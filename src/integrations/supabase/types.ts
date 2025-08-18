@@ -278,6 +278,78 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          max_requests: number
+          requests: number
+          user_id: string | null
+          window_duration: unknown
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          max_requests?: number
+          requests?: number
+          user_id?: string | null
+          window_duration?: unknown
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          max_requests?: number
+          requests?: number
+          user_id?: string | null
+          window_duration?: unknown
+          window_start?: string
+        }
+        Relationships: []
+      }
+      request_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          endpoint: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          method: string
+          request_id: string
+          status_code: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          method: string
+          request_id: string
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          method?: string
+          request_id?: string
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       slides: {
         Row: {
           alt_text: string | null
@@ -387,6 +459,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       visuals: {
         Row: {
           alt_text: string | null
@@ -430,6 +526,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_feature_enabled: {
         Args: { flag_name: string }
         Returns: boolean
@@ -445,7 +552,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -572,6 +679,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
