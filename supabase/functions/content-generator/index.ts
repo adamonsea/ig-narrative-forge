@@ -72,20 +72,47 @@ serve(async (req) => {
 
     console.log('Found article:', article.title);
 
-    // Create story record
-    const { data: story, error: storyError } = await supabase
+    // Check if story already exists for this article
+    let story;
+    const { data: existingStory } = await supabase
       .from('stories')
-      .insert({
-        article_id: articleId,
-        title: article.title,
-        status: 'draft'
-      })
-      .select()
+      .select('*')
+      .eq('article_id', articleId)
       .single();
 
-    if (storyError) {
-      console.error('Story creation error:', storyError);
-      throw new Error(`Failed to create story: ${storyError.message}`);
+    if (existingStory) {
+      console.log('Story already exists for article:', articleId, 'Story ID:', existingStory.id);
+      story = existingStory;
+      
+      // Update status to processing if it's not already published
+      if (story.status !== 'published') {
+        const { error: updateError } = await supabase
+          .from('stories')
+          .update({ status: 'processing' })
+          .eq('id', story.id);
+        
+        if (updateError) {
+          console.error('Failed to update story status:', updateError);
+        }
+      }
+    } else {
+      // Create new story record
+      const { data: newStory, error: storyError } = await supabase
+        .from('stories')
+        .insert({
+          article_id: articleId,
+          title: article.title,
+          status: 'processing'
+        })
+        .select()
+        .single();
+
+      if (storyError) {
+        console.error('Story creation error:', storyError);
+        throw new Error(`Failed to create story: ${storyError.message}`);
+      }
+      
+      story = newStory;
     }
     
     if (!story) {
@@ -98,6 +125,19 @@ serve(async (req) => {
     console.log('Generating slides with OpenAI...');
     const slides = await generateSlides(article, openAIApiKey);
     console.log('Generated slides:', slides.length);
+
+    // Delete existing slides if story already existed
+    if (existingStory) {
+      console.log('Deleting existing slides for story:', story.id);
+      const { error: deleteError } = await supabase
+        .from('slides')
+        .delete()
+        .eq('story_id', story.id);
+      
+      if (deleteError) {
+        console.error('Failed to delete existing slides:', deleteError);
+      }
+    }
 
     // Save slides to database
     const slideInserts = slides.map(slide => ({
@@ -228,16 +268,37 @@ Create slides that capture the essence of this story while being engaging for so
   }
 
   const data = await response.json();
+  console.log('OpenAI API response data:', JSON.stringify(data, null, 2));
+  
   const content = data.choices[0].message.content;
+  console.log('OpenAI content to parse:', content);
   
   try {
     const parsed = JSON.parse(content);
+    console.log('Parsed OpenAI response:', parsed);
+    
     if (!parsed.slides || !Array.isArray(parsed.slides)) {
-      throw new Error('Invalid response format from OpenAI');
+      console.error('Invalid response structure:', parsed);
+      throw new Error(`Invalid response format from OpenAI. Expected 'slides' array, got: ${typeof parsed.slides}`);
     }
+    
+    if (parsed.slides.length === 0) {
+      throw new Error('OpenAI returned empty slides array');
+    }
+    
+    // Validate slide structure
+    for (let i = 0; i < parsed.slides.length; i++) {
+      const slide = parsed.slides[i];
+      if (!slide.slideNumber || !slide.content || !slide.visualPrompt || !slide.altText) {
+        console.error(`Invalid slide ${i}:`, slide);
+        throw new Error(`Slide ${i} missing required properties`);
+      }
+    }
+    
     return parsed.slides;
   } catch (parseError) {
-    console.error('Failed to parse OpenAI response:', content);
-    throw new Error('Failed to parse AI response');
+    console.error('JSON Parse error:', parseError);
+    console.error('Raw OpenAI response content:', content);
+    throw new Error(`Failed to parse AI response: ${parseError.message}`);
   }
 }
