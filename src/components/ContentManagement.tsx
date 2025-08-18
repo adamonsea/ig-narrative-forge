@@ -25,17 +25,26 @@ interface Article {
   source_url: string;
   region: string | null;
   summary: string | null;
+  body: string | null;
+  created_at: string;
 }
 
 interface ContentSource {
   id: string;
   source_name: string;
+  feed_url: string | null;
+  canonical_domain: string | null;
   credibility_score: number | null;
   is_active: boolean | null;
   articles_scraped: number | null;
   success_rate: number | null;
+  avg_response_time_ms: number | null;
   last_scraped_at: string | null;
   region: string | null;
+  content_type: string | null;
+  is_whitelisted: boolean | null;
+  is_blacklisted: boolean | null;
+  scrape_frequency_hours: number | null;
 }
 
 export const ContentManagement = () => {
