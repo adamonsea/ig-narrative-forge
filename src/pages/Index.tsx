@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
 import { ContentManagement } from '@/components/ContentManagement';
 import { TestingSuite } from '@/components/TestingSuite';
+import { SlideGenerator } from '@/components/SlideGenerator';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin, userRole } = useAuth();
@@ -18,11 +19,16 @@ const Index = () => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showContentManagement, setShowContentManagement] = useState(false);
   const [showTestingSuite, setShowTestingSuite] = useState(false);
+  const [showSlideGenerator, setShowSlideGenerator] = useState(false);
+  const [articles, setArticles] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     checkSystemHealth();
-  }, []);
+    if (user) {
+      loadArticles();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Redirect to auth if not logged in and not loading
@@ -30,6 +36,21 @@ const Index = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  const loadArticles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id, title, author, region, category, word_count, reading_time_minutes, summary')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      setArticles(data || []);
+    } catch (error) {
+      console.error('Failed to load articles:', error);
+    }
+  };
 
   const checkSystemHealth = async () => {
     try {
@@ -99,6 +120,8 @@ const Index = () => {
           <ContentManagement />
         ) : showTestingSuite ? (
           <TestingSuite />
+        ) : showSlideGenerator ? (
+          <SlideGenerator articles={articles} onRefresh={loadArticles} />
         ) : (
           <>
             {/* System Health Status */}
@@ -208,14 +231,20 @@ const Index = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Generate Slides</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Generate Slides
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    AI-powered conversion of news into social media slides
+                    AI-powered conversion of news into social media slide carousels
                   </p>
-                  <Button className="w-full" disabled>
-                    Coming Soon
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setShowSlideGenerator(true)}
+                  >
+                    Open Slide Generator
                   </Button>
                 </CardContent>
               </Card>
