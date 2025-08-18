@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
 import { ContentManagement } from '@/components/ContentManagement';
+import { TestingSuite } from '@/components/TestingSuite';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin } = useAuth();
   const [systemHealth, setSystemHealth] = useState<any>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showContentManagement, setShowContentManagement] = useState(false);
+  const [showTestingSuite, setShowTestingSuite] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,6 +83,8 @@ const Index = () => {
           <AdminPanel />
         ) : showContentManagement ? (
           <ContentManagement />
+        ) : showTestingSuite ? (
+          <TestingSuite />
         ) : (
           <>
             {/* System Health Status */}
@@ -142,7 +146,7 @@ const Index = () => {
             </Card>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -159,6 +163,26 @@ const Index = () => {
                     onClick={() => setShowContentManagement(true)}
                   >
                     Open Content Manager
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TestTube className="w-5 h-5" />
+                    Testing & Validation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Validate Phase 1 functionality and system health
+                  </p>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setShowTestingSuite(true)}
+                  >
+                    Run Tests
                   </Button>
                 </CardContent>
               </Card>

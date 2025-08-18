@@ -714,6 +714,18 @@ export type Database = {
         }
         Returns: string
       }
+      test_rss_import: {
+        Args: { p_source_name?: string }
+        Returns: Json
+      }
+      test_search_functionality: {
+        Args: { p_search_term?: string }
+        Returns: {
+          article_id: string
+          relevance_score: number
+          title: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
