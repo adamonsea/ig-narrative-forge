@@ -113,12 +113,15 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
     }
   };
 
-  const approveArticle = async (article: Article) => {
+  const approveArticle = async (article: Article, slideType: 'short' | 'tabloid' | 'indepth' = 'tabloid') => {
     try {
       setProcessingArticle(article.id);
 
       const { data, error } = await supabase.functions.invoke('content-generator', {
-        body: { articleId: article.id }
+        body: { 
+          articleId: article.id,
+          slideType: slideType
+        }
       });
 
       if (error) throw error;
@@ -127,9 +130,15 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
         throw new Error(data.error || 'Content generation failed');
       }
 
+      const typeLabels = {
+        short: 'Short Carousel',
+        tabloid: 'Tabloid Style',
+        indepth: 'In-Depth Analysis'
+      };
+
       toast({
         title: 'Article Approved!',
-        description: `Generated ${data.slideCount} slides for "${article.title}"`,
+        description: `Generated ${data.slideCount} slides (${typeLabels[slideType]}) for "${article.title}"`,
       });
 
       // Remove from queue and refresh
@@ -300,24 +309,52 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
                           <X className="w-3 h-3" />
                         </Button>
                         
-                        <Button
-                          size="sm"
-                          onClick={() => approveArticle(article)}
-                          disabled={isProcessing}
-                          className="min-w-[100px]"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-3 h-3 mr-2" />
-                              Generate Slides
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            size="sm"
+                            onClick={() => approveArticle(article, 'short')}
+                            disabled={isProcessing}
+                            className="h-7 px-2 text-xs"
+                            variant="default"
+                          >
+                            {isProcessing ? (
+                              <div className="animate-spin rounded-full h-2 w-2 border-b border-white mr-1" />
+                            ) : (
+                              <Sparkles className="w-2 h-2 mr-1" />
+                            )}
+                            Short (4)
+                          </Button>
+                          
+                          <Button
+                            size="sm"
+                            onClick={() => approveArticle(article, 'tabloid')}
+                            disabled={isProcessing}
+                            className="h-7 px-2 text-xs"
+                            variant="secondary"
+                          >
+                            {isProcessing ? (
+                              <div className="animate-spin rounded-full h-2 w-2 border-b border-current mr-1" />
+                            ) : (
+                              <Sparkles className="w-2 h-2 mr-1" />
+                            )}
+                            Tabloid (8)
+                          </Button>
+                          
+                          <Button
+                            size="sm"
+                            onClick={() => approveArticle(article, 'indepth')}
+                            disabled={isProcessing}
+                            className="h-7 px-2 text-xs"
+                            variant="outline"
+                          >
+                            {isProcessing ? (
+                              <div className="animate-spin rounded-full h-2 w-2 border-b border-current mr-1" />
+                            ) : (
+                              <Sparkles className="w-2 h-2 mr-1" />
+                            )}
+                            In-Depth (10+)
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

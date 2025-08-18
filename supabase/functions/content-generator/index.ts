@@ -46,7 +46,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { articleId } = await req.json();
+    const { articleId, slideType = 'tabloid' } = await req.json();
 
     console.log('Processing article ID:', articleId);
 
@@ -122,8 +122,8 @@ serve(async (req) => {
     console.log('Created story:', story.id);
 
     // Generate slides using OpenAI
-    console.log('Generating slides with OpenAI...');
-    const slides = await generateSlides(article, openAIApiKey);
+    console.log('Generating slides with OpenAI...', 'Type:', slideType);
+    const slides = await generateSlides(article, openAIApiKey, slideType);
     console.log('Generated slides:', slides.length);
 
     // Delete existing slides if story already existed
@@ -198,17 +198,53 @@ serve(async (req) => {
   }
 });
 
-async function generateSlides(article: Article, openAIApiKey: string): Promise<SlideContent[]> {
-  const systemPrompt = `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid'): Promise<SlideContent[]> {
+  const getSlidePrompt = (type: string) => {
+    switch (type) {
+      case 'short':
+        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
 
 REQUIREMENTS:
-- Create exactly 5-7 slides from the article
+- Create exactly 4 slides from the article
 - Slide 1 (Hook): ≤15 words - Create curiosity gap, don't reveal the full story
-- Slides 2-3: ≤25 words each - Build context and tension
-- Slides 4-6: ≤35 words each - Deliver key information and insights  
+- Slide 2: ≤25 words - Build context 
+- Slide 3: ≤35 words - Deliver key information
+- Slide 4: ≤40 words - Strong takeaway or call-to-action
+
+STYLE: Quick news bites, punchy and direct. Focus on the most essential information only.`;
+
+      case 'indepth':
+        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+
+REQUIREMENTS:
+- Create exactly 10-12 slides from the article
+- Slide 1 (Hook): ≤15 words - Create curiosity gap
+- Slide 2 (Background): ≤25 words - Set context
+- Slides 3-6: ≤30 words each - Key developments, details, quotes
+- Slides 7-9: ≤35 words each - Analysis, implications, community impact
+- Slide 10 (Future): ≤35 words - What happens next
+- Final slide: ≤40 words - Strong conclusion with call-to-action
+
+STYLE: Comprehensive coverage with deep analysis. Include multiple perspectives, data points, and expert insights.`;
+
+      default: // tabloid
+        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+
+REQUIREMENTS:
+- Create exactly 8 slides from the article
+- Slide 1 (Hook): ≤15 words - Create curiosity gap, don't reveal the full story
+- Slide 2 (Context): ≤20 words - Set the scene
+- Slides 3-5: ≤30 words each - Build tension and deliver key developments
+- Slides 6-7: ≤35 words each - Impact and implications
 - Final slide: ≤40 words - Strong takeaway or call-to-action
 
-STYLE GUIDELINES:
+STYLE: Detailed storytelling with dramatic tension. Focus on human interest and emotional impact.`;
+    }
+  };
+
+  const systemPrompt = `${getSlidePrompt(slideType)}
+
+UNIVERSAL GUIDELINES:
 - Use active voice and strong verbs
 - Create emotional connection with local relevance
 - Include specific details and numbers when available
