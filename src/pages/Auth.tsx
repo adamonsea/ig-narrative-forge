@@ -69,10 +69,12 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
+        console.log('Sign in successful, redirecting...');
         toast({
           title: "Welcome back!",
           description: "Successfully signed in.",
         });
+        // Force a page refresh to ensure clean auth state
         window.location.href = '/';
       }
     } catch (error: any) {
