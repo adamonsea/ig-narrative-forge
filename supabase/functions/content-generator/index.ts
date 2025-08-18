@@ -136,9 +136,9 @@ serve(async (req) => {
 
     console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
 
-    // Extract publication name from source URL
-    const publicationName = extractPublicationName(article.source_url);
-    console.log(`Extracted publication: ${publicationName}`);
+    // Extract publication name from source URL with enhanced validation
+    const publicationName = await extractPublicationName(article.source_url, supabase, articleId);
+    console.log(`✅ Validated publication: ${publicationName}`);
 
     // Generate social media post copy with hashtags
     const postCopy = await generatePostCopy(article, publicationName, openAIApiKey);
@@ -447,19 +447,20 @@ Create slides that capture the essence of this story while being engaging for so
   }
 }
 
-// Function to extract publication name from URL
-function extractPublicationName(sourceUrl: string): string {
+// Enhanced function to extract and validate publication name from URL
+async function extractPublicationName(sourceUrl: string, supabase: any, articleId?: string): Promise<string> {
   try {
     const url = new URL(sourceUrl);
     const domain = url.hostname.toLowerCase();
-    
-    // Remove www. prefix if present
     const cleanDomain = domain.replace(/^www\./, '');
     
-    // Common publication mappings
+    console.log(`🔍 Extracting publication from URL: ${sourceUrl}`);
+    console.log(`🌐 Detected domain: ${cleanDomain}`);
+    
+    // Enhanced publication mappings with validation
     const publicationMap: { [key: string]: string } = {
       'theargus.co.uk': 'The Argus',
-      'sussexexpress.co.uk': 'Sussex Express',
+      'sussexexpress.co.uk': 'Sussex Express', 
       'eastbourneherald.co.uk': 'The Herald',
       'brightonandhovenews.org': 'Brighton & Hove News',
       'hastingsobserver.co.uk': 'Hastings Observer',
@@ -469,29 +470,99 @@ function extractPublicationName(sourceUrl: string): string {
       'independent.co.uk': 'The Independent',
       'telegraph.co.uk': 'The Telegraph',
       'dailymail.co.uk': 'Daily Mail',
-      'mirror.co.uk': 'Daily Mirror'
+      'mirror.co.uk': 'Daily Mirror',
+      'itv.com': 'ITV News',
+      'sky.com': 'Sky News',
+      'eastbourne.news': 'Eastbourne News',
+      'eastsussex.news': 'East Sussex News',
+      'eastbournereporter.co.uk': 'Eastbourne Reporter'
     };
+    
+    let extractedName = '';
+    let validationStatus = 'pending';
+    let isValid = true;
     
     // Check for exact match first
     if (publicationMap[cleanDomain]) {
-      return publicationMap[cleanDomain];
+      extractedName = publicationMap[cleanDomain];
+      validationStatus = 'validated';
+      console.log(`✅ Exact match found: ${extractedName}`);
+    } else {
+      // Try subdomain matching
+      const subdomainMatch = Object.keys(publicationMap).find(key => 
+        cleanDomain.includes(key) || key.includes(cleanDomain.split('.')[0])
+      );
+      
+      if (subdomainMatch) {
+        extractedName = publicationMap[subdomainMatch];
+        validationStatus = 'subdomain_match';
+        console.log(`🔄 Subdomain match found: ${extractedName}`);
+      } else {
+        // Fallback formatting with enhanced logic
+        const domainParts = cleanDomain.replace(/\.(co\.uk|com|org|net|co)$/, '').split('.');
+        
+        if (domainParts.length > 1) {
+          // Handle subdomains (e.g., news.bbc.co.uk -> BBC News)
+          extractedName = domainParts
+            .reverse()
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+        } else {
+          extractedName = domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+        }
+        
+        validationStatus = 'auto_generated';
+        isValid = false; // Requires manual verification
+        console.log(`⚠️ Auto-generated name: ${extractedName} (requires validation)`);
+      }
     }
     
-    // Try to extract from subdomain or path for news sites
-    if (domain.includes('bbc.')) {
-      return 'BBC';
+    // Log the attribution for audit trail
+    if (articleId && supabase) {
+      try {
+        await supabase
+          .from('source_attributions')
+          .insert({
+            article_id: articleId,
+            extracted_publication: extractedName,
+            source_url: sourceUrl,
+            detected_domain: cleanDomain,
+            validation_status: validationStatus,
+            is_valid: isValid
+          });
+        
+        console.log(`📝 Logged source attribution for article ${articleId}`);
+      } catch (auditError) {
+        console.error('Failed to log source attribution:', auditError);
+      }
     }
     
-    // Default formatting: capitalize first letters and remove .co.uk/.com etc
-    const baseName = cleanDomain
-      .replace(/\.(co\.uk|com|org|net|co)$/, '')
-      .split('.')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ');
+    const finalName = extractedName || 'Local News Source';
+    console.log(`📰 Final publication name: ${finalName}`);
     
-    return baseName || 'Local News Source';
+    return finalName;
+    
   } catch (error) {
-    console.error('Error extracting publication name:', error);
+    console.error('❌ Error extracting publication name:', error);
+    
+    // Log the error for debugging
+    if (articleId && supabase) {
+      try {
+        await supabase
+          .from('source_attributions')
+          .insert({
+            article_id: articleId,
+            extracted_publication: 'Local News Source',
+            source_url: sourceUrl,
+            detected_domain: 'error',
+            validation_status: 'error',
+            is_valid: false
+          });
+      } catch (auditError) {
+        console.error('Failed to log error attribution:', auditError);
+      }
+    }
+    
     return 'Local News Source';
   }
 }

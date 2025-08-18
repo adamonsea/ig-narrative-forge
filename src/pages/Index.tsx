@@ -13,13 +13,14 @@ import { ContentManagement } from '@/components/ContentManagement';
 import { ArticleQueue } from '@/components/ArticleQueue';
 import { SlideReview } from '@/components/SlideReview';
 import { SlideReviewQueue } from '@/components/SlideReviewQueue';
+import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -200,6 +201,14 @@ const Index = () => {
             {isAdmin && (
               <>
                 <Button
+                  variant={activeTab === 'monitor' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('monitor')}
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Monitor
+                </Button>
+                <Button
                   variant={activeTab === 'admin' ? 'default' : 'outline'}
                   onClick={() => setActiveTab('admin')}
                   className="flex items-center gap-2"
@@ -373,6 +382,12 @@ const Index = () => {
         {activeTab === 'testing' && isAdmin && (
           <div className="space-y-6">
             <TestingSuite />
+          </div>
+        )}
+
+        {activeTab === 'monitor' && isAdmin && (
+          <div className="space-y-6">
+            <ScheduleMonitor />
           </div>
         )}
 

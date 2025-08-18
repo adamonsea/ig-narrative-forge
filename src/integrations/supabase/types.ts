@@ -482,6 +482,93 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          max_retries: number
+          result_data: Json | null
+          retry_count: number
+          schedule_id: string
+          source_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_retries?: number
+          result_data?: Json | null
+          retry_count?: number
+          schedule_id: string
+          source_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_retries?: number
+          result_data?: Json | null
+          retry_count?: number
+          schedule_id?: string
+          source_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      scrape_schedules: {
+        Row: {
+          created_at: string
+          frequency_hours: number
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          next_run_at: string
+          run_count: number
+          schedule_type: string
+          source_id: string
+          success_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          frequency_hours?: number
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string
+          run_count?: number
+          schedule_type?: string
+          source_id: string
+          success_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          frequency_hours?: number
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string
+          run_count?: number
+          schedule_type?: string
+          source_id?: string
+          success_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       search_queries: {
         Row: {
           created_at: string
@@ -555,6 +642,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      source_attributions: {
+        Row: {
+          article_id: string
+          created_at: string
+          detected_domain: string
+          extracted_publication: string
+          id: string
+          is_valid: boolean | null
+          manual_override_by: string | null
+          override_reason: string | null
+          source_url: string
+          updated_at: string
+          validation_status: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          detected_domain: string
+          extracted_publication: string
+          id?: string
+          is_valid?: boolean | null
+          manual_override_by?: string | null
+          override_reason?: string | null
+          source_url: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          detected_domain?: string
+          extracted_publication?: string
+          id?: string
+          is_valid?: boolean | null
+          manual_override_by?: string | null
+          override_reason?: string | null
+          source_url?: string
+          updated_at?: string
+          validation_status?: string
+        }
+        Relationships: []
       }
       stories: {
         Row: {

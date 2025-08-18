@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.universal-scraper]
 verify_jwt = false
+
+[functions.automated-scheduler]
+verify_jwt = false
+
+[functions.scrape-monitor]
+verify_jwt = false
