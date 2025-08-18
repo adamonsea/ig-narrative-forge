@@ -17,7 +17,9 @@ import {
   CheckCircle, 
   Clock,
   BarChart3,
-  Settings
+  Settings,
+  Download,
+  Play
 } from 'lucide-react';
 
 interface ContentSource {
@@ -52,7 +54,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
   const [newSource, setNewSource] = useState({
     source_name: '',
     feed_url: '',
-    region: 'general',
+    region: 'Eastbourne',
     credibility_score: 70,
     scrape_frequency_hours: 24,
     content_type: 'news',
@@ -97,7 +99,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       setNewSource({
         source_name: '',
         feed_url: '',
-        region: 'general',
+        region: 'Eastbourne',
         credibility_score: 70,
         scrape_frequency_hours: 24,
         content_type: 'news',
@@ -176,6 +178,127 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
     }
   };
 
+  const handleScrapeSource = async (source: ContentSource) => {
+    if (!source.feed_url) {
+      toast({
+        title: 'Error',
+        description: 'No URL configured for this source',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      toast({
+        title: 'Scraping Started',
+        description: `Intelligently scraping content from ${source.source_name}...`,
+      });
+
+      const { data, error } = await supabase.functions.invoke('universal-scraper', {
+        body: {
+          feedUrl: source.feed_url,
+          sourceId: source.id,
+          region: source.region || 'Eastbourne'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'Scraping Complete',
+          description: `Found ${data.articlesFound} articles, scraped ${data.articlesScraped} relevant ones using ${data.method}`,
+        });
+        
+        if (data.errors && data.errors.length > 0) {
+          console.warn('Scraping warnings:', data.errors);
+        }
+      } else {
+        throw new Error(data?.error || 'Scraping failed');
+      }
+
+      onSourcesChange();
+    } catch (error) {
+      console.error('Scraping error:', error);
+      toast({
+        title: 'Scraping Failed',
+        description: error.message || 'Failed to scrape content from source',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScrapeAll = async () => {
+    const activeSources = sources.filter(s => s.is_active && s.feed_url);
+    
+    if (activeSources.length === 0) {
+      toast({
+        title: 'No Sources',
+        description: 'No active sources found to scrape',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    let totalArticlesFound = 0;
+    let totalArticlesScraped = 0;
+    let failedSources = 0;
+
+    try {
+      toast({
+        title: 'Bulk Scraping Started',
+        description: `Scraping ${activeSources.length} sources...`,
+      });
+
+      for (const source of activeSources) {
+        try {
+          const { data, error } = await supabase.functions.invoke('universal-scraper', {
+            body: {
+              feedUrl: source.feed_url,
+              sourceId: source.id,
+              region: source.region || 'Eastbourne'
+            }
+          });
+
+          if (error) throw error;
+
+          if (data?.success) {
+            totalArticlesFound += data.articlesFound || 0;
+            totalArticlesScraped += data.articlesScraped || 0;
+          } else {
+            failedSources++;
+          }
+        } catch (error) {
+          console.error(`Failed to scrape ${source.source_name}:`, error);
+          failedSources++;
+        }
+
+        // Small delay between sources to be respectful
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      toast({
+        title: 'Bulk Scraping Complete',
+        description: `Found ${totalArticlesFound} articles, scraped ${totalArticlesScraped} relevant ones. ${failedSources} sources failed.`,
+      });
+
+      onSourcesChange();
+    } catch (error) {
+      console.error('Bulk scraping error:', error);
+      toast({
+        title: 'Bulk Scraping Failed',
+        description: error.message || 'Failed to complete bulk scraping',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const extractDomainFromUrl = (url: string): string => {
     try {
       return new URL(url).hostname.replace('www.', '');
@@ -211,13 +334,23 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
         <div>
           <h2 className="text-2xl font-bold">Content Sources</h2>
           <p className="text-muted-foreground">
-            Manage RSS feeds and content sources with credibility tracking
+            Universal web scraping - works with any website or RSS feed
           </p>
         </div>
-        <Button onClick={() => setShowAddForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Source
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleScrapeAll}
+            disabled={loading || sources.filter(s => s.is_active).length === 0}
+            variant="outline"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Scrape All Active
+          </Button>
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Source
+          </Button>
+        </div>
       </div>
 
       {/* Add Source Form */}
@@ -226,7 +359,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
           <CardHeader>
             <CardTitle>Add New Content Source</CardTitle>
             <CardDescription>
-              Add an RSS feed or content source for automated article import
+              Add any website or RSS feed for universal content scraping
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -241,13 +374,16 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                 />
               </div>
               <div>
-                <Label htmlFor="feed-url">RSS Feed URL *</Label>
+                <Label htmlFor="feed-url">Website or RSS URL *</Label>
                 <Input
                   id="feed-url"
-                  placeholder="https://example.com/feed.xml"
+                  placeholder="https://eastbourneherald.co.uk OR https://example.com/feed.xml"
                   value={newSource.feed_url}
                   onChange={(e) => setNewSource(prev => ({ ...prev, feed_url: e.target.value }))}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Works with any website - RSS feeds, news sites, or regular web pages
+                </p>
               </div>
             </div>
 
@@ -262,6 +398,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Eastbourne">Eastbourne</SelectItem>
                     <SelectItem value="general">General</SelectItem>
                     <SelectItem value="local">Local</SelectItem>
                     <SelectItem value="national">National</SelectItem>
@@ -360,6 +497,17 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleScrapeSource(source)}
+                    disabled={loading || !source.is_active}
+                    className="flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    Scrape Now
+                  </Button>
+
                   <div className="flex items-center gap-2">
                     <Label htmlFor={`active-${source.id}`} className="text-sm">Active</Label>
                     <Switch
