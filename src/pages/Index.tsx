@@ -118,7 +118,7 @@ const Index = () => {
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       <Badge variant={systemHealth?.status === 'healthy' ? 'default' : 'destructive'}>
-                        {systemHealth?.status || 'Checking...'}
+                        {String(systemHealth?.status || 'Checking...')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Overall Status</p>
@@ -127,7 +127,7 @@ const Index = () => {
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       <Badge variant={systemHealth?.services?.database === 'up' ? 'default' : 'destructive'}>
-                        {systemHealth?.services?.database || 'Unknown'}
+                        {String(systemHealth?.services?.database || 'Unknown')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Database</p>
@@ -136,14 +136,19 @@ const Index = () => {
                   <div className="text-center">
                     <div className="text-2xl font-bold">
                       <Badge variant={systemHealth?.services?.job_queue === 'up' ? 'default' : 'destructive'}>
-                        {systemHealth?.services?.job_queue || 'Unknown'}
+                        {String(systemHealth?.services?.job_queue || 'Unknown')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Job Queue</p>
                   </div>
                   
                   <div className="text-center">
-                    <div className="text-2xl font-bold">{systemHealth?.pending_jobs || 0}</div>
+                    <div className="text-2xl font-bold">
+                      {typeof systemHealth?.pending_jobs === 'number' 
+                        ? systemHealth.pending_jobs 
+                        : (systemHealth?.pending_jobs ? String(systemHealth.pending_jobs) : 0)
+                      }
+                    </div>
                     <p className="text-sm text-muted-foreground">Pending Jobs</p>
                   </div>
                 </div>
