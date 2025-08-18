@@ -3,26 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TestingSuite } from '@/components/TestingSuite';
-import { EastbourneSourceManager } from '@/components/EastbourneSourceManager';
-import { SlideReviewQueue } from '@/components/SlideReviewQueue';
+import { ContentManagement } from '@/components/ContentManagement';
+import { SlideGenerator } from '@/components/SlideGenerator';
 
 const Index = () => {
-  const { user, loading, signOut, isAdmin, isSuperAdmin, userRole } = useAuth();
+  const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showTestingSuite, setShowTestingSuite] = useState(false);
-  const [articles, setArticles] = useState<any[]>([]);
   const { toast } = useToast();
+  
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides'>('dashboard');
+  const [articles, setArticles] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    sources: { count: 0, status: 'loading' },
+    articles: { count: 0, status: 'loading' },
+    slides: { count: 0, status: 'loading' },
+    errors: { count: 0, status: 'success' }
+  });
 
   useEffect(() => {
     if (user) {
       loadArticles();
+      loadStats();
     }
   }, [user]);
 
@@ -34,22 +41,87 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const loadArticles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('articles')
-        .select('id, title, author, region, category, word_count, reading_time_minutes, summary, created_at, source_url')
-        .eq('region', 'Eastbourne')
-        .order('created_at', { ascending: false })
-        .limit(20);
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('Error loading articles:', error);
+      setStats(prev => ({
+        ...prev,
+        articles: { count: 0, status: 'error', error: error.message }
+      }));
+    } else {
+      // Sort by Eastbourne relevance score (highest first), then by date
+      const sortedArticles = (data || []).sort((a, b) => {
+        const aMetadata = a.import_metadata as any;
+        const bMetadata = b.import_metadata as any;
+        const aScore = aMetadata?.eastbourne_relevance_score || 0;
+        const bScore = bMetadata?.eastbourne_relevance_score || 0;
+        
+        if (aScore !== bScore) {
+          return bScore - aScore; // Higher relevance first
+        }
+        
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
       
-      if (error) throw error;
-      setArticles(data || []);
-    } catch (error) {
-      console.error('Failed to load articles:', error);
+      setArticles(sortedArticles);
+      setStats(prev => ({
+        ...prev,
+        articles: { count: sortedArticles.length, status: 'success' }
+      }));
     }
   };
 
-  // Removed system health check for simplified UI
+  const deleteArticle = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Article Deleted",
+        description: "The article has been removed and won't reappear.",
+      });
+
+      await loadArticles(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadStats = async () => {
+    // Load source count
+    const { data: sources } = await supabase
+      .from('content_sources')
+      .select('id')
+      .eq('is_active', true);
+    
+    setStats(prev => ({
+      ...prev,
+      sources: { count: sources?.length || 0, status: 'success' }
+    }));
+
+    // Load slides count
+    const { data: slides } = await supabase
+      .from('slides')
+      .select('id');
+    
+    setStats(prev => ({
+      ...prev,
+      slides: { count: slides?.length || 0, status: 'success' }
+    }));
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -71,49 +143,95 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold gradient-text">News → Social Slides</h1>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">News → Social Slides</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {user?.email}
               {isSuperAdmin && <Badge variant="destructive" className="ml-2">SuperAdmin</Badge>}
               {isAdmin && !isSuperAdmin && <Badge variant="secondary" className="ml-2">Admin</Badge>}
             </span>
-            {isAdmin && (
-              <Button 
-                onClick={() => setShowAdmin(!showAdmin)} 
-                variant={showAdmin ? "default" : "outline"}
-                size="sm"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            )}
             <Button onClick={handleSignOut} variant="outline" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>
         </div>
+      </header>
 
-        {showAdmin && isAdmin ? (
-          <AdminPanel />
-        ) : showTestingSuite ? (
-          <TestingSuite />
-        ) : (
-          <>
-            {/* Eastbourne News Pipeline Status */}
+      {/* Navigation */}
+      <nav className="border-b bg-muted/50">
+        <div className="max-w-7xl mx-auto px-6 py-2">
+          <div className="flex gap-2">
+            <Button
+              variant={activeTab === 'dashboard' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('dashboard')}
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Dashboard
+            </Button>
+            <Button
+              variant={activeTab === 'slides' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('slides')}
+              className="flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Generate Slides
+            </Button>
+            <Button
+              variant={activeTab === 'content' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('content')}
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Content
+            </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  variant={activeTab === 'admin' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('admin')}
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin
+                </Button>
+                <Button
+                  variant={activeTab === 'testing' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('testing')}
+                  className="flex items-center gap-2"
+                >
+                  <TestTube className="w-4 h-4" />
+                  Testing
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Active Sources</p>
-                      <p className="text-2xl font-bold">{articles.length > 0 ? '3' : '0'}</p>
+                      <p className="text-2xl font-bold">{stats.sources.count}</p>
                     </div>
-                    <Badge variant="secondary">Eastbourne</Badge>
+                    {stats.sources.status === 'success' ? (
+                      <CheckCircle className="w-8 h-8 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-8 h-8 text-red-500" />
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -122,12 +240,8 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Articles Today</p>
-                      <p className="text-2xl font-bold">
-                        {articles.filter(a => 
-                          new Date(a.created_at).toDateString() === new Date().toDateString()
-                        ).length}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Articles Scraped</p>
+                      <p className="text-2xl font-bold">{stats.articles.count}</p>
                     </div>
                     <FileText className="w-8 h-8 text-primary/60" />
                   </div>
@@ -139,7 +253,7 @@ const Index = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Slides Generated</p>
-                      <p className="text-2xl font-bold">12</p>
+                      <p className="text-2xl font-bold">{stats.slides.count}</p>
                     </div>
                     <Sparkles className="w-8 h-8 text-primary/60" />
                   </div>
@@ -150,40 +264,58 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Pending Review</p>
-                      <p className="text-2xl font-bold">3</p>
+                      <p className="text-sm text-muted-foreground">System Status</p>
+                      <p className="text-2xl font-bold text-green-600">Healthy</p>
                     </div>
-                    <Clock className="w-8 h-8 text-primary/60" />
+                    <CheckCircle className="w-8 h-8 text-green-500" />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Main Workflow */}
-            <div className="space-y-8">
-              {/* Website Sources */}
-              <EastbourneSourceManager 
-                onSourcesChange={() => {
-                  loadArticles();
-                }}
-              />
-
-              {/* Latest Articles */}
-              {articles.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Latest Eastbourne Articles ({articles.length})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {articles.slice(0, 10).map((article: any) => (
+            {/* Recent Articles */}
+            {articles.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Recent Articles ({articles.length})
+                    </span>
+                    <p className="text-sm text-muted-foreground">Sorted by Eastbourne relevance</p>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {articles.slice(0, 15).map((article: any) => {
+                      const metadata = article.import_metadata as any;
+                      const relevanceScore = metadata?.eastbourne_relevance_score || 0;
+                      return (
                         <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                           <div className="flex-1">
-                            <h4 className="font-medium text-sm mb-1">{article.title}</h4>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-sm">{article.title}</h4>
+                              {relevanceScore > 15 && (
+                                <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+                                  High Relevance
+                                </Badge>
+                              )}
+                              {relevanceScore >= 5 && relevanceScore <= 15 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Relevant
+                                </Badge>
+                              )}
+                              {relevanceScore < 5 && (
+                                <Badge variant="outline" className="text-xs text-orange-600">
+                                  Low Relevance
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground mb-2">
                               {article.author && `${article.author} • `}
                               {new Date(article.created_at).toLocaleDateString()} • 
                               {article.word_count || 0} words
+                              {relevanceScore > 0 && ` • Relevance: ${relevanceScore}`}
                             </p>
                             {article.summary && (
                               <p className="text-xs text-muted-foreground line-clamp-2">
@@ -204,54 +336,57 @@ const Index = () => {
                               <ExternalLink className="w-3 h-3 mr-1" />
                               Read
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteArticle(article.id)}
+                              className="text-xs text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Discard
+                            </Button>
                           </div>
                         </div>
-                      ))}
-                      {articles.length > 10 && (
-                        <div className="text-center pt-2">
-                          <p className="text-xs text-muted-foreground">
-                            Showing 10 of {articles.length} articles
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Slide Review Queue */}
-              <SlideReviewQueue />
-            </div>
-
-            {/* Process Flow Indicator */}
-            <Card className="bg-muted/30">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span>Add Website</span>
+                      );
+                    })}
+                    {articles.length > 15 && (
+                      <div className="text-center pt-2">
+                        <p className="text-xs text-muted-foreground">
+                          Showing 15 of {articles.length} articles
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span>Auto Scrape Articles</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span>Generate Slides</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span>Review & Approve</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
-      </div>
+
+        {activeTab === 'testing' && isAdmin && (
+          <div className="space-y-6">
+            <TestingSuite />
+          </div>
+        )}
+
+        {activeTab === 'admin' && isAdmin && (
+          <div className="space-y-6">
+            <AdminPanel />
+          </div>
+        )}
+
+        {activeTab === 'content' && (
+          <div className="space-y-6">
+            <ContentManagement />
+          </div>
+        )}
+
+        {activeTab === 'slides' && (
+          <div className="space-y-6">
+            <SlideGenerator articles={articles} onRefresh={loadArticles} />
+          </div>
+        )}
+      </main>
     </div>
   );
 };

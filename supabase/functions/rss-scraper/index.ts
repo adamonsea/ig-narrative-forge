@@ -111,9 +111,10 @@ serve(async (req) => {
           continue;
         }
 
+        const relevanceScore = calculateEastbourneRelevanceScore(scrapedArticle, item);
         const contentChecksum = await generateChecksum(scrapedArticle.fullText + scrapedArticle.title);
 
-        // Insert new article with full content
+        // Insert new article with full content and relevance score
         const { error: insertError } = await supabase
           .from('articles')
           .insert({
@@ -128,13 +129,16 @@ serve(async (req) => {
             source_id: sourceId,
             content_checksum: contentChecksum,
             category: item.category,
+            word_count: scrapedArticle.fullText.split(/\s+/).length,
+            reading_time_minutes: Math.ceil(scrapedArticle.fullText.split(/\s+/).length / 200),
             import_metadata: {
               imported_from: 'rss_full_scrape',
               feed_url: feedUrl,
               guid: item.guid,
               scraped_at: new Date().toISOString(),
               subheading: scrapedArticle.subheading,
-              original_rss_description: item.description
+              original_rss_description: item.description,
+              eastbourne_relevance_score: relevanceScore
             }
           });
 
@@ -143,7 +147,7 @@ serve(async (req) => {
           console.error('Insert error:', insertError);
         } else {
           articlesScraped++;
-          console.log(`Successfully scraped and saved: ${scrapedArticle.title}`);
+          console.log(`Successfully scraped and saved: ${scrapedArticle.title} (Relevance: ${relevanceScore})`);
         }
         
         // Add small delay to be respectful to servers
@@ -260,28 +264,60 @@ async function generateChecksum(content: string): Promise<string> {
 }
 
 function checkEastbourneRelevance(article: ScrapedArticle, rssItem: RSSItem): boolean {
-  const searchTerm = 'eastbourne';
+  const eastbourneTerms = [
+    'eastbourne', 'eastbourne borough council', 'eastbourne town', 
+    'eastbourne seafront', 'eastbourne pier', 'beachy head'
+  ];
   
-  // Check in tags/categories
-  if (rssItem.category && rssItem.category.toLowerCase().includes(searchTerm)) {
-    return true;
+  const searchText = `${article.title} ${article.fullText} ${rssItem.title} ${rssItem.description}`.toLowerCase();
+  
+  // Must contain Eastbourne to be relevant
+  const hasEastbourne = eastbourneTerms.some(term => searchText.includes(term));
+  
+  if (!hasEastbourne) {
+    console.log(`Article filtered out - no Eastbourne reference: ${article.title}`);
+    return false;
   }
   
-  // Check in article content (title, headline, full text)
-  const contentToCheck = [
-    article.title,
-    article.headline, 
-    article.subheading,
-    article.fullText,
-    article.summary,
-    rssItem.description
-  ].filter(Boolean).join(' ').toLowerCase();
+  return true;
+}
+
+function calculateEastbourneRelevanceScore(article: ScrapedArticle, rssItem: RSSItem): number {
+  const highRelevanceTerms = [
+    'eastbourne council', 'eastbourne residents', 'eastbourne community',
+    'eastbourne seafront', 'eastbourne pier', 'eastbourne town centre',
+    'eastbourne borough', 'eastbourne beach', 'eastbourne police'
+  ];
   
-  if (contentToCheck.includes(searchTerm)) {
-    return true;
+  const mediumRelevanceTerms = [
+    'eastbourne', 'beachy head', 'sussex police eastbourne'
+  ];
+  
+  const searchText = `${article.title} ${article.fullText} ${rssItem.title} ${rssItem.description}`.toLowerCase();
+  
+  let score = 0;
+  
+  // High relevance terms - 10 points each
+  highRelevanceTerms.forEach(term => {
+    if (searchText.includes(term)) {
+      score += 10;
+    }
+  });
+  
+  // Medium relevance terms - 5 points each  
+  mediumRelevanceTerms.forEach(term => {
+    if (searchText.includes(term)) {
+      score += 5;
+    }
+  });
+  
+  // Title mentions get bonus points
+  const titleText = `${article.title} ${rssItem.title}`.toLowerCase();
+  if (titleText.includes('eastbourne')) {
+    score += 15;
   }
   
-  return false;
+  return score;
 }
 
 async function scrapeFullArticle(url: string, rssData: any): Promise<ScrapedArticle> {
@@ -335,10 +371,20 @@ async function scrapeFullArticle(url: string, rssData: any): Promise<ScrapedArti
 }
 
 function extractArticleContent(doc: any, url: string) {
-  // Common selectors for article content
+  // Expanded selectors for article content - more comprehensive
   const contentSelectors = [
+    'article .article-content',
+    'article .content',
+    'article .post-content', 
+    'article .entry-content',
+    'article .story-body',
+    'article .article-body',
+    '.main-content article',
+    '.article-wrapper .content',
+    '.post-wrapper .content',
+    '[role="main"] article',
+    '[role="main"] .content',
     'article',
-    '[role="main"]',
     '.article-content',
     '.post-content',
     '.entry-content',
@@ -347,7 +393,13 @@ function extractArticleContent(doc: any, url: string) {
     '.article-body',
     '#article-body',
     '.field-name-body',
-    '.field-type-text-with-summary'
+    '.field-type-text-with-summary',
+    '.entry-content-wrapper',
+    '.story-content',
+    '.article-text',
+    '.post-text',
+    '.main-content',
+    '#content'
   ];
 
   const titleSelectors = [
@@ -421,22 +473,61 @@ function extractArticleContent(doc: any, url: string) {
     }
   }
 
-  // If no specific article container found, try to find multiple paragraphs
-  if (!contentElement || !contentElement.textContent?.trim()) {
-    const paragraphs = doc.querySelectorAll('p');
-    if (paragraphs && paragraphs.length > 3) {
-      fullText = Array.from(paragraphs)
-        .map((p: any) => p.textContent?.trim())
-        .filter((text: string) => text && text.length > 20)
-        .join('\n\n');
+  // If no specific article container found or content too short, try comprehensive extraction
+  if (!contentElement || !contentElement.textContent?.trim() || contentElement.textContent.trim().length < 100) {
+    console.log('No content element found or content too short, trying comprehensive extraction');
+    
+    // Try to get all text content from paragraphs and filter out navigation/ads
+    const allParagraphs = doc.querySelectorAll('p, div.paragraph, .text-block, .content p, article p');
+    const paragraphTexts = Array.from(allParagraphs)
+      .map((p: any) => p.textContent?.trim())
+      .filter((text: string) => {
+        if (!text || text.length < 30) return false;
+        // Skip navigation, ads, social media, etc.
+        const skipPatterns = /^(share|follow|subscribe|advertisement|cookie|privacy|terms|navigation|menu|sign up|newsletter)/i;
+        return !skipPatterns.test(text);
+      });
+    
+    if (paragraphTexts.length > 2) {
+      fullText = paragraphTexts.join('\n\n');
+    } else {
+      // Last resort: get all text from body but clean it heavily
+      const bodyText = doc.body?.textContent || '';
+      if (bodyText.length > 200) {
+        fullText = bodyText
+          .split('\n')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 20)
+          .slice(0, 50) // Limit to first 50 meaningful lines
+          .join(' ');
+      }
     }
   } else {
     // Clean up the content
-    // Remove script and style tags
-    contentElement.querySelectorAll('script, style, nav, aside, .advertisement, .ad, .social-share')
+    // Remove script and style tags and other unwanted elements
+    contentElement.querySelectorAll('script, style, nav, aside, .advertisement, .ad, .social-share, .comments, .related-posts, .newsletter-signup, .cookie-banner')
       .forEach((el: any) => el.remove());
     
     fullText = contentElement.textContent?.trim() || '';
+  }
+
+  // Additional cleaning - remove very short content
+  if (fullText.length < 100) {
+    console.log('Content too short after extraction, trying alternative method');
+    // Try to find the longest text block
+    const allDivs = doc.querySelectorAll('div');
+    let longestText = '';
+    
+    for (const div of allDivs) {
+      const divText = div.textContent?.trim() || '';
+      if (divText.length > longestText.length && divText.length > 200) {
+        longestText = divText;
+      }
+    }
+    
+    if (longestText.length > fullText.length) {
+      fullText = longestText;
+    }
   }
 
   // Extract subheading (usually the first paragraph or subtitle)
