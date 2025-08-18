@@ -116,6 +116,7 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
   const approveArticle = async (article: Article, slideType: 'short' | 'tabloid' | 'indepth' = 'tabloid') => {
     try {
       setProcessingArticle(article.id);
+      console.log(`Starting slide generation for article ${article.id} with type ${slideType}`);
 
       const { data, error } = await supabase.functions.invoke('content-generator', {
         body: { 
@@ -124,9 +125,19 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
         }
       });
 
-      if (error) throw error;
+      console.log('Content generator response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(`Function call failed: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No response data from content generator');
+      }
 
       if (!data.success) {
+        console.error('Content generation failed:', data.error);
         throw new Error(data.error || 'Content generation failed');
       }
 
@@ -138,15 +149,17 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
 
       toast({
         title: 'Article Approved!',
-        description: `Generated ${data.slideCount} slides (${typeLabels[slideType]}) for "${article.title}"`,
+        description: `Generated ${data.slideCount} slides (${typeLabels[slideType]}) - check Slide Review Queue`,
       });
+
+      console.log(`Successfully generated ${data.slideCount} slides for story ${data.storyId}`);
 
       // Remove from queue and refresh
       await loadPendingArticles();
       onRefresh?.();
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('Generation error details:', error);
       toast({
         title: 'Generation Failed',
         description: error.message || 'Failed to generate slides',

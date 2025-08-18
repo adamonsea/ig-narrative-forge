@@ -158,12 +158,12 @@ serve(async (req) => {
       throw new Error(`Failed to save slides: ${slidesError.message}`);
     }
 
-    // Update story status
-    console.log('Updating story status to published...');
+    // Update story status to draft for review
+    console.log('Updating story status to draft for review...');
     const { error: updateError } = await supabase
       .from('stories')
       .update({ 
-        status: 'published'
+        status: 'draft'
       })
       .eq('id', story.id);
 
