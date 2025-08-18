@@ -63,7 +63,7 @@ serve(async (req) => {
       .insert({
         article_id: articleId,
         title: article.title,
-        status: 'generating'
+        status: 'draft'
       })
       .select()
       .single();
@@ -96,8 +96,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('stories')
       .update({ 
-        status: 'ready',
-        generated_at: new Date().toISOString()
+        status: 'published'
       })
       .eq('id', story.id);
 
