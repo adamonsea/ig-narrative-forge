@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -176,19 +176,44 @@ const Index = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {articles.slice(0, 5).map((article: any) => (
-                        <div key={article.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      {articles.slice(0, 10).map((article: any) => (
+                        <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                           <div className="flex-1">
-                            <h4 className="font-medium text-sm">{article.title}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {article.author} • {new Date(article.created_at).toLocaleDateString()}
+                            <h4 className="font-medium text-sm mb-1">{article.title}</h4>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {article.author && `${article.author} • `}
+                              {new Date(article.created_at).toLocaleDateString()} • 
+                              {article.word_count || 0} words
                             </p>
+                            {article.summary && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {article.summary}
+                              </p>
+                            )}
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {article.word_count || 0} words
-                          </Badge>
+                          <div className="flex items-center gap-2 ml-4">
+                            <Badge variant="outline" className="text-xs">
+                              {article.category || 'News'}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(article.source_url, '_blank')}
+                              className="text-xs"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Read
+                            </Button>
+                          </div>
                         </div>
                       ))}
+                      {articles.length > 10 && (
+                        <div className="text-center pt-2">
+                          <p className="text-xs text-muted-foreground">
+                            Showing 10 of {articles.length} articles
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
