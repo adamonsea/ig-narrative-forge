@@ -14,16 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_usage: {
+        Row: {
+          cost_usd: number | null
+          created_at: string | null
+          id: string
+          job_run_id: string | null
+          operation: string
+          region: string | null
+          service_name: string
+          tokens_used: number | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string | null
+          id?: string
+          job_run_id?: string | null
+          operation: string
+          region?: string | null
+          service_name: string
+          tokens_used?: number | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string | null
+          id?: string
+          job_run_id?: string | null
+          operation?: string
+          region?: string | null
+          service_name?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_job_run_id_fkey"
+            columns: ["job_run_id"]
+            isOneToOne: false
+            referencedRelation: "job_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author: string | null
           body: string | null
+          canonical_url: string | null
+          content_checksum: string | null
+          copyright_flags: Json | null
           created_at: string
           id: string
           image_url: string | null
+          import_metadata: Json | null
           published_at: string | null
           region: string | null
           search: unknown | null
+          source_id: string | null
           source_url: string
           title: string
           updated_at: string
@@ -31,12 +77,17 @@ export type Database = {
         Insert: {
           author?: string | null
           body?: string | null
+          canonical_url?: string | null
+          content_checksum?: string | null
+          copyright_flags?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
+          import_metadata?: Json | null
           published_at?: string | null
           region?: string | null
           search?: unknown | null
+          source_id?: string | null
           source_url: string
           title: string
           updated_at?: string
@@ -44,15 +95,142 @@ export type Database = {
         Update: {
           author?: string | null
           body?: string | null
+          canonical_url?: string | null
+          content_checksum?: string | null
+          copyright_flags?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
+          import_metadata?: Json | null
           published_at?: string | null
           region?: string | null
           search?: unknown | null
+          source_id?: string | null
           source_url?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_sources: {
+        Row: {
+          canonical_domain: string | null
+          created_at: string | null
+          credibility_score: number | null
+          id: string
+          is_active: boolean | null
+          scraping_config: Json | null
+          source_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          canonical_domain?: string | null
+          created_at?: string | null
+          credibility_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          scraping_config?: Json | null
+          source_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          canonical_domain?: string | null
+          created_at?: string | null
+          credibility_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          scraping_config?: Json | null
+          source_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          enabled: boolean | null
+          flag_name: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          flag_name: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          flag_name?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      job_runs: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          input_data: Json | null
+          job_type: string
+          max_attempts: number | null
+          output_data: Json | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          input_data?: Json | null
+          job_type: string
+          max_attempts?: number | null
+          output_data?: Json | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          input_data?: Json | null
+          job_type?: string
+          max_attempts?: number | null
+          output_data?: Json | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -176,6 +354,39 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          function_name: string | null
+          id: string
+          level: string
+          message: string
+          request_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          level: string
+          message: string
+          request_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          level?: string
+          message?: string
+          request_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       visuals: {
         Row: {
           alt_text: string | null
@@ -219,7 +430,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_feature_enabled: {
+        Args: { flag_name: string }
+        Returns: boolean
+      }
+      log_event: {
+        Args: {
+          p_context?: Json
+          p_function_name?: string
+          p_level: string
+          p_message: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

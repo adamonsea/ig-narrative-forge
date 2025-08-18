@@ -1,1 +1,7 @@
 project_id = "fpoywkjgdapgjtdeooak"
+
+[functions.job-processor]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
