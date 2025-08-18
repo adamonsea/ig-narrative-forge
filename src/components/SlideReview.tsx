@@ -211,7 +211,7 @@ export const SlideReview = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {story.status === 'approved' && (
+                        {(story.status === 'approved' || story.status === 'published') && (
                           <Button
                             size="sm"
                             variant="ghost"
