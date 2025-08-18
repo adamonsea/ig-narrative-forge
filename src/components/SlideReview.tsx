@@ -62,7 +62,7 @@ export const SlideReview = () => {
         .from('stories')
         .select(`
           *,
-          articles:article_id (
+          articles (
             id,
             title,
             author,

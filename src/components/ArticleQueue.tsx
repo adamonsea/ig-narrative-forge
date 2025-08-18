@@ -44,16 +44,16 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
     try {
       setLoading(true);
       
-      // Get articles that haven't been processed into slides yet
+      // Get articles that haven't been processed into slides yet and aren't rejected
       const { data: articles, error: articlesError } = await supabase
         .from('articles')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (articlesError) throw articlesError;
 
-      // Filter out articles that already have stories
+      // Filter out articles that already have stories or are rejected
       const { data: stories, error: storiesError } = await supabase
         .from('stories')
         .select('article_id');
@@ -62,10 +62,45 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
 
       const processedArticleIds = new Set(stories?.map(s => s.article_id) || []);
       const pendingArticles = articles?.filter(article => 
-        !processedArticleIds.has(article.id)
+        !processedArticleIds.has(article.id) && 
+        !(article.import_metadata as any)?.rejected
       ) || [];
 
-      setArticles(pendingArticles);
+      // Detect and sort reviews to bottom
+      const isReview = (article: Article) => {
+        const title = article.title.toLowerCase();
+        const body = article.body?.toLowerCase() || '';
+        
+        return title.includes('review') || 
+               title.includes('theatre') || 
+               title.includes('theater') ||
+               title.includes('film') ||
+               title.includes('movie') ||
+               title.includes('cinema') ||
+               title.includes('play') ||
+               title.includes('performance') ||
+               body.includes('stars out of') ||
+               body.includes('rating:') ||
+               body.includes('★') ||
+               /\d\/\d+/.test(title); // patterns like "4/5"
+      };
+
+      // Sort articles: non-reviews first (by relevance), then reviews at bottom
+      const sortedArticles = pendingArticles.sort((a, b) => {
+        const aIsReview = isReview(a);
+        const bIsReview = isReview(b);
+        
+        // If one is review and other isn't, non-review goes first
+        if (aIsReview && !bIsReview) return 1;
+        if (!aIsReview && bIsReview) return -1;
+        
+        // Both same type, sort by relevance score (higher first)
+        const aScore = (a.import_metadata as any)?.eastbourne_relevance_score || 0;
+        const bScore = (b.import_metadata as any)?.eastbourne_relevance_score || 0;
+        return bScore - aScore;
+      });
+
+      setArticles(sortedArticles);
     } catch (error: any) {
       console.error('Error loading articles:', error);
       toast({
@@ -115,11 +150,23 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
 
   const rejectArticle = async (articleId: string) => {
     try {
+      // Get current metadata and merge with rejection flag
+      const { data: currentArticle, error: fetchError } = await supabase
+        .from('articles')
+        .select('import_metadata')
+        .eq('id', articleId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentMetadata = (currentArticle?.import_metadata as any) || {};
+      
       // Mark as rejected by adding a flag to import_metadata
       const { error } = await supabase
         .from('articles')
         .update({
           import_metadata: { 
+            ...currentMetadata,
             rejected: true, 
             rejected_at: new Date().toISOString() 
           }
@@ -133,7 +180,9 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
         description: 'Article removed from queue',
       });
 
-      await loadPendingArticles();
+      // Immediately remove from local state for instant UI update
+      setArticles(articles.filter(article => article.id !== articleId));
+      
     } catch (error: any) {
       console.error('Error rejecting article:', error);
       toast({
@@ -182,11 +231,14 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
           ) : (
             <div className="space-y-4">
               {articles.map((article) => {
-                const relevanceScore = article.import_metadata?.eastbourne_relevance_score || 0;
+                const relevanceScore = (article.import_metadata as any)?.eastbourne_relevance_score || 0;
                 const isProcessing = processingArticle === article.id;
+                const isReview = article.title.toLowerCase().includes('review') || 
+                               article.title.toLowerCase().includes('theatre') ||
+                               article.title.toLowerCase().includes('film');
                 
                 return (
-                  <div key={article.id} className="p-4 border rounded-lg space-y-3">
+                  <div key={article.id} className={`p-4 border rounded-lg space-y-3 ${isReview ? 'bg-yellow-50 border-yellow-200' : ''}`}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">
@@ -200,6 +252,11 @@ export const ArticleQueue = ({ onRefresh }: ArticleQueueProps) => {
                               {relevanceScore}
                             </span>
                           </div>
+                          {isReview && (
+                            <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                              Review
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
