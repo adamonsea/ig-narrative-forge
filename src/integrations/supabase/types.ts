@@ -55,60 +55,123 @@ export type Database = {
           },
         ]
       }
+      article_duplicates: {
+        Row: {
+          created_at: string
+          detection_method: string
+          duplicate_article_id: string
+          id: string
+          original_article_id: string
+          similarity_score: number
+        }
+        Insert: {
+          created_at?: string
+          detection_method: string
+          duplicate_article_id: string
+          id?: string
+          original_article_id: string
+          similarity_score: number
+        }
+        Update: {
+          created_at?: string
+          detection_method?: string
+          duplicate_article_id?: string
+          id?: string
+          original_article_id?: string
+          similarity_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_duplicates_duplicate_article_id_fkey"
+            columns: ["duplicate_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_duplicates_original_article_id_fkey"
+            columns: ["original_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author: string | null
           body: string | null
           canonical_url: string | null
+          category: string | null
           content_checksum: string | null
           copyright_flags: Json | null
           created_at: string
           id: string
           image_url: string | null
           import_metadata: Json | null
+          keywords: string[] | null
+          language: string | null
           published_at: string | null
+          reading_time_minutes: number | null
           region: string | null
           search: unknown | null
           source_id: string | null
           source_url: string
+          summary: string | null
+          tags: string[] | null
           title: string
           updated_at: string
+          word_count: number | null
         }
         Insert: {
           author?: string | null
           body?: string | null
           canonical_url?: string | null
+          category?: string | null
           content_checksum?: string | null
           copyright_flags?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
           import_metadata?: Json | null
+          keywords?: string[] | null
+          language?: string | null
           published_at?: string | null
+          reading_time_minutes?: number | null
           region?: string | null
           search?: unknown | null
           source_id?: string | null
           source_url: string
+          summary?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
+          word_count?: number | null
         }
         Update: {
           author?: string | null
           body?: string | null
           canonical_url?: string | null
+          category?: string | null
           content_checksum?: string | null
           copyright_flags?: Json | null
           created_at?: string
           id?: string
           image_url?: string | null
           import_metadata?: Json | null
+          keywords?: string[] | null
+          language?: string | null
           published_at?: string | null
+          reading_time_minutes?: number | null
           region?: string | null
           search?: unknown | null
           source_id?: string | null
           source_url?: string
+          summary?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
+          word_count?: number | null
         }
         Relationships: [
           {
@@ -122,33 +185,63 @@ export type Database = {
       }
       content_sources: {
         Row: {
+          articles_scraped: number | null
+          avg_response_time_ms: number | null
           canonical_domain: string | null
+          content_type: string | null
           created_at: string | null
           credibility_score: number | null
+          feed_url: string | null
           id: string
           is_active: boolean | null
+          is_blacklisted: boolean | null
+          is_whitelisted: boolean | null
+          last_scraped_at: string | null
+          region: string | null
+          scrape_frequency_hours: number | null
           scraping_config: Json | null
           source_name: string
+          success_rate: number | null
           updated_at: string | null
         }
         Insert: {
+          articles_scraped?: number | null
+          avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          content_type?: string | null
           created_at?: string | null
           credibility_score?: number | null
+          feed_url?: string | null
           id?: string
           is_active?: boolean | null
+          is_blacklisted?: boolean | null
+          is_whitelisted?: boolean | null
+          last_scraped_at?: string | null
+          region?: string | null
+          scrape_frequency_hours?: number | null
           scraping_config?: Json | null
           source_name: string
+          success_rate?: number | null
           updated_at?: string | null
         }
         Update: {
+          articles_scraped?: number | null
+          avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          content_type?: string | null
           created_at?: string | null
           credibility_score?: number | null
+          feed_url?: string | null
           id?: string
           is_active?: boolean | null
+          is_blacklisted?: boolean | null
+          is_whitelisted?: boolean | null
+          last_scraped_at?: string | null
+          region?: string | null
+          scrape_frequency_hours?: number | null
           scraping_config?: Json | null
           source_name?: string
+          success_rate?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -350,6 +443,69 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_filters: {
+        Row: {
+          created_at: string
+          description: string | null
+          filters: Json
+          id: string
+          is_public: boolean | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_public?: boolean | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      search_queries: {
+        Row: {
+          created_at: string
+          execution_time_ms: number | null
+          filters: Json | null
+          id: string
+          query_text: string
+          results_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          execution_time_ms?: number | null
+          filters?: Json | null
+          id?: string
+          query_text: string
+          results_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          execution_time_ms?: number | null
+          filters?: Json | null
+          id?: string
+          query_text?: string
+          results_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       slides: {
         Row: {
           alt_text: string | null
@@ -526,6 +682,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_duplicate_articles: {
+        Args: { p_article_id: string; p_similarity_threshold?: number }
+        Returns: {
+          detection_method: string
+          duplicate_id: string
+          similarity_score: number
+        }[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]

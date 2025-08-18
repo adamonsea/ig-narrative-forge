@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
+import { ContentManagement } from '@/components/ContentManagement';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin } = useAuth();
   const [systemHealth, setSystemHealth] = useState<any>(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showContentManagement, setShowContentManagement] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,6 +79,8 @@ const Index = () => {
 
         {showAdmin && isAdmin ? (
           <AdminPanel />
+        ) : showContentManagement ? (
+          <ContentManagement />
         ) : (
           <>
             {/* System Health Status */}
@@ -141,14 +145,20 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Ingest News</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Content Management
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Pull latest stories from RSS feeds and news APIs
+                    Import articles, manage sources, and organize content
                   </p>
-                  <Button className="w-full" disabled>
-                    Coming Soon
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setShowContentManagement(true)}
+                  >
+                    Open Content Manager
                   </Button>
                 </CardContent>
               </Card>
