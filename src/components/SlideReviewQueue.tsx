@@ -14,7 +14,9 @@ import {
   Sparkles,
   ArrowRight,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface Slide {
@@ -41,6 +43,7 @@ export const SlideReviewQueue = () => {
   const [loading, setLoading] = useState(true);
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadPendingStories();
@@ -191,6 +194,16 @@ export const SlideReviewQueue = () => {
     }
   };
 
+  const toggleStoryExpanded = (storyId: string) => {
+    const newExpanded = new Set(expandedStories);
+    if (newExpanded.has(storyId)) {
+      newExpanded.delete(storyId);
+    } else {
+      newExpanded.add(storyId);
+    }
+    setExpandedStories(newExpanded);
+  };
+
   const getWordCountBadge = (wordCount: number) => {
     if (wordCount <= 15) return <Badge variant="default" className="text-xs">Hook</Badge>;
     if (wordCount <= 30) return <Badge variant="secondary" className="text-xs">Body</Badge>;
@@ -234,13 +247,33 @@ export const SlideReviewQueue = () => {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-lg">{story.title}</CardTitle>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => toggleStoryExpanded(story.id)}
+                      className="p-1 h-auto"
+                    >
+                      {expandedStories.has(story.id) ? 
+                        <ChevronDown className="w-4 h-4" /> : 
+                        <ChevronRight className="w-4 h-4" />
+                      }
+                    </Button>
+                    <CardTitle className="text-lg cursor-pointer" onClick={() => toggleStoryExpanded(story.id)}>
+                      {story.title}
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 ml-7">
                     <Badge variant="secondary">{story.slides?.length || 0} slides</Badge>
                     <Badge variant="outline">
                       <Clock className="w-3 h-3 mr-1" />
                       {new Date(story.created_at).toLocaleDateString()}
                     </Badge>
+                    {!expandedStories.has(story.id) && story.slides && story.slides.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        "{story.slides[0].content.substring(0, 80)}..."
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -264,52 +297,54 @@ export const SlideReviewQueue = () => {
               </div>
             </CardHeader>
 
-            <CardContent>
-              {/* Slides Preview */}
-              <div className="space-y-3">
-                {story.slides && story.slides.length > 0 ? (
-                  story.slides.map((slide, index) => (
-                    <div key={slide.id} className="border rounded-lg p-4 bg-muted/30">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            Slide {slide.slide_number}
-                          </Badge>
-                          {getWordCountBadge(slide.word_count)}
-                          <span className="text-xs text-muted-foreground">
-                            {slide.word_count} words
-                          </span>
+            {expandedStories.has(story.id) && (
+              <CardContent>
+                {/* Slides Preview */}
+                <div className="space-y-3">
+                  {story.slides && story.slides.length > 0 ? (
+                    story.slides.map((slide, index) => (
+                      <div key={slide.id} className="border rounded-lg p-4 bg-muted/30">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Slide {slide.slide_number}
+                            </Badge>
+                            {getWordCountBadge(slide.word_count)}
+                            <span className="text-xs text-muted-foreground">
+                              {slide.word_count} words
+                            </span>
+                          </div>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSlide(slide)}
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </Button>
                         </div>
                         
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditSlide(slide)}
-                        >
-                          <Edit3 className="w-3 h-3" />
-                        </Button>
+                        <p className="text-sm leading-relaxed">{slide.content}</p>
+                        
+                        {slide.alt_text && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            Alt text: {slide.alt_text}
+                          </p>
+                        )}
                       </div>
-                      
-                      <p className="text-sm leading-relaxed">{slide.content}</p>
-                      
-                      {slide.alt_text && (
-                        <p className="text-xs text-muted-foreground mt-2 italic">
-                          Alt: {slide.alt_text}
-                        </p>
-                      )}
+                    ))
+                  ) : (
+                    <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg bg-muted/10">
+                      <AlertTriangle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium">No Slides Generated</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        This story has no slides. There may have been an error during generation.
+                      </p>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg bg-muted/10">
-                    <AlertTriangle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm font-medium">No Slides Generated</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This story has no slides. There may have been an error during generation.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
+                  )}
+                </div>
+              </CardContent>
+            )}
           </Card>
         ))}
 

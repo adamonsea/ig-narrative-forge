@@ -43,14 +43,19 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const loadArticles = async () => {
+    // Query for new articles only (not processed and not discarded)
     const { data, error } = await supabase
       .from('articles')
-      .select('*')
+      .select(`
+        *,
+        stories!left(id)
+      `)
+      .is('stories.id', null) // Only articles without associated stories (new/unprocessed)
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (error) {
-      console.error('Error loading articles:', error);
+      console.error('Error loading new articles:', error);
       setStats(prev => ({
         ...prev,
         articles: { count: 0, status: 'error', error: error.message }
@@ -275,16 +280,16 @@ const Index = () => {
               </Card>
             </div>
 
-            {/* Recent Articles */}
+            {/* New Articles */}
             {articles.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <FileText className="w-5 h-5" />
-                      Recent Articles ({articles.length})
+                      New Articles ({articles.length})
                     </span>
-                    <p className="text-sm text-muted-foreground">Sorted by Eastbourne relevance</p>
+                    <p className="text-sm text-muted-foreground">Newly scraped content awaiting validation</p>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

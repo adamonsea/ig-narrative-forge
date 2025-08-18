@@ -21,7 +21,6 @@ interface Article {
 interface SlideContent {
   slideNumber: number;
   content: string;
-  visualPrompt: string;
   altText: string;
 }
 
@@ -154,7 +153,6 @@ serve(async (req) => {
       story_id: story.id,
       slide_number: slide.slideNumber,
       content: slide.content,
-      visual_prompt: slide.visualPrompt,
       alt_text: slide.altText
     }));
 
@@ -216,11 +214,12 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
 
 REQUIREMENTS:
 - Create exactly 4 slides from the article
-- Slide 1 (Hook): ≤15 words - Create curiosity gap, don't reveal the full story
-- Slide 2: ≤25 words - Build context 
-- Slide 3: ≤35 words - Deliver key information
-- Slide 4: ≤40 words - Strong takeaway or call-to-action
+- Slide 1 (Hook): ≤15 words - Use curiosity gaps, cliffhangers, or surprising facts
+- Slide 2: ≤25 words - Build context with social proof or urgency 
+- Slide 3: ≤35 words - Deliver key information with emotional triggers
+- Slide 4: ≤40 words - Strong CTA + source attribution (mention original publication)
 
+BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
 STYLE: Quick news bites, punchy and direct. Focus on the most essential information only.`;
 
       case 'indepth':
@@ -228,13 +227,14 @@ STYLE: Quick news bites, punchy and direct. Focus on the most essential informat
 
 REQUIREMENTS:
 - Create exactly 10-12 slides from the article
-- Slide 1 (Hook): ≤15 words - Create curiosity gap
-- Slide 2 (Background): ≤25 words - Set context
-- Slides 3-6: ≤30 words each - Key developments, details, quotes
-- Slides 7-9: ≤35 words each - Analysis, implications, community impact
-- Slide 10 (Future): ≤35 words - What happens next
-- Final slide: ≤40 words - Strong conclusion with call-to-action
+- Slide 1 (Hook): ≤15 words - Use psychological triggers: fear of missing out, surprise, controversy
+- Slide 2 (Background): ≤25 words - Set context with authority and credibility cues
+- Slides 3-6: ≤30 words each - Key developments with emotional resonance and local impact
+- Slides 7-9: ≤35 words each - Analysis with social proof and community relevance
+- Slide 10 (Future): ≤35 words - What happens next with urgency
+- Final slide: ≤40 words - Strong conclusion, CTA + source attribution
 
+BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
 STYLE: Comprehensive coverage with deep analysis. Include multiple perspectives, data points, and expert insights.`;
 
       default: // tabloid
@@ -242,12 +242,13 @@ STYLE: Comprehensive coverage with deep analysis. Include multiple perspectives,
 
 REQUIREMENTS:
 - Create exactly 8 slides from the article
-- Slide 1 (Hook): ≤15 words - Create curiosity gap, don't reveal the full story
-- Slide 2 (Context): ≤20 words - Set the scene
-- Slides 3-5: ≤30 words each - Build tension and deliver key developments
-- Slides 6-7: ≤35 words each - Impact and implications
-- Final slide: ≤40 words - Strong takeaway or call-to-action
+- Slide 1 (Hook): ≤15 words - Use powerful emotional hooks: shock, intrigue, local pride
+- Slide 2 (Context): ≤20 words - Set the scene with social proof and local connection
+- Slides 3-5: ≤30 words each - Build tension with contrast, before/after, us vs them
+- Slides 6-7: ≤35 words each - Impact with authority figures and community relevance
+- Final slide: ≤40 words - Strong takeaway, CTA + source attribution (e.g., "Source: Local News")
 
+BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
 STYLE: Detailed storytelling with dramatic tension. Focus on human interest and emotional impact.`;
     }
   };
@@ -255,16 +256,17 @@ STYLE: Detailed storytelling with dramatic tension. Focus on human interest and 
   const systemPrompt = `${getSlidePrompt(slideType)}
 
 UNIVERSAL GUIDELINES:
-- Use active voice and strong verbs
-- Create emotional connection with local relevance
-- Include specific details and numbers when available
-- End with clear takeaway or actionable insight
-- Maintain trustworthy, editorial tone
+- Use active voice and power words (exclusive, urgent, proven, secret, insider)
+- Create emotional connection with local relevance and community identity
+- Include specific details, numbers, and credible sources
+- Apply psychological triggers: scarcity, social proof, authority, reciprocity
+- Build tension with "but," "however," "until now" transitions
+- Use inclusive language ("we," "us," "our community")
+- End final slide with source attribution and clear CTA
+- Maintain trustworthy, editorial tone throughout
 - Each slide should work standalone but flow together
 
-For each slide, also provide:
-1. Visual prompt for AI image generation (descriptive, editorial style)
-2. Alt text for accessibility
+TEXT-ONLY FOCUS: Generate engaging text content only. No visual elements needed.
 
 Return ONLY valid JSON with this structure:
 {
@@ -272,8 +274,7 @@ Return ONLY valid JSON with this structure:
     {
       "slideNumber": 1,
       "content": "Hook content here",
-      "visualPrompt": "Editorial style image showing...",
-      "altText": "Description for screen readers"
+      "altText": "Brief description for accessibility"
     }
   ]
 }`;
@@ -336,7 +337,7 @@ Create slides that capture the essence of this story while being engaging for so
     // Validate slide structure
     for (let i = 0; i < parsed.slides.length; i++) {
       const slide = parsed.slides[i];
-      if (!slide.slideNumber || !slide.content || !slide.visualPrompt || !slide.altText) {
+      if (!slide.slideNumber || !slide.content || !slide.altText) {
         console.error(`Invalid slide ${i}:`, slide);
         throw new Error(`Slide ${i} missing required properties`);
       }
