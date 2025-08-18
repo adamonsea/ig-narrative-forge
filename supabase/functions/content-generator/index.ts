@@ -210,46 +210,83 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   const getSlidePrompt = (type: string) => {
     switch (type) {
       case 'short':
-        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+        return `You are an expert investigative social media content creator who finds buried angles in news stories.
+
+ANGLE-MINING PRIORITY: Go beyond the headline and lead. Hunt for:
+- Surprising statistics or numbers that reveal unexpected scale/impact
+- Contradictions, ironies, or "what if" moments buried in the text
+- Emotional stakes or human drama not emphasized in original reporting
+- Timeline surprises (how fast/slow things happened vs expectations)
+- Stakeholder impacts not obvious in the main narrative
+- Geographic/local connections that aren't highlighted
+
+RUTHLESS CONTENT FILTERING: For SHORT format, DISCARD:
+- Standard background information and obvious context
+- Predictable details and conventional reporting elements
+- Anything that doesn't serve the core hook or emotional payoff
 
 REQUIREMENTS:
 - Create exactly 4 slides from the article
-- Slide 1 (Hook): ≤15 words - Use curiosity gaps, cliffhangers, or surprising facts
+- Slide 1 (Hook): ≤15 words - ONE killer buried angle that grabs attention
 - Slide 2: ≤25 words - Build context with social proof or urgency 
 - Slide 3: ≤35 words - Deliver key information with emotional triggers
 - Slide 4: ≤40 words - Strong CTA + source attribution (mention original publication)
 
 BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
-STYLE: Quick news bites, punchy and direct. Focus on the most essential information only.`;
+STYLE: Laser-focused on the most compelling hidden narrative thread.`;
 
       case 'indepth':
-        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+        return `You are an expert investigative social media content creator who uncovers buried angles in news stories.
+
+COMPREHENSIVE ANGLE-MINING: Dig deep for:
+- Multiple hidden hooks and secondary storylines buried in the content
+- Unexpected connections to past events or future implications
+- Contradictory perspectives or stakeholder conflicts not emphasized
+- Data points that tell a different story than the main narrative
+- Historical context that reveals patterns or ironies
+- Expert implications or analysis hidden in quotes
+
+CONTENT STRATEGY: Build narrative complexity with layered revelations.
 
 REQUIREMENTS:
 - Create exactly 10-12 slides from the article
-- Slide 1 (Hook): ≤15 words - Use psychological triggers: fear of missing out, surprise, controversy
+- Slide 1 (Hook): ≤15 words - Most compelling buried angle with psychological triggers
 - Slide 2 (Background): ≤25 words - Set context with authority and credibility cues
-- Slides 3-6: ≤30 words each - Key developments with emotional resonance and local impact
-- Slides 7-9: ≤35 words each - Analysis with social proof and community relevance
+- Slides 3-6: ≤30 words each - Layer multiple hidden angles with emotional resonance
+- Slides 7-9: ≤35 words each - Analysis of buried implications with social proof
 - Slide 10 (Future): ≤35 words - What happens next with urgency
 - Final slide: ≤40 words - Strong conclusion, CTA + source attribution
 
 BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
-STYLE: Comprehensive coverage with deep analysis. Include multiple perspectives, data points, and expert insights.`;
+STYLE: Multi-layered investigation revealing hidden complexity and implications.`;
 
       default: // tabloid
-        return `You are an expert social media content creator specializing in transforming news articles into engaging Instagram carousel slides.
+        return `You are an expert investigative social media content creator who finds sensational buried angles.
+
+SENSATIONAL ANGLE-MINING: Hunt aggressively for:
+- Shocking details or statistics buried deeper in the article
+- Human interest elements not emphasized in the lead
+- Dramatic contrasts, before/after scenarios, or "us vs them" dynamics
+- Emotional core or personal stakes hidden in factual reporting
+- Exclusive details that competitors might miss or underplay
+- Local connections or community impact buried in broader narrative
+
+AGGRESSIVE FILTERING: For TABLOID format, prioritize:
+- Dramatic revelation over standard information
+- Emotional impact over neutral facts
+- Community relevance over generic context
+- Personal stakes over institutional angles
 
 REQUIREMENTS:
 - Create exactly 8 slides from the article
-- Slide 1 (Hook): ≤15 words - Use powerful emotional hooks: shock, intrigue, local pride
-- Slide 2 (Context): ≤20 words - Set the scene with social proof and local connection
-- Slides 3-5: ≤30 words each - Build tension with contrast, before/after, us vs them
-- Slides 6-7: ≤35 words each - Impact with authority figures and community relevance
+- Slide 1 (Hook): ≤15 words - Most dramatic buried angle with shock value
+- Slide 2 (Context): ≤20 words - Set the scene with local connection and social proof
+- Slides 3-5: ≤30 words each - Build tension with dramatic contrasts and hidden conflicts
+- Slides 6-7: ≤35 words each - Impact with authority figures and community stakes
 - Final slide: ≤40 words - Strong takeaway, CTA + source attribution (e.g., "Source: Local News")
 
 BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
-STYLE: Detailed storytelling with dramatic tension. Focus on human interest and emotional impact.`;
+STYLE: Dramatic investigative storytelling that reveals hidden drama and tension.`;
     }
   };
 
