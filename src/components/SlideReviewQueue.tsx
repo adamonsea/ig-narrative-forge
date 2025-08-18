@@ -48,6 +48,7 @@ export const SlideReviewQueue = () => {
   const loadPendingStories = async () => {
     try {
       setLoading(true);
+      console.log('Loading pending stories (draft status)...');
       const { data, error } = await supabase
         .from('stories')
         .select(`
@@ -71,6 +72,7 @@ export const SlideReviewQueue = () => {
 
       if (error) throw error;
       
+      console.log('Loaded draft stories:', data?.length || 0);
       setStories(data || []);
     } catch (error) {
       console.error('Failed to load stories:', error);

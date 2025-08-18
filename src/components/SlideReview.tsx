@@ -106,6 +106,7 @@ export const SlideReview = () => {
 
   const handleReturnToReview = async (storyId: string) => {
     try {
+      console.log('Returning story to review:', storyId);
       const { error } = await supabase
         .from('stories')
         .update({ status: 'draft' })
@@ -113,9 +114,10 @@ export const SlideReview = () => {
 
       if (error) throw error;
 
+      console.log('Story returned successfully, refreshing data...');
       toast({
-        title: 'Story Returned',
-        description: 'Story returned to review queue',
+        title: 'Story Returned to Review',
+        description: 'Check the "Slide Review Queue" tab to review the story',
       });
 
       loadStories();
