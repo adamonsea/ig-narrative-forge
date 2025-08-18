@@ -104,6 +104,13 @@ serve(async (req) => {
           continue;
         }
 
+        // Check if article is relevant to Eastbourne
+        const isEastbourneRelevant = checkEastbourneRelevance(scrapedArticle, item);
+        if (!isEastbourneRelevant) {
+          console.log(`Skipping article - no Eastbourne relevance: ${scrapedArticle.title}`);
+          continue;
+        }
+
         const contentChecksum = await generateChecksum(scrapedArticle.fullText + scrapedArticle.title);
 
         // Insert new article with full content
@@ -250,6 +257,31 @@ async function generateChecksum(content: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function checkEastbourneRelevance(article: ScrapedArticle, rssItem: RSSItem): boolean {
+  const searchTerm = 'eastbourne';
+  
+  // Check in tags/categories
+  if (rssItem.category && rssItem.category.toLowerCase().includes(searchTerm)) {
+    return true;
+  }
+  
+  // Check in article content (title, headline, full text)
+  const contentToCheck = [
+    article.title,
+    article.headline, 
+    article.subheading,
+    article.fullText,
+    article.summary,
+    rssItem.description
+  ].filter(Boolean).join(' ').toLowerCase();
+  
+  if (contentToCheck.includes(searchTerm)) {
+    return true;
+  }
+  
+  return false;
 }
 
 async function scrapeFullArticle(url: string, rssData: any): Promise<ScrapedArticle> {
