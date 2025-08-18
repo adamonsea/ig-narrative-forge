@@ -8,14 +8,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface SystemHealth {
-  status: 'healthy' | 'unhealthy';
+  overall_status: 'healthy' | 'unhealthy';
   timestamp: string;
   services: {
-    database: 'up' | 'down';
-    job_queue: 'up' | 'down';
-    error_rate: number;
+    database: {
+      status: 'healthy' | 'unhealthy';
+      error?: string;
+    };
+    job_queue: {
+      status: 'healthy' | 'unhealthy';
+      pending_jobs: number;
+      error?: string;
+    };
+    error_rate: {
+      status: 'healthy' | 'unhealthy' | 'unknown';
+      recent_errors: number;
+      error?: string;
+    };
   };
-  pending_jobs: number;
 }
 
 interface JobRun {
@@ -169,7 +179,7 @@ export const AdminPanel = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            {systemHealth?.status === 'healthy' ? (
+            {systemHealth?.overall_status === 'healthy' ? (
               <CheckCircle className="h-4 w-4 text-green-600" />
             ) : (
               <AlertCircle className="h-4 w-4 text-red-600" />
@@ -177,8 +187,8 @@ export const AdminPanel = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              <Badge variant={getStatusBadgeVariant(systemHealth?.status || 'unknown')}>
-                {systemHealth?.status || 'Unknown'}
+              <Badge variant={getStatusBadgeVariant(systemHealth?.overall_status || 'unknown')}>
+                {String(systemHealth?.overall_status || 'Unknown')}
               </Badge>
             </div>
           </CardContent>
@@ -190,7 +200,7 @@ export const AdminPanel = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{systemHealth?.pending_jobs || 0}</div>
+            <div className="text-2xl font-bold">{systemHealth?.services?.job_queue?.pending_jobs ?? 0}</div>
           </CardContent>
         </Card>
 
@@ -316,8 +326,8 @@ export const AdminPanel = () => {
                   <div>
                     <label className="text-sm font-medium">Database</label>
                     <div className="mt-1">
-                      <Badge variant={getStatusBadgeVariant(systemHealth.services.database)}>
-                        {systemHealth.services.database}
+                      <Badge variant={getStatusBadgeVariant(systemHealth.services.database.status)}>
+                        {String(systemHealth.services.database.status)}
                       </Badge>
                     </div>
                   </div>
@@ -325,16 +335,16 @@ export const AdminPanel = () => {
                   <div>
                     <label className="text-sm font-medium">Job Queue</label>
                     <div className="mt-1">
-                      <Badge variant={getStatusBadgeVariant(systemHealth.services.job_queue)}>
-                        {systemHealth.services.job_queue}
+                      <Badge variant={getStatusBadgeVariant(systemHealth.services.job_queue.status)}>
+                        {String(systemHealth.services.job_queue.status)}
                       </Badge>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium">Error Rate</label>
+                    <label className="text-sm font-medium">Recent Errors</label>
                     <div className="mt-1 text-lg font-semibold">
-                      {(systemHealth.services.error_rate * 100).toFixed(2)}%
+                      {systemHealth.services.error_rate.recent_errors}
                     </div>
                   </div>
                   

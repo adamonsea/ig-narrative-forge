@@ -106,7 +106,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   System Health
-                  {systemHealth?.status === 'healthy' ? (
+                  {systemHealth?.overall_status === 'healthy' ? (
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   ) : (
                     <AlertCircle className="h-5 w-5 text-red-600" />
@@ -117,8 +117,8 @@ const Index = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      <Badge variant={systemHealth?.status === 'healthy' ? 'default' : 'destructive'}>
-                        {String(systemHealth?.status || 'Checking...')}
+                      <Badge variant={systemHealth?.overall_status === 'healthy' ? 'default' : 'destructive'}>
+                        {String(systemHealth?.overall_status || 'Checking...')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Overall Status</p>
@@ -126,8 +126,8 @@ const Index = () => {
                   
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      <Badge variant={systemHealth?.services?.database === 'up' ? 'default' : 'destructive'}>
-                        {String(systemHealth?.services?.database || 'Unknown')}
+                      <Badge variant={systemHealth?.services?.database?.status === 'healthy' ? 'default' : 'destructive'}>
+                        {String(systemHealth?.services?.database?.status || 'Unknown')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Database</p>
@@ -135,8 +135,8 @@ const Index = () => {
                   
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      <Badge variant={systemHealth?.services?.job_queue === 'up' ? 'default' : 'destructive'}>
-                        {String(systemHealth?.services?.job_queue || 'Unknown')}
+                      <Badge variant={systemHealth?.services?.job_queue?.status === 'healthy' ? 'default' : 'destructive'}>
+                        {String(systemHealth?.services?.job_queue?.status || 'Unknown')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">Job Queue</p>
@@ -144,9 +144,9 @@ const Index = () => {
                   
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      {typeof systemHealth?.pending_jobs === 'number' 
-                        ? systemHealth.pending_jobs 
-                        : (systemHealth?.pending_jobs ? String(systemHealth.pending_jobs) : 0)
+                      {typeof systemHealth?.services?.job_queue?.pending_jobs === 'number' 
+                        ? systemHealth.services.job_queue.pending_jobs
+                        : 0
                       }
                     </div>
                     <p className="text-sm text-muted-foreground">Pending Jobs</p>
