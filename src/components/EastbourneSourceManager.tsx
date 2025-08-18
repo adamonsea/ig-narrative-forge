@@ -1,0 +1,228 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Plus, Globe, AlertCircle, CheckCircle } from 'lucide-react';
+
+interface ContentSource {
+  id: string;
+  source_name: string;
+  canonical_domain: string | null;
+  is_active: boolean | null;
+  articles_scraped: number | null;
+  last_scraped_at: string | null;
+}
+
+interface EastbourneSourceManagerProps {
+  onSourcesChange: () => void;
+}
+
+export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceManagerProps) => {
+  const { toast } = useToast();
+  const [sources, setSources] = useState<ContentSource[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadSources();
+  }, []);
+
+  const loadSources = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('content_sources')
+        .select('id, source_name, canonical_domain, is_active, articles_scraped, last_scraped_at')
+        .eq('region', 'Eastbourne')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSources(data || []);
+    } catch (error) {
+      console.error('Failed to load sources:', error);
+    }
+  };
+
+  const extractDomainFromUrl = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return 'unknown-domain';
+    }
+  };
+
+  const handleAddSource = async () => {
+    if (!newUrl.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid website URL',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Ensure URL has protocol
+    let processedUrl = newUrl.trim();
+    if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+      processedUrl = 'https://' + processedUrl;
+    }
+
+    setLoading(true);
+    try {
+      const domain = extractDomainFromUrl(processedUrl);
+      
+      const { error } = await supabase
+        .from('content_sources')
+        .insert({
+          source_name: domain,
+          feed_url: processedUrl, // We'll use this for scraping the site
+          canonical_domain: domain,
+          region: 'Eastbourne', // Always Eastbourne
+          credibility_score: 70, // Default score
+          scrape_frequency_hours: 24, // Daily scraping
+          content_type: 'news',
+          is_active: true,
+          is_whitelisted: true,
+          is_blacklisted: false,
+        });
+
+      if (error) throw error;
+
+      // Start background scraping
+      supabase.functions.invoke('rss-scraper', {
+        body: {
+          feedUrl: processedUrl,
+          region: 'Eastbourne',
+        },
+      }).catch(err => {
+        console.error('Background scraping failed:', err);
+      });
+
+      toast({
+        title: 'Website Added',
+        description: 'Website added successfully. Articles will be scraped automatically.',
+      });
+
+      setNewUrl('');
+      await loadSources();
+      onSourcesChange();
+    } catch (error) {
+      console.error('Error adding source:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add website',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveSource = async (sourceId: string) => {
+    if (!confirm('Remove this website source?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('content_sources')
+        .delete()
+        .eq('id', sourceId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Website source removed',
+      });
+
+      await loadSources();
+      onSourcesChange();
+    } catch (error) {
+      console.error('Error removing source:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove source',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Add Website URL */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add Website Source
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter website URL (e.g., eastbourneherald.co.uk)"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddSource()}
+              disabled={loading}
+              className="flex-1"
+            />
+            <Button onClick={handleAddSource} disabled={loading || !newUrl.trim()}>
+              {loading ? 'Adding...' : 'Add'}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Add news websites to scrape articles from. All content will be tagged as Eastbourne region.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Active Sources */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Sources ({sources.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {sources.map((source) => (
+              <div key={source.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{source.canonical_domain}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant={source.is_active ? "default" : "secondary"} className="text-xs">
+                        {source.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <span>{source.articles_scraped || 0} articles</span>
+                      {source.last_scraped_at && (
+                        <span>• Last: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemoveSource(source.id)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            
+            {sources.length === 0 && (
+              <div className="text-center py-8">
+                <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  No website sources added yet. Add your first Eastbourne news source above.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
