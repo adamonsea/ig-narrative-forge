@@ -35,12 +35,20 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasOpenAIKey: !!openAIApiKey
+    });
+    
     if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
       throw new Error('Missing required environment variables');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { articleId } = await req.json();
+
+    console.log('Processing article ID:', articleId);
 
     if (!articleId) {
       throw new Error('Article ID is required');
@@ -53,9 +61,16 @@ serve(async (req) => {
       .eq('id', articleId)
       .single();
 
-    if (articleError || !article) {
+    if (articleError) {
+      console.error('Article fetch error:', articleError);
+      throw new Error(`Article not found: ${articleError.message}`);
+    }
+    
+    if (!article) {
       throw new Error('Article not found');
     }
+
+    console.log('Found article:', article.title);
 
     // Create story record
     const { data: story, error: storyError } = await supabase
@@ -68,12 +83,21 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (storyError || !story) {
+    if (storyError) {
+      console.error('Story creation error:', storyError);
+      throw new Error(`Failed to create story: ${storyError.message}`);
+    }
+    
+    if (!story) {
       throw new Error('Failed to create story');
     }
 
+    console.log('Created story:', story.id);
+
     // Generate slides using OpenAI
+    console.log('Generating slides with OpenAI...');
     const slides = await generateSlides(article, openAIApiKey);
+    console.log('Generated slides:', slides.length);
 
     // Save slides to database
     const slideInserts = slides.map(slide => ({
@@ -84,15 +108,18 @@ serve(async (req) => {
       alt_text: slide.altText
     }));
 
+    console.log('Inserting slides:', slideInserts.length);
     const { error: slidesError } = await supabase
       .from('slides')
       .insert(slideInserts);
 
     if (slidesError) {
-      throw new Error('Failed to save slides');
+      console.error('Slides insertion error:', slidesError);
+      throw new Error(`Failed to save slides: ${slidesError.message}`);
     }
 
     // Update story status
+    console.log('Updating story status to published...');
     const { error: updateError } = await supabase
       .from('stories')
       .update({ 
