@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import { ContentManagement } from '@/components/ContentManagement';
 import { TestingSuite } from '@/components/TestingSuite';
 
 const Index = () => {
-  const { user, loading, signOut, isAdmin } = useAuth();
+  const { user, loading, signOut, isAdmin, isSuperAdmin, userRole } = useAuth();
+  const navigate = useNavigate();
   const [systemHealth, setSystemHealth] = useState<any>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showContentManagement, setShowContentManagement] = useState(false);
@@ -21,6 +23,13 @@ const Index = () => {
   useEffect(() => {
     checkSystemHealth();
   }, []);
+
+  useEffect(() => {
+    // Redirect to auth if not logged in and not loading
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
   const checkSystemHealth = async () => {
     try {
@@ -52,6 +61,10 @@ const Index = () => {
     );
   }
 
+  if (!user) {
+    return null; // Will redirect to auth
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -60,7 +73,8 @@ const Index = () => {
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
               {user?.email}
-              {isAdmin && <Badge variant="secondary" className="ml-2">Admin</Badge>}
+              {isSuperAdmin && <Badge variant="destructive" className="ml-2">SuperAdmin</Badge>}
+              {isAdmin && !isSuperAdmin && <Badge variant="secondary" className="ml-2">Admin</Badge>}
             </span>
             {isAdmin && (
               <Button 
