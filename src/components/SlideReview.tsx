@@ -137,6 +137,10 @@ export const SlideReview = () => {
         return <Badge variant="outline">Draft</Badge>;
       case 'approved':
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Approved</Badge>;
+      case 'processing':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Processing</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
