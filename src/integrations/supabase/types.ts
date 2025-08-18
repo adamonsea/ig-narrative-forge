@@ -14,7 +14,206 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      articles: {
+        Row: {
+          author: string | null
+          body: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          published_at: string | null
+          region: string | null
+          search: unknown | null
+          source_url: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          region?: string | null
+          search?: unknown | null
+          source_url: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          region?: string | null
+          search?: unknown | null
+          source_url?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          platform: string
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          story_id: string
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          platform: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          story_id: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          platform?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          story_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slides: {
+        Row: {
+          alt_text: string | null
+          content: string
+          created_at: string
+          id: string
+          slide_number: number
+          story_id: string
+          updated_at: string
+          word_count: number
+        }
+        Insert: {
+          alt_text?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          slide_number: number
+          story_id: string
+          updated_at?: string
+          word_count?: number
+        }
+        Update: {
+          alt_text?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          slide_number?: number
+          story_id?: string
+          updated_at?: string
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slides_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stories: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stories_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: true
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visuals: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          slide_id: string
+          style_preset: string | null
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          slide_id: string
+          style_preset?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          slide_id?: string
+          style_preset?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visuals_slide_id_fkey"
+            columns: ["slide_id"]
+            isOneToOne: false
+            referencedRelation: "slides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
