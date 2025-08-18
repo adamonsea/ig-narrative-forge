@@ -68,7 +68,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setStories((data as Story[]) || []);
+      setStories((data as any) || []);
     } catch (error: any) {
       toast({
         title: "Error Loading Stories",

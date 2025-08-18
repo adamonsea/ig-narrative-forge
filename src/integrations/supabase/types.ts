@@ -331,10 +331,12 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          hashtags: Json | null
           id: string
           platform: string
           published_at: string | null
           scheduled_at: string | null
+          source_attribution: string | null
           status: string
           story_id: string
           updated_at: string
@@ -342,10 +344,12 @@ export type Database = {
         Insert: {
           caption?: string | null
           created_at?: string
+          hashtags?: Json | null
           id?: string
           platform: string
           published_at?: string | null
           scheduled_at?: string | null
+          source_attribution?: string | null
           status?: string
           story_id: string
           updated_at?: string
@@ -353,10 +357,12 @@ export type Database = {
         Update: {
           caption?: string | null
           created_at?: string
+          hashtags?: Json | null
           id?: string
           platform?: string
           published_at?: string | null
           scheduled_at?: string | null
+          source_attribution?: string | null
           status?: string
           story_id?: string
           updated_at?: string
@@ -553,24 +559,30 @@ export type Database = {
       stories: {
         Row: {
           article_id: string
+          author: string | null
           created_at: string
           id: string
+          publication_name: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
           article_id: string
+          author?: string | null
           created_at?: string
           id?: string
+          publication_name?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
           article_id?: string
+          author?: string | null
           created_at?: string
           id?: string
+          publication_name?: string | null
           status?: string
           title?: string
           updated_at?: string

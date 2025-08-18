@@ -28,13 +28,34 @@ interface Slide {
   story_id: string;
 }
 
+interface Article {
+  id: string;
+  title: string;
+  author?: string;
+  source_url: string;
+  region?: string;
+  publication_name?: string;
+}
+
+interface Post {
+  id: string;
+  caption?: string;
+  hashtags?: any; // Database returns JSON type
+  source_attribution?: string;
+  story_id: string;
+}
+
 interface Story {
   id: string;
   title: string;
   status: string;
   article_id: string;
   created_at: string;
+  publication_name?: string;
+  author?: string;
   slides: Slide[];
+  article?: Article;
+  posts?: Post[];
 }
 
 export const SlideReviewQueue = () => {
@@ -50,47 +71,42 @@ export const SlideReviewQueue = () => {
   }, []);
 
   const loadPendingStories = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      console.log('Loading pending stories (draft status)...');
-      const { data, error } = await supabase
+      const { data: stories, error } = await supabase
         .from('stories')
         .select(`
-          id,
-          title,
-          status,
-          article_id,
-          created_at,
-          slides (
+          *,
+          slides:slides(*),
+          article:articles!stories_article_id_fkey(
             id,
-            slide_number,
-            content,
-            alt_text,
-            word_count,
-            story_id
-          )
+            title,
+            author,
+            source_url,
+            region
+          ),
+          posts:posts(*)
         `)
         .eq('status', 'draft')
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      console.log('Loaded draft stories:', data?.length || 0);
-      if (data && data.length > 0) {
-        console.log('Stories with slide counts:', data.map(s => ({
-          id: s.id,
-          title: s.title,
-          slideCount: s.slides?.length || 0
-        })));
+      if (error) {
+        console.error('Error loading stories:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load pending stories",
+          variant: "destructive",
+        });
+        return;
       }
-      setStories(data || []);
+
+      setStories(stories || []);
     } catch (error) {
-      console.error('Failed to load stories:', error);
+      console.error('Error in loadPendingStories:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load slide queue',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load stories",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -240,61 +256,92 @@ export const SlideReviewQueue = () => {
         </div>
       </div>
 
-      {/* Stories Queue */}
       <div className="space-y-6">
         {stories.map((story) => (
           <Card key={story.id} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{story.title}</CardTitle>
+                <div className="flex gap-2">
+                  {story.article?.source_url && (
+                    <Button
+                      variant="outline"
                       size="sm"
-                      onClick={() => toggleStoryExpanded(story.id)}
-                      className="p-1 h-auto"
+                      asChild
                     >
-                      {expandedStories.has(story.id) ? 
-                        <ChevronDown className="w-4 h-4" /> : 
-                        <ChevronRight className="w-4 h-4" />
-                      }
+                      <a 
+                        href={story.article.source_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        Source
+                      </a>
                     </Button>
-                    <CardTitle className="text-lg cursor-pointer" onClick={() => toggleStoryExpanded(story.id)}>
-                      {story.title}
-                    </CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 ml-7">
-                    <Badge variant="secondary">{story.slides?.length || 0} slides</Badge>
-                    <Badge variant="outline">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {new Date(story.created_at).toLocaleDateString()}
-                    </Badge>
-                    {!expandedStories.has(story.id) && story.slides && story.slides.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        "{story.slides[0].content.substring(0, 80)}..."
-                      </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleStoryExpanded(story.id)}
+                  >
+                    {expandedStories.has(story.id) ? (
+                      <>
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight className="h-4 w-4 mr-1" />
+                        View Slides ({story.slides?.length || 0})
+                      </>
                     )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRejectStory(story.id)}
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Reject
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleApproveStory(story.id)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Approve
                   </Button>
                 </div>
               </div>
+              
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{story.slides?.length || 0} slides</span>
+                <span>Created {new Date(story.created_at).toLocaleDateString()}</span>
+                {story.publication_name && (
+                  <span className="flex items-center">
+                    <span className="text-primary font-medium">{story.publication_name}</span>
+                    {story.author && <span className="ml-1">by {story.author}</span>}
+                  </span>
+                )}
+              </div>
+              
+              {story.slides?.[0] && (
+                <div className="mt-2 p-3 bg-muted/50 rounded-md">
+                  <div className="text-sm font-medium">First slide preview:</div>
+                  <div className="text-sm mt-1">{story.slides[0].content}</div>
+                  {getWordCountBadge(story.slides[0].word_count)}
+                </div>
+              )}
+
+              {story.posts?.[0] && (
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md">
+                  <div className="text-sm font-medium text-blue-800 dark:text-blue-200">Social Media Post Copy:</div>
+                  <div className="text-sm mt-1 text-blue-700 dark:text-blue-300">
+                    {story.posts[0].caption?.substring(0, 200)}
+                    {story.posts[0].caption && story.posts[0].caption.length > 200 ? '...' : ''}
+                  </div>
+                   {story.posts[0].hashtags && Array.isArray(story.posts[0].hashtags) && story.posts[0].hashtags.length > 0 && (
+                     <div className="flex flex-wrap gap-1 mt-2">
+                       {story.posts[0].hashtags.slice(0, 5).map((tag: string, idx: number) => (
+                         <span key={idx} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                           #{tag}
+                         </span>
+                       ))}
+                       {story.posts[0].hashtags.length > 5 && (
+                         <span className="text-xs text-blue-600 dark:text-blue-400">
+                           +{story.posts[0].hashtags.length - 5} more
+                         </span>
+                       )}
+                     </div>
+                   )}
+                </div>
+              )}
             </CardHeader>
 
             {expandedStories.has(story.id) && (
@@ -345,6 +392,24 @@ export const SlideReviewQueue = () => {
                 </div>
               </CardContent>
             )}
+            
+            <div className="flex items-center justify-end gap-2 p-4 pt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleRejectStory(story.id)}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleApproveStory(story.id)}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Approve
+              </Button>
+            </div>
           </Card>
         ))}
 

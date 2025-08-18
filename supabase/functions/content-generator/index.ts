@@ -16,6 +16,7 @@ interface Article {
   category?: string;
   tags?: string[];
   summary?: string;
+  source_url: string;
 }
 
 interface SlideContent {
@@ -133,51 +134,95 @@ serve(async (req) => {
       });
     }
 
-    console.log('✅ Generated', slides.length, 'slides for article:', article.title);
+    console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
 
-    // Delete existing slides if story already existed
+    // Extract publication name from source URL
+    const publicationName = extractPublicationName(article.source_url);
+    console.log(`Extracted publication: ${publicationName}`);
+
+    // Generate social media post copy with hashtags
+    const postCopy = await generatePostCopy(article, publicationName, openAIApiKey);
+    console.log('Generated post copy:', postCopy);
+
+    // Delete any existing slides and posts for this story
     if (existingStory) {
-      console.log('Deleting existing slides for story:', story.id);
       const { error: deleteError } = await supabase
         .from('slides')
         .delete()
-        .eq('story_id', story.id);
+        .eq('story_id', existingStory.id);
       
       if (deleteError) {
-        console.error('Failed to delete existing slides:', deleteError);
+        console.error('Error deleting existing slides:', deleteError);
+      }
+
+      // Delete existing posts
+      const { error: deletePostError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('story_id', existingStory.id);
+      
+      if (deletePostError) {
+        console.error('Error deleting existing posts:', deletePostError);
       }
     }
 
-    // Save slides to database
-    const slideInserts = slides.map(slide => ({
-      story_id: story.id,
-      slide_number: slide.slideNumber,
-      content: slide.content,
-      alt_text: slide.altText
-    }));
-
-    console.log('Inserting slides:', slideInserts.length);
-    const { error: slidesError } = await supabase
+    // Insert the new slides
+    console.log(`Inserting slides: ${slides.length}`);
+    const { error: insertError } = await supabase
       .from('slides')
-      .insert(slideInserts);
+      .insert(
+        slides.map(slide => ({
+          story_id: story.id,
+          slide_number: slide.slideNumber,
+          content: slide.content,
+          visual_prompt: slide.visualPrompt || `Create an engaging visual for: ${slide.content}`,
+          alt_text: slide.altText,
+          word_count: slide.content.split(' ').length
+        }))
+      );
 
-    if (slidesError) {
-      console.error('Slides insertion error:', slidesError);
-      throw new Error(`Failed to save slides: ${slidesError.message}`);
+    if (insertError) {
+      console.error('Error inserting slides:', insertError);
+      throw new Error(`Failed to insert slides: ${insertError.message}`);
     }
 
-    // Update story status to draft for review
-    console.log('Updating story status to draft for review...');
-    const { error: updateError } = await supabase
+    // Update the story with publication info and source attribution
+    const sourceAttribution = article.author 
+      ? `Summarised from an article in ${publicationName}, by ${article.author}`
+      : `Summarised from an article in ${publicationName}`;
+
+    const { error: storyUpdateError } = await supabase
       .from('stories')
       .update({ 
-        status: 'draft'
+        status: 'draft',
+        publication_name: publicationName,
+        author: article.author
       })
       .eq('id', story.id);
 
-    if (updateError) {
-      console.error('Failed to update story status:', updateError);
+    if (storyUpdateError) {
+      console.error('Error updating story:', storyUpdateError);
+      throw new Error(`Failed to update story: ${storyUpdateError.message}`);
     }
+
+    // Create a post record with the generated content
+    const { error: postError } = await supabase
+      .from('posts')
+      .insert({
+        story_id: story.id,
+        platform: 'instagram', // Default to Instagram
+        caption: postCopy.caption,
+        hashtags: postCopy.hashtags,
+        source_attribution: sourceAttribution,
+        status: 'draft'
+      });
+
+    if (postError) {
+      console.error('Error creating post:', postError);
+      // Don't throw error for post creation as slides are more important
+    }
+
+    console.log('Updated story status to draft for review...');
 
     return new Response(
       JSON.stringify({ 
@@ -232,6 +277,11 @@ REQUIREMENTS:
 - Slide 3: ≤35 words - Deliver key information with emotional triggers
 - Slide 4: ≤40 words - Strong CTA + source attribution (mention original publication)
 
+FINAL SLIDE SOURCE FORMAT:
+Always end the final slide with proper attribution:
+"Summarised from an article in [Publication], by [Author]" (when author available)
+OR "Summarised from an article in [Publication]" (when no author)
+
 BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
 STYLE: Laser-focused on the most compelling hidden narrative thread.`;
 
@@ -256,6 +306,11 @@ REQUIREMENTS:
 - Slides 7-9: ≤35 words each - Analysis of buried implications with social proof
 - Slide 10 (Future): ≤35 words - What happens next with urgency
 - Final slide: ≤40 words - Strong conclusion, CTA + source attribution
+
+FINAL SLIDE SOURCE FORMAT:
+Always end the final slide with proper attribution:
+"Summarised from an article in [Publication], by [Author]" (when author available)
+OR "Summarised from an article in [Publication]" (when no author)
 
 BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
 STYLE: Multi-layered investigation revealing hidden complexity and implications.`;
@@ -283,7 +338,12 @@ REQUIREMENTS:
 - Slide 2 (Context): ≤20 words - Set the scene with local connection and social proof
 - Slides 3-5: ≤30 words each - Build tension with dramatic contrasts and hidden conflicts
 - Slides 6-7: ≤35 words each - Impact with authority figures and community stakes
-- Final slide: ≤40 words - Strong takeaway, CTA + source attribution (e.g., "Source: Local News")
+- Final slide: ≤40 words - Strong takeaway, CTA + source attribution
+
+FINAL SLIDE SOURCE FORMAT:
+Always end the final slide with proper attribution:
+"Summarised from an article in [Publication], by [Author]" (when author available)
+OR "Summarised from an article in [Publication]" (when no author)
 
 BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
 STYLE: Dramatic investigative storytelling that reveals hidden drama and tension.`;
@@ -384,5 +444,132 @@ Create slides that capture the essence of this story while being engaging for so
     console.error('JSON Parse error:', parseError);
     console.error('Raw OpenAI response content:', content);
     throw new Error(`Failed to parse AI response: ${parseError.message}`);
+  }
+}
+
+// Function to extract publication name from URL
+function extractPublicationName(sourceUrl: string): string {
+  try {
+    const url = new URL(sourceUrl);
+    const domain = url.hostname.toLowerCase();
+    
+    // Remove www. prefix if present
+    const cleanDomain = domain.replace(/^www\./, '');
+    
+    // Common publication mappings
+    const publicationMap: { [key: string]: string } = {
+      'theargus.co.uk': 'The Argus',
+      'sussexexpress.co.uk': 'Sussex Express',
+      'eastbourneherald.co.uk': 'The Herald',
+      'brightonandhovenews.org': 'Brighton & Hove News',
+      'hastingsobserver.co.uk': 'Hastings Observer',
+      'bbc.co.uk': 'BBC',
+      'bbc.com': 'BBC',
+      'theguardian.com': 'The Guardian',
+      'independent.co.uk': 'The Independent',
+      'telegraph.co.uk': 'The Telegraph',
+      'dailymail.co.uk': 'Daily Mail',
+      'mirror.co.uk': 'Daily Mirror'
+    };
+    
+    // Check for exact match first
+    if (publicationMap[cleanDomain]) {
+      return publicationMap[cleanDomain];
+    }
+    
+    // Try to extract from subdomain or path for news sites
+    if (domain.includes('bbc.')) {
+      return 'BBC';
+    }
+    
+    // Default formatting: capitalize first letters and remove .co.uk/.com etc
+    const baseName = cleanDomain
+      .replace(/\.(co\.uk|com|org|net|co)$/, '')
+      .split('.')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+    
+    return baseName || 'Local News Source';
+  } catch (error) {
+    console.error('Error extracting publication name:', error);
+    return 'Local News Source';
+  }
+}
+
+// Function to generate social media post copy with hashtags
+async function generatePostCopy(article: Article, publicationName: string, openAIApiKey: string) {
+  const systemPrompt = `You are a social media expert creating engaging Instagram captions for local news carousel posts. 
+
+  Create compelling post copy that:
+  - Starts with a hook that makes people want to swipe through the carousel
+  - Includes a brief summary of the key story points
+  - Ends with proper source attribution
+  - Includes relevant local hashtags for discovery
+  - Stays under 2000 characters (Instagram limit)
+  - Uses engaging, conversational tone
+
+  HASHTAG STRATEGY:
+  - Always include location-based hashtags for the region mentioned
+  - Add category hashtags (#LocalNews, #Community, etc.)
+  - Include 8-15 hashtags total
+  - Focus on Sussex/Eastbourne/Brighton area hashtags when relevant
+  
+  OUTPUT FORMAT:
+  Return valid JSON:
+  {
+    "caption": "The full Instagram caption text",
+    "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
+  }`;
+
+  const userPrompt = `Create Instagram post copy for this local news story:
+
+  Title: ${article.title}
+  Author: ${article.author || 'Not specified'}
+  Publication: ${publicationName}
+  Region: ${article.region || 'Sussex'}
+  Body: ${article.body}
+  
+  Include proper source attribution: "Summarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}"`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini-2025-08-07',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_completion_tokens: 1500,
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API response not ok:', response.status, response.statusText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Post copy OpenAI response:', data);
+
+    const content = data.choices[0].message.content;
+    const parsedResponse = JSON.parse(content);
+    
+    return {
+      caption: parsedResponse.caption,
+      hashtags: parsedResponse.hashtags || []
+    };
+  } catch (error) {
+    console.error('Error generating post copy:', error);
+    // Fallback post copy
+    return {
+      caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
+      hashtags: ['LocalNews', 'Sussex', 'Community', 'News']
+    };
   }
 }
