@@ -515,6 +515,7 @@ export type Database = {
           slide_number: number
           story_id: string
           updated_at: string
+          visual_prompt: string | null
           word_count: number
         }
         Insert: {
@@ -525,6 +526,7 @@ export type Database = {
           slide_number: number
           story_id: string
           updated_at?: string
+          visual_prompt?: string | null
           word_count?: number
         }
         Update: {
@@ -535,6 +537,7 @@ export type Database = {
           slide_number?: number
           story_id?: string
           updated_at?: string
+          visual_prompt?: string | null
           word_count?: number
         }
         Relationships: [
