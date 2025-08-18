@@ -117,7 +117,7 @@ export const SlideReview = () => {
       console.log('Story returned successfully, refreshing data...');
       toast({
         title: 'Story Returned to Review',
-        description: 'Check the "Slide Review Queue" tab to review the story',
+        description: 'Story moved to "Slide Review Queue" section above',
       });
 
       loadStories();
@@ -217,7 +217,7 @@ export const SlideReview = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {(story.status === 'approved' || story.status === 'published') && (
+                        {(story.status !== 'draft' && story.status !== 'processing') && (
                           <Button
                             size="sm"
                             variant="ghost"

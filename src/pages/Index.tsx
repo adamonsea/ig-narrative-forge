@@ -12,6 +12,7 @@ import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ArticleQueue } from '@/components/ArticleQueue';
 import { SlideReview } from '@/components/SlideReview';
+import { SlideReviewQueue } from '@/components/SlideReviewQueue';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
@@ -384,8 +385,20 @@ const Index = () => {
 
         {activeTab === 'slides' && (
           <div className="space-y-6">
-            <ArticleQueue onRefresh={loadArticles} />
-            <SlideReview />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Article Validation Queue</h2>
+                <ArticleQueue onRefresh={loadArticles} />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Slide Review Queue</h2>
+                <SlideReviewQueue />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Generated Slide Stories</h2>
+              <SlideReview />
+            </div>
           </div>
         )}
       </main>
