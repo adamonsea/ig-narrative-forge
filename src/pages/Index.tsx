@@ -37,9 +37,10 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('articles')
-        .select('id, title, author, region, category, word_count, reading_time_minutes, summary')
+        .select('id, title, author, region, category, word_count, reading_time_minutes, summary, created_at, source_url')
+        .eq('region', 'Eastbourne')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       
       if (error) throw error;
       setArticles(data || []);
@@ -159,20 +160,42 @@ const Index = () => {
             </div>
 
             {/* Main Workflow */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-8">
               {/* Website Sources */}
-              <div>
-                <EastbourneSourceManager 
-                  onSourcesChange={() => {
-                    loadArticles();
-                  }}
-                />
-              </div>
+              <EastbourneSourceManager 
+                onSourcesChange={() => {
+                  loadArticles();
+                }}
+              />
+
+              {/* Latest Articles */}
+              {articles.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Latest Eastbourne Articles ({articles.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {articles.slice(0, 5).map((article: any) => (
+                        <div key={article.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{article.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {article.author} • {new Date(article.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {article.word_count || 0} words
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Slide Review Queue */}
-              <div>
-                <SlideReviewQueue />
-              </div>
+              <SlideReviewQueue />
             </div>
 
             {/* Process Flow Indicator */}
