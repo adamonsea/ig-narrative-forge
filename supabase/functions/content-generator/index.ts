@@ -121,10 +121,20 @@ serve(async (req) => {
 
     console.log('Created story:', story.id);
 
+    console.log('🤖 Starting slide generation for article:', article.title);
+    
     // Generate slides using OpenAI
-    console.log('Generating slides with OpenAI...', 'Type:', slideType);
     const slides = await generateSlides(article, openAIApiKey, slideType);
-    console.log('Generated slides:', slides.length);
+
+    if (!slides || slides.length === 0) {
+      console.error('❌ No slides generated for article:', article.title);
+      return new Response(JSON.stringify({ error: 'Failed to generate slides' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('✅ Generated', slides.length, 'slides for article:', article.title);
 
     // Delete existing slides if story already existed
     if (existingStory) {

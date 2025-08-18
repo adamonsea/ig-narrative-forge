@@ -120,28 +120,35 @@ export const SlideReviewQueue = () => {
   };
 
   const handleRejectStory = async (storyId: string) => {
-    if (!confirm('Reject this story? It will be moved to rejected status.')) return;
-
     try {
-      const { error } = await supabase
+      // Delete the story and its slides instead of setting rejected status
+      // First delete associated slides
+      const { error: slidesError } = await supabase
+        .from('slides')
+        .delete()
+        .eq('story_id', storyId);
+
+      if (slidesError) throw slidesError;
+
+      // Then delete the story (this will return the article to validation queue)
+      const { error: storyError } = await supabase
         .from('stories')
-        .update({ status: 'rejected' })
+        .delete()
         .eq('id', storyId);
 
-      if (error) throw error;
-
+      if (storyError) throw storyError;
+      
+      setStories(stories.filter(story => story.id !== storyId));
       toast({
-        title: 'Story Rejected',
-        description: 'Story has been rejected',
+        title: "Story rejected",
+        description: "Story has been rejected and the article returned to validation queue.",
       });
-
-      loadPendingStories();
     } catch (error) {
-      console.error('Failed to reject story:', error);
+      console.error('Error rejecting story:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to reject story',
-        variant: 'destructive',
+        title: "Error", 
+        description: "Failed to reject story. Please try again.",
+        variant: "destructive",
       });
     }
   };
