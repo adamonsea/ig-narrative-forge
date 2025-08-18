@@ -10,7 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
 import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
-import { SlideGenerator } from '@/components/SlideGenerator';
+import { ArticleQueue } from '@/components/ArticleQueue';
+import { SlideReview } from '@/components/SlideReview';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
@@ -180,7 +181,7 @@ const Index = () => {
               className="flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              Generate Slides
+              Article Processing
             </Button>
             <Button
               variant={activeTab === 'content' ? 'default' : 'outline'}
@@ -383,7 +384,8 @@ const Index = () => {
 
         {activeTab === 'slides' && (
           <div className="space-y-6">
-            <SlideGenerator articles={articles} onRefresh={loadArticles} />
+            <ArticleQueue onRefresh={loadArticles} />
+            <SlideReview />
           </div>
         )}
       </main>

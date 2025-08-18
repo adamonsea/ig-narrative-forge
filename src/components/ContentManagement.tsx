@@ -259,31 +259,8 @@ export const ContentManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Main Content Tabs */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="import">Import</TabsTrigger>
-          <TabsTrigger value="sources">Sources</TabsTrigger>
-          <TabsTrigger value="search">Advanced Search</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="articles" className="mt-6">
-          <ArticleList articles={articles} loading={loading} onRefresh={loadArticles} />
-        </TabsContent>
-
-        <TabsContent value="import" className="mt-6">
-          <ArticleImport onImportComplete={loadArticles} />
-        </TabsContent>
-
-        <TabsContent value="sources" className="mt-6">
-          <SourceManager sources={sources} onSourcesChange={loadSources} />
-        </TabsContent>
-
-        <TabsContent value="search" className="mt-6">
-          <AdvancedSearch onSearchResults={setArticles} />
-        </TabsContent>
-      </Tabs>
+      {/* Sources Management */}
+      <SourceManager sources={sources} onSourcesChange={loadSources} />
     </div>
   );
 };
