@@ -12,7 +12,8 @@ import {
   MapPin,
   FileText,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw
 } from 'lucide-react';
 
 interface Article {
@@ -103,12 +104,39 @@ export const SlideReview = () => {
     return 'text-red-600';
   };
 
+  const handleReturnToReview = async (storyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .update({ status: 'draft' })
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Story Returned',
+        description: 'Story returned to review queue',
+      });
+
+      loadStories();
+    } catch (error) {
+      console.error('Failed to return story:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to return story to review',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
         return <Badge className="bg-green-500">Published</Badge>;
       case 'draft':
         return <Badge variant="outline">Draft</Badge>;
+      case 'approved':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Approved</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -183,6 +211,18 @@ export const SlideReview = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {story.status === 'approved' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleReturnToReview(story.id)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Return to Review
+                          </Button>
+                        )}
+                        
                         <Button
                           size="sm"
                           variant="outline"
