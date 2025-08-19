@@ -1030,6 +1030,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      reset_stalled_stories: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       set_limit: {
         Args: { "": number }
         Returns: number

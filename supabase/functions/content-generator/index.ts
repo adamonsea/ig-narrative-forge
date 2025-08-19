@@ -249,11 +249,50 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in content-generator function:', error);
+    console.error('❌ ERROR in content-generator function:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // If we have a story ID, reset its status to draft so it can be retried
+    if (story?.id) {
+      try {
+        console.log('🔄 Resetting story status to draft due to error...');
+        await supabase
+          .from('stories')
+          .update({ status: 'draft' })
+          .eq('id', story.id);
+      } catch (resetError) {
+        console.error('Failed to reset story status:', resetError);
+      }
+    }
+    
+    // Log detailed error for debugging
+    try {
+      await supabase
+        .from('system_logs')
+        .insert({
+          level: 'error',
+          message: `Content generation failed: ${error.message}`,
+          context: {
+            error_type: error.name,
+            error_message: error.message,
+            story_id: story?.id,
+            article_id: articleId
+          },
+          function_name: 'content-generator'
+        });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: error.message,
+        details: 'Story has been reset to draft status for retry'
       }),
       {
         status: 500,
