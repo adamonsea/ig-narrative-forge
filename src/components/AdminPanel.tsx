@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle, Clock, Database, Activity } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Database, Activity, RotateCcw, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -122,6 +122,56 @@ export const AdminPanel = () => {
     }
   };
 
+  const handleResetStuck = async () => {
+    try {
+      const response = await supabase.functions.invoke('reset-stuck-processing', {
+        body: { action: 'reset_stuck_processing' }
+      });
+      
+      if (response.error) throw response.error;
+      
+      toast({
+        title: "Processing Reset",
+        description: response.data?.message || "Stuck processing jobs have been reset successfully.",
+      });
+      
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error resetting stuck processing:', error);
+      toast({
+        title: "Reset Failed",
+        description: "Failed to reset stuck processing jobs.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearQueue = async () => {
+    try {
+      const response = await supabase.functions.invoke('reset-stuck-processing', {
+        body: { action: 'clear_stuck_queue' }
+      });
+      
+      if (response.error) throw response.error;
+      
+      toast({
+        title: "Queue Cleared",
+        description: response.data?.message || "Stuck queue items have been cleared successfully.",
+      });
+      
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing queue:', error);
+      toast({
+        title: "Clear Failed",
+        description: "Failed to clear stuck queue items.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -235,9 +285,29 @@ export const AdminPanel = () => {
         <TabsContent value="jobs" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Recent Job Runs</h3>
-            <Button onClick={triggerJobProcessor}>
-              Trigger Job Processor
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleResetStuck}
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Stuck Processing
+              </Button>
+              
+              <Button 
+                onClick={handleClearQueue}
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear Stuck Queue
+              </Button>
+              
+              <Button onClick={triggerJobProcessor}>
+                Trigger Job Processor
+              </Button>
+            </div>
           </div>
           
           <Card>
