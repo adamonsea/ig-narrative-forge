@@ -573,10 +573,33 @@ INSTRUCTIONS:
   const data = await response.json();
   console.log('OpenAI API response data:', JSON.stringify(data, null, 2));
   
-  const content = data.choices[0].message.content;
-  console.log('OpenAI content to parse:', content);
+  let content = data.choices[0].message.content;
+  console.log('Raw OpenAI response content:', content);
   
+  // Clean the response - extract only the JSON part
   try {
+    // Find the JSON object boundaries
+    const jsonStart = content.indexOf('{"slides"');
+    if (jsonStart === -1) {
+      throw new Error('No valid JSON structure found in response');
+    }
+    
+    // Find the end of the JSON by counting braces
+    let braceCount = 0;
+    let jsonEnd = jsonStart;
+    for (let i = jsonStart; i < content.length; i++) {
+      if (content[i] === '{') braceCount++;
+      if (content[i] === '}') braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+    
+    // Extract clean JSON
+    content = content.substring(jsonStart, jsonEnd);
+    console.log('Cleaned JSON content:', content);
+    
     const parsed = JSON.parse(content);
     console.log('Parsed OpenAI response:', parsed);
     
