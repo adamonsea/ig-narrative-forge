@@ -70,6 +70,7 @@ export const ContentManagement = () => {
       const { data, error } = await supabase
         .from('articles')
         .select('*')
+        .eq('processing_status', 'new') // Only show new articles
         .order('published_at', { ascending: false })
         .limit(50);
 
@@ -117,6 +118,7 @@ export const ContentManagement = () => {
       const { data, error } = await supabase
         .from('articles')
         .select('*')
+        .eq('processing_status', 'new') // Only search in new articles
         .textSearch('search', searchQuery)
         .order('published_at', { ascending: false })
         .limit(50);
@@ -221,7 +223,7 @@ export const ContentManagement = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today's Imports</p>
+                <p className="text-sm text-muted-foreground">Today's New Articles</p>
                 <p className="text-2xl font-bold">
                   {articles.filter(a => 
                     a.published_at && 
@@ -261,6 +263,22 @@ export const ContentManagement = () => {
 
       {/* Sources Management */}
       <SourceManager sources={sources} onSourcesChange={loadSources} />
+
+      {/* New Articles List */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">New Articles</h2>
+          <p className="text-sm text-muted-foreground">
+            Articles ready for processing into social media content
+          </p>
+        </div>
+        
+        <ArticleList 
+          articles={articles} 
+          loading={loading} 
+          onRefresh={loadArticles} 
+        />
+      </div>
     </div>
   );
 };

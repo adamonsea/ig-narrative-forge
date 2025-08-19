@@ -98,6 +98,12 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         throw new Error(data.error || 'Content generation failed');
       }
 
+      // Update article processing status to 'processed'
+      await supabase
+        .from('articles')
+        .update({ processing_status: 'processed' })
+        .eq('id', article.id);
+
       setGenerationProgress(75);
       setCurrentStory({
         id: data.storyId,

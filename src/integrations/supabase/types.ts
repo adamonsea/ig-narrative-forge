@@ -111,6 +111,7 @@ export type Database = {
           import_metadata: Json | null
           keywords: string[] | null
           language: string | null
+          processing_status: string
           published_at: string | null
           reading_time_minutes: number | null
           region: string | null
@@ -136,6 +137,7 @@ export type Database = {
           import_metadata?: Json | null
           keywords?: string[] | null
           language?: string | null
+          processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
           region?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           import_metadata?: Json | null
           keywords?: string[] | null
           language?: string | null
+          processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
           region?: string | null

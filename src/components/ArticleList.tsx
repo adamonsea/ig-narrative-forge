@@ -15,8 +15,17 @@ import {
   BookOpen, 
   Tag,
   Edit,
-  Eye
+  Eye,
+  MoreHorizontal,
+  XCircle,
+  Archive
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Article {
   id: string;
@@ -45,6 +54,54 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [updatedData, setUpdatedData] = useState<any>({});
+
+  const handleDiscardArticle = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Article discarded',
+      });
+
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to discard article',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleArchiveArticle = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'archived' })
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Article archived',
+      });
+
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to archive article',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleUpdateArticle = async () => {
     if (!editingArticle) return;
@@ -137,14 +194,40 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                     </span>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(article.source_url, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(article.source_url, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleDiscardArticle(article.id)}
+                        className="text-orange-600"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Discard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleArchiveArticle(article.id)}
+                        className="text-blue-600"
+                      >
+                        <Archive className="w-4 h-4 mr-2" />
+                        Archive
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2">

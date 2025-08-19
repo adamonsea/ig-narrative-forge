@@ -1,12 +1,25 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface ScrapingConfig {
+  method: 'rss' | 'api' | 'html';
+  url: string;
+  headers?: Record<string, string>;
+  retryAttempts: number;
+  timeout: number;
+}
+
+interface ScrapingResult {
+  success: boolean;
+  articles: any[];
+  errors: string[];
+}
 
 interface ScrapedArticle {
   title: string;
@@ -33,91 +46,67 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
     const { feedUrl, sourceId, region = 'Eastbourne' } = await req.json();
     
-    console.log(`Starting universal scrape for: ${feedUrl}`);
+    console.log(`Starting intelligent scrape for: ${feedUrl}`);
     const startTime = Date.now();
     
-    let articles: ScrapedArticle[] = [];
-    let scrapeMethod: 'rss' | 'web_scraping' | 'hybrid' = 'web_scraping';
+    // Get scraping configurations for this domain
+    const configs = await getScrapingConfig(feedUrl, supabase);
+    console.log(`Using ${configs.length} scraping configurations`);
     
-    // Try RSS first if the URL looks like an RSS feed
-    if (isRSSUrl(feedUrl)) {
-      console.log('Attempting RSS scraping...');
-      try {
-        articles = await scrapeRSSFeed(feedUrl);
-        scrapeMethod = 'rss';
-        console.log(`RSS scraping successful: ${articles.length} articles found`);
-      } catch (error) {
-        console.log(`RSS failed: ${error.message}, falling back to web scraping`);
-        articles = await scrapeWebsite(feedUrl);
-        scrapeMethod = 'hybrid';
-      }
-    } else {
-      // Direct web scraping for non-RSS URLs
-      console.log('Performing intelligent web scraping...');
-      articles = await scrapeWebsite(feedUrl);
+    // Attempt intelligent scraping with multiple strategies
+    const scrapeResult = await intelligentScrape(configs, openAIApiKey);
+    
+    if (!scrapeResult.success) {
+      throw new Error('All scraping methods failed');
     }
-
+    
+    console.log(`Found ${scrapeResult.articles.length} articles`);
+    
+    // Process articles with regional context enhancement
+    const processedArticles = await processArticlesWithRegionalContext(
+      scrapeResult.articles, 
+      sourceId, 
+      supabase, 
+      openAIApiKey
+    );
+    
+    // Store processed articles in database
     let articlesScraped = 0;
     const errors: string[] = [];
 
-    // Process and save articles
-    for (const article of articles) {
+    for (const article of processedArticles) {
       try {
-        // Check for existing article
+        // Check for existing article by URL
         const { data: existing } = await supabase
           .from('articles')
           .select('id')
-          .eq('source_url', article.url)
-          .single();
+          .eq('source_url', article.source_url)
+          .maybeSingle();
 
         if (existing) {
-          continue; // Skip duplicates
-        }
-
-        // Eastbourne relevance check
-        if (!checkEastbourneRelevance(article)) {
-          console.log(`Skipping non-Eastbourne article: ${article.title}`);
+          console.log(`Skipping duplicate article: ${article.title}`);
           continue;
         }
 
-        const relevanceScore = calculateRelevanceScore(article);
-        const contentChecksum = await generateChecksum(article.content + article.title);
-
-        // Insert article
+        // Insert article with processing_status = 'new'
         const { error: insertError } = await supabase
           .from('articles')
           .insert({
-            title: article.title.substring(0, 500),
-            body: article.content,
-            summary: article.summary?.substring(0, 500) || '',
-            author: article.author,
-            source_url: article.url,
-            canonical_url: normalizeUrl(article.url),
-            published_at: article.publishedDate || new Date().toISOString(),
-            region,
-            source_id: sourceId,
-            content_checksum: contentChecksum,
-            word_count: article.content.split(/\s+/).length,
-            reading_time_minutes: Math.ceil(article.content.split(/\s+/).length / 200),
-            image_url: article.imageUrl,
-            import_metadata: {
-              imported_from: 'universal_scraper',
-              scrape_method: scrapeMethod,
-              scraped_at: new Date().toISOString(),
-              eastbourne_relevance_score: relevanceScore
-            }
+            ...article,
+            processing_status: 'new' // Mark as new for dashboard filtering
           });
 
         if (insertError) {
           errors.push(`Failed to insert article "${article.title}": ${insertError.message}`);
         } else {
           articlesScraped++;
-          console.log(`Saved: ${article.title} (Relevance: ${relevanceScore})`);
+          console.log(`Saved: ${article.title}`);
         }
 
       } catch (error) {
@@ -125,28 +114,28 @@ serve(async (req) => {
       }
     }
 
-    // Update source stats
+    // Update source metrics
     if (sourceId) {
       const responseTime = Date.now() - startTime;
-      await updateSourceStats(supabase, sourceId, articlesScraped, responseTime, errors.length === 0);
+      await updateSourceMetrics(sourceId, errors.length === 0, 'intelligent', supabase);
     }
 
-    const result: ScrapeResult = {
+    const result = {
       success: true,
-      articlesFound: articles.length,
+      articlesFound: scrapeResult.articles.length,
       articlesScraped,
       errors,
-      method: scrapeMethod
+      method: 'intelligent'
     };
 
-    console.log(`Universal scrape completed: ${JSON.stringify(result)}`);
+    console.log(`Intelligent scrape completed: ${JSON.stringify(result)}`);
     
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Universal scraper error:', error);
+    console.error('Intelligent scraper error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -154,7 +143,7 @@ serve(async (req) => {
         articlesFound: 0,
         articlesScraped: 0,
         errors: [error.message],
-        method: 'unknown'
+        method: 'intelligent'
       }),
       {
         status: 500,
@@ -163,6 +152,450 @@ serve(async (req) => {
     );
   }
 });
+
+// Get domain-specific scraping configurations
+async function getScrapingConfig(sourceUrl: string, supabase: any): Promise<ScrapingConfig[]> {
+  const domain = new URL(sourceUrl).hostname.replace('www.', '');
+  
+  // Domain-specific configurations for key sources
+  const domainConfigs: Record<string, ScrapingConfig[]> = {
+    'bournefreelive.co.uk': [
+      {
+        method: 'rss',
+        url: 'https://bournefreelive.co.uk/feed/',
+        retryAttempts: 3,
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'LocalNewsBot/1.0 (Eastbourne News Aggregator)',
+          'Accept': 'application/rss+xml, application/xml, text/xml'
+        }
+      },
+      {
+        method: 'html',
+        url: sourceUrl,
+        retryAttempts: 2,
+        timeout: 20000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LocalNewsBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      }
+    ],
+    'itv.com': [
+      {
+        method: 'rss',
+        url: 'https://www.itv.com/news/meridian/feed.xml',
+        retryAttempts: 3,
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'LocalNewsBot/1.0',
+          'Accept': 'application/rss+xml, application/xml'
+        }
+      }
+    ],
+    'moreradio.online': [
+      {
+        method: 'html',
+        url: sourceUrl,
+        retryAttempts: 2,
+        timeout: 20000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LocalNewsBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      }
+    ],
+    'reuters.com': [
+      {
+        method: 'rss',
+        url: 'https://feeds.reuters.com/reuters/UKdomesticNews',
+        retryAttempts: 3,
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'LocalNewsBot/1.0',
+          'Accept': 'application/rss+xml, application/xml'
+        }
+      }
+    ]
+  };
+
+  // Return domain-specific config or default
+  return domainConfigs[domain] || [{
+    method: 'html',
+    url: sourceUrl,
+    retryAttempts: 2,
+    timeout: 15000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    }
+  }];
+}
+
+// Intelligent scraping with multiple strategies
+async function intelligentScrape(configs: ScrapingConfig[], openAIApiKey: string): Promise<ScrapingResult> {
+  const errors: string[] = [];
+  
+  for (const config of configs) {
+    try {
+      console.log(`Attempting ${config.method} scraping for: ${config.url}`);
+      
+      // Fetch with retries and proper error handling
+      let content = '';
+      for (let attempt = 1; attempt <= config.retryAttempts; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+          
+          const response = await fetch(config.url, {
+            headers: config.headers || {},
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          content = await response.text();
+          break;
+        } catch (error) {
+          console.log(`Attempt ${attempt} failed: ${error.message}`);
+          if (attempt === config.retryAttempts) {
+            throw error;
+          }
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        }
+      }
+      
+      // Parse content based on method
+      let articles: any[] = [];
+      switch (config.method) {
+        case 'rss':
+          articles = await parseRSSContent(content);
+          break;
+        case 'api':
+          articles = await parseAPIContent(content);
+          break;
+        case 'html':
+          articles = await parseHTMLContent(content, config.url, openAIApiKey);
+          break;
+      }
+      
+      if (articles.length > 0) {
+        console.log(`Successfully scraped ${articles.length} articles using ${config.method}`);
+        return { success: true, articles, errors };
+      }
+      
+    } catch (error) {
+      const message = `${config.method.toUpperCase()} scraping failed: ${error.message}`;
+      console.error(message);
+      errors.push(message);
+    }
+  }
+  
+  return { success: false, articles: [], errors };
+}
+
+// Parse RSS content
+async function parseRSSContent(content: string): Promise<any[]> {
+  const articles: any[] = [];
+  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  let match;
+  
+  while ((match = itemRegex.exec(content)) !== null) {
+    const itemContent = match[1];
+    
+    const title = extractXMLContent(itemContent, 'title');
+    const link = extractXMLContent(itemContent, 'link');
+    const description = extractXMLContent(itemContent, 'description');
+    const pubDate = extractXMLContent(itemContent, 'pubDate');
+    const author = extractXMLContent(itemContent, 'author') || extractXMLContent(itemContent, 'dc:creator');
+    
+    if (title && link) {
+      articles.push({
+        title: cleanHTML(title),
+        body: cleanHTML(description || ''),
+        source_url: link,
+        published_at: pubDate || new Date().toISOString(),
+        author: author ? cleanHTML(author) : null,
+        summary: description ? cleanHTML(description).substring(0, 200) + '...' : null
+      });
+    }
+  }
+  
+  return articles.slice(0, 10); // Limit to 10 most recent
+}
+
+// Parse API JSON content
+async function parseAPIContent(content: string): Promise<any[]> {
+  try {
+    const data = JSON.parse(content);
+    
+    // Try common API response structures
+    const articlesArray = data.articles || data.items || data.posts || data.data || 
+                         (Array.isArray(data) ? data : []);
+    
+    return articlesArray.slice(0, 10).map((item: any) => ({
+      title: item.title || item.headline || 'Untitled',
+      body: item.content || item.body || item.description || '',
+      source_url: item.url || item.link || item.permalink || '',
+      published_at: item.publishedAt || item.published_at || item.date || new Date().toISOString(),
+      author: item.author || item.byline || null,
+      summary: item.summary || item.excerpt || null
+    }));
+  } catch (error) {
+    console.error('Failed to parse API content:', error);
+    return [];
+  }
+}
+
+// Parse HTML content using AI
+async function parseHTMLContent(content: string, sourceUrl: string, openAIApiKey: string): Promise<any[]> {
+  try {
+    console.log('Using AI to extract articles from HTML...');
+    
+    // Clean and truncate HTML for AI processing
+    const cleanContent = content
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .substring(0, 8000); // Limit content size
+    
+    const prompt = `Extract news articles from this HTML content. Focus on finding articles relevant to Eastbourne or local UK news. Return a JSON array with this structure:
+    [
+      {
+        "title": "Article title",
+        "body": "Full article content (at least 100 words)",
+        "source_url": "Article URL",
+        "published_at": "Publication date (ISO format)",
+        "author": "Author name",
+        "summary": "Brief summary"
+      }
+    ]
+    
+    HTML content:
+    ${cleanContent}
+    
+    Source URL: ${sourceUrl}
+    
+    Return only valid JSON, no other text.`;
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        temperature: 0.1,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+    
+    const aiResult = await response.json();
+    const extractedArticles = JSON.parse(aiResult.choices[0].message.content);
+    
+    console.log(`AI extracted ${extractedArticles.length} articles`);
+    return extractedArticles.slice(0, 5); // Limit AI extractions
+    
+  } catch (error) {
+    console.error('AI HTML parsing failed:', error);
+    return [];
+  }
+}
+
+// Process articles with regional context enhancement
+async function processArticlesWithRegionalContext(
+  articles: any[], 
+  sourceId: string, 
+  supabase: any, 
+  openAIApiKey: string
+): Promise<any[]> {
+  const processedArticles: any[] = [];
+  
+  for (const article of articles) {
+    try {
+      // Enhance with regional context using AI
+      const enhancedArticle = await enhanceRegionalContext(article, openAIApiKey);
+      
+      // Calculate regional relevance score
+      const relevanceScore = calculateRegionalRelevance(enhancedArticle);
+      
+      // Only include articles with some relevance to the region
+      if (relevanceScore > 0) {
+        processedArticles.push({
+          title: enhancedArticle.title.substring(0, 500),
+          body: enhancedArticle.body,
+          summary: enhancedArticle.summary?.substring(0, 500) || null,
+          author: enhancedArticle.author,
+          source_url: enhancedArticle.source_url,
+          canonical_url: enhancedArticle.source_url,
+          published_at: enhancedArticle.published_at,
+          region: enhancedArticle.region || 'Eastbourne',
+          source_id: sourceId,
+          word_count: enhancedArticle.body ? enhancedArticle.body.split(/\s+/).length : 0,
+          reading_time_minutes: enhancedArticle.body ? Math.ceil(enhancedArticle.body.split(/\s+/).length / 200) : 0,
+          import_metadata: {
+            imported_from: 'intelligent_scraper',
+            scraped_at: new Date().toISOString(),
+            regional_relevance_score: relevanceScore,
+            ai_enhanced: true
+          }
+        });
+      } else {
+        console.log(`Skipping article with low regional relevance: ${article.title}`);
+      }
+    } catch (error) {
+      console.error(`Failed to process article: ${article.title}`, error);
+    }
+  }
+  
+  return processedArticles;
+}
+
+// Enhance article with regional context using AI
+async function enhanceRegionalContext(article: any, openAIApiKey: string): Promise<any> {
+  try {
+    const prompt = `Analyze this article and add regional context for Eastbourne/East Sussex area. If the article mentions local places, events, or people, highlight the regional significance. Return JSON with enhanced content:
+    
+    {
+      "title": "Enhanced title with regional context if relevant",
+      "body": "Enhanced body content with regional context added",
+      "summary": "Enhanced summary",
+      "region": "Eastbourne" or specific local area,
+      "regional_significance": "Brief explanation of why this matters locally",
+      "regional_relevance_score": 1-10 (how relevant to Eastbourne)
+    }
+    
+    Original article:
+    Title: ${article.title}
+    Content: ${article.body?.substring(0, 1000) || 'No content'}
+    
+    Return only valid JSON.`;
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.2,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+    
+    const aiResult = await response.json();
+    const enhancement = JSON.parse(aiResult.choices[0].message.content);
+    
+    return {
+      ...article,
+      title: enhancement.title || article.title,
+      body: enhancement.body || article.body,
+      summary: enhancement.summary || article.summary,
+      region: enhancement.region || 'Eastbourne',
+      regional_significance: enhancement.regional_significance,
+      ai_regional_relevance_score: enhancement.regional_relevance_score || 0
+    };
+    
+  } catch (error) {
+    console.error('Regional context enhancement failed:', error);
+    return article; // Return original if enhancement fails
+  }
+}
+
+// Calculate regional relevance score
+function calculateRegionalRelevance(article: any): number {
+  const searchText = `${article.title} ${article.body}`.toLowerCase();
+  let score = 0;
+  
+  // High relevance terms for Eastbourne
+  const eastbourneTerms = ['eastbourne', 'beachy head', 'eastbourne pier', 'eastbourne council'];
+  const eastSussexTerms = ['east sussex', 'sussex', 'brighton', 'hastings', 'lewes'];
+  const localTerms = ['local', 'residents', 'community', 'neighbourhood'];
+  
+  // Score based on term presence
+  eastbourneTerms.forEach(term => {
+    if (searchText.includes(term)) score += 10;
+  });
+  
+  eastSussexTerms.forEach(term => {
+    if (searchText.includes(term)) score += 5;
+  });
+  
+  localTerms.forEach(term => {
+    if (searchText.includes(term)) score += 2;
+  });
+  
+  // Bonus for title mentions
+  if (article.title.toLowerCase().includes('eastbourne')) score += 15;
+  
+  // Use AI score if available
+  if (article.ai_regional_relevance_score) {
+    score += article.ai_regional_relevance_score;
+  }
+  
+  return Math.min(score, 100); // Cap at 100
+}
+
+// Update source metrics
+async function updateSourceMetrics(sourceId: string, success: boolean, method: string, supabase: any) {
+  try {
+    const updates: any = {
+      last_scraped_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    if (success) {
+      updates.scraping_config = { last_successful_method: method };
+    }
+    
+    const { error } = await supabase
+      .from('content_sources')
+      .update(updates)
+      .eq('id', sourceId);
+    
+    if (error) {
+      console.error('Failed to update source metrics:', error);
+    }
+  } catch (error) {
+    console.error('Error updating source metrics:', error);
+  }
+}
+
+// Helper function to extract XML content
+function extractXMLContent(xml: string, tag: string): string {
+  const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+  const match = xml.match(regex);
+  return match ? match[1].trim().replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1') : '';
+}
+
+// Helper function to clean HTML
+function cleanHTML(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
 
 function isRSSUrl(url: string): boolean {
   const rssIndicators = [
