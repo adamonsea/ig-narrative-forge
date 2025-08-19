@@ -352,6 +352,60 @@ serve(async (req) => {
   }
 });
 
+// PHASE 2: Story Type Analysis
+function analyzeStoryType(title: string, body: string): {
+  type: 'breaking' | 'feature' | 'routine' | 'analysis',
+  significance: 'high' | 'medium' | 'low',
+  angles: string[]
+} {
+  const titleLower = title.toLowerCase();
+  const bodyLower = body.toLowerCase();
+  
+  // Breaking news indicators
+  const breakingKeywords = ['breaking', 'urgent', 'emergency', 'evacuation', 'arrest', 'crash', 'fire', 'shooting'];
+  const isBreaking = breakingKeywords.some(keyword => titleLower.includes(keyword));
+  
+  // Significance indicators
+  const highSignificanceWords = ['killed', 'died', 'death', 'critical', 'life-threatening', 'major', 'massive'];
+  const routineWords = ['urged', 'warning', 'appeal', 'reminder', 'advice'];
+  
+  const hasHighSignificance = highSignificanceWords.some(word => titleLower.includes(word));
+  const isRoutine = routineWords.some(word => titleLower.includes(word));
+  
+  // Story angles detection
+  const angles = [];
+  if (bodyLower.includes('social media') || bodyLower.includes('viral') || bodyLower.includes('tiktok') || bodyLower.includes('instagram')) {
+    angles.push('social media trend');
+  }
+  if (bodyLower.includes('technology') || bodyLower.includes('app') || bodyLower.includes('digital')) {
+    angles.push('technology impact');
+  }
+  if (bodyLower.includes('climate') || bodyLower.includes('environment') || bodyLower.includes('weather')) {
+    angles.push('environmental factor');
+  }
+  if (bodyLower.includes('community') || bodyLower.includes('local') || bodyLower.includes('residents')) {
+    angles.push('community impact');
+  }
+  if (bodyLower.includes('safety') || bodyLower.includes('warning') || bodyLower.includes('danger')) {
+    angles.push('public safety');
+  }
+  
+  // Determine story type
+  let type: 'breaking' | 'feature' | 'routine' | 'analysis';
+  if (isBreaking) type = 'breaking';
+  else if (isRoutine) type = 'routine';
+  else if (angles.length > 1) type = 'analysis';
+  else type = 'feature';
+  
+  // Determine significance
+  let significance: 'high' | 'medium' | 'low';
+  if (hasHighSignificance) significance = 'high';
+  else if (isRoutine) significance = 'low';
+  else significance = 'medium';
+  
+  return { type, significance, angles };
+}
+
 // Extract hook promises from headline for validation
 function extractHookPromises(headline: string): string[] {
   const promises: string[] = [];
@@ -438,31 +492,54 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   // Calculate temporal context
   const temporalContext = calculateTemporalContext(article.published_at);
   
-  const systemPrompt = `Create ${config.count} engaging news slides with ${config.style} tone.
+  // PHASE 1: Story Intelligence - Assess story type and significance
+  const storyTypeAnalysis = analyzeStoryType(article.title, article.body);
+  
+  const systemPrompt = `You are an expert news editor creating ${config.count} engaging slides with ${config.style} tone.
 
-CORE RULES:
-• Deliver headline promises with specific details
-• Use declarative, punchy statements (avoid rhetorical questions)
-• Include location by slide 2: "In [Location]..."
+EDITORIAL INTELLIGENCE:
+• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
+• TONE MATCHING: Match the story's natural gravity - don't over-dramatize routine incidents
+• CLEVER ANGLES: Look for modern themes, social trends, human interest, societal impact
+• SMART HOOKS: Find compelling angles beyond surface-level drama
+
+STORYTELLING RULES:
+• Hook promises must be fulfilled with specific, accurate details
+• Include location context by slide 2: "In [Location]..."
 • Replace temporal references: "yesterday (${temporalContext.yesterday})"
-• Flow with smooth transitions: "But then..." "Meanwhile..." "The twist..."
+• Use sophisticated transitions that match story flow
 • FINAL SLIDE MUST end with: "Summarised from ${publicationName}${article.author ? `, by ${article.author}` : ''}"
 
-STYLE: ${config.style} engagement, word limits per slide: ${config.wordLimits}
-SLIDES: ${config.count} slides total
+LANGUAGE GUIDELINES:
+• BREAKING NEWS: Direct, urgent, factual tone
+• FEATURES: Thoughtful analysis, explore deeper angles
+• ROUTINE INCIDENTS: Professional reporting, avoid sensationalism
+• Avoid generic exclamations like "Emergency Alert!" for minor stories
+• Use story-appropriate engagement, not clickbait language
+
+STRUCTURE: ${config.count} slides, word limits: ${config.wordLimits}
 
 Return JSON: {"slides": [{"slideNumber": 1, "content": "text", "altText": "description"}]}`;
 
-  // Calculate temporal context for user prompt
-  let userPrompt = `ARTICLE (Published: ${temporalContext.publication_date}):
+  // PHASE 2 & 3: Enhanced user prompt with story analysis
+  let userPrompt = `ARTICLE ANALYSIS:
+PUBLICATION: ${temporalContext.publication_date}
 TITLE: ${article.title}
+STORY TYPE: ${storyTypeAnalysis.type}
+SIGNIFICANCE: ${storyTypeAnalysis.significance}
+POTENTIAL ANGLES: ${storyTypeAnalysis.angles.join(', ')}
+
 CONTENT: ${article.body.substring(0, 1200)}
 
-Transform into ${config.count} slides. Replace relative dates with absolute dates in brackets.`;
+INSTRUCTIONS:
+• Transform into ${config.count} slides matching the story's natural importance level
+• Look for clever angles: social media trends, technology impact, generational shifts
+• Replace relative dates with absolute dates in brackets
+• Find the real human story beneath surface events`;
 
-  // Add temporal context and promise delivery requirements
+  // Add hook promise delivery requirements
   if (hookPromises && hookPromises.length > 0) {
-    userPrompt += `\n\nDELIVER PROMISES: ${hookPromises.join(', ')} - provide specific details.`;
+    userPrompt += `\n\nHOOK PROMISES TO DELIVER: ${hookPromises.join(', ')} - provide specific, accurate details that justify these promises.`;
   }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
