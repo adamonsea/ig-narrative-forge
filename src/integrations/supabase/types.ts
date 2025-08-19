@@ -1026,6 +1026,10 @@ export type Database = {
         }
         Returns: string
       }
+      reset_stalled_processing: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       set_limit: {
         Args: { "": number }
         Returns: number

@@ -32,7 +32,16 @@ serve(async (req) => {
     console.log('🤖 Starting automated scheduler run...');
     const startTime = Date.now();
     
-    // Get all due schedules
+    // 1. Reset stalled processing jobs first
+    console.log('🔧 Resetting stalled processing jobs...');
+    const { error: resetError } = await supabase.rpc('reset_stalled_processing');
+    if (resetError) {
+      console.error('❌ Error resetting stalled processing:', resetError);
+    } else {
+      console.log('✅ Stalled processing jobs reset successfully');
+    }
+    
+    // 2. Get all due schedules
     const { data: dueSchedules, error: scheduleError } = await supabase
       .from('scrape_schedules')
       .select(`

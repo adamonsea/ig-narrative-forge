@@ -93,6 +93,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+  const [isResettingStalled, setIsResettingStalled] = useState(false);
 
   // Edit slide state
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
@@ -104,6 +105,31 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     loadPendingArticles();
     loadStories();
   }, []);
+
+  const resetStalledProcessing = async () => {
+    setIsResettingStalled(true);
+    try {
+      const { error } = await supabase.rpc('reset_stalled_processing');
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Stalled processing jobs have been reset",
+      });
+      
+      // Reload stories to show updated status
+      loadStories();
+    } catch (error) {
+      console.error('Error resetting stalled processing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset stalled processing jobs",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingStalled(false);
+    }
+  };
 
   // Article queue functions
   const loadPendingArticles = async () => {
@@ -625,13 +651,22 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                 {/* Pending Review Section */}
                 {draftStories.length > 0 && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{draftStories.length} pending review</Badge>
-                      <Button variant="outline" size="sm" onClick={loadStories}>
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Refresh
-                      </Button>
-                    </div>
+                     <div className="flex items-center gap-2">
+                       <Badge variant="outline">{draftStories.length} pending review</Badge>
+                       <Button variant="outline" size="sm" onClick={loadStories}>
+                         <RotateCcw className="w-3 h-3 mr-1" />
+                         Refresh
+                       </Button>
+                       <Button 
+                         variant="outline" 
+                         size="sm" 
+                         onClick={resetStalledProcessing}
+                         disabled={isResettingStalled}
+                       >
+                         <RotateCcw className={`w-3 h-3 mr-1 ${isResettingStalled ? 'animate-spin' : ''}`} />
+                         Reset Stalled
+                       </Button>
+                     </div>
                     
                     {draftStories.map((story) => (
                       <Card key={story.id} className="border-orange-200">
