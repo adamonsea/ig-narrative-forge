@@ -11,6 +11,7 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
+import { ApprovedQueue } from '@/components/ApprovedQueue';
 import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
@@ -20,7 +21,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor' | 'analytics' | 'duplicates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'approved' | 'monitor' | 'analytics' | 'duplicates'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -44,14 +45,11 @@ const Index = () => {
   }, [user, loading, navigate]);
 
   const loadArticles = async () => {
-    // Query for new articles only (not processed and not discarded)
+    // Query for new articles only (using processing_status instead of story join)
     const { data, error } = await supabase
       .from('articles')
-      .select(`
-        *,
-        stories!left(id)
-      `)
-      .is('stories.id', null) // Only articles without associated stories (new/unprocessed)
+      .select('*')
+      .eq('processing_status', 'new') // Only truly unprocessed articles
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -197,6 +195,14 @@ const Index = () => {
             >
               <Sparkles className="w-4 h-4" />
               Article Processing
+            </Button>
+            <Button
+              variant={activeTab === 'approved' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('approved')}
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Approved Queue
             </Button>
             <Button
               variant={activeTab === 'duplicates' ? 'default' : 'outline'}
@@ -425,6 +431,12 @@ const Index = () => {
 
         {activeTab === 'slides' && (
           <ContentPipeline onRefresh={loadArticles} />
+        )}
+
+        {activeTab === 'approved' && (
+          <div className="space-y-6">
+            <ApprovedQueue />
+          </div>
         )}
 
         {activeTab === 'duplicates' && (

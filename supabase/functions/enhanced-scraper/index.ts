@@ -235,10 +235,22 @@ async function parseHTMLEnhanced(
   config: ScrapingConfig
 ): Promise<any[]> {
   
-  // Enhanced AI prompt for better content extraction
+  // Enhanced AI prompt with truncation detection for bournefreelive.co.uk
+  const domain = new URL(sourceUrl).hostname.toLowerCase();
+  const isBourneFreeLive = domain.includes('bournefreelive.co.uk');
+  
   const prompt = `You are an expert web scraper specializing in news content extraction. Extract full news articles from this HTML content.
 
-CRITICAL: For each article, extract the COMPLETE article text, not just summaries or excerpts. Look for:
+CRITICAL REQUIREMENTS:
+${isBourneFreeLive ? `
+SPECIAL HANDLING FOR BOURNEFREELIVE.CO.UK:
+- This site often truncates content with "[…]" or "[...]"
+- Look for the COMPLETE article content, not truncated versions
+- If you find truncated content ending with "[…]", "[...]", or "Read more", mark it as incomplete
+- Extract ALL available paragraphs and full story details
+- Minimum 200 words for substantial articles from this source
+` : ''}
+- Extract COMPLETE article text, not summaries or excerpts
 - Full article body content (multiple paragraphs)
 - Complete news stories, not just headlines or captions
 - Actual journalistic content with substantial word count
@@ -246,24 +258,27 @@ CRITICAL: For each article, extract the COMPLETE article text, not just summarie
 Source URL: ${sourceUrl}
 Content selectors to prioritize: ${config.contentSelector || 'article, .content, .post-content'}
 
-HTML Content (first 12000 chars):
-${content.substring(0, 12000)}
+HTML Content (first 15000 chars):
+${content.substring(0, 15000)}
 
 Requirements:
-1. Extract FULL article content (minimum 50 words per article)
+1. Extract FULL article content (minimum ${isBourneFreeLive ? '200' : '50'} words per article)
 2. Include complete paragraphs and details
-3. Avoid short captions, navigation text, or summaries
-4. Prioritize substantial news content
+3. Detect and flag truncated content (ending with [...], […], "Read more", etc.)
+4. Avoid short captions, navigation text, or summaries
+5. Prioritize substantial news content
 
 Return JSON format:
 {
   "articles": [
     {
       "title": "Full article title",
-      "body": "COMPLETE article content with all paragraphs and details - minimum 50 words",
+      "body": "COMPLETE article content with all paragraphs and details",
       "url": "article URL or source URL",
       "author": "author name if found",
-      "wordCount": estimated_word_count
+      "wordCount": estimated_word_count,
+      "isTruncated": false,
+      "qualityScore": 1-100_based_on_completeness_and_length
     }
   ]
 }`;
@@ -296,19 +311,43 @@ Return JSON format:
     const data = await response.json();
     const parsed = JSON.parse(data.choices[0].message.content);
     
-    return (parsed.articles || [])
-      .filter((article: any) => article.body && article.body.length > 50) // Minimum content length
-      .map((article: any) => ({
-        title: article.title,
-        body: article.body,
-        author: article.author || null,
-        source_url: article.url || sourceUrl,
-        published_at: new Date().toISOString(),
-        word_count: article.wordCount || article.body.split(/\s+/).length,
-        content_quality_score: Math.min(article.body.length / 10, 100),
-        extraction_attempts: 1
-      }))
+    const articles = (parsed.articles || [])
+      .filter((article: any) => {
+        const minLength = new URL(sourceUrl).hostname.includes('bournefreelive.co.uk') ? 200 : 50;
+        return article.body && article.body.length > minLength;
+      })
+      .map((article: any) => {
+        const wordCount = article.wordCount || article.body.split(/\s+/).length;
+        const isTruncated = article.isTruncated || 
+          article.body.includes('[…]') || 
+          article.body.includes('[...]') || 
+          article.body.toLowerCase().includes('read more');
+        
+        return {
+          title: article.title,
+          body: article.body,
+          author: article.author || null,
+          source_url: article.url || sourceUrl,
+          published_at: new Date().toISOString(),
+          word_count: wordCount,
+          content_quality_score: isTruncated ? Math.min(article.qualityScore || 30, 50) : Math.min(article.qualityScore || article.body.length / 10, 100),
+          extraction_attempts: 1,
+          import_metadata: {
+            is_truncated: isTruncated,
+            extraction_quality: article.qualityScore || 0,
+            source_domain: new URL(sourceUrl).hostname
+          }
+        };
+      })
       .slice(0, 10);
+
+    // Log truncated articles for debugging
+    const truncatedArticles = articles.filter(a => a.import_metadata.is_truncated);
+    if (truncatedArticles.length > 0) {
+      console.log(`Warning: Found ${truncatedArticles.length} potentially truncated articles from ${sourceUrl}`);
+    }
+
+    return articles;
       
   } catch (error) {
     console.error('Error parsing HTML with enhanced AI:', error);
