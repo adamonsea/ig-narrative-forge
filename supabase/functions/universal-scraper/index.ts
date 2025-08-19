@@ -354,18 +354,15 @@ async function parseRSSContent(content: string): Promise<any[]> {
   return articles.slice(0, 10); // Limit to 10 most recent
 }
 
-// Parse RSS with enhanced full content extraction
+// Enhanced RSS content parsing with full article extraction
 async function parseRSSEnhancedContent(content: string, openAIApiKey: string): Promise<any[]> {
   const articles: any[] = [];
-  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
-  let match;
+  const urlsToFetch: any[] = [];
   
-  const urlsToFetch: Array<{title: string, url: string, description: string, pubDate: string, author: string | null}> = [];
+  // Parse RSS feed items
+  const items = content.split('<item>').slice(1);
   
-  // First pass: extract article URLs from RSS
-  while ((match = itemRegex.exec(content)) !== null) {
-    const itemContent = match[1];
-    
+  for (const itemContent of items.slice(0, 5)) { // Process top 5 items
     const title = extractXMLContent(itemContent, 'title');
     const link = extractXMLContent(itemContent, 'link');
     const description = extractXMLContent(itemContent, 'description');
@@ -383,60 +380,193 @@ async function parseRSSEnhancedContent(content: string, openAIApiKey: string): P
     }
   }
   
-  // Second pass: fetch full content from each article URL
-  for (const item of urlsToFetch.slice(0, 5)) { // Limit to 5 to avoid overwhelming
-    try {
-      const response = await fetch(item.url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; LocalNewsBot/1.0)',
-          'Accept': 'text/html,application/xhtml+xml'
-        }
-      });
+  // Enhanced content extraction with retry logic
+  for (const item of urlsToFetch) {
+    let fullContent = '';
+    let attempts = 0;
+    const maxAttempts = 2;
+    
+    while (attempts < maxAttempts && (!fullContent || fullContent.length < 200)) {
+      attempts++;
       
-      if (response.ok) {
-        const htmlContent = await response.text();
-        const fullContent = await extractFullArticleContent(htmlContent, openAIApiKey);
+      try {
+        console.log(`Fetching full content for: ${item.title} (attempt ${attempts})`);
         
-        articles.push({
-          title: item.title,
-          body: fullContent || item.description, // Fallback to RSS description if extraction fails
-          source_url: item.url,
-          published_at: item.pubDate,
-          author: item.author,
-          summary: item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description
+        const response = await fetch(item.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          signal: AbortSignal.timeout(30000) // 30 second timeout
         });
+        
+        if (response.ok) {
+          const htmlContent = await response.text();
+          fullContent = await extractFullArticleContent(htmlContent, openAIApiKey);
+          
+          if (fullContent && fullContent.length > 200) {
+            console.log(`Successfully extracted ${fullContent.length} characters for: ${item.title}`);
+            break; // Success, exit retry loop
+          } else {
+            console.log(`Extraction attempt ${attempts} yielded ${fullContent?.length || 0} characters`);
+          }
+        } else {
+          console.log(`HTTP ${response.status} for ${item.url}`);
+        }
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed for ${item.url}: ${error.message}`);
       }
-    } catch (error) {
-      console.log(`Failed to fetch full content for ${item.url}: ${error.message}`);
-      // Fallback to RSS description
-      articles.push({
-        title: item.title,
-        body: item.description,
-        source_url: item.url,
-        published_at: item.pubDate,
-        author: item.author,
-        summary: item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description
-      });
+      
+      // Brief delay between retries
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
+    
+    // Use the best content we got, or fallback to description
+    const finalContent = (fullContent && fullContent.length > 200) ? fullContent : item.description;
+    
+    articles.push({
+      title: item.title,
+      body: finalContent,
+      source_url: item.url,
+      published_at: item.pubDate,
+      author: item.author,
+      summary: item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description
+    });
+    
+    console.log(`Final article length for "${item.title}": ${finalContent.length} characters`);
   }
   
   return articles;
 }
 
-// Extract full article content from HTML page
+// Extract full article content from HTML page with multiple strategies
 async function extractFullArticleContent(html: string, openAIApiKey: string): Promise<string> {
-  const prompt = `Extract the complete main article content from this HTML page. 
+  // Strategy 1: Advanced AI extraction with better model
+  const advancedExtraction = await tryAdvancedAIExtraction(html, openAIApiKey);
+  if (advancedExtraction && advancedExtraction.length > 200) {
+    return advancedExtraction;
+  }
 
-CRITICAL INSTRUCTIONS:
-- Extract ONLY the main article body text, ignore all navigation, sidebars, ads, comments, related articles sections
-- If the article is broken up by images or other elements, reconstruct the complete flowing text
-- Combine all article paragraphs into one continuous text, maintaining the original order
-- Ignore any content from secondary columns, widget areas, or promotional sections
-- Focus on the primary content area that contains the actual news story
-- Return the complete article as clean, flowing text without HTML tags
+  // Strategy 2: Structured extraction targeting common article patterns
+  const structuredExtraction = await tryStructuredExtraction(html, openAIApiKey);
+  if (structuredExtraction && structuredExtraction.length > 200) {
+    return structuredExtraction;
+  }
+
+  // Strategy 3: Fallback to basic extraction
+  const basicExtraction = await tryBasicExtraction(html, openAIApiKey);
+  return basicExtraction || '';
+}
+
+// Advanced AI extraction with GPT-4 and comprehensive prompts
+async function tryAdvancedAIExtraction(html: string, openAIApiKey: string): Promise<string> {
+  const prompt = `You are an expert web content extractor. Extract the complete main article content from this HTML page.
+
+CRITICAL REQUIREMENTS:
+1. Extract ONLY the main news article text - ignore navigation, ads, comments, sidebars, headers, footers
+2. If the article is broken up by images, pull quotes, or other elements, reconstruct the complete flowing narrative
+3. Combine ALL article paragraphs maintaining their original sequence and flow
+4. Include any subheadings that are part of the main article structure
+5. Ignore any "Related articles", "You may also like", author bios, social sharing buttons
+6. Ignore any promotional content, newsletter signups, or advertisement text
+7. Return ONLY the article text as clean, readable content without HTML tags
+8. If you find multiple articles on the page, extract only the PRIMARY/MAIN article
+
+The content should read as one complete, coherent news article.
+
+HTML to extract from:
+${html.substring(0, 25000)}`; // Increased to 25k chars
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o', // Using more capable model
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 3000, // Increased token limit
+        temperature: 0.1
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const extracted = data.choices[0]?.message?.content?.trim() || '';
+    
+    console.log(`Advanced extraction result: ${extracted.length} characters`);
+    return extracted;
+  } catch (error) {
+    console.error('Advanced AI extraction failed:', error);
+    return '';
+  }
+}
+
+// Structured extraction targeting common article selectors
+async function tryStructuredExtraction(html: string, openAIApiKey: string): Promise<string> {
+  const prompt = `Extract the main article content using both visual cues and HTML structure analysis.
+
+EXTRACTION STRATEGY:
+1. Look for common article containers: <article>, <main>, .content, .post-content, .entry-content, .article-body
+2. Find the largest continuous text block that represents the main story
+3. If content is fragmented by images/ads, piece together all text that belongs to the main narrative
+4. Identify and combine all paragraphs that form the complete story
+5. Skip any sidebars, related content boxes, or promotional sections
+
+QUALITY CHECKS:
+- Ensure the extracted content tells a complete story from beginning to end
+- Include any article subheadings that structure the main content
+- The result should be significantly longer than just a summary or intro paragraph
 
 HTML content:
-${html.substring(0, 15000)}`; // Increased limit for complex layouts
+${html.substring(0, 20000)}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2500,
+        temperature: 0.2
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const extracted = data.choices[0]?.message?.content?.trim() || '';
+    
+    console.log(`Structured extraction result: ${extracted.length} characters`);
+    return extracted;
+  } catch (error) {
+    console.error('Structured extraction failed:', error);
+    return '';
+  }
+}
+
+// Basic extraction as final fallback
+async function tryBasicExtraction(html: string, openAIApiKey: string): Promise<string> {
+  const prompt = `Extract the main article text from this HTML. Focus on the primary news content and combine all paragraphs:
+
+${html.substring(0, 12000)}`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -458,9 +588,12 @@ ${html.substring(0, 15000)}`; // Increased limit for complex layouts
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content?.trim() || '';
+    const extracted = data.choices[0]?.message?.content?.trim() || '';
+    
+    console.log(`Basic extraction result: ${extracted.length} characters`);
+    return extracted;
   } catch (error) {
-    console.error('Failed to extract full content with AI:', error);
+    console.error('Basic extraction failed:', error);
     return '';
   }
 }
