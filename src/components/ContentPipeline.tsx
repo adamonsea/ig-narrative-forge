@@ -110,26 +110,17 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       setLoadingArticles(true);
       
+      // Only fetch articles with 'new' processing status
       const { data: articles, error: articlesError } = await supabase
         .from('articles')
         .select('*')
+        .eq('processing_status', 'new')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (articlesError) throw articlesError;
 
-      // Filter out articles that already have stories or are rejected
-      const { data: stories, error: storiesError } = await supabase
-        .from('stories')
-        .select('article_id');
-
-      if (storiesError) throw storiesError;
-
-      const processedArticleIds = new Set(stories?.map(s => s.article_id) || []);
-      const pendingArticles = articles?.filter(article => 
-        !processedArticleIds.has(article.id) && 
-        !(article.import_metadata as any)?.rejected
-      ) || [];
+      const pendingArticles = articles || [];
 
       // Sort articles: non-reviews first (by relevance), then reviews at bottom
       const isReview = (article: Article) => {
@@ -219,24 +210,11 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
   const rejectArticle = async (articleId: string) => {
     try {
-      const { data: currentArticle, error: fetchError } = await supabase
-        .from('articles')
-        .select('import_metadata')
-        .eq('id', articleId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentMetadata = (currentArticle?.import_metadata as any) || {};
-      
+      // Update processing status to 'discarded'
       const { error } = await supabase
         .from('articles')
         .update({
-          import_metadata: { 
-            ...currentMetadata,
-            rejected: true, 
-            rejected_at: new Date().toISOString() 
-          }
+          processing_status: 'discarded'
         })
         .eq('id', articleId);
 
@@ -244,9 +222,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       toast({
         title: 'Article Rejected',
-        description: 'Article removed from queue',
+        description: 'Article moved to discarded status',
       });
 
+      // Remove from local state
       setArticles(articles.filter(article => article.id !== articleId));
       
     } catch (error: any) {

@@ -11,6 +11,7 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
+import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
@@ -19,7 +20,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor' | 'analytics' | 'duplicates'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -196,6 +197,14 @@ const Index = () => {
             >
               <Sparkles className="w-4 h-4" />
               Article Processing
+            </Button>
+            <Button
+              variant={activeTab === 'duplicates' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('duplicates')}
+              className="flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Duplicates
             </Button>
             <Button
               variant={activeTab === 'content' ? 'default' : 'outline'}
@@ -416,6 +425,12 @@ const Index = () => {
 
         {activeTab === 'slides' && (
           <ContentPipeline onRefresh={loadArticles} />
+        )}
+
+        {activeTab === 'duplicates' && (
+          <div className="space-y-6">
+            <DuplicateDetection />
+          </div>
         )}
       </main>
     </div>

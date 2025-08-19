@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.scrape-monitor]
 verify_jwt = false
+
+[functions.duplicate-detector]
+verify_jwt = false
+
+[functions.enhanced-scraper]
+verify_jwt = false

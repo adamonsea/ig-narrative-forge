@@ -97,6 +97,60 @@ export type Database = {
           },
         ]
       }
+      article_duplicates_pending: {
+        Row: {
+          created_at: string
+          detection_method: string
+          duplicate_article_id: string
+          id: string
+          merged_at: string | null
+          merged_by: string | null
+          original_article_id: string
+          similarity_score: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detection_method: string
+          duplicate_article_id: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          original_article_id: string
+          similarity_score: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detection_method?: string
+          duplicate_article_id?: string
+          id?: string
+          merged_at?: string | null
+          merged_by?: string | null
+          original_article_id?: string
+          similarity_score?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_duplicates_pending_duplicate_article_id_fkey"
+            columns: ["duplicate_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_duplicates_pending_original_article_id_fkey"
+            columns: ["original_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author: string | null
@@ -104,13 +158,16 @@ export type Database = {
           canonical_url: string | null
           category: string | null
           content_checksum: string | null
+          content_quality_score: number | null
           copyright_flags: Json | null
           created_at: string
+          extraction_attempts: number | null
           id: string
           image_url: string | null
           import_metadata: Json | null
           keywords: string[] | null
           language: string | null
+          last_extraction_attempt: string | null
           processing_status: string
           published_at: string | null
           reading_time_minutes: number | null
@@ -130,13 +187,16 @@ export type Database = {
           canonical_url?: string | null
           category?: string | null
           content_checksum?: string | null
+          content_quality_score?: number | null
           copyright_flags?: Json | null
           created_at?: string
+          extraction_attempts?: number | null
           id?: string
           image_url?: string | null
           import_metadata?: Json | null
           keywords?: string[] | null
           language?: string | null
+          last_extraction_attempt?: string | null
           processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
@@ -156,13 +216,16 @@ export type Database = {
           canonical_url?: string | null
           category?: string | null
           content_checksum?: string | null
+          content_quality_score?: number | null
           copyright_flags?: Json | null
           created_at?: string
+          extraction_attempts?: number | null
           id?: string
           image_url?: string | null
           import_metadata?: Json | null
           keywords?: string[] | null
           language?: string | null
+          last_extraction_attempt?: string | null
           processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
@@ -903,6 +966,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      detect_article_duplicates: {
+        Args: { p_article_id: string }
+        Returns: {
+          detection_method: string
+          duplicate_id: string
+          similarity_score: number
+        }[]
+      }
       find_duplicate_articles: {
         Args: { p_article_id: string; p_similarity_threshold?: number }
         Returns: {
@@ -914,6 +985,26 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       has_role: {
         Args: {
@@ -934,6 +1025,18 @@ export type Database = {
           p_message: string
         }
         Returns: string
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
       }
       test_rss_import: {
         Args: { p_source_name?: string }
