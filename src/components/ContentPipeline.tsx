@@ -296,6 +296,49 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
+  const cancelQueuedJob = async (article: Article) => {
+    if (!article.queue_id) return;
+    
+    try {
+      // Remove the job from queue
+      const { error: deleteError } = await supabase
+        .from('content_generation_queue')
+        .delete()
+        .eq('id', article.queue_id);
+
+      if (deleteError) throw deleteError;
+
+      // Reset associated story back to draft if exists
+      const { error: resetError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        })
+        .eq('article_id', article.id);
+
+      if (resetError) {
+        console.warn('Could not reset story status:', resetError);
+      }
+
+      toast({
+        title: "Job Cancelled",
+        description: `Cancelled generation for "${article.title}" - returned to pipeline`,
+      });
+      
+      // Refresh both panels
+      loadQueuedArticles();
+      loadPendingArticles(); // Article should reappear in available articles
+    } catch (error: any) {
+      console.error('Error cancelling job:', error);
+      toast({
+        title: "Cancel Failed",
+        description: `Failed to cancel job: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetStalledProcessing = async () => {
     setIsResettingStalled(true);
     try {
@@ -807,8 +850,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             </div>
                             
                             <div className="flex justify-between items-center mt-2">
-                              <div>
-                                {article.is_stuck && (
+                              <div className="flex gap-2">
+                                {article.is_stuck ? (
                                   <Button
                                     size="sm"
                                     variant="destructive"
@@ -817,6 +860,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   >
                                     <Trash2 className="w-3 h-3" />
                                     Clear Stuck Job
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => cancelQueuedJob(article)}
+                                    className="flex items-center gap-1 text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  >
+                                    <X className="w-3 h-3" />
+                                    Cancel
                                   </Button>
                                 )}
                               </div>
