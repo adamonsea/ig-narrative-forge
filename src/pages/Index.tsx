@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink, Trash2, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,13 +12,14 @@ import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'monitor' | 'analytics'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -179,6 +180,14 @@ const Index = () => {
             >
               <FileText className="w-4 h-4" />
               Dashboard
+            </Button>
+            <Button
+              variant={activeTab === 'analytics' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('analytics')}
+              className="flex items-center gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
             </Button>
             <Button
               variant={activeTab === 'slides' ? 'default' : 'outline'}
@@ -375,6 +384,10 @@ const Index = () => {
               </Card>
             )}
           </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <AnalyticsDashboard />
         )}
 
         {activeTab === 'testing' && isAdmin && (

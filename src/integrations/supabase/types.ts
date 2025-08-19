@@ -377,6 +377,51 @@ export type Database = {
           },
         ]
       }
+      quality_reports: {
+        Row: {
+          analysis_data: Json | null
+          brand_safety_issues: Json | null
+          brand_safety_score: number
+          compliance_data: Json | null
+          content_quality_score: number
+          created_at: string
+          id: string
+          overall_score: number
+          recommendations: Json | null
+          regional_relevance_score: number
+          story_id: string
+          updated_at: string
+        }
+        Insert: {
+          analysis_data?: Json | null
+          brand_safety_issues?: Json | null
+          brand_safety_score?: number
+          compliance_data?: Json | null
+          content_quality_score?: number
+          created_at?: string
+          id?: string
+          overall_score?: number
+          recommendations?: Json | null
+          regional_relevance_score?: number
+          story_id: string
+          updated_at?: string
+        }
+        Update: {
+          analysis_data?: Json | null
+          brand_safety_issues?: Json | null
+          brand_safety_score?: number
+          compliance_data?: Json | null
+          content_quality_score?: number
+          created_at?: string
+          id?: string
+          overall_score?: number
+          recommendations?: Json | null
+          regional_relevance_score?: number
+          story_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           created_at: string
@@ -714,7 +759,9 @@ export type Database = {
           author: string | null
           created_at: string
           id: string
+          last_quality_check: string | null
           publication_name: string | null
+          quality_score: number | null
           status: string
           title: string
           updated_at: string
@@ -724,7 +771,9 @@ export type Database = {
           author?: string | null
           created_at?: string
           id?: string
+          last_quality_check?: string | null
           publication_name?: string | null
+          quality_score?: number | null
           status?: string
           title: string
           updated_at?: string
@@ -734,7 +783,9 @@ export type Database = {
           author?: string | null
           created_at?: string
           id?: string
+          last_quality_check?: string | null
           publication_name?: string | null
+          quality_score?: number | null
           status?: string
           title?: string
           updated_at?: string
