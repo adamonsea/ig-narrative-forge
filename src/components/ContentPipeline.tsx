@@ -734,15 +734,26 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   <Badge variant="outline" className="text-xs">{article.region}</Badge>
                                 </>
                               )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-xs text-muted-foreground">
-                          {article.queue_status === 'processing' 
-                            ? 'AI is currently generating slides...' 
-                            : 'Queued for processing. Runs automatically every 5 minutes.'}
-                        </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <div className="text-xs text-muted-foreground">
+                                    {article.queue_status === 'processing' 
+                                      ? 'AI is currently generating slides...' 
+                                      : 'Queued for processing. Runs automatically every 5 minutes.'}
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(article.source_url, '_blank')}
+                                    className="ml-2"
+                                  >
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    View Original
+                                  </Button>
+                                </div>
                       </CardContent>
                     </Card>
                   ))}
