@@ -446,7 +446,7 @@ CORE RULES:
 • Include location by slide 2: "In [Location]..."
 • Replace temporal references: "yesterday (${temporalContext.yesterday})"
 • Flow with smooth transitions: "But then..." "Meanwhile..." "The twist..."
-• Source format: "Summarised from ${publicationName}${article.author ? `, by ${article.author}` : ''}"
+• FINAL SLIDE MUST end with: "Summarised from ${publicationName}${article.author ? `, by ${article.author}` : ''}"
 
 STYLE: ${config.style} engagement, word limits per slide: ${config.wordLimits}
 SLIDES: ${config.count} slides total
