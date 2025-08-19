@@ -696,6 +696,17 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               <X className="w-3 h-3" />
                             </Button>
                           </div>
+                          
+                          <div className="flex justify-end mt-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(article.source_url, '_blank')}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              View Original
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     );
