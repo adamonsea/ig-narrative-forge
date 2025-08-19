@@ -604,12 +604,12 @@ Each of these promises MUST be addressed with concrete details in your slides. I
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5-mini-2025-08-07',
+      model: slideType === 'indepth' ? 'gpt-4.1-2025-04-14' : 'gpt-4o-mini', // Cost-efficient model selection
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_completion_tokens: 3000,
+      max_completion_tokens: slideType === 'indepth' ? 2500 : 1500, // Reduced tokens for standard content
       response_format: { type: "json_object" }
     }),
   });
@@ -807,7 +807,7 @@ async function generatePostCopy(article: Article, publicationName: string, openA
   Author: ${article.author || 'Not specified'}
   Publication: ${publicationName}
   Region: ${article.region || 'Sussex'}
-  Body: ${article.body}
+  Body: ${article.body?.substring(0, 600)}...
   
   Include proper source attribution: "Summarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}"`;
 
@@ -819,12 +819,12 @@ async function generatePostCopy(article: Article, publicationName: string, openA
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'gpt-4o-mini', // Cost-efficient model
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_completion_tokens: 1500,
+        max_completion_tokens: 800, // Reduced tokens
         response_format: { type: "json_object" }
       }),
     });

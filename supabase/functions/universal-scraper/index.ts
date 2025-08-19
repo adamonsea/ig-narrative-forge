@@ -466,22 +466,10 @@ async function extractFullArticleContent(html: string, openAIApiKey: string): Pr
 
 // Advanced AI extraction with GPT-4 and comprehensive prompts
 async function tryAdvancedAIExtraction(html: string, openAIApiKey: string): Promise<string> {
-  const prompt = `You are an expert web content extractor. Extract the complete main article content from this HTML page.
+  const prompt = `Extract main article text from HTML. Return only clean article content without tags.
 
-CRITICAL REQUIREMENTS:
-1. Extract ONLY the main news article text - ignore navigation, ads, comments, sidebars, headers, footers
-2. If the article is broken up by images, pull quotes, or other elements, reconstruct the complete flowing narrative
-3. Combine ALL article paragraphs maintaining their original sequence and flow
-4. Include any subheadings that are part of the main article structure
-5. Ignore any "Related articles", "You may also like", author bios, social sharing buttons
-6. Ignore any promotional content, newsletter signups, or advertisement text
-7. Return ONLY the article text as clean, readable content without HTML tags
-8. If you find multiple articles on the page, extract only the PRIMARY/MAIN article
-
-The content should read as one complete, coherent news article.
-
-HTML to extract from:
-${html.substring(0, 25000)}`; // Increased to 25k chars
+HTML:
+${html.substring(0, 8000)}`; // Limit input size for cost efficiency
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -491,9 +479,9 @@ ${html.substring(0, 25000)}`; // Increased to 25k chars
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Using more capable model
+        model: 'gpt-4o-mini', // Cost-efficient model
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 3000, // Increased token limit
+        max_tokens: 1200, // Reduced tokens
         temperature: 0.1
       })
     });

@@ -10,7 +10,7 @@ const corsHeaders = {
 interface QueueJob {
   id: string;
   article_id: string;
-  slideType: string;
+  slidetype: string;
   status: string;
   attempts: number;
   max_attempts: number;
@@ -87,7 +87,7 @@ serve(async (req) => {
         const { data: generationResult, error: generationError } = await supabase.functions.invoke('content-generator', {
           body: {
             articleId: job.article_id,
-            slideType: job.slideType
+            slideType: job.slidetype
           }
         });
 
