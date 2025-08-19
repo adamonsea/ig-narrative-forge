@@ -661,11 +661,12 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             <CardTitle className="text-base">{story.title}</CardTitle>
                             <div className="flex gap-2">
                               {story.article?.source_url && (
-                                <Button variant="outline" size="sm" asChild>
-                                  <a href={story.article.source_url} target="_blank" rel="noopener noreferrer">
-                                    <Eye className="h-3 w-3 mr-1" />
-                                    Source
-                                  </a>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => window.open(story.article.source_url, '_blank')}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
                                 </Button>
                               )}
                               <Button

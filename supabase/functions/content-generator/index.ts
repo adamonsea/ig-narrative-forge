@@ -257,6 +257,13 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
       case 'short':
         return `You are an expert investigative social media content creator who finds buried angles in news stories.
 
+CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
+Every story MUST include specific geographic/regional references in multiple slides:
+- ALWAYS mention the primary location (city, town, area) in Slide 1 or 2
+- Include regional context even if not emphasized in original article
+- Connect local landmarks, events, or community relevance where possible
+- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
+
 ANGLE-MINING PRIORITY: Go beyond the headline and lead. Hunt for:
 - Surprising statistics or numbers that reveal unexpected scale/impact
 - Contradictions, ironies, or "what if" moments buried in the text
@@ -264,6 +271,7 @@ ANGLE-MINING PRIORITY: Go beyond the headline and lead. Hunt for:
 - Timeline surprises (how fast/slow things happened vs expectations)
 - Stakeholder impacts not obvious in the main narrative
 - Geographic/local connections that aren't highlighted
+- Local events, landmarks, or community angles (airshows, festivals, local businesses)
 
 RUTHLESS CONTENT FILTERING: For SHORT format, DISCARD:
 - Standard background information and obvious context
@@ -273,7 +281,7 @@ RUTHLESS CONTENT FILTERING: For SHORT format, DISCARD:
 REQUIREMENTS:
 - Create exactly 4 slides from the article
 - Slide 1 (Hook): ≤15 words - ONE killer buried angle that grabs attention
-- Slide 2: ≤25 words - Build context with social proof or urgency 
+- Slide 2: ≤25 words - Build context with social proof or urgency PLUS regional reference
 - Slide 3: ≤35 words - Deliver key information with emotional triggers
 - Slide 4: ≤40 words - Strong CTA + source attribution (mention original publication)
 
@@ -283,10 +291,17 @@ Always end the final slide with proper attribution:
 OR "Summarised from an article in [Publication]" (when no author)
 
 BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
-STYLE: Laser-focused on the most compelling hidden narrative thread.`;
+STYLE: Laser-focused on the most compelling hidden narrative thread with strong regional identity.`;
 
       case 'indepth':
         return `You are an expert investigative social media content creator who uncovers buried angles in news stories.
+
+CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
+Every story MUST include specific geographic/regional references throughout:
+- ALWAYS mention the primary location (city, town, area) by Slide 2
+- Include regional context even if not emphasized in original article
+- Connect local landmarks, events, or community relevance where possible
+- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
 
 COMPREHENSIVE ANGLE-MINING: Dig deep for:
 - Multiple hidden hooks and secondary storylines buried in the content
@@ -295,13 +310,14 @@ COMPREHENSIVE ANGLE-MINING: Dig deep for:
 - Data points that tell a different story than the main narrative
 - Historical context that reveals patterns or ironies
 - Expert implications or analysis hidden in quotes
+- Local events, landmarks, or community angles (airshows, festivals, local businesses)
 
-CONTENT STRATEGY: Build narrative complexity with layered revelations.
+CONTENT STRATEGY: Build narrative complexity with layered revelations and strong regional identity.
 
 REQUIREMENTS:
 - Create exactly 10-12 slides from the article
 - Slide 1 (Hook): ≤15 words - Most compelling buried angle with psychological triggers
-- Slide 2 (Background): ≤25 words - Set context with authority and credibility cues
+- Slide 2 (Background): ≤25 words - Set context with authority and credibility cues PLUS regional reference
 - Slides 3-6: ≤30 words each - Layer multiple hidden angles with emotional resonance
 - Slides 7-9: ≤35 words each - Analysis of buried implications with social proof
 - Slide 10 (Future): ≤35 words - What happens next with urgency
@@ -313,10 +329,17 @@ Always end the final slide with proper attribution:
 OR "Summarised from an article in [Publication]" (when no author)
 
 BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
-STYLE: Multi-layered investigation revealing hidden complexity and implications.`;
+STYLE: Multi-layered investigation revealing hidden complexity and implications with strong regional identity.`;
 
       default: // tabloid
         return `You are an expert investigative social media content creator who finds sensational buried angles.
+
+CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
+Every story MUST include specific geographic/regional references throughout:
+- ALWAYS mention the primary location (city, town, area) by Slide 2
+- Include regional context even if not emphasized in original article  
+- Connect local landmarks, events, or community relevance where possible
+- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
 
 SENSATIONAL ANGLE-MINING: Hunt aggressively for:
 - Shocking details or statistics buried deeper in the article
@@ -325,6 +348,7 @@ SENSATIONAL ANGLE-MINING: Hunt aggressively for:
 - Emotional core or personal stakes hidden in factual reporting
 - Exclusive details that competitors might miss or underplay
 - Local connections or community impact buried in broader narrative
+- Local events, landmarks, or community angles (airshows, festivals, local businesses)
 
 AGGRESSIVE FILTERING: For TABLOID format, prioritize:
 - Dramatic revelation over standard information
@@ -335,7 +359,7 @@ AGGRESSIVE FILTERING: For TABLOID format, prioritize:
 REQUIREMENTS:
 - Create exactly 8 slides from the article
 - Slide 1 (Hook): ≤15 words - Most dramatic buried angle with shock value
-- Slide 2 (Context): ≤20 words - Set the scene with local connection and social proof
+- Slide 2 (Context): ≤20 words - Set the scene with local connection and social proof PLUS regional reference
 - Slides 3-5: ≤30 words each - Build tension with dramatic contrasts and hidden conflicts
 - Slides 6-7: ≤35 words each - Impact with authority figures and community stakes
 - Final slide: ≤40 words - Strong takeaway, CTA + source attribution
@@ -346,7 +370,7 @@ Always end the final slide with proper attribution:
 OR "Summarised from an article in [Publication]" (when no author)
 
 BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
-STYLE: Dramatic investigative storytelling that reveals hidden drama and tension.`;
+STYLE: Dramatic investigative storytelling that reveals hidden drama and tension with strong regional identity.`;
     }
   };
 
