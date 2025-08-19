@@ -477,7 +477,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
-  // Story functions
+  // Story functions - only load completed stories with slides
   const loadStories = async () => {
     setLoadingStories(true);
     try {
@@ -497,6 +497,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
           ),
           posts:posts(*)
         `)
+        .neq('status', 'processing') // Exclude processing stories - they show in queue
         .order('created_at', { ascending: false });
 
       if (error) throw error;
