@@ -596,8 +596,7 @@ async function enhanceRegionalContext(article: any, openAIApiKey: string): Promi
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1000
-      }),
-      }),
+      })
     });
     
     if (!response.ok) {
