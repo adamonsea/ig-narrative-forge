@@ -133,7 +133,9 @@ serve(async (req) => {
     console.log('🎯 Extracted hook promises from headline:', hookPromises);
     
     // Generate slides using OpenAI with publication name and temporal context
+    console.log(`🎯 Generating slides with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
     let slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
+    console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
 
     if (!slides || slides.length === 0) {
       console.error('❌ No slides generated for article:', article.title);
