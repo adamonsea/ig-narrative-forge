@@ -48,6 +48,7 @@ interface SlideGeneratorProps {
 export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isResettingStuck, setIsResettingStuck] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
@@ -168,6 +169,34 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const resetStuckProcessing = async () => {
+    setIsResettingStuck(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-stuck-processing');
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Processing Reset",
+          description: data.message || "Reset stuck processing jobs",
+        });
+        await loadStories();
+        onRefresh?.();
+      } else {
+        throw new Error(data.error || 'Reset failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Reset Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingStuck(false);
     }
   };
 
@@ -340,9 +369,19 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Generated Stories</CardTitle>
-            <Button onClick={loadStories} variant="outline" size="sm">
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={resetStuckProcessing} 
+                variant="outline" 
+                size="sm"
+                disabled={isResettingStuck}
+              >
+                {isResettingStuck ? "Resetting..." : "Fix Stuck Processing"}
+              </Button>
+              <Button onClick={loadStories} variant="outline" size="sm">
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

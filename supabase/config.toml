@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.queue-processor]
 verify_jwt = false
+
+[functions.reset-stuck-processing]
+verify_jwt = false
