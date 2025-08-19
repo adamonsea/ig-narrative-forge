@@ -24,7 +24,8 @@ import {
   BookOpen,
   RefreshCw,
   MapPin,
-  Zap
+  Zap,
+  Trash2
 } from 'lucide-react';
 
 // Article interfaces
@@ -47,6 +48,11 @@ interface Article {
   source_domain?: string;
   queue_status?: string;
   queue_type?: string;
+  queue_id?: string;
+  queue_attempts?: number;
+  queue_max_attempts?: number;
+  queue_error?: string;
+  is_stuck?: boolean;
 }
 
 // Slide and Story interfaces
@@ -185,10 +191,13 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       const { data: queueData, error: queueError } = await supabase
         .from('content_generation_queue')
         .select(`
+          id,
           article_id,
           status,
           slidetype,
           attempts,
+          max_attempts,
+          error_message,
           created_at
         `)
         .in('status', ['pending', 'processing']);
@@ -211,14 +220,28 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
         if (articleError) throw articleError;
 
-        const enrichedQueuedArticles = articleData?.map(article => ({
-          ...article,
-          import_metadata: {}, // Add empty metadata for queued articles
-          source_name: article.source_name?.source_name || 'Unknown',
-          source_domain: article.source_domain?.canonical_domain || 'unknown.com',
-          queue_status: queueData.find(q => q.article_id === article.id)?.status || 'pending',
-          queue_type: queueData.find(q => q.article_id === article.id)?.slidetype || 'tabloid'
-        })) || [];
+        const enrichedQueuedArticles = articleData?.map(article => {
+          const queueInfo = queueData.find(q => q.article_id === article.id);
+          const isStuck = queueInfo && (
+            queueInfo.attempts >= queueInfo.max_attempts ||
+            (queueInfo.status === 'processing' && 
+             new Date(queueInfo.created_at).getTime() < Date.now() - 10 * 60 * 1000)
+          );
+          
+          return {
+            ...article,
+            import_metadata: {}, // Add empty metadata for queued articles
+            source_name: article.source_name?.source_name || 'Unknown',
+            source_domain: article.source_domain?.canonical_domain || 'unknown.com',
+            queue_status: queueInfo?.status || 'pending',
+            queue_type: queueInfo?.slidetype || 'tabloid',
+            queue_id: queueInfo?.id,
+            queue_attempts: queueInfo?.attempts || 0,
+            queue_max_attempts: queueInfo?.max_attempts || 3,
+            queue_error: queueInfo?.error_message,
+            is_stuck: isStuck
+          };
+        }) || [];
 
         setQueuedArticles(enrichedQueuedArticles);
       } else {
@@ -227,6 +250,49 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     } catch (error) {
       console.error('Error loading queued articles:', error);
       setQueuedArticles([]);
+    }
+  };
+
+  const clearStuckJob = async (article: Article) => {
+    if (!article.queue_id) return;
+    
+    try {
+      // Remove the stuck job from queue
+      const { error: deleteError } = await supabase
+        .from('content_generation_queue')
+        .delete()
+        .eq('id', article.queue_id);
+
+      if (deleteError) throw deleteError;
+
+      // Reset associated story back to draft if exists
+      const { error: resetError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        })
+        .eq('article_id', article.id);
+
+      if (resetError) {
+        console.warn('Could not reset story status:', resetError);
+      }
+
+      toast({
+        title: "Stuck Job Cleared",
+        description: `Cleared stuck job for "${article.title}"`,
+      });
+      
+      // Refresh the queued articles to show the change
+      loadQueuedArticles();
+      loadPendingArticles(); // Article might reappear in pipeline
+    } catch (error: any) {
+      console.error('Error clearing stuck job:', error);
+      toast({
+        title: "Clear Failed",
+        description: `Failed to clear stuck job: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -694,11 +760,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Badge variant="outline" className={`text-xs ${
-                                    article.queue_status === 'processing' 
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                      : 'bg-primary/10 text-primary border-primary/30'
+                                    article.is_stuck 
+                                      ? 'bg-red-50 text-red-700 border-red-200' 
+                                      : article.queue_status === 'processing' 
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                        : 'bg-primary/10 text-primary border-primary/30'
                                   }`}>
-                                    {article.queue_status === 'processing' ? (
+                                    {article.is_stuck ? (
+                                      <>
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        Stuck ({article.queue_attempts}/{article.queue_max_attempts})
+                                      </>
+                                    ) : article.queue_status === 'processing' ? (
                                       <>
                                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1" />
                                         Processing
@@ -713,6 +786,11 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   {getArticleWordCountBadge(article.word_count || 0)}
                                 </div>
                                 <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
+                                {article.is_stuck && article.queue_error && (
+                                  <div className="text-xs text-red-600 mb-2 p-2 bg-red-50 rounded border border-red-200">
+                                    <strong>Error:</strong> {article.queue_error}
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                                   <span>{article.author || 'Unknown Author'}</span>
                                   <span>•</span>
@@ -727,7 +805,20 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               </div>
                             </div>
                             
-                            <div className="flex justify-end mt-2">
+                            <div className="flex justify-between items-center mt-2">
+                              <div>
+                                {article.is_stuck && (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => clearStuckJob(article)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    Clear Stuck Job
+                                  </Button>
+                                )}
+                              </div>
                               <Button
                                 size="sm"
                                 variant="ghost"

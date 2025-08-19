@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, CheckCircle, Clock, Database, Activity, RotateCcw, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { StuckJobCleaner } from './StuckJobCleaner';
 
 interface SystemHealth {
   overall_status: 'healthy' | 'unhealthy';
@@ -148,31 +147,6 @@ export const AdminPanel = () => {
     }
   };
 
-  const handleClearQueue = async () => {
-    try {
-      const response = await supabase.functions.invoke('reset-stuck-processing', {
-        body: { action: 'clear_stuck_queue' }
-      });
-      
-      if (response.error) throw response.error;
-      
-      toast({
-        title: "Queue Cleared",
-        description: response.data?.message || "Stuck queue items have been cleared successfully.",
-      });
-      
-      // Refresh the data
-      window.location.reload();
-    } catch (error) {
-      console.error('Error clearing queue:', error);
-      toast({
-        title: "Clear Failed",
-        description: "Failed to clear stuck queue items.",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -279,7 +253,6 @@ export const AdminPanel = () => {
       <Tabs defaultValue="jobs" className="space-y-4">
         <TabsList>
           <TabsTrigger value="jobs">Job Management</TabsTrigger>
-          <TabsTrigger value="stuck">Stuck Jobs</TabsTrigger>
           <TabsTrigger value="usage">API Usage</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
@@ -295,15 +268,6 @@ export const AdminPanel = () => {
               >
                 <RotateCcw className="h-4 w-4" />
                 Reset Stuck Processing
-              </Button>
-              
-              <Button 
-                onClick={handleClearQueue}
-                variant="outline" 
-                className="flex items-center gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear Stuck Queue
               </Button>
               
               <Button onClick={triggerJobProcessor}>
@@ -348,10 +312,6 @@ export const AdminPanel = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="stuck" className="space-y-4">
-          <StuckJobCleaner />
         </TabsContent>
 
         <TabsContent value="usage" className="space-y-4">

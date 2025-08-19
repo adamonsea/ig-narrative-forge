@@ -101,7 +101,7 @@ serve(async (req) => {
         const { data: clearedJobs, error: clearError } = await supabase
           .from('content_generation_queue')
           .delete()
-          .or('attempts.gte.3,and(status.eq.processing,created_at.lt.' + new Date(Date.now() - 10 * 60 * 1000).toISOString() + ')')
+          .or(`attempts.gte.3,and(status.eq.processing,created_at.lt.${new Date(Date.now() - 10 * 60 * 1000).toISOString()})`)
           .select('id, article_id, attempts, status');
 
         if (clearError) throw clearError;
@@ -151,7 +151,7 @@ serve(async (req) => {
         const { data: stuckQueue, error: stuckQueueError } = await supabase
           .from('content_generation_queue')
           .select('id, article_id, status, attempts, created_at, error_message')
-          .or('attempts.gte.3,and(status.eq.processing,created_at.lt.' + new Date(Date.now() - 10 * 60 * 1000).toISOString() + ')');
+          .or(`attempts.gte.3,and(status.eq.processing,created_at.lt.${new Date(Date.now() - 10 * 60 * 1000).toISOString()})`);
 
         if (stuckStoriesError || stuckQueueError) {
           throw stuckStoriesError || stuckQueueError;
