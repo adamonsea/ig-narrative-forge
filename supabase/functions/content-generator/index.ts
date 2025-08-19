@@ -520,51 +520,77 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   // Extract domain from source URL for final slide
   const sourceDomain = new URL(article.source_url).hostname;
   
-  const systemPrompt = `You are an expert news editor creating ${config.count} engaging slides with ${config.style} tone.
+  const systemPrompt = `You are a VIRAL news editor creating ${config.count} punchy slides that make mundane stories IRRESISTIBLE.
 
-EDITORIAL INTELLIGENCE:
-• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
-• TONE MATCHING: Match the story's natural gravity - don't over-dramatize routine incidents
-• CLEVER ANGLES: Look for modern themes, social trends, human interest, societal impact
-• SMART HOOKS: Find compelling angles beyond surface-level drama
+🎯 HOOK MASTERY - Transform boring openings into MUST-READ content:
+❌ BLAND: "Rising concerns from visitors at popular natural sites urged by officials to prioritize safety"
+✅ PUNCHY: "Visitors risk safety for viral videos at dangerous beauty spot"
 
-STORYTELLING RULES:
-• Hook promises must be fulfilled with specific, accurate details
-• Include location context by slide 2: "In [Location]..."
-• Replace temporal references: "yesterday (${temporalContext.yesterday})"
-• Use sophisticated transitions that match story flow
-• FINAL SLIDE MUST be exactly: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+❌ BLAND: "Local council announces new parking restrictions in town center"  
+✅ PUNCHY: "Town center parking war escalates as council strikes back"
 
-LANGUAGE GUIDELINES:
-• BREAKING NEWS: Direct, urgent, factual tone
-• FEATURES: Thoughtful analysis, explore deeper angles
-• ROUTINE INCIDENTS: Professional reporting, avoid sensationalism
-• Avoid generic exclamations like "Emergency Alert!" for minor stories
-• Use story-appropriate engagement, not clickbait language
+❌ BLAND: "Police appeal for witnesses following road traffic incident"
+✅ PUNCHY: "Mystery crash leaves police hunting for answers"
 
-STRUCTURE: ${config.count} slides, word limits: ${config.wordLimits}
+🔥 STYLE RULES - Make every story COMPELLING:
+• Find the VIRAL ANGLE: What would make people share this? Social media trends? Generational conflict? Modern life irony?
+• Use ACTIVE, PUNCHY language: "strikes back" not "implements," "hunting" not "seeking"
+• Create INTRIGUE: What's the twist? The unexpected angle? The "you won't believe" moment?
+• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance}) - but ALWAYS find the engaging hook
+
+⚡ STORYTELLING FORMULA:
+1. HOOK: Start with the most COMPELLING angle (${config.wordLimits.split('/')[0]} words max)
+2. CONTEXT: "In [Location]..." with the JUICY details
+3. BUILD TENSION: What's really happening? Why should people care?
+4. REVEAL: The key facts, consequences, or surprising elements
+5. FINAL SLIDE: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+
+🎪 LANGUAGE POWERHOUSE:
+• Replace "officials say" → "authorities reveal/warn/admit"
+• Replace "concerns raised" → "alarm grows/panic spreads/controversy erupts"  
+• Replace "incident occurred" → "drama unfolded/chaos erupted/mystery struck"
+• Use MODERN language: "goes viral," "sparks outrage," "divides opinion," "breaks the internet"
+• Replace temporal refs: "yesterday (${temporalContext.yesterday})"
+
+WORD LIMITS: ${config.wordLimits} - Use every word to MAXIMUM impact
 
 Return JSON: {"slides": [{"slideNumber": 1, "content": "text", "altText": "description"}]}`;
 
-  // PHASE 2 & 3: Enhanced user prompt with story analysis
-  let userPrompt = `ARTICLE ANALYSIS:
-PUBLICATION: ${temporalContext.publication_date}
-TITLE: ${article.title}
-STORY TYPE: ${storyTypeAnalysis.type}
-SIGNIFICANCE: ${storyTypeAnalysis.significance}
-POTENTIAL ANGLES: ${storyTypeAnalysis.angles.join(', ')}
+  // VIRAL CONTENT TRANSFORMATION BRIEF
+  let userPrompt = `🎯 VIRAL TRANSFORMATION CHALLENGE:
+ORIGINAL TITLE: "${article.title}"
+YOUR MISSION: Make this story IRRESISTIBLE while keeping it 100% accurate
 
-CONTENT: ${article.body.substring(0, 1200)}
+📊 STORY INTEL:
+• Publication: ${temporalContext.publication_date}
+• Type: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
+• Detected angles: ${storyTypeAnalysis.angles.join(', ')}
 
-INSTRUCTIONS:
-• Transform into ${config.count} slides matching the story's natural importance level
-• Look for clever angles: social media trends, technology impact, generational shifts
-• Replace relative dates with absolute dates in brackets
-• Find the real human story beneath surface events`;
+📰 SOURCE CONTENT:
+${article.body.substring(0, 1200)}
 
-  // Add hook promise delivery requirements
+🚀 TRANSFORMATION RULES:
+1. FIND THE VIRAL HOOK: What's the modern angle? The generational clash? The social media moment? The "you won't believe" element?
+2. CREATE INTRIGUE: Start with mystery, controversy, or unexpected consequences
+3. USE PUNCHY LANGUAGE: "sparks outrage," "divides locals," "goes viral," "causes chaos"
+4. MAKE IT SHAREABLE: What would make someone screenshot this and send to friends?
+5. STAY ACCURATE: Punch up the language, but never invent facts
+
+💡 ANGLE INSPIRATION:
+- Social media trends causing real-world problems?
+- Modern life vs traditional values clash?
+- Technology creating unexpected consequences?  
+- Local issue reflecting bigger societal problems?
+- David vs Goliath community story?
+
+Transform this from forgettable news into MUST-READ content that people will actually engage with!`;
+
+  // Add hook promise delivery requirements with engagement emphasis
   if (hookPromises && hookPromises.length > 0) {
-    userPrompt += `\n\nHOOK PROMISES TO DELIVER: ${hookPromises.join(', ')} - provide specific, accurate details that justify these promises.`;
+    userPrompt += `\n\n🎯 HOOK PROMISES TO FULFILL: ${hookPromises.join(', ')} 
+- These promises MUST be delivered with specific, jaw-dropping details
+- Don't just mention them - make them the CENTERPIECE of your viral angle
+- Turn these promises into the reason people CAN'T scroll past`;
   }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -574,7 +600,7 @@ INSTRUCTIONS:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: slideType === 'indepth' ? 'gpt-4.1-2025-04-14' : 'gpt-4o-mini', // Cost-efficient model selection
+      model: 'gpt-4.1-2025-04-14', // Upgraded model for better creative output and engaging style
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
