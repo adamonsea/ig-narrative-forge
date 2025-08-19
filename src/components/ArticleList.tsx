@@ -41,6 +41,8 @@ interface Article {
   summary: string | null;
   body: string | null;
   created_at: string;
+  source_name?: string;
+  source_domain?: string;
 }
 
 interface ArticleListProps {
@@ -182,6 +184,11 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold mb-2">{article.title}</h3>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                    {article.source_name && (
+                      <Badge variant="outline" className="text-xs">
+                        {article.source_name}
+                      </Badge>
+                    )}
                     {article.author && (
                       <span className="flex items-center gap-1">
                         <User className="w-4 h-4" />

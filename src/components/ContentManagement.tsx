@@ -27,6 +27,8 @@ interface Article {
   summary: string | null;
   body: string | null;
   created_at: string;
+  source_name?: string;
+  source_domain?: string;
 }
 
 interface ContentSource {
@@ -69,13 +71,27 @@ export const ContentManagement = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('articles')
-        .select('*')
+        .select(`
+          *,
+          content_sources:source_id (
+            source_name,
+            canonical_domain
+          )
+        `)
         .eq('processing_status', 'new') // Only show new articles
         .order('published_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setArticles(data || []);
+      
+      // Transform the data to flatten the source information
+      const transformedArticles = (data || []).map(article => ({
+        ...article,
+        source_name: article.content_sources?.source_name || 'Unknown Source',
+        source_domain: article.content_sources?.canonical_domain || null
+      }));
+      
+      setArticles(transformedArticles);
     } catch (error) {
       console.error('Error loading articles:', error);
       toast({
@@ -117,14 +133,28 @@ export const ContentManagement = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('articles')
-        .select('*')
+        .select(`
+          *,
+          content_sources:source_id (
+            source_name,
+            canonical_domain
+          )
+        `)
         .eq('processing_status', 'new') // Only search in new articles
         .textSearch('search', searchQuery)
         .order('published_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setArticles(data || []);
+      
+      // Transform the data to flatten the source information
+      const transformedArticles = (data || []).map(article => ({
+        ...article,
+        source_name: article.content_sources?.source_name || 'Unknown Source',
+        source_domain: article.content_sources?.canonical_domain || null
+      }));
+      
+      setArticles(transformedArticles);
 
       // Log search query for analytics
       await supabase
