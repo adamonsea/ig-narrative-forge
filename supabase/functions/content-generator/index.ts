@@ -166,6 +166,18 @@ serve(async (req) => {
       }
     }
 
+    // Verify story still exists before inserting slides (handles race conditions)
+    const { data: storyCheck, error: storyCheckError } = await supabase
+      .from('stories')
+      .select('id')
+      .eq('id', story.id)
+      .single();
+
+    if (storyCheckError || !storyCheck) {
+      console.error('Story was deleted during generation - likely by another process');
+      throw new Error('Story was deleted during generation process');
+    }
+
     // Insert the new slides
     console.log(`Inserting slides: ${slides.length}`);
     const { error: insertError } = await supabase
