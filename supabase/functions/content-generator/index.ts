@@ -127,8 +127,12 @@ serve(async (req) => {
 
     console.log('🤖 Starting slide generation for article:', article.title);
     
+    // Extract hook promises from headline for validation
+    const hookPromises = extractHookPromises(article.title);
+    console.log('🎯 Extracted hook promises from headline:', hookPromises);
+    
     // Generate slides using OpenAI with publication name for proper attribution
-    const slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
+    let slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
 
     if (!slides || slides.length === 0) {
       console.error('❌ No slides generated for article:', article.title);
@@ -136,6 +140,31 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Validate promise delivery if promises were detected
+    if (hookPromises.length > 0) {
+      const promisesDelivered = validatePromiseDelivery(slides, hookPromises);
+      console.log('📋 Promise delivery validation:', {
+        promises: hookPromises,
+        delivered: promisesDelivered
+      });
+
+      if (!promisesDelivered) {
+        console.log('⚠️ Slides failed promise delivery validation, regenerating...');
+        // Regenerate with explicit promise delivery requirement
+        slides = await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
+        
+        // Validate again
+        const secondValidation = validatePromiseDelivery(slides, hookPromises);
+        if (!secondValidation) {
+          console.warn('⚠️ Second generation also failed promise validation, proceeding with content');
+        } else {
+          console.log('✅ Second generation passed promise validation');
+        }
+      } else {
+        console.log('✅ Slides passed promise delivery validation');
+      }
     }
 
     console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
@@ -322,57 +351,113 @@ serve(async (req) => {
   }
 });
 
-async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string): Promise<SlideContent[]> {
+// Extract hook promises from headline for validation
+function extractHookPromises(headline: string): string[] {
+  const promises: string[] = [];
+  const promiseIndicators = [
+    'secrecy', 'secret', 'secrets', 'hidden', 'revealed', 'exclusive',
+    'rivalry', 'conflict', 'battle', 'clash', 'feud', 'tension',
+    'shocking', 'scandal', 'controversial', 'unprecedented', 'dramatic',
+    'mystery', 'unknown', 'behind closed doors', 'insider', 'exclusive'
+  ];
+  
+  const lowerHeadline = headline.toLowerCase();
+  promiseIndicators.forEach(indicator => {
+    if (lowerHeadline.includes(indicator)) {
+      promises.push(indicator);
+    }
+  });
+  
+  return promises;
+}
+
+// Validate that slides deliver on headline promises
+function validatePromiseDelivery(slides: SlideContent[], promises: string[]): boolean {
+  if (promises.length === 0) return true;
+  
+  const allSlideContent = slides.map(s => s.content.toLowerCase()).join(' ');
+  
+  // Check if at least 70% of promises are addressed in slides
+  const deliveredPromises = promises.filter(promise => 
+    allSlideContent.includes(promise) || 
+    allSlideContent.includes(promise.replace('y', 'ies')) || // secrecy -> secrets
+    allSlideContent.includes(promise.substring(0, promise.length - 1)) // rivalry -> rival
+  );
+  
+  return deliveredPromises.length >= Math.ceil(promises.length * 0.7);
+}
+
+async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<SlideContent[]> {
   const getSlidePrompt = (type: string) => {
     switch (type) {
       case 'short':
-        return `You are an expert investigative social media content creator who finds buried angles in news stories.
+        return `You are an expert social media storyteller who transforms news into compelling narrative journeys.
 
-CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
-Every story MUST include specific geographic/regional references in multiple slides:
-- ALWAYS mention the primary location (city, town, area) in Slide 1 or 2
-- Include regional context even if not emphasized in original article
-- Connect local landmarks, events, or community relevance where possible
-- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
+CRITICAL HOOK PROMISE DELIVERY:
+Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
+EVERY promise made in the headline MUST be addressed with specific details in your slides.
+If headline mentions "secrecy" - reveal the actual secrets.
+If headline mentions "rivalry" - explain the specific conflict details.
+Never make promises you don't deliver on.
 
-ANGLE-MINING PRIORITY: Go beyond the headline and lead. Hunt for:
-- Surprising statistics or numbers that reveal unexpected scale/impact
-- Contradictions, ironies, or "what if" moments buried in the text
-- Emotional stakes or human drama not emphasized in original reporting
-- Timeline surprises (how fast/slow things happened vs expectations)
-- Stakeholder impacts not obvious in the main narrative
-- Geographic/local connections that aren't highlighted
-- Local events, landmarks, or community angles (airshows, festivals, local businesses)
+NARRATIVE FLOW MASTERY:
+Each slide must flow naturally into the next like chapters in a story:
+- Use connecting phrases: "But here's what nobody saw coming...", "Meanwhile...", "The twist? ..."
+- End each slide with a hook for the next: "...and that's when everything changed."
+- Create momentum with escalating reveals and emotional beats
+- Make it feel like a conversation, not bullet points
 
-RUTHLESS CONTENT FILTERING: For SHORT format, DISCARD:
-- Standard background information and obvious context
-- Predictable details and conventional reporting elements
-- Anything that doesn't serve the core hook or emotional payoff
+LIVELY LANGUAGE REQUIREMENTS:
+- Use conversational, energetic tone ("Here's the wild part..." "You won't believe...")
+- Replace boring verbs with dynamic ones (happened → exploded, said → revealed)
+- Include sensory details and vivid imagery
+- Use rhetorical questions to engage readers
+- Inject personality and attitude into every sentence
+
+GEOGRAPHIC CONTEXT MANDATORY:
+- ALWAYS mention the primary location by Slide 2
+- Connect to local landmarks, community relevance
+- Use phrases like "In [Location]", "[Location] residents discovered..."
 
 REQUIREMENTS:
-- Create exactly 4 slides from the article
-- Slide 1 (Hook): ≤15 words - ONE killer buried angle that grabs attention
-- Slide 2: ≤25 words - Build context with social proof or urgency PLUS regional reference
-- Slide 3: ≤35 words - Deliver key information with emotional triggers
-- Slide 4: ≤40 words - Strong CTA + source attribution (mention original publication)
+- Create exactly 4 slides that flow like a story
+- Slide 1 (Hook): ≤15 words - Deliver on headline promises immediately
+- Slide 2: ≤25 words - Build context with smooth transition + regional reference
+- Slide 3: ≤35 words - Escalate with emotional peaks and story momentum
+- Slide 4: ≤40 words - Satisfying conclusion + source attribution
+
+TRANSITION EXAMPLES:
+"But the real shock came next..." / "That's when locals realized..." / "The plot thickens..."
 
 FINAL SLIDE SOURCE FORMAT:
-Always end the final slide with proper attribution:
 "Summarised from an article in ${publicationName}, by [Author]" (when author available)
 OR "Summarised from an article in ${publicationName}" (when no author)
 
-BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
-STYLE: Laser-focused on the most compelling hidden narrative thread with strong regional identity.`;
+STYLE: Conversational storytelling that keeps readers hooked slide after slide.`;
 
       case 'indepth':
-        return `You are an expert investigative social media content creator who uncovers buried angles in news stories.
+        return `You are an expert narrative architect who creates compelling story journeys from news articles.
 
-CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
-Every story MUST include specific geographic/regional references throughout:
-- ALWAYS mention the primary location (city, town, area) by Slide 2
-- Include regional context even if not emphasized in original article
-- Connect local landmarks, events, or community relevance where possible
-- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
+CRITICAL HOOK PROMISE DELIVERY:
+Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
+EVERY promise made in the headline MUST be addressed with specific details in your slides.
+If headline mentions "secrecy" - reveal the actual secrets.
+If headline mentions "rivalry" - explain the specific conflict details.
+Never make promises you don't deliver on.
+
+NARRATIVE FLOW MASTERY:
+Each slide must flow naturally into the next like chapters in an unfolding story:
+- Use connecting phrases: "But here's where it gets interesting...", "Meanwhile behind the scenes...", "The twist nobody saw coming..."
+- End each slide with intrigue for the next: "...but that was just the beginning."
+- Create escalating emotional beats and reveals
+- Make it feel like compelling storytelling, not information dumps
+
+LIVELY LANGUAGE REQUIREMENTS:
+- Use conversational, energetic tone ("Here's what's really happening..." "The truth is wild...")
+- Replace boring verbs with dynamic ones (occurred → erupted, revealed → exposed)
+- Include sensory details and vivid imagery
+- Use rhetorical questions to engage readers
+- Inject personality and insider knowledge into every sentence
 
 COMPREHENSIVE ANGLE-MINING: Dig deep for:
 - Multiple hidden hooks and secondary storylines buried in the content
@@ -383,34 +468,52 @@ COMPREHENSIVE ANGLE-MINING: Dig deep for:
 - Expert implications or analysis hidden in quotes
 - Local events, landmarks, or community angles (airshows, festivals, local businesses)
 
-CONTENT STRATEGY: Build narrative complexity with layered revelations and strong regional identity.
+GEOGRAPHIC CONTEXT MANDATORY:
+- ALWAYS mention the primary location by Slide 2
+- Connect to local landmarks, community relevance throughout
+- Use phrases like "In [Location]", "[Location] residents discovered..."
 
 REQUIREMENTS:
-- Create exactly 10-12 slides from the article
-- Slide 1 (Hook): ≤15 words - Most compelling buried angle with psychological triggers
-- Slide 2 (Background): ≤25 words - Set context with authority and credibility cues PLUS regional reference
-- Slides 3-6: ≤30 words each - Layer multiple hidden angles with emotional resonance
-- Slides 7-9: ≤35 words each - Analysis of buried implications with social proof
-- Slide 10 (Future): ≤35 words - What happens next with urgency
-- Final slide: ≤40 words - Strong conclusion, CTA + source attribution
+- Create exactly 10-12 slides that flow like an unfolding investigation
+- Slide 1 (Hook): ≤15 words - Deliver on headline promises with compelling opener
+- Slide 2 (Background): ≤25 words - Set context with smooth transition + regional reference
+- Slides 3-6: ≤30 words each - Layer multiple revelations with story momentum
+- Slides 7-9: ≤35 words each - Analysis with emotional resonance and flow
+- Slide 10 (Future): ≤35 words - What happens next with narrative completion
+- Final slide: ≤40 words - Satisfying conclusion + source attribution
+
+TRANSITION EXAMPLES:
+"But the investigation revealed..." / "That's when locals discovered..." / "The real story emerged when..."
 
 FINAL SLIDE SOURCE FORMAT:
-Always end the final slide with proper attribution:
 "Summarised from an article in ${publicationName}, by [Author]" (when author available)
 OR "Summarised from an article in ${publicationName}" (when no author)
 
-BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
-STYLE: Multi-layered investigation revealing hidden complexity and implications with strong regional identity.`;
+STYLE: Multi-layered investigative storytelling with smooth narrative flow and strong regional identity.`;
 
       default: // tabloid
-        return `You are an expert investigative social media content creator who finds sensational buried angles.
+        return `You are an expert social media storyteller who creates engaging, dramatic narratives from news.
 
-CRITICAL: GEOGRAPHIC/REGIONAL CONTEXT MANDATORY
-Every story MUST include specific geographic/regional references throughout:
-- ALWAYS mention the primary location (city, town, area) by Slide 2
-- Include regional context even if not emphasized in original article  
-- Connect local landmarks, events, or community relevance where possible
-- Use phrases like "In [Location]", "Near [Location]", "[Location] residents", "Off [Location] coast"
+CRITICAL HOOK PROMISE DELIVERY:
+Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
+EVERY promise made in the headline MUST be addressed with specific details in your slides.
+If headline mentions "secrecy" - reveal the actual secrets.
+If headline mentions "rivalry" - explain the specific conflict details.
+Never make promises you don't deliver on.
+
+NARRATIVE FLOW MASTERY:
+Each slide must flow naturally into the next with dramatic storytelling:
+- Use connecting phrases: "But wait, it gets better...", "Then this happened...", "Plot twist ahead..."
+- End each slide with cliffhanger momentum: "...and that's when things got really wild."
+- Create escalating drama and emotional peaks
+- Make it feel like an engaging conversation, not bullet points
+
+LIVELY LANGUAGE REQUIREMENTS:
+- Use conversational, dramatic tone ("Wait until you hear this..." "The community is buzzing...")
+- Replace boring verbs with dynamic ones (happened → exploded, announced → dropped the bombshell)
+- Include sensory details and vivid imagery
+- Use rhetorical questions to engage readers
+- Inject excitement and insider perspective into every sentence
 
 SENSATIONAL ANGLE-MINING: Hunt aggressively for:
 - Shocking details or statistics buried deeper in the article
@@ -421,27 +524,27 @@ SENSATIONAL ANGLE-MINING: Hunt aggressively for:
 - Local connections or community impact buried in broader narrative
 - Local events, landmarks, or community angles (airshows, festivals, local businesses)
 
-AGGRESSIVE FILTERING: For TABLOID format, prioritize:
-- Dramatic revelation over standard information
-- Emotional impact over neutral facts
-- Community relevance over generic context
-- Personal stakes over institutional angles
+GEOGRAPHIC CONTEXT MANDATORY:
+- ALWAYS mention the primary location by Slide 2
+- Connect to local landmarks, community relevance throughout
+- Use phrases like "In [Location]", "[Location] residents are talking about..."
 
 REQUIREMENTS:
-- Create exactly 8 slides from the article
-- Slide 1 (Hook): ≤15 words - Most dramatic buried angle with shock value
-- Slide 2 (Context): ≤20 words - Set the scene with local connection and social proof PLUS regional reference
-- Slides 3-5: ≤30 words each - Build tension with dramatic contrasts and hidden conflicts
-- Slides 6-7: ≤35 words each - Impact with authority figures and community stakes
-- Final slide: ≤40 words - Strong takeaway, CTA + source attribution
+- Create exactly 8 slides that flow like dramatic storytelling
+- Slide 1 (Hook): ≤15 words - Deliver on headline promises with dramatic opener
+- Slide 2 (Context): ≤20 words - Set scene with smooth transition + regional reference
+- Slides 3-5: ≤30 words each - Build tension with story momentum and reveals
+- Slides 6-7: ≤35 words each - Impact with emotional resonance and community stakes
+- Final slide: ≤40 words - Satisfying conclusion + source attribution
+
+TRANSITION EXAMPLES:
+"But here's the kicker..." / "Then locals realized..." / "The community was shocked when..."
 
 FINAL SLIDE SOURCE FORMAT:
-Always end the final slide with proper attribution:
 "Summarised from an article in ${publicationName}, by [Author]" (when author available)
 OR "Summarised from an article in ${publicationName}" (when no author)
 
-BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
-STYLE: Dramatic investigative storytelling that reveals hidden drama and tension with strong regional identity.`;
+STYLE: Dramatic storytelling that reveals hidden drama and tension with smooth narrative flow and strong regional identity.`;
     }
   };
 
@@ -471,7 +574,7 @@ Return ONLY valid JSON with this structure:
   ]
 }`;
 
-  const userPrompt = `Transform this article into engaging carousel slides:
+  let userPrompt = `Transform this article into engaging carousel slides:
 
 TITLE: ${article.title}
 AUTHOR: ${article.author || 'Unknown'}
@@ -482,6 +585,17 @@ CONTENT:
 ${article.body}
 
 Create slides that capture the essence of this story while being engaging for social media.`;
+
+  // If this is a regeneration with specific hook promises, add explicit requirements
+  if (hookPromises && hookPromises.length > 0) {
+    userPrompt += `
+
+⚠️ CRITICAL PROMISE DELIVERY REQUIREMENT:
+The headline makes these specific promises that MUST be delivered in your slides:
+${hookPromises.map(promise => `- "${promise}": You must explain/reveal specific details about this`).join('\n')}
+
+Each of these promises MUST be addressed with concrete details in your slides. If the headline mentions "secrecy", reveal the actual secrets. If it mentions "rivalry", explain the specific conflict. Don't just hint at these elements - deliver on them explicitly.`;
+  }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
