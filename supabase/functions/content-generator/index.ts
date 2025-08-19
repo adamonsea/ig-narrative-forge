@@ -583,29 +583,58 @@ INSTRUCTIONS:
   
   // Clean the response - extract only the JSON part
   try {
-    // Find the JSON object boundaries
-    const jsonStart = content.indexOf('{"slides"');
-    if (jsonStart === -1) {
-      throw new Error('No valid JSON structure found in response');
-    }
-    
-    // Find the end of the JSON by counting braces
-    let braceCount = 0;
-    let jsonEnd = jsonStart;
-    for (let i = jsonStart; i < content.length; i++) {
-      if (content[i] === '{') braceCount++;
-      if (content[i] === '}') braceCount--;
-      if (braceCount === 0) {
-        jsonEnd = i + 1;
-        break;
+    // Try to parse the content directly first
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+      console.log('Direct parse successful:', parsed);
+    } catch (directParseError) {
+      console.log('Direct parse failed, attempting extraction...');
+      
+      // Find the JSON object boundaries - try multiple patterns
+      let jsonStart = content.indexOf('{"slides"');
+      if (jsonStart === -1) {
+        jsonStart = content.indexOf('{\n  "slides"');
       }
+      if (jsonStart === -1) {
+        jsonStart = content.indexOf('{ "slides"');
+      }
+      if (jsonStart === -1) {
+        // Look for any opening brace followed by "slides"
+        const slidesIndex = content.indexOf('"slides"');
+        if (slidesIndex > -1) {
+          // Search backwards for opening brace
+          for (let i = slidesIndex; i >= 0; i--) {
+            if (content[i] === '{') {
+              jsonStart = i;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (jsonStart === -1) {
+        throw new Error('No valid JSON structure found in response');
+      }
+      
+      // Find the end of the JSON by counting braces
+      let braceCount = 0;
+      let jsonEnd = jsonStart;
+      for (let i = jsonStart; i < content.length; i++) {
+        if (content[i] === '{') braceCount++;
+        if (content[i] === '}') braceCount--;
+        if (braceCount === 0) {
+          jsonEnd = i + 1;
+          break;
+        }
+      }
+      
+      // Extract clean JSON
+      content = content.substring(jsonStart, jsonEnd);
+      console.log('Cleaned JSON content:', content);
+      parsed = JSON.parse(content);
     }
     
-    // Extract clean JSON
-    content = content.substring(jsonStart, jsonEnd);
-    console.log('Cleaned JSON content:', content);
-    
-    const parsed = JSON.parse(content);
     console.log('Parsed OpenAI response:', parsed);
     
     if (!parsed.slides || !Array.isArray(parsed.slides)) {
