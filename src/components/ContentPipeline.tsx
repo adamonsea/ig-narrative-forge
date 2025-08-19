@@ -563,6 +563,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     return <Badge variant="outline" className="text-xs">Long</Badge>;
   };
 
+  const getArticleWordCountBadge = (wordCount: number) => {
+    return <Badge variant="outline" className="text-xs">{wordCount} words</Badge>;
+  };
+
   const getWordCountColor = (wordCount: number, slideNumber: number) => {
     const maxWords = slideNumber === 1 ? 15 : slideNumber <= 3 ? 25 : slideNumber <= 6 ? 35 : 40;
     if (wordCount <= maxWords) return 'text-green-600';
@@ -636,7 +640,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   Available
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">Score: {relevanceScore}</span>
-                                {getWordCountBadge(article.word_count || 0)}
+                                {getArticleWordCountBadge(article.word_count || 0)}
                               </div>
                               <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
@@ -721,7 +725,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   </>
                                 )}
                               </Badge>
-                              {getWordCountBadge(article.word_count || 0)}
+                              {getArticleWordCountBadge(article.word_count || 0)}
                             </div>
                             <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
