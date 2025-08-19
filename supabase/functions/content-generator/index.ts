@@ -17,6 +17,7 @@ interface Article {
   tags?: string[];
   summary?: string;
   source_url: string;
+  published_at: string;
 }
 
 interface SlideContent {
@@ -54,10 +55,10 @@ serve(async (req) => {
       throw new Error('Article ID is required');
     }
 
-    // Fetch the article
+    // Fetch the article with published_at for temporal context
     const { data: article, error: articleError } = await supabase
       .from('articles')
-      .select('*')
+      .select('*, published_at')
       .eq('id', articleId)
       .single();
 
@@ -131,7 +132,7 @@ serve(async (req) => {
     const hookPromises = extractHookPromises(article.title);
     console.log('🎯 Extracted hook promises from headline:', hookPromises);
     
-    // Generate slides using OpenAI with publication name for proper attribution
+    // Generate slides using OpenAI with publication name and temporal context
     let slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
 
     if (!slides || slides.length === 0) {
@@ -387,214 +388,81 @@ function validatePromiseDelivery(slides: SlideContent[], promises: string[]): bo
   return deliveredPromises.length >= Math.ceil(promises.length * 0.7);
 }
 
-async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<SlideContent[]> {
-  const getSlidePrompt = (type: string) => {
-    switch (type) {
-      case 'short':
-        return `You are an expert social media storyteller who transforms news into compelling narrative journeys.
-
-CRITICAL HOOK PROMISE DELIVERY:
-Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
-EVERY promise made in the headline MUST be addressed with specific details in your slides.
-If headline mentions "secrecy" - reveal the actual secrets.
-If headline mentions "rivalry" - explain the specific conflict details.
-Never make promises you don't deliver on.
-
-NARRATIVE FLOW MASTERY:
-Each slide must flow naturally into the next like chapters in a story:
-- Use connecting phrases: "But here's what nobody saw coming...", "Meanwhile...", "The twist? ..."
-- End each slide with a hook for the next: "...and that's when everything changed."
-- Create momentum with escalating reveals and emotional beats
-- Make it feel like a conversation, not bullet points
-
-LIVELY LANGUAGE REQUIREMENTS:
-- Use conversational, energetic tone ("Here's the wild part..." "You won't believe...")
-- Replace boring verbs with dynamic ones (happened → exploded, said → revealed)
-- Include sensory details and vivid imagery
-- Use rhetorical questions to engage readers
-- Inject personality and attitude into every sentence
-
-GEOGRAPHIC CONTEXT MANDATORY:
-- ALWAYS mention the primary location by Slide 2
-- Connect to local landmarks, community relevance
-- Use phrases like "In [Location]", "[Location] residents discovered..."
-
-REQUIREMENTS:
-- Create exactly 4 slides that flow like a story
-- Slide 1 (Hook): ≤15 words - Deliver on headline promises immediately
-- Slide 2: ≤25 words - Build context with smooth transition + regional reference
-- Slide 3: ≤35 words - Escalate with emotional peaks and story momentum
-- Slide 4: ≤40 words - Satisfying conclusion + source attribution
-
-TRANSITION EXAMPLES:
-"But the real shock came next..." / "That's when locals realized..." / "The plot thickens..."
-
-FINAL SLIDE SOURCE FORMAT:
-"Summarised from an article in ${publicationName}, by [Author]" (when author available)
-OR "Summarised from an article in ${publicationName}" (when no author)
-
-STYLE: Conversational storytelling that keeps readers hooked slide after slide.`;
-
-      case 'indepth':
-        return `You are an expert narrative architect who creates compelling story journeys from news articles.
-
-CRITICAL HOOK PROMISE DELIVERY:
-Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
-EVERY promise made in the headline MUST be addressed with specific details in your slides.
-If headline mentions "secrecy" - reveal the actual secrets.
-If headline mentions "rivalry" - explain the specific conflict details.
-Never make promises you don't deliver on.
-
-NARRATIVE FLOW MASTERY:
-Each slide must flow naturally into the next like chapters in an unfolding story:
-- Use connecting phrases: "But here's where it gets interesting...", "Meanwhile behind the scenes...", "The twist nobody saw coming..."
-- End each slide with intrigue for the next: "...but that was just the beginning."
-- Create escalating emotional beats and reveals
-- Make it feel like compelling storytelling, not information dumps
-
-LIVELY LANGUAGE REQUIREMENTS:
-- Use conversational, energetic tone ("Here's what's really happening..." "The truth is wild...")
-- Replace boring verbs with dynamic ones (occurred → erupted, revealed → exposed)
-- Include sensory details and vivid imagery
-- Use rhetorical questions to engage readers
-- Inject personality and insider knowledge into every sentence
-
-COMPREHENSIVE ANGLE-MINING: Dig deep for:
-- Multiple hidden hooks and secondary storylines buried in the content
-- Unexpected connections to past events or future implications
-- Contradictory perspectives or stakeholder conflicts not emphasized
-- Data points that tell a different story than the main narrative
-- Historical context that reveals patterns or ironies
-- Expert implications or analysis hidden in quotes
-- Local events, landmarks, or community angles (airshows, festivals, local businesses)
-
-GEOGRAPHIC CONTEXT MANDATORY:
-- ALWAYS mention the primary location by Slide 2
-- Connect to local landmarks, community relevance throughout
-- Use phrases like "In [Location]", "[Location] residents discovered..."
-
-REQUIREMENTS:
-- Create exactly 10-12 slides that flow like an unfolding investigation
-- Slide 1 (Hook): ≤15 words - Deliver on headline promises with compelling opener
-- Slide 2 (Background): ≤25 words - Set context with smooth transition + regional reference
-- Slides 3-6: ≤30 words each - Layer multiple revelations with story momentum
-- Slides 7-9: ≤35 words each - Analysis with emotional resonance and flow
-- Slide 10 (Future): ≤35 words - What happens next with narrative completion
-- Final slide: ≤40 words - Satisfying conclusion + source attribution
-
-TRANSITION EXAMPLES:
-"But the investigation revealed..." / "That's when locals discovered..." / "The real story emerged when..."
-
-FINAL SLIDE SOURCE FORMAT:
-"Summarised from an article in ${publicationName}, by [Author]" (when author available)
-OR "Summarised from an article in ${publicationName}" (when no author)
-
-STYLE: Multi-layered investigative storytelling with smooth narrative flow and strong regional identity.`;
-
-      default: // tabloid
-        return `You are an expert social media storyteller who creates engaging, dramatic narratives from news.
-
-CRITICAL HOOK PROMISE DELIVERY:
-Before writing anything, analyze the headline for specific promises (secrecy, rivalry, drama, exclusives, etc.).
-EVERY promise made in the headline MUST be addressed with specific details in your slides.
-If headline mentions "secrecy" - reveal the actual secrets.
-If headline mentions "rivalry" - explain the specific conflict details.
-Never make promises you don't deliver on.
-
-NARRATIVE FLOW MASTERY:
-Each slide must flow naturally into the next with dramatic storytelling:
-- Use connecting phrases: "But wait, it gets better...", "Then this happened...", "Plot twist ahead..."
-- End each slide with cliffhanger momentum: "...and that's when things got really wild."
-- Create escalating drama and emotional peaks
-- Make it feel like an engaging conversation, not bullet points
-
-LIVELY LANGUAGE REQUIREMENTS:
-- Use conversational, dramatic tone ("Wait until you hear this..." "The community is buzzing...")
-- Replace boring verbs with dynamic ones (happened → exploded, announced → dropped the bombshell)
-- Include sensory details and vivid imagery
-- Use rhetorical questions to engage readers
-- Inject excitement and insider perspective into every sentence
-
-SENSATIONAL ANGLE-MINING: Hunt aggressively for:
-- Shocking details or statistics buried deeper in the article
-- Human interest elements not emphasized in the lead
-- Dramatic contrasts, before/after scenarios, or "us vs them" dynamics
-- Emotional core or personal stakes hidden in factual reporting
-- Exclusive details that competitors might miss or underplay
-- Local connections or community impact buried in broader narrative
-- Local events, landmarks, or community angles (airshows, festivals, local businesses)
-
-GEOGRAPHIC CONTEXT MANDATORY:
-- ALWAYS mention the primary location by Slide 2
-- Connect to local landmarks, community relevance throughout
-- Use phrases like "In [Location]", "[Location] residents are talking about..."
-
-REQUIREMENTS:
-- Create exactly 8 slides that flow like dramatic storytelling
-- Slide 1 (Hook): ≤15 words - Deliver on headline promises with dramatic opener
-- Slide 2 (Context): ≤20 words - Set scene with smooth transition + regional reference
-- Slides 3-5: ≤30 words each - Build tension with story momentum and reveals
-- Slides 6-7: ≤35 words each - Impact with emotional resonance and community stakes
-- Final slide: ≤40 words - Satisfying conclusion + source attribution
-
-TRANSITION EXAMPLES:
-"But here's the kicker..." / "Then locals realized..." / "The community was shocked when..."
-
-FINAL SLIDE SOURCE FORMAT:
-"Summarised from an article in ${publicationName}, by [Author]" (when author available)
-OR "Summarised from an article in ${publicationName}" (when no author)
-
-STYLE: Dramatic storytelling that reveals hidden drama and tension with smooth narrative flow and strong regional identity.`;
-    }
+// Calculate temporal references from article publication date
+function calculateTemporalContext(publishedAt: string): { [key: string]: string } {
+  const pubDate = new Date(publishedAt);
+  const today = new Date();
+  
+  // Calculate days difference
+  const timeDiff = today.getTime() - pubDate.getTime();
+  const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+  
+  // Helper to format dates
+  const formatDate = (date: Date) => 
+    date.toLocaleDateString('en-GB', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  
+  // Calculate temporal mappings
+  const yesterday = new Date(pubDate);
+  yesterday.setDate(pubDate.getDate() - 1);
+  
+  const tomorrow = new Date(pubDate);
+  tomorrow.setDate(pubDate.getDate() + 1);
+  
+  const lastWeek = new Date(pubDate);
+  lastWeek.setDate(pubDate.getDate() - 7);
+  
+  return {
+    'today': formatDate(pubDate),
+    'yesterday': formatDate(yesterday),
+    'tomorrow': formatDate(tomorrow),
+    'last week': formatDate(lastWeek),
+    'this week': `week of ${formatDate(pubDate)}`,
+    'publication_date': formatDate(pubDate)
   };
+}
 
-  const systemPrompt = `${getSlidePrompt(slideType)}
+async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<SlideContent[]> {
+  // Optimized single prompt template with variables
+  const slideConfigs = {
+    short: { count: 4, style: 'conversational', wordLimits: '15/25/35/40' },
+    indepth: { count: 12, style: 'investigative', wordLimits: '15/25/30/30/30/30/35/35/35/35/40' },
+    tabloid: { count: 8, style: 'dramatic', wordLimits: '15/20/30/30/30/35/35/40' }
+  };
+  
+  const config = slideConfigs[slideType as keyof typeof slideConfigs] || slideConfigs.tabloid;
+  
+  // Calculate temporal context
+  const temporalContext = calculateTemporalContext(article.published_at);
+  
+  const systemPrompt = `Create ${config.count} engaging news slides with ${config.style} tone.
 
-UNIVERSAL GUIDELINES:
-- Use active voice and power words (exclusive, urgent, proven, secret, insider)
-- Create emotional connection with local relevance and community identity
-- Include specific details, numbers, and credible sources
-- Apply psychological triggers: scarcity, social proof, authority, reciprocity
-- Build tension with "but," "however," "until now" transitions
-- Use inclusive language ("we," "us," "our community")
-- End final slide with source attribution and clear CTA
-- Maintain trustworthy, editorial tone throughout
-- Each slide should work standalone but flow together
+CORE RULES:
+• Deliver headline promises with specific details
+• Use declarative, punchy statements (avoid rhetorical questions)
+• Include location by slide 2: "In [Location]..."
+• Replace temporal references: "yesterday (${temporalContext.yesterday})"
+• Flow with smooth transitions: "But then..." "Meanwhile..." "The twist..."
+• Source format: "Summarised from ${publicationName}${article.author ? `, by ${article.author}` : ''}"
 
-TEXT-ONLY FOCUS: Generate engaging text content only. No visual elements needed.
+STYLE: ${config.style} engagement, word limits per slide: ${config.wordLimits}
+SLIDES: ${config.count} slides total
 
-Return ONLY valid JSON with this structure:
-{
-  "slides": [
-    {
-      "slideNumber": 1,
-      "content": "Hook content here",
-      "altText": "Brief description for accessibility"
-    }
-  ]
-}`;
+Return JSON: {"slides": [{"slideNumber": 1, "content": "text", "altText": "description"}]}`;
 
-  let userPrompt = `Transform this article into engaging carousel slides:
-
+  // Calculate temporal context for user prompt
+  let userPrompt = `ARTICLE (Published: ${temporalContext.publication_date}):
 TITLE: ${article.title}
-AUTHOR: ${article.author || 'Unknown'}
-REGION: ${article.region || 'Unknown'}
-CATEGORY: ${article.category || 'News'}
+CONTENT: ${article.body.substring(0, 1200)}
 
-CONTENT:
-${article.body}
+Transform into ${config.count} slides. Replace relative dates with absolute dates in brackets.`;
 
-Create slides that capture the essence of this story while being engaging for social media.`;
-
-  // If this is a regeneration with specific hook promises, add explicit requirements
+  // Add temporal context and promise delivery requirements
   if (hookPromises && hookPromises.length > 0) {
-    userPrompt += `
-
-⚠️ CRITICAL PROMISE DELIVERY REQUIREMENT:
-The headline makes these specific promises that MUST be delivered in your slides:
-${hookPromises.map(promise => `- "${promise}": You must explain/reveal specific details about this`).join('\n')}
-
-Each of these promises MUST be addressed with concrete details in your slides. If the headline mentions "secrecy", reveal the actual secrets. If it mentions "rivalry", explain the specific conflict. Don't just hint at these elements - deliver on them explicitly.`;
+    userPrompt += `\n\nDELIVER PROMISES: ${hookPromises.join(', ')} - provide specific details.`;
   }
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -776,40 +644,19 @@ async function extractPublicationName(sourceUrl: string, supabase: any, articleI
   }
 }
 
-// Function to generate social media post copy with hashtags
+// Optimized function to generate social media post copy
 async function generatePostCopy(article: Article, publicationName: string, openAIApiKey: string) {
-  const systemPrompt = `You are a social media expert creating engaging Instagram captions for local news carousel posts. 
-
-  Create compelling post copy that:
-  - Starts with a hook that makes people want to swipe through the carousel
-  - Includes a brief summary of the key story points
-  - Ends with proper source attribution
-  - Includes relevant local hashtags for discovery
-  - Stays under 2000 characters (Instagram limit)
-  - Uses engaging, conversational tone
-
-  HASHTAG STRATEGY:
-  - Always include location-based hashtags for the region mentioned
-  - Add category hashtags (#LocalNews, #Community, etc.)
-  - Include 8-15 hashtags total
-  - Focus on Sussex/Eastbourne/Brighton area hashtags when relevant
+  const temporalContext = calculateTemporalContext(article.published_at);
   
-  OUTPUT FORMAT:
-  Return valid JSON:
-  {
-    "caption": "The full Instagram caption text",
-    "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
-  }`;
+  const systemPrompt = `Create Instagram caption for news carousel. Include hook, summary, attribution, hashtags (8-15). Under 2000 chars. Return JSON: {"caption": "text", "hashtags": ["tag1"]}`;
 
-  const userPrompt = `Create Instagram post copy for this local news story:
+  const userPrompt = `Story: ${article.title}
+Content: ${article.body?.substring(0, 400)}
+Published: ${temporalContext.publication_date}
+Source: ${publicationName}${article.author ? `, by ${article.author}` : ''}
+Region: ${article.region || 'Sussex'}
 
-  Title: ${article.title}
-  Author: ${article.author || 'Not specified'}
-  Publication: ${publicationName}
-  Region: ${article.region || 'Sussex'}
-  Body: ${article.body?.substring(0, 600)}...
-  
-  Include proper source attribution: "Summarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}"`;
+Replace relative dates with absolute dates in brackets.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -819,26 +666,22 @@ async function generatePostCopy(article: Article, publicationName: string, openA
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Cost-efficient model
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_completion_tokens: 800, // Reduced tokens
+        max_completion_tokens: 600,
         response_format: { type: "json_object" }
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API response not ok:', response.status, response.statusText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Post copy OpenAI response:', data);
-
-    const content = data.choices[0].message.content;
-    const parsedResponse = JSON.parse(content);
+    const parsedResponse = JSON.parse(data.choices[0].message.content);
     
     return {
       caption: parsedResponse.caption,
@@ -846,7 +689,6 @@ async function generatePostCopy(article: Article, publicationName: string, openA
     };
   } catch (error) {
     console.error('Error generating post copy:', error);
-    // Fallback post copy
     return {
       caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
       hashtags: ['LocalNews', 'Sussex', 'Community', 'News']
