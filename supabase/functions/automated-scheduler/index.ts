@@ -103,8 +103,8 @@ serve(async (req) => {
             continue;
           }
 
-          // Call the universal scraper
-          const scrapeResponse = await supabase.functions.invoke('universal-scraper', {
+          // Call the hybrid scraper (more reliable than universal-scraper)
+          const scrapeResponse = await supabase.functions.invoke('hybrid-scraper', {
             body: {
               feedUrl: source.feed_url,
               sourceId: schedule.source_id,

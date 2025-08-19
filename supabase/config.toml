@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.universal-scraper]
 verify_jwt = false
 
+[functions.hybrid-scraper]
+verify_jwt = false
+
 [functions.automated-scheduler]
 verify_jwt = false
 
@@ -28,4 +31,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.enhanced-scraper]
+verify_jwt = false
+
+[functions.simple-scraper]
+verify_jwt = false
+
+[functions.test-scraper]
 verify_jwt = false

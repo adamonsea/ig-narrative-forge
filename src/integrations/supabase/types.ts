@@ -266,6 +266,7 @@ export type Database = {
           region: string | null
           scrape_frequency_hours: number | null
           scraping_config: Json | null
+          scraping_method: string | null
           source_name: string
           success_rate: number | null
           updated_at: string | null
@@ -286,6 +287,7 @@ export type Database = {
           region?: string | null
           scrape_frequency_hours?: number | null
           scraping_config?: Json | null
+          scraping_method?: string | null
           source_name: string
           success_rate?: number | null
           updated_at?: string | null
@@ -306,6 +308,7 @@ export type Database = {
           region?: string | null
           scrape_frequency_hours?: number | null
           scraping_config?: Json | null
+          scraping_method?: string | null
           source_name?: string
           success_rate?: number | null
           updated_at?: string | null
