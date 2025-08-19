@@ -181,6 +181,28 @@ async function getScrapingConfig(sourceUrl: string, supabase: any): Promise<Scra
         }
       }
     ],
+    'sussexbylines.co.uk': [
+      {
+        method: 'rss_enhanced',
+        url: 'https://sussexbylines.co.uk/feed/',
+        retryAttempts: 3,
+        timeout: 20000,
+        headers: {
+          'User-Agent': 'LocalNewsBot/1.0 (Sussex News Aggregator)',
+          'Accept': 'application/rss+xml, application/xml, text/xml'
+        }
+      },
+      {
+        method: 'html',
+        url: sourceUrl,
+        retryAttempts: 2,
+        timeout: 25000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LocalNewsBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      }
+    ],
     'itv.com': [
       {
         method: 'rss',
@@ -403,9 +425,18 @@ async function parseRSSEnhancedContent(content: string, openAIApiKey: string): P
 
 // Extract full article content from HTML page
 async function extractFullArticleContent(html: string, openAIApiKey: string): Promise<string> {
-  const prompt = `Extract the full article content from this HTML page. Focus on the main article text, excluding navigation, ads, comments, and sidebars. Return only the article content as plain text:
+  const prompt = `Extract the complete main article content from this HTML page. 
 
-${html.substring(0, 8000)}`; // Limit HTML to avoid token limits
+CRITICAL INSTRUCTIONS:
+- Extract ONLY the main article body text, ignore all navigation, sidebars, ads, comments, related articles sections
+- If the article is broken up by images or other elements, reconstruct the complete flowing text
+- Combine all article paragraphs into one continuous text, maintaining the original order
+- Ignore any content from secondary columns, widget areas, or promotional sections
+- Focus on the primary content area that contains the actual news story
+- Return the complete article as clean, flowing text without HTML tags
+
+HTML content:
+${html.substring(0, 15000)}`; // Increased limit for complex layouts
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -469,11 +500,15 @@ async function parseHTMLContent(content: string, sourceUrl: string, openAIApiKey
       .replace(/<!--[\s\S]*?-->/g, '')
       .substring(0, 8000); // Limit content size
     
-    const prompt = `Extract news articles from this HTML content. Focus on finding articles relevant to Eastbourne or local UK news. Return a JSON array with this structure:
+    const prompt = `Extract news articles from this HTML content. Focus on finding articles relevant to Eastbourne or local UK news. 
+
+CRITICAL: For each article, extract ONLY the main article content from the primary content area. Ignore sidebars, navigation, ads, related articles, and secondary columns.
+
+Return a JSON array with this structure:
     [
       {
         "title": "Article title",
-        "body": "Full article content (at least 100 words)",
+        "body": "Complete main article content (extract from primary content area only)",
         "source_url": "Article URL",
         "published_at": "Publication date (ISO format)",
         "author": "Author name",
