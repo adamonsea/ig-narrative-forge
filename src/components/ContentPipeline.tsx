@@ -854,6 +854,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                 </Button>
                               )}
                               
+                              {story.status === 'processing' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleRejectStory(story.id)}
+                                  className="h-8 px-2 text-xs text-red-600 hover:text-red-700"
+                                >
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  Send Back to Pipeline
+                                </Button>
+                              )}
+                              
                               <Button
                                 size="sm"
                                 variant="outline"
