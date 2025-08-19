@@ -192,10 +192,10 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
     try {
       toast({
         title: 'Scraping Started',
-        description: `Intelligently scraping content from ${source.source_name}...`,
+        description: `Scraping content from ${source.source_name}...`,
       });
 
-      const { data, error } = await supabase.functions.invoke('universal-scraper', {
+      const { data, error } = await supabase.functions.invoke('hybrid-scraper', {
         body: {
           feedUrl: source.feed_url,
           sourceId: source.id,
@@ -256,7 +256,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
       for (const source of activeSources) {
         try {
-          const { data, error } = await supabase.functions.invoke('universal-scraper', {
+          const { data, error } = await supabase.functions.invoke('hybrid-scraper', {
             body: {
               feedUrl: source.feed_url,
               sourceId: source.id,
