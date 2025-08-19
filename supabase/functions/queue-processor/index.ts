@@ -163,10 +163,10 @@ serve(async (req) => {
               }
             })
             .eq('id', job.id);
-        }
-
-        if (failError) {
-          console.error(`Failed to mark job ${job.id} as failed:`, failError);
+            
+          if (failError) {
+            console.error(`Failed to mark job ${job.id} as failed:`, failError);
+          }
         }
 
         results.push({

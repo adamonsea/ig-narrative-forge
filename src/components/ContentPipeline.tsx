@@ -21,8 +21,9 @@ import {
   FileText,
   Calendar,
   User,
-  MapPin,
   BookOpen,
+  RefreshCw,
+  MapPin,
   Zap
 } from 'lucide-react';
 
@@ -112,15 +113,64 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
   const { toast } = useToast();
 
-  // Auto-refresh both panels every 10 seconds to show real-time updates
+  // Real-time subscriptions instead of disruptive auto-refresh
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadPendingArticles();
-      loadQueuedArticles();
-      loadStories();
-    }, 10000);
+    // Set up real-time subscription for content generation queue updates
+    const queueChannel = supabase
+      .channel('queue-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content_generation_queue'
+        },
+        () => {
+          // Only refresh queued articles when queue changes
+          loadQueuedArticles();
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    // Set up real-time subscription for story updates
+    const storyChannel = supabase
+      .channel('story-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        () => {
+          // Refresh stories when they change
+          loadStories();
+        }
+      )
+      .subscribe();
+
+    // Set up real-time subscription for article updates
+    const articleChannel = supabase
+      .channel('article-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'articles'
+        },
+        () => {
+          // Refresh available articles when their status changes
+          loadPendingArticles();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(queueChannel);
+      supabase.removeChannel(storyChannel);
+      supabase.removeChannel(articleChannel);
+    };
   }, []);
 
   useEffect(() => {
@@ -610,7 +660,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {loadingArticles ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -622,8 +672,93 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                 </div>
               ) : (
                 <>
+                  {/* Queued Articles - Now at the top */}
+                  {queuedArticles.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium text-primary">Queued for Processing ({queuedArticles.length})</h3>
+                        <Button 
+                          onClick={loadQueuedArticles}
+                          variant="outline" 
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh Queue
+                        </Button>
+                      </div>
+                      {queuedArticles.map((article) => (
+                        <Card key={`queued-${article.id}`} className="border border-primary/30 bg-primary/5">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className={`text-xs ${
+                                    article.queue_status === 'processing' 
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                      : 'bg-primary/10 text-primary border-primary/30'
+                                  }`}>
+                                    {article.queue_status === 'processing' ? (
+                                      <>
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1" />
+                                        Processing
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        Queued ({article.queue_type})
+                                      </>
+                                    )}
+                                  </Badge>
+                                  {getArticleWordCountBadge(article.word_count || 0)}
+                                </div>
+                                <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                  <span>{article.author || 'Unknown Author'}</span>
+                                  <span>•</span>
+                                  <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
+                                  {article.region && (
+                                    <>
+                                      <span>•</span>
+                                      <Badge variant="outline" className="text-xs">{article.region}</Badge>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => window.open(article.source_url, '_blank')}
+                              >
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                View Original
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Available Articles */}
-                  {articles.map((article) => {
+                  {articles.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium text-muted-foreground">Available Articles ({articles.length})</h3>
+                        <Button 
+                          onClick={loadPendingArticles}
+                          variant="outline" 
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh Available
+                        </Button>
+                      </div>
+                      {articles.map((article) => {
                     const relevanceScore = (article.import_metadata as any)?.eastbourne_relevance_score || 0;
                     const isProcessing = processingArticle === article.id;
                     const isReview = article.title.toLowerCase().includes('review') || 
@@ -709,69 +844,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                           </div>
                         </CardContent>
                       </Card>
-                    );
-                  })}
-
-                  {/* Queued Articles */}
-                  {queuedArticles.map((article) => (
-                    <Card key={`queued-${article.id}`} className="border border-amber-200 bg-amber-50/50">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className={`text-xs ${
-                                article.queue_status === 'processing' 
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}>
-                                {article.queue_status === 'processing' ? (
-                                  <>
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1" />
-                                    Processing
-                                  </>
-                                ) : (
-                                  <>
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    Queued ({article.queue_type})
-                                  </>
-                                )}
-                              </Badge>
-                              {getArticleWordCountBadge(article.word_count || 0)}
-                            </div>
-                            <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                              <span>{article.author || 'Unknown Author'}</span>
-                              <span>•</span>
-                              <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
-                              {article.region && (
-                                <>
-                                  <span>•</span>
-                                  <Badge variant="outline" className="text-xs">{article.region}</Badge>
-                                </>
-                              )}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                  <div className="text-xs text-muted-foreground">
-                                    {article.queue_status === 'processing' 
-                                      ? 'AI is currently generating slides...' 
-                                      : 'Queued for processing. Runs automatically every 5 minutes.'}
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(article.source_url, '_blank')}
-                                    className="ml-2"
-                                  >
-                                    <ExternalLink className="w-3 h-3 mr-1" />
-                                    View Original
-                                  </Button>
-                                </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        );
+                      })}
+                    </div>
+                  )}
                 </>
               )}
             </div>
