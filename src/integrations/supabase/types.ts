@@ -249,6 +249,56 @@ export type Database = {
           },
         ]
       }
+      content_generation_queue: {
+        Row: {
+          article_id: string
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          result_data: Json | null
+          slidetype: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          article_id: string
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          result_data?: Json | null
+          slidetype?: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          article_id?: string
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          result_data?: Json | null
+          slidetype?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_generation_queue_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_sources: {
         Row: {
           articles_scraped: number | null

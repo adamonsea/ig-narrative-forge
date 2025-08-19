@@ -210,16 +210,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       setProcessingArticle(article.id);
       
-      const { data, error } = await supabase.functions.invoke('content-generator', {
-        body: { 
-          articleId: article.id,
-          slideType: slideType
-        }
-      });
+      // Add job to the queue instead of calling content-generator directly
+      const { data: queueJob, error: queueError } = await supabase
+        .from('content_generation_queue')
+        .insert({
+          article_id: article.id,
+          slideType: slideType,
+          status: 'pending'
+        })
+        .select()
+        .single();
 
-      if (error) throw new Error(`Function call failed: ${error.message}`);
-      if (!data) throw new Error('No response data from content generator');
-      if (!data.success) throw new Error(data.error || 'Content generation failed');
+      if (queueError) throw new Error(`Failed to queue job: ${queueError.message}`);
 
       const typeLabels = {
         short: 'Short Carousel',
@@ -228,19 +230,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       };
 
       toast({
-        title: 'Slides Generated!',
-        description: `Created ${data.slideCount} slides (${typeLabels[slideType]}) - review in right panel`,
+        title: 'Generation Queued!',
+        description: `${typeLabels[slideType]} generation added to queue. Processing will start shortly.`,
       });
 
-      // Refresh both panels
-      await Promise.all([loadPendingArticles(), loadStories()]);
-      onRefresh?.();
+      // Refresh the articles list to remove this one from the queue
+      loadPendingArticles();
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('Queueing error:', error);
       toast({
-        title: 'Generation Failed',
-        description: error.message || 'Failed to generate slides',
+        title: 'Queue Failed',
+        description: error.message || 'Failed to queue generation',
         variant: 'destructive',
       });
     } finally {
