@@ -136,7 +136,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       setLoadingArticles(true);
       
-      // Only fetch articles with 'new' processing status
+      // First get article IDs that already have stories
+      const { data: existingStories, error: storiesError } = await supabase
+        .from('stories')
+        .select('article_id');
+
+      if (storiesError) throw storiesError;
+
+      const articlesWithStories = new Set(existingStories?.map(s => s.article_id) || []);
+      
+      // Only fetch articles with 'new' processing status 
       const { data: articles, error: articlesError } = await supabase
         .from('articles')
         .select('*')
@@ -146,7 +155,12 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       if (articlesError) throw articlesError;
 
-      const pendingArticles = articles || [];
+      // Filter out articles that already have stories (safety net)
+      const articlesWithoutStories = (articles || []).filter(article => 
+        !articlesWithStories.has(article.id)
+      );
+
+      const pendingArticles = articlesWithoutStories;
 
       // Sort articles: non-reviews first (by relevance), then reviews at bottom
       const isReview = (article: Article) => {

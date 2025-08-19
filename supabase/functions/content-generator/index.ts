@@ -217,6 +217,19 @@ serve(async (req) => {
       throw new Error(`Failed to update story: ${storyUpdateError.message}`);
     }
 
+    // Update the article processing status to 'processed' so it disappears from content pipeline
+    const { error: articleUpdateError } = await supabase
+      .from('articles')
+      .update({ processing_status: 'processed' })
+      .eq('id', articleId);
+
+    if (articleUpdateError) {
+      console.error('Error updating article processing status:', articleUpdateError);
+      // Don't throw error - story creation succeeded, this is just cleanup
+    } else {
+      console.log('Article processing status updated to processed');
+    }
+
     // Create a post record with the generated content
     const { error: postError } = await supabase
       .from('posts')
