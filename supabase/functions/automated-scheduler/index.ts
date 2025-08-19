@@ -191,6 +191,23 @@ serve(async (req) => {
       }
     }
 
+    // 3. Process content generation queue
+    console.log('🔄 Processing content generation queue...');
+    let queueProcessed = 0;
+    try {
+      const queueResponse = await supabase.functions.invoke('queue-processor', {});
+      if (queueResponse.data?.success) {
+        queueProcessed = queueResponse.data.processed || 0;
+        console.log(`✅ Queue processor completed: ${queueProcessed} jobs processed`);
+      } else {
+        console.error('❌ Queue processor failed:', queueResponse.error);
+        errors.push(`Queue processing failed: ${queueResponse.error?.message || 'Unknown error'}`);
+      }
+    } catch (queueError) {
+      console.error('❌ Error invoking queue processor:', queueError);
+      errors.push(`Queue processor error: ${queueError.message}`);
+    }
+
     const duration = Date.now() - startTime;
     const summary = {
       success: true,
@@ -198,6 +215,7 @@ serve(async (req) => {
       processed_sources: processedSources,
       successful_scrapes: successfulScrapes,
       failed_scrapes: processedSources - successfulScrapes,
+      queue_jobs_processed: queueProcessed,
       errors: errors,
       next_scheduler_run: new Date(Date.now() + (6 * 60 * 60 * 1000)).toISOString() // 6 hours
     };
@@ -209,7 +227,7 @@ serve(async (req) => {
       .from('system_logs')
       .insert({
         level: 'info',
-        message: `Automated scheduler completed: ${processedSources} sources processed, ${successfulScrapes} successful`,
+        message: `Automated scheduler completed: ${processedSources} sources processed, ${successfulScrapes} successful, ${queueProcessed} queue jobs processed`,
         context: summary,
         function_name: 'automated-scheduler'
       });
