@@ -299,7 +299,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'approved' })
+        .update({ status: 'ready' })
         .eq('id', storyId);
 
       if (error) throw error;
