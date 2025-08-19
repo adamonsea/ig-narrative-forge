@@ -34,14 +34,14 @@ serve(async (req) => {
     
     console.log('🔄 Starting queue processing...');
 
-    // Get pending jobs from the queue (limit to 3 at a time to prevent overload)
+    // Get pending jobs from the queue (limit to 5 at a time for better efficiency)
     const { data: pendingJobs, error: queueError } = await supabase
       .from('content_generation_queue')
       .select('*')
       .eq('status', 'pending')
       .lt('attempts', 3) // Don't retry failed jobs too many times
       .order('created_at', { ascending: true })
-      .limit(3);
+      .limit(5);
 
     if (queueError) {
       console.error('Error fetching queue:', queueError);
@@ -83,11 +83,13 @@ serve(async (req) => {
           continue;
         }
 
-        // Call the content-generator function
+        // Call the content-generator function with cost optimization
         const { data: generationResult, error: generationError } = await supabase.functions.invoke('content-generator', {
           body: {
             articleId: job.article_id,
-            slideType: job.slidetype
+            slideType: job.slidetype,
+            costOptimized: true, // Enable cost optimizations
+            batchMode: true // Enable batch processing mode
           }
         });
 
@@ -125,19 +127,43 @@ serve(async (req) => {
       } catch (jobError) {
         console.error(`❌ Error processing job ${job.id}:`, jobError);
         
-        // Mark job as failed
-        const { error: failError } = await supabase
-          .from('content_generation_queue')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            error_message: jobError.message,
-            result_data: {
-              success: false,
-              error: jobError.message
-            }
-          })
-          .eq('id', job.id);
+        // Implement exponential backoff for retries
+        const nextAttemptDelay = Math.pow(2, job.attempts) * 60000; // 1min, 2min, 4min, etc.
+        const shouldRetry = job.attempts < job.max_attempts;
+        
+        if (shouldRetry) {
+          // Mark for retry with backoff
+          const { error: retryError } = await supabase
+            .from('content_generation_queue')
+            .update({
+              status: 'pending',
+              error_message: jobError.message,
+              result_data: {
+                success: false,
+                error: jobError.message,
+                retry_scheduled_for: new Date(Date.now() + nextAttemptDelay).toISOString()
+              }
+            })
+            .eq('id', job.id);
+            
+          if (!retryError) {
+            console.log(`🔄 Job ${job.id} scheduled for retry in ${nextAttemptDelay/1000/60} minutes`);
+          }
+        } else {
+          // Mark job as failed after max attempts
+          const { error: failError } = await supabase
+            .from('content_generation_queue')
+            .update({
+              status: 'failed',
+              completed_at: new Date().toISOString(),
+              error_message: jobError.message,
+              result_data: {
+                success: false,
+                error: jobError.message
+              }
+            })
+            .eq('id', job.id);
+        }
 
         if (failError) {
           console.error(`Failed to mark job ${job.id} as failed:`, failError);

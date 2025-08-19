@@ -21,7 +21,9 @@ import {
   FileText,
   Calendar,
   User,
-  MapPin
+  MapPin,
+  BookOpen,
+  Zap
 } from 'lucide-react';
 
 // Article interfaces
@@ -36,6 +38,14 @@ interface Article {
   word_count: number | null;
   import_metadata: any;
   created_at: string;
+  category?: string;
+  tags?: string[];
+  reading_time_minutes?: number;
+  summary?: string;
+  source_name?: string;
+  source_domain?: string;
+  queue_status?: string;
+  queue_type?: string;
 }
 
 // Slide and Story interfaces
@@ -86,6 +96,7 @@ interface ContentPipelineProps {
 export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   // Article queue state
   const [articles, setArticles] = useState<Article[]>([]);
+  const [queuedArticles, setQueuedArticles] = useState<Article[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
 
@@ -94,7 +105,6 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [loadingStories, setLoadingStories] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [isResettingStalled, setIsResettingStalled] = useState(false);
-  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
   // Edit slide state
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
@@ -106,6 +116,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   useEffect(() => {
     const interval = setInterval(() => {
       loadPendingArticles();
+      loadQueuedArticles();
       loadStories();
     }, 10000);
 
@@ -114,36 +125,58 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
   useEffect(() => {
     loadPendingArticles();
+    loadQueuedArticles();
     loadStories();
   }, []);
 
-  const processQueue = async () => {
-    setIsProcessingQueue(true);
+  // Load articles with queue status
+  const loadQueuedArticles = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('queue-processor');
+      const { data: queueData, error: queueError } = await supabase
+        .from('content_generation_queue')
+        .select(`
+          article_id,
+          status,
+          slidetype,
+          attempts,
+          created_at
+        `)
+        .in('status', ['pending', 'processing']);
+
+      if (queueError) throw queueError;
+
+      const queuedIds = queueData?.map(q => q.article_id) || [];
       
-      if (error) throw error;
-      
-      toast({
-        title: "Queue Processing Started",
-        description: "Processing stuck jobs in the queue. This may take a few minutes.",
-      });
-      
-      // Reload both panels to show updated status
-      setTimeout(() => {
-        loadStories();
-        loadPendingArticles();
-      }, 2000);
-      
+      if (queuedIds.length > 0) {
+        const { data: articleData, error: articleError } = await supabase
+          .from('articles')
+          .select(`
+            id, title, author, published_at, category, tags, word_count, 
+            reading_time_minutes, source_url, region, summary, body, created_at,
+            import_metadata,
+            source_name:content_sources(source_name),
+            source_domain:content_sources(canonical_domain)
+          `)
+          .in('id', queuedIds);
+
+        if (articleError) throw articleError;
+
+        const enrichedQueuedArticles = articleData?.map(article => ({
+          ...article,
+          import_metadata: {}, // Add empty metadata for queued articles
+          source_name: article.source_name?.source_name || 'Unknown',
+          source_domain: article.source_domain?.canonical_domain || 'unknown.com',
+          queue_status: queueData.find(q => q.article_id === article.id)?.status || 'pending',
+          queue_type: queueData.find(q => q.article_id === article.id)?.slidetype || 'tabloid'
+        })) || [];
+
+        setQueuedArticles(enrichedQueuedArticles);
+      } else {
+        setQueuedArticles([]);
+      }
     } catch (error) {
-      console.error('Error processing queue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process queue jobs",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingQueue(false);
+      console.error('Error loading queued articles:', error);
+      setQueuedArticles([]);
     }
   };
 
@@ -573,136 +606,149 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingArticles ? (
-              <div className="flex items-center justify-center p-12">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
-            ) : articles.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No articles pending review</p>
-                <p className="text-sm">New articles will appear here for validation</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {articles.map((article) => {
-                  const relevanceScore = (article.import_metadata as any)?.eastbourne_relevance_score || 0;
-                  const isProcessing = processingArticle === article.id;
-                  const isReview = article.title.toLowerCase().includes('review') || 
-                                 article.title.toLowerCase().includes('theatre') ||
-                                 article.title.toLowerCase().includes('film');
-                  
-                  return (
-                    <div key={article.id} className={`p-4 border rounded-lg space-y-3 ${isReview ? 'bg-yellow-50 border-yellow-200' : ''}`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium line-clamp-2">{article.title}</h3>
-                            <div className="flex items-center gap-1">
-                              <div 
-                                className={`w-2 h-2 rounded-full ${getRelevanceColor(relevanceScore)}`}
-                                title={`Relevance Score: ${relevanceScore}`}
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                {relevanceScore}
-                              </span>
+            <div className="space-y-4">
+              {loadingArticles ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : articles.length === 0 && queuedArticles.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No articles available for processing</p>
+                </div>
+              ) : (
+                <>
+                  {/* Available Articles */}
+                  {articles.map((article) => {
+                    const relevanceScore = (article.import_metadata as any)?.eastbourne_relevance_score || 0;
+                    const isProcessing = processingArticle === article.id;
+                    const isReview = article.title.toLowerCase().includes('review') || 
+                                   article.title.toLowerCase().includes('theatre') ||
+                                   article.title.toLowerCase().includes('film');
+                    
+                    return (
+                      <Card key={article.id} className="border border-border/40">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                  Available
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">Score: {relevanceScore}</span>
+                                {getWordCountBadge(article.word_count || 0)}
+                              </div>
+                              <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                <span>{article.author || 'Unknown Author'}</span>
+                                <span>•</span>
+                                <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
+                                {article.region && (
+                                  <>
+                                    <span>•</span>
+                                    <Badge variant="outline" className="text-xs">{article.region}</Badge>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            {article.author && <span>{article.author}</span>}
-                            {article.region && (
-                              <>
-                                <span>•</span>
-                                <Badge variant="outline" className="text-xs">{article.region}</Badge>
-                              </>
-                            )}
-                            {article.word_count && (
-                              <>
-                                <span>•</span>
-                                <span>{article.word_count} words</span>
-                              </>
-                            )}
-                            <span>•</span>
-                            <span>{new Date(article.created_at).toLocaleDateString()}</span>
-                          </div>
-
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {article.body?.substring(0, 200)}...
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(article.source_url, '_blank')}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </Button>
-                          
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => rejectArticle(article.id)}
-                            disabled={isProcessing}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                          
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              size="sm"
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
                               onClick={() => approveArticle(article, 'short')}
                               disabled={isProcessing}
-                              className="h-7 px-2 text-xs"
-                              variant="default"
+                              className="flex-1"
                             >
-                              {isProcessing ? (
-                                <div className="animate-spin rounded-full h-2 w-2 border-b border-white mr-1" />
-                              ) : (
-                                <Sparkles className="w-2 h-2 mr-1" />
-                              )}
-                              Short (4)
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Short
                             </Button>
-                            
-                            <Button
-                              size="sm"
+                            <Button 
+                              size="sm" 
+                              variant="secondary"
                               onClick={() => approveArticle(article, 'tabloid')}
                               disabled={isProcessing}
-                              className="h-7 px-2 text-xs"
-                              variant="secondary"
+                              className="flex-1"
                             >
-                              {isProcessing ? (
-                                <div className="animate-spin rounded-full h-2 w-2 border-b border-current mr-1" />
-                              ) : (
-                                <Sparkles className="w-2 h-2 mr-1" />
-                              )}
-                              Tabloid (8)
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Tabloid
                             </Button>
-                            
-                            <Button
-                              size="sm"
+                            <Button 
+                              size="sm" 
+                              variant="outline"
                               onClick={() => approveArticle(article, 'indepth')}
                               disabled={isProcessing}
-                              className="h-7 px-2 text-xs"
-                              variant="outline"
+                              className="flex-1"
                             >
-                              {isProcessing ? (
-                                <div className="animate-spin rounded-full h-2 w-2 border-b border-current mr-1" />
-                              ) : (
-                                <Sparkles className="w-2 h-2 mr-1" />
-                              )}
-                              In-Depth (10+)
+                              <BookOpen className="w-3 h-3 mr-1" />
+                              In-Depth
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => rejectArticle(article.id)}
+                              disabled={isProcessing}
+                            >
+                              <X className="w-3 h-3" />
                             </Button>
                           </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {/* Queued Articles */}
+                  {queuedArticles.map((article) => (
+                    <Card key={`queued-${article.id}`} className="border border-amber-200 bg-amber-50/50">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className={`text-xs ${
+                                article.queue_status === 'processing' 
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {article.queue_status === 'processing' ? (
+                                  <>
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1" />
+                                    Processing
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Queued ({article.queue_type})
+                                  </>
+                                )}
+                              </Badge>
+                              {getWordCountBadge(article.word_count || 0)}
+                            </div>
+                            <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                              <span>{article.author || 'Unknown Author'}</span>
+                              <span>•</span>
+                              <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
+                              {article.region && (
+                                <>
+                                  <span>•</span>
+                                  <Badge variant="outline" className="text-xs">{article.region}</Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        
+                        <div className="text-xs text-muted-foreground">
+                          {article.queue_status === 'processing' 
+                            ? 'AI is currently generating slides...' 
+                            : 'Queued for processing. Runs automatically every 5 minutes.'}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -741,15 +787,6 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                          <RotateCcw className="w-3 h-3 mr-1" />
                          Refresh
                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={processQueue}
-                          disabled={isProcessingQueue}
-                        >
-                          <Sparkles className={`w-3 h-3 mr-1 ${isProcessingQueue ? 'animate-spin' : ''}`} />
-                          Process Queue
-                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
