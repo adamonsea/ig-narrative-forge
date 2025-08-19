@@ -495,6 +495,9 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   // PHASE 1: Story Intelligence - Assess story type and significance
   const storyTypeAnalysis = analyzeStoryType(article.title, article.body);
   
+  // Extract domain from source URL for final slide
+  const sourceDomain = new URL(article.source_url).hostname;
+  
   const systemPrompt = `You are an expert news editor creating ${config.count} engaging slides with ${config.style} tone.
 
 EDITORIAL INTELLIGENCE:
@@ -508,7 +511,7 @@ STORYTELLING RULES:
 • Include location context by slide 2: "In [Location]..."
 • Replace temporal references: "yesterday (${temporalContext.yesterday})"
 • Use sophisticated transitions that match story flow
-• FINAL SLIDE MUST end with: "Summarised from ${publicationName}${article.author ? `, by ${article.author}` : ''}"
+• FINAL SLIDE MUST be exactly: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
 
 LANGUAGE GUIDELINES:
 • BREAKING NEWS: Direct, urgent, factual tone
