@@ -139,15 +139,30 @@ serve(async (req) => {
     
     // Generate slides using OpenAI with publication name and temporal context
     console.log(`🎯 Generating slides with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
-    let slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
-    console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
-
-    if (!slides || slides.length === 0) {
-      console.error('❌ No slides generated for article:', article.title);
-      return new Response(JSON.stringify({ error: 'Failed to generate slides' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    let slides;
+    try {
+      slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
+      console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
+      
+      if (!slides || slides.length === 0) {
+        console.error('❌ No slides generated for article:', article.title);
+        // Reset story status and delete story if no slides were created
+        await supabase
+          .from('stories')
+          .delete()
+          .eq('id', story.id);
+        
+        throw new Error('Failed to generate slides');
+      }
+    } catch (slideError) {
+      console.error('❌ Error during slide generation:', slideError);
+      // Reset story status and delete story if no slides were created
+      await supabase
+        .from('stories')
+        .delete()
+        .eq('id', story.id);
+      
+      throw slideError;
     }
 
     // Validate promise delivery if promises were detected

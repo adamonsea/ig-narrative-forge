@@ -544,7 +544,13 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setStories(stories || []);
+      
+      // Filter out stories that don't have any slides (orphaned stories)
+      const storiesWithSlides = (stories || []).filter(story => 
+        story.slides && story.slides.length > 0
+      );
+      
+      setStories(storiesWithSlides);
     } catch (error) {
       console.error('Error loading stories:', error);
       toast({
