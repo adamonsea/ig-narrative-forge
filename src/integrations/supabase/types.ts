@@ -525,7 +525,22 @@ export type Database = {
           started_at?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_scrape_jobs_schedule_id"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "scrape_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_scrape_jobs_source_id"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scrape_schedules: {
         Row: {
@@ -567,7 +582,15 @@ export type Database = {
           success_rate?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_scrape_schedules_source_id"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       search_queries: {
         Row: {
