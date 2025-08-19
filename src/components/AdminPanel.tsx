@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, CheckCircle, Clock, Database, Activity, RotateCcw, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { StuckJobCleaner } from './StuckJobCleaner';
 
 interface SystemHealth {
   overall_status: 'healthy' | 'unhealthy';
@@ -278,6 +279,7 @@ export const AdminPanel = () => {
       <Tabs defaultValue="jobs" className="space-y-4">
         <TabsList>
           <TabsTrigger value="jobs">Job Management</TabsTrigger>
+          <TabsTrigger value="stuck">Stuck Jobs</TabsTrigger>
           <TabsTrigger value="usage">API Usage</TabsTrigger>
           <TabsTrigger value="system">System Info</TabsTrigger>
         </TabsList>
@@ -346,6 +348,10 @@ export const AdminPanel = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="stuck" className="space-y-4">
+          <StuckJobCleaner />
         </TabsContent>
 
         <TabsContent value="usage" className="space-y-4">

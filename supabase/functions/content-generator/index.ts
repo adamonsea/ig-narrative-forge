@@ -74,12 +74,17 @@ serve(async (req) => {
     console.log('Found article:', article.title);
 
     // Check if story already exists for this article
-    let story;
-    const { data: existingStory } = await supabase
+    let story = null;
+    const { data: existingStory, error: storySelectError } = await supabase
       .from('stories')
       .select('*')
       .eq('article_id', articleId)
       .single();
+
+    if (storySelectError && storySelectError.code !== 'PGRST116') {
+      console.error('Error checking for existing story:', storySelectError);
+      throw new Error(`Failed to check for existing story: ${storySelectError.message}`);
+    }
 
     if (existingStory) {
       console.log('Story already exists for article:', articleId, 'Story ID:', existingStory.id);
@@ -117,10 +122,10 @@ serve(async (req) => {
     }
     
     if (!story) {
-      throw new Error('Failed to create story');
+      throw new Error('Failed to create or retrieve story');
     }
 
-    console.log('Created story:', story.id);
+    console.log('Using story:', story.id);
 
     // Extract publication name from source URL first for proper attribution in slides
     const publicationName = await extractPublicationName(article.source_url, supabase, articleId);
