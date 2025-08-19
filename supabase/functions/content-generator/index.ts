@@ -538,12 +538,19 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
 • Create INTRIGUE: What's the twist? The unexpected angle? The "you won't believe" moment?
 • STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance}) - but ALWAYS find the engaging hook
 
-⚡ STORYTELLING FORMULA:
+⚡ STORYTELLING FORMULA - COMPLETE NARRATIVE ARC:
 1. HOOK: Start with the most COMPELLING angle (${config.wordLimits.split('/')[0]} words max)
 2. CONTEXT: "In [Location]..." with the JUICY details
 3. BUILD TENSION: What's really happening? Why should people care?
-4. REVEAL: The key facts, consequences, or surprising elements
-5. FINAL SLIDE: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+4. CLIMAX/RESOLUTION: The key outcome, rescue, solution, or how it ended - THIS IS CRITICAL
+5. IMPACT/CONSEQUENCE: What happened as a result? Who was the hero? What was learned?
+6. FINAL SLIDE: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+
+🎯 NARRATIVE ARC REQUIREMENTS:
+• SETUP: What was the initial situation/problem?
+• CONFLICT: What went wrong or created tension?
+• RESOLUTION: How was it resolved? Who helped? What was the outcome?
+• NEVER leave readers hanging - always show HOW the story ended
 
 🎪 LANGUAGE POWERHOUSE:
 • Replace "officials say" → "authorities reveal/warn/admit"
@@ -572,9 +579,18 @@ ${article.body.substring(0, 1200)}
 🚀 TRANSFORMATION RULES:
 1. FIND THE VIRAL HOOK: What's the modern angle? The generational clash? The social media moment? The "you won't believe" element?
 2. CREATE INTRIGUE: Start with mystery, controversy, or unexpected consequences
-3. USE PUNCHY LANGUAGE: "sparks outrage," "divides locals," "goes viral," "causes chaos"
-4. MAKE IT SHAREABLE: What would make someone screenshot this and send to friends?
-5. STAY ACCURATE: Punch up the language, but never invent facts
+3. CAPTURE COMPLETE STORY ARC: Setup → Conflict → Resolution → Outcome (WHO saved the day? HOW did it end?)
+4. USE PUNCHY LANGUAGE: "sparks outrage," "divides locals," "goes viral," "causes chaos"
+5. MAKE IT SHAREABLE: What would make someone screenshot this and send to friends?
+6. STAY ACCURATE: Punch up the language, but never invent facts
+
+📖 STORY RESOLUTION CHECKLIST:
+• If there's a rescue - WHO rescued them and HOW?
+• If there's a problem - HOW was it solved?
+• If there's conflict - WHAT was the outcome?
+• If there's danger - HOW did people get to safety?
+• If there's mystery - WHAT was discovered?
+• ALWAYS show the complete journey from problem to resolution
 
 💡 ANGLE INSPIRATION:
 - Social media trends causing real-world problems?
