@@ -121,10 +121,14 @@ serve(async (req) => {
 
     console.log('Created story:', story.id);
 
+    // Extract publication name from source URL first for proper attribution in slides
+    const publicationName = await extractPublicationName(article.source_url, supabase, articleId);
+    console.log(`✅ Validated publication: ${publicationName}`);
+
     console.log('🤖 Starting slide generation for article:', article.title);
     
-    // Generate slides using OpenAI
-    const slides = await generateSlides(article, openAIApiKey, slideType);
+    // Generate slides using OpenAI with publication name for proper attribution
+    const slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
 
     if (!slides || slides.length === 0) {
       console.error('❌ No slides generated for article:', article.title);
@@ -135,10 +139,6 @@ serve(async (req) => {
     }
 
     console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
-
-    // Extract publication name from source URL with enhanced validation
-    const publicationName = await extractPublicationName(article.source_url, supabase, articleId);
-    console.log(`✅ Validated publication: ${publicationName}`);
 
     // Generate social media post copy with hashtags
     const postCopy = await generatePostCopy(article, publicationName, openAIApiKey);
@@ -263,7 +263,7 @@ serve(async (req) => {
   }
 });
 
-async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid'): Promise<SlideContent[]> {
+async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string): Promise<SlideContent[]> {
   const getSlidePrompt = (type: string) => {
     switch (type) {
       case 'short':
@@ -299,8 +299,8 @@ REQUIREMENTS:
 
 FINAL SLIDE SOURCE FORMAT:
 Always end the final slide with proper attribution:
-"Summarised from an article in [Publication], by [Author]" (when author available)
-OR "Summarised from an article in [Publication]" (when no author)
+"Summarised from an article in ${publicationName}, by [Author]" (when author available)
+OR "Summarised from an article in ${publicationName}" (when no author)
 
 BEHAVIORAL NUDGES: Use scarcity, social proof, authority, and local relevance throughout.
 STYLE: Laser-focused on the most compelling hidden narrative thread with strong regional identity.`;
@@ -337,8 +337,8 @@ REQUIREMENTS:
 
 FINAL SLIDE SOURCE FORMAT:
 Always end the final slide with proper attribution:
-"Summarised from an article in [Publication], by [Author]" (when author available)
-OR "Summarised from an article in [Publication]" (when no author)
+"Summarised from an article in ${publicationName}, by [Author]" (when author available)
+OR "Summarised from an article in ${publicationName}" (when no author)
 
 BEHAVIORAL NUDGES: Leverage loss aversion, social proof, authority, reciprocity, and commitment.
 STYLE: Multi-layered investigation revealing hidden complexity and implications with strong regional identity.`;
@@ -378,8 +378,8 @@ REQUIREMENTS:
 
 FINAL SLIDE SOURCE FORMAT:
 Always end the final slide with proper attribution:
-"Summarised from an article in [Publication], by [Author]" (when author available)
-OR "Summarised from an article in [Publication]" (when no author)
+"Summarised from an article in ${publicationName}, by [Author]" (when author available)
+OR "Summarised from an article in ${publicationName}" (when no author)
 
 BEHAVIORAL NUDGES: Use storytelling, emotional contrast, tribal identity, and reciprocity principles.
 STYLE: Dramatic investigative storytelling that reveals hidden drama and tension with strong regional identity.`;
