@@ -327,7 +327,24 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
   const handleRejectStory = async (storyId: string) => {
     try {
-      // Delete the story and its slides - this returns the article to validation queue
+      // First get the article_id from the story
+      const { data: story, error: storyFetchError } = await supabase
+        .from('stories')
+        .select('article_id')
+        .eq('id', storyId)
+        .single();
+
+      if (storyFetchError) throw storyFetchError;
+
+      // Reset the article status to 'new' so it reappears in the content pipeline
+      const { error: articleError } = await supabase
+        .from('articles')
+        .update({ processing_status: 'new' })
+        .eq('id', story.article_id);
+
+      if (articleError) throw articleError;
+
+      // Delete the story and its slides
       const { error: slidesError } = await supabase
         .from('slides')
         .delete()
