@@ -101,6 +101,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
   const { toast } = useToast();
 
+  // Auto-refresh both panels every 10 seconds to show real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadPendingArticles();
+      loadStories();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     loadPendingArticles();
     loadStories();
@@ -117,8 +127,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         description: "Stalled processing jobs have been reset",
       });
       
-      // Reload stories to show updated status
+      // Reload both panels to show updated status
       loadStories();
+      loadPendingArticles();
     } catch (error) {
       console.error('Error resetting stalled processing:', error);
       toast({
@@ -136,16 +147,24 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       setLoadingArticles(true);
       
-      // First get article IDs that already have stories
+      // First get article IDs that already have stories OR queued jobs
       const { data: existingStories, error: storiesError } = await supabase
         .from('stories')
         .select('article_id');
 
       if (storiesError) throw storiesError;
 
+      const { data: queuedJobs, error: queueError } = await supabase
+        .from('content_generation_queue')
+        .select('article_id')
+        .in('status', ['pending', 'processing']);
+
+      if (queueError) throw queueError;
+
       const articlesWithStories = new Set(existingStories?.map(s => s.article_id) || []);
+      const articlesQueued = new Set(queuedJobs?.map(j => j.article_id) || []);
       
-      // Only fetch articles with 'new' processing status 
+      // Only fetch articles with 'new' processing status that don't have stories or queued jobs
       const { data: articles, error: articlesError } = await supabase
         .from('articles')
         .select('*')
@@ -155,12 +174,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       if (articlesError) throw articlesError;
 
-      // Filter out articles that already have stories (safety net)
-      const articlesWithoutStories = (articles || []).filter(article => 
-        !articlesWithStories.has(article.id)
+      // Filter out articles that already have stories or are queued (safety net)
+      const availableArticles = (articles || []).filter(article => 
+        !articlesWithStories.has(article.id) && !articlesQueued.has(article.id)
       );
-
-      const pendingArticles = articlesWithoutStories;
 
       // Sort articles: non-reviews first (by relevance), then reviews at bottom
       const isReview = (article: Article) => {
@@ -181,7 +198,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                /\d\/\d+/.test(title);
       };
 
-      const sortedArticles = pendingArticles.sort((a, b) => {
+      const sortedArticles = availableArticles.sort((a, b) => {
         const aIsReview = isReview(a);
         const bIsReview = isReview(b);
         
@@ -234,8 +251,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         description: `${typeLabels[slideType]} generation added to queue. Processing will start shortly.`,
       });
 
-      // Refresh the articles list to remove this one from the queue
+      // Refresh both panels - article should disappear from pipeline and eventually appear in review
       loadPendingArticles();
+      loadStories();
 
     } catch (error: any) {
       console.error('Queueing error:', error);
@@ -330,6 +348,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       });
 
       loadStories();
+      loadPendingArticles(); // Refresh in case there are workflow changes
     } catch (error) {
       console.error('Failed to approve story:', error);
       toast({
@@ -380,8 +399,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         description: "Story deleted and article returned to validation queue.",
       });
 
-      // Refresh article queue as the article is now available again
+      // Refresh both panels as the article is now available again
       loadPendingArticles();
+      loadStories();
     } catch (error) {
       console.error('Error rejecting story:', error);
       toast({
@@ -407,6 +427,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       });
 
       loadStories();
+      loadPendingArticles(); // Refresh in case there are workflow changes
     } catch (error) {
       console.error('Failed to return story:', error);
       toast({
