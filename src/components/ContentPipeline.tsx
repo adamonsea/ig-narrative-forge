@@ -215,7 +215,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         .from('content_generation_queue')
         .insert({
           article_id: article.id,
-          slideType: slideType,
+          slidetype: slideType, // Fixed: using lowercase 'slidetype' to match DB schema
           status: 'pending'
         })
         .select()
