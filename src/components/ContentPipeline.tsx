@@ -94,6 +94,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [loadingStories, setLoadingStories] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [isResettingStalled, setIsResettingStalled] = useState(false);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
   // Edit slide state
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
@@ -115,6 +116,36 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     loadPendingArticles();
     loadStories();
   }, []);
+
+  const processQueue = async () => {
+    setIsProcessingQueue(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('queue-processor');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Queue Processing Started",
+        description: "Processing stuck jobs in the queue. This may take a few minutes.",
+      });
+      
+      // Reload both panels to show updated status
+      setTimeout(() => {
+        loadStories();
+        loadPendingArticles();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error processing queue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process queue jobs",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingQueue(false);
+    }
+  };
 
   const resetStalledProcessing = async () => {
     setIsResettingStalled(true);
@@ -710,15 +741,24 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                          <RotateCcw className="w-3 h-3 mr-1" />
                          Refresh
                        </Button>
-                       <Button 
-                         variant="outline" 
-                         size="sm" 
-                         onClick={resetStalledProcessing}
-                         disabled={isResettingStalled}
-                       >
-                         <RotateCcw className={`w-3 h-3 mr-1 ${isResettingStalled ? 'animate-spin' : ''}`} />
-                         Reset Stalled
-                       </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={processQueue}
+                          disabled={isProcessingQueue}
+                        >
+                          <Sparkles className={`w-3 h-3 mr-1 ${isProcessingQueue ? 'animate-spin' : ''}`} />
+                          Process Queue
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={resetStalledProcessing}
+                          disabled={isResettingStalled}
+                        >
+                          <RotateCcw className={`w-3 h-3 mr-1 ${isResettingStalled ? 'animate-spin' : ''}`} />
+                          Reset Stalled
+                        </Button>
                      </div>
                     
                     {draftStories.map((story) => (
