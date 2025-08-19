@@ -415,7 +415,7 @@ ${html.substring(0, 8000)}`; // Limit HTML to avoid token limits
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1500,
         temperature: 0.1
@@ -497,8 +497,7 @@ async function parseHTMLContent(content: string, sourceUrl: string, openAIApiKey
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2000,
-        temperature: 0.1,
+        max_tokens: 2000
       }),
     });
     
@@ -596,8 +595,8 @@ async function enhanceRegionalContext(article: any, openAIApiKey: string): Promi
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
-        temperature: 0.2,
+        max_tokens: 1000
+      }),
       }),
     });
     
