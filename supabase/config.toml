@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.test-scraper]
 verify_jwt = false
+
+[functions.scraping-test]
+verify_jwt = false

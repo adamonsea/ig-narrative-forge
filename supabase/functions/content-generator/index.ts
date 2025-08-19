@@ -257,15 +257,22 @@ serve(async (req) => {
     });
     
     // If we have a story ID, reset its status to draft so it can be retried
-    if (story?.id) {
-      try {
-        console.log('🔄 Resetting story status to draft due to error...');
-        await supabase
-          .from('stories')
-          .update({ status: 'draft' })
-          .eq('id', story.id);
-      } catch (resetError) {
-        console.error('Failed to reset story status:', resetError);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (supabaseUrl && supabaseKey) {
+      const supabaseInstance = createClient(supabaseUrl, supabaseKey);
+      
+      if (story?.id) {
+        try {
+          console.log('🔄 Resetting story status to draft due to error...');
+          await supabaseInstance
+            .from('stories')
+            .update({ status: 'draft' })
+            .eq('id', story.id);
+        } catch (resetError) {
+          console.error('Failed to reset story status:', resetError);
+        }
       }
     }
     

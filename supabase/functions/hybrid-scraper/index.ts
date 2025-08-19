@@ -384,9 +384,16 @@ function extractBasicContent(html: string, baseUrl: string): any[] {
   return [];
 }
 
-// Store articles in database
+// Store articles in database with regional relevance scoring
 async function storeArticles(articles: any[], sourceId: string, region: string, supabase: any): Promise<number> {
   let storedCount = 0;
+  
+  // Get source info for relevance scoring
+  const { data: sourceInfo } = await supabase
+    .from('content_sources')
+    .select('source_name, canonical_domain, region')
+    .eq('id', sourceId)
+    .single();
   
   for (const article of articles) {
     try {
@@ -402,21 +409,26 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
         continue;
       }
 
-      // Insert new article
+      // Calculate regional relevance score
+      const relevanceScore = calculateRegionalRelevance(article, sourceInfo, region);
+      console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore}`);
+
+      // Insert new article with relevance score
       const { error } = await supabase
         .from('articles')
         .insert({
           ...article,
           source_id: sourceId,
           region: region,
-          processing_status: 'new'
+          processing_status: 'new',
+          content_quality_score: relevanceScore
         });
 
       if (error) {
         console.error(`❌ Failed to store: ${article.title} - ${error.message}`);
       } else {
         storedCount++;
-        console.log(`💾 Stored: ${article.title}`);
+        console.log(`💾 Stored: ${article.title} (relevance: ${relevanceScore})`);
       }
 
     } catch (error) {
@@ -425,6 +437,87 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
   }
   
   return storedCount;
+}
+
+// Calculate regional relevance score for articles
+function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion: string): number {
+  let score = 0;
+  const content = `${article.title} ${article.body} ${article.summary || ''}`.toLowerCase();
+  
+  // Base score from source type
+  if (sourceInfo?.region === targetRegion || sourceInfo?.region === 'Eastbourne') {
+    score += 60; // Local source gets significant boost
+    console.log(`🏠 Local source bonus: +60 points`);
+  } else if (sourceInfo?.region === 'UK' && targetRegion === 'Eastbourne') {
+    score += 20; // National UK source gets moderate boost for Eastbourne
+    console.log(`🇬🇧 UK source bonus: +20 points`);
+  }
+
+  // Primary location keywords (exact matches)
+  const primaryKeywords = ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon'];
+  for (const keyword of primaryKeywords) {
+    if (content.includes(keyword)) {
+      score += 25;
+      console.log(`📍 Primary location "${keyword}": +25 points`);
+    }
+  }
+
+  // Secondary location keywords (broader East Sussex)
+  const secondaryKeywords = ['brighton', 'hastings', 'lewes', 'newhaven', 'uckfield', 'east sussex', 'sussex'];
+  for (const keyword of secondaryKeywords) {
+    if (content.includes(keyword)) {
+      score += 15;
+      console.log(`🌊 Secondary location "${keyword}": +15 points`);
+    }
+  }
+
+  // Local landmarks, venues, and organizations
+  const landmarks = ['beachy head', 'seven sisters', 'south downs', 'eastbourne pier', 'devonshire park', 'congress theatre', 'towner gallery', 'redoubt fortress', 'airbourne', 'eastbourne college'];
+  for (const landmark of landmarks) {
+    if (content.includes(landmark)) {
+      score += 20;
+      console.log(`🏛️ Local landmark "${landmark}": +20 points`);
+    }
+  }
+
+  // Local organizations and services
+  const organizations = ['eastbourne borough council', 'east sussex fire', 'sussex police', 'eastbourne district general', 'rnli eastbourne', 'eastbourne town fc'];
+  for (const org of organizations) {
+    if (content.includes(org)) {
+      score += 15;
+      console.log(`🏢 Local organization "${org}": +15 points`);
+    }
+  }
+
+  // Local events and seasonal content
+  const events = ['airbourne', 'eastbourne airshow', 'tennis international', 'beer festival', 'seafood wine festival'];
+  for (const event of events) {
+    if (content.includes(event)) {
+      score += 15;
+      console.log(`🎪 Local event "${event}": +15 points`);
+    }
+  }
+
+  // Postal code patterns (BN20-BN25 for Eastbourne area)
+  if (content.match(/bn2[0-5]\b/i)) {
+    score += 25;
+    console.log(`📮 Local postcode match: +25 points`);
+  }
+
+  // Street name patterns (common local streets)
+  const streets = ['grand parade', 'terminus road', 'grove road', 'seaside road', 'kings avenue', 'cornfield road'];
+  for (const street of streets) {
+    if (content.includes(street)) {
+      score += 20;
+      console.log(`🛣️ Local street "${street}": +20 points`);
+    }
+  }
+
+  // Cap the score at 100
+  score = Math.min(score, 100);
+  
+  console.log(`🎯 Final relevance score: ${score}/100`);
+  return score;
 }
 
 // Update source metrics
