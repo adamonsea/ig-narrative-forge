@@ -10,7 +10,7 @@ import { Search, Plus, RefreshCw, Filter, Eye, Settings } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ArticleImport } from './ArticleImport';
 import { SourceManager } from './SourceManager';
-import { AdvancedSearch } from './AdvancedSearch';
+// import { AdvancedSearch } from './AdvancedSearch';
 import { ArticleList } from './ArticleList';
 
 interface Article {

@@ -8,20 +8,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
-import { TestingSuite } from '@/components/TestingSuite';
+// import { TestingSuite } from '@/components/TestingSuite';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
 import { ApprovedQueue } from '@/components/ApprovedQueue';
 import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
+// import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
   const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'testing' | 'content' | 'slides' | 'approved' | 'monitor' | 'analytics' | 'duplicates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -180,14 +180,14 @@ const Index = () => {
               <FileText className="w-4 h-4" />
               Dashboard
             </Button>
-            <Button
+            {/* <Button
               variant={activeTab === 'analytics' ? 'default' : 'outline'}
               onClick={() => setActiveTab('analytics')}
               className="flex items-center gap-2"
             >
               <BarChart3 className="w-4 h-4" />
               Analytics
-            </Button>
+            </Button> */}
             <Button
               variant={activeTab === 'slides' ? 'default' : 'outline'}
               onClick={() => setActiveTab('slides')}
@@ -238,14 +238,14 @@ const Index = () => {
                   <Settings className="w-4 h-4" />
                   Admin
                 </Button>
-                <Button
+                {/* <Button
                   variant={activeTab === 'testing' ? 'default' : 'outline'}
                   onClick={() => setActiveTab('testing')}
                   className="flex items-center gap-2"
                 >
                   <TestTube className="w-4 h-4" />
                   Testing
-                </Button>
+                </Button> */}
               </>
             )}
           </div>
@@ -401,7 +401,7 @@ const Index = () => {
           </div>
         )}
 
-        {activeTab === 'analytics' && (
+        {/* {activeTab === 'analytics' && (
           <AnalyticsDashboard />
         )}
 
@@ -409,7 +409,7 @@ const Index = () => {
           <div className="space-y-6">
             <TestingSuite />
           </div>
-        )}
+        )} */}
 
         {activeTab === 'monitor' && isAdmin && (
           <div className="space-y-6">
