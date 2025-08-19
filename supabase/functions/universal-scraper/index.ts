@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ScrapingConfig {
-  method: 'rss' | 'api' | 'html';
+  method: 'rss' | 'rss_enhanced' | 'api' | 'html';
   url: string;
   headers?: Record<string, string>;
   retryAttempts: number;
@@ -161,7 +161,7 @@ async function getScrapingConfig(sourceUrl: string, supabase: any): Promise<Scra
   const domainConfigs: Record<string, ScrapingConfig[]> = {
     'bournefreelive.co.uk': [
       {
-        method: 'rss',
+        method: 'rss_enhanced',
         url: 'https://bournefreelive.co.uk/feed/',
         retryAttempts: 3,
         timeout: 15000,
@@ -276,6 +276,9 @@ async function intelligentScrape(configs: ScrapingConfig[], openAIApiKey: string
         case 'rss':
           articles = await parseRSSContent(content);
           break;
+        case 'rss_enhanced':
+          articles = await parseRSSEnhancedContent(content, openAIApiKey);
+          break;
         case 'api':
           articles = await parseAPIContent(content);
           break;
@@ -327,6 +330,108 @@ async function parseRSSContent(content: string): Promise<any[]> {
   }
   
   return articles.slice(0, 10); // Limit to 10 most recent
+}
+
+// Parse RSS with enhanced full content extraction
+async function parseRSSEnhancedContent(content: string, openAIApiKey: string): Promise<any[]> {
+  const articles: any[] = [];
+  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+  let match;
+  
+  const urlsToFetch: Array<{title: string, url: string, description: string, pubDate: string, author: string | null}> = [];
+  
+  // First pass: extract article URLs from RSS
+  while ((match = itemRegex.exec(content)) !== null) {
+    const itemContent = match[1];
+    
+    const title = extractXMLContent(itemContent, 'title');
+    const link = extractXMLContent(itemContent, 'link');
+    const description = extractXMLContent(itemContent, 'description');
+    const pubDate = extractXMLContent(itemContent, 'pubDate');
+    const author = extractXMLContent(itemContent, 'author') || extractXMLContent(itemContent, 'dc:creator');
+    
+    if (title && link) {
+      urlsToFetch.push({
+        title: cleanHTML(title),
+        url: link,
+        description: cleanHTML(description || ''),
+        pubDate: pubDate || new Date().toISOString(),
+        author: author ? cleanHTML(author) : null
+      });
+    }
+  }
+  
+  // Second pass: fetch full content from each article URL
+  for (const item of urlsToFetch.slice(0, 5)) { // Limit to 5 to avoid overwhelming
+    try {
+      const response = await fetch(item.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; LocalNewsBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml'
+        }
+      });
+      
+      if (response.ok) {
+        const htmlContent = await response.text();
+        const fullContent = await extractFullArticleContent(htmlContent, openAIApiKey);
+        
+        articles.push({
+          title: item.title,
+          body: fullContent || item.description, // Fallback to RSS description if extraction fails
+          source_url: item.url,
+          published_at: item.pubDate,
+          author: item.author,
+          summary: item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description
+        });
+      }
+    } catch (error) {
+      console.log(`Failed to fetch full content for ${item.url}: ${error.message}`);
+      // Fallback to RSS description
+      articles.push({
+        title: item.title,
+        body: item.description,
+        source_url: item.url,
+        published_at: item.pubDate,
+        author: item.author,
+        summary: item.description.length > 200 ? item.description.substring(0, 200) + '...' : item.description
+      });
+    }
+  }
+  
+  return articles;
+}
+
+// Extract full article content from HTML page
+async function extractFullArticleContent(html: string, openAIApiKey: string): Promise<string> {
+  const prompt = `Extract the full article content from this HTML page. Focus on the main article text, excluding navigation, ads, comments, and sidebars. Return only the article content as plain text:
+
+${html.substring(0, 8000)}`; // Limit HTML to avoid token limits
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1500,
+        temperature: 0.1
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content?.trim() || '';
+  } catch (error) {
+    console.error('Failed to extract full content with AI:', error);
+    return '';
+  }
 }
 
 // Parse API JSON content
