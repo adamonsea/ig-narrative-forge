@@ -365,6 +365,43 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
+  // Extract content function
+  const handleExtractContent = async (article: Article) => {
+    try {
+      setProcessingArticle(article.id);
+      
+      // Call the content extractor edge function
+      const { data, error } = await supabase.functions.invoke('content-extractor', {
+        body: { 
+          articleId: article.id,
+          sourceUrl: article.source_url 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'Content Extracted',
+          description: 'Full article content has been extracted successfully',
+        });
+        // Refresh articles to show updated content
+        loadPendingArticles();
+      } else {
+        throw new Error(data?.error || 'Content extraction failed');
+      }
+    } catch (error: any) {
+      console.error('Content extraction error:', error);
+      toast({
+        title: 'Extraction Failed',
+        description: error.message || 'Failed to extract article content',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingArticle(null);
+    }
+  };
+
   // Article queue functions
   const loadPendingArticles = async () => {
     try {
@@ -882,7 +919,18 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => window.open(article.source_url, '_blank')}
+                                onClick={() => {
+                                  try {
+                                    window.open(article.source_url, '_blank', 'noopener,noreferrer');
+                                  } catch (error) {
+                                    // Fallback: copy URL to clipboard
+                                    navigator.clipboard?.writeText(article.source_url);
+                                    toast({
+                                      title: 'Link copied',
+                                      description: 'Article URL copied to clipboard',
+                                    });
+                                  }
+                                }}
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />
                                 View Original
@@ -989,21 +1037,42 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleExtractContent(article)}
+                                  disabled={processingArticle === article.id}
                                   className="text-blue-600 border-blue-200"
                                 >
-                                  <RefreshCw className="w-3 h-3 mr-1" />
-                                  Extract Content
+                                  {processingArticle === article.id ? (
+                                    <>
+                                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                      Extracting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-3 h-3 mr-1" />
+                                      Extract Content
+                                    </>
+                                  )}
                                 </Button>
                               )}
-                             <Button
-                               size="sm"
-                               variant="ghost"
-                               onClick={() => window.open(article.source_url, '_blank')}
-                               className="ml-auto"
-                             >
-                               <ExternalLink className="w-3 h-3 mr-1" />
-                               View Original
-                             </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  try {
+                                    window.open(article.source_url, '_blank', 'noopener,noreferrer');
+                                  } catch (error) {
+                                    // Fallback: copy URL to clipboard
+                                    navigator.clipboard?.writeText(article.source_url);
+                                    toast({
+                                      title: 'Link copied',
+                                      description: 'Article URL copied to clipboard',
+                                    });
+                                  }
+                                }}
+                                className="ml-auto"
+                              >
+                                <ExternalLink className="w-3 h-3 mr-1" />
+                                View Original
+                              </Button>
                            </div>
                         </CardContent>
                       </Card>
@@ -1326,41 +1395,4 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       )}
     </div>
   );
-
-  // Extract content function
-  const handleExtractContent = async (article: Article) => {
-    try {
-      setProcessingArticle(article.id);
-      
-      // Call the content extractor edge function
-      const { data, error } = await supabase.functions.invoke('content-extractor', {
-        body: { 
-          articleId: article.id,
-          sourceUrl: article.source_url 
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: 'Content Extracted',
-          description: 'Full article content has been extracted successfully',
-        });
-        // Refresh articles to show updated content
-        loadPendingArticles();
-      } else {
-        throw new Error(data?.error || 'Content extraction failed');
-      }
-    } catch (error: any) {
-      console.error('Content extraction error:', error);
-      toast({
-        title: 'Extraction Failed',
-        description: error.message || 'Failed to extract article content',
-        variant: 'destructive',
-      });
-    } finally {
-      setProcessingArticle(null);
-    }
-  };
 };
