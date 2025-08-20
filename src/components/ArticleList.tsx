@@ -209,10 +209,44 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                     onClick={() => {
                       const url = article.source_url || article.canonical_url;
                       if (url) {
-                        // Clean URL by removing HTML entities
-                        const cleanUrl = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-                        console.log('Opening URL:', cleanUrl);
-                        window.open(cleanUrl, '_blank');
+                        // Clean URL by removing HTML entities and any CDATA remnants
+                        const cleanUrl = url
+                          .replace(/&amp;/g, '&')
+                          .replace(/&lt;/g, '<')
+                          .replace(/&gt;/g, '>')
+                          .replace(/\]\]>/g, '')  // Remove CDATA closing
+                          .replace(/<!\[CDATA\[/g, '') // Remove CDATA opening
+                          .trim();
+                          
+                        console.log('Article ID:', article.id);
+                        console.log('Raw URL:', url);
+                        console.log('Clean URL:', cleanUrl);
+                        
+                        try {
+                          // Test if URL is valid
+                          new URL(cleanUrl);
+                          
+                          // Create link element for better compatibility
+                          const link = document.createElement('a');
+                          link.href = cleanUrl;
+                          link.target = '_blank';
+                          link.rel = 'noopener noreferrer';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          
+                          toast({
+                            title: "Opening article",
+                            description: `Opening: ${new URL(cleanUrl).hostname}`,
+                          });
+                        } catch (error) {
+                          console.error('Invalid URL:', cleanUrl, error);
+                          toast({
+                            title: "Invalid URL",
+                            description: `Cannot open: ${cleanUrl}`,
+                            variant: "destructive"
+                          });
+                        }
                       } else {
                         console.error('No valid URL found for article:', article.id);
                         toast({
