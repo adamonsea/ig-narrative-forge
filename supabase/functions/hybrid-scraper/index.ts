@@ -284,8 +284,8 @@ async function tryFallbackMethod(feedUrl: string): Promise<ScrapeResult & { arti
   }
 }
 
-// Parse RSS/Atom content
-function parseRSSContent(content: string): any[] {
+// Parse RSS/Atom content and enrich with full article content
+async function parseRSSContent(content: string): Promise<any[]> {
   const articles: any[] = [];
   
   // Handle both RSS <item> and Atom <entry> tags
@@ -308,13 +308,51 @@ function parseRSSContent(content: string): any[] {
                   extractAuthorName(itemContent);
     
     if (title && link) {
+      // Try to fetch full content from the article URL
+      let fullContent = '';
+      let enrichedTitle = cleanHTML(title).trim();
+      
+      try {
+        console.log(`📄 Fetching full content from: ${link}`);
+        const articleResponse = await fetch(link, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml'
+          },
+          timeout: 15000
+        });
+        
+        if (articleResponse.ok) {
+          const articleHTML = await articleResponse.text();
+          const extracted = extractFullArticleContent(articleHTML, link);
+          
+          if (extracted.title && extracted.title.length > enrichedTitle.length) {
+            enrichedTitle = extracted.title;
+          }
+          
+          if (extracted.content && extracted.content.length > 100) {
+            fullContent = extracted.content;
+            console.log(`✅ Extracted ${fullContent.length} chars from ${link}`);
+          } else {
+            console.log(`⚠️ Minimal content extracted from ${link}, using RSS description`);
+            fullContent = description ? cleanHTML(description).trim() : '';
+          }
+        } else {
+          console.log(`❌ Failed to fetch article: ${articleResponse.status}`);
+          fullContent = description ? cleanHTML(description).trim() : '';
+        }
+      } catch (error) {
+        console.log(`❌ Error fetching article content: ${error.message}`);
+        fullContent = description ? cleanHTML(description).trim() : '';
+      }
+      
       articles.push({
-        title: cleanHTML(title).trim(),
-        body: description ? cleanHTML(description).trim() : '',
+        title: enrichedTitle,
+        body: fullContent,
         source_url: link.trim(),
         published_at: parseDate(pubDate) || new Date().toISOString(),
         author: author ? cleanHTML(author).trim() : null,
-        summary: description ? cleanHTML(description).substring(0, 200) + '...' : null
+        summary: fullContent ? fullContent.substring(0, 200) + '...' : (description ? cleanHTML(description).substring(0, 200) + '...' : null)
       });
     }
     
@@ -322,6 +360,83 @@ function parseRSSContent(content: string): any[] {
   }
   
   return articles;
+}
+
+// Extract full article content from individual article pages
+function extractFullArticleContent(html: string, url: string): { title: string; content: string } {
+  let title = '';
+  let content = '';
+  
+  // Extract title from multiple sources
+  const titlePatterns = [
+    /<h1[^>]*class="[^"]*(?:title|headline|entry-title|post-title)[^"]*"[^>]*>([^<]*)<\/h1>/i,
+    /<h1[^>]*>([^<]*)<\/h1>/i,
+    /<title>([^<]*)<\/title>/i,
+    /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i
+  ];
+  
+  for (const pattern of titlePatterns) {
+    const match = html.match(pattern);
+    if (match && match[1] && match[1].trim()) {
+      title = cleanHTML(match[1]).trim();
+      break;
+    }
+  }
+  
+  // Extract main content from multiple sources
+  const contentPatterns = [
+    // Article content selectors
+    /<article[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/article>/i,
+    /<div[^>]*class="[^"]*(?:post-content|entry-content|article-content|main-content|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<section[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<main[^>]*>([\s\S]*?)<\/main>/i,
+    /<article[^>]*>([\s\S]*?)<\/article>/i
+  ];
+  
+  for (const pattern of contentPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      let rawContent = match[1];
+      
+      // Extract paragraphs from the content area
+      const paragraphs: string[] = [];
+      const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+      let pMatch;
+      
+      while ((pMatch = pRegex.exec(rawContent)) !== null) {
+        const paragraph = cleanHTML(pMatch[1]).trim();
+        if (paragraph.length > 20) { // Only include substantial paragraphs
+          paragraphs.push(paragraph);
+        }
+      }
+      
+      if (paragraphs.length > 0) {
+        content = paragraphs.join('\n\n');
+        break;
+      }
+    }
+  }
+  
+  // Fallback: extract all paragraphs from the entire HTML
+  if (!content) {
+    const allParagraphs: string[] = [];
+    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+    let pMatch;
+    
+    while ((pMatch = pRegex.exec(html)) !== null) {
+      const paragraph = cleanHTML(pMatch[1]).trim();
+      if (paragraph.length > 30 && !paragraph.includes('cookie') && !paragraph.includes('subscribe')) {
+        allParagraphs.push(paragraph);
+      }
+    }
+    
+    if (allParagraphs.length > 0) {
+      content = allParagraphs.slice(0, 10).join('\n\n'); // Limit to first 10 paragraphs
+    }
+  }
+  
+  return { title, content };
 }
 
 // Extract articles from HTML using common patterns
