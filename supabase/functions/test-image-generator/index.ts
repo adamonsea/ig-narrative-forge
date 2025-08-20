@@ -223,30 +223,21 @@ serve(async (req) => {
 
       // Enhanced prompt for text-based slide  
       const slideContent = slide?.content || sanitizedPrompt;
-      const enhancedPrompt = `Create a simple text-only social media slide. Display this text clearly: "${slideContent}". Use a solid background color, large bold typography for readability. Minimize decorative elements. Focus on clean text presentation and legibility. No illustrations or graphics - just text on plain background.`;
+      const enhancedPrompt = `Simple text-based social media slide, clean minimal design. Display text clearly: "${slideContent}". Solid background color, large readable typography, no decorative elements or illustrations. Focus only on text presentation and legibility.`;
 
-      console.log(`Testing fal.ai Kontext API for slide ${slideId}`);
+      console.log(`Testing fal.ai FLUX Schnell API for slide ${slideId}`);
 
-      // Prepare request body for Fal.ai Kontext model (supports style references)
+      // Prepare request body for Fal.ai FLUX Schnell model
       const requestBody: any = {
         prompt: enhancedPrompt,
         image_size: 'square_hd',
-        num_inference_steps: 8,
-        guidance_scale: 3.5,
+        num_inference_steps: 4,
         num_images: 1,
-        enable_safety_checker: true,
-        output_format: 'jpeg'
+        enable_safety_checker: true
       };
 
-      // Add style reference if provided
-      if (styleReferenceUrl && styleReferenceUrl.trim()) {
-        console.log('Adding style reference to Fal.ai request:', styleReferenceUrl);
-        requestBody.reference_image_url = styleReferenceUrl.trim();
-        requestBody.reference_strength = 0.7; // Moderate style influence
-      }
-
-      // Using fal.ai FLUX Kontext model (supports style references)
-      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux-pro/kontext', {
+      // Using fal.ai FLUX Schnell model (more stable)
+      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux-schnell', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
@@ -427,8 +418,8 @@ serve(async (req) => {
         throw new Error('No image data received from Fal.ai API');
       }
       
-      // Estimate cost (Fal.ai Kontext pricing - higher than schnell)
-      cost = 0.12; // Kontext model is more expensive but supports style references
+      // Estimate cost (Fal.ai FLUX Schnell pricing)
+      cost = 0.003; // FLUX Schnell is much cheaper
       generationTime = Date.now() - startTime;
 
     } else {
@@ -444,9 +435,9 @@ serve(async (req) => {
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
       const slideContent = slide?.content || sanitizedPrompt;
-      const enhancedPrompt = `Create a clean text-based social media slide. Display this text prominently and clearly: "${slideContent}". Use a solid background color, bold readable typography, simple layout. No decorative elements or illustrations - focus only on text presentation and readability. Plain background with well-formatted text.`;
+      const enhancedPrompt = `Create a simple text-based social media slide. Display this text clearly and prominently: "${slideContent}". Use a solid background color, large readable typography, clean minimal layout. No illustrations or decorative graphics - focus only on text presentation and readability. Portrait orientation suitable for social media carousel.`;
 
-      console.log(`Testing openai API for slide ${slideId}`);
+      console.log(`Testing openai gpt-image-1 API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -455,11 +446,13 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'dall-e-3',
+          model: 'gpt-image-1',
           prompt: enhancedPrompt,
           n: 1,
-          size: '1024x1024',
-          quality: 'hd'
+          size: '1024x1536',
+          quality: 'high',
+          output_format: 'webp',
+          output_compression: 85
         }),
       });
 
@@ -471,31 +464,15 @@ serve(async (req) => {
 
       const openAIData = await imageResponse.json();
       
-      // Handle both b64_json and url responses
-      if (openAIData.data[0].b64_json) {
-        imageData = openAIData.data[0].b64_json;
-      } else if (openAIData.data[0].url) {
-        // Download image from URL and convert to base64 (handle large images safely)
-        const imgResponse = await fetch(openAIData.data[0].url);
-        const imgBuffer = await imgResponse.arrayBuffer();
-        const uint8Array = new Uint8Array(imgBuffer);
-        
-        // Convert to base64 in chunks to avoid stack overflow
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          const chunk = uint8Array.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
-        }
-        imageData = btoa(binary);
-      }
+      // GPT-Image-1 returns base64 data directly
+      imageData = openAIData.data[0].b64_json;
       
       if (!imageData) {
         throw new Error('No image data received from OpenAI');
       }
 
       // Estimate OpenAI cost
-      cost = 0.04; // Estimated per image for gpt-image-1
+      cost = 0.08; // Estimated per image for gpt-image-1
       generationTime = Date.now() - startTime;
     }
 
