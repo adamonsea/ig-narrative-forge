@@ -91,15 +91,20 @@ export default function IdeogramTestSuite() {
   const [styleReferenceFile, setStyleReferenceFile] = useState<File | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedSlideForViewing, setSelectedSlideForViewing] = useState<string | null>(null);
+  const [selectedImageModal, setSelectedImageModal] = useState<{
+    src: string;
+    alt: string;
+    provider: string;
+  } | null>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [deletingVisuals, setDeletingVisuals] = useState<Set<string>>(new Set());
   const [providerCosts] = useState({
-    openai: { cost: 0.04, name: 'DALL-E 3 (OpenAI)' },
-    ideogram: { cost: 0.08, name: 'Ideogram 2.0' },
-    fal: { cost: 0.05, name: 'Recraft V3 (Fal.ai)' },
-    replicate: { cost: 0.035, name: 'SD 3.5 Large (Replicate)' },
+    openai: { cost: 0.08, name: 'OpenAI GPT-Image-1' },
+    ideogram: { cost: 0.08, name: 'Ideogram V3' },
+    fal: { cost: 0.05, name: 'FAL Recraft V3' },
+    replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large' },
     huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)' },
-    deepinfra: { cost: 0.025, name: 'SDXL (DeepInfra)' }
+    deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large' }
   });
 
   useEffect(() => {
@@ -817,37 +822,41 @@ export default function IdeogramTestSuite() {
                           )}
                           
                           {result.visual && (result.visual.image_data || result.visual.image_url) && (
-                            <div className="space-y-2">
-                              <h5 className="text-sm font-medium">Generated Image ({providerCosts[result.api_provider as keyof typeof providerCosts]?.name || result.api_provider.toUpperCase()}):</h5>
-                              <div className="relative inline-block">
-                                <img
-                                  src={result.visual.image_data 
-                                    ? `data:image/jpeg;base64,${result.visual.image_data}` 
-                                    : result.visual.image_url}
-                                  alt={result.visual.alt_text || 'Generated image'}
-                                  className="w-32 h-32 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
-                                  onClick={() => {
-                                    const imgSrc = result.visual.image_data 
+                              <div className="space-y-2">
+                                <h5 className="text-sm font-medium">Generated Image ({providerCosts[result.api_provider as keyof typeof providerCosts]?.name || result.api_provider.toUpperCase()}):</h5>
+                                <div className="relative inline-block">
+                                  <img
+                                    src={result.visual.image_data 
                                       ? `data:image/jpeg;base64,${result.visual.image_data}` 
-                                      : result.visual.image_url;
-                                    window.open(imgSrc, '_blank');
-                                  }}
-                                />
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="absolute -top-2 -right-2 w-6 h-6 p-0"
-                                  onClick={() => deleteVisual(result.visual_id!, result.slide_id)}
-                                  disabled={deletingVisuals.has(result.visual_id!)}
-                                >
-                                  {deletingVisuals.has(result.visual_id!) ? (
-                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-3 h-3" />
-                                  )}
-                                </Button>
+                                      : result.visual.image_url}
+                                    alt={result.visual.alt_text || 'Generated image'}
+                                    className="w-40 h-40 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => {
+                                      const imgSrc = result.visual.image_data 
+                                        ? `data:image/jpeg;base64,${result.visual.image_data}` 
+                                        : result.visual.image_url;
+                                      setSelectedImageModal({
+                                        src: imgSrc,
+                                        alt: result.visual.alt_text || 'Generated image',
+                                        provider: providerCosts[result.api_provider as keyof typeof providerCosts]?.name || result.api_provider.toUpperCase()
+                                      });
+                                    }}
+                                  />
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute -top-2 -right-2 w-6 h-6 p-0"
+                                    onClick={() => deleteVisual(result.visual_id!, result.slide_id)}
+                                    disabled={deletingVisuals.has(result.visual_id!)}
+                                  >
+                                    {deletingVisuals.has(result.visual_id!) ? (
+                                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3 h-3" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
                           )}
                           
                           {/* Show slide info but not all visuals together */}
@@ -933,6 +942,30 @@ export default function IdeogramTestSuite() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Full-Size Image Modal */}
+      <Dialog 
+        open={!!selectedImageModal} 
+        onOpenChange={(open) => !open && setSelectedImageModal(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Generated Image - {selectedImageModal?.provider}</DialogTitle>
+            <DialogDescription>
+              {selectedImageModal?.alt}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedImageModal && (
+            <div className="flex justify-center items-center">
+              <img
+                src={selectedImageModal.src}
+                alt={selectedImageModal.alt}
+                className="max-w-full max-h-[70vh] object-contain rounded"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Slide Viewer Dialog */}
       <Dialog 

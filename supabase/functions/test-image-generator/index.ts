@@ -392,7 +392,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            version: "bc31d0afc533b2a3a1b330d7319602bef414c50e7bc931995f2b413b9bb8d689", // SD 3.5 Large version
+            version: "25d2f75ecda0c0bed917ee2fe179b75db5120cd36fac42b3aa07cf264067c8e5", // SD 3.5 Large correct version
             input: {
               prompt: enhancedPrompt,
               aspect_ratio: "1:1",
@@ -613,8 +613,8 @@ serve(async (req) => {
 
        console.log(`Testing DeepInfra Stable Diffusion XL API for slide ${slideId}`);
 
-       // Using Stable Diffusion XL - working model on DeepInfra
-       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/stabilityai/stable-diffusion-xl-base-1.0', {
+        // Using Stable Diffusion 3.5 Large - better model on DeepInfra
+        const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/stabilityai/stable-diffusion-3-5-large', {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${deepinfraApiKey}`,
@@ -744,7 +744,7 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography. Square format for social media.`;
 
-      console.log(`Testing OpenAI DALL-E 3 API for slide ${slideId}`);
+      console.log(`Testing OpenAI GPT-Image-1 API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -753,12 +753,11 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'dall-e-3', // Use dall-e-3 for better compatibility
+          model: 'gpt-image-1', // Use gpt-image-1 for better quality
           prompt: enhancedPrompt,
-          n: 1,
           size: '1024x1024',
-          quality: 'standard',
-          style: 'natural'
+          quality: 'high',
+          output_format: 'png'
         }),
       });
 
@@ -783,34 +782,23 @@ serve(async (req) => {
       }
 
       const openAIData = await imageResponse.json();
+      console.log('OpenAI GPT-Image-1 response structure:', {
+        hasData: !!openAIData.data,
+        dataLength: openAIData.data?.length,
+        keys: Object.keys(openAIData)
+      });
       
-      // DALL-E 3 returns URL, need to download and convert to base64
-      if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
-        const imageUrl = openAIData.data[0].url;
-        
-        // Download the image and convert to base64
-        const imageDownloadResponse = await fetch(imageUrl);
-        if (!imageDownloadResponse.ok) {
-          throw new Error(`Failed to download image from OpenAI: ${imageDownloadResponse.status}`);
-        }
-        
-        const imageBuffer = await imageDownloadResponse.arrayBuffer();
-        const uint8Array = new Uint8Array(imageBuffer);
-        
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          const chunk = uint8Array.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
-        }
-        imageData = btoa(binary);
-        console.log(`Generated image with OpenAI DALL-E 3, size: ${imageBuffer.byteLength} bytes`);
+      // GPT-Image-1 returns base64 directly, no download needed
+      if (openAIData.data && openAIData.data[0] && openAIData.data[0].b64_json) {
+        imageData = openAIData.data[0].b64_json;
+        console.log(`Generated image with OpenAI GPT-Image-1, base64 length: ${imageData.length}`);
       } else {
-        throw new Error('No image URL received from OpenAI DALL-E 3');
+        console.error('Invalid OpenAI GPT-Image-1 response:', openAIData);
+        throw new Error('No base64 image data received from OpenAI GPT-Image-1');
       }
       
-      // Estimate cost (DALL-E 3 pricing)
-      cost = 0.04;
+      // Estimate cost (GPT-Image-1 pricing)
+      cost = 0.08;
       generationTime = Date.now() - startTime;
     }
 
