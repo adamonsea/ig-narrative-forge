@@ -294,12 +294,16 @@ serve(async (req) => {
     };
 
     // Insert test log
-    await supabase
+    const { data: testLog, error: testLogError } = await supabase
       .from('image_generation_tests')
       .insert(testResult)
       .select()
-      .single()
-      .catch(console.error); // Don't fail if logging fails
+      .single();
+
+    if (testLogError) {
+      console.error('Failed to log test result:', testLogError);
+      // Don't fail the main function if logging fails
+    }
 
     const imageFormat = apiProvider === 'ideogram' ? 'jpeg' : 'webp';
 
