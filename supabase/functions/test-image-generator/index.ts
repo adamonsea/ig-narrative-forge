@@ -101,13 +101,19 @@ serve(async (req) => {
         throw new Error('Ideogram API key not configured');
       }
 
+      // Sanitize prompt to avoid content policy violations
+      const sanitizedPrompt = prompt
+        .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+        .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+        .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
       // Enhanced prompt for editorial style
-      const enhancedPrompt = `Editorial news illustration: ${prompt}. Clean, professional, flat design with subtle gradients. Modern minimalist aesthetic suitable for social media carousel. High contrast, readable typography, portrait 3:4 aspect ratio.`;
+      const enhancedPrompt = `Editorial news illustration: Clean professional graphic design for "${sanitizedPrompt}". Modern minimalist social media post design, flat vector style, bold typography, high contrast colors, square 1:1 format suitable for Instagram.`;
 
       // Create FormData for Ideogram V3 API (requires multipart form data)
       const formData = new FormData();
       formData.append('prompt', enhancedPrompt);
-      formData.append('aspect_ratio', '3:4');
+      formData.append('aspect_ratio', '1:1');
       formData.append('style_type', 'DESIGN');
       formData.append('rendering_speed', 'DEFAULT');
 
@@ -120,7 +126,7 @@ serve(async (req) => {
 
       console.log('Ideogram V3 request parameters:', {
         prompt: enhancedPrompt.substring(0, 100) + '...',
-        aspect_ratio: '3:4',
+        aspect_ratio: '1:1',
         style_type: 'DESIGN',
         rendering_speed: 'DEFAULT'
       });
@@ -175,7 +181,15 @@ serve(async (req) => {
         throw new Error('OpenAI API key not configured');
       }
 
-      const enhancedPrompt = `Editorial news illustration style: ${prompt}. Clean, professional, flat design with subtle gradients. Modern minimalist aesthetic suitable for social media carousel. High contrast, readable from mobile devices. Portrait orientation 3:4 aspect ratio.`;
+      // Sanitize prompt to avoid content policy violations  
+      const sanitizedPrompt = prompt
+        .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+        .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+        .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+      const enhancedPrompt = `Professional editorial graphic design: Clean modern illustration for "${sanitizedPrompt}". Minimalist flat design style, bold typography, high contrast, suitable for social media. Square 1:1 aspect ratio format.`;
+
+      console.log(`Testing openai API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -187,7 +201,7 @@ serve(async (req) => {
           model: 'dall-e-3',
           prompt: enhancedPrompt,
           n: 1,
-          size: '1024x1792',
+          size: '1024x1024',
           quality: 'hd'
         }),
       });
