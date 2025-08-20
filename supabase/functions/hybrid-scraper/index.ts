@@ -7,6 +7,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Region-specific configuration for relevance scoring
+const REGION_CONFIGS = {
+  'Eastbourne': {
+    keywords: ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon'],
+    landmarks: ['beachy head', 'seven sisters', 'south downs', 'eastbourne pier', 'devonshire park', 'congress theatre', 'towner gallery', 'redoubt fortress', 'airbourne', 'eastbourne college'],
+    postcodes: ['bn20', 'bn21', 'bn22', 'bn23', 'bn24', 'bn25', 'bn26', 'bn27'],
+    organizations: ['eastbourne borough council', 'east sussex fire', 'sussex police', 'eastbourne district general', 'rnli eastbourne', 'eastbourne town fc']
+  },
+  'Brighton': {
+    keywords: ['brighton', 'hove', 'portslade', 'saltdean', 'rottingdean', 'ovingdean'],
+    landmarks: ['brighton pier', 'royal pavilion', 'lanes', 'north laine', 'preston park', 'devils dyke', 'brighton marina', 'amex stadium'],
+    postcodes: ['bn1', 'bn2', 'bn3', 'bn41', 'bn42', 'bn50', 'bn51', 'bn52'],
+    organizations: ['brighton & hove city council', 'brighton & hove albion', 'university of brighton', 'sussex university']
+  }
+};
+
 interface ScrapeResult {
   success: boolean;
   articlesFound: number;
@@ -25,8 +41,8 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { feedUrl, sourceId, region = 'Eastbourne' } = await req.json();
-    console.log(`🚀 Starting hybrid scrape for: ${feedUrl}`);
+    const { feedUrl, sourceId, region } = await req.json();
+    console.log(`🚀 Starting hybrid scrape for: ${feedUrl} (region: ${region})`);
     
     const startTime = Date.now();
     let result: ScrapeResult;
@@ -52,7 +68,7 @@ serve(async (req) => {
 
     console.log(`✅ Found ${result.articlesFound} articles using ${result.method}`);
 
-    // Filter and store articles
+    // Filter and store articles with region-aware scoring
     const storedCount = await storeArticles(result.articles, sourceId, region, supabase);
     
     // Update source metrics
@@ -384,14 +400,14 @@ function extractBasicContent(html: string, baseUrl: string): any[] {
   return [];
 }
 
-// Store articles in database with regional relevance scoring
+// Store articles with region-aware and source-type-aware relevance scoring
 async function storeArticles(articles: any[], sourceId: string, region: string, supabase: any): Promise<number> {
   let storedCount = 0;
   
   // Get source info for relevance scoring
   const { data: sourceInfo } = await supabase
     .from('content_sources')
-    .select('source_name, canonical_domain, region')
+    .select('source_name, canonical_domain, region, source_type')
     .eq('id', sourceId)
     .single();
   
@@ -409,11 +425,11 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
         continue;
       }
 
-      // Calculate regional relevance score
+      // Calculate regional relevance score using source-type and region config
       const relevanceScore = calculateRegionalRelevance(article, sourceInfo, region);
-      console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore}`);
+      console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore} (source: ${sourceInfo?.source_type})`);
 
-      // Insert new article with relevance score
+      // Insert new article with relevance score and metadata
       const { error } = await supabase
         .from('articles')
         .insert({
@@ -421,7 +437,13 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
           source_id: sourceId,
           region: region,
           processing_status: 'new',
-          content_quality_score: relevanceScore
+          regional_relevance_score: relevanceScore,
+          import_metadata: {
+            scraping_method: 'hybrid',
+            regional_relevance_score: relevanceScore,
+            source_type: sourceInfo?.source_type,
+            scraped_at: new Date().toISOString()
+          }
         });
 
       if (error) {
@@ -439,41 +461,36 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
   return storedCount;
 }
 
-// Calculate regional relevance score for articles
+// Calculate regional relevance score with source-type awareness
 function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion: string): number {
   let score = 0;
   const content = `${article.title} ${article.body} ${article.summary || ''}`.toLowerCase();
   
-  // Base score from source type
-  if (sourceInfo?.region === targetRegion || sourceInfo?.region === 'Eastbourne') {
-    score += 60; // Local source gets significant boost
-    console.log(`🏠 Local source bonus: +60 points`);
-  } else if (sourceInfo?.region === 'UK' && targetRegion === 'Eastbourne') {
-    score += 20; // National UK source gets moderate boost for Eastbourne
-    console.log(`🇬🇧 UK source bonus: +20 points`);
+  // Get region configuration
+  const regionConfig = REGION_CONFIGS[targetRegion] || REGION_CONFIGS['Eastbourne']; // fallback
+  
+  // Base score from source type (hyperlocal sources get massive boost)
+  if (sourceInfo?.source_type === 'hyperlocal') {
+    score += 70; // Hyperlocal sources are inherently relevant
+    console.log(`🏠 Hyperlocal source bonus: +70 points`);
+  } else if (sourceInfo?.source_type === 'regional') {
+    score += 40; // Regional sources get moderate boost
+    console.log(`🌊 Regional source bonus: +40 points`);
+  } else if (sourceInfo?.source_type === 'national') {
+    score += 0; // National sources need to prove relevance through content
+    console.log(`🇬🇧 National source: +0 points (content-dependent)`);
   }
 
-  // Primary location keywords (exact matches)
-  const primaryKeywords = ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon'];
-  for (const keyword of primaryKeywords) {
+  // Primary location keywords
+  for (const keyword of regionConfig.keywords) {
     if (content.includes(keyword)) {
       score += 25;
       console.log(`📍 Primary location "${keyword}": +25 points`);
     }
   }
 
-  // Secondary location keywords (broader East Sussex)
-  const secondaryKeywords = ['brighton', 'hastings', 'lewes', 'newhaven', 'uckfield', 'east sussex', 'sussex'];
-  for (const keyword of secondaryKeywords) {
-    if (content.includes(keyword)) {
-      score += 15;
-      console.log(`🌊 Secondary location "${keyword}": +15 points`);
-    }
-  }
-
-  // Local landmarks, venues, and organizations
-  const landmarks = ['beachy head', 'seven sisters', 'south downs', 'eastbourne pier', 'devonshire park', 'congress theatre', 'towner gallery', 'redoubt fortress', 'airbourne', 'eastbourne college'];
-  for (const landmark of landmarks) {
+  // Local landmarks and venues
+  for (const landmark of regionConfig.landmarks) {
     if (content.includes(landmark)) {
       score += 20;
       console.log(`🏛️ Local landmark "${landmark}": +20 points`);
@@ -481,120 +498,107 @@ function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion:
   }
 
   // Local organizations and services
-  const organizations = ['eastbourne borough council', 'east sussex fire', 'sussex police', 'eastbourne district general', 'rnli eastbourne', 'eastbourne town fc'];
-  for (const org of organizations) {
+  for (const org of regionConfig.organizations) {
     if (content.includes(org)) {
       score += 15;
       console.log(`🏢 Local organization "${org}": +15 points`);
     }
   }
 
-  // Local events and seasonal content
-  const events = ['airbourne', 'eastbourne airshow', 'tennis international', 'beer festival', 'seafood wine festival'];
-  for (const event of events) {
-    if (content.includes(event)) {
-      score += 15;
-      console.log(`🎪 Local event "${event}": +15 points`);
+  // Postcode matching
+  for (const postcode of regionConfig.postcodes) {
+    if (content.includes(postcode)) {
+      score += 10;
+      console.log(`📮 Postcode "${postcode}": +10 points`);
     }
   }
 
-  // Postal code patterns (BN20-BN25 for Eastbourne area)
-  if (content.match(/bn2[0-5]\b/i)) {
-    score += 25;
-    console.log(`📮 Local postcode match: +25 points`);
-  }
-
-  // Street name patterns (common local streets)
-  const streets = ['grand parade', 'terminus road', 'grove road', 'seaside road', 'kings avenue', 'cornfield road'];
-  for (const street of streets) {
-    if (content.includes(street)) {
-      score += 20;
-      console.log(`🛣️ Local street "${street}": +20 points`);
-    }
-  }
-
-  // Cap the score at 100
-  score = Math.min(score, 100);
-  
-  console.log(`🎯 Final relevance score: ${score}/100`);
-  return score;
+  console.log(`📊 Total relevance score: ${score} for "${article.title}"`);
+  return Math.min(score, 100); // Cap at 100
 }
 
-// Update source metrics
-async function updateSourceMetrics(sourceId: string, success: boolean, method: string, responseTime: number, supabase: any): Promise<void> {
+// Update source metrics after scraping
+async function updateSourceMetrics(sourceId: string, success: boolean, method: string, responseTime: number, supabase: any) {
   try {
     const { error } = await supabase
       .from('content_sources')
       .update({
         last_scraped_at: new Date().toISOString(),
-        avg_response_time_ms: responseTime,
         scraping_method: method,
-        success_rate: success ? 100 : 0 // Simplified for now
+        avg_response_time_ms: responseTime,
+        updated_at: new Date().toISOString()
       })
       .eq('id', sourceId);
 
     if (error) {
-      console.error('Failed to update source metrics:', error);
+      console.error('❌ Failed to update source metrics:', error);
+    } else {
+      console.log(`📊 Updated source metrics: ${method}, ${responseTime}ms`);
     }
   } catch (error) {
-    console.error('Error updating source metrics:', error);
+    console.error('❌ Error updating source metrics:', error);
   }
 }
 
 // Utility functions
-function extractXMLContent(content: string, tagName: string): string | null {
-  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
-  const match = content.match(regex);
-  return match ? match[1].trim() : null;
+function extractXMLContent(xml: string, tag: string): string {
+  const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+  const match = xml.match(regex);
+  return match ? match[1].trim() : '';
 }
 
-function extractLinkHref(content: string): string | null {
-  const match = content.match(/<link[^>]*href=["']([^"']*?)["'][^>]*>/i);
-  return match ? match[1] : null;
+function extractLinkHref(content: string): string {
+  const hrefMatch = content.match(/href=["']([^"']*?)["']/i);
+  return hrefMatch ? hrefMatch[1] : '';
 }
 
-function extractAuthorName(content: string): string | null {
-  const nameMatch = content.match(/<name>([^<]*)<\/name>/i);
-  return nameMatch ? nameMatch[1] : null;
+function extractAuthorName(content: string): string {
+  const nameMatch = content.match(/<name[^>]*>([^<]*)<\/name>/i);
+  return nameMatch ? nameMatch[1] : '';
 }
 
 function extractFromHTML(html: string, patterns: RegExp[]): string {
   for (const pattern of patterns) {
-    const matches = html.match(pattern);
-    if (matches) {
-      return matches[1] || matches[0];
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      return match[1];
     }
   }
   return '';
 }
 
-function cleanHTML(text: string): string {
-  return text
+function cleanHTML(html: string): string {
+  return html
     .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#8216;/g, "'")
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8211;/g, '–')
+    .replace(/&#8212;/g, '—')
     .trim();
 }
 
-function parseDate(dateString: string | null): string | null {
-  if (!dateString) return null;
+function parseDate(dateStr: string): string | null {
+  if (!dateStr) return null;
   
   try {
-    const date = new Date(dateString);
-    return date.toISOString();
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date.toISOString();
   } catch {
     return null;
   }
 }
 
-function resolveURL(url: string, baseUrl: string): string {
+function resolveURL(url: string, base: string): string {
   try {
-    return new URL(url, baseUrl).href;
+    return new URL(url, base).href;
   } catch {
     return url;
   }
