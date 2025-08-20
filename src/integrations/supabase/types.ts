@@ -172,6 +172,7 @@ export type Database = {
           published_at: string | null
           reading_time_minutes: number | null
           region: string | null
+          regional_relevance_score: number | null
           search: unknown | null
           source_id: string | null
           source_url: string
@@ -201,6 +202,7 @@ export type Database = {
           published_at?: string | null
           reading_time_minutes?: number | null
           region?: string | null
+          regional_relevance_score?: number | null
           search?: unknown | null
           source_id?: string | null
           source_url: string
@@ -230,6 +232,7 @@ export type Database = {
           published_at?: string | null
           reading_time_minutes?: number | null
           region?: string | null
+          regional_relevance_score?: number | null
           search?: unknown | null
           source_id?: string | null
           source_url?: string
