@@ -28,8 +28,17 @@ serve(async (req) => {
       throw new Error('Slide ID and prompt are required');
     }
 
-    // Enhance prompt for editorial style
-    const enhancedPrompt = `Editorial news illustration style: ${prompt}. Clean, professional, flat design with subtle gradients. Modern minimalist aesthetic suitable for social media carousel. High contrast, readable from mobile devices. Portrait orientation 3:4 aspect ratio.`;
+    // Get slide content for text-based slide generation
+    const { data: slideData, error: slideDataError } = await supabase
+      .from('slides')
+      .select('content, slide_number')
+      .eq('id', slideId)
+      .single();
+
+    const slideContent = slideData?.content || prompt;
+    
+    // Enhanced prompt for text-based slide
+    const enhancedPrompt = `Create a simple text-based social media slide. Display this text clearly and prominently: "${slideContent}". Use a solid background color, large readable typography, clean minimal layout. No illustrations or decorative graphics - focus only on text presentation and readability. Portrait orientation suitable for social media carousel.`;
 
     // Generate image using OpenAI
     const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
@@ -81,7 +90,7 @@ serve(async (req) => {
       .insert({
         slide_id: slideId,
         image_data: base64Image,
-        alt_text: slide?.alt_text || 'Generated editorial illustration',
+        alt_text: slide?.alt_text || 'Generated text slide',
         generation_prompt: enhancedPrompt,
         style_preset: stylePreset
       })

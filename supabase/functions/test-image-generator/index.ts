@@ -93,6 +93,17 @@ serve(async (req) => {
       throw new Error('Slide ID and prompt are required');
     }
 
+    // Get slide details including content for text-based slide generation
+    const { data: slide, error: slideError } = await supabase
+      .from('slides')
+      .select('alt_text, story_id, content, slide_number')
+      .eq('id', slideId)
+      .single();
+
+    if (slideError) {
+      console.error('Failed to fetch slide details:', slideError);
+    }
+
     console.log(`Testing ${apiProvider} API for slide ${slideId}`);
 
     let imageData, cost, generationTime;
@@ -109,8 +120,9 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for editorial style
-      const enhancedPrompt = `Editorial news illustration: Clean professional graphic design for "${sanitizedPrompt}". Modern minimalist social media post design, flat vector style, bold typography, high contrast colors, square 1:1 format suitable for Instagram.`;
+      // Enhanced prompt for text-based slide
+      const slideContent = slide?.content || sanitizedPrompt;
+      const enhancedPrompt = `Create a simple text-based social media slide with clean layout. Display this text clearly and prominently: "${slideContent}". Use a plain background color, large readable typography, and minimal design. Focus on text legibility. No illustrations or graphics - just clean text presentation suitable for Instagram carousel.`;
 
       // Create FormData for Ideogram V3 API (requires multipart form data)
       const formData = new FormData();
@@ -209,8 +221,9 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for editorial style
-      const enhancedPrompt = `Professional editorial news illustration: Clean modern graphic design for "${sanitizedPrompt}". Minimalist flat design style, bold typography, high contrast colors, social media optimized, square format.`;
+      // Enhanced prompt for text-based slide  
+      const slideContent = slide?.content || sanitizedPrompt;
+      const enhancedPrompt = `Create a simple text-only social media slide. Display this text clearly: "${slideContent}". Use a solid background color, large bold typography for readability. Minimize decorative elements. Focus on clean text presentation and legibility. No illustrations or graphics - just text on plain background.`;
 
       console.log(`Testing fal.ai Kontext API for slide ${slideId}`);
 
@@ -390,7 +403,8 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      const enhancedPrompt = `Professional editorial graphic design: Clean modern illustration for "${sanitizedPrompt}". Minimalist flat design style, bold typography, high contrast, suitable for social media. Square 1:1 aspect ratio format.`;
+      const slideContent = slide?.content || sanitizedPrompt;
+      const enhancedPrompt = `Create a clean text-based social media slide. Display this text prominently and clearly: "${slideContent}". Use a solid background color, bold readable typography, simple layout. No decorative elements or illustrations - focus only on text presentation and readability. Plain background with well-formatted text.`;
 
       console.log(`Testing openai API for slide ${slideId}`);
 
@@ -445,16 +459,16 @@ serve(async (req) => {
       generationTime = Date.now() - startTime;
     }
 
-    // Get slide details for alt text
-    const { data: slide, error: slideError } = await supabase
-      .from('slides')
-      .select('alt_text, story_id')
-      .eq('id', slideId)
-      .single();
+    // Get slide details for alt text (already fetched above)
+    // const { data: slide, error: slideError } = await supabase
+    //   .from('slides')
+    //   .select('alt_text, story_id, content, slide_number')
+    //   .eq('id', slideId)
+    //   .single();
 
-    if (slideError) {
-      console.error('Failed to fetch slide details:', slideError);
-    }
+    // if (slideError) {
+    //   console.error('Failed to fetch slide details:', slideError);
+    // }
 
     // Save visual to database with test metadata
     const { data: visual, error: visualError } = await supabase
@@ -462,7 +476,7 @@ serve(async (req) => {
       .insert({
         slide_id: slideId,
         image_data: imageData,
-        alt_text: slide?.alt_text || 'Generated editorial illustration',
+        alt_text: slide?.alt_text || 'Generated text slide',
         generation_prompt: prompt,
         style_preset: stylePreset
       })
