@@ -378,7 +378,7 @@ serve(async (req) => {
 
       console.log(`Testing Replicate FLUX Pro API for slide ${slideId}`);
 
-       // Using Replicate FLUX Schnell (faster, cheaper alternative)
+       // Using Replicate FLUX Schnell (updated model version)
        const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
          method: 'POST',
          headers: {
@@ -386,14 +386,16 @@ serve(async (req) => {
            'Content-Type': 'application/json',
          },
          body: JSON.stringify({
-           version: "f15c956a9a1002d21453c23db2adb4cb8d76fb8e5da7fd4da355e62e9de7bb1c", // FLUX.1 Schnell (correct version)
+           version: "30414db8da27648f5a1d5a70e0dc8a63ad5090456f7bd7885a5e7bb66a16b85f", // Updated FLUX.1 Schnell version
              input: {
                prompt: enhancedPrompt,
-               aspect_ratio: "1:1", // Square format for social media
+               width: 1024,
+               height: 1024,
                output_format: "webp",
                output_quality: 90,
                num_outputs: 1, // Ensure single image
-               num_inference_steps: 4
+               num_inference_steps: 4,
+               seed: Math.floor(Math.random() * 1000000)
              }
          }),
        });
