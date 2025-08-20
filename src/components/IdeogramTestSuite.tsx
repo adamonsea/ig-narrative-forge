@@ -25,7 +25,9 @@ import {
   Sparkles,
   Eye,
   Trash2,
-  Upload
+  Upload,
+  Archive,
+  ArchiveX
 } from 'lucide-react';
 
 interface Story {
@@ -336,6 +338,91 @@ export default function IdeogramTestSuite() {
     } catch (error) {
       console.error('Error deleting slide visuals:', error);
       toast.error('Failed to delete visuals');
+    }
+  };
+
+  const archiveTestResult = async (testId: string, slideId: string) => {
+    if (!testId) return;
+    
+    try {
+      // First delete associated visuals for this slide
+      const { error: visualsError } = await supabase
+        .from('visuals')
+        .delete()
+        .eq('slide_id', slideId);
+        
+      if (visualsError) {
+        console.error('Error deleting visuals during archive:', visualsError);
+        toast.error('Failed to delete associated images');
+        return;
+      }
+      
+      // Then delete the test result
+      const { error: testError } = await supabase
+        .from('image_generation_tests')
+        .delete()
+        .eq('id', testId);
+        
+      if (testError) {
+        console.error('Error archiving test result:', testError);
+        toast.error('Failed to archive test result');
+        return;
+      }
+      
+      // Refresh data
+      await Promise.all([loadStories(), loadTestResults()]);
+      toast.success('Test result archived and images deleted');
+    } catch (error) {
+      console.error('Error archiving test result:', error);
+      toast.error('Failed to archive test result');
+    }
+  };
+
+  const archiveAllTests = async () => {
+    if (testResults.length === 0) return;
+    
+    const confirmArchive = window.confirm(
+      `This will permanently delete all ${testResults.length} test results and their associated images. This action cannot be undone. Continue?`
+    );
+    
+    if (!confirmArchive) return;
+    
+    try {
+      // Get all unique slide IDs from test results
+      const slideIds = [...new Set(testResults.map(test => test.slide_id).filter(Boolean))];
+      
+      // Delete all visuals for these slides
+      if (slideIds.length > 0) {
+        const { error: visualsError } = await supabase
+          .from('visuals')
+          .delete()
+          .in('slide_id', slideIds);
+          
+        if (visualsError) {
+          console.error('Error deleting visuals during bulk archive:', visualsError);
+          toast.error('Failed to delete associated images');
+          return;
+        }
+      }
+      
+      // Delete all test results
+      const { error: testsError } = await supabase
+        .from('image_generation_tests')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+        
+      if (testsError) {
+        console.error('Error archiving all test results:', testsError);
+        toast.error('Failed to archive test results');
+        return;
+      }
+      
+      // Refresh data
+      await Promise.all([loadStories(), loadTestResults()]);
+      toast.success(`Archived all test results and deleted ${slideIds.length} associated images`);
+    } catch (error) {
+      console.error('Error archiving all tests:', error);
+      toast.error('Failed to archive all tests');
     }
   };
 
@@ -658,12 +745,27 @@ export default function IdeogramTestSuite() {
            )}
          </TabsContent>
 
-        <TabsContent value="results" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Test Results</CardTitle>
-              <CardDescription>Latest image generation tests with visual previews</CardDescription>
-            </CardHeader>
+         <TabsContent value="results" className="space-y-4">
+           <Card>
+             <CardHeader>
+               <div className="flex items-center justify-between">
+                 <div>
+                   <CardTitle>Recent Test Results</CardTitle>
+                   <CardDescription>Latest image generation tests with visual previews</CardDescription>
+                 </div>
+                 {testResults.length > 0 && (
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={archiveAllTests}
+                     className="text-destructive hover:text-destructive"
+                   >
+                     <ArchiveX className="h-4 w-4 mr-1" />
+                     Archive All ({testResults.length})
+                   </Button>
+                 )}
+               </div>
+             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {testResults.slice(0, 20).map(result => {
@@ -700,16 +802,24 @@ export default function IdeogramTestSuite() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4" />
-                            ${result.estimated_cost?.toFixed(4)}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {(result.generation_time_ms / 1000).toFixed(1)}s
-                          </div>
-                        </div>
+                         <div className="flex items-center gap-4 text-sm">
+                           <div className="flex items-center gap-1">
+                             <DollarSign className="h-4 w-4" />
+                             ${result.estimated_cost?.toFixed(4)}
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <Clock className="h-4 w-4" />
+                             {(result.generation_time_ms / 1000).toFixed(1)}s
+                           </div>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={() => archiveTestResult(result.id, result.slide_id || '')}
+                             className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                           >
+                             <Archive className="h-3 w-3" />
+                           </Button>
+                         </div>
                       </div>
                       
                       {/* Show slide content and generated visuals */}
