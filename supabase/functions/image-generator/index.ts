@@ -38,7 +38,7 @@ serve(async (req) => {
     const slideContent = slideData?.content || prompt;
     
     // Enhanced prompt for text-based slide with consistent typography
-    const enhancedPrompt = `Create a simple text-based social media slide. Typography: Use modern sans-serif font (Helvetica or Arial family). Text formatting: Title case. Display this text clearly and prominently: "${slideContent}". Layout: Centered text on solid background color, generous white space, high contrast for readability. Style: Minimal design, no decorative elements, no illustrations, focus purely on typography and text hierarchy. Portrait orientation suitable for social media carousel.`;
+    const enhancedPrompt = `Create a professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Display this text clearly and prominently: "${slideContent}". Layout: Centered text on clean white/light background, dark text for maximum contrast and readability, generous white space. Style: Editorial news design, no decorative elements, no illustrations, focus purely on clear legible typography. Square 1:1 format for social media.`;
 
     // Generate image using OpenAI
     const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
@@ -51,7 +51,7 @@ serve(async (req) => {
         model: 'gpt-image-1',
         prompt: enhancedPrompt,
         n: 1,
-        size: '1024x1536', // Portrait orientation for Instagram carousel
+        size: '1024x1024', // Square format for social media
         quality: 'high',
         output_format: 'webp',
         output_compression: 85

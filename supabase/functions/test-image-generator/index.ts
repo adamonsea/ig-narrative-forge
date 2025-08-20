@@ -255,12 +255,12 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for text-based slide  
+      // Enhanced prompt for text-based slide with clearer text
       const slideContent = slide?.content || sanitizedPrompt;
       const isTitle = slide?.slide_number === 1;
-      const textCase = isTitle ? 'UPPERCASE TITLE TEXT' : 'Sentence case text';
+      const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
       
-      const enhancedPrompt = `Typography-focused social media slide. Font: Modern sans-serif (Helvetica/Arial). Text case: ${textCase}. Content: "${slideContent}". Layout: Centered text, solid background, high contrast, minimal design, no decorative elements.`;
+      const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
 
       console.log(`Testing fal.ai FLUX Pro API for slide ${slideId}`);
 
@@ -369,12 +369,12 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for text-based slide  
+      // Enhanced prompt for text-based slide with clearer text
       const slideContent = slide?.content || sanitizedPrompt;
       const isTitle = slide?.slide_number === 1;
-      const textCase = isTitle ? 'UPPERCASE TITLE TEXT' : 'Sentence case text';
+      const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
       
-      const enhancedPrompt = `Clean typography-based social media slide. Modern sans-serif font (Helvetica family). ${textCase}. Text content: "${slideContent}". Centered layout, solid color background, high contrast, minimal design, no graphics or decorative elements.`;
+      const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
 
       console.log(`Testing Replicate FLUX Pro API for slide ${slideId}`);
 
@@ -387,14 +387,14 @@ serve(async (req) => {
          },
          body: JSON.stringify({
            version: "f15c956a9a1002d21453c23db2adb4cb8d76fb8e5da7fd4da355e62e9de7bb1c", // FLUX.1 Schnell (correct version)
-            input: {
-              prompt: enhancedPrompt,
-              aspect_ratio: "9:16", // Portrait for social media
-              output_format: "webp",
-              output_quality: 90,
-              num_outputs: 1, // Ensure single image
-              num_inference_steps: 4
-            }
+             input: {
+               prompt: enhancedPrompt,
+               aspect_ratio: "1:1", // Square format for social media
+               output_format: "webp",
+               output_quality: 90,
+               num_outputs: 1, // Ensure single image
+               num_inference_steps: 4
+             }
          }),
        });
 
@@ -520,8 +520,12 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
+      // Enhanced prompt for text-based slide with consistent typography
       const slideContent = slide?.content || sanitizedPrompt;
-      const enhancedPrompt = `Create a simple text-based social media slide. Display this text clearly and prominently: "${slideContent}". Use a solid background color, large readable typography, clean minimal layout. No illustrations or decorative graphics - focus only on text presentation and readability. Portrait orientation suitable for social media carousel.`;
+      const isTitle = slide?.slide_number === 1;
+      const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
+      
+      const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography. Square format for social media.`;
 
       console.log(`Testing openai gpt-image-1 API for slide ${slideId}`);
 
@@ -535,7 +539,7 @@ serve(async (req) => {
           model: 'gpt-image-1',
           prompt: enhancedPrompt,
           n: 1,
-          size: '1024x1536',
+          size: '1024x1024', // Square format for social media
           quality: 'high',
           output_format: 'webp',
           output_compression: 85
