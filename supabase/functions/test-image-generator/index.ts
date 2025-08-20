@@ -46,6 +46,8 @@ serve(async (req) => {
     const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY');
     const falApiKey = Deno.env.get('FAL_API_KEY');
     const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN');
+    const huggingfaceApiKey = Deno.env.get('HUGGINGFACE_API_KEY');
+    const deepinfraApiKey = Deno.env.get('DEEPINFRA_API_KEY');
     
      console.log('Environment check:', {
        supabaseUrl: !!supabaseUrl,
@@ -54,7 +56,8 @@ serve(async (req) => {
        ideogramApiKey: !!ideogramApiKey,
        falApiKey: !!falApiKey,
        replicateApiToken: !!replicateApiToken,
-       huggingfaceApiKey: !!Deno.env.get('HUGGINGFACE_API_KEY')
+      huggingfaceApiKey: !!huggingfaceApiKey,
+      deepinfraApiKey: !!deepinfraApiKey
      });
     
     if (!supabaseUrl || !supabaseKey) {
@@ -513,7 +516,7 @@ serve(async (req) => {
        generationTime = Date.now() - startTime;
 
      } else if (apiProvider === 'huggingface') {
-       if (!Deno.env.get('HUGGINGFACE_API_KEY')) {
+       if (!huggingfaceApiKey) {
          throw new Error('Hugging Face API key not configured');
        }
 
@@ -528,22 +531,22 @@ serve(async (req) => {
        const isTitle = slide?.slide_number === 1;
        const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
        
-       const enhancedPrompt = `Professional editorial typography design: Create a clean text-focused social media slide. Typography: Bold modern sans-serif font (Helvetica/Arial family), LARGE readable text size. Text format: ${textCase}. Display this exact text: "${slideContent}". Design: Pure white/light background, dark text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, NO graphics, NO decorative elements, focus purely on clear legible typography. Square format, high quality text rendering.`;
+       const enhancedPrompt = `Typography poster design: Create a clean, minimal text slide for social media. Typography: Bold sans-serif font (Helvetica/Arial), large readable text. Text format: ${textCase}. Display this text: "${slideContent}". Layout: White background, black text, centered, generous margins. Style: Clean editorial design, no graphics, no decorative elements. Square 1:1 format.`;
 
-       console.log(`Testing Hugging Face Stable Diffusion 3.5 Medium API for slide ${slideId}`);
+       console.log(`Testing Hugging Face FLUX.1-schnell API for slide ${slideId}`);
 
-       // Using Hugging Face Stable Diffusion 3.5 Medium (free tier available)
-       const hfResponse = await fetch('https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3.5-medium', {
+       // Using FLUX.1-schnell - better for text rendering and faster
+       const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
          method: 'POST',
          headers: {
-           'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
+           'Authorization': `Bearer ${huggingfaceApiKey}`,
            'Content-Type': 'application/json',
          },
          body: JSON.stringify({
            inputs: enhancedPrompt,
            parameters: {
-             guidance_scale: 7.5,
-             num_inference_steps: 30,
+             num_inference_steps: 4,
+             guidance_scale: 0.0,
              width: 1024,
              height: 1024,
            }
@@ -584,10 +587,105 @@ serve(async (req) => {
        }
        imageData = btoa(binary);
        
-       console.log(`Generated image with Hugging Face SD 3.5 Medium, size: ${imageBlob.byteLength} bytes`);
+       console.log(`Generated image with Hugging Face FLUX.1-schnell, size: ${imageBlob.byteLength} bytes`);
        
-       // Estimate cost (Hugging Face free tier, then pay-per-use)
+       // Estimate cost (FLUX.1-schnell pricing)
        cost = 0.02;
+       generationTime = Date.now() - startTime;
+
+     } else if (apiProvider === 'deepinfra') {
+       if (!deepinfraApiKey) {
+         throw new Error('DeepInfra API key not configured');
+       }
+
+       // Sanitize prompt to avoid content policy violations
+       const sanitizedPrompt = prompt
+         .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+       // Enhanced prompt for DeepSeek Janus Pro - excellent text rendering
+       const slideContent = slide?.content || sanitizedPrompt;
+       const isTitle = slide?.slide_number === 1;
+       const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
+       
+       const enhancedPrompt = `Professional text-based social media slide design. Typography: Bold modern sans-serif font, large readable size. Text format: ${textCase}. Display this text clearly: "${slideContent}". Layout: Clean white/light background, dark text for maximum contrast, centered alignment. Style: Minimal editorial design, no graphics, focus on typography clarity. Square 1:1 format.`;
+
+       console.log(`Testing DeepInfra DeepSeek Janus Pro API for slide ${slideId}`);
+
+       // Using DeepSeek Janus Pro - multimodal model with excellent text understanding
+       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/deepseek-ai/janus-pro-7b', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${deepinfraApiKey}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           prompt: enhancedPrompt,
+           width: 1024,
+           height: 1024,
+           num_inference_steps: 20,
+           guidance_scale: 5.0,
+         }),
+       });
+
+       console.log('DeepInfra response status:', deepinfraResponse.status);
+
+       if (!deepinfraResponse.ok) {
+         const errorData = await deepinfraResponse.text();
+         console.error('DeepInfra API error:', errorData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'deepinfra',
+           success: false,
+           error_message: `DeepInfra API error: ${deepinfraResponse.status} - ${errorData}`,
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error(`DeepInfra generation failed: ${deepinfraResponse.status} - ${errorData}`);
+       }
+
+       const deepinfraData = await deepinfraResponse.json();
+       console.log('DeepInfra response structure:', {
+         hasImages: !!deepinfraData.images,
+         hasData: !!deepinfraData.data,
+         keys: Object.keys(deepinfraData)
+       });
+
+       // DeepInfra returns base64 image data
+       if (deepinfraData.images && deepinfraData.images[0]) {
+         imageData = deepinfraData.images[0];
+         console.log(`Generated image with DeepInfra Janus Pro`);
+       } else if (deepinfraData.data && deepinfraData.data[0]) {
+         imageData = deepinfraData.data[0];
+         console.log(`Generated image with DeepInfra Janus Pro`);
+       } else {
+         console.error('No image data in DeepInfra response:', JSON.stringify(deepinfraData, null, 2));
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'deepinfra',
+           success: false,
+           error_message: 'No image data received from DeepInfra',
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error('No image data received from DeepInfra');
+       }
+       
+       // Estimate cost (DeepInfra Janus Pro pricing)
+       cost = 0.025;
        generationTime = Date.now() - startTime;
 
      } else {
