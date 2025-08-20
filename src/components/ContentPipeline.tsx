@@ -952,16 +952,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                    // Ensure URL has protocol
                                    const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
                                    
-                                   try {
-                                     console.log('Opening URL:', validUrl);
-                                     window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                     
-                                     // Success feedback
-                                     toast({
-                                       title: 'Article Opened',
-                                       description: 'Original article opened in new tab',
-                                     });
-                                   } catch (error) {
+                                    try {
+                                      window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                    } catch (error) {
                                      console.warn('Failed to open URL, copying instead:', error);
                                      // Fallback: copy URL to clipboard
                                      navigator.clipboard?.writeText(validUrl);
@@ -1114,16 +1107,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                    // Ensure URL has protocol
                                    const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
                                    
-                                   try {
-                                     console.log('Opening URL:', validUrl);
-                                     window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                     
-                                     // Success feedback
-                                     toast({
-                                       title: 'Article Opened',
-                                       description: 'Original article opened in new tab',
-                                     });
-                                   } catch (error) {
+                                    try {
+                                      window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                    } catch (error) {
                                      console.warn('Failed to open URL, copying instead:', error);
                                      // Fallback: copy URL to clipboard
                                      navigator.clipboard?.writeText(validUrl);
