@@ -206,9 +206,23 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       if (error) throw error;
 
       if (data?.success) {
+        let description = `Found ${data.articlesFound} articles using ${data.method}`;
+        
+        if (data.articlesScraped > 0) {
+          description += `, stored ${data.articlesScraped} new articles`;
+        }
+        
+        if (data.duplicatesSkipped > 0) {
+          description += `, skipped ${data.duplicatesSkipped} duplicates`;
+        }
+        
+        if (data.filteredForRelevance > 0) {
+          description += `, filtered ${data.filteredForRelevance} for low relevance`;
+        }
+        
         toast({
           title: 'Scraping Complete',
-          description: `Found ${data.articlesFound} articles, scraped ${data.articlesScraped} relevant ones using ${data.method}`,
+          description,
         });
         
         if (data.errors && data.errors.length > 0) {

@@ -89,7 +89,7 @@ serve(async (req) => {
     console.log(`✅ Found ${result.articlesFound} articles using ${result.method}`);
 
     // Filter and store articles with enhanced regional context
-    const storedCount = await storeArticles(result.articles, sourceId, targetRegion, sourceInfo, supabase);
+    const storeResults = await storeArticles(result.articles, sourceId, targetRegion, sourceInfo, supabase);
     
     // Update source metrics
     if (sourceId) {
@@ -99,7 +99,9 @@ serve(async (req) => {
 
     const finalResult = {
       ...result,
-      articlesScraped: storedCount,
+      articlesScraped: storeResults.storedCount,
+      duplicatesSkipped: storeResults.duplicateCount,
+      filteredForRelevance: storeResults.filteredCount,
       duration_ms: Date.now() - startTime
     };
 
@@ -421,8 +423,10 @@ function extractBasicContent(html: string, baseUrl: string): any[] {
 }
 
 // Store articles in database with regional relevance scoring
-async function storeArticles(articles: any[], sourceId: string, region: string, sourceInfo: any, supabase: any): Promise<number> {
+async function storeArticles(articles: any[], sourceId: string, region: string, sourceInfo: any, supabase: any): Promise<{storedCount: number, duplicateCount: number, filteredCount: number}> {
   let storedCount = 0;
+  let duplicateCount = 0;
+  let filteredCount = 0;
   
   for (const article of articles) {
     try {
@@ -434,6 +438,7 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
         .maybeSingle();
 
       if (existing) {
+        duplicateCount++;
         console.log(`⏭️ Skipping duplicate: ${article.title}`);
         continue;
       }
@@ -443,6 +448,7 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
       console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore}`);
 
       // Insert new article with relevance score and metadata
+      // Note: The database trigger will handle filtering based on source type thresholds
       const { error } = await supabase
         .from('articles')
         .insert({
@@ -460,7 +466,13 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
         });
 
       if (error) {
-        console.error(`❌ Failed to store: ${article.title} - ${error.message}`);
+        // Check if this was filtered by the relevance trigger
+        if (error.message.includes('discarded') || error.message.includes('relevance')) {
+          filteredCount++;
+          console.log(`🔽 Filtered for low relevance: ${article.title} (score: ${relevanceScore})`);
+        } else {
+          console.error(`❌ Failed to store: ${article.title} - ${error.message}`);
+        }
       } else {
         storedCount++;
         console.log(`💾 Stored: ${article.title} (relevance: ${relevanceScore})`);
@@ -471,7 +483,7 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
     }
   }
   
-  return storedCount;
+  return { storedCount, duplicateCount, filteredCount };
 }
 
 // Calculate regional relevance score using region-agnostic configuration
