@@ -262,10 +262,10 @@ serve(async (req) => {
       
       const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
 
-      console.log(`Testing fal.ai FLUX Pro API for slide ${slideId}`);
+      console.log(`Testing Fal.ai F-Lite API for slide ${slideId}`);
 
-      // Using Fal.ai FLUX Pro (better for text) instead of Schnell
-      const falResponse = await fetch('https://fal.run/fal-ai/flux-pro', {
+      // Using Fal.ai native F-Lite model (cheaper FAL option, not FLUX)
+      const falResponse = await fetch('https://fal.run/fal-ai/f-lite/standard', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
@@ -273,11 +273,11 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           prompt: enhancedPrompt,
-          image_size: 'square_hd', // 1024x1024 square format
-          num_inference_steps: 25, // More steps for better quality
-          guidance_scale: 7.5, // Higher guidance for better prompt adherence
+          width: 1024,
+          height: 1024,
+          num_inference_steps: 20,
+          guidance_scale: 7.5,
           num_images: 1,
-          enable_safety_checker: true,
           seed: Math.floor(Math.random() * 1000000)
         }),
       });
@@ -312,14 +312,14 @@ serve(async (req) => {
         keys: Object.keys(falData)
       });
 
-      // Extract image URL from response
+      // Extract image URL from F-Lite response
       let imageUrl = null;
       if (falData.images && falData.images.length > 0) {
         imageUrl = falData.images[0].url;
       } else if (falData.data && falData.data.images && falData.data.images.length > 0) {
         imageUrl = falData.data.images[0].url;
       } else {
-        console.error('No image URL in Fal.ai response:', JSON.stringify(falData, null, 2));
+        console.error('No image URL in F-Lite response:', JSON.stringify(falData, null, 2));
         
         // Log test failure to database
         await supabase.from('image_generation_tests').insert({
@@ -334,7 +334,7 @@ serve(async (req) => {
           style_reference_used: !!styleReferenceUrl
         });
         
-        throw new Error('No image data received from Fal.ai API');
+        throw new Error('No image data received from F-Lite API');
       }
 
       // Download the image and convert to base64
@@ -354,10 +354,10 @@ serve(async (req) => {
       }
       imageData = btoa(binary);
       
-      console.log(`Generated image with Fal.ai FLUX Schnell, size: ${imageBuffer.byteLength} bytes`);
+      console.log(`Generated image with Fal.ai F-Lite, size: ${imageBuffer.byteLength} bytes`);
       
-      // Estimate cost (Fal.ai FLUX Pro pricing - higher cost but better quality)
-      cost = 0.055;
+      // Estimate cost (Fal.ai F-Lite pricing - much cheaper than FLUX)
+      cost = 0.01;
       generationTime = Date.now() - startTime;
 
     } else if (apiProvider === 'replicate') {
@@ -531,7 +531,7 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography. Square format for social media.`;
 
-      console.log(`Testing openai gpt-image-1 API for slide ${slideId}`);
+      console.log(`Testing OpenAI DALL-E 3 API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -540,13 +540,12 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'dall-e-3', // Switch to DALL-E 3 which is more reliable for text
           prompt: enhancedPrompt,
           n: 1,
-          size: '1024x1024', // Square format for social media
-          quality: 'high',
-          output_format: 'webp',
-          output_compression: 85
+          size: '1024x1024',
+          quality: 'standard', // Use standard quality to avoid potential issues
+          style: 'natural' // Natural style for better text rendering
         }),
       });
 
@@ -572,28 +571,34 @@ serve(async (req) => {
 
       const openAIData = await imageResponse.json();
       
-      // GPT-Image-1 returns base64 data directly
-      imageData = openAIData.data[0].b64_json;
-      
-      if (!imageData) {
-        // Log test failure to database
-        await supabase.from('image_generation_tests').insert({
-          test_id: testId || null,
-          slide_id: slideId || null,
-          story_id: slide?.story_id || null,
-          api_provider: 'openai',
-          success: false,
-          error_message: 'No image data received from OpenAI',
-          generation_time_ms: Date.now() - startTime,
-          estimated_cost: 0.08,
-          style_reference_used: !!styleReferenceUrl
-        });
+      // DALL-E 3 returns URL, need to download and convert to base64
+      if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
+        const imageUrl = openAIData.data[0].url;
         
-        throw new Error('No image data received from OpenAI');
+        // Download the image and convert to base64
+        const imageDownloadResponse = await fetch(imageUrl);
+        if (!imageDownloadResponse.ok) {
+          throw new Error(`Failed to download image from OpenAI: ${imageDownloadResponse.status}`);
+        }
+        
+        const imageBuffer = await imageDownloadResponse.arrayBuffer();
+        const uint8Array = new Uint8Array(imageBuffer);
+        
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        imageData = btoa(binary);
+      } else {
+        throw new Error('No image URL received from OpenAI DALL-E 3');
       }
-
-      // Estimate OpenAI cost
-      cost = 0.08; // Estimated per image for gpt-image-1
+      
+      console.log(`Generated image with OpenAI DALL-E 3, size: ${imageData ? 'success' : 'failed'}`);
+      
+      // Estimate cost (DALL-E 3 standard pricing)
+      cost = 0.040;
       generationTime = Date.now() - startTime;
     }
 
