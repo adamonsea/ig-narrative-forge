@@ -516,9 +516,8 @@ function extractArticleContent(doc: any, url: string) {
           break;
         }
       }
-      }
-    }
-  } else {
+        }
+    } else {
     // Clean up the content
     // Remove script and style tags and other unwanted elements
     contentElement.querySelectorAll('script, style, nav, aside, .advertisement, .ad, .social-share, .comments, .related-posts, .newsletter-signup, .cookie-banner')
