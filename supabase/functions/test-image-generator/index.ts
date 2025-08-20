@@ -47,14 +47,15 @@ serve(async (req) => {
     const falApiKey = Deno.env.get('FAL_API_KEY');
     const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN');
     
-    console.log('Environment check:', {
-      supabaseUrl: !!supabaseUrl,
-      supabaseKey: !!supabaseKey,
-      openAIApiKey: !!openAIApiKey,
-      ideogramApiKey: !!ideogramApiKey,
-      falApiKey: !!falApiKey,
-      replicateApiToken: !!replicateApiToken
-    });
+     console.log('Environment check:', {
+       supabaseUrl: !!supabaseUrl,
+       supabaseKey: !!supabaseKey,
+       openAIApiKey: !!openAIApiKey,
+       ideogramApiKey: !!ideogramApiKey,
+       falApiKey: !!falApiKey,
+       replicateApiToken: !!replicateApiToken,
+       huggingfaceApiKey: !!Deno.env.get('HUGGINGFACE_API_KEY')
+     });
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase environment variables');
@@ -378,30 +379,28 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
 
-      console.log(`Testing Replicate Stable Diffusion 3.5 Large API for slide ${slideId}`);
+       console.log(`Testing Replicate Stable Diffusion 3.5 Large API for slide ${slideId}`);
 
-       // Using Stable Diffusion 3.5 Large - superior text rendering
-       const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
-         method: 'POST',
-         headers: {
-           'Authorization': `Bearer ${replicateApiToken}`,
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
-           version: "45a5c3e6b59b8b305eb8efe94b5e2dc72723e6a6aae844369d28df8e72eaf585", // Stable Diffusion 3.5 Large
-             input: {
-               prompt: enhancedPrompt,
-               width: 1024,
-               height: 1024,
-               num_outputs: 1,
-               guidance_scale: 4.5,
-               num_inference_steps: 40,
-               seed: Math.floor(Math.random() * 1000000),
-               output_format: "webp",
-               output_quality: 90
-             }
-         }),
-       });
+        // Using Stable Diffusion 3.5 Large - superior text rendering (updated API format)
+        const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${replicateApiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: "stability-ai/stable-diffusion-3.5-large",
+            input: {
+              prompt: enhancedPrompt,
+              aspect_ratio: "1:1",
+              cfg: 4.5,
+              steps: 40,
+              seed: Math.floor(Math.random() * 1000000),
+              output_format: "webp",
+              output_quality: 90
+            }
+          }),
+        });
 
       console.log('Replicate response status:', replicateResponse.status);
 
@@ -439,7 +438,7 @@ serve(async (req) => {
         
         const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${finalData.id}`, {
           headers: {
-            'Authorization': `Bearer ${replicateApiToken}`,
+            'Authorization': `Token ${replicateApiToken}`,
           },
         });
         
@@ -511,9 +510,87 @@ serve(async (req) => {
       
        // Estimate cost (SD 3.5 Large pricing)
        cost = 0.035;
-      generationTime = Date.now() - startTime;
+       generationTime = Date.now() - startTime;
 
-    } else {
+     } else if (apiProvider === 'huggingface') {
+       if (!Deno.env.get('HUGGINGFACE_API_KEY')) {
+         throw new Error('Hugging Face API key not configured');
+       }
+
+       // Sanitize prompt to avoid content policy violations
+       const sanitizedPrompt = prompt
+         .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+       // Enhanced prompt for text-based slide with excellent typography
+       const slideContent = slide?.content || sanitizedPrompt;
+       const isTitle = slide?.slide_number === 1;
+       const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
+       
+       const enhancedPrompt = `Professional editorial typography design: Create a clean text-focused social media slide. Typography: Bold modern sans-serif font (Helvetica/Arial family), LARGE readable text size. Text format: ${textCase}. Display this exact text: "${slideContent}". Design: Pure white/light background, dark text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, NO graphics, NO decorative elements, focus purely on clear legible typography. Square format, high quality text rendering.`;
+
+       console.log(`Testing Hugging Face Stable Diffusion 3.5 Medium API for slide ${slideId}`);
+
+       // Using Hugging Face Stable Diffusion 3.5 Medium (free tier available)
+       const hfResponse = await fetch('https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3.5-medium', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           inputs: enhancedPrompt,
+           parameters: {
+             guidance_scale: 7.5,
+             num_inference_steps: 30,
+             width: 1024,
+             height: 1024,
+           }
+         }),
+       });
+
+       console.log('Hugging Face response status:', hfResponse.status);
+
+       if (!hfResponse.ok) {
+         const errorData = await hfResponse.text();
+         console.error('Hugging Face API error:', errorData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'huggingface',
+           success: false,
+           error_message: `Hugging Face API error: ${hfResponse.status} - ${errorData}`,
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error(`Hugging Face generation failed: ${hfResponse.status} - ${errorData}`);
+       }
+
+       // Hugging Face returns the image as a blob
+       const imageBlob = await hfResponse.arrayBuffer();
+       const uint8Array = new Uint8Array(imageBlob);
+       
+       let binary = '';
+       const chunkSize = 8192;
+       for (let i = 0; i < uint8Array.length; i += chunkSize) {
+         const chunk = uint8Array.subarray(i, i + chunkSize);
+         binary += String.fromCharCode.apply(null, Array.from(chunk));
+       }
+       imageData = btoa(binary);
+       
+       console.log(`Generated image with Hugging Face SD 3.5 Medium, size: ${imageBlob.byteLength} bytes`);
+       
+       // Estimate cost (Hugging Face free tier, then pay-per-use)
+       cost = 0.02;
+       generationTime = Date.now() - startTime;
+
+     } else {
       // OpenAI generation (existing logic)
       if (!openAIApiKey) {
         throw new Error('OpenAI API key not configured');
