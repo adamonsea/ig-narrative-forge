@@ -314,8 +314,8 @@ serve(async (req) => {
               console.log(`Generated image with Fal.ai FLUX (alt format), size: ${imageBuffer.byteLength} bytes`);
               break;
             } else {
-              console.log('Fal.ai completed but no images found in response:', statusData);
-              throw new Error('Fal.ai generation completed but no image data received');
+            console.log('Fal.ai completed but no images found in response:', JSON.stringify(statusData, null, 2));
+            throw new Error('Fal.ai generation completed but no image data received');
             }
           } else if (statusData.status === 'FAILED') {
             throw new Error(`Fal.ai generation failed: ${statusData.error || 'Unknown error'}`);

@@ -935,44 +935,42 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => {
-                                  // Validate URL before opening
-                                  const url = article.source_url;
-                                  if (!url) {
-                                    toast({
-                                      title: 'No URL Available',
-                                      description: 'This article doesn\'t have a source URL',
-                                      variant: 'destructive',
-                                    });
-                                    return;
-                                  }
+                                   // Validate URL before opening
+                                   let url = article.source_url;
+                                   if (!url) {
+                                     toast({
+                                       title: 'No URL Available',
+                                       description: 'This article doesn\'t have a source URL',
+                                       variant: 'destructive',
+                                     });
+                                     return;
+                                   }
 
-                                  // Ensure URL has protocol
-                                  const validUrl = url.startsWith('http') ? url : `https://${url}`;
-                                  
-                                  try {
-                                    console.log('Opening URL:', validUrl);
-                                    const opened = window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                    
-                                    // Check if popup was blocked
-                                    if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-                                      throw new Error('Popup blocked');
-                                    }
-                                    
-                                    // Success feedback
-                                    toast({
-                                      title: 'Article Opened',
-                                      description: 'Original article opened in new tab',
-                                    });
-                                  } catch (error) {
-                                    console.warn('Failed to open URL, copying instead:', error);
-                                    // Fallback: copy URL to clipboard
-                                    navigator.clipboard?.writeText(validUrl);
-                                    toast({
-                                      title: 'Link Copied',
-                                      description: 'Popup blocked. Article URL copied to clipboard - paste in browser to view.',
-                                    });
-                                  }
-                                }}
+                                   // Decode HTML entities and clean URL
+                                   url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+                                   
+                                   // Ensure URL has protocol
+                                   const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
+                                   
+                                   try {
+                                     console.log('Opening URL:', validUrl);
+                                     window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                     
+                                     // Success feedback
+                                     toast({
+                                       title: 'Article Opened',
+                                       description: 'Original article opened in new tab',
+                                     });
+                                   } catch (error) {
+                                     console.warn('Failed to open URL, copying instead:', error);
+                                     // Fallback: copy URL to clipboard
+                                     navigator.clipboard?.writeText(validUrl);
+                                     toast({
+                                       title: 'Link Copied',
+                                       description: 'Popup blocked. Article URL copied to clipboard - paste in browser to view.',
+                                     });
+                                   }
+                                 }}
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />
                                 View Original
@@ -1100,7 +1098,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                 variant="ghost"
                                  onClick={() => {
                                    // Validate URL before opening
-                                   const url = article.source_url;
+                                   let url = article.source_url;
                                    if (!url) {
                                      toast({
                                        title: 'No URL Available',
@@ -1110,17 +1108,15 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                      return;
                                    }
 
+                                   // Decode HTML entities and clean URL
+                                   url = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+                                   
                                    // Ensure URL has protocol
-                                   const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                   const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
                                    
                                    try {
                                      console.log('Opening URL:', validUrl);
-                                     const opened = window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                     
-                                     // Check if popup was blocked
-                                     if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-                                       throw new Error('Popup blocked');
-                                     }
+                                     window.open(validUrl, '_blank', 'noopener,noreferrer');
                                      
                                      // Success feedback
                                      toast({

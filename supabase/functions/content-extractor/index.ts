@@ -259,18 +259,20 @@ function extractContentFromHTML(html: string) {
 
   // Extract main content - Enhanced patterns for The Argus and other news sites
   const contentPatterns = [
-    // The Argus specific patterns
-    /<div[^>]*class="[^"]*article-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*story-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*content-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    // The Argus specific patterns (exact selectors)
+    /<div[^>]*class="article-body"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="entry-content"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="post-content"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="story-body"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="content-body"[^>]*>([\s\S]*?)<\/div>/i,
     /<section[^>]*class="[^"]*article-content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*id="post-\d+"[^>]*>([\s\S]*?)<\/div>/i,
     // Generic news patterns
     /<article[^>]*>([\s\S]*?)<\/article>/i,
     /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
     /<div[^>]*class="[^"]*story[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*post-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i
   ];
 

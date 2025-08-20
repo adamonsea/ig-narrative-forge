@@ -487,27 +487,39 @@ function calculateContentQuality(article: any): number {
 
 function calculateRegionalRelevance(article: any): number {
   let score = 0;
-  const content = `${article.title} ${article.body}`.toLowerCase();
+  const title = article.title.toLowerCase();
+  const firstParagraph = article.body.substring(0, 500).toLowerCase(); // First 500 chars
+  const fullContent = `${title} ${article.body}`.toLowerCase();
   
-  // Eastbourne-specific terms (high value)
+  // STRICT: Regional terms must appear in title OR first paragraph (not just anywhere on page)
+  const titleContent = `${title} ${firstParagraph}`;
+  
+  // Eastbourne-specific terms (high value) - must be in title or first paragraph
   const eastbourneTerms = ['eastbourne', 'beachy head', 'pier', 'seafront', 'airshow', 'meads', 'old town', 'devonshire park'];
   eastbourneTerms.forEach(term => {
-    if (content.includes(term)) score += 25;
+    if (titleContent.includes(term)) score += 30;
   });
   
-  // East Sussex terms (medium value) 
+  // East Sussex terms (medium value) - must be in title or first paragraph
   const sussexTerms = ['east sussex', 'hastings', 'lewes', 'brighton', 'hove', 'seaford', 'polegate'];
   sussexTerms.forEach(term => {
-    if (content.includes(term)) score += 15;
+    if (titleContent.includes(term)) score += 15;
   });
   
-  // General local terms (low value)
+  // General local terms (low value) - only if in title/first paragraph 
   const localTerms = ['council', 'local', 'residents', 'community', 'borough'];
   localTerms.forEach(term => {
-    if (content.includes(term)) score += 5;
+    if (titleContent.includes(term)) score += 5;
+  });
+
+  // Negative scoring for generic/national content in title/first paragraph
+  const genericTerms = ['uk wide', 'national', 'england', 'britain', 'london', 'government'];
+  genericTerms.forEach(term => {
+    if (titleContent.includes(term)) score -= 10;
   });
   
-  return Math.min(score, 100);
+  // Minimum threshold - if score is below 20, reject the article
+  return Math.max(0, Math.min(score, 100));
 }
 
 function extractXMLContent(xml: string, tag: string): string {
