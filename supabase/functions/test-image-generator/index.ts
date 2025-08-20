@@ -386,7 +386,7 @@ serve(async (req) => {
            'Content-Type': 'application/json',
          },
          body: JSON.stringify({
-           version: "f2ab8a5569070ad0648a3dc435b76595b94bfd18ecf0ce9c8142eae4b725a0f3", // FLUX.1 Schnell (faster)
+           version: "f15c956a9a1002d21453c23db2adb4cb8d76fb8e5da7fd4da355e62e9de7bb1c", // FLUX.1 Schnell (correct version)
            input: {
              prompt: enhancedPrompt,
              aspect_ratio: "1:1",
