@@ -121,9 +121,21 @@ serve(async (req) => {
 
       // Add style reference image if provided
       if (styleReferenceUrl) {
-        // For style reference, we would need to download and append the image file
-        // This is a more complex implementation that would require downloading the image first
-        console.log('Style reference URL provided but not implemented yet:', styleReferenceUrl);
+        try {
+          console.log('Downloading style reference for Ideogram:', styleReferenceUrl);
+          // Download the style reference image
+          const styleImageResponse = await fetch(styleReferenceUrl);
+          if (styleImageResponse.ok) {
+            const styleImageBlob = await styleImageResponse.blob();
+            formData.append('style_reference_image', styleImageBlob, 'style_reference.jpg');
+            console.log('Style reference image added to Ideogram request');
+          } else {
+            console.warn('Failed to download style reference image:', styleImageResponse.status);
+          }
+        } catch (error) {
+          console.warn('Error downloading style reference image:', error);
+          // Continue without style reference
+        }
       }
 
       console.log('Ideogram V3 request parameters:', {
@@ -200,24 +212,34 @@ serve(async (req) => {
       // Enhanced prompt for editorial style
       const enhancedPrompt = `Professional editorial news illustration: Clean modern graphic design for "${sanitizedPrompt}". Minimalist flat design style, bold typography, high contrast colors, social media optimized, square format.`;
 
-      console.log(`Testing fal.ai API for slide ${slideId}`);
+      console.log(`Testing fal.ai Kontext API for slide ${slideId}`);
 
-      // Using fal.ai FLUX schnell model
-      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
+      // Prepare request body for Fal.ai Kontext model (supports style references)
+      const requestBody: any = {
+        prompt: enhancedPrompt,
+        image_size: 'square_hd',
+        num_inference_steps: 8,
+        guidance_scale: 3.5,
+        num_images: 1,
+        enable_safety_checker: true,
+        output_format: 'jpeg'
+      };
+
+      // Add style reference if provided
+      if (styleReferenceUrl && styleReferenceUrl.trim()) {
+        console.log('Adding style reference to Fal.ai request:', styleReferenceUrl);
+        requestBody.reference_image_url = styleReferenceUrl.trim();
+        requestBody.reference_strength = 0.7; // Moderate style influence
+      }
+
+      // Using fal.ai FLUX Kontext model (supports style references)
+      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux-pro/kontext', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: enhancedPrompt,
-          image_size: 'square_hd',
-          num_inference_steps: 4,
-          guidance_scale: 3.5,
-          num_images: 1,
-          enable_safety_checker: true,
-          output_format: 'jpeg'
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       console.log('Fal.ai response status:', falResponse.status);
@@ -352,8 +374,8 @@ serve(async (req) => {
         throw new Error('No image data received from Fal.ai API');
       }
       
-      // Estimate cost (Fal.ai pricing - typically cheaper than alternatives)
-      cost = 0.02; // Estimated per image for FLUX schnell
+      // Estimate cost (Fal.ai Kontext pricing - higher than schnell)
+      cost = 0.12; // Kontext model is more expensive but supports style references
       generationTime = Date.now() - startTime;
 
     } else {

@@ -76,6 +76,7 @@ export default function IdeogramTestSuite() {
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [styleReferenceUrl, setStyleReferenceUrl] = useState('');
+  const [styleReferenceFile, setStyleReferenceFile] = useState<File | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedSlideForViewing, setSelectedSlideForViewing] = useState<string | null>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
@@ -156,6 +157,32 @@ export default function IdeogramTestSuite() {
 
   const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal') => {
     const testId = crypto.randomUUID();
+    
+    // Handle style reference image upload if file is provided
+    let finalStyleReferenceUrl = styleReferenceUrl;
+    
+    if (styleReferenceFile && apiProvider !== 'openai') {
+      try {
+        // Upload style reference to Supabase storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('visuals')
+          .upload(`style-references/${testId}-${styleReferenceFile.name}`, styleReferenceFile);
+        
+        if (uploadError) throw uploadError;
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('visuals')
+          .getPublicUrl(uploadData.path);
+        
+        finalStyleReferenceUrl = urlData.publicUrl;
+        console.log('Style reference uploaded:', finalStyleReferenceUrl);
+      } catch (error) {
+        console.error('Failed to upload style reference:', error);
+        // Continue without style reference
+      }
+    }
+
     const prompt = customPrompt || generateEditorialPrompt(slide);
 
     try {
@@ -167,7 +194,7 @@ export default function IdeogramTestSuite() {
           prompt,
           apiProvider,
           stylePreset: 'editorial',
-          styleReferenceUrl: styleReferenceUrl || null,
+          styleReferenceUrl: finalStyleReferenceUrl || null,
           testId
         }
       });
@@ -358,6 +385,41 @@ export default function IdeogramTestSuite() {
                     rows={2}
                   />
                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="styleFile">Upload Style Reference Image</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="styleFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setStyleReferenceFile(e.target.files?.[0] || null)}
+                    className="flex-1"
+                  />
+                  {styleReferenceFile && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStyleReferenceFile(null)}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload an image to use as style reference (supported by Ideogram and Fal.ai)
+                </p>
+                
+                {styleReferenceFile && (
+                  <div className="mt-2">
+                    <img
+                      src={URL.createObjectURL(styleReferenceFile)}
+                      alt="Style reference preview"
+                      className="h-20 w-20 object-cover rounded border"
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
