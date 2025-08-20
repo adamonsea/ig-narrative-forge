@@ -1,5 +1,8 @@
 project_id = "fpoywkjgdapgjtdeooak"
 
+[functions.test-image-generator]
+verify_jwt = false
+
 [functions.job-processor]
 verify_jwt = false
 

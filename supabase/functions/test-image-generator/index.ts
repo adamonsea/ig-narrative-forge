@@ -10,9 +10,32 @@ const corsHeaders = {
 serve(async (req) => {
   console.log('=== TEST IMAGE GENERATOR FUNCTION STARTED ===');
   console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
   
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return new Response(null, { headers: corsHeaders });
+  }
+
+  let requestBody;
+  try {
+    console.log('Parsing request body...');
+    requestBody = await req.json();
+    console.log('Request body parsed successfully:', requestBody);
+  } catch (parseError) {
+    console.error('Failed to parse request body:', parseError);
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: 'Invalid JSON in request body',
+        details: parseError.message 
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 
   try {
@@ -31,24 +54,38 @@ serve(async (req) => {
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('Missing Supabase environment variables');
-      throw new Error('Missing required Supabase environment variables');
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Missing required Supabase environment variables'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     console.log('Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    console.log('Parsing request body...');
-    const requestBody = await req.json();
-    console.log('Request body:', requestBody);
-    
     const { 
       slideId, 
       prompt, 
-      apiProvider = 'openai', // 'openai' or 'ideogram'
+      apiProvider = 'openai',
       stylePreset = 'editorial',
       styleReferenceUrl = null,
       testId = null 
     } = requestBody;
+
+    console.log('Extracted parameters:', {
+      slideId,
+      prompt: prompt?.substring(0, 100) + '...',
+      apiProvider,
+      stylePreset,
+      hasStyleReference: !!styleReferenceUrl,
+      testId
+    });
 
     if (!slideId || !prompt) {
       throw new Error('Slide ID and prompt are required');
