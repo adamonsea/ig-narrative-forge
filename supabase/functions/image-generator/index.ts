@@ -37,8 +37,8 @@ serve(async (req) => {
 
     const slideContent = slideData?.content || prompt;
     
-    // Enhanced prompt for text-based slide
-    const enhancedPrompt = `Create a simple text-based social media slide. Display this text clearly and prominently: "${slideContent}". Use a solid background color, large readable typography, clean minimal layout. No illustrations or decorative graphics - focus only on text presentation and readability. Portrait orientation suitable for social media carousel.`;
+    // Enhanced prompt for text-based slide with consistent typography
+    const enhancedPrompt = `Create a simple text-based social media slide. Typography: Use modern sans-serif font (Helvetica or Arial family). Text formatting: Title case. Display this text clearly and prominently: "${slideContent}". Layout: Centered text on solid background color, generous white space, high contrast for readability. Style: Minimal design, no decorative elements, no illustrations, focus purely on typography and text hierarchy. Portrait orientation suitable for social media carousel.`;
 
     // Generate image using OpenAI
     const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {

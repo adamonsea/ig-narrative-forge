@@ -45,13 +45,15 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY');
     const falApiKey = Deno.env.get('FAL_API_KEY');
+    const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN');
     
     console.log('Environment check:', {
       supabaseUrl: !!supabaseUrl,
       supabaseKey: !!supabaseKey,
       openAIApiKey: !!openAIApiKey,
       ideogramApiKey: !!ideogramApiKey,
-      falApiKey: !!falApiKey
+      falApiKey: !!falApiKey,
+      replicateApiToken: !!replicateApiToken
     });
     
     if (!supabaseUrl || !supabaseKey) {
@@ -120,9 +122,13 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for text-based slide
+      // Enhanced prompt for text-based slide with consistent typography
       const slideContent = slide?.content || sanitizedPrompt;
-      const enhancedPrompt = `Create a simple text-based social media slide with clean layout. Display this text clearly and prominently: "${slideContent}". Use a plain background color, large readable typography, and minimal design. Focus on text legibility. No illustrations or graphics - just clean text presentation suitable for Instagram carousel.`;
+      // Determine if this is a title slide or supporting slide based on slide number
+      const isTitle = slide?.slide_number === 1;
+      const textCase = isTitle ? 'UPPERCASE TITLE TEXT' : 'Sentence case text';
+      
+      const enhancedPrompt = `Create a clean text-based social media slide. Typography: Use modern sans-serif font (Helvetica or Arial family). Text formatting: ${textCase}. Display this text: "${slideContent}". Layout: Centered text on solid background color, generous white space, high contrast for readability. Style: Minimal design, no decorative elements, no illustrations, focus purely on typography and text hierarchy. Format: Square 1:1 aspect ratio for social media.`;
 
       // Create FormData for Ideogram V3 API (requires multipart form data)
       const formData = new FormData();
@@ -223,27 +229,28 @@ serve(async (req) => {
 
       // Enhanced prompt for text-based slide  
       const slideContent = slide?.content || sanitizedPrompt;
-      const enhancedPrompt = `Simple text-based social media slide, clean minimal design. Display text clearly: "${slideContent}". Solid background color, large readable typography, no decorative elements or illustrations. Focus only on text presentation and legibility.`;
+      const isTitle = slide?.slide_number === 1;
+      const textCase = isTitle ? 'UPPERCASE TITLE TEXT' : 'Sentence case text';
+      
+      const enhancedPrompt = `Typography-focused social media slide. Font: Modern sans-serif (Helvetica/Arial). Text case: ${textCase}. Content: "${slideContent}". Layout: Centered text, solid background, high contrast, minimal design, no decorative elements.`;
 
-      console.log(`Testing fal.ai FLUX Schnell API for slide ${slideId}`);
+      console.log(`Testing fal.ai FLUX Pro API for slide ${slideId}`);
 
-      // Prepare request body for Fal.ai FLUX Schnell model
-      const requestBody: any = {
-        prompt: enhancedPrompt,
-        image_size: 'square_hd',
-        num_inference_steps: 4,
-        num_images: 1,
-        enable_safety_checker: true
-      };
-
-      // Using fal.ai FLUX Schnell model (more stable)
-      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux-schnell', {
+      // Using direct Fal.ai endpoint (non-queued)
+      const falResponse = await fetch('https://fal.run/fal-ai/flux/dev', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          prompt: enhancedPrompt,
+          image_size: 'square_hd',
+          num_inference_steps: 25,
+          guidance_scale: 7.5,
+          num_images: 1,
+          enable_safety_checker: true
+        }),
       });
 
       console.log('Fal.ai response status:', falResponse.status);
@@ -255,171 +262,148 @@ serve(async (req) => {
       }
 
       const falData = await falResponse.json();
-      console.log('Fal.ai response structure:', {
-        status: falData.status,
+      console.log('Fal.ai direct response structure:', {
         hasImages: !!falData.images,
-        hasRequestId: !!falData.request_id,
-        statusUrl: falData.status_url
+        imagesLength: falData.images?.length,
+        hasData: !!falData.data,
+        keys: Object.keys(falData)
       });
 
-      // Handle queued responses (need to poll for completion)
-      if (falData.status === 'IN_QUEUE' && falData.status_url) {
-        console.log('Fal.ai job queued, polling for completion...');
-        let attempts = 0;
-        const maxAttempts = 30; // 30 seconds max wait
-        
-        while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
-          attempts++;
-          
-          const statusResponse = await fetch(falData.status_url, {
-            headers: {
-              'Authorization': `Key ${falApiKey}`,
-            },
-          });
-          
-          if (!statusResponse.ok) {
-            console.error(`Fal.ai status check failed: ${statusResponse.status}`);
-            if (attempts >= maxAttempts) {
-              throw new Error(`Failed to check Fal.ai status after ${attempts} attempts`);
-            }
-            continue; // Skip this attempt and try again
-          }
-          
-          const statusData = await statusResponse.json();
-          console.log(`Fal.ai poll attempt ${attempts}/${maxAttempts}:`, statusData.status, statusData.logs ? `- ${statusData.logs.length} logs` : '');
-          
-          if (statusData.status === 'COMPLETED') {
-            console.log('Fal.ai generation completed, response structure:', {
-              hasImages: !!statusData.images,
-              hasData: !!statusData.data,
-              imagesLength: statusData.images?.length,
-              dataLength: statusData.data?.length
-            });
-            
-            // Check if we have images in the response
-            // Check multiple possible response structures for Fal.ai
-            let imageUrl = null;
-            let imageData = null;
-            
-            if (statusData.images && statusData.images.length > 0) {
-              imageUrl = statusData.images[0].url;
-            } else if (statusData.data && Array.isArray(statusData.data) && statusData.data.length > 0) {
-              imageUrl = statusData.data[0].url || statusData.data[0].image_url;
-            } else if (statusData.data && statusData.data.url) {
-              imageUrl = statusData.data.url;
-            } else if (statusData.url) {
-              imageUrl = statusData.url;
-            }
-            
-            if (imageUrl) {
-              // Download the image and convert to base64
-              const imageResponse = await fetch(imageUrl);
-              if (!imageResponse.ok) {
-                throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
-              }
-              
-              const imageBuffer = await imageResponse.arrayBuffer();
-              const uint8Array = new Uint8Array(imageBuffer);
-            let binary = '';
-            const chunkSize = 8192;
-            for (let i = 0; i < uint8Array.length; i += chunkSize) {
-              const chunk = uint8Array.subarray(i, i + chunkSize);
-              binary += String.fromCharCode.apply(null, Array.from(chunk));
-            }
-            imageData = btoa(binary);
-            
-            console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
-            break;
-            } else if (statusData.data && statusData.data.length > 0 && statusData.data[0].url) {
-              // Alternative response format
-              const imageResponse = await fetch(statusData.data[0].url);
-              if (!imageResponse.ok) {
-                throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
-              }
-              
-              const imageBuffer = await imageResponse.arrayBuffer();
-              const uint8Array = new Uint8Array(imageBuffer);
-              
-              let binary = '';
-              const chunkSize = 8192;
-              for (let i = 0; i < uint8Array.length; i += chunkSize) {
-                const chunk = uint8Array.subarray(i, i + chunkSize);
-                binary += String.fromCharCode.apply(null, Array.from(chunk));
-              }
-              imageData = btoa(binary);
-              
-              console.log(`Generated image with Fal.ai FLUX (alt format), size: ${imageBuffer.byteLength} bytes`);
-              break;
-            } else {
-            console.log('Fal.ai completed but no images found in response:', JSON.stringify(statusData, null, 2));
-            console.log('Creating placeholder response for empty Fal.ai result');
-            
-            // For debugging: log test failure but continue without throwing
-            await supabase.from('image_generation_tests').insert({
-              test_id: testId || null,
-              slide_id: slideId || null,
-              story_id: null,
-              api_provider: 'fal',
-              success: false,
-              error_message: 'Fal.ai completed but returned no image data',
-              generation_time_ms: Date.now() - startTime,
-              estimated_cost: 0.02,
-              style_reference_used: !!styleReferenceUrl
-            });
-            
-            return new Response(JSON.stringify({ 
-              success: false,
-              error: 'Fal.ai generated no image data - may need different model or parameters',
-              provider: 'fal',
-              debug_info: {
-                status: statusData.status,
-                hasImages: !!statusData.images,
-                hasData: !!statusData.data,
-                keys: Object.keys(statusData)
-              }
-            }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-            }
-          } else if (statusData.status === 'FAILED') {
-            throw new Error(`Fal.ai generation failed: ${statusData.error || 'Unknown error'}`);
-          }
-        }
-        
-        if (!imageData) {
-          throw new Error(`Fal.ai generation timed out after ${maxAttempts * 2} seconds. The image may still be processing - please try again in a few moments.`);
-        }
-      } else if (falData.images && falData.images[0] && falData.images[0].url) {
-        // Direct response (synchronous)
-        console.log('Fal.ai returned direct result');
-        
-        const imageResponse = await fetch(falData.images[0].url);
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
-        }
-        
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const uint8Array = new Uint8Array(imageBuffer);
-        
-        // Convert to base64 in chunks to avoid stack overflow
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          const chunk = uint8Array.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
-        }
-        imageData = btoa(binary);
-        
-        console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
+      // Extract image URL from response
+      let imageUrl = null;
+      if (falData.images && falData.images.length > 0) {
+        imageUrl = falData.images[0].url;
+      } else if (falData.data && falData.data.images && falData.data.images.length > 0) {
+        imageUrl = falData.data.images[0].url;
       } else {
-        console.error('Unexpected Fal.ai response:', falData);
+        console.error('No image URL in Fal.ai response:', JSON.stringify(falData, null, 2));
         throw new Error('No image data received from Fal.ai API');
       }
+
+      // Download the image and convert to base64
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+      }
       
-      // Estimate cost (Fal.ai FLUX Schnell pricing)
-      cost = 0.003; // FLUX Schnell is much cheaper
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imageBuffer);
+      
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      imageData = btoa(binary);
+      
+      console.log(`Generated image with Fal.ai FLUX Dev, size: ${imageBuffer.byteLength} bytes`);
+      
+      // Estimate cost (Fal.ai FLUX Dev pricing)
+      cost = 0.025; // FLUX Dev pricing
+      generationTime = Date.now() - startTime;
+
+    } else if (apiProvider === 'replicate') {
+      if (!replicateApiToken) {
+        throw new Error('Replicate API token not configured');
+      }
+
+      // Sanitize prompt to avoid content policy violations
+      const sanitizedPrompt = prompt
+        .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+        .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+        .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+      // Enhanced prompt for text-based slide  
+      const slideContent = slide?.content || sanitizedPrompt;
+      const isTitle = slide?.slide_number === 1;
+      const textCase = isTitle ? 'UPPERCASE TITLE TEXT' : 'Sentence case text';
+      
+      const enhancedPrompt = `Clean typography-based social media slide. Modern sans-serif font (Helvetica family). ${textCase}. Text content: "${slideContent}". Centered layout, solid color background, high contrast, minimal design, no graphics or decorative elements.`;
+
+      console.log(`Testing Replicate FLUX Pro API for slide ${slideId}`);
+
+      // Using Replicate FLUX Pro model
+      const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${replicateApiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          version: "7de2b42f13cd912906265775d73a42187093497c5b8d5f2e49a9df3806b2a191", // FLUX.1 Pro
+          input: {
+            prompt: enhancedPrompt,
+            aspect_ratio: "1:1",
+            output_format: "jpg",
+            output_quality: 90,
+            safety_tolerance: 2,
+            prompt_upsampling: false
+          }
+        }),
+      });
+
+      console.log('Replicate response status:', replicateResponse.status);
+
+      if (!replicateResponse.ok) {
+        const errorData = await replicateResponse.text();
+        console.error('Replicate API error:', errorData);
+        throw new Error(`Replicate generation failed: ${replicateResponse.status} - ${errorData}`);
+      }
+
+      const replicateData = await replicateResponse.json();
+      console.log('Replicate initial response:', replicateData.status);
+
+      // Poll for completion if needed
+      let attempts = 0;
+      const maxAttempts = 30;
+      let finalData = replicateData;
+
+      while (finalData.status !== 'succeeded' && finalData.status !== 'failed' && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+        
+        const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${finalData.id}`, {
+          headers: {
+            'Authorization': `Bearer ${replicateApiToken}`,
+          },
+        });
+        
+        if (statusResponse.ok) {
+          finalData = await statusResponse.json();
+          console.log(`Replicate poll ${attempts}/${maxAttempts}:`, finalData.status);
+        }
+      }
+
+      if (finalData.status === 'failed') {
+        throw new Error(`Replicate generation failed: ${finalData.error || 'Unknown error'}`);
+      }
+
+      if (!finalData.output || finalData.output.length === 0) {
+        throw new Error('No image URL received from Replicate');
+      }
+
+      // Download the image and convert to base64
+      const imageResponse = await fetch(finalData.output[0]);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image from Replicate: ${imageResponse.status}`);
+      }
+      
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imageBuffer);
+      
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      imageData = btoa(binary);
+      
+      console.log(`Generated image with Replicate FLUX Pro, size: ${imageBuffer.byteLength} bytes`);
+      
+      // Estimate cost (Replicate FLUX Pro pricing)
+      cost = 0.055; // FLUX Pro pricing on Replicate
       generationTime = Date.now() - startTime;
 
     } else {
