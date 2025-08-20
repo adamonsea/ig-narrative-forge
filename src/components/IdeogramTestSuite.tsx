@@ -23,7 +23,8 @@ import {
   BarChart3,
   ExternalLink,
   Sparkles,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
 
 interface Story {
@@ -80,6 +81,7 @@ export default function IdeogramTestSuite() {
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedSlideForViewing, setSelectedSlideForViewing] = useState<string | null>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
+  const [deletingVisuals, setDeletingVisuals] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadStories();
@@ -277,6 +279,62 @@ export default function IdeogramTestSuite() {
     } finally {
       setIsRunning(false);
       setProgress(0);
+    }
+  };
+
+  const deleteVisual = async (visualId: string, slideId: string) => {
+    if (!visualId) return;
+    
+    setDeletingVisuals(prev => new Set([...prev, visualId]));
+    
+    try {
+      const { error } = await supabase
+        .from('visuals')
+        .delete()
+        .eq('id', visualId);
+        
+      if (error) {
+        console.error('Error deleting visual:', error);
+        toast.error('Failed to delete visual');
+        return;
+      }
+      
+      // Refresh data
+      await Promise.all([loadStories(), loadTestResults()]);
+      toast.success('Visual deleted successfully');
+    } catch (error) {
+      console.error('Error deleting visual:', error);
+      toast.error('Failed to delete visual');
+    } finally {
+      setDeletingVisuals(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(visualId);
+        return newSet;
+      });
+    }
+  };
+
+  const deleteAllSlideVisuals = async (slideId: string) => {
+    if (!slideId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('visuals')
+        .delete()
+        .eq('slide_id', slideId);
+        
+      if (error) {
+        console.error('Error deleting slide visuals:', error);
+        toast.error('Failed to delete visuals');
+        return;
+      }
+      
+      // Refresh data
+      await Promise.all([loadStories(), loadTestResults()]);
+      toast.success('All slide visuals deleted successfully');
+    } catch (error) {
+      console.error('Error deleting slide visuals:', error);
+      toast.error('Failed to delete visuals');
     }
   };
 
@@ -678,63 +736,105 @@ export default function IdeogramTestSuite() {
                             </div>
                           </div>
                           
-                          {relatedSlide.visuals && relatedSlide.visuals.length > 0 && (
-                            <div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const newExpanded = new Set(expandedResults);
-                                  if (expandedResults.has(result.id)) {
-                                    newExpanded.delete(result.id);
-                                  } else {
-                                    newExpanded.add(result.id);
-                                  }
-                                  setExpandedResults(newExpanded);
-                                }}
-                                className="w-full justify-between h-6 mb-2 text-xs"
-                              >
-                                <span>Generated Images ({relatedSlide.visuals.length})</span>
-                                <span>{expandedResults.has(result.id) ? '−' : '+'}</span>
-                              </Button>
+                           {relatedSlide.visuals && relatedSlide.visuals.length > 0 && (
+                             <div>
+                               <div className="flex items-center justify-between mb-2">
+                                 <Button
+                                   variant="ghost"
+                                   size="sm"
+                                   onClick={() => {
+                                     const newExpanded = new Set(expandedResults);
+                                     if (expandedResults.has(result.id)) {
+                                       newExpanded.delete(result.id);
+                                     } else {
+                                       newExpanded.add(result.id);
+                                     }
+                                     setExpandedResults(newExpanded);
+                                   }}
+                                   className="justify-between h-6 text-xs flex-1"
+                                 >
+                                   <span>Generated Images ({relatedSlide.visuals.length})</span>
+                                   <span>{expandedResults.has(result.id) ? '−' : '+'}</span>
+                                 </Button>
+                                 {relatedSlide.visuals.length > 1 && (
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => deleteAllSlideVisuals(relatedSlide.id)}
+                                     className="h-6 px-2 text-xs ml-2 text-destructive hover:text-destructive"
+                                   >
+                                     <Trash2 className="h-3 w-3" />
+                                   </Button>
+                                 )}
+                               </div>
                               
                               {expandedResults.has(result.id) ? (
                                 <div className="grid grid-cols-3 gap-2">
-                                  {relatedSlide.visuals.map((visual) => (
-                                    <div key={visual.id} className="relative group">
-                                      {visual.image_data || visual.image_url ? (
-                                        <div className="relative">
-                                          <img
-                                            src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
-                                            alt={visual.alt_text || 'Generated visual'}
-                                            className="w-full h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                                            onClick={() => {
-                                              if (visual.image_data) {
-                                                window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
-                                              } else if (visual.image_url) {
-                                                window.open(visual.image_url, '_blank');
-                                              }
-                                            }}
-                                            onError={(e) => {
-                                              console.error('Failed to load visual:', visual);
-                                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
-                                            }}
-                                          />
-                                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
-                                            <ExternalLink className="h-3 w-3 text-white" />
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="w-full h-16 bg-muted border rounded flex items-center justify-center">
-                                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                      )}
-                                      <Badge className="absolute top-1 right-1 text-xs px-1" variant="secondary">
-                                        {visual.style_preset || 'def'}
-                                      </Badge>
-                                    </div>
-                                  ))}
-                                </div>
+                                   {relatedSlide.visuals.map((visual) => (
+                                     <div key={visual.id} className="relative group">
+                                       {visual.image_data || visual.image_url ? (
+                                         <div className="relative">
+                                           <img
+                                             src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                             alt={visual.alt_text || 'Generated visual'}
+                                             className="w-full h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                             onClick={() => {
+                                               if (visual.image_data) {
+                                                 window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                               } else if (visual.image_url) {
+                                                 window.open(visual.image_url, '_blank');
+                                               }
+                                             }}
+                                             onError={(e) => {
+                                               console.error('Failed to load visual:', visual);
+                                               e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
+                                             }}
+                                           />
+                                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-1">
+                                             <Button
+                                               variant="ghost"
+                                               size="sm"
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 if (visual.image_data) {
+                                                   window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                                 } else if (visual.image_url) {
+                                                   window.open(visual.image_url, '_blank');
+                                                 }
+                                               }}
+                                               className="h-5 w-5 p-0 text-white hover:text-white hover:bg-black/30"
+                                             >
+                                               <ExternalLink className="h-3 w-3" />
+                                             </Button>
+                                             <Button
+                                               variant="ghost"
+                                               size="sm"
+                                               disabled={deletingVisuals.has(visual.id)}
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 deleteVisual(visual.id, relatedSlide.id);
+                                               }}
+                                               className="h-5 w-5 p-0 text-white hover:text-red-300 hover:bg-red-500/30"
+                                             >
+                                               {deletingVisuals.has(visual.id) ? (
+                                                 <div className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                                               ) : (
+                                                 <Trash2 className="h-3 w-3" />
+                                               )}
+                                             </Button>
+                                           </div>
+                                         </div>
+                                       ) : (
+                                         <div className="w-full h-16 bg-muted border rounded flex items-center justify-center">
+                                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                         </div>
+                                       )}
+                                       <Badge className="absolute top-1 right-1 text-xs px-1" variant="secondary">
+                                         {visual.style_preset || 'def'}
+                                       </Badge>
+                                     </div>
+                                   ))}
+                                 </div>
                               ) : (
                                 <div className="flex gap-2 flex-wrap">
                                   {relatedSlide.visuals.slice(0, 4).map((visual) => (

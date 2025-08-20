@@ -307,17 +307,29 @@ serve(async (req) => {
             });
             
             // Check if we have images in the response
+            // Check multiple possible response structures for Fal.ai
+            let imageUrl = null;
+            let imageData = null;
+            
             if (statusData.images && statusData.images.length > 0) {
-              // Download the image and convert to base64
-              const imageResponse = await fetch(statusData.images[0].url);
-            if (!imageResponse.ok) {
-              throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+              imageUrl = statusData.images[0].url;
+            } else if (statusData.data && Array.isArray(statusData.data) && statusData.data.length > 0) {
+              imageUrl = statusData.data[0].url || statusData.data[0].image_url;
+            } else if (statusData.data && statusData.data.url) {
+              imageUrl = statusData.data.url;
+            } else if (statusData.url) {
+              imageUrl = statusData.url;
             }
             
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const uint8Array = new Uint8Array(imageBuffer);
-            
-            // Convert to base64 in chunks to avoid stack overflow
+            if (imageUrl) {
+              // Download the image and convert to base64
+              const imageResponse = await fetch(imageUrl);
+              if (!imageResponse.ok) {
+                throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+              }
+              
+              const imageBuffer = await imageResponse.arrayBuffer();
+              const uint8Array = new Uint8Array(imageBuffer);
             let binary = '';
             const chunkSize = 8192;
             for (let i = 0; i < uint8Array.length; i += chunkSize) {
@@ -350,7 +362,35 @@ serve(async (req) => {
               break;
             } else {
             console.log('Fal.ai completed but no images found in response:', JSON.stringify(statusData, null, 2));
-            throw new Error('Fal.ai generation completed but no image data received');
+            console.log('Creating placeholder response for empty Fal.ai result');
+            
+            // For debugging: log test failure but continue without throwing
+            await supabase.from('image_generation_tests').insert({
+              test_id: testId || null,
+              slide_id: slideId || null,
+              story_id: null,
+              api_provider: 'fal',
+              success: false,
+              error_message: 'Fal.ai completed but returned no image data',
+              generation_time_ms: Date.now() - startTime,
+              estimated_cost: 0.02,
+              style_reference_used: !!styleReferenceUrl
+            });
+            
+            return new Response(JSON.stringify({ 
+              success: false,
+              error: 'Fal.ai generated no image data - may need different model or parameters',
+              provider: 'fal',
+              debug_info: {
+                status: statusData.status,
+                hasImages: !!statusData.images,
+                hasData: !!statusData.data,
+                keys: Object.keys(statusData)
+              }
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
             }
           } else if (statusData.status === 'FAILED') {
             throw new Error(`Fal.ai generation failed: ${statusData.error || 'Unknown error'}`);
