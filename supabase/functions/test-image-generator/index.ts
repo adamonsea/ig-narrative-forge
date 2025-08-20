@@ -387,13 +387,14 @@ serve(async (req) => {
          },
          body: JSON.stringify({
            version: "f15c956a9a1002d21453c23db2adb4cb8d76fb8e5da7fd4da355e62e9de7bb1c", // FLUX.1 Schnell (correct version)
-           input: {
-             prompt: enhancedPrompt,
-             aspect_ratio: "1:1",
-             output_format: "jpg",
-             output_quality: 90,
-             num_inference_steps: 4
-           }
+            input: {
+              prompt: enhancedPrompt,
+              aspect_ratio: "9:16", // Portrait for social media
+              output_format: "webp",
+              output_quality: 90,
+              num_outputs: 1, // Ensure single image
+              num_inference_steps: 4
+            }
          }),
        });
 
