@@ -321,6 +321,18 @@ export default function IdeogramTestSuite() {
     setDeletingVisuals(prev => new Set([...prev, visualId]));
     
     try {
+      // First, delete any test results that reference this visual
+      const { error: testError } = await supabase
+        .from('image_generation_tests')
+        .delete()
+        .eq('visual_id', visualId);
+        
+      if (testError) {
+        console.error('Error deleting test results:', testError);
+        toast.warning('Could not delete related test results');
+      }
+      
+      // Then delete the visual
       const { error } = await supabase
         .from('visuals')
         .delete()
@@ -806,7 +818,7 @@ export default function IdeogramTestSuite() {
                           
                           {result.visual && (result.visual.image_data || result.visual.image_url) && (
                             <div className="space-y-2">
-                              <h5 className="text-sm font-medium">Generated Image:</h5>
+                              <h5 className="text-sm font-medium">Generated Image ({result.api_provider.toUpperCase()}):</h5>
                               <div className="relative inline-block">
                                 <img
                                   src={result.visual.image_data 
@@ -838,41 +850,13 @@ export default function IdeogramTestSuite() {
                             </div>
                           )}
                           
-                          {relatedSlide && relatedSlide.visuals.length > 0 && (
+                          {/* Show slide info but not all visuals together */}
+                          {relatedSlide && (
                             <div className="space-y-2">
-                              <h5 className="text-sm font-medium">All Visuals for this Slide:</h5>
-                              <div className="flex gap-2 flex-wrap">
-                                {relatedSlide.visuals.slice(0, 4).map((visual) => (
-                                  <div key={visual.id} className="relative">
-                                    {visual.image_data || visual.image_url ? (
-                                      <img
-                                        src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
-                                        alt={visual.alt_text || 'Generated visual'}
-                                        className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                        onClick={() => {
-                                          if (visual.image_data) {
-                                            window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
-                                          } else if (visual.image_url) {
-                                            window.open(visual.image_url, '_blank');
-                                          }
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-16 h-16 bg-muted border rounded flex items-center justify-center">
-                                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge className="absolute -bottom-1 -right-1 text-xs px-1" variant="secondary">
-                                      {visual.style_preset || 'def'}
-                                    </Badge>
-                                  </div>
-                                ))}
-                                {relatedSlide.visuals.length > 4 && (
-                                  <div className="w-16 h-16 border rounded flex items-center justify-center text-xs text-muted-foreground bg-muted">
-                                    +{relatedSlide.visuals.length - 4}
-                                  </div>
-                                )}
-                              </div>
+                              <h5 className="text-sm font-medium">Slide Content:</h5>
+                              <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                                "{relatedSlide.content.substring(0, 200)}..."
+                              </p>
                             </div>
                           )}
                         </div>

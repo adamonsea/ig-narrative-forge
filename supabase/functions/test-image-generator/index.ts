@@ -624,7 +624,7 @@ serve(async (req) => {
            prompt: enhancedPrompt,
            width: 1024,
            height: 1024,
-           num_inference_steps: 20,
+           steps: 20,
            guidance_scale: 5.0,
          }),
        });
