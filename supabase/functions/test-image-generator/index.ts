@@ -255,17 +255,17 @@ serve(async (req) => {
         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-      // Enhanced prompt for text-based slide with clearer text
+      // Enhanced prompt for text-based slide with ultra-clear text specifications
       const slideContent = slide?.content || sanitizedPrompt;
       const isTitle = slide?.slide_number === 1;
       const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
       
-      const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
+      const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
 
       console.log(`Testing fal.ai FLUX Pro API for slide ${slideId}`);
 
-      // Using direct Fal.ai endpoint (non-queued) with correct model
-      const falResponse = await fetch('https://fal.run/fal-ai/flux/schnell', {
+      // Using Fal.ai FLUX Pro (better for text) instead of Schnell
+      const falResponse = await fetch('https://fal.run/fal-ai/flux-pro', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
@@ -273,10 +273,12 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           prompt: enhancedPrompt,
-          image_size: 'square_hd',
-          num_inference_steps: 4,
+          image_size: 'square_hd', // 1024x1024 square format
+          num_inference_steps: 25, // More steps for better quality
+          guidance_scale: 7.5, // Higher guidance for better prompt adherence
           num_images: 1,
-          enable_safety_checker: true
+          enable_safety_checker: true,
+          seed: Math.floor(Math.random() * 1000000)
         }),
       });
 
@@ -354,8 +356,8 @@ serve(async (req) => {
       
       console.log(`Generated image with Fal.ai FLUX Schnell, size: ${imageBuffer.byteLength} bytes`);
       
-      // Estimate cost (Fal.ai FLUX Schnell pricing)
-      cost = 0.003;
+      // Estimate cost (Fal.ai FLUX Pro pricing - higher cost but better quality)
+      cost = 0.055;
       generationTime = Date.now() - startTime;
 
     } else if (apiProvider === 'replicate') {
