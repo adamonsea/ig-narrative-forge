@@ -19,7 +19,8 @@ import {
   XCircle, 
   Image as ImageIcon,
   BarChart3,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 
 interface Story {
@@ -148,7 +149,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram') => {
+  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal') => {
     const testId = crypto.randomUUID();
     const prompt = customPrompt || generateEditorialPrompt(slide);
 
@@ -220,7 +221,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram') => {
+  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal') => {
     setIsRunning(true);
     setProgress(0);
     
@@ -404,47 +405,76 @@ export default function IdeogramTestSuite() {
                   <div className="space-y-3">
                     <h4 className="font-medium">Single Slide Tests</h4>
                     {selectedStory.slides.slice(0, 3).map(slide => (
-                       <div key={slide.id} className="p-3 border rounded">
-                         <p className="text-sm mb-2">Slide {slide.slide_number}: {slide.content.substring(0, 60)}...</p>
-                         <div className="flex gap-2 flex-wrap">
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             onClick={() => runSingleSlideTest(slide, 'openai')}
-                             disabled={isRunning}
-                           >
-                             <ImageIcon className="h-4 w-4 mr-1" />
-                             OpenAI
-                           </Button>
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             onClick={() => runSingleSlideTest(slide, 'ideogram')}
-                             disabled={isRunning}
-                           >
-                             <Zap className="h-4 w-4 mr-1" />
-                             Ideogram
-                           </Button>
-                           <Button
-                             size="sm"
-                             onClick={() => runComparisonTest(slide)}
-                             disabled={isRunning}
-                           >
-                             <BarChart3 className="h-4 w-4 mr-1" />
-                             Compare
-                           </Button>
-                           {selectedStory?.article?.source_url && (
+                        <div key={slide.id} className="p-3 border rounded">
+                          <p className="text-sm mb-2">Slide {slide.slide_number}: {slide.content.substring(0, 60)}...</p>
+                          <div className="flex gap-2 flex-wrap mb-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => runSingleSlideTest(slide, 'openai')}
+                              disabled={isRunning}
+                            >
+                              <ImageIcon className="h-4 w-4 mr-1" />
+                              OpenAI
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => runSingleSlideTest(slide, 'ideogram')}
+                              disabled={isRunning}
+                            >
+                              <Zap className="h-4 w-4 mr-1" />
+                              Ideogram
+                            </Button>
                              <Button
                                size="sm"
-                               variant="ghost"
-                               onClick={() => window.open(selectedStory.article.source_url, '_blank')}
-                               title="View original article"
+                               variant="outline"
+                               onClick={() => runSingleSlideTest(slide, 'fal')}
+                               disabled={isRunning}
                              >
-                               <ExternalLink className="h-4 w-4" />
+                               <Sparkles className="h-4 w-4 mr-1" />
+                               Fal.ai
                              </Button>
-                           )}
-                         </div>
-                       </div>
+                             <Button
+                               size="sm"
+                               onClick={() => runComparisonTest(slide)}
+                               disabled={isRunning}
+                             >
+                               <BarChart3 className="h-4 w-4 mr-1" />
+                               Compare
+                             </Button>
+                          </div>
+                          
+                          {/* Show generated visuals for this slide */}
+                          {slide.visuals && slide.visuals.length > 0 && (
+                            <div className="flex gap-2 flex-wrap">
+                              {slide.visuals.slice(0, 3).map((visual) => (
+                                <div key={visual.id} className="relative">
+                                  <img
+                                    src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                    alt={visual.alt_text || 'Generated visual'}
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                    onClick={() => {
+                                      if (visual.image_data) {
+                                        window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                      } else if (visual.image_url) {
+                                        window.open(visual.image_url, '_blank');
+                                      }
+                                    }}
+                                  />
+                                  <Badge className="absolute -top-1 -right-1 text-xs px-1" variant="secondary">
+                                    {visual.style_preset}
+                                  </Badge>
+                                </div>
+                              ))}
+                              {slide.visuals.length > 3 && (
+                                <div className="w-12 h-12 border rounded flex items-center justify-center text-xs text-muted-foreground">
+                                  +{slide.visuals.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                     ))}
                   </div>
 
@@ -470,14 +500,22 @@ export default function IdeogramTestSuite() {
                           <Zap className="h-4 w-4 mr-2" />
                           Full Ideogram Test
                         </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+                         <Button
+                           className="w-full"
+                           onClick={() => runStoryTest(selectedStory, 'fal')}
+                           disabled={isRunning}
+                         >
+                           <Sparkles className="h-4 w-4 mr-2" />
+                           Full Fal.ai Test
+                         </Button>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+         </TabsContent>
 
         <TabsContent value="results" className="space-y-4">
           <Card>
@@ -621,7 +659,7 @@ export default function IdeogramTestSuite() {
                 </div>
               </CardContent>
             </Card>
-          )}
+           )}
         </TabsContent>
       </Tabs>
     </div>

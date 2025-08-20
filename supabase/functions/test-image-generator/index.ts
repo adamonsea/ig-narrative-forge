@@ -44,12 +44,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY');
+    const falApiKey = Deno.env.get('FAL_API_KEY');
     
     console.log('Environment check:', {
       supabaseUrl: !!supabaseUrl,
       supabaseKey: !!supabaseKey,
       openAIApiKey: !!openAIApiKey,
-      ideogramApiKey: !!ideogramApiKey
+      ideogramApiKey: !!ideogramApiKey,
+      falApiKey: !!falApiKey
     });
     
     if (!supabaseUrl || !supabaseKey) {
@@ -184,6 +186,84 @@ serve(async (req) => {
       cost = 0.08; // Estimated per image
       generationTime = Date.now() - startTime;
 
+    } else if (apiProvider === 'fal') {
+      if (!falApiKey) {
+        throw new Error('Fal.ai API key not configured');
+      }
+
+      // Sanitize prompt to avoid content policy violations
+      const sanitizedPrompt = prompt
+        .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+        .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+        .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+      // Enhanced prompt for editorial style
+      const enhancedPrompt = `Professional editorial news illustration: Clean modern graphic design for "${sanitizedPrompt}". Minimalist flat design style, bold typography, high contrast colors, social media optimized, square format.`;
+
+      console.log(`Testing fal.ai API for slide ${slideId}`);
+
+      // Using fal.ai FLUX schnell model
+      const falResponse = await fetch('https://queue.fal.run/fal-ai/flux/schnell', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Key ${falApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: enhancedPrompt,
+          image_size: 'square_hd',
+          num_inference_steps: 4,
+          guidance_scale: 3.5,
+          num_images: 1,
+          enable_safety_checker: true,
+          output_format: 'jpeg'
+        }),
+      });
+
+      console.log('Fal.ai response status:', falResponse.status);
+
+      if (!falResponse.ok) {
+        const errorData = await falResponse.text();
+        console.error('Fal.ai API error:', errorData);
+        throw new Error(`Fal.ai generation failed: ${falResponse.status} - ${errorData}`);
+      }
+
+      const falData = await falResponse.json();
+      console.log('Fal.ai response structure:', {
+        hasImages: !!falData.images,
+        imageCount: falData.images?.length,
+        firstImageKeys: falData.images?.[0] ? Object.keys(falData.images[0]) : null
+      });
+
+      if (!falData.images || !falData.images[0] || !falData.images[0].url) {
+        console.error('Invalid Fal.ai response:', falData);
+        throw new Error('No image data received from Fal.ai API');
+      }
+
+      // Download the image and convert to base64
+      const imageResponse = await fetch(falData.images[0].url);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+      }
+      
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imageBuffer);
+      
+      // Convert to base64 in chunks to avoid stack overflow
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      imageData = btoa(binary);
+      
+      console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
+      
+      // Estimate cost (Fal.ai pricing - typically cheaper than alternatives)
+      cost = 0.02; // Estimated per image for FLUX schnell
+      generationTime = Date.now() - startTime;
+
     } else {
       // OpenAI generation (existing logic)
       if (!openAIApiKey) {
@@ -305,7 +385,8 @@ serve(async (req) => {
       // Don't fail the main function if logging fails
     }
 
-    const imageFormat = apiProvider === 'ideogram' ? 'jpeg' : 'webp';
+    const imageFormat = apiProvider === 'ideogram' ? 'jpeg' : 
+                      apiProvider === 'fal' ? 'jpeg' : 'webp';
 
     return new Response(
       JSON.stringify({ 

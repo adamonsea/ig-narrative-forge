@@ -337,9 +337,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         variant: "destructive",
       });
     }
-  };
-
-  const resetStalledProcessing = async () => {
+export { ContentPipeline };
     setIsResettingStalled(true);
     try {
       const { error } = await supabase.rpc('reset_stalled_processing');
@@ -943,56 +941,68 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             </div>
                           </div>
                           
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              onClick={() => approveArticle(article, 'short')}
-                              disabled={isProcessing}
-                              className="flex-1"
-                            >
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Short
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="secondary"
-                              onClick={() => approveArticle(article, 'tabloid')}
-                              disabled={isProcessing}
-                              className="flex-1"
-                            >
-                              <Sparkles className="w-3 h-3 mr-1" />
-                              Tabloid
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => approveArticle(article, 'indepth')}
-                              disabled={isProcessing}
-                              className="flex-1"
-                            >
-                              <BookOpen className="w-3 h-3 mr-1" />
-                              In-Depth
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive"
-                              onClick={() => rejectArticle(article.id)}
-                              disabled={isProcessing}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          
-                          <div className="flex justify-end mt-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(article.source_url, '_blank')}
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              View Original
-                            </Button>
-                          </div>
+                           <div className="flex gap-2">
+                             <Button 
+                               size="sm" 
+                               onClick={() => approveArticle(article, 'short')}
+                               disabled={isProcessing}
+                               className="flex-1"
+                             >
+                               <CheckCircle2 className="w-3 h-3 mr-1" />
+                               Short
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="secondary"
+                               onClick={() => approveArticle(article, 'tabloid')}
+                               disabled={isProcessing}
+                               className="flex-1"
+                             >
+                               <Sparkles className="w-3 h-3 mr-1" />
+                               Tabloid
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="outline"
+                               onClick={() => approveArticle(article, 'indepth')}
+                               disabled={isProcessing}
+                               className="flex-1"
+                             >
+                               <BookOpen className="w-3 h-3 mr-1" />
+                               In-Depth
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="destructive"
+                               onClick={() => rejectArticle(article.id)}
+                               disabled={isProcessing}
+                             >
+                               <X className="w-3 h-3" />
+                             </Button>
+                           </div>
+                           
+                           <div className="flex justify-between mt-2">
+                             {(article.word_count || 0) <= 1 && (
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => extractArticleContent(article)}
+                                 className="text-blue-600 border-blue-200"
+                               >
+                                 <RefreshCw className="w-3 h-3 mr-1" />
+                                 Extract Content
+                               </Button>
+                             )}
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => window.open(article.source_url, '_blank')}
+                               className="ml-auto"
+                             >
+                               <ExternalLink className="w-3 h-3 mr-1" />
+                               View Original
+                             </Button>
+                           </div>
                         </CardContent>
                       </Card>
                         );
