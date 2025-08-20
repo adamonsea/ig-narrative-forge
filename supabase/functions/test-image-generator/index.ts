@@ -217,33 +217,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in test-image-generator function:', error);
+    console.error('Error stack:', error.stack);
     
-    // Log failed test
-    try {
-      const { testId: requestTestId } = await req.json().catch(() => ({}));
-      if (requestTestId) {
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!, 
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        );
-        await supabase
-          .from('image_generation_tests')
-          .insert({
-            test_id: requestTestId,
-            success: false,
-            error_message: error.message,
-            created_at: new Date().toISOString()
-          })
-          .catch(console.error);
-      }
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
-    }
-
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: error.message || 'Unknown error occurred',
+        details: error.stack
       }),
       {
         status: 500,
