@@ -596,18 +596,28 @@ export default function IdeogramTestSuite() {
                             <div className="flex gap-2 flex-wrap">
                               {relatedSlide.visuals.slice(0, 4).map((visual) => (
                                 <div key={visual.id} className="relative group">
-                                  <img
-                                    src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
-                                    alt={visual.alt_text || 'Generated visual'}
-                                    className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                    onClick={() => {
-                                      if (visual.image_data) {
-                                        window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
-                                      } else if (visual.image_url) {
-                                        window.open(visual.image_url, '_blank');
-                                      }
-                                    }}
-                                  />
+                                  {visual.image_data || visual.image_url ? (
+                                    <img
+                                      src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                      alt={visual.alt_text || 'Generated visual'}
+                                      className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                      onClick={() => {
+                                        if (visual.image_data) {
+                                          window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                        } else if (visual.image_url) {
+                                          window.open(visual.image_url, '_blank');
+                                        }
+                                      }}
+                                      onError={(e) => {
+                                        console.error('Failed to load visual:', visual);
+                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-16 h-16 bg-muted border rounded flex items-center justify-center">
+                                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                  )}
                                   <Badge className="absolute -bottom-1 -right-1 text-xs px-1" variant="secondary">
                                     {visual.style_preset || 'def'}
                                   </Badge>

@@ -259,11 +259,13 @@ serve(async (req) => {
           const statusData = await statusResponse.json();
           console.log(`Fal.ai poll attempt ${attempts}:`, statusData.status);
           
-          if (statusData.status === 'COMPLETED' && statusData.images) {
-            console.log('Fal.ai generation completed');
+          if (statusData.status === 'COMPLETED') {
+            console.log('Fal.ai generation completed, response:', statusData);
             
-            // Download the image and convert to base64
-            const imageResponse = await fetch(statusData.images[0].url);
+            // Check if we have images in the response
+            if (statusData.images && statusData.images.length > 0) {
+              // Download the image and convert to base64
+              const imageResponse = await fetch(statusData.images[0].url);
             if (!imageResponse.ok) {
               throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
             }
@@ -282,6 +284,30 @@ serve(async (req) => {
             
             console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
             break;
+            } else if (statusData.data && statusData.data.length > 0 && statusData.data[0].url) {
+              // Alternative response format
+              const imageResponse = await fetch(statusData.data[0].url);
+              if (!imageResponse.ok) {
+                throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+              }
+              
+              const imageBuffer = await imageResponse.arrayBuffer();
+              const uint8Array = new Uint8Array(imageBuffer);
+              
+              let binary = '';
+              const chunkSize = 8192;
+              for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                const chunk = uint8Array.subarray(i, i + chunkSize);
+                binary += String.fromCharCode.apply(null, Array.from(chunk));
+              }
+              imageData = btoa(binary);
+              
+              console.log(`Generated image with Fal.ai FLUX (alt format), size: ${imageBuffer.byteLength} bytes`);
+              break;
+            } else {
+              console.log('Fal.ai completed but no images found in response:', statusData);
+              throw new Error('Fal.ai generation completed but no image data received');
+            }
           } else if (statusData.status === 'FAILED') {
             throw new Error(`Fal.ai generation failed: ${statusData.error || 'Unknown error'}`);
           }
