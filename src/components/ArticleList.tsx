@@ -37,6 +37,7 @@ interface Article {
   word_count: number | null;
   reading_time_minutes: number | null;
   source_url: string;
+  canonical_url?: string | null;
   region: string | null;
   summary: string | null;
   body: string | null;
@@ -205,10 +206,26 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(article.source_url, '_blank')}
+                    onClick={() => {
+                      const url = article.source_url || article.canonical_url;
+                      if (url) {
+                        // Clean URL by removing HTML entities
+                        const cleanUrl = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                        console.log('Opening URL:', cleanUrl);
+                        window.open(cleanUrl, '_blank');
+                      } else {
+                        console.error('No valid URL found for article:', article.id);
+                        toast({
+                          title: "Error",
+                          description: "No valid URL found for this article",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    disabled={!article.source_url && !article.canonical_url}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View
+                    View Original
                   </Button>
                   
                   <DropdownMenu>

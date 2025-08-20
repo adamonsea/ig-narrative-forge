@@ -18,6 +18,32 @@ interface ScrapingConfig {
   authorSelector?: string;
 }
 
+// Regional configuration for different areas
+interface RegionConfig {
+  name: string;
+  keywords: string[];
+  landmarks: string[];
+  postcodes: string[];
+  organizations: string[];
+}
+
+const REGION_CONFIGS: Record<string, RegionConfig> = {
+  'Eastbourne': {
+    name: 'Eastbourne/East Sussex',
+    keywords: ['eastbourne', 'east sussex', 'sussex', 'pier', 'seafront', 'south downs'],
+    landmarks: ['Eastbourne Pier', 'Beachy Head', 'South Downs', 'Sovereign Harbour', 'Devonshire Park'],
+    postcodes: ['BN20', 'BN21', 'BN22', 'BN23', 'BN24'],
+    organizations: ['Eastbourne Borough Council', 'East Sussex County Council', 'Sussex Police']
+  },
+  'Brighton': {
+    name: 'Brighton & Hove',
+    keywords: ['brighton', 'hove', 'sussex', 'seafront', 'lanes', 'pier'],
+    landmarks: ['Brighton Pier', 'Royal Pavilion', 'The Lanes', 'Brighton Marina', 'Hove Seafront'],
+    postcodes: ['BN1', 'BN2', 'BN3', 'BN41', 'BN42'],
+    organizations: ['Brighton & Hove City Council', 'Sussex Police', 'University of Brighton']
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -37,6 +63,15 @@ serve(async (req) => {
 
     console.log('Starting enhanced scraping for:', articleUrl || sourceUrl);
 
+    // Get source info for regional context
+    const { data: sourceInfo } = await supabase
+      .from('content_sources')
+      .select('source_name, canonical_domain, region, source_type')
+      .eq('id', sourceId)
+      .single();
+
+    console.log(`📊 Source info: ${sourceInfo?.source_name} (Type: ${sourceInfo?.source_type}, Region: ${sourceInfo?.region})`);
+
     // Get enhanced scraping configuration
     const config = getEnhancedScrapingConfig(sourceUrl);
     
@@ -47,28 +82,26 @@ serve(async (req) => {
     const result = await enhancedScrape(config, targetUrl, openAIApiKey);
     
     if (result.success && result.articles.length > 0) {
-  // Get source info for relevance calculations
-  const { data: sourceInfo } = await supabase
-    .from('content_sources')
-    .select('source_name, canonical_domain, region, source_type')
-    .eq('id', sourceId)
-    .single();
-
-  console.log(`📊 Source info: ${sourceInfo?.source_name} (Type: ${sourceInfo?.source_type}, Region: ${sourceInfo?.region})`);
-
-  // Process articles with enhanced extraction
-  const processedArticles = await processArticlesWithEnhancedExtraction(
-    result.articles, 
-    sourceId, 
-    supabase, 
-    openAIApiKey,
-    sourceInfo
-  );
+      // Process articles with enhanced extraction
+      const targetRegion = sourceInfo?.region || 'Eastbourne'; // Use source region or default
+      const processedArticles = await processArticlesWithEnhancedExtraction(
+        result.articles,
+        sourceInfo,
+        targetRegion,
+        openAIApiKey
+      );
+      
+      // Add source ID to processed articles
+      const articlesWithSourceId = processedArticles.map(article => ({
+        ...article,
+        source_id: sourceId,
+        processing_status: 'new'
+      }));
       
       // Store articles
       const { error: insertError } = await supabase
         .from('articles')
-        .insert(processedArticles);
+        .insert(articlesWithSourceId);
 
       if (insertError) {
         console.error('Error inserting articles:', insertError);
@@ -367,26 +400,23 @@ Return JSON format:
 
 async function processArticlesWithEnhancedExtraction(
   articles: any[],
-  sourceId: string,
-  supabase: any,
-  openAIApiKey: string,
-  sourceInfo: any
+  sourceInfo: any,
+  targetRegion: string,
+  openAIApiKey: string
 ): Promise<any[]> {
   const processedArticles = [];
   
   for (const article of articles) {
-    // Enhanced regional context
-    const enhancedArticle = await enhanceWithRegionalContext(article, openAIApiKey);
+    // Enhance with regional context
+    const enhancedArticle = await enhanceWithRegionalContext(article, targetRegion, openAIApiKey);
     
-      // Calculate content quality and relevance with source context
-      const qualityScore = calculateContentQuality(enhancedArticle);
-      const relevanceScore = calculateRegionalRelevance(enhancedArticle, sourceInfo);
+    // Calculate quality and relevance scores
+    const qualityScore = calculateContentQuality(enhancedArticle);
+    const relevanceScore = calculateRegionalRelevance(enhancedArticle, sourceInfo, targetRegion);
     
     processedArticles.push({
       ...enhancedArticle,
-      source_id: sourceId,
       region: enhancedArticle.region || 'Unknown',
-      processing_status: 'new',
       content_quality_score: qualityScore,
       import_metadata: {
         scraping_method: 'enhanced-scraper',
@@ -401,8 +431,10 @@ async function processArticlesWithEnhancedExtraction(
   return processedArticles;
 }
 
-async function enhanceWithRegionalContext(article: any, openAIApiKey: string): Promise<any> {
-  const prompt = `Enhance this news article with regional context for Eastbourne/East Sussex area:
+async function enhanceWithRegionalContext(article: any, targetRegion: string, openAIApiKey: string): Promise<any> {
+  const regionConfig = REGION_CONFIGS[targetRegion] || REGION_CONFIGS['Eastbourne']; // fallback
+  
+  const prompt = `Enhance this news article with regional context for ${regionConfig.name} area:
 
 Title: ${article.title}
 Content: ${article.body}
@@ -410,7 +442,7 @@ Content: ${article.body}
 Tasks:
 1. Identify primary geographic location
 2. Add local significance and community connections
-3. Rate regional relevance (1-100) for Eastbourne/East Sussex
+3. Rate regional relevance (1-100) for ${regionConfig.name}
 4. Extract key local terms and landmarks
 5. Determine article category (news, events, business, etc.)
 
@@ -438,7 +470,7 @@ Return JSON:
         messages: [
           { 
             role: 'system', 
-            content: 'You are an expert at enhancing news articles with regional context for Eastbourne and East Sussex.' 
+            content: `You are an expert at enhancing news articles with regional context for ${regionConfig.name} area.` 
           },
           { role: 'user', content: prompt }
         ],
@@ -496,98 +528,58 @@ function calculateContentQuality(article: any): number {
   return Math.min(score, 100);
 }
 
-function calculateRegionalRelevance(article: any, sourceInfo: any): number {
+function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion: string): number {
   let score = 0;
-  const content = `${article.title} ${article.body} ${article.summary || ''}`.toLowerCase();
   
-  // SOURCE-AWARE BASE SCORING - This is the key fix for hyperlocal sources
-  if (sourceInfo?.source_type === 'hyperlocal') {
-    score += 70; // Hyperlocal sources get high base score
-    console.log(`🏠 Hyperlocal source bonus: +70 points`);
-  } else if (sourceInfo?.source_type === 'regional') {
-    score += 40; // Regional sources get medium base score
-    console.log(`🌊 Regional source bonus: +40 points`);
-  } else if (sourceInfo?.region === 'UK' || sourceInfo?.source_type === 'national') {
-    score += 0; // National sources must earn relevance through keywords
-    console.log(`🇬🇧 National source: 0 base points - must earn through keywords`);
+  // Base score based on source type
+  const sourceType = sourceInfo?.source_type || 'national';
+  if (sourceType === 'hyperlocal') {
+    score += 70; // High base score for hyperlocal sources
+  } else if (sourceType === 'regional') {
+    score += 40; // Medium base score for regional sources
   }
-
-  // Primary location keywords (exact matches)
-  const primaryKeywords = ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon'];
-  for (const keyword of primaryKeywords) {
-    if (content.includes(keyword)) {
-      score += 25;
-      console.log(`📍 Primary location "${keyword}": +25 points`);
-    }
-  }
-
-  // Secondary location keywords (broader East Sussex)
-  const secondaryKeywords = ['brighton', 'hastings', 'lewes', 'newhaven', 'uckfield', 'east sussex', 'sussex'];
-  for (const keyword of secondaryKeywords) {
-    if (content.includes(keyword)) {
-      score += 15;
-      console.log(`🌊 Secondary location "${keyword}": +15 points`);
-    }
-  }
-
-  // Local landmarks, venues, and organizations
-  const landmarks = ['beachy head', 'seven sisters', 'south downs', 'eastbourne pier', 'devonshire park', 'congress theatre', 'towner gallery', 'redoubt fortress', 'airbourne', 'eastbourne college'];
-  for (const landmark of landmarks) {
-    if (content.includes(landmark)) {
-      score += 20;
-      console.log(`🏛️ Local landmark "${landmark}": +20 points`);
-    }
-  }
-
-  // Local organizations and services
-  const organizations = ['eastbourne borough council', 'east sussex fire', 'sussex police', 'eastbourne district general', 'rnli eastbourne', 'eastbourne town fc'];
-  for (const org of organizations) {
-    if (content.includes(org)) {
-      score += 15;
-      console.log(`🏢 Local organization "${org}": +15 points`);
-    }
-  }
-
-  // Postal code patterns (BN20-BN25 for Eastbourne area)
-  if (content.match(/bn2[0-5]\b/i)) {
-    score += 25;
-    console.log(`📮 Local postcode match: +25 points`);
-  }
-
-  // Street name patterns (common local streets)
-  const streets = ['grand parade', 'terminus road', 'grove road', 'seaside road', 'kings avenue', 'cornfield road'];
-  for (const street of streets) {
-    if (content.includes(street)) {
-      score += 20;
-      console.log(`🛣️ Local street "${street}": +20 points`);
-    }
-  }
-
-  // Negative scoring for obviously non-local content (reduced penalty for hyperlocal sources)
-  const genericTerms = ['uk wide', 'national news', 'government', 'parliament', 'westminster'];
-  const penalty = sourceInfo?.source_type === 'hyperlocal' ? -5 : -15; // Smaller penalty for trusted local sources
-  for (const term of genericTerms) {
-    if (content.includes(term)) {
-      score += penalty;
-      console.log(`🚫 Generic term "${term}": ${penalty} points`);
-    }
-  }
-
-  // Tiered minimum thresholds based on source type
-  let minThreshold = 20; // Default for national sources
-  if (sourceInfo?.source_type === 'hyperlocal') {
-    minThreshold = 20; // Lower threshold for hyperlocal - they already have 70 base points
-  } else if (sourceInfo?.source_type === 'regional') {
-    minThreshold = 45; // Medium threshold for regional
-  } else {
-    minThreshold = 60; // Higher threshold for national sources
-  }
-
-  // Cap the score at 100
-  score = Math.min(score, 100);
+  // National sources get 0 base score
   
-  console.log(`🎯 Final relevance score: ${score}/100 (min threshold: ${minThreshold})`);
-  return Math.max(0, score);
+  const regionConfig = REGION_CONFIGS[targetRegion] || REGION_CONFIGS['Eastbourne'];
+  const title = (article.title || '').toLowerCase();
+  const body = (article.body || '').toLowerCase();
+  const content = `${title} ${body}`;
+  
+  // Region-specific keywords (weighted by importance)
+  const primaryKeywords = regionConfig.keywords.map((keyword, index) => ({
+    term: keyword.toLowerCase(),
+    weight: 20 - (index * 2) // Decreasing weight for each keyword
+  }));
+  
+  primaryKeywords.forEach(keyword => {
+    if (content.includes(keyword.term)) {
+      score += keyword.weight;
+    }
+  });
+  
+  // Local landmarks and places
+  regionConfig.landmarks.forEach(landmark => {
+    if (content.includes(landmark.toLowerCase())) {
+      score += 8;
+    }
+  });
+  
+  // Local organizations and institutions
+  regionConfig.organizations.forEach(org => {
+    if (content.includes(org.toLowerCase())) {
+      score += 10;
+    }
+  });
+  
+  // Postcode patterns
+  const postcodePattern = new RegExp(`\\b(${regionConfig.postcodes.join('|')})\\b`, 'gi');
+  const postcodeMatches = content.match(postcodePattern);
+  if (postcodeMatches) {
+    score += postcodeMatches.length * 15;
+  }
+  
+  // Cap the maximum score
+  return Math.min(score, 100);
 }
 
 function extractXMLContent(xml: string, tag: string): string {
