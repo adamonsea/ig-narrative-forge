@@ -653,6 +653,65 @@ export default function IdeogramTestSuite() {
             </CardContent>
           </Card>
 
+          {/* Quick Provider Test */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Provider Test</CardTitle>
+              <CardDescription>Test different providers on the first slide for quick comparison</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stories.length > 0 && stories[0].slides.length > 0 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Testing: "{stories[0].slides[0].content.substring(0, 60)}..."
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Button
+                      onClick={() => runSingleSlideTest(stories[0].slides[0], 'openai')}
+                      disabled={isRunning}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <span className="text-sm font-medium">OpenAI DALL-E 3</span>
+                      <span className="text-xs text-muted-foreground">$0.080/image</span>
+                    </Button>
+                    
+                    <Button
+                      onClick={() => runSingleSlideTest(stories[0].slides[0], 'fal')}
+                      disabled={isRunning}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <span className="text-sm font-medium">Fal.ai Recraft V3</span>
+                      <span className="text-xs text-muted-foreground">$0.05/image • Text Expert</span>
+                    </Button>
+                    
+                    <Button
+                      onClick={() => runSingleSlideTest(stories[0].slides[0], 'replicate')}
+                      disabled={isRunning}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <span className="text-sm font-medium">SD 3.5 Large</span>
+                      <span className="text-xs text-muted-foreground">$0.035/image • Typography</span>
+                    </Button>
+                    
+                    <Button
+                      onClick={() => runSingleSlideTest(stories[0].slides[0], 'ideogram')}
+                      disabled={isRunning}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <span className="text-sm font-medium">Ideogram 2.0</span>
+                      <span className="text-xs text-muted-foreground">$0.08/image</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Test Actions */}
           {selectedStory && (
             <Card>
@@ -696,7 +755,7 @@ export default function IdeogramTestSuite() {
                                disabled={isRunning}
                              >
                                <Sparkles className="h-4 w-4 mr-1" />
-                               Fal.ai
+                               Recraft V3
                              </Button>
                              <Button
                                size="sm"
@@ -705,7 +764,7 @@ export default function IdeogramTestSuite() {
                                disabled={isRunning}
                              >
                                <Sparkles className="h-4 w-4 mr-1" />
-                               Flux
+                               SD 3.5 Large
                              </Button>
                              <Button
                                size="sm"
@@ -778,7 +837,7 @@ export default function IdeogramTestSuite() {
                             disabled={isRunning}
                           >
                             <Sparkles className="h-4 w-4 mr-2" />
-                            Full Fal.ai Test
+                            Full Recraft V3 Test
                           </Button>
                           <Button
                             className="w-full"
@@ -786,7 +845,7 @@ export default function IdeogramTestSuite() {
                             disabled={isRunning}
                           >
                             <Sparkles className="h-4 w-4 mr-2" />
-                            Full Flux Test
+                            Full SD 3.5 Large Test
                           </Button>
                         </div>
                      </div>
@@ -842,9 +901,9 @@ export default function IdeogramTestSuite() {
                                  result.api_provider === 'fal' ? 'secondary' :
                                  result.api_provider === 'replicate' ? 'default' : 'outline'
                                }>
-                                 {result.api_provider === 'replicate' ? 'FLUX' : 
-                                  result.api_provider === 'fal' ? 'FAL.AI' : 
-                                  result.api_provider.toUpperCase()}
+                                  {result.api_provider === 'replicate' ? 'SD 3.5 Large' : 
+                                   result.api_provider === 'fal' ? 'RECRAFT V3' : 
+                                   result.api_provider.toUpperCase()}
                               </Badge>
                               <span className="text-sm font-medium">
                                 {relatedStory?.title?.substring(0, 50) || `Slide ${result.slide_id.substring(0, 8)}`}...

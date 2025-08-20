@@ -262,10 +262,10 @@ serve(async (req) => {
       
       const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
 
-      console.log(`Testing Fal.ai F-Lite API for slide ${slideId}`);
+      console.log(`Testing Fal.ai Recraft V3 API for slide ${slideId}`);
 
-      // Using Fal.ai native F-Lite model (cheaper FAL option, not FLUX)
-      const falResponse = await fetch('https://fal.run/fal-ai/f-lite/standard', {
+      // Using Recraft V3 - specifically designed for excellent text rendering
+      const falResponse = await fetch('https://fal.run/fal-ai/recraft/v3/text-to-image', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
@@ -273,12 +273,12 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           prompt: enhancedPrompt,
-          width: 1024,
-          height: 1024,
-          num_inference_steps: 20,
-          guidance_scale: 7.5,
-          num_images: 1,
-          seed: Math.floor(Math.random() * 1000000)
+          image_size: 'square',
+          style_id: 'recraft_20b_base',
+          controls: {
+            colors: [],
+            background_color: '#ffffff'
+          }
         }),
       });
 
@@ -354,10 +354,10 @@ serve(async (req) => {
       }
       imageData = btoa(binary);
       
-      console.log(`Generated image with Fal.ai F-Lite, size: ${imageBuffer.byteLength} bytes`);
+      console.log(`Generated image with Fal.ai Recraft V3, size: ${imageBuffer.byteLength} bytes`);
       
-      // Estimate cost (Fal.ai F-Lite pricing - much cheaper than FLUX)
-      cost = 0.01;
+      // Estimate cost (Recraft V3 pricing)
+      cost = 0.05;
       generationTime = Date.now() - startTime;
 
     } else if (apiProvider === 'replicate') {
@@ -378,9 +378,9 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
 
-      console.log(`Testing Replicate FLUX Pro API for slide ${slideId}`);
+      console.log(`Testing Replicate Stable Diffusion 3.5 Large API for slide ${slideId}`);
 
-       // Using Replicate FLUX Schnell (updated model version)
+       // Using Stable Diffusion 3.5 Large - superior text rendering
        const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
          method: 'POST',
          headers: {
@@ -388,16 +388,17 @@ serve(async (req) => {
            'Content-Type': 'application/json',
          },
          body: JSON.stringify({
-           version: "30414db8da27648f5a1d5a70e0dc8a63ad5090456f7bd7885a5e7bb66a16b85f", // Updated FLUX.1 Schnell version
+           version: "45a5c3e6b59b8b305eb8efe94b5e2dc72723e6a6aae844369d28df8e72eaf585", // Stable Diffusion 3.5 Large
              input: {
                prompt: enhancedPrompt,
                width: 1024,
                height: 1024,
+               num_outputs: 1,
+               guidance_scale: 4.5,
+               num_inference_steps: 40,
+               seed: Math.floor(Math.random() * 1000000),
                output_format: "webp",
-               output_quality: 90,
-               num_outputs: 1, // Ensure single image
-               num_inference_steps: 4,
-               seed: Math.floor(Math.random() * 1000000)
+               output_quality: 90
              }
          }),
        });
@@ -506,10 +507,10 @@ serve(async (req) => {
       }
       imageData = btoa(binary);
       
-      console.log(`Generated image with Replicate FLUX Pro, size: ${imageBuffer.byteLength} bytes`);
+      console.log(`Generated image with Replicate SD 3.5 Large, size: ${imageBuffer.byteLength} bytes`);
       
-       // Estimate cost (Replicate FLUX Schnell pricing)
-       cost = 0.003; // FLUX Schnell is much cheaper
+       // Estimate cost (SD 3.5 Large pricing)
+       cost = 0.035;
       generationTime = Date.now() - startTime;
 
     } else {
