@@ -24,7 +24,8 @@ import {
   ExternalLink,
   Sparkles,
   Eye,
-  Trash2
+  Trash2,
+  Upload
 } from 'lucide-react';
 
 interface Story {
