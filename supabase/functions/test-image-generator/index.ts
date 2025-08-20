@@ -174,11 +174,25 @@ serve(async (req) => {
 
       console.log('Ideogram response status:', ideogramResponse.status);
 
-      if (!ideogramResponse.ok) {
-        const errorData = await ideogramResponse.text();
-        console.error('Ideogram V3 API error:', errorData);
-        throw new Error(`Ideogram generation failed: ${ideogramResponse.status} - ${errorData}`);
-      }
+       if (!ideogramResponse.ok) {
+         const errorData = await ideogramResponse.text();
+         console.error('Ideogram V3 API error:', errorData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'ideogram',
+           success: false,
+           error_message: `Ideogram API error: ${ideogramResponse.status} - ${errorData}`,
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error(`Ideogram generation failed: ${ideogramResponse.status} - ${errorData}`);
+       }
 
       const ideogramData = await ideogramResponse.json();
       console.log('Ideogram V3 response structure:', {
@@ -187,10 +201,24 @@ serve(async (req) => {
         firstItemKeys: ideogramData.data?.[0] ? Object.keys(ideogramData.data[0]) : null
       });
 
-      if (!ideogramData.data || !ideogramData.data[0] || !ideogramData.data[0].url) {
-        console.error('Invalid Ideogram V3 response:', ideogramData);
-        throw new Error('No image data received from Ideogram V3 API');
-      }
+       if (!ideogramData.data || !ideogramData.data[0] || !ideogramData.data[0].url) {
+         console.error('Invalid Ideogram V3 response:', ideogramData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'ideogram',
+           success: false,
+           error_message: 'No image data received from Ideogram V3 API',
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0.08,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error('No image data received from Ideogram V3 API');
+       }
 
       // Download the image and convert to base64 (handle large images safely)
       const imageResponse = await fetch(ideogramData.data[0].url);
@@ -236,8 +264,8 @@ serve(async (req) => {
 
       console.log(`Testing fal.ai FLUX Pro API for slide ${slideId}`);
 
-      // Using direct Fal.ai endpoint (non-queued)
-      const falResponse = await fetch('https://fal.run/fal-ai/flux/dev', {
+      // Using direct Fal.ai endpoint (non-queued) with correct model
+      const falResponse = await fetch('https://fal.run/fal-ai/flux/schnell', {
         method: 'POST',
         headers: {
           'Authorization': `Key ${falApiKey}`,
@@ -246,8 +274,7 @@ serve(async (req) => {
         body: JSON.stringify({
           prompt: enhancedPrompt,
           image_size: 'square_hd',
-          num_inference_steps: 25,
-          guidance_scale: 7.5,
+          num_inference_steps: 4,
           num_images: 1,
           enable_safety_checker: true
         }),
@@ -258,6 +285,20 @@ serve(async (req) => {
       if (!falResponse.ok) {
         const errorData = await falResponse.text();
         console.error('Fal.ai API error:', errorData);
+        
+        // Log test failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'fal',
+          success: false,
+          error_message: `Fal.ai API error: ${falResponse.status} - ${errorData}`,
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error(`Fal.ai generation failed: ${falResponse.status} - ${errorData}`);
       }
 
@@ -277,6 +318,20 @@ serve(async (req) => {
         imageUrl = falData.data.images[0].url;
       } else {
         console.error('No image URL in Fal.ai response:', JSON.stringify(falData, null, 2));
+        
+        // Log test failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'fal',
+          success: false,
+          error_message: 'No image URL in Fal.ai response',
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0.003,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error('No image data received from Fal.ai API');
       }
 
@@ -297,10 +352,10 @@ serve(async (req) => {
       }
       imageData = btoa(binary);
       
-      console.log(`Generated image with Fal.ai FLUX Dev, size: ${imageBuffer.byteLength} bytes`);
+      console.log(`Generated image with Fal.ai FLUX Schnell, size: ${imageBuffer.byteLength} bytes`);
       
-      // Estimate cost (Fal.ai FLUX Dev pricing)
-      cost = 0.025; // FLUX Dev pricing
+      // Estimate cost (Fal.ai FLUX Schnell pricing)
+      cost = 0.003;
       generationTime = Date.now() - startTime;
 
     } else if (apiProvider === 'replicate') {
@@ -323,33 +378,46 @@ serve(async (req) => {
 
       console.log(`Testing Replicate FLUX Pro API for slide ${slideId}`);
 
-      // Using Replicate FLUX Pro model
-      const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${replicateApiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          version: "7de2b42f13cd912906265775d73a42187093497c5b8d5f2e49a9df3806b2a191", // FLUX.1 Pro
-          input: {
-            prompt: enhancedPrompt,
-            aspect_ratio: "1:1",
-            output_format: "jpg",
-            output_quality: 90,
-            safety_tolerance: 2,
-            prompt_upsampling: false
-          }
-        }),
-      });
+       // Using Replicate FLUX Schnell (faster, cheaper alternative)
+       const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${replicateApiToken}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           version: "f2ab8a5569070ad0648a3dc435b76595b94bfd18ecf0ce9c8142eae4b725a0f3", // FLUX.1 Schnell (faster)
+           input: {
+             prompt: enhancedPrompt,
+             aspect_ratio: "1:1",
+             output_format: "jpg",
+             output_quality: 90,
+             num_inference_steps: 4
+           }
+         }),
+       });
 
       console.log('Replicate response status:', replicateResponse.status);
 
-      if (!replicateResponse.ok) {
-        const errorData = await replicateResponse.text();
-        console.error('Replicate API error:', errorData);
-        throw new Error(`Replicate generation failed: ${replicateResponse.status} - ${errorData}`);
-      }
+       if (!replicateResponse.ok) {
+         const errorData = await replicateResponse.text();
+         console.error('Replicate API error:', errorData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'replicate',
+           success: false,
+           error_message: `Replicate API error: ${replicateResponse.status} - ${errorData}`,
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error(`Replicate generation failed: ${replicateResponse.status} - ${errorData}`);
+       }
 
       const replicateData = await replicateResponse.json();
       console.log('Replicate initial response:', replicateData.status);
@@ -402,8 +470,8 @@ serve(async (req) => {
       
       console.log(`Generated image with Replicate FLUX Pro, size: ${imageBuffer.byteLength} bytes`);
       
-      // Estimate cost (Replicate FLUX Pro pricing)
-      cost = 0.055; // FLUX Pro pricing on Replicate
+       // Estimate cost (Replicate FLUX Schnell pricing)
+       cost = 0.003; // FLUX Schnell is much cheaper
       generationTime = Date.now() - startTime;
 
     } else {
@@ -443,6 +511,20 @@ serve(async (req) => {
       if (!imageResponse.ok) {
         const errorData = await imageResponse.text();
         console.error('OpenAI Image API error:', errorData);
+        
+        // Log test failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'openai',
+          success: false,
+          error_message: `OpenAI API error: ${imageResponse.status} - ${errorData}`,
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error(`OpenAI image generation failed: ${imageResponse.status}`);
       }
 
@@ -452,6 +534,19 @@ serve(async (req) => {
       imageData = openAIData.data[0].b64_json;
       
       if (!imageData) {
+        // Log test failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'openai',
+          success: false,
+          error_message: 'No image data received from OpenAI',
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0.08,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error('No image data received from OpenAI');
       }
 
@@ -460,36 +555,8 @@ serve(async (req) => {
       generationTime = Date.now() - startTime;
     }
 
-    // Get slide details for alt text (already fetched above)
-    // const { data: slide, error: slideError } = await supabase
-    //   .from('slides')
-    //   .select('alt_text, story_id, content, slide_number')
-    //   .eq('id', slideId)
-    //   .single();
-
-    // if (slideError) {
-    //   console.error('Failed to fetch slide details:', slideError);
-    // }
-
-    // Save visual to database with test metadata
-    const { data: visual, error: visualError } = await supabase
-      .from('visuals')
-      .insert({
-        slide_id: slideId,
-        image_data: imageData,
-        alt_text: slide?.alt_text || 'Generated text slide',
-        generation_prompt: prompt,
-        style_preset: stylePreset
-      })
-      .select()
-      .single();
-
-    if (visualError) {
-      console.error('Failed to save visual:', visualError);
-      throw new Error('Failed to save generated image');
-    }
-
-    // Log test results
+    // Log test results FIRST (before visual insertion in case that fails)
+    console.log('Logging test results to database...');
     const testResult = {
       test_id: testId,
       slide_id: slideId,
@@ -511,7 +578,28 @@ serve(async (req) => {
 
     if (testLogError) {
       console.error('Failed to log test result:', testLogError);
-      // Don't fail the main function if logging fails
+      // Don't fail the main function if logging fails, but we should know about it
+    } else {
+      console.log('Test result logged successfully:', testLog?.id);
+    }
+
+    // Save visual to database with test metadata
+    console.log('Saving visual to database...');
+    const { data: visual, error: visualError } = await supabase
+      .from('visuals')
+      .insert({
+        slide_id: slideId,
+        image_data: imageData,
+        alt_text: slide?.alt_text || 'Generated text slide',
+        generation_prompt: prompt,
+        style_preset: stylePreset
+      })
+      .select()
+      .single();
+
+    if (visualError) {
+      console.error('Failed to save visual:', visualError);
+      throw new Error('Failed to save generated image');
     }
 
     const imageFormat = apiProvider === 'ideogram' ? 'jpeg' : 
@@ -536,6 +624,35 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in test-image-generator function:', error);
     console.error('Error stack:', error.stack);
+    
+    // Log failed test result to database
+    try {
+      const { slideId, testId, apiProvider = 'unknown' } = requestBody || {};
+      const startTime = Date.now();
+      
+      if (slideId) {
+        // Get slide details for story_id
+        const { data: slide } = await supabase
+          .from('slides')
+          .select('story_id')
+          .eq('id', slideId)
+          .single();
+          
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: apiProvider,
+          success: false,
+          error_message: error.message || 'Unknown error occurred',
+          generation_time_ms: 0,
+          estimated_cost: 0,
+          style_reference_used: false
+        });
+      }
+    } catch (logError) {
+      console.error('Failed to log error to database:', logError);
+    }
     
     return new Response(
       JSON.stringify({ 

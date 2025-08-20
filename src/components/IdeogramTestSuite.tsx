@@ -775,9 +775,9 @@ export default function IdeogramTestSuite() {
            <Card>
              <CardHeader>
                <div className="flex items-center justify-between">
-                 <div>
-                   <CardTitle>Recent Test Results</CardTitle>
-                   <CardDescription>Latest image generation tests with visual previews</CardDescription>
+                  <div>
+                    <CardTitle>Image gen tests</CardTitle>
+                    <CardDescription>Latest image generation tests with visual previews</CardDescription>
                  </div>
                  {testResults.length > 0 && (
                    <Button
