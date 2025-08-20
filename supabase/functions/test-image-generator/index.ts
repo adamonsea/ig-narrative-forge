@@ -604,17 +604,17 @@ serve(async (req) => {
          .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
          .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
 
-       // Enhanced prompt for DeepSeek Janus Pro - excellent text rendering
+       // Enhanced prompt for Stable Diffusion 3.5 - excellent text rendering
        const slideContent = slide?.content || sanitizedPrompt;
        const isTitle = slide?.slide_number === 1;
        const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
        
        const enhancedPrompt = `Professional text-based social media slide design. Typography: Bold modern sans-serif font, large readable size. Text format: ${textCase}. Display this text clearly: "${slideContent}". Layout: Clean white/light background, dark text for maximum contrast, centered alignment. Style: Minimal editorial design, no graphics, focus on typography clarity. Square 1:1 format.`;
 
-       console.log(`Testing DeepInfra DeepSeek Janus Pro API for slide ${slideId}`);
+       console.log(`Testing DeepInfra Stable Diffusion 3.5 Medium API for slide ${slideId}`);
 
-       // Using DeepSeek Janus Pro - multimodal model with excellent text understanding
-       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/deepseek-ai/janus-pro-7b', {
+       // Using Stable Diffusion 3.5 Medium - working model with good text rendering
+       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/stabilityai/stable-diffusion-3-5-medium', {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${deepinfraApiKey}`,
@@ -624,8 +624,9 @@ serve(async (req) => {
            prompt: enhancedPrompt,
            width: 1024,
            height: 1024,
-           steps: 20,
-           guidance_scale: 5.0,
+           num_inference_steps: 28,
+           guidance_scale: 4.5,
+           seed: Math.floor(Math.random() * 1000000)
          }),
        });
 
@@ -654,17 +655,33 @@ serve(async (req) => {
        const deepinfraData = await deepinfraResponse.json();
        console.log('DeepInfra response structure:', {
          hasImages: !!deepinfraData.images,
-         hasData: !!deepinfraData.data,
+         hasUrl: !!deepinfraData.url,
          keys: Object.keys(deepinfraData)
        });
 
-       // DeepInfra returns base64 image data
-       if (deepinfraData.images && deepinfraData.images[0]) {
+       // DeepInfra SD 3.5 returns URL or base64 depending on response format
+       if (deepinfraData.url) {
+         // Download the image and convert to base64
+         const imageResponse = await fetch(deepinfraData.url);
+         if (!imageResponse.ok) {
+           throw new Error(`Failed to download image from DeepInfra: ${imageResponse.status}`);
+         }
+         
+         const imageBuffer = await imageResponse.arrayBuffer();
+         const uint8Array = new Uint8Array(imageBuffer);
+         
+         let binary = '';
+         const chunkSize = 8192;
+         for (let i = 0; i < uint8Array.length; i += chunkSize) {
+           const chunk = uint8Array.subarray(i, i + chunkSize);
+           binary += String.fromCharCode.apply(null, Array.from(chunk));
+         }
+         imageData = btoa(binary);
+         console.log(`Generated image with DeepInfra SD 3.5 Medium, size: ${imageBuffer.byteLength} bytes`);
+       } else if (deepinfraData.images && deepinfraData.images[0]) {
+         // Direct base64 response
          imageData = deepinfraData.images[0];
-         console.log(`Generated image with DeepInfra Janus Pro`);
-       } else if (deepinfraData.data && deepinfraData.data[0]) {
-         imageData = deepinfraData.data[0];
-         console.log(`Generated image with DeepInfra Janus Pro`);
+         console.log(`Generated image with DeepInfra SD 3.5 Medium (base64)`);
        } else {
          console.error('No image data in DeepInfra response:', JSON.stringify(deepinfraData, null, 2));
          
@@ -684,8 +701,8 @@ serve(async (req) => {
          throw new Error('No image data received from DeepInfra');
        }
        
-       // Estimate cost (DeepInfra Janus Pro pricing)
-       cost = 0.025;
+       // Estimate cost (DeepInfra SD 3.5 Medium pricing)
+       cost = 0.03;
        generationTime = Date.now() - startTime;
 
      } else {
@@ -707,7 +724,7 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography. Square format for social media.`;
 
-      console.log(`Testing OpenAI DALL-E 3 API for slide ${slideId}`);
+      console.log(`Testing OpenAI gpt-image-1 API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -716,12 +733,13 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'dall-e-3', // Switch to DALL-E 3 which is more reliable for text
+          model: 'gpt-image-1', // Use newest model with better text rendering
           prompt: enhancedPrompt,
           n: 1,
           size: '1024x1024',
-          quality: 'standard', // Use standard quality to avoid potential issues
-          style: 'natural' // Natural style for better text rendering
+          quality: 'high',
+          output_format: 'webp',
+          output_compression: 85
         }),
       });
 
@@ -747,8 +765,12 @@ serve(async (req) => {
 
       const openAIData = await imageResponse.json();
       
-      // DALL-E 3 returns URL, need to download and convert to base64
-      if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
+      // gpt-image-1 returns base64 data directly
+      if (openAIData.data && openAIData.data[0] && openAIData.data[0].b64_json) {
+        imageData = openAIData.data[0].b64_json;
+        console.log(`Generated image with OpenAI gpt-image-1, base64 length: ${imageData.length}`);
+      } else if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
+        // Fallback to URL if base64 not available
         const imageUrl = openAIData.data[0].url;
         
         // Download the image and convert to base64
@@ -767,14 +789,13 @@ serve(async (req) => {
           binary += String.fromCharCode.apply(null, Array.from(chunk));
         }
         imageData = btoa(binary);
+        console.log(`Generated image with OpenAI gpt-image-1 (via URL), size: ${imageBuffer.byteLength} bytes`);
       } else {
-        throw new Error('No image URL received from OpenAI DALL-E 3');
+        throw new Error('No image data received from OpenAI gpt-image-1');
       }
       
-      console.log(`Generated image with OpenAI DALL-E 3, size: ${imageData ? 'success' : 'failed'}`);
-      
-      // Estimate cost (DALL-E 3 standard pricing)
-      cost = 0.040;
+      // Estimate cost (gpt-image-1 pricing)
+      cost = 0.04;
       generationTime = Date.now() - startTime;
     }
 
