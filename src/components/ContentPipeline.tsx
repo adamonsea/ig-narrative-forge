@@ -337,7 +337,9 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         variant: "destructive",
       });
     }
-export { ContentPipeline };
+  };
+
+  const resetStalledProcessing = async () => {
     setIsResettingStalled(true);
     try {
       const { error } = await supabase.rpc('reset_stalled_processing');
@@ -982,17 +984,17 @@ export { ContentPipeline };
                            </div>
                            
                            <div className="flex justify-between mt-2">
-                             {(article.word_count || 0) <= 1 && (
-                               <Button
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => extractArticleContent(article)}
-                                 className="text-blue-600 border-blue-200"
-                               >
-                                 <RefreshCw className="w-3 h-3 mr-1" />
-                                 Extract Content
-                               </Button>
-                             )}
+                              {(article.word_count || 0) <= 1 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleExtractContent(article)}
+                                  className="text-blue-600 border-blue-200"
+                                >
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                  Extract Content
+                                </Button>
+                              )}
                              <Button
                                size="sm"
                                variant="ghost"
@@ -1324,4 +1326,41 @@ export { ContentPipeline };
       )}
     </div>
   );
+
+  // Extract content function
+  const handleExtractContent = async (article: Article) => {
+    try {
+      setProcessingArticle(article.id);
+      
+      // Call the content extractor edge function
+      const { data, error } = await supabase.functions.invoke('content-extractor', {
+        body: { 
+          articleId: article.id,
+          sourceUrl: article.source_url 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'Content Extracted',
+          description: 'Full article content has been extracted successfully',
+        });
+        // Refresh articles to show updated content
+        loadPendingArticles();
+      } else {
+        throw new Error(data?.error || 'Content extraction failed');
+      }
+    } catch (error: any) {
+      console.error('Content extraction error:', error);
+      toast({
+        title: 'Extraction Failed',
+        description: error.message || 'Failed to extract article content',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingArticle(null);
+    }
+  };
 };
