@@ -253,6 +253,7 @@ export default function IdeogramTestSuite() {
 
     const openaiResults = testResults.filter(r => r.api_provider === 'openai');
     const ideogramResults = testResults.filter(r => r.api_provider === 'ideogram');
+    const falResults = testResults.filter(r => r.api_provider === 'fal');
 
     const avgOpenaiCost = openaiResults.length > 0 
       ? openaiResults.reduce((sum, r) => sum + r.estimated_cost, 0) / openaiResults.length 
@@ -262,12 +263,20 @@ export default function IdeogramTestSuite() {
       ? ideogramResults.reduce((sum, r) => sum + r.estimated_cost, 0) / ideogramResults.length 
       : 0;
 
+    const avgFalCost = falResults.length > 0 
+      ? falResults.reduce((sum, r) => sum + r.estimated_cost, 0) / falResults.length 
+      : 0;
+
     const avgOpenaiTime = openaiResults.length > 0
       ? openaiResults.reduce((sum, r) => sum + r.generation_time_ms, 0) / openaiResults.length
       : 0;
 
     const avgIdeogramTime = ideogramResults.length > 0
       ? ideogramResults.reduce((sum, r) => sum + r.generation_time_ms, 0) / ideogramResults.length
+      : 0;
+
+    const avgFalTime = falResults.length > 0
+      ? falResults.reduce((sum, r) => sum + r.generation_time_ms, 0) / falResults.length
       : 0;
 
     return {
@@ -282,6 +291,12 @@ export default function IdeogramTestSuite() {
         avgCost: avgIdeogramCost,
         avgTime: avgIdeogramTime,
         successRate: ideogramResults.filter(r => r.success).length / ideogramResults.length * 100
+      },
+      fal: {
+        count: falResults.length,
+        avgCost: avgFalCost,
+        avgTime: avgFalTime,
+        successRate: falResults.filter(r => r.success).length / falResults.length * 100
       }
     };
   };
@@ -521,42 +536,98 @@ export default function IdeogramTestSuite() {
           <Card>
             <CardHeader>
               <CardTitle>Recent Test Results</CardTitle>
-              <CardDescription>Latest image generation tests</CardDescription>
+              <CardDescription>Latest image generation tests with visual previews</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {testResults.map(result => (
-                  <div key={result.id} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-3">
-                      {result.success ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={result.api_provider === 'openai' ? 'default' : 'secondary'}>
-                            {result.api_provider.toUpperCase()}
-                          </Badge>
-                          <span className="text-sm font-medium">Slide {result.slide_id.substring(0, 8)}</span>
+                {testResults.slice(0, 20).map(result => {
+                  // Find the slide and its visuals for this test result
+                  const relatedStory = stories.find(story => story.id === result.story_id);
+                  const relatedSlide = relatedStory?.slides.find(slide => slide.id === result.slide_id);
+                  
+                  return (
+                    <div key={result.id} className="border rounded-lg">
+                      <div className="flex items-center justify-between p-3">
+                        <div className="flex items-center gap-3">
+                          {result.success ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                          )}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={
+                                result.api_provider === 'openai' ? 'default' : 
+                                result.api_provider === 'ideogram' ? 'secondary' : 'outline'
+                              }>
+                                {result.api_provider.toUpperCase()}
+                              </Badge>
+                              <span className="text-sm font-medium">
+                                {relatedStory?.title?.substring(0, 50) || `Slide ${result.slide_id.substring(0, 8)}`}...
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Slide {relatedSlide?.slide_number || '?'} • {new Date(result.created_at).toLocaleString()}
+                            </p>
+                            {result.error_message && (
+                              <p className="text-xs text-red-500">{result.error_message}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(result.created_at).toLocaleString()}
-                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            ${result.estimated_cost?.toFixed(4)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {(result.generation_time_ms / 1000).toFixed(1)}s
+                          </div>
+                        </div>
                       </div>
+                      
+                      {/* Show slide content and generated visuals */}
+                      {relatedSlide && (
+                        <div className="px-3 pb-3 border-t bg-muted/20">
+                          <p className="text-xs text-muted-foreground py-2">
+                            "{relatedSlide.content.substring(0, 120)}..."
+                          </p>
+                          {relatedSlide.visuals && relatedSlide.visuals.length > 0 && (
+                            <div className="flex gap-2 flex-wrap">
+                              {relatedSlide.visuals.slice(0, 4).map((visual) => (
+                                <div key={visual.id} className="relative group">
+                                  <img
+                                    src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                    alt={visual.alt_text || 'Generated visual'}
+                                    className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                    onClick={() => {
+                                      if (visual.image_data) {
+                                        window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                      } else if (visual.image_url) {
+                                        window.open(visual.image_url, '_blank');
+                                      }
+                                    }}
+                                  />
+                                  <Badge className="absolute -bottom-1 -right-1 text-xs px-1" variant="secondary">
+                                    {visual.style_preset || 'def'}
+                                  </Badge>
+                                </div>
+                              ))}
+                              {relatedSlide.visuals.length > 4 && (
+                                <div className="w-16 h-16 border rounded flex items-center justify-center text-xs text-muted-foreground bg-muted">
+                                  +{relatedSlide.visuals.length - 4}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4" />
-                        ${result.estimated_cost?.toFixed(4)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {result.generation_time_ms}ms
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {testResults.length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">No test results yet</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -564,7 +635,7 @@ export default function IdeogramTestSuite() {
 
         <TabsContent value="analytics" className="space-y-4">
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* OpenAI Stats */}
               <Card>
                 <CardHeader>
@@ -589,7 +660,7 @@ export default function IdeogramTestSuite() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Avg Time</p>
-                      <p className="text-2xl font-bold">{Math.round(stats.openai.avgTime)}ms</p>
+                      <p className="text-2xl font-bold">{(stats.openai.avgTime / 1000).toFixed(1)}s</p>
                     </div>
                   </div>
                 </CardContent>
@@ -619,7 +690,37 @@ export default function IdeogramTestSuite() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Avg Time</p>
-                      <p className="text-2xl font-bold">{Math.round(stats.ideogram.avgTime)}ms</p>
+                      <p className="text-2xl font-bold">{(stats.ideogram.avgTime / 1000).toFixed(1)}s</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fal.ai Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Fal.ai Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tests Run</p>
+                      <p className="text-2xl font-bold">{stats.fal.count}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Success Rate</p>
+                      <p className="text-2xl font-bold">{stats.fal.successRate.toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg Cost</p>
+                      <p className="text-2xl font-bold">${stats.fal.avgCost.toFixed(4)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg Time</p>
+                      <p className="text-2xl font-bold">{(stats.fal.avgTime / 1000).toFixed(1)}s</p>
                     </div>
                   </div>
                 </CardContent>
@@ -628,25 +729,54 @@ export default function IdeogramTestSuite() {
           )}
 
           {/* Cost Comparison */}
-          {stats && stats.openai.count > 0 && stats.ideogram.count > 0 && (
+          {stats && (stats.openai.count > 0 || stats.ideogram.count > 0 || stats.fal.count > 0) && (
             <Card>
               <CardHeader>
-                <CardTitle>Cost Analysis</CardTitle>
+                <CardTitle>Cost Analysis Comparison</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Cost Difference per Slide</p>
-                    <p className="text-2xl font-bold">
-                      {stats.ideogram.avgCost > stats.openai.avgCost ? '+' : ''}
-                      ${(stats.ideogram.avgCost - stats.openai.avgCost).toFixed(4)}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground">OpenAI Cost per Slide</p>
+                    <p className="text-2xl font-bold text-blue-600">${stats.openai.avgCost.toFixed(4)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ideogram Cost per Slide</p>
+                    <p className="text-2xl font-bold text-purple-600">${stats.ideogram.avgCost.toFixed(4)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Fal.ai Cost per Slide</p>
+                    <p className="text-2xl font-bold text-green-600">${stats.fal.avgCost.toFixed(4)}</p>
+                  </div>
+                </div>
+                
+                {/* Cost Winner */}
+                {stats.fal.count > 0 && (
+                  <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-center">
+                      💡 <strong>Most Cost-Effective:</strong> {
+                        Math.min(
+                          stats.openai.count > 0 ? stats.openai.avgCost : Infinity,
+                          stats.ideogram.count > 0 ? stats.ideogram.avgCost : Infinity,
+                          stats.fal.count > 0 ? stats.fal.avgCost : Infinity
+                        ) === stats.fal.avgCost 
+                          ? "Fal.ai" 
+                          : Math.min(stats.openai.avgCost, stats.ideogram.avgCost) === stats.ideogram.avgCost 
+                          ? "Ideogram" 
+                          : "OpenAI"
+                      }
                     </p>
                   </div>
+                )}
+
+                {/* Monthly projections */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Estimated Cost per 5-slide Story</p>
+                    <p className="text-sm text-muted-foreground">Cost per 5-slide Story</p>
                     <div className="space-y-1">
                       <p className="text-lg font-semibold">OpenAI: ${(stats.openai.avgCost * 5).toFixed(3)}</p>
                       <p className="text-lg font-semibold">Ideogram: ${(stats.ideogram.avgCost * 5).toFixed(3)}</p>
+                      <p className="text-lg font-semibold">Fal.ai: ${(stats.fal.avgCost * 5).toFixed(3)}</p>
                     </div>
                   </div>
                   <div className="text-center">
@@ -654,6 +784,15 @@ export default function IdeogramTestSuite() {
                     <div className="space-y-1">
                       <p className="text-lg font-semibold">OpenAI: ${(stats.openai.avgCost * 5 * 100).toFixed(2)}</p>
                       <p className="text-lg font-semibold">Ideogram: ${(stats.ideogram.avgCost * 5 * 100).toFixed(2)}</p>
+                      <p className="text-lg font-semibold">Fal.ai: ${(stats.fal.avgCost * 5 * 100).toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Speed Comparison</p>
+                    <div className="space-y-1">
+                      <p className="text-lg font-semibold">OpenAI: {(stats.openai.avgTime / 1000).toFixed(1)}s</p>
+                      <p className="text-lg font-semibold">Ideogram: {(stats.ideogram.avgTime / 1000).toFixed(1)}s</p>
+                      <p className="text-lg font-semibold">Fal.ai: {(stats.fal.avgTime / 1000).toFixed(1)}s</p>
                     </div>
                   </div>
                 </div>

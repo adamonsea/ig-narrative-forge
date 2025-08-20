@@ -230,35 +230,92 @@ serve(async (req) => {
 
       const falData = await falResponse.json();
       console.log('Fal.ai response structure:', {
+        status: falData.status,
         hasImages: !!falData.images,
-        imageCount: falData.images?.length,
-        firstImageKeys: falData.images?.[0] ? Object.keys(falData.images[0]) : null
+        hasRequestId: !!falData.request_id,
+        statusUrl: falData.status_url
       });
 
-      if (!falData.images || !falData.images[0] || !falData.images[0].url) {
-        console.error('Invalid Fal.ai response:', falData);
+      // Handle queued responses (need to poll for completion)
+      if (falData.status === 'IN_QUEUE' && falData.status_url) {
+        console.log('Fal.ai job queued, polling for completion...');
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max wait
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          attempts++;
+          
+          const statusResponse = await fetch(falData.status_url, {
+            headers: {
+              'Authorization': `Key ${falApiKey}`,
+            },
+          });
+          
+          if (!statusResponse.ok) {
+            throw new Error(`Failed to check Fal.ai status: ${statusResponse.status}`);
+          }
+          
+          const statusData = await statusResponse.json();
+          console.log(`Fal.ai poll attempt ${attempts}:`, statusData.status);
+          
+          if (statusData.status === 'COMPLETED' && statusData.images) {
+            console.log('Fal.ai generation completed');
+            
+            // Download the image and convert to base64
+            const imageResponse = await fetch(statusData.images[0].url);
+            if (!imageResponse.ok) {
+              throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+            }
+            
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const uint8Array = new Uint8Array(imageBuffer);
+            
+            // Convert to base64 in chunks to avoid stack overflow
+            let binary = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < uint8Array.length; i += chunkSize) {
+              const chunk = uint8Array.subarray(i, i + chunkSize);
+              binary += String.fromCharCode.apply(null, Array.from(chunk));
+            }
+            imageData = btoa(binary);
+            
+            console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
+            break;
+          } else if (statusData.status === 'FAILED') {
+            throw new Error(`Fal.ai generation failed: ${statusData.error || 'Unknown error'}`);
+          }
+        }
+        
+        if (!imageData) {
+          throw new Error('Fal.ai generation timed out after 30 seconds');
+        }
+      } else if (falData.images && falData.images[0] && falData.images[0].url) {
+        // Direct response (synchronous)
+        console.log('Fal.ai returned direct result');
+        
+        const imageResponse = await fetch(falData.images[0].url);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
+        }
+        
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const uint8Array = new Uint8Array(imageBuffer);
+        
+        // Convert to base64 in chunks to avoid stack overflow
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        imageData = btoa(binary);
+        
+        console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
+      } else {
+        console.error('Unexpected Fal.ai response:', falData);
         throw new Error('No image data received from Fal.ai API');
       }
-
-      // Download the image and convert to base64
-      const imageResponse = await fetch(falData.images[0].url);
-      if (!imageResponse.ok) {
-        throw new Error(`Failed to download image from Fal.ai: ${imageResponse.status}`);
-      }
-      
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const uint8Array = new Uint8Array(imageBuffer);
-      
-      // Convert to base64 in chunks to avoid stack overflow
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, i + chunkSize);
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      imageData = btoa(binary);
-      
-      console.log(`Generated image with Fal.ai FLUX, size: ${imageBuffer.byteLength} bytes`);
       
       // Estimate cost (Fal.ai pricing - typically cheaper than alternatives)
       cost = 0.02; // Estimated per image for FLUX schnell
