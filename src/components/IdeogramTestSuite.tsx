@@ -177,7 +177,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate') => {
+  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface') => {
     const testId = crypto.randomUUID();
     
     // Handle style reference image upload if file is provided
@@ -280,7 +280,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate') => {
+  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface') => {
     setIsRunning(true);
     setProgress(0);
     
@@ -698,6 +698,16 @@ export default function IdeogramTestSuite() {
                     </Button>
                     
                     <Button
+                      onClick={() => runSingleSlideTest(stories[0].slides[0], 'huggingface')}
+                      disabled={isRunning}
+                      variant="outline"
+                      className="flex flex-col items-center p-4 h-auto"
+                    >
+                      <span className="text-sm font-medium">HuggingFace SD 3.5</span>
+                      <span className="text-xs text-muted-foreground">$0.02/image • Typography</span>
+                    </Button>
+                    
+                    <Button
                       onClick={() => runSingleSlideTest(stories[0].slides[0], 'ideogram')}
                       disabled={isRunning}
                       variant="outline"
@@ -902,7 +912,8 @@ export default function IdeogramTestSuite() {
                                  result.api_provider === 'replicate' ? 'default' : 'outline'
                                }>
                                   {result.api_provider === 'replicate' ? 'SD 3.5 Large' : 
-                                   result.api_provider === 'fal' ? 'RECRAFT V3' : 
+                                   result.api_provider === 'fal' ? 'RECRAFT V3' :
+                                   result.api_provider === 'huggingface' ? 'HUGGINGFACE SD 3.5' : 
                                    result.api_provider.toUpperCase()}
                               </Badge>
                               <span className="text-sm font-medium">
