@@ -412,6 +412,7 @@ export type Database = {
           success: boolean
           test_id: string | null
           updated_at: string
+          visual_id: string | null
         }
         Insert: {
           api_provider: string
@@ -426,6 +427,7 @@ export type Database = {
           success?: boolean
           test_id?: string | null
           updated_at?: string
+          visual_id?: string | null
         }
         Update: {
           api_provider?: string
@@ -440,8 +442,17 @@ export type Database = {
           success?: boolean
           test_id?: string | null
           updated_at?: string
+          visual_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "image_generation_tests_visual_id_fkey"
+            columns: ["visual_id"]
+            isOneToOne: false
+            referencedRelation: "visuals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_runs: {
         Row: {

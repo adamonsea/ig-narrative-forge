@@ -71,6 +71,14 @@ interface TestResult {
   success: boolean;
   error_message?: string;
   created_at: string;
+  visual_id?: string;
+  visual?: {
+    id: string;
+    image_data?: string;
+    image_url?: string;
+    alt_text?: string;
+    style_preset?: string;
+  };
 }
 
 export default function IdeogramTestSuite() {
@@ -133,7 +141,16 @@ export default function IdeogramTestSuite() {
     try {
       const { data, error } = await supabase
         .from('image_generation_tests')
-        .select('*')
+        .select(`
+          *,
+          visual:visuals(
+            id,
+            image_data,
+            image_url,
+            alt_text,
+            style_preset
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(50);
 

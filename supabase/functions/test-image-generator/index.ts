@@ -445,10 +445,43 @@ serve(async (req) => {
       }
 
       if (finalData.status === 'failed') {
+        console.error('Replicate generation failed with error:', finalData.error);
+        
+        // Log failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'replicate',
+          success: false,
+          error_message: `Replicate generation failed: ${finalData.error || 'Unknown error'}`,
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error(`Replicate generation failed: ${finalData.error || 'Unknown error'}`);
       }
 
+      console.log('Replicate final result status:', finalData.status);
+      console.log('Replicate final result output:', finalData.output ? 'present' : 'missing');
+      
       if (!finalData.output || finalData.output.length === 0) {
+        console.error('No image URL in Replicate response:', JSON.stringify(finalData, null, 2));
+        
+        // Log failure to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId || null,
+          slide_id: slideId || null,
+          story_id: slide?.story_id || null,
+          api_provider: 'replicate',
+          success: false,
+          error_message: 'No image URL received from Replicate',
+          generation_time_ms: Date.now() - startTime,
+          estimated_cost: 0,
+          style_reference_used: !!styleReferenceUrl
+        });
+        
         throw new Error('No image URL received from Replicate');
       }
 
@@ -556,36 +589,7 @@ serve(async (req) => {
       generationTime = Date.now() - startTime;
     }
 
-    // Log test results FIRST (before visual insertion in case that fails)
-    console.log('Logging test results to database...');
-    const testResult = {
-      test_id: testId,
-      slide_id: slideId,
-      story_id: slide?.story_id,
-      api_provider: apiProvider,
-      generation_time_ms: generationTime,
-      estimated_cost: cost,
-      style_reference_used: !!styleReferenceUrl,
-      success: true
-    };
-    
-    console.log('Test result payload:', testResult);
-
-    // Insert test log
-    const { data: testLog, error: testLogError } = await supabase
-      .from('image_generation_tests')
-      .insert(testResult)
-      .select()
-      .single();
-
-    if (testLogError) {
-      console.error('Failed to log test result:', testLogError);
-      // Don't fail the main function if logging fails, but we should know about it
-    } else {
-      console.log('Test result logged successfully:', testLog?.id);
-    }
-
-    // Save visual to database with test metadata
+    // Save visual to database FIRST
     console.log('Saving visual to database...');
     const { data: visual, error: visualError } = await supabase
       .from('visuals')
@@ -602,6 +606,36 @@ serve(async (req) => {
     if (visualError) {
       console.error('Failed to save visual:', visualError);
       throw new Error('Failed to save generated image');
+    }
+
+    // Log test results AFTER visual is saved
+    console.log('Logging test results to database...');
+    const testResult = {
+      test_id: testId,
+      slide_id: slideId,
+      story_id: slide?.story_id,
+      api_provider: apiProvider,
+      generation_time_ms: generationTime,
+      estimated_cost: cost,
+      style_reference_used: !!styleReferenceUrl,
+      success: true,
+      visual_id: visual.id // Link to the specific visual generated
+    };
+    
+    console.log('Test result payload:', testResult);
+
+    // Insert test log after visual is saved
+    const { data: testLog, error: testLogError } = await supabase
+      .from('image_generation_tests')
+      .insert(testResult)
+      .select()
+      .single();
+
+    if (testLogError) {
+      console.error('Failed to log test result:', testLogError);
+      // Don't fail the main function if logging fails, but we should know about it
+    } else {
+      console.log('Test result logged successfully:', testLog?.id);
     }
 
     const imageFormat = apiProvider === 'ideogram' ? 'jpeg' : 
