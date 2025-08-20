@@ -321,6 +321,7 @@ export type Database = {
           scraping_config: Json | null
           scraping_method: string | null
           source_name: string
+          source_type: string | null
           success_rate: number | null
           updated_at: string | null
         }
@@ -342,6 +343,7 @@ export type Database = {
           scraping_config?: Json | null
           scraping_method?: string | null
           source_name: string
+          source_type?: string | null
           success_rate?: number | null
           updated_at?: string | null
         }
@@ -363,6 +365,7 @@ export type Database = {
           scraping_config?: Json | null
           scraping_method?: string | null
           source_name?: string
+          source_type?: string | null
           success_rate?: number | null
           updated_at?: string | null
         }
