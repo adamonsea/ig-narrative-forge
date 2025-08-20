@@ -209,38 +209,38 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                     onClick={() => {
                       const url = article.source_url || article.canonical_url;
                       if (url) {
-                        // Clean URL by removing HTML entities and any CDATA remnants
+                        // Comprehensive URL cleaning
                         const cleanUrl = url
                           .replace(/&amp;/g, '&')
                           .replace(/&lt;/g, '<')
                           .replace(/&gt;/g, '>')
-                          .replace(/\]\]>/g, '')  // Remove CDATA closing
-                          .replace(/<!\[CDATA\[/g, '') // Remove CDATA opening
-                          .trim();
+                          .replace(/&quot;/g, '"')
+                          .replace(/&#39;/g, "'")
+                          .replace(/\]\]>/g, '')
+                          .replace(/<!\[CDATA\[/g, '')
+                          .replace(/^\s+|\s+$/g, '')
+                          .replace(/\n|\r|\t/g, '');
                           
-                        console.log('Article ID:', article.id);
-                        console.log('Raw URL:', url);
-                        console.log('Clean URL:', cleanUrl);
+                        console.log('Opening URL:', cleanUrl);
                         
                         try {
-                          // Test if URL is valid
-                          new URL(cleanUrl);
+                          // Validate URL
+                          const urlObj = new URL(cleanUrl);
                           
-                          // Create link element for better compatibility
-                          const link = document.createElement('a');
-                          link.href = cleanUrl;
-                          link.target = '_blank';
-                          link.rel = 'noopener noreferrer';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
+                          // Direct window.open with user interaction
+                          const newWindow = window.open(cleanUrl, '_blank', 'noopener,noreferrer');
                           
-                          toast({
-                            title: "Opening article",
-                            description: `Opening: ${new URL(cleanUrl).hostname}`,
-                          });
+                          if (newWindow) {
+                            toast({
+                              title: "Article opened",
+                              description: `Opened ${urlObj.hostname}`,
+                            });
+                          } else {
+                            // Fallback: direct navigation
+                            window.location.href = cleanUrl;
+                          }
                         } catch (error) {
-                          console.error('Invalid URL:', cleanUrl, error);
+                          console.error('URL error:', error);
                           toast({
                             title: "Invalid URL",
                             description: `Cannot open: ${cleanUrl}`,
@@ -248,10 +248,9 @@ export const ArticleList = ({ articles, loading, onRefresh }: ArticleListProps) 
                           });
                         }
                       } else {
-                        console.error('No valid URL found for article:', article.id);
                         toast({
                           title: "Error",
-                          description: "No valid URL found for this article",
+                          description: "No URL found for this article",
                           variant: "destructive"
                         });
                       }
