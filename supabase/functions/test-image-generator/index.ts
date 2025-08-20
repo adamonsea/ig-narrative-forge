@@ -113,7 +113,7 @@ serve(async (req) => {
       // Create FormData for Ideogram V3 API (requires multipart form data)
       const formData = new FormData();
       formData.append('prompt', enhancedPrompt);
-      formData.append('aspect_ratio', '1:1');
+      formData.append('aspect_ratio', '1x1');  // Use 1x1 format, not 1:1
       formData.append('style_type', 'DESIGN');
       formData.append('rendering_speed', 'DEFAULT');
 
@@ -126,7 +126,7 @@ serve(async (req) => {
 
       console.log('Ideogram V3 request parameters:', {
         prompt: enhancedPrompt.substring(0, 100) + '...',
-        aspect_ratio: '1:1',
+        aspect_ratio: '1x1',
         style_type: 'DESIGN',
         rendering_speed: 'DEFAULT'
       });
@@ -160,14 +160,23 @@ serve(async (req) => {
         throw new Error('No image data received from Ideogram V3 API');
       }
 
-      // Download the image and convert to base64
+      // Download the image and convert to base64 (handle large images safely)
       const imageResponse = await fetch(ideogramData.data[0].url);
       if (!imageResponse.ok) {
         throw new Error(`Failed to download image from Ideogram: ${imageResponse.status}`);
       }
       
       const imageBuffer = await imageResponse.arrayBuffer();
-      imageData = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+      const uint8Array = new Uint8Array(imageBuffer);
+      
+      // Convert to base64 in chunks to avoid stack overflow
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      imageData = btoa(binary);
       
       console.log(`Generated image with Ideogram V3, size: ${imageBuffer.byteLength} bytes`);
       
@@ -218,10 +227,19 @@ serve(async (req) => {
       if (openAIData.data[0].b64_json) {
         imageData = openAIData.data[0].b64_json;
       } else if (openAIData.data[0].url) {
-        // Download image from URL and convert to base64
+        // Download image from URL and convert to base64 (handle large images safely)
         const imgResponse = await fetch(openAIData.data[0].url);
         const imgBuffer = await imgResponse.arrayBuffer();
-        imageData = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+        const uint8Array = new Uint8Array(imgBuffer);
+        
+        // Convert to base64 in chunks to avoid stack overflow
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        imageData = btoa(binary);
       }
       
       if (!imageData) {
