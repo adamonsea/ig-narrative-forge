@@ -160,7 +160,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal') => {
+  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate') => {
     const testId = crypto.randomUUID();
     
     // Handle style reference image upload if file is provided
@@ -208,15 +208,17 @@ export default function IdeogramTestSuite() {
 
       if (error) {
         console.error(`${apiProvider} function error:`, error);
-        throw new Error(error.message || 'Function call failed');
+        toast.error(`${apiProvider.toUpperCase()} generation failed: ${error.message || 'Function call failed'}`);
+        return null;
       }
 
       if (!data?.success) {
         console.error(`${apiProvider} generation failed:`, data);
-        throw new Error(data?.error || 'Generation failed');
+        toast.error(`${apiProvider.toUpperCase()} generation failed: ${data?.error || 'Generation failed'}`);
+        return null;
       }
 
-      toast.success(`${apiProvider.toUpperCase()} generation completed! Cost: $${data.estimatedCost}`);
+      toast.success(`${apiProvider === 'replicate' ? 'FLUX' : apiProvider.toUpperCase()} generation completed! Cost: $${data.estimatedCost}`);
       
       // Reload data
       loadStories();
@@ -228,8 +230,8 @@ export default function IdeogramTestSuite() {
       
       // Enhanced error message with more details
       const errorMessage = error.message || 'Unknown error occurred';
-      toast.error(`${apiProvider.toUpperCase()} generation failed: ${errorMessage}`);
-      throw error;
+      toast.error(`${apiProvider === 'replicate' ? 'FLUX' : apiProvider.toUpperCase()} generation failed: ${errorMessage}`);
+      return null;
     }
   };
 
@@ -248,7 +250,11 @@ export default function IdeogramTestSuite() {
       
       setProgress(100);
       
-      toast.success(`Comparison complete! OpenAI: $${openaiResult.estimatedCost}, Ideogram: $${ideogramResult.estimatedCost}`);
+      if (openaiResult && ideogramResult) {
+        toast.success(`Comparison complete! OpenAI: $${openaiResult.estimatedCost}, Ideogram: $${ideogramResult.estimatedCost}`);
+      } else {
+        toast.error('Some comparison tests failed - check individual results');
+      }
       
     } catch (error) {
       toast.error('Comparison test failed');
@@ -258,7 +264,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal') => {
+  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate') => {
     setIsRunning(true);
     setProgress(0);
     
@@ -270,13 +276,16 @@ export default function IdeogramTestSuite() {
     try {
       for (const slide of story.slides) {
         const result = await runSingleSlideTest(slide, apiProvider);
-        results.push(result);
-        totalCost += result.estimatedCost;
+        if (result) {
+          results.push(result);
+          totalCost += result.estimatedCost;
+        }
         completedSlides++;
         setProgress((completedSlides / totalSlides) * 100);
       }
 
-      toast.success(`Story test complete! ${completedSlides} slides generated. Total cost: $${totalCost.toFixed(4)}`);
+      const successCount = results.length;
+      toast.success(`Story test complete! ${successCount}/${completedSlides} slides generated successfully. Total cost: $${totalCost.toFixed(4)}`);
     } catch (error) {
       toast.error('Story test failed');
     } finally {
@@ -499,7 +508,7 @@ export default function IdeogramTestSuite() {
       <Tabs defaultValue="test" className="space-y-4">
         <TabsList>
           <TabsTrigger value="test">Run Tests</TabsTrigger>
-          <TabsTrigger value="results">Test Results</TabsTrigger>
+          <TabsTrigger value="results">Image gen tests</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -553,9 +562,9 @@ export default function IdeogramTestSuite() {
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Upload an image to use as style reference (supported by Ideogram and Fal.ai)
-                </p>
+                 <p className="text-xs text-muted-foreground">
+                   Upload an image to use as style reference (supported by Ideogram, Fal.ai and Replicate)
+                 </p>
                 
                 {styleReferenceFile && (
                   <div className="mt-2">
@@ -665,13 +674,22 @@ export default function IdeogramTestSuite() {
                              </Button>
                              <Button
                                size="sm"
+                               variant="outline"
+                               onClick={() => runSingleSlideTest(slide, 'replicate')}
+                               disabled={isRunning}
+                             >
+                               <Sparkles className="h-4 w-4 mr-1" />
+                               Flux
+                             </Button>
+                             <Button
+                               size="sm"
                                onClick={() => runComparisonTest(slide)}
                                disabled={isRunning}
                              >
                                <BarChart3 className="h-4 w-4 mr-1" />
                                Compare
                              </Button>
-                          </div>
+                           </div>
                           
                           {/* Show generated visuals for this slide */}
                           {slide.visuals && slide.visuals.length > 0 && (
@@ -711,32 +729,40 @@ export default function IdeogramTestSuite() {
                     <h4 className="font-medium">Full Story Tests</h4>
                     <div className="p-3 border rounded">
                       <p className="text-sm mb-3">Generate all {selectedStory.slides.length} slides</p>
-                      <div className="space-y-2">
-                        <Button
-                          className="w-full"
-                          onClick={() => runStoryTest(selectedStory, 'openai')}
-                          disabled={isRunning}
-                        >
-                          <ImageIcon className="h-4 w-4 mr-2" />
-                          Full OpenAI Test
-                        </Button>
-                        <Button
-                          className="w-full"
-                          onClick={() => runStoryTest(selectedStory, 'ideogram')}
-                          disabled={isRunning}
-                        >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Full Ideogram Test
-                        </Button>
+                       <div className="space-y-2">
                          <Button
                            className="w-full"
-                           onClick={() => runStoryTest(selectedStory, 'fal')}
+                           onClick={() => runStoryTest(selectedStory, 'openai')}
                            disabled={isRunning}
                          >
-                           <Sparkles className="h-4 w-4 mr-2" />
-                           Full Fal.ai Test
+                           <ImageIcon className="h-4 w-4 mr-2" />
+                           Full OpenAI Test
                          </Button>
-                       </div>
+                         <Button
+                           className="w-full"
+                           onClick={() => runStoryTest(selectedStory, 'ideogram')}
+                           disabled={isRunning}
+                         >
+                           <Zap className="h-4 w-4 mr-2" />
+                           Full Ideogram Test
+                         </Button>
+                          <Button
+                            className="w-full"
+                            onClick={() => runStoryTest(selectedStory, 'fal')}
+                            disabled={isRunning}
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Full Fal.ai Test
+                          </Button>
+                          <Button
+                            className="w-full"
+                            onClick={() => runStoryTest(selectedStory, 'replicate')}
+                            disabled={isRunning}
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Full Flux Test
+                          </Button>
+                        </div>
                      </div>
                    </div>
                  </div>
@@ -784,11 +810,12 @@ export default function IdeogramTestSuite() {
                           )}
                           <div>
                             <div className="flex items-center gap-2">
-                              <Badge variant={
-                                result.api_provider === 'openai' ? 'default' : 
-                                result.api_provider === 'ideogram' ? 'secondary' : 'outline'
-                              }>
-                                {result.api_provider.toUpperCase()}
+                               <Badge variant={
+                                 result.api_provider === 'openai' ? 'default' : 
+                                 result.api_provider === 'ideogram' ? 'secondary' :
+                                 result.api_provider === 'replicate' ? 'default' : 'outline'
+                               }>
+                                 {result.api_provider === 'replicate' ? 'FLUX' : result.api_provider.toUpperCase()}
                               </Badge>
                               <span className="text-sm font-medium">
                                 {relatedStory?.title?.substring(0, 50) || `Slide ${result.slide_id.substring(0, 8)}`}...
