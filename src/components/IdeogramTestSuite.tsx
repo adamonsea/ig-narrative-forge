@@ -95,7 +95,7 @@ export default function IdeogramTestSuite() {
             )
           )
         `)
-        .eq('status', 'completed')
+        .in('status', ['approved', 'completed'])
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -122,9 +122,25 @@ export default function IdeogramTestSuite() {
     }
   };
 
+  const generateEditorialPrompt = (slide: Slide) => {
+    const basePrompt = "Editorial style social media illustration, clean and professional, flat design with bold typography:";
+    const contentSummary = slide.content.length > 80 ? 
+      slide.content.substring(0, 80) + "..." : 
+      slide.content;
+    
+    // Generate contextual prompt based on slide number and content
+    if (slide.slide_number === 1) {
+      return `${basePrompt} Eye-catching hook visual for "${contentSummary}". Bold header design, attention-grabbing colors, news-style layout.`;
+    } else if (slide.slide_number <= 3) {
+      return `${basePrompt} Supporting information graphic for "${contentSummary}". Clear infographic style, data visualization elements, professional news design.`;
+    } else {
+      return `${basePrompt} Conclusion or call-to-action visual for "${contentSummary}". Engaging summary design, social media optimized, editorial branding.`;
+    }
+  };
+
   const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram') => {
     const testId = crypto.randomUUID();
-    const prompt = customPrompt || slide.visual_prompt || `Editorial illustration for: ${slide.content}`;
+    const prompt = customPrompt || generateEditorialPrompt(slide);
 
     try {
       const { data, error } = await supabase.functions.invoke('test-image-generator', {
