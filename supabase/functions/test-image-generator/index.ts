@@ -278,7 +278,7 @@ serve(async (req) => {
         body: JSON.stringify({
           prompt: enhancedPrompt,
           image_size: 'square',
-          style_id: 'recraft_20b_base',
+          // Remove style_id as it's causing validation errors
           controls: {
             colors: [],
             background_color: '#ffffff'
@@ -382,9 +382,9 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography.`;
 
-       console.log(`Testing Replicate Stable Diffusion 3.5 Large API for slide ${slideId}`);
+        console.log(`Testing Replicate Stable Diffusion 3.5 Large API for slide ${slideId}`);
 
-        // Using Stable Diffusion 3.5 Large - superior text rendering (updated API format)
+        // Using Stable Diffusion 3.5 Large - superior text rendering (correct API format)
         const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
           method: 'POST',
           headers: {
@@ -392,7 +392,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: "stability-ai/stable-diffusion-3.5-large",
+            version: "bc31d0afc533b2a3a1b330d7319602bef414c50e7bc931995f2b413b9bb8d689", // SD 3.5 Large version
             input: {
               prompt: enhancedPrompt,
               aspect_ratio: "1:1",
@@ -611,10 +611,10 @@ serve(async (req) => {
        
        const enhancedPrompt = `Professional text-based social media slide design. Typography: Bold modern sans-serif font, large readable size. Text format: ${textCase}. Display this text clearly: "${slideContent}". Layout: Clean white/light background, dark text for maximum contrast, centered alignment. Style: Minimal editorial design, no graphics, focus on typography clarity. Square 1:1 format.`;
 
-       console.log(`Testing DeepInfra Stable Diffusion 3.5 Medium API for slide ${slideId}`);
+       console.log(`Testing DeepInfra Stable Diffusion XL API for slide ${slideId}`);
 
-       // Using Stable Diffusion 3.5 Medium - working model with good text rendering
-       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/stabilityai/stable-diffusion-3-5-medium', {
+       // Using Stable Diffusion XL - working model on DeepInfra
+       const deepinfraResponse = await fetch('https://api.deepinfra.com/v1/inference/stabilityai/stable-diffusion-xl-base-1.0', {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${deepinfraApiKey}`,
@@ -624,8 +624,8 @@ serve(async (req) => {
            prompt: enhancedPrompt,
            width: 1024,
            height: 1024,
-           num_inference_steps: 28,
-           guidance_scale: 4.5,
+           num_inference_steps: 25,
+           guidance_scale: 7.5,
            seed: Math.floor(Math.random() * 1000000)
          }),
        });
@@ -659,7 +659,7 @@ serve(async (req) => {
          keys: Object.keys(deepinfraData)
        });
 
-       // DeepInfra SD 3.5 returns URL or base64 depending on response format
+       // DeepInfra SDXL returns URL or images array
        if (deepinfraData.url) {
          // Download the image and convert to base64
          const imageResponse = await fetch(deepinfraData.url);
@@ -677,11 +677,31 @@ serve(async (req) => {
            binary += String.fromCharCode.apply(null, Array.from(chunk));
          }
          imageData = btoa(binary);
-         console.log(`Generated image with DeepInfra SD 3.5 Medium, size: ${imageBuffer.byteLength} bytes`);
+         console.log(`Generated image with DeepInfra SDXL, size: ${imageBuffer.byteLength} bytes`);
        } else if (deepinfraData.images && deepinfraData.images[0]) {
-         // Direct base64 response
-         imageData = deepinfraData.images[0];
-         console.log(`Generated image with DeepInfra SD 3.5 Medium (base64)`);
+         // Direct base64 or URL in images array
+         if (deepinfraData.images[0].startsWith('http')) {
+           // URL in images array
+           const imageResponse = await fetch(deepinfraData.images[0]);
+           if (!imageResponse.ok) {
+             throw new Error(`Failed to download image from DeepInfra: ${imageResponse.status}`);
+           }
+           
+           const imageBuffer = await imageResponse.arrayBuffer();
+           const uint8Array = new Uint8Array(imageBuffer);
+           
+           let binary = '';
+           const chunkSize = 8192;
+           for (let i = 0; i < uint8Array.length; i += chunkSize) {
+             const chunk = uint8Array.subarray(i, i + chunkSize);
+             binary += String.fromCharCode.apply(null, Array.from(chunk));
+           }
+           imageData = btoa(binary);
+         } else {
+           // Base64 data
+           imageData = deepinfraData.images[0];
+         }
+         console.log(`Generated image with DeepInfra SDXL`);
        } else {
          console.error('No image data in DeepInfra response:', JSON.stringify(deepinfraData, null, 2));
          
@@ -701,8 +721,8 @@ serve(async (req) => {
          throw new Error('No image data received from DeepInfra');
        }
        
-       // Estimate cost (DeepInfra SD 3.5 Medium pricing)
-       cost = 0.03;
+       // Estimate cost (DeepInfra SDXL pricing)
+       cost = 0.025;
        generationTime = Date.now() - startTime;
 
      } else {
@@ -724,7 +744,7 @@ serve(async (req) => {
       
       const enhancedPrompt = `Professional text-only social media slide. Typography: Bold modern sans-serif font (Helvetica Neue/Arial Bold), large readable text size. Text format: ${textCase}. Display text clearly: "${slideContent}". Design: Clean white/light background, dark text for maximum contrast and readability, generous padding, centered layout. Style: Editorial news design, no graphics, no decorative elements, focus on clear legible typography. Square format for social media.`;
 
-      console.log(`Testing OpenAI gpt-image-1 API for slide ${slideId}`);
+      console.log(`Testing OpenAI DALL-E 3 API for slide ${slideId}`);
 
       const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -733,13 +753,12 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1', // Use newest model with better text rendering
+          model: 'dall-e-3', // Use dall-e-3 for better compatibility
           prompt: enhancedPrompt,
           n: 1,
           size: '1024x1024',
-          quality: 'high',
-          output_format: 'webp',
-          output_compression: 85
+          quality: 'standard',
+          style: 'natural'
         }),
       });
 
@@ -765,12 +784,8 @@ serve(async (req) => {
 
       const openAIData = await imageResponse.json();
       
-      // gpt-image-1 returns base64 data directly
-      if (openAIData.data && openAIData.data[0] && openAIData.data[0].b64_json) {
-        imageData = openAIData.data[0].b64_json;
-        console.log(`Generated image with OpenAI gpt-image-1, base64 length: ${imageData.length}`);
-      } else if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
-        // Fallback to URL if base64 not available
+      // DALL-E 3 returns URL, need to download and convert to base64
+      if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
         const imageUrl = openAIData.data[0].url;
         
         // Download the image and convert to base64
@@ -789,12 +804,12 @@ serve(async (req) => {
           binary += String.fromCharCode.apply(null, Array.from(chunk));
         }
         imageData = btoa(binary);
-        console.log(`Generated image with OpenAI gpt-image-1 (via URL), size: ${imageBuffer.byteLength} bytes`);
+        console.log(`Generated image with OpenAI DALL-E 3, size: ${imageBuffer.byteLength} bytes`);
       } else {
-        throw new Error('No image data received from OpenAI gpt-image-1');
+        throw new Error('No image URL received from OpenAI DALL-E 3');
       }
       
-      // Estimate cost (gpt-image-1 pricing)
+      // Estimate cost (DALL-E 3 pricing)
       cost = 0.04;
       generationTime = Date.now() - startTime;
     }

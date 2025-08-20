@@ -94,12 +94,12 @@ export default function IdeogramTestSuite() {
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [deletingVisuals, setDeletingVisuals] = useState<Set<string>>(new Set());
   const [providerCosts] = useState({
-    openai: { cost: 0.04, name: 'DALL-E 3' },
+    openai: { cost: 0.04, name: 'DALL-E 3 (OpenAI)' },
     ideogram: { cost: 0.08, name: 'Ideogram 2.0' },
-    fal: { cost: 0.05, name: 'Recraft V3' },
-    replicate: { cost: 0.035, name: 'SD 3.5 Large' },
-    huggingface: { cost: 0.02, name: 'FLUX.1-schnell' },
-    deepinfra: { cost: 0.025, name: 'Janus Pro' }
+    fal: { cost: 0.05, name: 'Recraft V3 (Fal.ai)' },
+    replicate: { cost: 0.035, name: 'SD 3.5 Large (Replicate)' },
+    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)' },
+    deepinfra: { cost: 0.025, name: 'SDXL (DeepInfra)' }
   });
 
   useEffect(() => {
@@ -818,7 +818,7 @@ export default function IdeogramTestSuite() {
                           
                           {result.visual && (result.visual.image_data || result.visual.image_url) && (
                             <div className="space-y-2">
-                              <h5 className="text-sm font-medium">Generated Image ({result.api_provider.toUpperCase()}):</h5>
+                              <h5 className="text-sm font-medium">Generated Image ({providerCosts[result.api_provider as keyof typeof providerCosts]?.name || result.api_provider.toUpperCase()}):</h5>
                               <div className="relative inline-block">
                                 <img
                                   src={result.visual.image_data 
