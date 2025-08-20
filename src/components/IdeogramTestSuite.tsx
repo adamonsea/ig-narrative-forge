@@ -95,7 +95,7 @@ export default function IdeogramTestSuite() {
             )
           )
         `)
-        .in('status', ['approved', 'completed'])
+        .in('status', ['ready', 'completed', 'approved'])
         .order('created_at', { ascending: false })
         .limit(10);
 
