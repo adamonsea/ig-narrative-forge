@@ -19,7 +19,7 @@ import {
   XCircle, 
   Image as ImageIcon,
   BarChart3,
-  Download
+  ExternalLink
 } from 'lucide-react';
 
 interface Story {
@@ -27,6 +27,11 @@ interface Story {
   title: string;
   status: string;
   slides: Slide[];
+  article?: {
+    id: string;
+    source_url: string;
+    title: string;
+  };
 }
 
 interface Slide {
@@ -82,6 +87,11 @@ export default function IdeogramTestSuite() {
           id,
           title,
           status,
+          article:articles(
+            id,
+            source_url,
+            title
+          ),
           slides!inner(
             id,
             slide_number,
@@ -334,15 +344,30 @@ export default function IdeogramTestSuite() {
                     }`}
                     onClick={() => setSelectedStory(story)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">{story.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {story.slides.length} slides • Status: {story.status}
-                        </p>
-                      </div>
-                      <Badge variant="secondary">{story.slides.length} slides</Badge>
-                    </div>
+                     <div className="flex items-center justify-between">
+                       <div>
+                         <h3 className="font-medium">{story.title}</h3>
+                         <p className="text-sm text-muted-foreground">
+                           {story.slides.length} slides • Status: {story.status}
+                         </p>
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <Badge variant="secondary">{story.slides.length} slides</Badge>
+                         {story.article?.source_url && (
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               window.open(story.article.source_url, '_blank');
+                             }}
+                             title="View original article"
+                           >
+                             <ExternalLink className="w-4 h-4" />
+                           </Button>
+                         )}
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -364,37 +389,47 @@ export default function IdeogramTestSuite() {
                   <div className="space-y-3">
                     <h4 className="font-medium">Single Slide Tests</h4>
                     {selectedStory.slides.slice(0, 3).map(slide => (
-                      <div key={slide.id} className="p-3 border rounded">
-                        <p className="text-sm mb-2">Slide {slide.slide_number}: {slide.content.substring(0, 60)}...</p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => runSingleSlideTest(slide, 'openai')}
-                            disabled={isRunning}
-                          >
-                            <ImageIcon className="h-4 w-4 mr-1" />
-                            OpenAI
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => runSingleSlideTest(slide, 'ideogram')}
-                            disabled={isRunning}
-                          >
-                            <Zap className="h-4 w-4 mr-1" />
-                            Ideogram
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => runComparisonTest(slide)}
-                            disabled={isRunning}
-                          >
-                            <BarChart3 className="h-4 w-4 mr-1" />
-                            Compare
-                          </Button>
-                        </div>
-                      </div>
+                       <div key={slide.id} className="p-3 border rounded">
+                         <p className="text-sm mb-2">Slide {slide.slide_number}: {slide.content.substring(0, 60)}...</p>
+                         <div className="flex gap-2 flex-wrap">
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => runSingleSlideTest(slide, 'openai')}
+                             disabled={isRunning}
+                           >
+                             <ImageIcon className="h-4 w-4 mr-1" />
+                             OpenAI
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => runSingleSlideTest(slide, 'ideogram')}
+                             disabled={isRunning}
+                           >
+                             <Zap className="h-4 w-4 mr-1" />
+                             Ideogram
+                           </Button>
+                           <Button
+                             size="sm"
+                             onClick={() => runComparisonTest(slide)}
+                             disabled={isRunning}
+                           >
+                             <BarChart3 className="h-4 w-4 mr-1" />
+                             Compare
+                           </Button>
+                           {selectedStory?.article?.source_url && (
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => window.open(selectedStory.article.source_url, '_blank')}
+                               title="View original article"
+                             >
+                               <ExternalLink className="h-4 w-4" />
+                             </Button>
+                           )}
+                         </div>
+                       </div>
                     ))}
                   </div>
 

@@ -53,7 +53,7 @@ serve(async (req) => {
         image_request: {
           prompt: enhancedPrompt,
           aspect_ratio: "ASPECT_3_4",
-          model: "V_3_TURBO",
+          model: "V_3",
           magic_prompt_option: "AUTO",
           style_type: "DESIGN"
         }
@@ -112,13 +112,11 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'dall-e-3',
           prompt: enhancedPrompt,
           n: 1,
-          size: '1024x1536',
-          quality: 'high',
-          output_format: 'webp',
-          output_compression: 85
+          size: '1024x1792',
+          quality: 'hd'
         }),
       });
 
@@ -129,7 +127,16 @@ serve(async (req) => {
       }
 
       const openAIData = await imageResponse.json();
-      imageData = openAIData.data[0].b64_json;
+      
+      // Handle both b64_json and url responses
+      if (openAIData.data[0].b64_json) {
+        imageData = openAIData.data[0].b64_json;
+      } else if (openAIData.data[0].url) {
+        // Download image from URL and convert to base64
+        const imgResponse = await fetch(openAIData.data[0].url);
+        const imgBuffer = await imgResponse.arrayBuffer();
+        imageData = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+      }
       
       if (!imageData) {
         throw new Error('No image data received from OpenAI');
@@ -212,20 +219,25 @@ serve(async (req) => {
     console.error('Error in test-image-generator function:', error);
     
     // Log failed test
-    if (testId) {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!, 
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      await supabase
-        .from('image_generation_tests')
-        .insert({
-          test_id: testId,
-          success: false,
-          error_message: error.message,
-          created_at: new Date().toISOString()
-        })
-        .catch(console.error);
+    try {
+      const { testId: requestTestId } = await req.json().catch(() => ({}));
+      if (requestTestId) {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!, 
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        await supabase
+          .from('image_generation_tests')
+          .insert({
+            test_id: requestTestId,
+            success: false,
+            error_message: error.message,
+            created_at: new Date().toISOString()
+          })
+          .catch(console.error);
+      }
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
     }
 
     return new Response(

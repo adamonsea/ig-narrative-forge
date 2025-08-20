@@ -99,9 +99,12 @@ serve(async (req) => {
           pubDate: item.pubDate
         });
         
-        if (!scrapedArticle.fullText || scrapedArticle.fullText.length < 100) {
-          errors.push(`Article too short or failed to scrape: ${item.link}`);
-          continue;
+        console.log(`Scraped article content length: ${scrapedArticle.fullText.length} characters`);
+        
+        if (!scrapedArticle.fullText || scrapedArticle.fullText.length < 50) {
+          console.log(`Article content too short (${scrapedArticle.fullText.length} chars), using RSS description as fallback`);
+          // Use RSS description as body content if scraping fails
+          scrapedArticle.fullText = item.description || item.title;
         }
 
         // Check if article is relevant to Eastbourne
@@ -474,32 +477,45 @@ function extractArticleContent(doc: any, url: string) {
   }
 
   // If no specific article container found or content too short, try comprehensive extraction
-  if (!contentElement || !contentElement.textContent?.trim() || contentElement.textContent.trim().length < 100) {
+  if (!contentElement || !contentElement.textContent?.trim() || contentElement.textContent.trim().length < 50) {
     console.log('No content element found or content too short, trying comprehensive extraction');
     
     // Try to get all text content from paragraphs and filter out navigation/ads
-    const allParagraphs = doc.querySelectorAll('p, div.paragraph, .text-block, .content p, article p');
+    const allParagraphs = doc.querySelectorAll('p, div.paragraph, .text-block, .content p, article p, .entry-text p');
     const paragraphTexts = Array.from(allParagraphs)
       .map((p: any) => p.textContent?.trim())
       .filter((text: string) => {
-        if (!text || text.length < 30) return false;
+        if (!text || text.length < 15) return false;
         // Skip navigation, ads, social media, etc.
-        const skipPatterns = /^(share|follow|subscribe|advertisement|cookie|privacy|terms|navigation|menu|sign up|newsletter)/i;
+        const skipPatterns = /^(share|follow|subscribe|advertisement|cookie|privacy|terms|navigation|menu|sign up|newsletter|related|most read|trending|more stories)/i;
         return !skipPatterns.test(text);
       });
     
-    if (paragraphTexts.length > 2) {
+    if (paragraphTexts.length >= 2) {
       fullText = paragraphTexts.join('\n\n');
+      console.log(`Extracted ${paragraphTexts.length} paragraphs with total length: ${fullText.length}`);
     } else {
-      // Last resort: get all text from body but clean it heavily
-      const bodyText = doc.body?.textContent || '';
-      if (bodyText.length > 200) {
-        fullText = bodyText
-          .split('\n')
-          .map((line: string) => line.trim())
-          .filter((line: string) => line.length > 20)
-          .slice(0, 50) // Limit to first 50 meaningful lines
-          .join(' ');
+      console.log('Comprehensive paragraph extraction failed, trying fallback methods');
+      
+      // Try specific news site patterns
+      const fallbackSelectors = [
+        '.story-content',
+        '.article-text', 
+        '.post-body',
+        '.entry-text',
+        '.content-body',
+        '[data-module="ArticleBody"]',
+        '.rte'
+      ];
+      
+      for (const selector of fallbackSelectors) {
+        const element = doc.querySelector(selector);
+        if (element?.textContent?.trim()) {
+          fullText = element.textContent.trim();
+          console.log(`Found content using fallback selector: ${selector}, length: ${fullText.length}`);
+          break;
+        }
+      }
       }
     }
   } else {
