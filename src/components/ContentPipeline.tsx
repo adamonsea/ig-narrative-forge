@@ -952,9 +952,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                    // Ensure URL has protocol
                                    const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
                                    
-                                    try {
-                                      window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                    } catch (error) {
+                                     try {
+                                       console.log('Opening URL:', validUrl);
+                                       window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                     } catch (error) {
                                      console.warn('Failed to open URL, copying instead:', error);
                                      // Fallback: copy URL to clipboard
                                      navigator.clipboard?.writeText(validUrl);
@@ -1107,9 +1108,10 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                    // Ensure URL has protocol
                                    const validUrl = url.match(/^https?:\/\//) ? url : `https://${url}`;
                                    
-                                    try {
-                                      window.open(validUrl, '_blank', 'noopener,noreferrer');
-                                    } catch (error) {
+                                     try {
+                                       console.log('Opening URL:', validUrl);
+                                       window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                     } catch (error) {
                                      console.warn('Failed to open URL, copying instead:', error);
                                      // Fallback: copy URL to clipboard
                                      navigator.clipboard?.writeText(validUrl);
