@@ -8,21 +8,39 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('=== TEST IMAGE GENERATOR FUNCTION STARTED ===');
+  console.log('Request method:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Reading environment variables...');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY');
     
+    console.log('Environment check:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseKey: !!supabaseKey,
+      openAIApiKey: !!openAIApiKey,
+      ideogramApiKey: !!ideogramApiKey
+    });
+    
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
       throw new Error('Missing required Supabase environment variables');
     }
 
+    console.log('Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    console.log('Parsing request body...');
+    const requestBody = await req.json();
+    console.log('Request body:', requestBody);
+    
     const { 
       slideId, 
       prompt, 
@@ -30,7 +48,7 @@ serve(async (req) => {
       stylePreset = 'editorial',
       styleReferenceUrl = null,
       testId = null 
-    } = await req.json();
+    } = requestBody;
 
     if (!slideId || !prompt) {
       throw new Error('Slide ID and prompt are required');

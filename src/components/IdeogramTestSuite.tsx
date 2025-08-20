@@ -153,6 +153,8 @@ export default function IdeogramTestSuite() {
     const prompt = customPrompt || generateEditorialPrompt(slide);
 
     try {
+      console.log(`Running ${apiProvider} test for slide ${slide.id}`);
+      
       const { data, error } = await supabase.functions.invoke('test-image-generator', {
         body: {
           slideId: slide.id,
@@ -164,7 +166,17 @@ export default function IdeogramTestSuite() {
         }
       });
 
-      if (error) throw error;
+      console.log('Function response:', { data, error });
+
+      if (error) {
+        console.error(`${apiProvider} function error:`, error);
+        throw new Error(error.message || 'Function call failed');
+      }
+
+      if (!data?.success) {
+        console.error(`${apiProvider} generation failed:`, data);
+        throw new Error(data?.error || 'Generation failed');
+      }
 
       toast.success(`${apiProvider.toUpperCase()} generation completed! Cost: $${data.estimatedCost}`);
       
@@ -175,7 +187,10 @@ export default function IdeogramTestSuite() {
       return data;
     } catch (error) {
       console.error(`${apiProvider} test failed:`, error);
-      toast.error(`${apiProvider.toUpperCase()} generation failed: ${error.message}`);
+      
+      // Enhanced error message with more details
+      const errorMessage = error.message || 'Unknown error occurred';
+      toast.error(`${apiProvider.toUpperCase()} generation failed: ${errorMessage}`);
       throw error;
     }
   };
