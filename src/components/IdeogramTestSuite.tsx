@@ -220,9 +220,8 @@ export default function IdeogramTestSuite() {
 
       toast.success(`${apiProvider === 'replicate' ? 'FLUX' : apiProvider.toUpperCase()} generation completed! Cost: $${data.estimatedCost}`);
       
-      // Reload data
-      loadStories();
-      loadTestResults();
+    // Reload data after successful generation
+    loadTestResults();
       
       return data;
     } catch (error) {
@@ -495,7 +494,7 @@ export default function IdeogramTestSuite() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Zap className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">Ideogram API Test Suite</h1>
+          <h1 className="text-3xl font-bold">Image gen tests</h1>
         </div>
         {isRunning && (
           <div className="flex items-center gap-2">
@@ -813,9 +812,12 @@ export default function IdeogramTestSuite() {
                                <Badge variant={
                                  result.api_provider === 'openai' ? 'default' : 
                                  result.api_provider === 'ideogram' ? 'secondary' :
+                                 result.api_provider === 'fal' ? 'secondary' :
                                  result.api_provider === 'replicate' ? 'default' : 'outline'
                                }>
-                                 {result.api_provider === 'replicate' ? 'FLUX' : result.api_provider.toUpperCase()}
+                                 {result.api_provider === 'replicate' ? 'FLUX' : 
+                                  result.api_provider === 'fal' ? 'FAL.AI' : 
+                                  result.api_provider.toUpperCase()}
                               </Badge>
                               <span className="text-sm font-medium">
                                 {relatedStory?.title?.substring(0, 50) || `Slide ${result.slide_id.substring(0, 8)}`}...

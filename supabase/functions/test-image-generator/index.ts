@@ -565,9 +565,10 @@ serve(async (req) => {
       generation_time_ms: generationTime,
       estimated_cost: cost,
       style_reference_used: !!styleReferenceUrl,
-      success: true,
-      created_at: new Date().toISOString()
+      success: true
     };
+    
+    console.log('Test result payload:', testResult);
 
     // Insert test log
     const { data: testLog, error: testLogError } = await supabase
