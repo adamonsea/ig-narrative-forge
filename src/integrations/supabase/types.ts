@@ -395,6 +395,51 @@ export type Database = {
         }
         Relationships: []
       }
+      image_generation_tests: {
+        Row: {
+          api_provider: string
+          created_at: string
+          error_message: string | null
+          estimated_cost: number | null
+          generation_time_ms: number | null
+          id: string
+          slide_id: string | null
+          story_id: string | null
+          style_reference_used: boolean | null
+          success: boolean
+          test_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_provider: string
+          created_at?: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          generation_time_ms?: number | null
+          id?: string
+          slide_id?: string | null
+          story_id?: string | null
+          style_reference_used?: boolean | null
+          success?: boolean
+          test_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_provider?: string
+          created_at?: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          generation_time_ms?: number | null
+          id?: string
+          slide_id?: string | null
+          story_id?: string | null
+          style_reference_used?: boolean | null
+          success?: boolean
+          test_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_runs: {
         Row: {
           attempts: number | null
