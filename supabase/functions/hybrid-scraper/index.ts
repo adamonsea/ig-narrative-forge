@@ -7,19 +7,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Region-specific configuration for relevance scoring
-const REGION_CONFIGS = {
+// Region-specific configuration for contextual relevance scoring
+interface RegionConfig {
+  name: string;
+  keywords: string[];
+  landmarks: string[];
+  postcodes: string[];
+  organizations: string[];
+}
+
+const REGION_CONFIGS: Record<string, RegionConfig> = {
   'Eastbourne': {
-    keywords: ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon'],
+    name: 'Eastbourne',
+    keywords: ['eastbourne', 'seaford', 'hailsham', 'polegate', 'willingdon', 'beachy head'],
     landmarks: ['beachy head', 'seven sisters', 'south downs', 'eastbourne pier', 'devonshire park', 'congress theatre', 'towner gallery', 'redoubt fortress', 'airbourne', 'eastbourne college'],
     postcodes: ['bn20', 'bn21', 'bn22', 'bn23', 'bn24', 'bn25', 'bn26', 'bn27'],
     organizations: ['eastbourne borough council', 'east sussex fire', 'sussex police', 'eastbourne district general', 'rnli eastbourne', 'eastbourne town fc']
   },
   'Brighton': {
-    keywords: ['brighton', 'hove', 'portslade', 'saltdean', 'rottingdean', 'ovingdean'],
-    landmarks: ['brighton pier', 'royal pavilion', 'lanes', 'north laine', 'preston park', 'devils dyke', 'brighton marina', 'amex stadium'],
+    name: 'Brighton',
+    keywords: ['brighton', 'hove', 'preston', 'kemp town', 'hanover', 'brunswick'],
+    landmarks: ['brighton pier', 'royal pavilion', 'preston park', 'devil\'s dyke', 'brighton marina', 'lanes', 'north laine'],
     postcodes: ['bn1', 'bn2', 'bn3', 'bn41', 'bn42', 'bn50', 'bn51', 'bn52'],
-    organizations: ['brighton & hove city council', 'brighton & hove albion', 'university of brighton', 'sussex university']
+    organizations: ['brighton & hove city council', 'sussex police', 'royal sussex county hospital', 'amex stadium', 'brighton fc']
   }
 };
 
@@ -42,7 +52,17 @@ serve(async (req) => {
 
   try {
     const { feedUrl, sourceId, region } = await req.json();
-    console.log(`🚀 Starting hybrid scrape for: ${feedUrl} (region: ${region})`);
+    console.log(`🚀 Starting hybrid scrape for: ${feedUrl}`);
+    
+    // Get source information to determine region and type
+    const { data: sourceInfo } = await supabase
+      .from('content_sources')
+      .select('region, source_type, source_name, canonical_domain')
+      .eq('id', sourceId)
+      .single();
+
+    const targetRegion = region || sourceInfo?.region || 'Eastbourne';
+    console.log(`📍 Target region: ${targetRegion}, Source type: ${sourceInfo?.source_type}`);
     
     const startTime = Date.now();
     let result: ScrapeResult;
@@ -68,8 +88,8 @@ serve(async (req) => {
 
     console.log(`✅ Found ${result.articlesFound} articles using ${result.method}`);
 
-    // Filter and store articles with region-aware scoring
-    const storedCount = await storeArticles(result.articles, sourceId, region, supabase);
+    // Filter and store articles with enhanced regional context
+    const storedCount = await storeArticles(result.articles, sourceId, targetRegion, sourceInfo, supabase);
     
     // Update source metrics
     if (sourceId) {
@@ -400,16 +420,9 @@ function extractBasicContent(html: string, baseUrl: string): any[] {
   return [];
 }
 
-// Store articles with region-aware and source-type-aware relevance scoring
-async function storeArticles(articles: any[], sourceId: string, region: string, supabase: any): Promise<number> {
+// Store articles in database with regional relevance scoring
+async function storeArticles(articles: any[], sourceId: string, region: string, sourceInfo: any, supabase: any): Promise<number> {
   let storedCount = 0;
-  
-  // Get source info for relevance scoring
-  const { data: sourceInfo } = await supabase
-    .from('content_sources')
-    .select('source_name, canonical_domain, region, source_type')
-    .eq('id', sourceId)
-    .single();
   
   for (const article of articles) {
     try {
@@ -425,9 +438,9 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
         continue;
       }
 
-      // Calculate regional relevance score using source-type and region config
+      // Calculate regional relevance score using region-agnostic logic
       const relevanceScore = calculateRegionalRelevance(article, sourceInfo, region);
-      console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore} (source: ${sourceInfo?.source_type})`);
+      console.log(`📊 Regional relevance score for "${article.title}": ${relevanceScore}`);
 
       // Insert new article with relevance score and metadata
       const { error } = await supabase
@@ -441,7 +454,7 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
           import_metadata: {
             scraping_method: 'hybrid',
             regional_relevance_score: relevanceScore,
-            source_type: sourceInfo?.source_type,
+            source_type: sourceInfo?.source_type || 'unknown',
             scraped_at: new Date().toISOString()
           }
         });
@@ -461,37 +474,41 @@ async function storeArticles(articles: any[], sourceId: string, region: string, 
   return storedCount;
 }
 
-// Calculate regional relevance score with source-type awareness
+// Calculate regional relevance score using region-agnostic configuration
 function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion: string): number {
   let score = 0;
   const content = `${article.title} ${article.body} ${article.summary || ''}`.toLowerCase();
   
-  // Get region configuration
-  const regionConfig = REGION_CONFIGS[targetRegion] || REGION_CONFIGS['Eastbourne']; // fallback
-  
-  // Base score from source type (hyperlocal sources get massive boost)
+  // Base score from source type - higher scores for hyperlocal sources
   if (sourceInfo?.source_type === 'hyperlocal') {
-    score += 70; // Hyperlocal sources are inherently relevant
+    score += 70; // Hyperlocal sources get maximum boost
     console.log(`🏠 Hyperlocal source bonus: +70 points`);
   } else if (sourceInfo?.source_type === 'regional') {
     score += 40; // Regional sources get moderate boost
-    console.log(`🌊 Regional source bonus: +40 points`);
+    console.log(`🗺️ Regional source bonus: +40 points`);
   } else if (sourceInfo?.source_type === 'national') {
-    score += 0; // National sources need to prove relevance through content
-    console.log(`🇬🇧 National source: +0 points (content-dependent)`);
+    score += 0; // National sources need strong local content
+    console.log(`🌍 National source: +0 points (content-dependent)`);
   }
 
-  // Primary location keywords
+  // Get region configuration
+  const regionConfig = REGION_CONFIGS[targetRegion];
+  if (!regionConfig) {
+    console.log(`⚠️ No configuration found for region: ${targetRegion}`);
+    return score;
+  }
+
+  // Primary keywords for the region
   for (const keyword of regionConfig.keywords) {
-    if (content.includes(keyword)) {
+    if (content.includes(keyword.toLowerCase())) {
       score += 25;
-      console.log(`📍 Primary location "${keyword}": +25 points`);
+      console.log(`📍 Regional keyword "${keyword}": +25 points`);
     }
   }
 
   // Local landmarks and venues
   for (const landmark of regionConfig.landmarks) {
-    if (content.includes(landmark)) {
+    if (content.includes(landmark.toLowerCase())) {
       score += 20;
       console.log(`🏛️ Local landmark "${landmark}": +20 points`);
     }
@@ -499,7 +516,7 @@ function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion:
 
   // Local organizations and services
   for (const org of regionConfig.organizations) {
-    if (content.includes(org)) {
+    if (content.includes(org.toLowerCase())) {
       score += 15;
       console.log(`🏢 Local organization "${org}": +15 points`);
     }
@@ -507,9 +524,9 @@ function calculateRegionalRelevance(article: any, sourceInfo: any, targetRegion:
 
   // Postcode matching
   for (const postcode of regionConfig.postcodes) {
-    if (content.includes(postcode)) {
-      score += 10;
-      console.log(`📮 Postcode "${postcode}": +10 points`);
+    if (content.includes(postcode.toLowerCase())) {
+      score += 15;
+      console.log(`📮 Postcode match "${postcode}": +15 points`);
     }
   }
 
