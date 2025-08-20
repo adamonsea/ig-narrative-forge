@@ -227,7 +227,7 @@ const Index = () => {
               className="flex items-center gap-2"
             >
               <TestTube className="w-4 h-4" />
-              Ideogram Test
+              AI Image Test
             </Button>
             {isAdmin && (
               <>
