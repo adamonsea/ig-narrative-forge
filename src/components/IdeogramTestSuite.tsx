@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import SlideViewer from './SlideViewer';
 import { 
   Play, 
   Zap, 
@@ -20,7 +22,8 @@ import {
   Image as ImageIcon,
   BarChart3,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 
 interface Story {
@@ -74,6 +77,8 @@ export default function IdeogramTestSuite() {
   const [progress, setProgress] = useState(0);
   const [styleReferenceUrl, setStyleReferenceUrl] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
+  const [selectedSlideForViewing, setSelectedSlideForViewing] = useState<string | null>(null);
+  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadStories();
@@ -589,43 +594,121 @@ export default function IdeogramTestSuite() {
                       {/* Show slide content and generated visuals */}
                       {relatedSlide && (
                         <div className="px-3 pb-3 border-t bg-muted/20">
-                          <p className="text-xs text-muted-foreground py-2">
-                            "{relatedSlide.content.substring(0, 120)}..."
-                          </p>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-muted-foreground py-2 flex-1">
+                              "{relatedSlide.content.substring(0, 100)}..."
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {relatedSlide.visuals.length} visual{relatedSlide.visuals.length !== 1 ? 's' : ''}
+                              </span>
+                              {relatedSlide.visuals.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedSlideForViewing(relatedSlide.id)}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View All
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          
                           {relatedSlide.visuals && relatedSlide.visuals.length > 0 && (
-                            <div className="flex gap-2 flex-wrap">
-                              {relatedSlide.visuals.slice(0, 4).map((visual) => (
-                                <div key={visual.id} className="relative group">
-                                  {visual.image_data || visual.image_url ? (
-                                    <img
-                                      src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
-                                      alt={visual.alt_text || 'Generated visual'}
-                                      className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                      onClick={() => {
-                                        if (visual.image_data) {
-                                          window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
-                                        } else if (visual.image_url) {
-                                          window.open(visual.image_url, '_blank');
-                                        }
-                                      }}
-                                      onError={(e) => {
-                                        console.error('Failed to load visual:', visual);
-                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-16 h-16 bg-muted border rounded flex items-center justify-center">
-                                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                            <div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newExpanded = new Set(expandedResults);
+                                  if (expandedResults.has(result.id)) {
+                                    newExpanded.delete(result.id);
+                                  } else {
+                                    newExpanded.add(result.id);
+                                  }
+                                  setExpandedResults(newExpanded);
+                                }}
+                                className="w-full justify-between h-6 mb-2 text-xs"
+                              >
+                                <span>Generated Images ({relatedSlide.visuals.length})</span>
+                                <span>{expandedResults.has(result.id) ? '−' : '+'}</span>
+                              </Button>
+                              
+                              {expandedResults.has(result.id) ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {relatedSlide.visuals.map((visual) => (
+                                    <div key={visual.id} className="relative group">
+                                      {visual.image_data || visual.image_url ? (
+                                        <div className="relative">
+                                          <img
+                                            src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                            alt={visual.alt_text || 'Generated visual'}
+                                            className="w-full h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => {
+                                              if (visual.image_data) {
+                                                window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                              } else if (visual.image_url) {
+                                                window.open(visual.image_url, '_blank');
+                                              }
+                                            }}
+                                            onError={(e) => {
+                                              console.error('Failed to load visual:', visual);
+                                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
+                                            }}
+                                          />
+                                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                                            <ExternalLink className="h-3 w-3 text-white" />
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="w-full h-16 bg-muted border rounded flex items-center justify-center">
+                                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                      )}
+                                      <Badge className="absolute top-1 right-1 text-xs px-1" variant="secondary">
+                                        {visual.style_preset || 'def'}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex gap-2 flex-wrap">
+                                  {relatedSlide.visuals.slice(0, 4).map((visual) => (
+                                    <div key={visual.id} className="relative group">
+                                      {visual.image_data || visual.image_url ? (
+                                        <img
+                                          src={visual.image_data ? `data:image/jpeg;base64,${visual.image_data}` : visual.image_url}
+                                          alt={visual.alt_text || 'Generated visual'}
+                                          className="w-16 h-16 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                          onClick={() => {
+                                            if (visual.image_data) {
+                                              window.open(`data:image/jpeg;base64,${visual.image_data}`, '_blank');
+                                            } else if (visual.image_url) {
+                                              window.open(visual.image_url, '_blank');
+                                            }
+                                          }}
+                                          onError={(e) => {
+                                            console.error('Failed to load visual:', visual);
+                                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEw0NCA0NG0wLTI0TDIwIDQ0IiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=';
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-16 h-16 bg-muted border rounded flex items-center justify-center">
+                                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                      )}
+                                      <Badge className="absolute -bottom-1 -right-1 text-xs px-1" variant="secondary">
+                                        {visual.style_preset || 'def'}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                  {relatedSlide.visuals.length > 4 && (
+                                    <div className="w-16 h-16 border rounded flex items-center justify-center text-xs text-muted-foreground bg-muted">
+                                      +{relatedSlide.visuals.length - 4}
                                     </div>
                                   )}
-                                  <Badge className="absolute -bottom-1 -right-1 text-xs px-1" variant="secondary">
-                                    {visual.style_preset || 'def'}
-                                  </Badge>
-                                </div>
-                              ))}
-                              {relatedSlide.visuals.length > 4 && (
-                                <div className="w-16 h-16 border rounded flex items-center justify-center text-xs text-muted-foreground bg-muted">
-                                  +{relatedSlide.visuals.length - 4}
                                 </div>
                               )}
                             </div>
@@ -811,6 +894,21 @@ export default function IdeogramTestSuite() {
            )}
         </TabsContent>
       </Tabs>
+
+      {/* Slide Viewer Dialog */}
+      {selectedSlideForViewing && (
+        <Dialog open={!!selectedSlideForViewing} onOpenChange={() => setSelectedSlideForViewing(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Slide Visuals</DialogTitle>
+              <DialogDescription>
+                View and manage all generated visuals for this slide
+              </DialogDescription>
+            </DialogHeader>
+            <SlideViewer slideId={selectedSlideForViewing} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

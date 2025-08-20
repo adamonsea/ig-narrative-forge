@@ -243,7 +243,7 @@ serve(async (req) => {
         const maxAttempts = 30; // 30 seconds max wait
         
         while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
           attempts++;
           
           const statusResponse = await fetch(falData.status_url, {
@@ -253,14 +253,23 @@ serve(async (req) => {
           });
           
           if (!statusResponse.ok) {
-            throw new Error(`Failed to check Fal.ai status: ${statusResponse.status}`);
+            console.error(`Fal.ai status check failed: ${statusResponse.status}`);
+            if (attempts >= maxAttempts) {
+              throw new Error(`Failed to check Fal.ai status after ${attempts} attempts`);
+            }
+            continue; // Skip this attempt and try again
           }
           
           const statusData = await statusResponse.json();
-          console.log(`Fal.ai poll attempt ${attempts}:`, statusData.status);
+          console.log(`Fal.ai poll attempt ${attempts}/${maxAttempts}:`, statusData.status, statusData.logs ? `- ${statusData.logs.length} logs` : '');
           
           if (statusData.status === 'COMPLETED') {
-            console.log('Fal.ai generation completed, response:', statusData);
+            console.log('Fal.ai generation completed, response structure:', {
+              hasImages: !!statusData.images,
+              hasData: !!statusData.data,
+              imagesLength: statusData.images?.length,
+              dataLength: statusData.data?.length
+            });
             
             // Check if we have images in the response
             if (statusData.images && statusData.images.length > 0) {
@@ -314,7 +323,7 @@ serve(async (req) => {
         }
         
         if (!imageData) {
-          throw new Error('Fal.ai generation timed out after 30 seconds');
+          throw new Error(`Fal.ai generation timed out after ${maxAttempts * 2} seconds. The image may still be processing - please try again in a few moments.`);
         }
       } else if (falData.images && falData.images[0] && falData.images[0].url) {
         // Direct response (synchronous)

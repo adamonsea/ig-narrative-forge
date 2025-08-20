@@ -257,13 +257,21 @@ function extractContentFromHTML(html: string) {
                      cleaned.match(/by\s+([A-Za-z\s]+)/i);
   const author = authorMatch ? authorMatch[1].trim() : '';
 
-  // Extract main content
+  // Extract main content - Enhanced patterns for The Argus and other news sites
   const contentPatterns = [
+    // The Argus specific patterns
+    /<div[^>]*class="[^"]*article-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*story-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*content-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<section[^>]*class="[^"]*article-content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    // Generic news patterns
     /<article[^>]*>([\s\S]*?)<\/article>/i,
     /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<div[^>]*class="[^"]*story[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    /<div[^>]*class="[^"]*story[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*post-content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i
   ];
 
   let bodyContent = '';
@@ -278,6 +286,14 @@ function extractContentFromHTML(html: string) {
   if (!bodyContent || bodyContent.length < 200) {
     const paragraphs = cleaned.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
     bodyContent = paragraphs.join('\n');
+    
+    // Additional fallback: look for divs with substantial text content
+    if (!bodyContent || bodyContent.length < 100) {
+      const textDivs = cleaned.match(/<div[^>]*>[^<]*[a-zA-Z]{50,}[^<]*<\/div>/gi) || [];
+      if (textDivs.length > 0) {
+        bodyContent = textDivs.join('\n');
+      }
+    }
   }
 
   // Clean up the body content

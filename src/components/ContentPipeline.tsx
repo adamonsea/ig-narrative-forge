@@ -381,10 +381,25 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       if (error) throw error;
 
       if (data?.success) {
+        const wordCountChange = data.wordCount ? ` (${data.wordCount} words)` : '';
+        const extractedLength = data.bodyLength ? ` ${data.bodyLength} characters` : '';
+        const method = data.extractionMethod || 'direct';
+        
         toast({
-          title: 'Content Extracted',
-          description: 'Full article content has been extracted successfully',
+          title: 'Content Extracted Successfully',
+          description: `Extracted${wordCountChange} using ${method} method.${extractedLength ? ` Content: ${extractedLength}` : ''}`,
         });
+        
+        // Show content preview if available
+        if (data.wordCount && data.wordCount > 10) {
+          setTimeout(() => {
+            toast({
+              title: 'Content Preview',
+              description: data.title ? `"${data.title.substring(0, 100)}..."` : 'Content successfully extracted from article',
+            });
+          }, 1000);
+        }
+        
         // Refresh articles to show updated content
         loadPendingArticles();
       } else {
@@ -920,14 +935,41 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => {
-                                  try {
-                                    window.open(article.source_url, '_blank', 'noopener,noreferrer');
-                                  } catch (error) {
-                                    // Fallback: copy URL to clipboard
-                                    navigator.clipboard?.writeText(article.source_url);
+                                  // Validate URL before opening
+                                  const url = article.source_url;
+                                  if (!url) {
                                     toast({
-                                      title: 'Link copied',
-                                      description: 'Article URL copied to clipboard',
+                                      title: 'No URL Available',
+                                      description: 'This article doesn\'t have a source URL',
+                                      variant: 'destructive',
+                                    });
+                                    return;
+                                  }
+
+                                  // Ensure URL has protocol
+                                  const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                  
+                                  try {
+                                    console.log('Opening URL:', validUrl);
+                                    const opened = window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                    
+                                    // Check if popup was blocked
+                                    if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+                                      throw new Error('Popup blocked');
+                                    }
+                                    
+                                    // Success feedback
+                                    toast({
+                                      title: 'Article Opened',
+                                      description: 'Original article opened in new tab',
+                                    });
+                                  } catch (error) {
+                                    console.warn('Failed to open URL, copying instead:', error);
+                                    // Fallback: copy URL to clipboard
+                                    navigator.clipboard?.writeText(validUrl);
+                                    toast({
+                                      title: 'Link Copied',
+                                      description: 'Popup blocked. Article URL copied to clipboard - paste in browser to view.',
                                     });
                                   }
                                 }}
@@ -1056,18 +1098,45 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => {
-                                  try {
-                                    window.open(article.source_url, '_blank', 'noopener,noreferrer');
-                                  } catch (error) {
-                                    // Fallback: copy URL to clipboard
-                                    navigator.clipboard?.writeText(article.source_url);
-                                    toast({
-                                      title: 'Link copied',
-                                      description: 'Article URL copied to clipboard',
-                                    });
-                                  }
-                                }}
+                                 onClick={() => {
+                                   // Validate URL before opening
+                                   const url = article.source_url;
+                                   if (!url) {
+                                     toast({
+                                       title: 'No URL Available',
+                                       description: 'This article doesn\'t have a source URL',
+                                       variant: 'destructive',
+                                     });
+                                     return;
+                                   }
+
+                                   // Ensure URL has protocol
+                                   const validUrl = url.startsWith('http') ? url : `https://${url}`;
+                                   
+                                   try {
+                                     console.log('Opening URL:', validUrl);
+                                     const opened = window.open(validUrl, '_blank', 'noopener,noreferrer');
+                                     
+                                     // Check if popup was blocked
+                                     if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+                                       throw new Error('Popup blocked');
+                                     }
+                                     
+                                     // Success feedback
+                                     toast({
+                                       title: 'Article Opened',
+                                       description: 'Original article opened in new tab',
+                                     });
+                                   } catch (error) {
+                                     console.warn('Failed to open URL, copying instead:', error);
+                                     // Fallback: copy URL to clipboard
+                                     navigator.clipboard?.writeText(validUrl);
+                                     toast({
+                                       title: 'Link Copied',
+                                       description: 'Popup blocked. Article URL copied to clipboard - paste in browser to view.',
+                                     });
+                                   }
+                                 }}
                                 className="ml-auto"
                               >
                                 <ExternalLink className="w-3 h-3 mr-1" />
