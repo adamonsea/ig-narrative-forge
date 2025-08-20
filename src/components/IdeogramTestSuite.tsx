@@ -43,6 +43,7 @@ interface Visual {
   image_data?: string;
   alt_text?: string;
   style_preset?: string;
+  generation_prompt?: string;
 }
 
 interface TestResult {

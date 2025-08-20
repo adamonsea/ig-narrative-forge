@@ -14,6 +14,7 @@ import { ContentPipeline } from '@/components/ContentPipeline';
 import { ApprovedQueue } from '@/components/ApprovedQueue';
 import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
+import IdeogramTestSuite from '@/components/IdeogramTestSuite';
 // import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
@@ -21,7 +22,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -219,6 +220,14 @@ const Index = () => {
             >
               <Settings className="w-4 h-4" />
               Content
+            </Button>
+            <Button
+              variant={activeTab === 'ideogram' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('ideogram')}
+              className="flex items-center gap-2"
+            >
+              <TestTube className="w-4 h-4" />
+              Ideogram Test
             </Button>
             {isAdmin && (
               <>
@@ -442,6 +451,12 @@ const Index = () => {
         {activeTab === 'duplicates' && (
           <div className="space-y-6">
             <DuplicateDetection />
+          </div>
+        )}
+
+        {activeTab === 'ideogram' && (
+          <div className="space-y-6">
+            <IdeogramTestSuite />
           </div>
         )}
       </main>

@@ -1025,7 +1025,9 @@ export type Database = {
         Row: {
           alt_text: string | null
           created_at: string
+          generation_prompt: string | null
           id: string
+          image_data: string | null
           image_url: string | null
           slide_id: string
           style_preset: string | null
@@ -1034,7 +1036,9 @@ export type Database = {
         Insert: {
           alt_text?: string | null
           created_at?: string
+          generation_prompt?: string | null
           id?: string
+          image_data?: string | null
           image_url?: string | null
           slide_id: string
           style_preset?: string | null
@@ -1043,7 +1047,9 @@ export type Database = {
         Update: {
           alt_text?: string | null
           created_at?: string
+          generation_prompt?: string | null
           id?: string
+          image_data?: string | null
           image_url?: string | null
           slide_id?: string
           style_preset?: string | null
