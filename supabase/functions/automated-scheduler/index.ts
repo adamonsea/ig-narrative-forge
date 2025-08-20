@@ -60,7 +60,7 @@ serve(async (req) => {
         )
       `)
       .eq('is_active', true)
-      .lte('next_run_at', new Date().toISOString())
+      .lte('next_run_at', new Date(Date.now() + 60000).toISOString()) // Add 1 minute buffer
       .limit(50);
 
     if (scheduleError) {
