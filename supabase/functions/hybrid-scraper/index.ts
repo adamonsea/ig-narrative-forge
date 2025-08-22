@@ -121,7 +121,8 @@ serve(async (req) => {
         articlesFound: 0,
         articlesScraped: 0,
         errors: [error.message],
-        method: 'none'
+        method: 'none',
+        articles: []
       }),
       {
         status: 500,
