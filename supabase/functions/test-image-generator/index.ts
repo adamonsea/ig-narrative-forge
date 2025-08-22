@@ -745,25 +745,23 @@ serve(async (req) => {
        
        const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
 
-       console.log(`Testing Nebius AI API for slide ${slideId}`);
+        console.log(`Testing Nebius AI API for slide ${slideId}`);
 
-       const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/text-to-image/generation', {
-         method: 'POST',
-         headers: {
-           'Authorization': `Bearer ${nebiusApiKey}`,
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
-           model: 'flux-schnell', // Ultra-cheap and fast
-           prompt: enhancedPrompt,
-           width: 1024,
-           height: 1024,
-           steps: 4,
-           guidance_scale: 3.5,
-           seed: Math.floor(Math.random() * 1000000),
-           output_format: 'webp'
-         }),
-       });
+        // Nebius uses OpenAI-compatible API format
+        const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${nebiusApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'black-forest-labs/flux-1-schnell', // Correct model name
+            prompt: enhancedPrompt,
+            n: 1,
+            size: "1024x1024",
+            response_format: "b64_json"
+          }),
+        });
 
        console.log('Nebius response status:', nebiusResponse.status);
 
@@ -787,64 +785,23 @@ serve(async (req) => {
          throw new Error(`Nebius generation failed: ${nebiusResponse.status} - ${errorData}`);
        }
 
-       const nebiusData = await nebiusResponse.json();
-       console.log('Nebius response structure:', {
-         hasImages: !!nebiusData.images,
-         imagesLength: nebiusData.images?.length,
-         keys: Object.keys(nebiusData)
-       });
+        const nebiusData = await nebiusResponse.json();
+        console.log('Nebius response structure:', {
+          hasData: !!nebiusData.data,
+          dataLength: nebiusData.data?.length,
+          keys: Object.keys(nebiusData)
+        });
 
-       if (!nebiusData.images || !nebiusData.images[0]) {
-         console.error('No image data in Nebius response:', JSON.stringify(nebiusData, null, 2));
-         
-         // Log test failure to database
-         await supabase.from('image_generation_tests').insert({
-           test_id: testId || null,
-           slide_id: slideId || null,
-           story_id: slide?.story_id || null,
-           api_provider: 'nebius',
-           success: false,
-           error_message: 'No image data received from Nebius AI',
-           generation_time_ms: Date.now() - startTime,
-           estimated_cost: 0.0013,
-           style_reference_used: !!styleReferenceUrl
-         });
-         
-         throw new Error('No image data received from Nebius AI');
-       }
+        if (!nebiusData.data || !nebiusData.data[0] || !nebiusData.data[0].b64_json) {
+          throw new Error('No image data received from Nebius AI');
+        }
 
-       // Extract base64 or URL from response
-       const imageResult = nebiusData.images[0];
-       
-       if (imageResult.b64_json) {
-         // Base64 response
-         imageData = imageResult.b64_json;
-       } else if (imageResult.url) {
-         // URL response - download and convert to base64
-         const imageResponse = await fetch(imageResult.url);
-         if (!imageResponse.ok) {
-           throw new Error(`Failed to download image from Nebius: ${imageResponse.status}`);
-         }
-         
-         const imageBuffer = await imageResponse.arrayBuffer();
-         const uint8Array = new Uint8Array(imageBuffer);
-         
-         let binary = '';
-         const chunkSize = 8192;
-         for (let i = 0; i < uint8Array.length; i += chunkSize) {
-           const chunk = uint8Array.subarray(i, i + chunkSize);
-           binary += String.fromCharCode.apply(null, Array.from(chunk));
-         }
-         imageData = btoa(binary);
-       } else {
-         throw new Error('No valid image format received from Nebius AI');
-       }
-       
-       console.log(`Generated image with Nebius AI Flux-Schnell`);
-       
-       // Ultra-cheap cost
-       cost = 0.0013;
-       generationTime = Date.now() - startTime;
+        imageData = nebiusData.data[0].b64_json;
+        console.log(`Generated image with Nebius AI Flux-Schnell`);
+        
+        // Ultra-cheap cost
+        cost = 0.0013;
+        generationTime = Date.now() - startTime;
 
      } else {
       // OpenAI generation (existing logic)

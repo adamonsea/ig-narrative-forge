@@ -54,22 +54,19 @@ serve(async (req) => {
 
     const startTime = Date.now();
 
-    // Nebius AI Studio API call
-    const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/text-to-image/generation', {
+    // Nebius AI Studio API call using OpenAI-compatible format
+    const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${nebiusApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model, // flux-schnell, flux-dev, or sdxl
+        model: 'black-forest-labs/flux-1-schnell', // Correct model name
         prompt: enhancedPrompt,
-        width: 1024,
-        height: 1024,
-        steps: model === 'flux-schnell' ? 4 : 28,
-        guidance_scale: model.startsWith('flux') ? 3.5 : 7.5,
-        seed: Math.floor(Math.random() * 1000000),
-        output_format: 'webp'
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json"
       }),
     });
 
@@ -92,45 +89,19 @@ serve(async (req) => {
     }
 
     const nebiusData = await nebiusResponse.json();
-    const generationTime = Date.now() - startTime;
     
     console.log('Nebius response structure:', {
-      hasImages: !!nebiusData.images,
-      imagesLength: nebiusData.images?.length,
+      hasData: !!nebiusData.data,
+      dataLength: nebiusData.data?.length,
       keys: Object.keys(nebiusData)
     });
 
-    if (!nebiusData.images || !nebiusData.images[0]) {
+    if (!nebiusData.data || !nebiusData.data[0] || !nebiusData.data[0].b64_json) {
       throw new Error('No image data received from Nebius AI');
     }
 
-    // Extract base64 or URL from response
-    let imageData;
-    const imageResult = nebiusData.images[0];
-    
-    if (imageResult.b64_json) {
-      // Base64 response
-      imageData = imageResult.b64_json;
-    } else if (imageResult.url) {
-      // URL response - download and convert to base64
-      const imageResponse = await fetch(imageResult.url);
-      if (!imageResponse.ok) {
-        throw new Error(`Failed to download image from Nebius: ${imageResponse.status}`);
-      }
-      
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const uint8Array = new Uint8Array(imageBuffer);
-      
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, i + chunkSize);
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      imageData = btoa(binary);
-    } else {
-      throw new Error('No valid image format received from Nebius AI');
-    }
+    // Extract base64 image data (OpenAI format)
+    imageData = nebiusData.data[0].b64_json;
 
     // Calculate cost based on model
     let cost;
@@ -156,6 +127,8 @@ serve(async (req) => {
       tokens_used: Math.ceil(enhancedPrompt.length / 4), // Estimate token usage
       region: 'global'
     });
+
+    const generationTime = Date.now() - startTime;
 
     console.log(`Generated image with Nebius AI ${model}, cost: $${cost}, time: ${generationTime}ms`);
 
