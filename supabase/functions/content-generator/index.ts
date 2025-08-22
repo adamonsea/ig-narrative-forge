@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { ContentValidator } from '../_shared/content-validator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -194,6 +195,56 @@ serve(async (req) => {
     }
 
     console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
+
+    // Validate slides for factual accuracy
+    const validator = new ContentValidator();
+    const validationResult = validator.validateSlides(slides, article.title, article.body);
+    
+    console.log('📋 Content validation result:', {
+      score: validationResult.score,
+      isValid: validationResult.isValid,
+      issues: validationResult.issues.length
+    });
+
+    // Log validation issues if any
+    if (validationResult.issues.length > 0) {
+      console.warn('⚠️ Content validation issues detected:', validationResult.issues);
+      
+      // Log validation issues for review
+      await supabase
+        .from('system_logs')
+        .insert({
+          level: 'warning',
+          message: `Content validation issues detected for article: ${article.title}`,
+          context: {
+            validation_score: validationResult.score,
+            issues: validationResult.issues,
+            fabricated_topics: validationResult.fabricatedTopics,
+            article_id: articleId,
+            story_id: story.id
+          },
+          function_name: 'content-generator'
+        });
+
+      // If validation score is too low, regenerate with stricter prompts
+      if (validationResult.score < 70) {
+        console.log('🔄 Validation score too low, attempting regeneration with stricter constraints...');
+        
+        try {
+          const strictSlideResult = await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
+          const revalidation = validator.validateSlides(strictSlideResult.slides, article.title, article.body);
+          
+          if (revalidation.score > validationResult.score) {
+            console.log('✅ Regeneration improved validation score from', validationResult.score, 'to', revalidation.score);
+            slides = strictSlideResult.slides;
+          } else {
+            console.log('⚠️ Regeneration did not improve validation score, using original');
+          }
+        } catch (regenError) {
+          console.error('Failed to regenerate slides:', regenError);
+        }
+      }
+    }
 
     // Generate social media post copy with hashtags
     const postResult = await generatePostCopy(article, publicationName, openAIApiKey);
@@ -542,94 +593,130 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   // Extract domain from source URL for final slide
   const sourceDomain = new URL(article.source_url).hostname;
   
-  const systemPrompt = `You are a VIRAL news editor creating ${config.count} punchy slides that make mundane stories IRRESISTIBLE.
+  const systemPrompt = `🚨 CRITICAL: FACTUAL ACCURACY IS NON-NEGOTIABLE 🚨
 
-🎯 HOOK MASTERY - Transform boring openings into MUST-READ content:
+FACTUAL ACCURACY CHECKLIST - COMPLETE BEFORE WRITING:
+✅ Every claim must exist in the source material
+✅ No invented quotes, conversations, or events
+✅ No fabricated technology connections unless explicitly mentioned
+✅ No added controversies that don't exist in the original
+✅ Only use information directly from the provided content
+
+You are creating ${config.count} engaging slides from factual news content.
+
+🎯 HOOK MASTERY - Make real content compelling:
 ❌ BLAND: "Rising concerns from visitors at popular natural sites urged by officials to prioritize safety"
-✅ PUNCHY: "Visitors risk safety for viral videos at dangerous beauty spot"
+✅ PUNCHY: "Visitors risk safety at dangerous beauty spot as officials issue urgent warning"
 
-❌ BLAND: "Local council announces new parking restrictions in town center"  
-✅ PUNCHY: "Town center parking war escalates as council strikes back"
+❌ WRONG: "AI study hacks help students achieve GCSE success" (FABRICATED - not in source)
+✅ RIGHT: "Students celebrate outstanding GCSE results at local school" (FACTUAL)
 
-❌ BLAND: "Police appeal for witnesses following road traffic incident"
-✅ PUNCHY: "Mystery crash leaves police hunting for answers"
+❌ WRONG: "Social media trend sparks controversy" (if no social media mentioned)
+✅ RIGHT: Use only angles that exist in the source material
 
-🔥 STYLE RULES - Make every story COMPELLING:
-• Find the VIRAL ANGLE: What would make people share this? Social media trends? Generational conflict? Modern life irony?
-• Use ACTIVE, PUNCHY language: "strikes back" not "implements," "hunting" not "seeking"
-• Create INTRIGUE: What's the twist? The unexpected angle? The "you won't believe" moment?
-• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance}) - but ALWAYS find the engaging hook
+🔥 ENGAGEMENT RULES - Work with what you have:
+• ONLY use angles present in the source content
+• Transform boring language into punchy language WITHOUT changing facts
+• Create intrigue from REAL events, not invented drama
+• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
+
+🚫 ABSOLUTELY FORBIDDEN:
+• Adding technology angles when none exist
+• Inventing social media connections
+• Creating generational conflicts not in source
+• Fabricating controversies or drama
+• Adding quotes or conversations not in original
 
 ⚡ STORYTELLING FORMULA - COMPLETE NARRATIVE ARC:
-1. HOOK: Start with the most COMPELLING angle (${config.wordLimits.split('/')[0]} words max)
-2. CONTEXT: "In [Location]..." with the JUICY details
-3. BUILD TENSION: What's really happening? Why should people care?
-4. CLIMAX/RESOLUTION: The key outcome, rescue, solution, or how it ended - THIS IS CRITICAL
-5. IMPACT/CONSEQUENCE: What happened as a result? Who was the hero? What was learned?
+1. HOOK: Start with the most compelling FACTUAL angle (${config.wordLimits.split('/')[0]} words max)
+2. CONTEXT: "In [Location]..." with actual details from source
+3. BUILD TENSION: What actually happened according to the source
+4. CLIMAX/RESOLUTION: The real outcome described in the article
+5. IMPACT/CONSEQUENCE: Actual results mentioned in the source
 6. FINAL SLIDE: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
 
-🎯 NARRATIVE ARC REQUIREMENTS:
-• SETUP: What was the initial situation/problem?
-• CONFLICT: What went wrong or created tension?
-• RESOLUTION: How was it resolved? Who helped? What was the outcome?
-• NEVER leave readers hanging - always show HOW the story ended
+🎯 FACTUAL NARRATIVE REQUIREMENTS:
+• SETUP: Describe the actual initial situation from the source
+• CONFLICT: Use only tensions/problems mentioned in the article
+• RESOLUTION: Show only the real resolution described in the source
+• NEVER invent details not present in the original content
 
-🎪 LANGUAGE POWERHOUSE:
-• Replace "officials say" → "authorities reveal/warn/admit"
-• Replace "concerns raised" → "alarm grows/panic spreads/controversy erupts"  
-• Replace "incident occurred" → "drama unfolded/chaos erupted/mystery struck"
-• Use MODERN language: "goes viral," "sparks outrage," "divides opinion," "breaks the internet"
+🎪 LANGUAGE ENHANCEMENT (without changing facts):
+• Replace "officials say" → "authorities reveal/warn/confirm"
+• Replace "concerns raised" → "warnings issued/alerts raised"
+• Replace "incident occurred" → "event unfolded/situation developed"
+• Use engaging language but ONLY for facts already in the source
 • Replace temporal refs: "yesterday (${temporalContext.yesterday})"
 
-WORD LIMITS: ${config.wordLimits} - Use every word to MAXIMUM impact
+WORD LIMITS: ${config.wordLimits} - Use every word for FACTUAL impact
+
+FINAL VALIDATION: Before returning, confirm every claim exists in the source material.
 
 Return JSON: {"slides": [{"slideNumber": 1, "content": "text", "altText": "description"}]}`;
 
-  // VIRAL CONTENT TRANSFORMATION BRIEF
-  let userPrompt = `🎯 VIRAL TRANSFORMATION CHALLENGE:
-ORIGINAL TITLE: "${article.title}"
-YOUR MISSION: Make this story IRRESISTIBLE while keeping it 100% accurate
+  // FACTUAL ENGAGEMENT TRANSFORMATION
+  let userPrompt = `🚨 FACTUAL ACCURACY FIRST: Only use information from the source content below.
 
-📊 STORY INTEL:
+ORIGINAL TITLE: "${article.title}"
+YOUR MISSION: Make this story engaging using ONLY the facts provided
+
+📊 STORY DETAILS:
 • Publication: ${temporalContext.publication_date}
 • Type: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
-• Detected angles: ${storyTypeAnalysis.angles.join(', ')}
+• Detected angles (if present in source): ${storyTypeAnalysis.angles.join(', ')}
 
-📰 SOURCE CONTENT:
+📰 SOURCE CONTENT (YOUR ONLY REFERENCE):
 ${article.body.substring(0, 1200)}
 
-🚀 TRANSFORMATION RULES:
-1. FIND THE VIRAL HOOK: What's the modern angle? The generational clash? The social media moment? The "you won't believe" element?
-2. CREATE INTRIGUE: Start with mystery, controversy, or unexpected consequences
-3. CAPTURE COMPLETE STORY ARC: Setup → Conflict → Resolution → Outcome (WHO saved the day? HOW did it end?)
-4. USE PUNCHY LANGUAGE: "sparks outrage," "divides locals," "goes viral," "causes chaos"
-5. MAKE IT SHAREABLE: What would make someone screenshot this and send to friends?
-6. STAY ACCURATE: Punch up the language, but never invent facts
+🔒 STRICT TRANSFORMATION RULES:
+1. FACT CHECK FIRST: Read the source content completely
+2. IDENTIFY REAL HOOKS: What compelling angles actually exist in the source?
+3. ENHANCE LANGUAGE: Make boring facts sound interesting without changing them
+4. COMPLETE STORY ARC: Use only the setup, conflict, and resolution described in source
+5. PUNCHY BUT ACCURATE: Upgrade language while keeping facts identical
+6. NO FABRICATION: If it's not in the source, don't write it
 
-📖 STORY RESOLUTION CHECKLIST:
-• If there's a rescue - WHO rescued them and HOW?
-• If there's a problem - HOW was it solved?
-• If there's conflict - WHAT was the outcome?
-• If there's danger - HOW did people get to safety?
-• If there's mystery - WHAT was discovered?
-• ALWAYS show the complete journey from problem to resolution
+❌ FORBIDDEN FABRICATIONS (Examples):
+• Don't add "AI study hacks" if technology isn't mentioned
+• Don't create "social media trends" if social media isn't in source
+• Don't invent "controversy erupts" if no controversy described
+• Don't add "generational clash" if generations aren't mentioned
+• Don't create "viral moment" if viral activity isn't described
 
-💡 ANGLE INSPIRATION:
-- Social media trends causing real-world problems?
-- Modern life vs traditional values clash?
-- Technology creating unexpected consequences?  
-- Local issue reflecting bigger societal problems?
-- David vs Goliath community story?
+✅ ALLOWED ENHANCEMENTS (Examples):
+• "Officials announce new rules" → "Authorities crack down with new rules"
+• "People were concerned" → "Residents raised alarm"
+• "Investigation ongoing" → "Mystery deepens as investigation continues"
+• But ONLY if the basic fact exists in the source
 
-Transform this from forgettable news into MUST-READ content that people will actually engage with!`;
+📖 FACTUAL STORY CHECKLIST:
+• Rescue story? WHO rescued and HOW (from source only)
+• Problem story? HOW was it solved (from source only)
+• Conflict story? WHAT was the real outcome (from source only)
+• Celebration story? WHAT are they celebrating (from source only)
+• NEVER add details not present in the original
 
-  // Add hook promise delivery requirements with engagement emphasis
+🎯 CONTENT VALIDATION:
+Before writing each slide, ask: "Is this information in the source material?"
+If no, rewrite using only factual content.
+
+Transform boring language into engaging language, but keep identical facts!`;
+
+// Add hook promise delivery requirements with factual validation
   if (hookPromises && hookPromises.length > 0) {
     userPrompt += `\n\n🎯 HOOK PROMISES TO FULFILL: ${hookPromises.join(', ')} 
-- These promises MUST be delivered with specific, jaw-dropping details
-- Don't just mention them - make them the CENTERPIECE of your viral angle
-- Turn these promises into the reason people CAN'T scroll past`;
+- These promises MUST be delivered with specific details FROM THE SOURCE ONLY
+- Don't just mention them - show how they're addressed in the actual story
+- CRITICAL: Only use promise details that exist in the source material`;
   }
+
+  // Add final validation reminder
+  userPrompt += `\n\n🔒 FINAL VALIDATION BEFORE SUBMITTING:
+1. Read each slide and ask: "Does this claim exist in the source?"
+2. Check for any technology/AI/social media angles not in original
+3. Verify all quotes and events are from the source material
+4. Confirm no controversies or conflicts were invented
+5. Ensure language is punchy but facts are identical to source`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
