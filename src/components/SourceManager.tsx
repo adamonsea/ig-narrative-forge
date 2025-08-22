@@ -148,13 +148,55 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
     }
   };
 
-  const handleDeleteSource = async (sourceId: string) => {
-    if (!confirm('Are you sure you want to delete this source? This action cannot be undone.')) {
+  const handleDeleteSource = async (sourceId: string, sourceName: string = 'this source') => {
+    // First check if this source has any articles
+    const { data: articleCount, error: countError } = await supabase
+      .from('articles')
+      .select('id', { count: 'exact', head: true })
+      .eq('source_id', sourceId);
+
+    if (countError) {
+      console.error('Error checking articles:', countError);
+      toast({
+        title: 'Error',
+        description: 'Failed to check if source has articles',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const hasArticles = (articleCount as any)?.count > 0;
+    
+    let confirmMessage = `Are you sure you want to delete "${sourceName}"?`;
+    if (hasArticles) {
+      confirmMessage += `\n\nThis source has ${(articleCount as any)?.count} articles. Deleting the source will orphan these articles (they'll remain but lose source reference).`;
+    }
+    confirmMessage += '\n\nThis action cannot be undone.';
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     setLoading(true);
     try {
+      // If there are articles, set their source_id to NULL first
+      if (hasArticles) {
+        const { error: updateError } = await supabase
+          .from('articles')
+          .update({ source_id: null })
+          .eq('source_id', sourceId);
+
+        if (updateError) {
+          throw new Error(`Failed to orphan articles: ${updateError.message}`);
+        }
+
+        toast({
+          title: 'Articles Updated',
+          description: `${(articleCount as any)?.count} articles have been orphaned from this source`,
+        });
+      }
+
+      // Now delete the source
       const { error } = await supabase
         .from('content_sources')
         .delete()
@@ -164,7 +206,9 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
       toast({
         title: 'Success',
-        description: 'Source deleted successfully',
+        description: hasArticles 
+          ? `Source "${sourceName}" deleted and ${(articleCount as any)?.count} articles orphaned`
+          : `Source "${sourceName}" deleted successfully`,
       });
 
       onSourcesChange();
@@ -569,7 +613,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteSource(source.id)}
+                    onClick={() => handleDeleteSource(source.id, source.source_name)}
                     disabled={loading}
                   >
                     <Trash2 className="w-4 h-4" />
