@@ -149,12 +149,18 @@ export class ScrapingStrategies {
         return null;
       }
 
-      const regionalRelevance = calculateRegionalRelevance(
+      // Calculate regional relevance - for hyperlocal sources, give higher base scores
+      let regionalRelevance = calculateRegionalRelevance(
         finalContent,
         finalTitle,
         this.region,
-        this.sourceInfo?.source_type
+        this.sourceInfo?.source_type || 'national'
       );
+      
+      // Boost scores for hyperlocal sources even if no specific keywords match
+      if (this.sourceInfo?.source_type === 'hyperlocal' && regionalRelevance < 10) {
+        regionalRelevance = Math.max(regionalRelevance, 15); // Minimum relevance for hyperlocal
+      }
 
       return {
         title: finalTitle,
@@ -199,12 +205,18 @@ export class ScrapingStrategies {
           const extractedContent = extractContentFromHTML(articleHtml, articleUrl);
           
           if (extractedContent.body && extractedContent.word_count >= 50) {
-            const regionalRelevance = calculateRegionalRelevance(
+            // Calculate regional relevance - for hyperlocal sources, give higher base scores
+            let regionalRelevance = calculateRegionalRelevance(
               extractedContent.body,
               extractedContent.title,
               this.region,
-              this.sourceInfo?.source_type
+              this.sourceInfo?.source_type || 'national'
             );
+            
+            // Boost scores for hyperlocal sources even if no specific keywords match
+            if (this.sourceInfo?.source_type === 'hyperlocal' && regionalRelevance < 10) {
+              regionalRelevance = Math.max(regionalRelevance, 15); // Minimum relevance for hyperlocal
+            }
 
             articles.push({
               title: extractedContent.title,

@@ -14,6 +14,23 @@ export class DatabaseOperations {
 
     console.log(`💾 Storing ${articles.length} articles for source ${sourceId}`);
 
+    // Get source information to determine thresholds
+    const { data: sourceInfo } = await this.supabase
+      .from('content_sources')
+      .select('source_type')
+      .eq('id', sourceId)
+      .single();
+
+    // Set different relevance thresholds based on source type
+    let relevanceThreshold = 10;
+    if (sourceInfo?.source_type === 'hyperlocal') {
+      relevanceThreshold = 5;  // Lower threshold for hyperlocal sources like bournefreelive
+    } else if (sourceInfo?.source_type === 'regional') {
+      relevanceThreshold = 8;
+    } else {
+      relevanceThreshold = 15; // Higher threshold for national sources
+    }
+
     for (const article of articles) {
       try {
         // Check for duplicates by title similarity
@@ -35,9 +52,9 @@ export class DatabaseOperations {
           }
         }
 
-        // Apply quality and relevance filters
-        if (article.word_count < 50 || article.content_quality_score < 30) {
-          console.log(`🗑️ Discarding low quality article: ${article.title.substring(0, 50)}...`);
+        // Apply quality and relevance filters with dynamic thresholds
+        if (article.word_count < 50 || article.content_quality_score < 30 || article.regional_relevance_score < relevanceThreshold) {
+          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}, quality: ${article.content_quality_score}, relevance: ${article.regional_relevance_score}, threshold: ${relevanceThreshold})`);
           discarded++;
           continue;
         }

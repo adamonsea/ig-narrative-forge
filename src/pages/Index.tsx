@@ -16,6 +16,7 @@ import { ApprovedQueue } from '@/components/ApprovedQueue';
 import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 import IdeogramTestSuite from '@/components/IdeogramTestSuite';
+import ArticleApprovalInterface from '@/components/ArticleApprovalInterface';
 // import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
@@ -23,7 +24,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram' | 'testing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram' | 'testing' | 'approval'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -181,6 +182,14 @@ const Index = () => {
             >
               <FileText className="w-4 h-4" />
               Dashboard
+            </Button>
+            <Button
+              variant={activeTab === 'approval' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('approval')}
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Article Approval
             </Button>
             {/* <Button
               variant={activeTab === 'analytics' ? 'default' : 'outline'}
@@ -408,6 +417,12 @@ const Index = () => {
                 </CardContent>
               </Card>
             )}
+          </div>
+        )}
+
+        {activeTab === 'approval' && (
+          <div className="space-y-6">
+            <ArticleApprovalInterface />
           </div>
         )}
 
