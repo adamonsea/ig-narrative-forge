@@ -2,23 +2,23 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { FeedSlide } from "@/components/FeedSlide";
+import { StoryCarousel } from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 
-interface Slide {
+interface Story {
   id: string;
-  slide_number: number;
-  content: string;
-  story: {
+  title: string;
+  author: string | null;
+  publication_name: string | null;
+  created_at: string;
+  slides: Array<{
     id: string;
-    title: string;
-    author: string | null;
-    publication_name: string | null;
-    created_at: string;
-    article: {
-      source_url: string;
-      region: string;
-    };
+    slide_number: number;
+    content: string;
+  }>;
+  article: {
+    source_url: string;
+    region: string;
   };
 }
 
@@ -28,8 +28,8 @@ type FilterOption = "all" | "with-visuals" | "without-visuals";
 export default function EastbourneFeed() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [slides, setSlides] = useState<Slide[]>([]);
-  const [loadingSlides, setLoadingSlides] = useState(true);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [loadingStories, setLoadingStories] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
 
@@ -40,84 +40,72 @@ export default function EastbourneFeed() {
     }
     
     if (user) {
-      loadSlides();
+      loadStories();
     }
   }, [user, loading, navigate, sortBy, filterBy]);
 
-  const loadSlides = async () => {
+  const loadStories = async () => {
     try {
-      setLoadingSlides(true);
+      setLoadingStories(true);
       
       let { data, error } = await supabase
-        .from("slides")
+        .from("stories")
         .select(`
           id,
-          slide_number,
-          content,
-          stories!inner (
+          title,
+          author,
+          publication_name,
+          created_at,
+          status,
+          slides (
             id,
-            title,
-            author,
-            publication_name,
-            created_at,
-            status,
-            articles!inner (
-              source_url,
-              region
-            )
+            slide_number,
+            content
+          ),
+          articles!inner (
+            source_url,
+            region
           )
         `)
-        .eq("stories.status", "ready")
-        .ilike("stories.articles.region", "%eastbourne%");
+        .eq("status", "ready")
+        .ilike("articles.region", "%eastbourne%");
 
       if (error) {
-        console.error("Error loading slides:", error);
+        console.error("Error loading stories:", error);
         return;
       }
 
-      // Transform the data to match our interface
-      const transformedSlides = (data || []).map(slide => ({
-        id: slide.id,
-        slide_number: slide.slide_number,
-        content: slide.content,
-        story: {
-          id: slide.stories.id,
-          title: slide.stories.title,
-          author: slide.stories.author,
-          publication_name: slide.stories.publication_name,
-          created_at: slide.stories.created_at,
-          article: {
-            source_url: slide.stories.articles.source_url,
-            region: slide.stories.articles.region
-          }
+      // Transform and sort the data
+      const transformedStories = (data || []).map(story => ({
+        id: story.id,
+        title: story.title,
+        author: story.author,
+        publication_name: story.publication_name,
+        created_at: story.created_at,
+        slides: story.slides.sort((a, b) => a.slide_number - b.slide_number),
+        article: {
+          source_url: story.articles.source_url,
+          region: story.articles.region
         }
       }));
 
       // Apply sorting
-      let sortedSlides = [...transformedSlides];
+      let sortedStories = [...transformedStories];
       if (sortBy === "newest") {
-        sortedSlides.sort((a, b) => new Date(b.story.created_at).getTime() - new Date(a.story.created_at).getTime());
+        sortedStories.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       } else {
-        sortedSlides.sort((a, b) => new Date(a.story.created_at).getTime() - new Date(b.story.created_at).getTime());
+        sortedStories.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       }
 
-      // Sort by slide number within each story
-      sortedSlides.sort((a, b) => {
-        if (a.story.id === b.story.id) {
-          return a.slide_number - b.slide_number;
-        }
-        return 0;
-      });
-
-      setSlides(sortedSlides);
+      setStories(sortedStories);
     } catch (error) {
       console.error("Error loading slides:", error);
     } finally {
-      setLoadingSlides(false);
+      setLoadingStories(false);
     }
   };
 
-  if (loading || loadingSlides) {
+  if (loading || loadingStories) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -139,17 +127,17 @@ export default function EastbourneFeed() {
             setSortBy={setSortBy}
             filterBy={filterBy}
             setFilterBy={setFilterBy}
-            slideCount={slides.length}
+            slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
           />
         </div>
       </header>
 
       {/* Feed */}
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {slides.length > 0 ? (
+        {stories.length > 0 ? (
           <div className="space-y-8">
-            {slides.map((slide) => (
-              <FeedSlide key={slide.id} slide={slide} topicName="Eastbourne" />
+            {stories.map((story) => (
+              <StoryCarousel key={story.id} story={story} topicName="Eastbourne" />
             ))}
           </div>
         ) : (
