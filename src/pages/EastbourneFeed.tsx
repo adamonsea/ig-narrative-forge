@@ -48,53 +48,68 @@ export default function EastbourneFeed() {
     try {
       setLoadingSlides(true);
       
-      let query = supabase
+      let { data, error } = await supabase
         .from("slides")
         .select(`
           id,
           slide_number,
           content,
-          story:stories!inner (
+          stories!inner (
             id,
             title,
             author,
             publication_name,
             created_at,
-            article:articles!inner (
+            status,
+            articles!inner (
               source_url,
               region
             )
           )
         `)
-        .eq("story.status", "ready")
-        .ilike("story.article.region", "%eastbourne%");
-
-      // Apply sorting - sort by story creation date
-      if (sortBy === "newest") {
-        query = query.order("story.created_at", { ascending: false });
-      } else {
-        query = query.order("story.created_at", { ascending: true });
-      }
-
-      // Always order by slide number within stories
-      query = query.order("slide_number", { ascending: true });
-
-      const { data, error } = await query;
+        .eq("stories.status", "ready")
+        .ilike("stories.articles.region", "%eastbourne%");
 
       if (error) {
         console.error("Error loading slides:", error);
         return;
       }
 
-      let filteredSlides = data || [];
+      // Transform the data to match our interface
+      const transformedSlides = (data || []).map(slide => ({
+        id: slide.id,
+        slide_number: slide.slide_number,
+        content: slide.content,
+        story: {
+          id: slide.stories.id,
+          title: slide.stories.title,
+          author: slide.stories.author,
+          publication_name: slide.stories.publication_name,
+          created_at: slide.stories.created_at,
+          article: {
+            source_url: slide.stories.articles.source_url,
+            region: slide.stories.articles.region
+          }
+        }
+      }));
 
-      // Apply filtering (simplified since we removed visuals)
-      if (filterBy === "with-visuals" || filterBy === "without-visuals") {
-        // For now, show all slides since we removed visual filtering
-        filteredSlides = data || [];
+      // Apply sorting
+      let sortedSlides = [...transformedSlides];
+      if (sortBy === "newest") {
+        sortedSlides.sort((a, b) => new Date(b.story.created_at).getTime() - new Date(a.story.created_at).getTime());
+      } else {
+        sortedSlides.sort((a, b) => new Date(a.story.created_at).getTime() - new Date(b.story.created_at).getTime());
       }
 
-      setSlides(filteredSlides);
+      // Sort by slide number within each story
+      sortedSlides.sort((a, b) => {
+        if (a.story.id === b.story.id) {
+          return a.slide_number - b.slide_number;
+        }
+        return 0;
+      });
+
+      setSlides(sortedSlides);
     } catch (error) {
       console.error("Error loading slides:", error);
     } finally {
