@@ -26,7 +26,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { slideId, prompt, model = 'flux-schnell', stylePreset = 'editorial' } = await req.json();
+    const { slideId, prompt, model = 'black-forest-labs/flux-schnell', stylePreset = 'editorial' } = await req.json();
 
     if (!slideId || !prompt) {
       throw new Error('Slide ID and prompt are required');
@@ -62,7 +62,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'FLUX.1-schnell', // Exact model name from Nebius Studio
+        model: model || 'black-forest-labs/flux-schnell', // Use the correct model name from Nebius API
         prompt: enhancedPrompt,
         n: 1,
         size: "1024x1024",
