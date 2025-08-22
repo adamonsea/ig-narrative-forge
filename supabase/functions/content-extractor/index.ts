@@ -188,7 +188,7 @@ serve(async (req) => {
         body: extractedContent.body,
         word_count: wordCount,
         reading_time_minutes: Math.max(1, Math.round(wordCount / 200)),
-        processing_status: wordCount > 50 ? 'extracted' : 'low_quality',
+        processing_status: wordCount > 50 ? 'processed' : 'discarded',
         updated_at: new Date().toISOString()
       };
 

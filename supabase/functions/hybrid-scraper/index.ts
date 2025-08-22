@@ -380,7 +380,7 @@ async function parseRSSContent(content: string): Promise<any[]> {
         summary: fullContent ? fullContent.substring(0, 200) + '...' : null,
         word_count: wordCount,
         content_quality_score: Math.min(wordCount * 2, 100), // Score based on word count
-        processing_status: 'extracted'
+        processing_status: 'processed'
       });
     }
     
@@ -697,7 +697,7 @@ function extractArticlesFromHTML(html: string, baseUrl: string): any[] {
             summary: cleanContent.substring(0, 200) + '...',
             word_count: wordCount,
             content_quality_score: Math.min(wordCount * 1.5, 100),
-            processing_status: 'extracted'
+            processing_status: 'processed'
           });
         } else {
           console.log(`⚠️ Skipping HTML article with insufficient content: ${wordCount} words`);
@@ -810,7 +810,7 @@ function extractBasicContent(html: string, baseUrl: string): any[] {
       summary: description.substring(0, 200) + '...',
       word_count: wordCount,
       content_quality_score: Math.min(wordCount, 75), // Lower quality score for basic extraction
-      processing_status: 'extracted'
+      processing_status: 'processed'
     }];
   } else {
     console.log(`❌ Basic extraction failed: insufficient content (${wordCount} words)`);
