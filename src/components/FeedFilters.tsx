@@ -38,7 +38,7 @@ export function FeedFilters({
             Filters
             {hasActiveFilters && (
               <Badge variant="secondary" className="text-xs ml-1">
-                {slideCount}
+                Active
               </Badge>
             )}
           </Button>
@@ -87,12 +87,6 @@ export function FeedFilters({
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {!hasActiveFilters && (
-        <Badge variant="secondary" className="text-xs">
-          {slideCount} slides
-        </Badge>
-      )}
     </div>
   );
 }

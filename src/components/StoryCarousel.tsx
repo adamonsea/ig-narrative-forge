@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Heart, Share, Send } from "lucide-react";
 
 interface Story {
   id: string;
@@ -27,6 +27,8 @@ interface StoryCarouselProps {
 
 export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isLoved, setIsLoved] = useState(false);
+  const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -48,6 +50,24 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
     setCurrentSlideIndex(index);
   };
 
+  const toggleLove = () => {
+    setIsLoved(!isLoved);
+    setLoveCount(prev => isLoved ? prev - 1 : prev + 1);
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: story.title,
+        text: currentSlide.content,
+        url: story.article.source_url,
+      });
+    } else {
+      // Fallback - copy to clipboard
+      navigator.clipboard.writeText(`${story.title}\n\n${currentSlide.content}\n\nRead more: ${story.article.source_url}`);
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       {/* Slide Content */}
@@ -55,10 +75,43 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         <div className="p-8">
           {/* Main Content */}
           <div className="mb-8">
-            <p className="text-2xl leading-relaxed font-light text-foreground">
+            <p className="text-4xl leading-relaxed font-light text-foreground">
               {currentSlide.content}
             </p>
           </div>
+
+          {/* Last slide actions */}
+          {isLastSlide && (
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2"
+              >
+                <Share className="w-4 h-4" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send
+              </Button>
+              <Button
+                variant={isLoved ? "default" : "outline"}
+                size="sm"
+                onClick={toggleLove}
+                className="flex items-center gap-2"
+              >
+                <Heart className={`w-4 h-4 ${isLoved ? "fill-current" : ""}`} />
+                Like
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Navigation Controls - only show if more than 1 slide */}
@@ -128,14 +181,27 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
 
       {/* Bottom Attribution */}
       <div className="flex items-center justify-between text-sm text-muted-foreground border-t px-8 py-4 bg-muted/20">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{topicName}</span>
-          {story.publication_name && (
-            <>
-              <span>•</span>
-              <span>{story.publication_name}</span>
-            </>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{topicName}</span>
+            {story.publication_name && (
+              <>
+                <span>•</span>
+                <span>{story.publication_name}</span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleLove}
+              className="flex items-center gap-1 h-8 px-2 text-muted-foreground hover:text-primary"
+            >
+              <Heart className={`w-4 h-4 ${isLoved ? "fill-current text-red-500" : ""}`} />
+              <span className="text-xs">{loveCount}</span>
+            </Button>
+          </div>
         </div>
         <a
           href={story.article.source_url}
