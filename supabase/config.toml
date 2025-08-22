@@ -76,3 +76,9 @@ verify_jwt = false
 # Testing and Analytics
 [functions.test-image-generator]
 verify_jwt = false
+
+[functions.nebius-image-generator]
+verify_jwt = false
+
+[functions.midjourney-image-generator]
+verify_jwt = false

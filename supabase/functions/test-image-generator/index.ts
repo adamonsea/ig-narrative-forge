@@ -117,6 +117,60 @@ serve(async (req) => {
     let imageData, cost, generationTime;
     const startTime = Date.now();
 
+    if (apiProvider === 'midjourney') {
+      console.log('Routing to MidJourney API');
+      
+      const { data: mjData, error: mjError } = await supabase.functions.invoke('midjourney-image-generator', {
+        body: {
+          slideId,
+          prompt,
+          model: 'mj-v7',
+          stylePreset,
+          testId
+        }
+      });
+      
+      if (mjError) {
+        console.error('MidJourney function error:', mjError);
+        throw new Error(`MidJourney generation failed: ${mjError.message}`);
+      }
+      
+      if (!mjData?.success) {
+        throw new Error(`MidJourney generation failed: ${mjData?.error || 'Unknown error'}`);
+      }
+      
+      console.log('MidJourney generation successful');
+      
+      // Log to database
+      await supabase
+        .from('image_generation_tests')
+        .insert({
+          test_id: testId,
+          slide_id: slideId,
+          story_id: slide?.story_id,
+          api_provider: 'midjourney',
+          generation_time_ms: 30000, // Estimated time for MidJourney
+          estimated_cost: mjData.cost || 0.02,
+          style_reference_used: hasStyleReference,
+          success: true,
+          visual_id: mjData.visualId
+        });
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          visualId: mjData.visualId,
+          imageData: mjData.imageData,
+          estimatedCost: mjData.cost || 0.02,
+          model: mjData.model || 'mj-v7',
+          taskId: mjData.taskId
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     if (apiProvider === 'ideogram') {
       if (!ideogramApiKey) {
         throw new Error('Ideogram API key not configured');

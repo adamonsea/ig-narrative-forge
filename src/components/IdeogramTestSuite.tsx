@@ -105,7 +105,8 @@ export default function IdeogramTestSuite() {
     replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large' },
     huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)' },
     deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large' },
-    nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell' }
+    nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell' },
+    midjourney: { cost: 0.02, name: 'MidJourney via kie.ai' }
   });
 
   useEffect(() => {
@@ -191,7 +192,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface' | 'deepinfra' | 'nebius') => {
+  const runSingleSlideTest = async (slide: Slide, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface' | 'deepinfra' | 'nebius' | 'midjourney') => {
     const testId = crypto.randomUUID();
     
     // Handle style reference image upload if file is provided
@@ -298,7 +299,7 @@ export default function IdeogramTestSuite() {
     }
   };
 
-  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface' | 'deepinfra' | 'nebius') => {
+  const runStoryTest = async (story: Story, apiProvider: 'openai' | 'ideogram' | 'fal' | 'replicate' | 'huggingface' | 'deepinfra' | 'nebius' | 'midjourney') => {
     setIsRunning(true);
     setProgress({ current: 0, total: story.slides.length });
     
