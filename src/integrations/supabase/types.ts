@@ -1087,6 +1087,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_article_for_generation: {
+        Args: { article_uuid: string }
+        Returns: boolean
+      }
       detect_article_duplicates: {
         Args: { p_article_id: string }
         Returns: {
