@@ -365,9 +365,9 @@ async function parseRSSContent(content: string): Promise<any[]> {
         wordCount = fullContent ? fullContent.split(/\s+/).length : 0;
       }
       
-      // QUALITY CHECK: Skip articles with insufficient content
-      if (wordCount < 20) {
-        console.log(`⚠️ Skipping article with only ${wordCount} words: ${enrichedTitle}`);
+      // QUALITY CHECK: Enforce 50+ word minimum as per COMPREHENSIVE_SCRAPING_SPEC
+      if (wordCount < 50) {
+        console.log(`⚠️ Skipping article with only ${wordCount} words (below 50-word minimum): ${enrichedTitle}`);
         continue;
       }
       
@@ -390,128 +390,323 @@ async function parseRSSContent(content: string): Promise<any[]> {
   return articles;
 }
 
-// Extract full article content from individual article pages
+// PHASE 2: Enhanced full article content extraction with progressive fallback chains
 function extractFullArticleContent(html: string, url: string): { title: string; content: string } {
   let title = '';
   let content = '';
   
-  // Extract title from multiple sources
+  console.log(`🔍 Starting progressive content extraction for: ${url}`);
+  
+  // PRIORITY 1: Enhanced title extraction with multiple selectors
   const titlePatterns = [
-    /<h1[^>]*class="[^"]*(?:title|headline|entry-title|post-title)[^"]*"[^>]*>([^<]*)<\/h1>/i,
+    // News-specific title patterns (high priority)
+    /<h1[^>]*class="[^"]*(?:headline|entry-title|post-title|article-title|story-title)[^"]*"[^>]*>([^<]*)<\/h1>/i,
+    /<h1[^>]*class="[^"]*title[^"]*"[^>]*>([^<]*)<\/h1>/i,
+    /<title[^>]*class="[^"]*(?:article|story|post)[^"]*"[^>]*>([^<]*)<\/title>/i,
+    // Schema.org structured data
+    /<h1[^>]*itemprop="headline"[^>]*>([^<]*)<\/h1>/i,
+    /<[^>]*itemprop="name"[^>]*>([^<]*)<\/[^>]*>/i,
+    // Open Graph and meta tags
+    /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i,
+    /<meta[^>]*name="twitter:title"[^>]*content="([^"]*)"[^>]*>/i,
+    // JSON-LD structured data
+    /"headline"\s*:\s*"([^"]*)"[^}]*}/i,
+    // Generic patterns (lower priority)
     /<h1[^>]*>([^<]*)<\/h1>/i,
-    /<title>([^<]*)<\/title>/i,
-    /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i
+    /<title>([^<]*)<\/title>/i
   ];
   
   for (const pattern of titlePatterns) {
     const match = html.match(pattern);
-    if (match && match[1] && match[1].trim()) {
+    if (match && match[1] && match[1].trim() && match[1].length > 10) {
       title = cleanHTML(match[1]).trim();
+      console.log(`✅ Title extracted using pattern: ${title.substring(0, 50)}...`);
       break;
     }
   }
   
-  // Extract main content from multiple sources
-  const contentPatterns = [
-    // Article content selectors
-    /<article[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*class="[^"]*(?:post-content|entry-content|article-content|main-content|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
-    /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<article[^>]*>([\s\S]*?)<\/article>/i
+  // PRIORITY 2: Progressive content extraction with comprehensive selectors
+  const contentExtractionStrategies = [
+    // Strategy 1: News-specific content selectors (highest priority)
+    {
+      name: 'news-specific',
+      patterns: [
+        /<article[^>]*class="[^"]*(?:story|article|post|entry)[^"]*"[^>]*>([\s\S]*?)<\/article>/i,
+        /<div[^>]*class="[^"]*(?:story-body|article-body|post-body|entry-content|main-content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+        /<section[^>]*class="[^"]*(?:article-content|story-content|post-content)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+        /<div[^>]*id="[^"]*(?:story|article|post|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+      ]
+    },
+    // Strategy 2: Schema.org and structured data
+    {
+      name: 'structured-data',
+      patterns: [
+        /<[^>]*itemprop="articleBody"[^>]*>([\s\S]*?)<\/[^>]*>/i,
+        /<[^>]*class="[^"]*articleBody[^"]*"[^>]*>([\s\S]*?)<\/[^>]*>/i
+      ]
+    },
+    // Strategy 3: Common CMS patterns
+    {
+      name: 'cms-patterns',
+      patterns: [
+        /<div[^>]*class="[^"]*(?:content|text|body)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+        /<main[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/main>/i,
+        /<section[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/section>/i
+      ]
+    },
+    // Strategy 4: Generic semantic HTML
+    {
+      name: 'semantic-html',
+      patterns: [
+        /<main[^>]*>([\s\S]*?)<\/main>/i,
+        /<article[^>]*>([\s\S]*?)<\/article>/i
+      ]
+    }
   ];
   
-  for (const pattern of contentPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      let rawContent = match[1];
-      
-      // Extract paragraphs from the content area
-      const paragraphs: string[] = [];
-      const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-      let pMatch;
-      
-      while ((pMatch = pRegex.exec(rawContent)) !== null) {
-        const paragraph = cleanHTML(pMatch[1]).trim();
-        if (paragraph.length > 20) { // Only include substantial paragraphs
-          paragraphs.push(paragraph);
+  // Try each strategy in order
+  for (const strategy of contentExtractionStrategies) {
+    console.log(`🔄 Trying ${strategy.name} extraction strategy...`);
+    
+    for (const pattern of strategy.patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const rawContent = match[1];
+        
+        // Extract paragraphs with quality filtering
+        const extractedContent = extractParagraphsWithQuality(rawContent);
+        
+        if (extractedContent && extractedContent.length >= 200) { // Minimum 200 chars for strategy success
+          content = extractedContent;
+          console.log(`✅ Content extracted using ${strategy.name}: ${content.length} chars`);
+          break;
         }
       }
-      
-      if (paragraphs.length > 0) {
-        content = paragraphs.join('\n\n');
-        break;
-      }
+    }
+    
+    if (content) break; // Stop if we found good content
+  }
+  
+  // FALLBACK 1: Extract all paragraphs from entire HTML if strategies failed
+  if (!content || content.split(/\s+/).length < 50) {
+    console.log(`🔄 Applying fallback: extracting all paragraphs...`);
+    const fallbackContent = extractAllParagraphsWithFiltering(html);
+    
+    if (fallbackContent && fallbackContent.split(/\s+/).length >= 50) {
+      content = fallbackContent;
+      console.log(`✅ Fallback content extracted: ${content.length} chars`);
     }
   }
   
-  // Fallback: extract all paragraphs from the entire HTML
-  if (!content) {
-    const allParagraphs: string[] = [];
-    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
-    let pMatch;
+  // FALLBACK 2: Try readability-style extraction
+  if (!content || content.split(/\s+/).length < 50) {
+    console.log(`🔄 Applying final fallback: readability extraction...`);
+    const readabilityContent = extractReadabilityContent(html);
     
-    while ((pMatch = pRegex.exec(html)) !== null) {
-      const paragraph = cleanHTML(pMatch[1]).trim();
-      if (paragraph.length > 30 && !paragraph.includes('cookie') && !paragraph.includes('subscribe')) {
-        allParagraphs.push(paragraph);
-      }
-    }
-    
-    if (allParagraphs.length > 0) {
-      content = allParagraphs.slice(0, 10).join('\n\n'); // Limit to first 10 paragraphs
+    if (readabilityContent && readabilityContent.split(/\s+/).length >= 50) {
+      content = readabilityContent;
+      console.log(`✅ Readability content extracted: ${content.length} chars`);
     }
   }
+  
+  // QUALITY VALIDATION: Ensure content meets minimum standards
+  const wordCount = content ? content.split(/\s+/).length : 0;
+  console.log(`📊 Final content quality: ${wordCount} words, ${content.length} chars`);
   
   return { title, content };
 }
 
-// Extract articles from HTML using common patterns
-function extractArticlesFromHTML(html: string, baseUrl: string): any[] {
-  const articles: any[] = [];
+// Extract paragraphs with quality filtering
+function extractParagraphsWithQuality(rawContent: string): string {
+  const paragraphs: string[] = [];
+  const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pMatch;
   
-  // Common article selectors
-  const articlePatterns = [
-    /<article[^>]*>([\s\S]*?)<\/article>/gi,
-    /<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-    /<div[^>]*class="[^"]*post[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-    /<div[^>]*class="[^"]*news[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
-  ];
+  while ((pMatch = pRegex.exec(rawContent)) !== null) {
+    const paragraph = cleanHTML(pMatch[1]).trim();
+    
+    // Quality filters for paragraphs
+    if (paragraph.length > 30 && 
+        !isNavigationText(paragraph) && 
+        !isAdvertisingText(paragraph) &&
+        !isSocialMediaText(paragraph)) {
+      paragraphs.push(paragraph);
+    }
+  }
+  
+  return paragraphs.join('\n\n');
+}
 
-  for (const pattern of articlePatterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null && articles.length < 5) {
-      const articleHTML = match[1];
-      
-      const title = extractFromHTML(articleHTML, [
-        /<h[1-6][^>]*>(.*?)<\/h[1-6]>/i,
-        /<title>(.*?)<\/title>/i,
-        /<div[^>]*class="[^"]*title[^"]*"[^>]*>(.*?)<\/div>/i
-      ]);
-      
-      const content = extractFromHTML(articleHTML, [
-        /<p[^>]*>(.*?)<\/p>/gi,
-        /<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/i
-      ]);
-      
-      const link = extractFromHTML(articleHTML, [
-        /<a[^>]*href="([^"]*)"[^>]*>/i
-      ]);
+// Extract all paragraphs with comprehensive filtering
+function extractAllParagraphsWithFiltering(html: string): string {
+  const allParagraphs: string[] = [];
+  const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pMatch;
+  
+  while ((pMatch = pRegex.exec(html)) !== null) {
+    const paragraph = cleanHTML(pMatch[1]).trim();
+    
+    // Enhanced quality filters
+    if (paragraph.length > 40 && 
+        !isNavigationText(paragraph) && 
+        !isAdvertisingText(paragraph) &&
+        !isSocialMediaText(paragraph) &&
+        !isMetadataText(paragraph) &&
+        hasSubstantialContent(paragraph)) {
+      allParagraphs.push(paragraph);
+    }
+  }
+  
+  // Return top paragraphs (limit to prevent memory issues)
+  return allParagraphs.slice(0, 15).join('\n\n');
+}
 
-      if (title && content) {
-        articles.push({
-          title: cleanHTML(title).trim(),
-          body: cleanHTML(content).trim(),
-          source_url: resolveURL(link || baseUrl, baseUrl),
-          published_at: new Date().toISOString(),
-          author: null,
-          summary: cleanHTML(content).substring(0, 200) + '...'
-        });
+// Readability-style content extraction
+function extractReadabilityContent(html: string): string {
+  // Look for divs with substantial text content
+  const contentDivs: Array<{content: string, score: number}> = [];
+  const divRegex = /<div[^>]*>([\s\S]*?)<\/div>/gi;
+  let divMatch;
+  
+  while ((divMatch = divRegex.exec(html)) !== null) {
+    const divContent = divMatch[1];
+    const textContent = cleanHTML(divContent).trim();
+    
+    if (textContent.length > 100) {
+      // Score based on content indicators
+      let score = 0;
+      
+      // Positive indicators
+      score += (textContent.match(/\./g) || []).length * 2; // Sentences
+      score += (textContent.match(/[A-Z][a-z]+/g) || []).length; // Proper words
+      score += textContent.length > 500 ? 10 : 0; // Length bonus
+      
+      // Negative indicators  
+      score -= (textContent.match(/click|subscribe|follow|share/gi) || []).length * 5;
+      score -= textContent.includes('cookie') ? 10 : 0;
+      
+      if (score > 10) {
+        contentDivs.push({content: textContent, score});
       }
     }
   }
   
+  // Return highest scoring content
+  if (contentDivs.length > 0) {
+    contentDivs.sort((a, b) => b.score - a.score);
+    return contentDivs[0].content;
+  }
+  
+  return '';
+}
+
+// Quality filter functions
+function isNavigationText(text: string): boolean {
+  const navPatterns = /^(home|about|contact|menu|search|login|register|subscribe|follow)$/i;
+  const navKeywords = /(click here|read more|continue reading|view all|show more|load more)/i;
+  return navPatterns.test(text.trim()) || navKeywords.test(text);
+}
+
+function isAdvertisingText(text: string): boolean {
+  const adKeywords = /(advertisement|sponsored|promoted|buy now|shop now|limited time|special offer)/i;
+  return adKeywords.test(text);
+}
+
+function isSocialMediaText(text: string): boolean {
+  const socialKeywords = /(share on|follow us|like us|tweet|facebook|instagram|linkedin)/i;
+  return socialKeywords.test(text);
+}
+
+function isMetadataText(text: string): boolean {
+  const metaKeywords = /(published|updated|author|tags|categories|comments|copyright)/i;
+  return text.length < 50 && metaKeywords.test(text);
+}
+
+function hasSubstantialContent(text: string): boolean {
+  // Check for substantial sentences (not just fragments)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  return sentences.length >= 1 && text.split(/\s+/).length >= 15;
+}
+
+// PHASE 2: Enhanced HTML article extraction with quality validation
+function extractArticlesFromHTML(html: string, baseUrl: string): any[] {
+  const articles: any[] = [];
+  
+  console.log(`🌐 Starting HTML article extraction from: ${baseUrl}`);
+  
+  // Enhanced article selectors with broader coverage
+  const articlePatterns = [
+    // High-priority news patterns
+    /<article[^>]*class="[^"]*(?:story|article|post|entry|news)[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
+    /<div[^>]*class="[^"]*(?:story|article|post|entry|news)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+    // Content sections
+    /<section[^>]*class="[^"]*(?:article|story|content)[^"]*"[^>]*>([\s\S]*?)<\/section>/gi,
+    // Generic patterns
+    /<article[^>]*>([\s\S]*?)<\/article>/gi,
+    /<div[^>]*class="[^"]*(?:content|text|body)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+  ];
+
+  for (const pattern of articlePatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null && articles.length < 8) {
+      const articleHTML = match[1];
+      
+      // Enhanced title extraction
+      const title = extractFromHTML(articleHTML, [
+        /<h[1-3][^>]*class="[^"]*(?:title|headline)[^"]*"[^>]*>(.*?)<\/h[1-3]>/i,
+        /<h[1-6][^>]*>(.*?)<\/h[1-6]>/i,
+        /<div[^>]*class="[^"]*title[^"]*"[^>]*>(.*?)<\/div>/i,
+        /<title>(.*?)<\/title>/i
+      ]);
+      
+      // Enhanced content extraction with paragraph focus
+      let content = '';
+      const contentSources = [
+        extractFromHTML(articleHTML, [/<div[^>]*class="[^"]*(?:content|text|body)[^"]*"[^>]*>(.*?)<\/div>/is]),
+        extractFromHTML(articleHTML, [/<p[^>]*>(.*?)<\/p>/gis])
+      ];
+      
+      // Use the longest content source
+      for (const source of contentSources) {
+        if (source && source.length > content.length) {
+          content = source;
+        }
+      }
+      
+      // Extract article URL if available
+      const link = extractFromHTML(articleHTML, [
+        /<a[^>]*href="([^"]*)"[^>]*>/i,
+        /<link[^>]*href="([^"]*)"[^>]*>/i
+      ]);
+
+      if (title && content) {
+        const cleanTitle = cleanHTML(title).trim();
+        const cleanContent = cleanHTML(content).trim();
+        const wordCount = cleanContent.split(/\s+/).length;
+        
+        // QUALITY VALIDATION: 50+ word minimum
+        if (wordCount >= 50 && cleanTitle.length > 10) {
+          console.log(`✅ HTML article extracted: "${cleanTitle}" (${wordCount} words)`);
+          
+          articles.push({
+            title: cleanTitle,
+            body: cleanContent,
+            source_url: resolveURL(link || baseUrl, baseUrl),
+            published_at: new Date().toISOString(),
+            author: null,
+            summary: cleanContent.substring(0, 200) + '...',
+            word_count: wordCount,
+            content_quality_score: Math.min(wordCount * 1.5, 100),
+            processing_status: 'extracted'
+          });
+        } else {
+          console.log(`⚠️ Skipping HTML article with insufficient content: ${wordCount} words`);
+        }
+      }
+    }
+  }
+  
+  console.log(`📊 HTML extraction completed: ${articles.length} articles found`);
   return articles;
 }
 
@@ -541,25 +736,84 @@ function extractFeedLinks(html: string, baseUrl: string): string[] {
   return [...new Set(feedLinks)]; // Remove duplicates
 }
 
-// Extract basic content as last resort
+// PHASE 2: Enhanced basic content extraction with quality standards
 function extractBasicContent(html: string, baseUrl: string): any[] {
-  // Very basic content extraction
-  const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-  const title = titleMatch ? cleanHTML(titleMatch[1]) : 'Untitled';
+  console.log(`🔧 Applying basic content extraction as last resort...`);
   
-  // Extract meta description
-  const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*?)["'][^>]*>/i);
-  const description = descMatch ? cleanHTML(descMatch[1]) : '';
+  // Enhanced title extraction
+  const titlePatterns = [
+    /<h1[^>]*>(.*?)<\/h1>/i,
+    /<title>(.*?)<\/title>/i,
+    /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i,
+    /<meta[^>]*name="title"[^>]*content="([^"]*)"[^>]*>/i
+  ];
   
-  if (title && description && title !== 'Untitled') {
+  let title = '';
+  for (const pattern of titlePatterns) {
+    const titleMatch = html.match(pattern);
+    if (titleMatch && titleMatch[1] && titleMatch[1].trim()) {
+      title = cleanHTML(titleMatch[1]).trim();
+      break;
+    }
+  }
+  
+  // Enhanced description extraction
+  const descriptionPatterns = [
+    /<meta[^>]*name=["']description["'][^>]*content=["']([^"']*?)["'][^>]*>/i,
+    /<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i,
+    /<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"[^>]*>/i
+  ];
+  
+  let description = '';
+  for (const pattern of descriptionPatterns) {
+    const descMatch = html.match(pattern);
+    if (descMatch && descMatch[1] && descMatch[1].trim()) {
+      description = cleanHTML(descMatch[1]).trim();
+      break;
+    }
+  }
+  
+  // Try to extract more content from page
+  if (!description || description.split(/\s+/).length < 20) {
+    console.log(`🔍 Description too short, trying paragraph extraction...`);
+    
+    const paragraphs: string[] = [];
+    const pRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+    let pMatch;
+    
+    while ((pMatch = pRegex.exec(html)) !== null && paragraphs.length < 5) {
+      const paragraph = cleanHTML(pMatch[1]).trim();
+      if (paragraph.length > 50 && 
+          !isNavigationText(paragraph) && 
+          !isAdvertisingText(paragraph)) {
+        paragraphs.push(paragraph);
+      }
+    }
+    
+    if (paragraphs.length > 0) {
+      description = paragraphs.join(' ').substring(0, 800);
+    }
+  }
+  
+  // QUALITY VALIDATION: Ensure minimum standards
+  const wordCount = description ? description.split(/\s+/).length : 0;
+  
+  if (title && description && title !== 'Untitled' && wordCount >= 50) {
+    console.log(`✅ Basic content extracted: "${title}" (${wordCount} words)`);
+    
     return [{
       title: title.trim(),
       body: description.trim(),
       source_url: baseUrl,
       published_at: new Date().toISOString(),
       author: null,
-      summary: description.substring(0, 200) + '...'
+      summary: description.substring(0, 200) + '...',
+      word_count: wordCount,
+      content_quality_score: Math.min(wordCount, 75), // Lower quality score for basic extraction
+      processing_status: 'extracted'
     }];
+  } else {
+    console.log(`❌ Basic extraction failed: insufficient content (${wordCount} words)`);
   }
   
   return [];
