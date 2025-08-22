@@ -1,6 +1,38 @@
 import { ContentExtractionResult } from './types.ts';
 
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Enhanced anti-detection user agents that rotate
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0 Safari/537.36'
+];
+
+// Government and protected site patterns
+const GOVERNMENT_SITE_PATTERNS = [
+  /\.gov\./,
+  /\.gov$/,
+  /\.gov\.uk$/,
+  /council\./,
+  /police\./,
+  /nhs\./
+];
+
+// Common government RSS feed paths to try
+const GOVERNMENT_RSS_PATTERNS = [
+  '/rss',
+  '/rss.xml',
+  '/feed',
+  '/feed.xml',
+  '/news.rss',
+  '/news/rss',
+  '/news/feed',
+  '/feeds/news.xml',
+  '/api/rss',
+  '/atom.xml'
+];
 
 // Site-specific configurations for known problematic sites
 const SITE_CONFIGS: Record<string, {
@@ -134,10 +166,13 @@ const EXCLUDE_URL_PATTERNS = [
 export class UniversalContentExtractor {
   private siteConfig: typeof SITE_CONFIGS['default'];
   private domain: string;
+  private isGovernmentSite: boolean;
+  private requestCount: number = 0;
 
   constructor(url: string) {
     this.domain = this.extractDomain(url);
     this.siteConfig = SITE_CONFIGS[this.domain] || SITE_CONFIGS['default'];
+    this.isGovernmentSite = this.detectGovernmentSite(url);
   }
 
   private extractDomain(url: string): string {
@@ -148,31 +183,104 @@ export class UniversalContentExtractor {
     }
   }
 
+  private detectGovernmentSite(url: string): boolean {
+    return GOVERNMENT_SITE_PATTERNS.some(pattern => pattern.test(url.toLowerCase()));
+  }
+
+  private getRotatingUserAgent(): string {
+    const index = this.requestCount % USER_AGENTS.length;
+    this.requestCount++;
+    return USER_AGENTS[index];
+  }
+
+  private async addIntelligentDelay(): Promise<void> {
+    // Add delays for government sites and after multiple requests
+    const baseDelay = this.isGovernmentSite ? 2000 : 1000; // 2s for gov sites, 1s for others
+    const extraDelay = Math.floor(this.requestCount / 3) * 500; // Additional delay every 3rd request
+    const randomJitter = Math.random() * 1000; // 0-1s random jitter
+    
+    const totalDelay = baseDelay + extraDelay + randomJitter;
+    
+    if (totalDelay > 1000) {
+      console.log(`⏳ Intelligent delay: ${Math.round(totalDelay)}ms (gov: ${this.isGovernmentSite}, requests: ${this.requestCount})`);
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
+    }
+  }
+
+  private getEnhancedHeaders(): Record<string, string> {
+    const userAgent = this.getRotatingUserAgent();
+    
+    // Enhanced headers that look more browser-like
+    const headers: Record<string, string> = {
+      'User-Agent': userAgent,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
+    };
+
+    // Add government-site specific headers
+    if (this.isGovernmentSite) {
+      headers['DNT'] = '1'; // Do Not Track for privacy compliance
+      headers['Sec-GPC'] = '1'; // Global Privacy Control
+      delete headers['Sec-Fetch-Site']; // Remove some tracking headers for gov sites
+    }
+
+    // Randomly add optional headers to vary fingerprint
+    if (Math.random() > 0.5) {
+      headers['Referer'] = 'https://www.google.com/';
+    }
+
+    return headers;
+  }
+
   async fetchWithRetry(url: string, maxRetries: number = 3): Promise<string> {
     let lastError: Error | null = null;
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Enhanced retry count for government sites
+    const enhancedMaxRetries = this.isGovernmentSite ? Math.max(maxRetries, 5) : maxRetries;
+    
+    for (let attempt = 1; attempt <= enhancedMaxRetries; attempt++) {
       try {
-        console.log(`🌐 Fetching ${url} (attempt ${attempt}/${maxRetries})`);
+        // Add intelligent delays between requests
+        if (attempt > 1) {
+          await this.addIntelligentDelay();
+        }
+        
+        console.log(`🌐 Fetching ${url} (attempt ${attempt}/${enhancedMaxRetries}) ${this.isGovernmentSite ? '[GOV SITE]' : ''}`);
         
         const fetchOptions: RequestInit = {
-          headers: {
-            'User-Agent': USER_AGENT,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-          },
-          signal: AbortSignal.timeout(20000) // 20 second timeout
+          headers: this.getEnhancedHeaders(),
+          signal: AbortSignal.timeout(30000) // Increased timeout for gov sites
         };
 
-        // Retry with different connection approach if HTTP/2 issues
+        // Enhanced retry logic for different error types
         if (attempt > 1 && lastError?.message.includes('http2')) {
           fetchOptions.headers = {
             ...fetchOptions.headers,
             'Connection': 'close'
           };
+        }
+        
+        // For 403 errors, try different approaches
+        if (attempt > 2 && lastError?.message.includes('403')) {
+          console.log('🔄 Trying enhanced anti-detection for 403 error...');
+          
+          // Remove potentially problematic headers
+          delete (fetchOptions.headers as any)['Sec-Fetch-Dest'];
+          delete (fetchOptions.headers as any)['Sec-Fetch-Mode'];
+          delete (fetchOptions.headers as any)['Sec-Fetch-Site'];
+          delete (fetchOptions.headers as any)['Sec-Fetch-User'];
+          
+          // Add more human-like headers
+          (fetchOptions.headers as any)['Referer'] = 'https://www.google.com/';
+          (fetchOptions.headers as any)['X-Forwarded-For'] = this.generateRandomIP();
         }
         
         const response = await fetch(url, fetchOptions);
@@ -189,15 +297,59 @@ export class UniversalContentExtractor {
         lastError = error as Error;
         console.log(`❌ Attempt ${attempt} failed: ${error.message}`);
         
-        if (attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000;
-          console.log(`⏳ Retrying in ${delay}ms...`);
+        if (attempt < enhancedMaxRetries) {
+          // Enhanced delay calculation
+          let delay = Math.pow(2, attempt) * 1000;
+          
+          // Longer delays for government sites and 403 errors
+          if (this.isGovernmentSite || error.message.includes('403')) {
+            delay = delay * 2 + (Math.random() * 3000); // 2x delay + 0-3s jitter
+          }
+          
+          console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
     
     throw lastError || new Error('Failed to fetch after all retries');
+  }
+
+  private generateRandomIP(): string {
+    // Generate a plausible IP address
+    const octets = Array.from({ length: 4 }, () => Math.floor(Math.random() * 255));
+    return octets.join('.');
+  }
+
+  // Enhanced method to try government RSS feed patterns
+  async tryGovernmentRSSFeeds(baseUrl: string): Promise<string[]> {
+    if (!this.isGovernmentSite) {
+      return [];
+    }
+
+    console.log('🏛️ Trying government RSS feed patterns...');
+    const validFeeds: string[] = [];
+
+    for (const pattern of GOVERNMENT_RSS_PATTERNS) {
+      try {
+        const feedUrl = new URL(pattern, baseUrl).href;
+        console.log(`🔗 Checking government RSS: ${feedUrl}`);
+        
+        await this.addIntelligentDelay(); // Rate limit RSS discovery
+        const feedContent = await this.fetchWithRetry(feedUrl, 2); // Fewer retries for discovery
+        
+        // Basic validation that it's an RSS/XML feed
+        if (feedContent.includes('<rss') || feedContent.includes('<feed') || feedContent.includes('<atom')) {
+          console.log(`✅ Found valid government RSS feed: ${feedUrl}`);
+          validFeeds.push(feedUrl);
+        }
+      } catch (error) {
+        // Silently continue - expected for many URLs
+        console.log(`⚠️ Government RSS pattern ${pattern} failed: ${error.message}`);
+      }
+    }
+
+    return validFeeds;
   }
 
   extractContentFromHTML(html: string, url: string): ContentExtractionResult {

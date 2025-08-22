@@ -27,8 +27,34 @@ export class EnhancedScrapingStrategies {
     
     try {
       const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
-      const rssContent = await this.extractor.fetchWithRetry(feedUrl);
-      return await this.parseRSSContent(rssContent, feedUrl);
+      
+      // First try the provided/base URL
+      try {
+        const rssContent = await this.extractor.fetchWithRetry(feedUrl);
+        return await this.parseRSSContent(rssContent, feedUrl);
+      } catch (primaryError) {
+        console.log(`❌ Primary RSS URL failed: ${primaryError.message}`);
+        
+        // For government sites, try alternative RSS patterns
+        const governmentFeeds = await this.extractor.tryGovernmentRSSFeeds(this.baseUrl);
+        
+        for (const govFeedUrl of governmentFeeds) {
+          try {
+            console.log(`🏛️ Trying government RSS feed: ${govFeedUrl}`);
+            const rssContent = await this.extractor.fetchWithRetry(govFeedUrl);
+            const result = await this.parseRSSContent(rssContent, govFeedUrl);
+            if (result.success && result.articles.length > 0) {
+              return { ...result, method: 'government_rss_discovery' };
+            }
+          } catch (govError) {
+            console.log(`⚠️ Government RSS feed ${govFeedUrl} failed: ${govError.message}`);
+          }
+        }
+        
+        // Re-throw the primary error if no government feeds worked
+        throw primaryError;
+      }
+      
     } catch (error) {
       console.log(`❌ RSS parsing failed: ${error.message}`);
       return {
