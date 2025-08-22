@@ -8,6 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Separator } from '@/components/ui/separator';
+import { ScrapingStatusMonitor } from './ScrapingStatusMonitor';
 import { 
   Plus, 
   Edit, 
@@ -195,7 +197,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
         description: `Scraping content from ${source.source_name}...`,
       });
 
-      const { data, error } = await supabase.functions.invoke('hybrid-scraper', {
+      const { data, error } = await supabase.functions.invoke('universal-scraper', {
         body: {
           feedUrl: source.feed_url,
           sourceId: source.id,
@@ -208,8 +210,8 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       if (data?.success) {
         let description = `Found ${data.articlesFound} articles using ${data.method}`;
         
-        if (data.articlesScraped > 0) {
-          description += `, stored ${data.articlesScraped} new articles`;
+        if (data.articlesStored > 0) {
+          description += `, stored ${data.articlesStored} new articles`;
         }
         
         if (data.duplicatesSkipped > 0) {
@@ -270,7 +272,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
       for (const source of activeSources) {
         try {
-          const { data, error } = await supabase.functions.invoke('hybrid-scraper', {
+          const { data, error } = await supabase.functions.invoke('universal-scraper', {
             body: {
               feedUrl: source.feed_url,
               sourceId: source.id,
@@ -282,7 +284,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
           if (data?.success) {
             totalArticlesFound += data.articlesFound || 0;
-            totalArticlesScraped += data.articlesScraped || 0;
+            totalArticlesScraped += data.articlesStored || 0;
           } else {
             failedSources++;
           }
@@ -342,30 +344,34 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header & Add Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Content Sources</h2>
-          <p className="text-muted-foreground">
-            Universal web scraping - works with any website or RSS feed
-          </p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Content Sources</h2>
+            <p className="text-muted-foreground">
+              Enhanced universal web scraping with AI-powered content extraction
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleScrapeAll}
+              disabled={loading || sources.filter(s => s.is_active).length === 0}
+              variant="outline"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Scrape All Active
+            </Button>
+            <Button onClick={() => setShowAddForm(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Source
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={handleScrapeAll}
-            disabled={loading || sources.filter(s => s.is_active).length === 0}
-            variant="outline"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Scrape All Active
-          </Button>
-          <Button onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Source
-          </Button>
-        </div>
-      </div>
+
+        {/* Enhanced Status Monitoring */}
+        <ScrapingStatusMonitor />
+
+        <Separator />
 
       {/* Add Source Form */}
       {showAddForm && (

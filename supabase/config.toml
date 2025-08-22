@@ -1,52 +1,78 @@
 project_id = "fpoywkjgdapgjtdeooak"
 
-[functions.test-image-generator]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+image_transformation = { enabled = true }
+
+[auth]
+enabled = true
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+# New Enhanced Universal Scraper
+[functions.universal-scraper]
 verify_jwt = false
 
-[functions.job-processor]
-verify_jwt = false
-
-[functions.health-check]
-verify_jwt = false
-
-[functions.rss-scraper]
-verify_jwt = false
-
+# Core Content Processing
 [functions.content-generator]
 verify_jwt = false
 
 [functions.image-generator]
 verify_jwt = false
 
-[functions.universal-scraper]
+[functions.content-quality-analyzer]
 verify_jwt = false
 
-[functions.hybrid-scraper]
+[functions.duplicate-detector]
 verify_jwt = false
 
+# Queue and Job Processing
+[functions.queue-processor]
+verify_jwt = false
+
+[functions.job-processor]
+verify_jwt = false
+
+# Automation and Monitoring
 [functions.automated-scheduler]
 verify_jwt = false
 
 [functions.scrape-monitor]
 verify_jwt = false
 
-[functions.duplicate-detector]
-verify_jwt = false
-
-[functions.enhanced-scraper]
-verify_jwt = false
-
-[functions.simple-scraper]
-verify_jwt = false
-
-[functions.test-scraper]
-verify_jwt = false
-
-[functions.scraping-test]
-verify_jwt = false
-
-[functions.queue-processor]
+[functions.health-check]
 verify_jwt = false
 
 [functions.reset-stuck-processing]
+verify_jwt = false
+
+# Testing and Analytics
+[functions.test-image-generator]
 verify_jwt = false
