@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
 
@@ -208,23 +208,42 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       if (error) throw error;
 
       if (data?.success) {
-        let description = `Found ${data.articlesFound} articles using ${data.method}`;
+        const totalFound = data.articlesFound || 0;
+        const stored = data.articlesStored || 0;
+        const duplicates = data.duplicatesSkipped || 0;
+        const filtered = data.filteredForRelevance || 0;
         
-        if (data.articlesStored > 0) {
-          description += `, stored ${data.articlesStored} new articles`;
+        let description = `Found ${totalFound} articles using ${data.method}`;
+        
+        if (stored > 0) {
+          description += `, stored ${stored} new articles`;
+        } else {
+          description += `, stored 0 articles`;
         }
         
-        if (data.duplicatesSkipped > 0) {
-          description += `, skipped ${data.duplicatesSkipped} duplicates`;
+        if (duplicates > 0) {
+          description += `, skipped ${duplicates} duplicates`;
         }
         
-        if (data.filteredForRelevance > 0) {
-          description += `, filtered ${data.filteredForRelevance} for low relevance`;
+        if (filtered > 0) {
+          description += `, filtered ${filtered} for low relevance`;
+        }
+        
+        // Calculate any remaining articles that were processed but not accounted for
+        const unaccountedFor = totalFound - stored - duplicates - filtered;
+        if (unaccountedFor > 0) {
+          description += `, ${unaccountedFor} failed quality/content checks`;
+        }
+        
+        // If no articles were stored, make that clear
+        if (stored === 0 && totalFound > 0) {
+          description += '. No articles met criteria for pipeline.';
         }
         
         toast({
-          title: 'Scraping Complete',
+          title: stored > 0 ? 'Scraping Complete' : 'Scraping Complete - No Articles Stored',
           description,
+          variant: stored > 0 ? 'default' : 'destructive'
         });
         
         if (data.errors && data.errors.length > 0) {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, RefreshCw, Filter, Eye, Settings } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { ArticleImport } from './ArticleImport';
 import { SourceManager } from './SourceManager';
 // import { AdvancedSearch } from './AdvancedSearch';
