@@ -56,10 +56,23 @@ export async function fetchWithRetry(url: string, maxRetries: number = 3): Promi
     try {
       console.log(`🌐 Fetching ${url} (attempt ${attempt}/${maxRetries})`);
       
-      const response = await fetch(url, {
+      // For HTTP/2 issues, try different approaches
+      let fetchOptions: RequestInit = {
         headers: DEFAULT_HEADERS,
         signal: AbortSignal.timeout(15000) // 15 second timeout
-      });
+      };
+
+      // If this is a retry due to HTTP/2 errors, try with HTTP/1.1 headers
+      if (attempt > 1 && lastError?.message.includes('http2')) {
+        console.log(`🔄 HTTP/2 error detected, forcing HTTP/1.1 for attempt ${attempt}`);
+        fetchOptions.headers = {
+          ...DEFAULT_HEADERS,
+          'Connection': 'close', // Force HTTP/1.1
+          'HTTP2-Settings': '', // Disable HTTP/2
+        };
+      }
+      
+      const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -72,6 +85,11 @@ export async function fetchWithRetry(url: string, maxRetries: number = 3): Promi
     } catch (error) {
       lastError = error as Error;
       console.log(`❌ Attempt ${attempt} failed: ${error.message}`);
+      
+      // If it's an HTTP/2 error, try alternative URL schemes on next attempt
+      if (error.message.includes('http2') && attempt < maxRetries) {
+        console.log(`🔄 HTTP/2 protocol error detected, will retry with different headers`);
+      }
       
       if (attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000; // Exponential backoff

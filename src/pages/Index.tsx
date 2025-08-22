@@ -16,7 +16,7 @@ import { ApprovedQueue } from '@/components/ApprovedQueue';
 import { DuplicateDetection } from "@/components/DuplicateDetection";
 import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 import IdeogramTestSuite from '@/components/IdeogramTestSuite';
-import ArticleApprovalInterface from '@/components/ArticleApprovalInterface';
+
 // import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
@@ -24,7 +24,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram' | 'testing' | 'approval'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram' | 'testing'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -183,14 +183,6 @@ const Index = () => {
               <FileText className="w-4 h-4" />
               Dashboard
             </Button>
-            <Button
-              variant={activeTab === 'approval' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('approval')}
-              className="flex items-center gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              Article Approval
-            </Button>
             {/* <Button
               variant={activeTab === 'analytics' ? 'default' : 'outline'}
               onClick={() => setActiveTab('analytics')}
@@ -205,7 +197,7 @@ const Index = () => {
               className="flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              Article Processing
+              Pipeline
             </Button>
             <Button
               variant={activeTab === 'approved' ? 'default' : 'outline'}
@@ -330,101 +322,9 @@ const Index = () => {
               </Card>
             </div>
 
-            {/* New Articles */}
-            {articles.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      New Articles ({articles.length})
-                    </span>
-                    <p className="text-sm text-muted-foreground">Newly scraped content awaiting validation</p>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {articles.slice(0, 15).map((article: any) => {
-                      const metadata = article.import_metadata as any;
-                      const relevanceScore = metadata?.eastbourne_relevance_score || 0;
-                      return (
-                        <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium text-sm">{article.title}</h4>
-                              {relevanceScore > 15 && (
-                                <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-                                  High Relevance
-                                </Badge>
-                              )}
-                              {relevanceScore >= 5 && relevanceScore <= 15 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Relevant
-                                </Badge>
-                              )}
-                              {relevanceScore < 5 && (
-                                <Badge variant="outline" className="text-xs text-orange-600">
-                                  Low Relevance
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              {article.author && `${article.author} • `}
-                              {new Date(article.created_at).toLocaleDateString()} • 
-                              {article.word_count || 0} words
-                              {relevanceScore > 0 && ` • Relevance: ${relevanceScore}`}
-                            </p>
-                            {article.summary && (
-                              <p className="text-xs text-muted-foreground line-clamp-2">
-                                {article.summary}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <Badge variant="outline" className="text-xs">
-                              {article.category || 'News'}
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => window.open(article.source_url, '_blank')}
-                              className="text-xs"
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Read
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deleteArticle(article.id)}
-                              className="text-xs text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Discard
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {articles.length > 15 && (
-                      <div className="text-center pt-2">
-                        <p className="text-xs text-muted-foreground">
-                          Showing 15 of {articles.length} articles
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
 
-        {activeTab === 'approval' && (
-          <div className="space-y-6">
-            <ArticleApprovalInterface />
-          </div>
-        )}
 
         {activeTab === 'testing' && isAdmin && (
           <div className="space-y-6">
