@@ -20,7 +20,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'ideogram'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'content' | 'slides' | 'approved' | 'ideogram' | 'admin'>('content');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -154,6 +154,17 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">News → Social Slides</h1>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('admin')}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground">
               {user?.email}
               {isSuperAdmin && <Badge variant="destructive" className="ml-2">SuperAdmin</Badge>}
@@ -172,21 +183,13 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-6 py-2">
           <div className="flex gap-2">
             <Button
-              variant={activeTab === 'dashboard' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('dashboard')}
+              variant={activeTab === 'content' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('content')}
               className="flex items-center gap-2"
             >
-              <FileText className="w-4 h-4" />
-              Dashboard
+              <Settings className="w-4 h-4" />
+              Get Stories
             </Button>
-            {/* <Button
-              variant={activeTab === 'analytics' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('analytics')}
-              className="flex items-center gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </Button> */}
             <Button
               variant={activeTab === 'slides' ? 'default' : 'outline'}
               onClick={() => setActiveTab('slides')}
@@ -204,14 +207,6 @@ const Index = () => {
               Approved Queue
             </Button>
             <Button
-              variant={activeTab === 'content' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('content')}
-              className="flex items-center gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Content
-            </Button>
-            <Button
               variant={activeTab === 'ideogram' ? 'default' : 'outline'}
               onClick={() => setActiveTab('ideogram')}
               className="flex items-center gap-2"
@@ -219,85 +214,12 @@ const Index = () => {
               <TestTube className="w-4 h-4" />
               AI Image Test
             </Button>
-            {isAdmin && (
-              <>
-                <Button
-                  variant={activeTab === 'admin' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('admin')}
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Admin
-                </Button>
-              </>
-            )}
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Active Sources</p>
-                      <p className="text-2xl font-bold">{stats.sources.count}</p>
-                    </div>
-                    {stats.sources.status === 'success' ? (
-                      <CheckCircle className="w-8 h-8 text-green-500" />
-                    ) : (
-                      <AlertCircle className="w-8 h-8 text-red-500" />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Articles Scraped</p>
-                      <p className="text-2xl font-bold">{stats.articles.count}</p>
-                    </div>
-                    <FileText className="w-8 h-8 text-primary/60" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Slides Generated</p>
-                      <p className="text-2xl font-bold">{stats.slides.count}</p>
-                    </div>
-                    <Sparkles className="w-8 h-8 text-primary/60" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">System Status</p>
-                      <p className="text-2xl font-bold text-green-600">Healthy</p>
-                    </div>
-                    <CheckCircle className="w-8 h-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-          </div>
-        )}
-
-
         {activeTab === 'admin' && isAdmin && (
           <div className="space-y-6">
             <AdminPanel />
