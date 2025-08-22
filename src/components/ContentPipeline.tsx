@@ -112,6 +112,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [loadingStories, setLoadingStories] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [isResettingStalled, setIsResettingStalled] = useState(false);
+  const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
+  const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
 
   // Edit slide state
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
@@ -616,13 +618,19 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   };
 
   const handleApproveStory = async (storyId: string) => {
+    if (processingApproval.has(storyId)) {
+      console.log('⚠️ Story approval already in progress:', storyId);
+      return;
+    }
+
     console.log('🚀 Approving story:', storyId);
+    setProcessingApproval(prev => new Set(prev).add(storyId));
     
     try {
       // First check current status
       const { data: currentStory, error: fetchError } = await supabase
         .from('stories')
-        .select('status, title')
+        .select('status, title, article_id')
         .eq('id', storyId)
         .single();
 
@@ -630,11 +638,20 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       
       console.log('📋 Current story status:', currentStory.status);
 
+      if (currentStory.status === 'ready') {
+        console.log('✅ Story already approved');
+        toast({
+          title: 'Already Approved',
+          description: 'This story is already approved',
+        });
+        return;
+      }
+
       // Check for existing queue entries to prevent duplicates
       const { data: existingQueue, error: queueCheckError } = await supabase
         .from('content_generation_queue')
         .select('id, status')
-        .eq('article_id', (await supabase.from('stories').select('article_id').eq('id', storyId).single()).data?.article_id)
+        .eq('article_id', currentStory.article_id)
         .neq('status', 'completed');
 
       if (queueCheckError) {
@@ -642,8 +659,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       } else if (existingQueue && existingQueue.length > 0) {
         console.log('⚠️ Found existing queue entries:', existingQueue);
         toast({
-          title: 'Warning',
-          description: 'Story has pending generation jobs. Please wait for completion.',
+          title: 'Processing In Progress',
+          description: 'This story has pending generation jobs. Please wait for completion.',
           variant: 'destructive',
         });
         return;
@@ -685,7 +702,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       });
 
       // Only refresh stories, don't call loadPendingArticles to prevent cascade
-      loadStories();
+      await loadStories();
       
     } catch (error: any) {
       console.error('❌ Failed to approve story:', error);
@@ -693,6 +710,12 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         title: 'Error',
         description: `Failed to approve story: ${error.message || 'Unknown error'}`,
         variant: 'destructive',
+      });
+    } finally {
+      setProcessingApproval(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
       });
     }
   };
@@ -1323,16 +1346,26 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             variant="outline"
                             size="sm"
                             onClick={() => handleRejectStory(story.id)}
+                            disabled={processingRejection.has(story.id) || processingApproval.has(story.id)}
                           >
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Reject
+                            {processingRejection.has(story.id) ? (
+                              <Clock className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <XCircle className="w-4 h-4 mr-1" />
+                            )}
+                            {processingRejection.has(story.id) ? 'Rejecting...' : 'Reject'}
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleApproveStory(story.id)}
+                            disabled={processingApproval.has(story.id) || processingRejection.has(story.id)}
                           >
-                            <CheckCircle2 className="w-4 h-4 mr-1" />
-                            Approve
+                            {processingApproval.has(story.id) ? (
+                              <Clock className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                            )}
+                            {processingApproval.has(story.id) ? 'Approving...' : 'Approve'}
                           </Button>
                         </div>
                       </Card>
