@@ -461,7 +461,9 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
       {/* Sources List */}
       <div className="grid gap-4">
-        {sources.map((source) => (
+        {sources
+          .sort((a, b) => a.source_name.localeCompare(b.source_name))
+          .map((source) => (
           <Card key={source.id}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">

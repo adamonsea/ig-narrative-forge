@@ -140,9 +140,12 @@ serve(async (req) => {
     // Generate slides using OpenAI with publication name and temporal context
     console.log(`🎯 Generating slides with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
     let slides;
+    let slideGenerationCost = 0;
     try {
-      slides = await generateSlides(article, openAIApiKey, slideType, publicationName);
-      console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
+      const slideResult = await generateSlides(article, openAIApiKey, slideType, publicationName);
+      slides = slideResult.slides;
+      slideGenerationCost = slideResult.estimatedCost || 0;
+      console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}, cost: $${slideGenerationCost.toFixed(4)}`);
       
       if (!slides || slides.length === 0) {
         console.error('❌ No slides generated for article:', article.title);
@@ -193,8 +196,11 @@ serve(async (req) => {
     console.log(`✅ Generated ${slides.length} slides for article: ${article.title}`);
 
     // Generate social media post copy with hashtags
-    const postCopy = await generatePostCopy(article, publicationName, openAIApiKey);
-    console.log('Generated post copy:', postCopy);
+    const postResult = await generatePostCopy(article, publicationName, openAIApiKey);
+    console.log('Generated post copy:', postResult.postCopy);
+    
+    const totalApiCost = slideGenerationCost + (postResult.estimatedCost || 0);
+    console.log(`💰 Total API cost for story generation: $${totalApiCost.toFixed(4)}`);
 
     // Delete any existing slides and posts for this story
     if (existingStory) {
@@ -282,14 +288,30 @@ serve(async (req) => {
       console.log('Article processing status updated to processed');
     }
 
+    // Track API usage for both slide generation and post copy
+    try {
+      await supabase
+        .from('api_usage')
+        .insert({
+          service_name: 'OpenAI',
+          operation: 'content-generation',
+          tokens_used: Math.round(totalApiCost * 50000), // Estimate tokens from cost
+          cost_usd: totalApiCost,
+          region: article.region || 'Eastbourne'
+        });
+      console.log(`💰 Logged API usage: $${totalApiCost.toFixed(4)}`);
+    } catch (apiLogError) {
+      console.error('Failed to log API usage:', apiLogError);
+    }
+
     // Create a post record with the generated content
     const { error: postError } = await supabase
       .from('posts')
       .insert({
         story_id: story.id,
         platform: 'instagram', // Default to Instagram
-        caption: postCopy.caption,
-        hashtags: postCopy.hashtags,
+        caption: postResult.postCopy.caption,
+        hashtags: postResult.postCopy.hashtags,
         source_attribution: sourceAttribution,
         status: 'draft'
       });
@@ -501,7 +523,7 @@ function calculateTemporalContext(publishedAt: string): { [key: string]: string 
   };
 }
 
-async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<SlideContent[]> {
+async function generateSlides(article: Article, openAIApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<{ slides: SlideContent[], estimatedCost: number }> {
   // Optimized single prompt template with variables
   const slideConfigs = {
     short: { count: 4, style: 'conversational', wordLimits: '15/25/35/40' },
@@ -635,6 +657,11 @@ Transform this from forgettable news into MUST-READ content that people will act
   const data = await response.json();
   console.log('OpenAI API response data:', JSON.stringify(data, null, 2));
   
+  // Calculate estimated cost based on token usage
+  const inputTokens = data.usage?.prompt_tokens || 1000; // Fallback estimate
+  const outputTokens = data.usage?.completion_tokens || 500; // Fallback estimate
+  const estimatedCost = (inputTokens * 0.00001) + (outputTokens * 0.00003); // GPT-4.1 pricing
+  
   let content = data.choices[0].message.content;
   console.log('Raw OpenAI response content:', content);
   
@@ -712,7 +739,7 @@ Transform this from forgettable news into MUST-READ content that people will act
       }
     }
     
-    return parsed.slides;
+    return { slides: parsed.slides, estimatedCost };
   } catch (parseError) {
     console.error('JSON Parse error:', parseError);
     console.error('Raw OpenAI response content:', content);
@@ -841,7 +868,7 @@ async function extractPublicationName(sourceUrl: string, supabase: any, articleI
 }
 
 // Optimized function to generate social media post copy
-async function generatePostCopy(article: Article, publicationName: string, openAIApiKey: string) {
+async function generatePostCopy(article: Article, publicationName: string, openAIApiKey: string): Promise<{ postCopy: { caption: string, hashtags: string[] }, estimatedCost: number }> {
   const temporalContext = calculateTemporalContext(article.published_at);
   
   const systemPrompt = `Create Instagram caption for news carousel. Include hook, summary, attribution, hashtags (8-15). Under 2000 chars. Return JSON: {"caption": "text", "hashtags": ["tag1"]}`;
@@ -879,15 +906,26 @@ Replace relative dates with absolute dates in brackets.`;
     const data = await response.json();
     const parsedResponse = JSON.parse(data.choices[0].message.content);
     
+    // Calculate estimated cost for gpt-4o-mini
+    const inputTokens = data.usage?.prompt_tokens || 300; // Fallback estimate
+    const outputTokens = data.usage?.completion_tokens || 200; // Fallback estimate
+    const estimatedCost = (inputTokens * 0.000150 / 1000) + (outputTokens * 0.000600 / 1000); // GPT-4o-mini pricing
+    
     return {
-      caption: parsedResponse.caption,
-      hashtags: parsedResponse.hashtags || []
+      postCopy: {
+        caption: parsedResponse.caption,
+        hashtags: parsedResponse.hashtags || []
+      },
+      estimatedCost
     };
   } catch (error) {
     console.error('Error generating post copy:', error);
     return {
-      caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
-      hashtags: ['LocalNews', 'Sussex', 'Community', 'News']
+      postCopy: {
+        caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
+        hashtags: ['LocalNews', 'Sussex', 'Community', 'News']
+      },
+      estimatedCost: 0
     };
   }
 }

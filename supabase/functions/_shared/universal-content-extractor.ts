@@ -48,6 +48,33 @@ const SITE_CONFIGS: Record<string, {
       '.comments-area'
     ]
   },
+  'eastsussex.news': {
+    contentSelectors: [
+      'div[class*="entry-content"]',
+      'div[class*="post-content"]', 
+      '.wp-block-post-content',
+      '.entry-wrapper .content',
+      'article .content-area',
+      'main article p',
+      '.post-entry',
+      'article'
+    ],
+    titleSelectors: ['.entry-title', '.post-title', 'h1.title', 'article h1', 'h1'],
+    authorSelectors: ['.author-name', '.byline', '.post-author', '.entry-meta .author'],
+    excludeSelectors: [
+      '.sidebar',
+      '.widget',
+      '.related-posts',
+      '.comments',
+      '.social-share',
+      '.advertisement',
+      '.wp-block-navigation',
+      'nav',
+      'footer',
+      'header',
+      '.entry-meta'
+    ]
+  },
   // Generic news site fallbacks
   'default': {
     contentSelectors: [

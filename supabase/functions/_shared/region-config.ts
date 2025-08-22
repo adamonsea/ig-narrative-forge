@@ -53,12 +53,29 @@ export function calculateRegionalRelevance(
   ).length;
   score += orgMatches * 12;
 
-  // Source type bonus
+  // Negative scoring for articles clearly about other areas (tighten filtering)
+  const negativeTerms = ['brighton', 'hastings', 'lewes', 'crowborough', 'uckfield', 'battle', 'rye'];
+  const negativeMatches = negativeTerms.filter(term => 
+    text.includes(term) && !text.includes(`${term} to eastbourne`) && !text.includes(`eastbourne to ${term}`)
+  ).length;
+  score -= negativeMatches * 8; // Penalty for other Sussex areas when targeting Eastbourne
+
+  // Enhanced filtering for BBC and national sources - give them baseline UK relevance
+  if (sourceType === 'national') {
+    const ukKeywords = ['uk', 'britain', 'british', 'england', 'sussex', 'south east'];
+    const ukMatches = ukKeywords.filter(keyword => text.includes(keyword)).length;
+    if (ukMatches > 0) {
+      score += 30; // Baseline UK relevance for national sources
+    }
+  }
+
+  // Source type bonus/penalty
   const sourceMultiplier = {
     'hyperlocal': 1.5,
     'regional': 1.2,
     'national': 1.0
   }[sourceType] || 1.0;
 
-  return Math.round(score * sourceMultiplier);
+  // Ensure minimum score isn't negative
+  return Math.max(0, Math.round(score * sourceMultiplier));
 }
