@@ -48,6 +48,7 @@ serve(async (req) => {
     const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN');
     const huggingfaceApiKey = Deno.env.get('HUGGINGFACE_API_KEY');
     const deepinfraApiKey = Deno.env.get('DEEPINFRA_API_KEY');
+    const nebiusApiKey = Deno.env.get('NEBIUS_API_KEY');
     
      console.log('Environment check:', {
        supabaseUrl: !!supabaseUrl,
@@ -56,8 +57,9 @@ serve(async (req) => {
        ideogramApiKey: !!ideogramApiKey,
        falApiKey: !!falApiKey,
        replicateApiToken: !!replicateApiToken,
-      huggingfaceApiKey: !!huggingfaceApiKey,
-      deepinfraApiKey: !!deepinfraApiKey
+       huggingfaceApiKey: !!huggingfaceApiKey,
+       deepinfraApiKey: !!deepinfraApiKey,
+       nebiusApiKey: !!nebiusApiKey
      });
     
     if (!supabaseUrl || !supabaseKey) {
@@ -721,8 +723,127 @@ serve(async (req) => {
          throw new Error('No image data received from DeepInfra');
        }
        
-       // Estimate cost (DeepInfra SDXL pricing)
-       cost = 0.025;
+        // Estimate cost (DeepInfra SDXL pricing)
+        cost = 0.025;
+        generationTime = Date.now() - startTime;
+
+     } else if (apiProvider === 'nebius') {
+       if (!nebiusApiKey) {
+         throw new Error('Nebius API key not configured');
+       }
+
+       // Sanitize prompt to avoid content policy violations
+       const sanitizedPrompt = prompt
+         .replace(/terrifying|scary|frightening|fear|panic|drama|crisis|tragedy/gi, 'news story')
+         .replace(/death|died|killed|murder|violence|attack/gi, 'incident')
+         .replace(/disaster|catastrophe|horror|nightmare/gi, 'event');
+
+       // Enhanced prompt for text-based slide with ultra-clear text specifications
+       const slideContent = slide?.content || sanitizedPrompt;
+       const isTitle = slide?.slide_number === 1;
+       const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
+       
+       const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
+
+       console.log(`Testing Nebius AI API for slide ${slideId}`);
+
+       const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/text-to-image/generation', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${nebiusApiKey}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           model: 'flux-schnell', // Ultra-cheap and fast
+           prompt: enhancedPrompt,
+           width: 1024,
+           height: 1024,
+           steps: 4,
+           guidance_scale: 3.5,
+           seed: Math.floor(Math.random() * 1000000),
+           output_format: 'webp'
+         }),
+       });
+
+       console.log('Nebius response status:', nebiusResponse.status);
+
+       if (!nebiusResponse.ok) {
+         const errorData = await nebiusResponse.text();
+         console.error('Nebius AI API error:', errorData);
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'nebius',
+           success: false,
+           error_message: `Nebius API error: ${nebiusResponse.status} - ${errorData}`,
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error(`Nebius generation failed: ${nebiusResponse.status} - ${errorData}`);
+       }
+
+       const nebiusData = await nebiusResponse.json();
+       console.log('Nebius response structure:', {
+         hasImages: !!nebiusData.images,
+         imagesLength: nebiusData.images?.length,
+         keys: Object.keys(nebiusData)
+       });
+
+       if (!nebiusData.images || !nebiusData.images[0]) {
+         console.error('No image data in Nebius response:', JSON.stringify(nebiusData, null, 2));
+         
+         // Log test failure to database
+         await supabase.from('image_generation_tests').insert({
+           test_id: testId || null,
+           slide_id: slideId || null,
+           story_id: slide?.story_id || null,
+           api_provider: 'nebius',
+           success: false,
+           error_message: 'No image data received from Nebius AI',
+           generation_time_ms: Date.now() - startTime,
+           estimated_cost: 0.0013,
+           style_reference_used: !!styleReferenceUrl
+         });
+         
+         throw new Error('No image data received from Nebius AI');
+       }
+
+       // Extract base64 or URL from response
+       const imageResult = nebiusData.images[0];
+       
+       if (imageResult.b64_json) {
+         // Base64 response
+         imageData = imageResult.b64_json;
+       } else if (imageResult.url) {
+         // URL response - download and convert to base64
+         const imageResponse = await fetch(imageResult.url);
+         if (!imageResponse.ok) {
+           throw new Error(`Failed to download image from Nebius: ${imageResponse.status}`);
+         }
+         
+         const imageBuffer = await imageResponse.arrayBuffer();
+         const uint8Array = new Uint8Array(imageBuffer);
+         
+         let binary = '';
+         const chunkSize = 8192;
+         for (let i = 0; i < uint8Array.length; i += chunkSize) {
+           const chunk = uint8Array.subarray(i, i + chunkSize);
+           binary += String.fromCharCode.apply(null, Array.from(chunk));
+         }
+         imageData = btoa(binary);
+       } else {
+         throw new Error('No valid image format received from Nebius AI');
+       }
+       
+       console.log(`Generated image with Nebius AI Flux-Schnell`);
+       
+       // Ultra-cheap cost
+       cost = 0.0013;
        generationTime = Date.now() - startTime;
 
      } else {
