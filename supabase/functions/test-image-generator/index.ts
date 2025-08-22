@@ -829,87 +829,80 @@ serve(async (req) => {
           console.log('Could not fetch models list:', modelsError.message);
         }
 
-        // Try multiple possible model identifiers based on common patterns
-        const possibleModels = [
-          'flux-1-schnell',
-          'flux_1_schnell', 
-          'FLUX.1-schnell',
-          'flux.1-schnell',
-          'black-forest-labs/FLUX.1-schnell',
-          'black-forest-labs/flux-1-schnell',
-          'flux-schnell',
-          'FLUX-schnell'
-        ];
+        // Call the dedicated Nebius image generator function
+        console.log('Routing to Nebius image generator function');
         
-        let imageData = null;
-        let workingModel = null;
-        
-        for (const modelId of possibleModels) {
-          console.log(`Trying model identifier: ${modelId}`);
-          
-          try {
-            const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${nebiusApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: modelId,
-                prompt: enhancedPrompt,
-                n: 1,
-                size: "1024x1024",
-                response_format: "b64_json"
-              }),
-            });
-
-            console.log(`Model ${modelId} response status:`, nebiusResponse.status);
-
-            if (nebiusResponse.ok) {
-              const nebiusData = await nebiusResponse.json();
-              console.log(`SUCCESS with model: ${modelId}`);
-              console.log('Response structure:', {
-                hasData: !!nebiusData.data,
-                dataLength: nebiusData.data?.length,
-                keys: Object.keys(nebiusData)
-              });
-
-              if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].b64_json) {
-                imageData = nebiusData.data[0].b64_json;
-                workingModel = modelId;
-                break;
-              }
-            } else {
-              const errorText = await nebiusResponse.text();
-              console.log(`Model ${modelId} failed:`, nebiusResponse.status, errorText);
-            }
-          } catch (modelError) {
-            console.log(`Error testing model ${modelId}:`, modelError.message);
-            continue;
+        const { data: nebiusData, error: nebiusError } = await supabase.functions.invoke('nebius-image-generator', {
+          body: {
+            slideId,
+            prompt: enhancedPrompt,
+            model: 'flux-schnell',
+            stylePreset
           }
-        }
+        });
         
-        if (!imageData || !workingModel) {
-          // Log final failure to database
+        if (nebiusError) {
+          console.error('Nebius function error:', nebiusError);
+          
           await supabase.from('image_generation_tests').insert({
             test_id: testId || null,
             slide_id: slideId || null,
             story_id: slide?.story_id || null,
             api_provider: 'nebius',
             success: false,
-            error_message: 'None of the Nebius model identifiers worked',
+            error_message: `Nebius function error: ${nebiusError.message}`,
             generation_time_ms: Date.now() - startTime,
             estimated_cost: 0,
             style_reference_used: !!styleReferenceUrl
           });
-          throw new Error('None of the Nebius model identifiers worked');
+          
+          throw new Error(`Nebius generation failed: ${nebiusError.message}`);
         }
-
-        console.log(`Generated image with Nebius AI using working model: ${workingModel}`);
         
-        // Ultra-cheap cost
-        cost = 0.0013;
-        generationTime = Date.now() - startTime;
+        if (!nebiusData?.success) {
+          await supabase.from('image_generation_tests').insert({
+            test_id: testId || null,
+            slide_id: slideId || null,
+            story_id: slide?.story_id || null,
+            api_provider: 'nebius',
+            success: false,
+            error_message: `Nebius generation failed: ${nebiusData?.error || 'Unknown error'}`,
+            generation_time_ms: Date.now() - startTime,
+            estimated_cost: 0,
+            style_reference_used: !!styleReferenceUrl
+          });
+          
+          throw new Error(`Nebius generation failed: ${nebiusData?.error || 'Unknown error'}`);
+        }
+        
+        console.log('Nebius generation successful');
+        
+        // Log success to database
+        await supabase.from('image_generation_tests').insert({
+          test_id: testId,
+          slide_id: slideId,
+          story_id: slide?.story_id,
+          api_provider: 'nebius',
+          generation_time_ms: nebiusData.generationTime || 5000,
+          estimated_cost: nebiusData.cost || 0.0013,
+          style_reference_used: !!styleReferenceUrl,
+          success: true,
+          visual_id: nebiusData.visualId
+        });
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            visualId: nebiusData.visualId,
+            imageData: nebiusData.imageData,
+            altText: nebiusData.altText,
+            apiProvider: 'nebius',
+            estimatedCost: nebiusData.cost,
+            generationTimeMs: nebiusData.generationTime,
+            testId: testId
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
 
      } else {
       // OpenAI generation (existing logic)
@@ -932,23 +925,24 @@ serve(async (req) => {
 
       console.log(`Testing OpenAI GPT-Image-1 API for slide ${slideId}`);
 
-      const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      const openAIResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${openAIApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1', // Use gpt-image-1 for better quality
+          model: 'gpt-image-1',
           prompt: enhancedPrompt,
+          n: 1,
           size: '1024x1024',
           quality: 'high',
           output_format: 'png'
         }),
       });
 
-      if (!imageResponse.ok) {
-        const errorData = await imageResponse.text();
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.text();
         console.error('OpenAI Image API error:', errorData);
         
         // Log test failure to database
@@ -958,16 +952,16 @@ serve(async (req) => {
           story_id: slide?.story_id || null,
           api_provider: 'openai',
           success: false,
-          error_message: `OpenAI API error: ${imageResponse.status} - ${errorData}`,
+          error_message: `OpenAI API error: ${openAIResponse.status} - ${errorData}`,
           generation_time_ms: Date.now() - startTime,
           estimated_cost: 0,
           style_reference_used: !!styleReferenceUrl
         });
         
-        throw new Error(`OpenAI image generation failed: ${imageResponse.status}`);
+        throw new Error(`OpenAI image generation failed: ${openAIResponse.status}`);
       }
 
-      const openAIData = await imageResponse.json();
+      const openAIData = await openAIResponse.json();
       console.log('OpenAI GPT-Image-1 response structure:', {
         hasData: !!openAIData.data,
         dataLength: openAIData.data?.length,
@@ -978,9 +972,26 @@ serve(async (req) => {
       if (openAIData.data && openAIData.data[0] && openAIData.data[0].b64_json) {
         imageData = openAIData.data[0].b64_json;
         console.log(`Generated image with OpenAI GPT-Image-1, base64 length: ${imageData.length}`);
+      } else if (openAIData.data && openAIData.data[0] && openAIData.data[0].url) {
+        // Handle URL response format as fallback
+        const imageResponse = await fetch(openAIData.data[0].url);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image from OpenAI: ${imageResponse.status}`);
+        }
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const uint8Array = new Uint8Array(imageBuffer);
+        
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          const chunk = uint8Array.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        imageData = btoa(binary);
+        console.log(`Downloaded and converted image from OpenAI GPT-Image-1, size: ${imageBuffer.byteLength} bytes`);
       } else {
         console.error('Invalid OpenAI GPT-Image-1 response:', openAIData);
-        throw new Error('No base64 image data received from OpenAI GPT-Image-1');
+        throw new Error('No image data received from OpenAI GPT-Image-1');
       }
       
       // Estimate cost (GPT-Image-1 pricing)
