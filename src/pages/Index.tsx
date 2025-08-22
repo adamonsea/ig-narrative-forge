@@ -13,8 +13,6 @@ import { Phase4Validator } from '@/components/Phase4Validator';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
 import { ApprovedQueue } from '@/components/ApprovedQueue';
-import { DuplicateDetection } from "@/components/DuplicateDetection";
-import { ScheduleMonitor } from '@/components/ScheduleMonitor';
 import IdeogramTestSuite from '@/components/IdeogramTestSuite';
 
 // import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
@@ -24,7 +22,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'monitor' | 'duplicates' | 'ideogram' | 'testing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'ideogram' | 'testing'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -208,14 +206,6 @@ const Index = () => {
               Approved Queue
             </Button>
             <Button
-              variant={activeTab === 'duplicates' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('duplicates')}
-              className="flex items-center gap-2"
-            >
-              <AlertCircle className="w-4 h-4" />
-              Duplicates
-            </Button>
-            <Button
               variant={activeTab === 'content' ? 'default' : 'outline'}
               onClick={() => setActiveTab('content')}
               className="flex items-center gap-2"
@@ -233,14 +223,6 @@ const Index = () => {
             </Button>
             {isAdmin && (
               <>
-                <Button
-                  variant={activeTab === 'monitor' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('monitor')}
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Monitor
-                </Button>
                 <Button
                   variant={activeTab === 'admin' ? 'default' : 'outline'}
                   onClick={() => setActiveTab('admin')}
@@ -333,12 +315,6 @@ const Index = () => {
           </div>
         )}
 
-        {activeTab === 'monitor' && isAdmin && (
-          <div className="space-y-6">
-            <ScheduleMonitor />
-          </div>
-        )}
-
         {activeTab === 'admin' && isAdmin && (
           <div className="space-y-6">
             <AdminPanel />
@@ -358,12 +334,6 @@ const Index = () => {
         {activeTab === 'approved' && (
           <div className="space-y-6">
             <ApprovedQueue />
-          </div>
-        )}
-
-        {activeTab === 'duplicates' && (
-          <div className="space-y-6">
-            <DuplicateDetection />
           </div>
         )}
 
