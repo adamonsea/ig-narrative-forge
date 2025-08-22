@@ -62,7 +62,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'black-forest-labs/flux-1-schnell', // Correct model name
+        model: 'FLUX.1-schnell', // Exact model name from Nebius Studio
         prompt: enhancedPrompt,
         n: 1,
         size: "1024x1024",
@@ -101,7 +101,7 @@ serve(async (req) => {
     }
 
     // Extract base64 image data (OpenAI format)
-    imageData = nebiusData.data[0].b64_json;
+    const imageData = nebiusData.data[0].b64_json;
 
     // Calculate cost based on model
     let cost;
