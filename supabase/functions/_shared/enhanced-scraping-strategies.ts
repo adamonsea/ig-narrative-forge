@@ -280,15 +280,25 @@ export class EnhancedScrapingStrategies {
   }
 
   private isArticleQualified(article: ArticleData): boolean {
-    return article.word_count >= 30 && 
-           article.content_quality_score >= 20 && 
-           article.body.length > 100;
+    // More lenient qualification criteria for better capture
+    const hasMinimumWords = (article.word_count || 0) >= 20; // Reduced threshold
+    const hasDecentQuality = (article.content_quality_score || 0) >= 15; // Reduced threshold  
+    const hasMinimumContent = (article.body?.length || 0) > 50; // Reduced threshold
+    
+    console.log(`🔍 Article qualification: "${article.title}"`);
+    console.log(`   Words: ${article.word_count || 0}, Quality: ${article.content_quality_score || 0}, Length: ${article.body?.length || 0}`);
+    console.log(`   Qualified: ${hasMinimumWords && hasDecentQuality && hasMinimumContent}`);
+    
+    return hasMinimumWords && hasDecentQuality && hasMinimumContent;
   }
 
   private isContentQualified(content: any): boolean {
-    return content.word_count >= 30 && 
-           content.content_quality_score >= 20 && 
-           content.body.length > 100;
+    // More lenient content qualification
+    const hasMinimumWords = (content.word_count || 0) >= 20; 
+    const hasDecentQuality = (content.content_quality_score || 0) >= 15;
+    const hasMinimumContent = (content.body?.length || 0) > 50;
+    
+    return hasMinimumWords && hasDecentQuality && hasMinimumContent;
   }
 
   // Helper methods

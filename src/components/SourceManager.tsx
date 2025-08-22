@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
-import { ScrapingStatusMonitor } from './ScrapingStatusMonitor';
+
 import { 
   Plus, 
   Edit, 
@@ -367,9 +367,6 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
             </Button>
           </div>
         </div>
-
-        {/* Enhanced Status Monitoring */}
-        <ScrapingStatusMonitor />
 
         <Separator />
 

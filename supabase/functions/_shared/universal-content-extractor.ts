@@ -10,14 +10,18 @@ const SITE_CONFIGS: Record<string, {
   excludeSelectors: string[];
   articleLinkPatterns?: RegExp[];
 }> = {
-  'bournefree.co.uk': {
+  'bournefreelive.co.uk': {
     contentSelectors: [
       '.entry-content',
       '.post-content', 
       'article .content',
-      '.article-body'
+      '.article-body',
+      '.post-body',
+      'div[class*="content"]',
+      'article div',
+      'main article'
     ],
-    titleSelectors: ['.entry-title', 'h1.post-title', 'article h1'],
+    titleSelectors: ['.entry-title', 'h1.post-title', 'article h1', 'h1'],
     authorSelectors: ['.author-name', '.byline', '.post-author'],
     excludeSelectors: [
       '.sidebar',
@@ -407,30 +411,40 @@ export class UniversalContentExtractor {
   }
 
   private calculateContentQuality(content: string, title: string): number {
+    if (!content || content.trim().length === 0) return 0;
+    
     let score = 0;
-    
     const wordCount = this.countWords(content);
+    const charCount = content.length;
     
-    // Word count scoring
-    if (wordCount > 500) score += 40;
-    else if (wordCount > 300) score += 30;
-    else if (wordCount > 150) score += 20;
-    else if (wordCount > 50) score += 10;
+    console.log(`📊 Quality calculation - Words: ${wordCount}, Chars: ${charCount}`);
+    
+    // Word count scoring (more generous)
+    if (wordCount >= 500) score += 40;
+    else if (wordCount >= 300) score += 35;
+    else if (wordCount >= 200) score += 30;
+    else if (wordCount >= 100) score += 25;
+    else if (wordCount >= 50) score += 15;
+    else if (wordCount >= 20) score += 10;
     
     // Content structure
-    if (content.includes('\n\n')) score += 10;
+    if (content.includes('\n\n') || content.includes('\n')) score += 10;
     if (title && title.length > 10) score += 10;
     
-    // Length bonus
-    if (content.length > 1000) score += 20;
-    else if (content.length > 500) score += 15;
-    else if (content.length > 200) score += 10;
+    // Length bonus (more realistic thresholds)
+    if (charCount > 2000) score += 20;
+    else if (charCount > 1000) score += 15;
+    else if (charCount > 500) score += 10;
+    else if (charCount > 200) score += 5;
     
-    // Penalties
-    if (wordCount < 50) score -= 20;
-    if (content.length < 200) score -= 15;
+    // Reduce harsh penalties
+    if (wordCount < 20) score -= 10;
+    if (charCount < 100) score -= 5;
     
-    return Math.max(0, Math.min(100, score));
+    const finalScore = Math.max(0, Math.min(100, score));
+    console.log(`📊 Final quality score: ${finalScore}`);
+    
+    return finalScore;
   }
 
   // Enhanced article URL detection
