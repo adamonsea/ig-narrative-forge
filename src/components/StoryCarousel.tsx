@@ -75,7 +75,11 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         <div className="p-8">
           {/* Main Content */}
           <div className="mb-8">
-            <p className="text-4xl leading-relaxed font-light text-foreground">
+            <p className={`leading-relaxed text-foreground ${
+              isFirstSlide 
+                ? "text-4xl font-bold uppercase" 
+                : "text-3xl font-light"
+            }`}>
               {currentSlide.content}
             </p>
           </div>
