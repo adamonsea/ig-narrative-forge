@@ -104,7 +104,7 @@ export default function IdeogramTestSuite() {
     ideogram: { cost: 0.08, name: 'Ideogram V3', status: 'success' as const },
     fal: { cost: 0.05, name: 'FAL Recraft V3', status: 'success' as const },
     replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large', status: 'error' as const },
-    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)', status: 'error' as const },
+    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)', status: 'success' as const },
     deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large', status: 'error' as const },
     nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell', status: 'error' as const },
     midjourney: { cost: 0.02, name: 'MidJourney via kie.ai', status: 'error' as const }
@@ -669,7 +669,7 @@ export default function IdeogramTestSuite() {
                         className="flex flex-col items-center p-3 h-auto text-xs relative"
                       >
                         <div className="absolute top-1 right-1">
-                          <StatusIndicator status={info.status} size="sm" />
+                          <StatusIndicator status={info.status} size="xs" />
                         </div>
                         <span className="font-medium">{info.name}</span>
                         <span className="text-muted-foreground">${info.cost}</span>
@@ -718,7 +718,7 @@ export default function IdeogramTestSuite() {
                             disabled={isRunning}
                             className="flex-1 text-xs relative"
                           >
-                            <StatusIndicator status={info.status} size="sm" />
+                            <StatusIndicator status={info.status} size="xs" />
                             <span className="ml-1">{info.name.split(' ')[0]}</span>
                           </Button>
                         ))}
@@ -739,7 +739,7 @@ export default function IdeogramTestSuite() {
                         disabled={isRunning || !selectedStory}
                         className="flex items-center gap-2 flex-1 text-xs"
                       >
-                        <StatusIndicator status={info.status} size="sm" />
+                        <StatusIndicator status={info.status} size="xs" />
                         {info.name}
                       </Button>
                     ))}

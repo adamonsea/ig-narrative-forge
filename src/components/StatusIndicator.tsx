@@ -5,13 +5,13 @@ import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 interface StatusIndicatorProps {
   status: 'success' | 'pending' | 'error' | 'warning';
   text?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 export function StatusIndicator({ status, text, size = 'md' }: StatusIndicatorProps) {
   const getIcon = () => {
     const iconProps = {
-      className: size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
+      className: size === 'xs' ? 'h-2 w-2' : size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
     };
 
     switch (status) {
