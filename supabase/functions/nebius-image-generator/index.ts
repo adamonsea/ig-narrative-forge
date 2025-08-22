@@ -66,8 +66,8 @@ TYPOGRAPHY SPECIFICATIONS:
 
 LAYOUT REQUIREMENTS:
 - Main text: Centered with generous white space
-- Bottom left corner: "Eastbourne" (small text, 12pt)
-- Bottom right corner: "The Argus" (small text, 12pt)
+- Bottom left corner: "E a s t b o u r n e" (small text, 12pt, character-spaced)
+- Bottom right corner: "E a s t b o u r n e   R e p o r t e r" (small text, 12pt, character-spaced)
 - Clean white/light background
 - High contrast dark text
 
