@@ -49,8 +49,8 @@ serve(async (req) => {
     const isTitle = slideData?.slide_number === 1;
     const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
     
-    // Enhanced prompt for text-based slide with ultra-clear text specifications
-    const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
+    // FLUX-optimized prompt using natural language for best text accuracy
+    const enhancedPrompt = `A clean social media typography slide featuring the text "${slideContent}". The text should be rendered in large, bold, highly readable sans-serif font like Helvetica Neue or Arial Bold. Use pure white or light gray background with dark text for maximum contrast and readability. Center the text with generous white space margins. The design should be minimal and professional, suitable for news or editorial content. Focus entirely on making every letter crystal clear and perfectly legible - this is crucial for readability. No graphics, no decorative elements, just perfectly rendered typography in ${textCase} format.`;
 
     const startTime = Date.now();
 
