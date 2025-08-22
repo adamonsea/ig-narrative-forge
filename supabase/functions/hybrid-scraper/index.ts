@@ -39,6 +39,7 @@ interface ScrapeResult {
   articlesScraped: number;
   errors: string[];
   method: 'rss' | 'simple_html' | 'fallback';
+  articles: any[]; // CRITICAL FIX: Added missing articles property
 }
 
 serve(async (req) => {
@@ -131,7 +132,7 @@ serve(async (req) => {
 });
 
 // Strategy 1: RSS/Atom parsing (most reliable)
-async function tryRSSParsing(feedUrl: string): Promise<ScrapeResult & { articles?: any[] }> {
+async function tryRSSParsing(feedUrl: string): Promise<ScrapeResult> {
   try {
     console.log('🔍 Attempting RSS parsing...');
     
@@ -176,13 +177,14 @@ async function tryRSSParsing(feedUrl: string): Promise<ScrapeResult & { articles
       articlesFound: 0,
       articlesScraped: 0,
       errors: [`RSS parsing failed: ${error.message}`],
-      method: 'rss'
+      method: 'rss',
+      articles: []
     };
   }
 }
 
 // Strategy 2: Simple HTML parsing
-async function trySimpleHTMLParsing(feedUrl: string): Promise<ScrapeResult & { articles?: any[] }> {
+async function trySimpleHTMLParsing(feedUrl: string): Promise<ScrapeResult> {
   try {
     console.log('🌐 Attempting HTML parsing...');
     
@@ -221,13 +223,14 @@ async function trySimpleHTMLParsing(feedUrl: string): Promise<ScrapeResult & { a
       articlesFound: 0,
       articlesScraped: 0,
       errors: [`HTML parsing failed: ${error.message}`],
-      method: 'simple_html'
+      method: 'simple_html',
+      articles: []
     };
   }
 }
 
 // Strategy 3: Fallback method for difficult sites
-async function tryFallbackMethod(feedUrl: string): Promise<ScrapeResult & { articles?: any[] }> {
+async function tryFallbackMethod(feedUrl: string): Promise<ScrapeResult> {
   try {
     console.log('🔧 Attempting fallback method...');
     
@@ -279,7 +282,8 @@ async function tryFallbackMethod(feedUrl: string): Promise<ScrapeResult & { arti
       articlesFound: 0,
       articlesScraped: 0,
       errors: [`Fallback method failed: ${error.message}`],
-      method: 'fallback'
+      method: 'fallback',
+      articles: []
     };
   }
 }
@@ -308,42 +312,63 @@ async function parseRSSContent(content: string): Promise<any[]> {
                   extractAuthorName(itemContent);
     
     if (title && link) {
-      // Try to fetch full content from the article URL
+      // CRITICAL FIX: Always try to fetch full content from individual article URLs
       let fullContent = '';
       let enrichedTitle = cleanHTML(title).trim();
+      let wordCount = 0;
       
       try {
         console.log(`📄 Fetching full content from: ${link}`);
         const articleResponse = await fetch(link, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Cache-Control': 'no-cache'
           },
-          timeout: 15000
+          signal: AbortSignal.timeout(20000)
         });
         
         if (articleResponse.ok) {
           const articleHTML = await articleResponse.text();
           const extracted = extractFullArticleContent(articleHTML, link);
           
+          // Use better title if extracted
           if (extracted.title && extracted.title.length > enrichedTitle.length) {
             enrichedTitle = extracted.title;
           }
           
-          if (extracted.content && extracted.content.length > 100) {
+          // CRITICAL: Ensure we have substantial content, not just RSS summaries
+          if (extracted.content && extracted.content.length > 200) {
             fullContent = extracted.content;
-            console.log(`✅ Extracted ${fullContent.length} chars from ${link}`);
+            wordCount = extracted.content.split(/\s+/).length;
+            console.log(`✅ Extracted ${fullContent.length} chars (${wordCount} words) from ${link}`);
+          } else if (extracted.content && extracted.content.length > 50) {
+            // Accept shorter content but flag it
+            fullContent = extracted.content;
+            wordCount = extracted.content.split(/\s+/).length;
+            console.log(`⚠️ Short content extracted: ${wordCount} words from ${link}`);
           } else {
-            console.log(`⚠️ Minimal content extracted from ${link}, using RSS description`);
+            // Last resort: use RSS description if available
             fullContent = description ? cleanHTML(description).trim() : '';
+            wordCount = fullContent ? fullContent.split(/\s+/).length : 0;
+            console.log(`❌ Minimal content, using RSS description: ${wordCount} words`);
           }
         } else {
-          console.log(`❌ Failed to fetch article: ${articleResponse.status}`);
+          console.log(`❌ Failed to fetch article: HTTP ${articleResponse.status}`);
           fullContent = description ? cleanHTML(description).trim() : '';
+          wordCount = fullContent ? fullContent.split(/\s+/).length : 0;
         }
       } catch (error) {
         console.log(`❌ Error fetching article content: ${error.message}`);
         fullContent = description ? cleanHTML(description).trim() : '';
+        wordCount = fullContent ? fullContent.split(/\s+/).length : 0;
+      }
+      
+      // QUALITY CHECK: Skip articles with insufficient content
+      if (wordCount < 20) {
+        console.log(`⚠️ Skipping article with only ${wordCount} words: ${enrichedTitle}`);
+        continue;
       }
       
       articles.push({
@@ -352,7 +377,10 @@ async function parseRSSContent(content: string): Promise<any[]> {
         source_url: link.trim(),
         published_at: parseDate(pubDate) || new Date().toISOString(),
         author: author ? cleanHTML(author).trim() : null,
-        summary: fullContent ? fullContent.substring(0, 200) + '...' : (description ? cleanHTML(description).substring(0, 200) + '...' : null)
+        summary: fullContent ? fullContent.substring(0, 200) + '...' : null,
+        word_count: wordCount,
+        content_quality_score: Math.min(wordCount * 2, 100), // Score based on word count
+        processing_status: 'extracted'
       });
     }
     
