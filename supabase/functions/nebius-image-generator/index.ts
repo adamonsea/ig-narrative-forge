@@ -49,24 +49,35 @@ serve(async (req) => {
     const isTitle = slideData?.slide_number === 1;
     const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
     
-    // FLUX-optimized prompt with enhanced word separation for accuracy
-    const wordSeparatedContent = slideContent.split(' ').join('  '); // Double space between words
-    const enhancedPrompt = `Create a professional typography slide with this EXACT text: "${wordSeparatedContent}". 
+    // Enhanced FLUX prompt with Lexend font and better word separation to prevent letter errors
+    const wordSeparatedContent = slideContent.split('').join(' '); // Space between each character
+    const enhancedPrompt = `Create a professional typography social media slide using LEXEND FONT FAMILY.
 
-TEXT REQUIREMENTS:
-- Use large, bold sans-serif font (Helvetica/Arial Bold)
-- Each word must be clearly separated and perfectly spelled
+EXACT TEXT TO RENDER: "${slideContent}"
+CHARACTER-SPACED VERSION: "${wordSeparatedContent}"
+
+TYPOGRAPHY SPECIFICATIONS:
+- Font: Lexend (Google Fonts family) - clean, readable sans-serif
+- Size: Large, bold weight for maximum readability
 - Text format: ${textCase}
-- NO word joining, NO typos, NO creative interpretation
+- CRITICAL: Each letter must be rendered exactly as specified
+- NO letter substitution (M≠N, no extra S letters)
+- Perfect spelling - double-check each character
 
-DESIGN SPECIFICATION:
+LAYOUT REQUIREMENTS:
+- Main text: Centered with generous white space
+- Bottom left corner: "Eastbourne" (small text, 12pt)
+- Bottom right corner: "The Argus" (small text, 12pt)
 - Clean white/light background
-- High contrast dark text for readability  
-- Center alignment with generous margins
-- Professional editorial news style
-- Pure typography only - no graphics or decorations
+- High contrast dark text
 
-CRITICAL: Render each word individually and clearly. The text "${slideContent}" must appear exactly as written with proper word spacing.`;
+DESIGN STYLE:
+- Professional editorial news layout
+- Lexend font throughout for consistency
+- No graphics, decorations, or illustrations
+- Focus on crystal-clear typography
+
+VERIFICATION: The text "${slideContent}" must appear exactly as written with perfect letter accuracy.`;
 
     const startTime = Date.now();
 
