@@ -745,59 +745,113 @@ serve(async (req) => {
        
        const enhancedPrompt = `TYPOGRAPHY POSTER: Create a professional text-only social media slide with crystal clear, perfectly readable text. Typography: Use BOLD Helvetica Neue or Arial Bold font, EXTRA LARGE text size for maximum readability. Text format: ${textCase}. Exact text to display: "${slideContent}". CRITICAL: Text must be spelled EXACTLY as written, no typos, no creative interpretation. Design: Pure white or very light background, solid black text for maximum contrast, generous margins, perfect center alignment. Style: Clean editorial newspaper design, absolutely NO graphics, NO decorative elements, NO illustrations - ONLY text. Ensure every letter is crystal clear and perfectly legible.`;
 
-        console.log(`Testing Nebius AI API for slide ${slideId}`);
+         console.log(`Testing Nebius AI API for slide ${slideId}`);
 
-        // Nebius uses OpenAI-compatible API format
-        const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${nebiusApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'FLUX.1-schnell', // Exact model name from Nebius Studio
-            prompt: enhancedPrompt,
-            n: 1,
-            size: "1024x1024",
-            response_format: "b64_json"
-          }),
-        });
-
-       console.log('Nebius response status:', nebiusResponse.status);
-
-       if (!nebiusResponse.ok) {
-         const errorData = await nebiusResponse.text();
-         console.error('Nebius AI API error:', errorData);
-         
-         // Log test failure to database
-         await supabase.from('image_generation_tests').insert({
-           test_id: testId || null,
-           slide_id: slideId || null,
-           story_id: slide?.story_id || null,
-           api_provider: 'nebius',
-           success: false,
-           error_message: `Nebius API error: ${nebiusResponse.status} - ${errorData}`,
-           generation_time_ms: Date.now() - startTime,
-           estimated_cost: 0,
-           style_reference_used: !!styleReferenceUrl
-         });
-         
-         throw new Error(`Nebius generation failed: ${nebiusResponse.status} - ${errorData}`);
-       }
-
-        const nebiusData = await nebiusResponse.json();
-        console.log('Nebius response structure:', {
-          hasData: !!nebiusData.data,
-          dataLength: nebiusData.data?.length,
-          keys: Object.keys(nebiusData)
-        });
-
-        if (!nebiusData.data || !nebiusData.data[0] || !nebiusData.data[0].b64_json) {
-          throw new Error('No image data received from Nebius AI');
+         // First, let's check available models for debugging
+        try {
+          const modelsResponse = await fetch('https://api.studio.nebius.ai/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${nebiusApiKey}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (modelsResponse.ok) {
+            const modelsData = await modelsResponse.json();
+            console.log('Available Nebius models:', JSON.stringify(modelsData, null, 2));
+            
+            // Look for image generation models
+            const imageModels = modelsData.data?.filter(model => 
+              model.id?.toLowerCase().includes('flux') || 
+              model.id?.toLowerCase().includes('sdxl') ||
+              model.id?.toLowerCase().includes('image')
+            );
+            console.log('Image models found:', JSON.stringify(imageModels, null, 2));
+          } else {
+            console.log('Models endpoint failed:', modelsResponse.status, await modelsResponse.text());
+          }
+        } catch (modelsError) {
+          console.log('Could not fetch models list:', modelsError.message);
         }
 
-        imageData = nebiusData.data[0].b64_json;
-        console.log(`Generated image with Nebius AI Flux-Schnell`);
+        // Try multiple possible model identifiers based on common patterns
+        const possibleModels = [
+          'flux-1-schnell',
+          'flux_1_schnell', 
+          'FLUX.1-schnell',
+          'flux.1-schnell',
+          'black-forest-labs/FLUX.1-schnell',
+          'black-forest-labs/flux-1-schnell',
+          'flux-schnell',
+          'FLUX-schnell'
+        ];
+        
+        let imageData = null;
+        let workingModel = null;
+        
+        for (const modelId of possibleModels) {
+          console.log(`Trying model identifier: ${modelId}`);
+          
+          try {
+            const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${nebiusApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: modelId,
+                prompt: enhancedPrompt,
+                n: 1,
+                size: "1024x1024",
+                response_format: "b64_json"
+              }),
+            });
+
+            console.log(`Model ${modelId} response status:`, nebiusResponse.status);
+
+            if (nebiusResponse.ok) {
+              const nebiusData = await nebiusResponse.json();
+              console.log(`SUCCESS with model: ${modelId}`);
+              console.log('Response structure:', {
+                hasData: !!nebiusData.data,
+                dataLength: nebiusData.data?.length,
+                keys: Object.keys(nebiusData)
+              });
+
+              if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].b64_json) {
+                imageData = nebiusData.data[0].b64_json;
+                workingModel = modelId;
+                break;
+              }
+            } else {
+              const errorText = await nebiusResponse.text();
+              console.log(`Model ${modelId} failed:`, nebiusResponse.status, errorText);
+            }
+          } catch (modelError) {
+            console.log(`Error testing model ${modelId}:`, modelError.message);
+            continue;
+          }
+        }
+        
+        if (!imageData || !workingModel) {
+          // Log final failure to database
+          await supabase.from('image_generation_tests').insert({
+            test_id: testId || null,
+            slide_id: slideId || null,
+            story_id: slide?.story_id || null,
+            api_provider: 'nebius',
+            success: false,
+            error_message: 'None of the Nebius model identifiers worked',
+            generation_time_ms: Date.now() - startTime,
+            estimated_cost: 0,
+            style_reference_used: !!styleReferenceUrl
+          });
+          throw new Error('None of the Nebius model identifiers worked');
+        }
+
+        console.log(`Generated image with Nebius AI using working model: ${workingModel}`);
         
         // Ultra-cheap cost
         cost = 0.0013;
