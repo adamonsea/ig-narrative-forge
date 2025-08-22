@@ -106,13 +106,13 @@ serve(async (req) => {
     // Calculate cost based on model
     let cost;
     switch (model) {
-      case 'flux-schnell':
+      case 'black-forest-labs/flux-schnell':
         cost = 0.0013; // Ultra-cheap Flux Schnell
         break;
-      case 'flux-dev':
+      case 'black-forest-labs/flux-dev':
         cost = 0.0025; // Flux Dev
         break;
-      case 'sdxl':
+      case 'stability-ai/sdxl':
         cost = 0.002; // SDXL
         break;
       default:
