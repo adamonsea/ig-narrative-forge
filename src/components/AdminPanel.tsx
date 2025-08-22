@@ -25,6 +25,11 @@ interface CostSummary {
     total: number;
     count: number;
     avgCost: number;
+    breakdown?: {
+      fromUsageTable: number;
+      fromTestsTable: number;
+      testCosts: any[];
+    };
   };
   totalCost: number;
   totalOperations: number;
@@ -46,7 +51,7 @@ export const AdminPanel = () => {
       
       if (error) throw error;
       setApiUsage(data || []);
-      calculateCostSummary(data || []);
+      await calculateCostSummary(data || []);
     } catch (error) {
       console.error('Failed to fetch API usage:', error);
       toast({
@@ -57,7 +62,26 @@ export const AdminPanel = () => {
     }
   };
 
-  const calculateCostSummary = (usage: ApiUsage[]) => {
+  const fetchImageGenerationCosts = async () => {
+    try {
+      // Get costs from image_generation_tests table where they're actually logged
+      const { data: imageTests, error } = await supabase
+        .from('image_generation_tests')
+        .select('api_provider, estimated_cost, created_at, success')
+        .eq('success', true)
+        .not('estimated_cost', 'is', null)
+        .gte('estimated_cost', 0.001) // Filter out $0 estimates
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return imageTests || [];
+    } catch (error) {
+      console.error('Failed to fetch image generation costs:', error);
+      return [];
+    }
+  };
+
+  const calculateCostSummary = async (usage: ApiUsage[]) => {
     const storyGenOps = usage.filter(u => 
       u.service_name.toLowerCase().includes('openai') || 
       u.operation.toLowerCase().includes('content') ||
@@ -65,16 +89,23 @@ export const AdminPanel = () => {
       u.operation.toLowerCase().includes('story')
     );
     
-    const imageGenOps = usage.filter(u => 
+    const imageGenOpsFromUsage = usage.filter(u => 
       u.service_name.toLowerCase().includes('ideogram') ||
       u.service_name.toLowerCase().includes('fal') ||
       u.service_name.toLowerCase().includes('replicate') ||
+      u.service_name.toLowerCase().includes('nebius') ||
       u.operation.toLowerCase().includes('image') ||
       u.operation.toLowerCase().includes('visual')
     );
 
+    // Get additional image costs from image_generation_tests table
+    const imageTestCosts = await fetchImageGenerationCosts();
+    
     const storyGenTotal = storyGenOps.reduce((sum, op) => sum + Number(op.cost_usd || 0), 0);
-    const imageGenTotal = imageGenOps.reduce((sum, op) => sum + Number(op.cost_usd || 0), 0);
+    const imageGenFromUsageTotal = imageGenOpsFromUsage.reduce((sum, op) => sum + Number(op.cost_usd || 0), 0);
+    const imageGenFromTestsTotal = imageTestCosts.reduce((sum, test) => sum + Number(test.estimated_cost || 0), 0);
+    const imageGenTotal = imageGenFromUsageTotal + imageGenFromTestsTotal;
+    const imageGenCount = imageGenOpsFromUsage.length + imageTestCosts.length;
     
     setCostSummary({
       storyGeneration: {
@@ -84,11 +115,16 @@ export const AdminPanel = () => {
       },
       imageGeneration: {
         total: imageGenTotal,
-        count: imageGenOps.length,
-        avgCost: imageGenOps.length > 0 ? imageGenTotal / imageGenOps.length : 0
+        count: imageGenCount,
+        avgCost: imageGenCount > 0 ? imageGenTotal / imageGenCount : 0,
+        breakdown: {
+          fromUsageTable: imageGenFromUsageTotal,
+          fromTestsTable: imageGenFromTestsTotal,
+          testCosts: imageTestCosts
+        }
       },
       totalCost: storyGenTotal + imageGenTotal,
-      totalOperations: usage.length
+      totalOperations: usage.length + imageTestCosts.length
     });
   };
 
