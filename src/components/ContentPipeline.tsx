@@ -616,26 +616,82 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   };
 
   const handleApproveStory = async (storyId: string) => {
+    console.log('🚀 Approving story:', storyId);
+    
     try {
-      const { error } = await supabase
+      // First check current status
+      const { data: currentStory, error: fetchError } = await supabase
         .from('stories')
-        .update({ status: 'ready' })
-        .eq('id', storyId);
+        .select('status, title')
+        .eq('id', storyId)
+        .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+      
+      console.log('📋 Current story status:', currentStory.status);
+
+      // Check for existing queue entries to prevent duplicates
+      const { data: existingQueue, error: queueCheckError } = await supabase
+        .from('content_generation_queue')
+        .select('id, status')
+        .eq('article_id', (await supabase.from('stories').select('article_id').eq('id', storyId).single()).data?.article_id)
+        .neq('status', 'completed');
+
+      if (queueCheckError) {
+        console.error('Error checking queue:', queueCheckError);
+      } else if (existingQueue && existingQueue.length > 0) {
+        console.log('⚠️ Found existing queue entries:', existingQueue);
+        toast({
+          title: 'Warning',
+          description: 'Story has pending generation jobs. Please wait for completion.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Update status with proper error handling
+      const { data: updateResult, error: updateError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'ready',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId)
+        .select('status, title');
+
+      if (updateError) {
+        console.error('❌ Update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Update result:', updateResult);
+
+      // Verify the update was successful
+      const { data: verifyStory, error: verifyError } = await supabase
+        .from('stories')
+        .select('status')
+        .eq('id', storyId)
+        .single();
+
+      if (verifyError) {
+        console.error('❌ Verify error:', verifyError);
+      } else {
+        console.log('✅ Verified status:', verifyStory.status);
+      }
 
       toast({
         title: 'Story Approved',
         description: 'Story approved and ready for publishing',
       });
 
+      // Only refresh stories, don't call loadPendingArticles to prevent cascade
       loadStories();
-      loadPendingArticles(); // Refresh in case there are workflow changes
-    } catch (error) {
-      console.error('Failed to approve story:', error);
+      
+    } catch (error: any) {
+      console.error('❌ Failed to approve story:', error);
       toast({
         title: 'Error',
-        description: 'Failed to approve story',
+        description: `Failed to approve story: ${error.message || 'Unknown error'}`,
         variant: 'destructive',
       });
     }
