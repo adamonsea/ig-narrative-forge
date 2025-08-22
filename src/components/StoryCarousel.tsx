@@ -29,6 +29,8 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -68,14 +70,42 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(0); // Reset touch end
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && !isLastSlide) {
+      nextSlide();
+    }
+    if (isRightSwipe && !isFirstSlide) {
+      prevSlide();
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       {/* Slide Content */}
       <div className="relative">
-        <div className="p-8">
+        <div 
+          className="p-8"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Main Content */}
           <div className="mb-8">
-            <p className={`leading-relaxed text-foreground ${
+            <p className={`leading-normal text-foreground ${
               isFirstSlide 
                 ? "text-4xl font-bold uppercase" 
                 : "text-3xl font-light"
