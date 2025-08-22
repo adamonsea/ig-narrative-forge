@@ -2,6 +2,10 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
+// Import shared utilities
+import { extractContentFromHTML, fetchWithRetry } from '../_shared/content-processor.ts';
+import { DatabaseOperations } from '../_shared/database-operations.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -22,6 +26,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const dbOps = new DatabaseOperations(supabase);
     const { articleId, articleUrl, forceRefresh = false } = await req.json();
 
     if (!articleId && !articleUrl) {
@@ -78,127 +83,58 @@ serve(async (req) => {
 
     console.log('Extracting content from URL:', targetUrl);
 
-    // Extract content using multiple strategies
+    // Extract content using shared utilities
     let extractedContent = null;
-    let extractionMethod = '';
+    let extractionMethod = 'direct';
     let error_message = null;
 
-    // Strategy 1: Try direct fetch and parse
     try {
       console.log('Attempting direct content extraction...');
-      const response = await fetch(targetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-        },
-      });
-
-      if (response.ok) {
-        const html = await response.text();
-        extractedContent = extractContentFromHTML(html);
-        extractionMethod = 'direct_fetch';
-        console.log('Direct extraction successful, content length:', extractedContent.body.length);
+      const html = await fetchWithRetry(targetUrl);
+      extractedContent = extractContentFromHTML(html, targetUrl);
+      
+      if (extractedContent && extractedContent.word_count >= 50) {
+        console.log(`✅ Content extracted successfully: ${extractedContent.word_count} words`);
+      } else {
+        throw new Error('Insufficient content extracted');
       }
+      
     } catch (error) {
-      console.log('Direct extraction failed:', error.message);
-    }
-
-    // Strategy 2: Use OpenAI for enhanced extraction if available and direct method failed
-    if (!extractedContent && openAIApiKey) {
-      try {
-        console.log('Attempting AI-enhanced extraction...');
-        
-        const response = await fetch(targetUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0; +http://example.com/bot)',
-          },
-        });
-
-        if (response.ok) {
-          const html = await response.text();
-          const cleanText = extractContentFromHTML(html);
+      console.log(`❌ Direct extraction failed: ${error.message}`);
+      error_message = error.message;
+      
+      // Try AI enhancement if OpenAI API key is available
+      if (openAIApiKey && articleRecord) {
+        try {
+          console.log('Attempting AI-enhanced extraction...');
+          extractedContent = await enhanceContentWithAI(targetUrl, openAIApiKey);
+          extractionMethod = 'ai_enhanced';
           
-          // Use OpenAI to clean and enhance the extracted content
-          const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openAIApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are a content extraction specialist. Clean up the provided article text, removing navigation, ads, and irrelevant content. Return only the main article content including title, author, and body. Preserve the original writing style and all factual information. Format as JSON with title, author, and body fields.'
-                },
-                {
-                  role: 'user',
-                  content: `Please extract and clean this article content:\n\n${cleanText.body.substring(0, 8000)}`
-                }
-              ],
-              max_tokens: 4000,
-              temperature: 0.1
-            }),
-          });
-
-          if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            const aiContent = aiData.choices[0].message.content;
-            
-            try {
-              const parsed = JSON.parse(aiContent);
-              extractedContent = {
-                title: parsed.title || cleanText.title,
-                author: parsed.author || cleanText.author,
-                body: parsed.body || cleanText.body,
-                publishedAt: cleanText.publishedAt
-              };
-              extractionMethod = 'ai_enhanced';
-              console.log('AI-enhanced extraction successful');
-            } catch (parseError) {
-              // If JSON parsing fails, use the AI response as body
-              extractedContent = {
-                ...cleanText,
-                body: aiContent
-              };
-              extractionMethod = 'ai_enhanced_text';
-            }
+          if (extractedContent && extractedContent.word_count >= 50) {
+            console.log(`✅ AI enhancement successful: ${extractedContent.word_count} words`);
+            error_message = null;
+          } else {
+            throw new Error('AI enhancement produced insufficient content');
           }
+        } catch (aiError) {
+          console.log(`❌ AI enhancement failed: ${aiError.message}`);
+          error_message = `Direct: ${error.message}, AI: ${aiError.message}`;
         }
-      } catch (error) {
-        console.log('AI-enhanced extraction failed:', error.message);
       }
     }
 
-    if (!extractedContent) {
-      throw new Error('Failed to extract content using all available methods');
-    }
-
-    // Calculate word count
-    const wordCount = extractedContent.body ? 
-      extractedContent.body.trim().split(/\s+/).length : 0;
-
-    // Update article in database if we have an articleId
-    if (articleId) {
-      const updateData: any = {
+    // Update article record if we have one
+    if (articleRecord && extractedContent && extractedContent.word_count >= 50) {
+      const updateData = {
+        title: extractedContent.title || articleRecord.title,
         body: extractedContent.body,
-        word_count: wordCount,
-        reading_time_minutes: Math.max(1, Math.round(wordCount / 200)),
-        processing_status: wordCount > 50 ? 'processed' : 'discarded',
+        author: extractedContent.author,
+        published_at: extractedContent.published_at,
+        word_count: extractedContent.word_count,
+        content_quality_score: extractedContent.content_quality_score,
+        processing_status: 'processed',
         updated_at: new Date().toISOString()
       };
-
-      // Update title and author if they're better than what we have
-      if (extractedContent.title && extractedContent.title.length > (articleRecord?.title?.length || 0)) {
-        updateData.title = extractedContent.title;
-      }
-      if (extractedContent.author && !articleRecord?.author) {
-        updateData.author = extractedContent.author;
-      }
 
       const { error: updateError } = await supabase
         .from('articles')
@@ -206,28 +142,45 @@ serve(async (req) => {
         .eq('id', articleId);
 
       if (updateError) {
-        console.error('Failed to update article:', updateError);
+        console.error(`❌ Failed to update article: ${updateError.message}`);
+      } else {
+        console.log(`✅ Article updated successfully`);
       }
+
+      // Log successful extraction
+      await dbOps.logSystemEvent('info', 'Content extraction completed', {
+        articleId,
+        targetUrl,
+        method: extractionMethod,
+        wordCount: extractedContent.word_count,
+        qualityScore: extractedContent.content_quality_score
+      }, 'content-extractor');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      articleId,
-      extractionMethod,
-      wordCount,
-      title: extractedContent.title,
-      author: extractedContent.author,
-      bodyLength: extractedContent.body?.length || 0,
-      extracted: true
-    }), {
+    // Return response
+    const response = {
+      success: extractedContent && extractedContent.word_count >= 50,
+      articleId: articleRecord?.id,
+      url: targetUrl,
+      method: extractionMethod,
+      wordCount: extractedContent?.word_count || 0,
+      qualityScore: extractedContent?.content_quality_score || 0,
+      title: extractedContent?.title || 'Untitled',
+      extracted: extractedContent && extractedContent.word_count >= 50,
+      error: error_message
+    };
+
+    return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Content extraction error:', error);
+    console.error('❌ Content extractor error:', error);
+    
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error.message,
+      extracted: false
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -235,85 +188,61 @@ serve(async (req) => {
   }
 });
 
-function extractContentFromHTML(html: string) {
-  // Remove scripts, styles, and other non-content elements
-  let cleaned = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '');
+// AI-enhanced content extraction using OpenAI
+async function enhanceContentWithAI(url: string, apiKey: string): Promise<any> {
+  const prompt = `Extract the main article content from this URL: ${url}
+  
+Please provide:
+1. Title of the article
+2. Main body content (full text, not summary)
+3. Author if available
+4. Publication date if available
 
-  // Extract title
-  const titleMatch = cleaned.match(/<title[^>]*>([^<]+)<\/title>/i) ||
-                    cleaned.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
-                    cleaned.match(/class="[^"]*title[^"]*"[^>]*>([^<]+)</i);
-  const title = titleMatch ? titleMatch[1].trim() : '';
+Focus on extracting the complete article text, excluding navigation, ads, and sidebar content.`;
 
-  // Extract author
-  const authorMatch = cleaned.match(/class="[^"]*author[^"]*"[^>]*>([^<]+)</i) ||
-                     cleaned.match(/by\s+([A-Za-z\s]+)/i);
-  const author = authorMatch ? authorMatch[1].trim() : '';
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a content extraction assistant. Extract clean, readable article content from web pages.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1
+    })
+  });
 
-  // Extract main content - Enhanced patterns for The Argus and other news sites
-  const contentPatterns = [
-    // The Argus specific patterns (exact selectors)
-    /<div[^>]*class="article-body"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="entry-content"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="post-content"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="story-body"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="content-body"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*class="[^"]*article-content[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
-    /<div[^>]*id="post-\d+"[^>]*>([\s\S]*?)<\/div>/i,
-    // Generic news patterns
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<div[^>]*class="[^"]*story[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i
-  ];
-
-  let bodyContent = '';
-  for (const pattern of contentPatterns) {
-    const match = cleaned.match(pattern);
-    if (match && match[1].length > bodyContent.length) {
-      bodyContent = match[1];
-    }
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
 
-  // If no specific content found, extract all paragraph text
-  if (!bodyContent || bodyContent.length < 200) {
-    const paragraphs = cleaned.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
-    bodyContent = paragraphs.join('\n');
-    
-    // Additional fallback: look for divs with substantial text content
-    if (!bodyContent || bodyContent.length < 100) {
-      const textDivs = cleaned.match(/<div[^>]*>[^<]*[a-zA-Z]{50,}[^<]*<\/div>/gi) || [];
-      if (textDivs.length > 0) {
-        bodyContent = textDivs.join('\n');
-      }
-    }
+  const result = await response.json();
+  const content = result.choices[0]?.message?.content;
+
+  if (!content) {
+    throw new Error('No content returned from AI');
   }
 
-  // Clean up the body content
-  bodyContent = bodyContent
-    .replace(/<[^>]+>/g, ' ') // Remove HTML tags
-    .replace(/&[a-zA-Z0-9]+;/g, ' ') // Remove HTML entities
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim();
-
-  // Extract publish date
-  const dateMatch = cleaned.match(/datetime="([^"]+)"/i) ||
-                   cleaned.match(/\b(\d{4}-\d{2}-\d{2})\b/);
-  const publishedAt = dateMatch ? dateMatch[1] : null;
-
+  // Parse the AI response to extract structured data
+  const wordCount = content.split(/\s+/).length;
+  
   return {
-    title,
-    author,
-    body: bodyContent,
-    publishedAt
+    title: 'AI Extracted Content',
+    body: content,
+    author: null,
+    published_at: new Date().toISOString(),
+    word_count: wordCount,
+    content_quality_score: Math.min(wordCount * 1.5, 100)
   };
 }
