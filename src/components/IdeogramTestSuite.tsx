@@ -101,11 +101,14 @@ export default function IdeogramTestSuite() {
   const [deletingVisuals, setDeletingVisuals] = useState<Set<string>>(new Set());
   const [providerCosts] = useState({
     nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell', status: 'success' as const },
-    // Keep other working providers for fallback but hide error status ones
-    // openai: { cost: 0.08, name: 'OpenAI GPT-Image-1', status: 'success' as const },
-    // ideogram: { cost: 0.08, name: 'Ideogram V3', status: 'success' as const },
-    // fal: { cost: 0.05, name: 'FAL Recraft V3', status: 'success' as const },
-    // huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)', status: 'success' as const },
+    openai: { cost: 0.08, name: 'OpenAI GPT-Image-1', status: 'success' as const },
+    ideogram: { cost: 0.08, name: 'Ideogram V3', status: 'success' as const },
+    fal: { cost: 0.05, name: 'FAL Recraft V3', status: 'success' as const },
+    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)', status: 'success' as const },
+    // Hidden error status providers:
+    // replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large', status: 'error' as const },
+    // deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large', status: 'error' as const },
+    // midjourney: { cost: 0.02, name: 'MidJourney via kie.ai', status: 'error' as const }
   });
 
   useEffect(() => {
