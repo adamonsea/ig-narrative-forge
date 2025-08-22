@@ -8,8 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
-import { TestingSuite } from '@/components/TestingSuite';
-import { Phase4Validator } from '@/components/Phase4Validator';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
 import { ApprovedQueue } from '@/components/ApprovedQueue';
@@ -22,7 +20,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'ideogram' | 'testing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'admin' | 'content' | 'slides' | 'approved' | 'ideogram'>('dashboard');
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({
     sources: { count: 0, status: 'loading' },
@@ -231,14 +229,6 @@ const Index = () => {
                   <Settings className="w-4 h-4" />
                   Admin
                 </Button>
-                <Button
-                  variant={activeTab === 'testing' ? 'default' : 'outline'}
-                  onClick={() => setActiveTab('testing')}
-                  className="flex items-center gap-2"
-                >
-                  <TestTube className="w-4 h-4" />
-                  Testing
-                </Button>
               </>
             )}
           </div>
@@ -307,13 +297,6 @@ const Index = () => {
           </div>
         )}
 
-
-        {activeTab === 'testing' && isAdmin && (
-          <div className="space-y-6">
-            <Phase4Validator />
-            <TestingSuite />
-          </div>
-        )}
 
         {activeTab === 'admin' && isAdmin && (
           <div className="space-y-6">
