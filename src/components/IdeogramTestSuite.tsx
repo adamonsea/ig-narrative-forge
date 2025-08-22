@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import SlideViewer from './SlideViewer';
+import StatusIndicator from './StatusIndicator';
 import { 
   Play, 
   Zap, 
@@ -99,14 +100,14 @@ export default function IdeogramTestSuite() {
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [deletingVisuals, setDeletingVisuals] = useState<Set<string>>(new Set());
   const [providerCosts] = useState({
-    openai: { cost: 0.08, name: 'OpenAI GPT-Image-1' },
-    ideogram: { cost: 0.08, name: 'Ideogram V3' },
-    fal: { cost: 0.05, name: 'FAL Recraft V3' },
-    replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large' },
-    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)' },
-    deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large' },
-    nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell' },
-    midjourney: { cost: 0.02, name: 'MidJourney via kie.ai' }
+    openai: { cost: 0.08, name: 'OpenAI GPT-Image-1', status: 'success' as const },
+    ideogram: { cost: 0.08, name: 'Ideogram V3', status: 'success' as const },
+    fal: { cost: 0.05, name: 'FAL Recraft V3', status: 'success' as const },
+    replicate: { cost: 0.035, name: 'Replicate SD 3.5 Large', status: 'error' as const },
+    huggingface: { cost: 0.02, name: 'FLUX.1-schnell (HuggingFace)', status: 'error' as const },
+    deepinfra: { cost: 0.025, name: 'DeepInfra SD 3.5 Large', status: 'error' as const },
+    nebius: { cost: 0.0013, name: 'Nebius FLUX-schnell', status: 'error' as const },
+    midjourney: { cost: 0.02, name: 'MidJourney via kie.ai', status: 'error' as const }
   });
 
   useEffect(() => {
@@ -665,8 +666,11 @@ export default function IdeogramTestSuite() {
                         onClick={() => runSingleSlideTest(stories[0].slides[0], provider as any)}
                         disabled={isRunning}
                         variant="outline"
-                        className="flex flex-col items-center p-3 h-auto text-xs"
+                        className="flex flex-col items-center p-3 h-auto text-xs relative"
                       >
+                        <div className="absolute top-1 right-1">
+                          <StatusIndicator status={info.status} size="sm" />
+                        </div>
                         <span className="font-medium">{info.name}</span>
                         <span className="text-muted-foreground">${info.cost}</span>
                       </Button>
@@ -712,9 +716,10 @@ export default function IdeogramTestSuite() {
                             variant="outline"
                             onClick={() => runSingleSlideTest(slide, provider as any)}
                             disabled={isRunning}
-                            className="flex-1 text-xs"
+                            className="flex-1 text-xs relative"
                           >
-                            {info.name.split(' ')[0]}
+                            <StatusIndicator status={info.status} size="sm" />
+                            <span className="ml-1">{info.name.split(' ')[0]}</span>
                           </Button>
                         ))}
                       </div>
@@ -732,8 +737,9 @@ export default function IdeogramTestSuite() {
                         size="sm"
                         onClick={() => runStoryTest(selectedStory, provider as any)}
                         disabled={isRunning || !selectedStory}
-                        className="flex-1 text-xs"
+                        className="flex items-center gap-2 flex-1 text-xs"
                       >
+                        <StatusIndicator status={info.status} size="sm" />
                         {info.name}
                       </Button>
                     ))}
