@@ -15,11 +15,11 @@ export function StatusIndicator({ status, text, size = 'md' }: StatusIndicatorPr
 
     switch (status) {
       case 'success':
-        return <div className={`${dotSize} rounded-full bg-green-500`} />;
+        return <div className={`${dotSize} rounded-full border-2 border-green-500`} />;
       case 'pending':
         return <Clock className={`${iconSize} text-yellow-500 animate-pulse`} />;
       case 'error':
-        return <div className={`${dotSize} rounded-full bg-red-500`} />;
+        return <div className={`${dotSize} rounded-full border-2 border-red-500`} />;
       case 'warning':
         return <AlertCircle className={`${iconSize} text-orange-500`} />;
       default:
