@@ -49,8 +49,24 @@ serve(async (req) => {
     const isTitle = slideData?.slide_number === 1;
     const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
     
-    // FLUX-optimized prompt using natural language for best text accuracy
-    const enhancedPrompt = `A clean social media typography slide featuring the text "${slideContent}". The text should be rendered in large, bold, highly readable sans-serif font like Helvetica Neue or Arial Bold. Use pure white or light gray background with dark text for maximum contrast and readability. Center the text with generous white space margins. The design should be minimal and professional, suitable for news or editorial content. Focus entirely on making every letter crystal clear and perfectly legible - this is crucial for readability. No graphics, no decorative elements, just perfectly rendered typography in ${textCase} format.`;
+    // FLUX-optimized prompt with enhanced word separation for accuracy
+    const wordSeparatedContent = slideContent.split(' ').join('  '); // Double space between words
+    const enhancedPrompt = `Create a professional typography slide with this EXACT text: "${wordSeparatedContent}". 
+
+TEXT REQUIREMENTS:
+- Use large, bold sans-serif font (Helvetica/Arial Bold)
+- Each word must be clearly separated and perfectly spelled
+- Text format: ${textCase}
+- NO word joining, NO typos, NO creative interpretation
+
+DESIGN SPECIFICATION:
+- Clean white/light background
+- High contrast dark text for readability  
+- Center alignment with generous margins
+- Professional editorial news style
+- Pure typography only - no graphics or decorations
+
+CRITICAL: Render each word individually and clearly. The text "${slideContent}" must appear exactly as written with proper word spacing.`;
 
     const startTime = Date.now();
 
