@@ -49,25 +49,28 @@ serve(async (req) => {
     const isTitle = slideData?.slide_number === 1;
     const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
     
-    // Enhanced FLUX prompt with Lexend font and better word separation to prevent letter errors
-    const wordSeparatedContent = slideContent.split('').join(' '); // Space between each character
+    // Enhanced FLUX prompt optimized for longer text with better line breaking
+    const wordsArray = slideContent.split(' ');
+    const lineBreakPrompt = wordsArray.length > 8 ? 
+      `Break this text into 2-3 readable lines for better display: "${slideContent}"` : 
+      `Single line text: "${slideContent}"`;
+    
     const enhancedPrompt = `Create a professional typography social media slide using LEXEND FONT FAMILY.
 
-EXACT TEXT TO RENDER: "${slideContent}"
-CHARACTER-SPACED VERSION: "${wordSeparatedContent}"
+${lineBreakPrompt}
 
 TYPOGRAPHY SPECIFICATIONS:
-- Font: Lexend (Google Fonts family) - clean, readable sans-serif
+- Font: Lexend (clean, highly readable sans-serif)
 - Size: Large, bold weight for maximum readability
 - Text format: ${textCase}
-- CRITICAL: Each letter must be rendered exactly as specified
-- NO letter substitution (M≠N, no extra S letters)
-- Perfect spelling - double-check each character
+- CRITICAL: Display ALL words from the text above
+- Perfect spelling and complete text display
+- If text is long, break into 2-3 centered lines
 
 LAYOUT REQUIREMENTS:
 - Main text: Centered with generous white space
-- Bottom left corner: "E a s t b o u r n e" (small text, 12pt, character-spaced)
-- Bottom right corner: "E a s t b o u r n e   R e p o r t e r" (small text, 12pt, character-spaced)
+- Allow text to flow across multiple lines if needed
+- Bottom left corner: "Eastbourne" (small text, 12pt)
 - Clean white/light background
 - High contrast dark text
 
@@ -75,9 +78,9 @@ DESIGN STYLE:
 - Professional editorial news layout
 - Lexend font throughout for consistency
 - No graphics, decorations, or illustrations
-- Focus on crystal-clear typography
+- Focus on complete, accurate typography display
 
-VERIFICATION: The text "${slideContent}" must appear exactly as written with perfect letter accuracy.`;
+CRITICAL INSTRUCTION: Ensure EVERY SINGLE WORD from "${slideContent}" appears in the final image. Do not truncate or abbreviate.`;
 
     const startTime = Date.now();
 
