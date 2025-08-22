@@ -836,7 +836,7 @@ serve(async (req) => {
           body: {
             slideId,
             prompt: enhancedPrompt,
-            model: 'flux-schnell',
+            model: 'black-forest-labs/flux-schnell',
             stylePreset
           }
         });
