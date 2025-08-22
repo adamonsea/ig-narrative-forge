@@ -152,10 +152,19 @@ const Index = () => {
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-primary">eeZee news</h1>
-            <p className="text-sm text-muted-foreground">turbo hyper local</p>
-          </div>
+            <div>
+              <h1 className="text-2xl font-bold text-primary">eeZee news</h1>
+              <p className="text-sm text-muted-foreground">turbo hyper local</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open("/feed/eastbourne", "_blank")}
+              >
+                View Eastbourne Feed
+              </Button>
+            </div>
           <div className="flex items-center gap-4">
             {isAdmin && (
               <Button
