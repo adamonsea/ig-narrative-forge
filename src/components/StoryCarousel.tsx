@@ -102,6 +102,38 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
     }
   };
 
+  // Parse content for last slide styling
+  const parseContentForLastSlide = (content: string) => {
+    if (!isLastSlide) return { mainContent: content, ctaContent: null };
+    
+    // Look for CTA patterns
+    const ctaPatterns = [
+      /Comment, like, share\./i,
+      /Summarised by/i,
+      /Support local journalism/i
+    ];
+    
+    let splitIndex = -1;
+    for (const pattern of ctaPatterns) {
+      const match = content.search(pattern);
+      if (match !== -1) {
+        splitIndex = match;
+        break;
+      }
+    }
+    
+    if (splitIndex === -1) {
+      return { mainContent: content, ctaContent: null };
+    }
+    
+    return {
+      mainContent: content.substring(0, splitIndex).trim(),
+      ctaContent: content.substring(splitIndex).trim()
+    };
+  };
+
+  const { mainContent, ctaContent } = parseContentForLastSlide(currentSlide.content);
+
   return (
     <Card className="overflow-hidden">
       {/* Slide Content */}
@@ -123,30 +155,26 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
                 ? "text-4xl font-bold uppercase" 
                 : "text-3xl font-light"
             }`}>
-              {currentSlide.content}
+              {/* Main story content */}
+              {isLastSlide ? mainContent : currentSlide.content}
               
-              {/* Call-to-action text integrated into last slide content */}
-              {isLastSlide && (
-                <div className="mt-6 pt-4">
-                  <p className="text-lg font-bold text-muted-foreground mb-2">
-                    Comment, like, share. Summarised by{" "}
-                    {story.author && story.publication_name 
-                      ? `${story.author} from ${story.publication_name}` 
-                      : story.publication_name || "our editorial team"
-                    }.
-                  </p>
-                  <p className="text-lg font-bold text-muted-foreground">
-                    Support local journalism, visit their{" "}
-                    <a 
-                      href={story.article.source_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      source website
-                    </a>
-                    {" "}for the full story.
-                  </p>
+              {/* CTA content with special styling on last slide */}
+              {isLastSlide && ctaContent && (
+                <div className="mt-4 pt-4 border-t border-muted">
+                  <div 
+                    className="text-lg font-bold text-muted-foreground"
+                    dangerouslySetInnerHTML={{
+                      __html: ctaContent
+                        .replace(
+                          /(https?:\/\/[^\s]+)/g, 
+                          '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">source website</a>'
+                        )
+                        .replace(
+                          /source website/g,
+                          '<a href="' + story.article.source_url + '" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">source website</a>'
+                        )
+                    }}
+                  />
                 </div>
               )}
             </div>
