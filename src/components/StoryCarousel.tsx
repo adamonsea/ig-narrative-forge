@@ -118,38 +118,38 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
             slideDirection === 'right' ? 'animate-slide-out-right' : 
             'animate-slide-in'
           }`}>
-            <p className={`leading-normal text-foreground ${
+            <div className={`leading-normal text-foreground ${
               isFirstSlide 
                 ? "text-4xl font-bold uppercase" 
                 : "text-3xl font-light"
             }`}>
               {currentSlide.content}
-            </p>
-            
-            {/* Call-to-action text on last slide */}
-            {isLastSlide && (
-              <div className="mt-6 pt-4 border-t">
-                <p className="text-sm font-bold text-muted-foreground mb-2">
-                  Comment, like, share. Summarised by{" "}
-                  {story.author && story.publication_name 
-                    ? `${story.author} from ${story.publication_name}` 
-                    : story.publication_name || "our editorial team"
-                  }.
-                </p>
-                <p className="text-sm font-bold text-muted-foreground">
-                  Support local journalism, visit their{" "}
-                  <a 
-                    href={story.article.source_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    source website
-                  </a>
-                  {" "}for the full story.
-                </p>
-              </div>
-            )}
+              
+              {/* Call-to-action text integrated into last slide content */}
+              {isLastSlide && (
+                <div className="mt-6 pt-4">
+                  <p className="text-xl font-bold text-muted-foreground mb-2">
+                    Comment, like, share. Summarised by{" "}
+                    {story.author && story.publication_name 
+                      ? `${story.author} from ${story.publication_name}` 
+                      : story.publication_name || "our editorial team"
+                    }.
+                  </p>
+                  <p className="text-xl font-bold text-muted-foreground">
+                    Support local journalism, visit their{" "}
+                    <a 
+                      href={story.article.source_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      source website
+                    </a>
+                    {" "}for the full story.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Last slide actions */}
