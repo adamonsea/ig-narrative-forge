@@ -43,7 +43,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex + 1);
         setSlideDirection(null);
-      }, 150);
+      }, 200);
     }
   };
 
@@ -53,7 +53,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex - 1);
         setSlideDirection(null);
-      }, 150);
+      }, 200);
     }
   };
 
@@ -113,10 +113,10 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
           onTouchEnd={handleTouchEnd}
         >
           {/* Main Content */}
-          <div className={`mb-8 transition-all duration-300 ${
+          <div className={`mb-8 transition-all duration-500 ${
             slideDirection === 'left' ? 'animate-slide-out-left' : 
             slideDirection === 'right' ? 'animate-slide-out-right' : 
-            'animate-fade-in'
+            'animate-slide-in'
           }`}>
             <p className={`leading-normal text-foreground ${
               isFirstSlide 
@@ -125,50 +125,18 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
             }`}>
               {currentSlide.content}
             </p>
-          </div>
-
-          {/* Last slide actions and attribution */}
-          {isLastSlide && (
-            <>
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  className="flex items-center gap-2"
-                >
-                  <Share className="w-4 h-4" />
-                  Share
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  className="flex items-center gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  Send
-                </Button>
-                <Button
-                  variant={isLoved ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleLove}
-                  className="flex items-center gap-2"
-                >
-                  <Heart className={`w-4 h-4 ${isLoved ? "fill-current" : ""}`} />
-                  Like
-                </Button>
-              </div>
-              
-              <div className="text-sm text-muted-foreground border-t pt-4 mt-4">
-                <p className="mb-2">
+            
+            {/* Call-to-action text on last slide */}
+            {isLastSlide && (
+              <div className="mt-6 pt-4 border-t">
+                <p className="text-sm font-bold text-muted-foreground mb-2">
                   Comment, like, share. Summarised by{" "}
                   {story.author && story.publication_name 
                     ? `${story.author} from ${story.publication_name}` 
                     : story.publication_name || "our editorial team"
                   }.
                 </p>
-                <p>
+                <p className="text-sm font-bold text-muted-foreground">
                   Support local journalism, visit their{" "}
                   <a 
                     href={story.article.source_url} 
@@ -181,7 +149,40 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
                   {" "}for the full story.
                 </p>
               </div>
-            </>
+            )}
+          </div>
+
+          {/* Last slide actions */}
+          {isLastSlide && (
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2"
+              >
+                <Share className="w-4 h-4" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send
+              </Button>
+              <Button
+                variant={isLoved ? "default" : "outline"}
+                size="sm"
+                onClick={toggleLove}
+                className="flex items-center gap-2"
+              >
+                <Heart className={`w-4 h-4 ${isLoved ? "fill-current" : ""}`} />
+                Like
+              </Button>
+            </div>
           )}
         </div>
 
@@ -208,17 +209,11 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         </div>
       )}
 
-      {/* Bottom Attribution - no source link on non-last slides */}
+      {/* Bottom Attribution - no publication on footer */}
       <div className="flex items-center justify-between text-sm text-muted-foreground border-t px-8 py-4 bg-muted/20">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="font-medium">{topicName}</span>
-            {story.publication_name && (
-              <>
-                <span>•</span>
-                <span>{story.publication_name}</span>
-              </>
-            )}
           </div>
           <div className="flex items-center gap-1">
             <Button
