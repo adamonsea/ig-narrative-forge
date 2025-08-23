@@ -114,77 +114,69 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
             </p>
           </div>
 
-          {/* Last slide actions */}
+          {/* Last slide actions and attribution */}
           {isLastSlide && (
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="flex items-center gap-2"
-              >
-                <Share className="w-4 h-4" />
-                Share
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Send
-              </Button>
-              <Button
-                variant={isLoved ? "default" : "outline"}
-                size="sm"
-                onClick={toggleLove}
-                className="flex items-center gap-2"
-              >
-                <Heart className={`w-4 h-4 ${isLoved ? "fill-current" : ""}`} />
-                Like
-              </Button>
-            </div>
+            <>
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="flex items-center gap-2"
+                >
+                  <Share className="w-4 h-4" />
+                  Share
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Send
+                </Button>
+                <Button
+                  variant={isLoved ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleLove}
+                  className="flex items-center gap-2"
+                >
+                  <Heart className={`w-4 h-4 ${isLoved ? "fill-current" : ""}`} />
+                  Like
+                </Button>
+              </div>
+              
+              <div className="text-sm text-muted-foreground border-t pt-4 mt-4">
+                <p className="mb-2">Comment, like, share. Summarised by Reporter from Sussex Express.</p>
+                <p>Support local journalism, visit their site{" "}
+                  <a 
+                    href="https://www.sussexexpress.co.uk" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    www.sussexexpress.co.uk
+                  </a>
+                  {" "}for the full story.
+                </p>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Navigation Controls - only show if more than 1 slide */}
-        {story.slides.length > 1 && (
-          <>
-            {/* Navigation Buttons */}
-            <div className="absolute right-4 top-4 flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={prevSlide}
-                disabled={isFirstSlide}
-                className="bg-background/80 backdrop-blur"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={nextSlide}
-                disabled={isLastSlide}
-                className="bg-background/80 backdrop-blur"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </>
-        )}
+        {/* Navigation Controls removed per user request */}
       </div>
 
       {/* Slide Progress - only show if more than 1 slide */}
       {story.slides.length > 1 && (
         <div className="px-8 pb-4">
-          <div className="flex gap-1 mb-4">
+          <div className="flex justify-center gap-2 mb-4">
             {story.slides.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
-                className={`flex-1 h-1 rounded-full transition-colors ${
+                className={`w-2 h-2 rounded-full transition-colors ${
                   index === currentSlideIndex ? "bg-primary" : "bg-muted"
                 }`}
               />
@@ -196,7 +188,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         </div>
       )}
 
-      {/* Bottom Attribution */}
+      {/* Bottom Attribution - no source link on non-last slides */}
       <div className="flex items-center justify-between text-sm text-muted-foreground border-t px-8 py-4 bg-muted/20">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -220,15 +212,6 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
             </Button>
           </div>
         </div>
-        <a
-          href={story.article.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 hover:text-primary transition-colors"
-        >
-          <ExternalLink className="w-3 h-3" />
-          <span>Source</span>
-        </a>
       </div>
     </Card>
   );
