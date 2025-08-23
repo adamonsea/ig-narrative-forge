@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Send, Heart, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Share2, Send, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import html2canvas from 'html2canvas';
 
 interface Story {
   id: string;
@@ -34,8 +33,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const slideRef = useRef<HTMLDivElement>(null);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -106,43 +103,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
     }
   };
 
-  // Export slide as image
-  const exportSlideAsImage = async () => {
-    if (!slideRef.current || isExporting) return;
-    
-    setIsExporting(true);
-    
-    try {
-      // Temporarily hide interactive elements
-      const interactiveElements = slideRef.current.querySelectorAll('[data-hide-on-export]');
-      interactiveElements.forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
-      
-      const canvas = await html2canvas(slideRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        width: 1080,
-        height: 1350, // Instagram portrait ratio
-      });
-      
-      // Restore interactive elements
-      interactiveElements.forEach(el => {
-        (el as HTMLElement).style.display = '';
-      });
-      
-      const link = document.createElement('a');
-      link.download = `${topicName}-slide-${currentSlideIndex + 1}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-    } catch (error) {
-      console.error('Error exporting slide:', error);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // Parse content for last slide styling
   const parseContentForLastSlide = (content: string) => {
@@ -176,33 +136,37 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
 
   const { mainContent, ctaContent } = parseContentForLastSlide(currentSlide.content);
 
+  // Dynamic text sizing based on content length
+  const getTextSize = (content: string, isTitle: boolean) => {
+    const length = content.length;
+    if (isTitle) {
+      if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
+      if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
+      return "text-xl md:text-2xl lg:text-3xl";
+    } else {
+      if (length < 80) return "text-xl md:text-2xl lg:text-3xl";
+      if (length < 150) return "text-lg md:text-xl lg:text-2xl";
+      if (length < 250) return "text-base md:text-lg lg:text-xl";
+      return "text-sm md:text-base lg:text-lg";
+    }
+  };
+
   return (
-    <Card className="overflow-hidden" ref={slideRef}>
+    <Card className="overflow-hidden">
       <div 
-        className="relative bg-gradient-to-br from-background to-muted min-h-[600px] flex flex-col"
+        className="relative bg-background min-h-[600px] flex flex-col"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b" data-hide-on-export>
+        <div className="flex items-center justify-between p-4 border-b">
           <Badge variant="secondary" className="text-sm font-medium">
             {topicName}
           </Badge>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={exportSlideAsImage}
-              disabled={isExporting}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {currentSlideIndex + 1} of {story.slides.length}
-            </span>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            {currentSlideIndex + 1} of {story.slides.length}
+          </span>
         </div>
 
         {/* Slide Content */}
@@ -216,8 +180,8 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
             }`}>
               <div className={`text-center leading-relaxed ${
                   currentSlideIndex === 0 
-                  ? "text-2xl md:text-3xl lg:text-4xl font-bold uppercase text-balance" 
-                  : "text-lg md:text-xl lg:text-2xl xl:text-3xl font-light text-balance"
+                  ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
               }`}>
                 {/* Main story content */}
                 {isLastSlide ? mainContent : currentSlide.content}
@@ -254,7 +218,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
                 className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={prevSlide}
                 disabled={currentSlideIndex === 0}
-                data-hide-on-export
               >
                 <ChevronLeft className="h-6 w-6" />
               </Button>
@@ -264,7 +227,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={nextSlide}
                 disabled={currentSlideIndex === story.slides.length - 1}
-                data-hide-on-export
               >
                 <ChevronRight className="h-6 w-6" />
               </Button>
@@ -273,7 +235,7 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
         </div>
 
         {/* Bottom section */}
-        <div className="p-4" data-hide-on-export>
+        <div className="p-4">
           {/* Progress dots */}
           {story.slides.length > 1 && (
             <div className="flex justify-center space-x-2 mb-4">

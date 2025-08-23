@@ -633,7 +633,7 @@ You are creating ${config.count} engaging slides from factual news content.
 3. BUILD TENSION: What actually happened according to the source
 4. CLIMAX/RESOLUTION: The real outcome described in the article
 5. IMPACT/CONSEQUENCE: Actual results mentioned in the source
-6. FINAL SLIDE: "What you think about [story topic]? - comment, like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+6. FINAL SLIDE: "What do you think about [story topic]? Like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
 
 🎯 FACTUAL NARRATIVE REQUIREMENTS:
 • SETUP: Describe the actual initial situation from the source
