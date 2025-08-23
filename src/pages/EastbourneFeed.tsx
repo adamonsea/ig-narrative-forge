@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { StoryCarousel } from "@/components/StoryCarousel";
+import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 
 interface Story {
