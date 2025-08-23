@@ -31,7 +31,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -39,7 +39,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
 
   const nextSlide = () => {
     if (!isLastSlide) {
-      setSlideDirection('left');
+      setSlideDirection('next');
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex + 1);
         setSlideDirection(null);
@@ -49,7 +49,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
 
   const prevSlide = () => {
     if (!isFirstSlide) {
-      setSlideDirection('right');
+      setSlideDirection('prev');
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex - 1);
         setSlideDirection(null);
@@ -114,8 +114,8 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         >
           {/* Main Content */}
           <div className={`mb-8 transition-all duration-500 ${
-            slideDirection === 'left' ? 'animate-slide-out-left' : 
-            slideDirection === 'right' ? 'animate-slide-out-right' : 
+            slideDirection === 'next' ? 'animate-slide-out-left' : 
+            slideDirection === 'prev' ? 'animate-slide-out-right' : 
             'animate-slide-in'
           }`}>
             <div className={`leading-normal text-foreground ${
@@ -128,14 +128,14 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
               {/* Call-to-action text integrated into last slide content */}
               {isLastSlide && (
                 <div className="mt-6 pt-4">
-                  <p className="text-xl font-bold text-muted-foreground mb-2">
+                  <p className="text-lg font-bold text-muted-foreground mb-2">
                     Comment, like, share. Summarised by{" "}
                     {story.author && story.publication_name 
                       ? `${story.author} from ${story.publication_name}` 
                       : story.publication_name || "our editorial team"
                     }.
                   </p>
-                  <p className="text-xl font-bold text-muted-foreground">
+                  <p className="text-lg font-bold text-muted-foreground">
                     Support local journalism, visit their{" "}
                     <a 
                       href={story.article.source_url} 
