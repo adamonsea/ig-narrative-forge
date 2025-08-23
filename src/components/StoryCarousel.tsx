@@ -71,7 +71,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(0); // Reset touch end
+    setTouchEnd(0);
     setTouchStart(e.targetTouches[0].clientX);
   };
 
@@ -82,8 +82,8 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
+    const isLeftSwipe = distance > 30;
+    const isRightSwipe = distance < -30;
 
     if (isLeftSwipe && !isLastSlide) {
       nextSlide();
@@ -151,23 +151,6 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
         {/* Navigation Controls - only show if more than 1 slide */}
         {story.slides.length > 1 && (
           <>
-            {/* Touch/Click Areas for Navigation */}
-            {!isFirstSlide && (
-              <button
-                onClick={prevSlide}
-                className="absolute left-0 top-0 w-1/3 h-full bg-transparent hover:bg-black/5 transition-colors z-10"
-                aria-label="Previous slide"
-              />
-            )}
-            
-            {!isLastSlide && (
-              <button
-                onClick={nextSlide}
-                className="absolute right-0 top-0 w-1/3 h-full bg-transparent hover:bg-black/5 transition-colors z-10"
-                aria-label="Next slide"
-              />
-            )}
-
             {/* Navigation Buttons */}
             <div className="absolute right-4 top-4 flex gap-2">
               <Button
