@@ -31,6 +31,7 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -38,13 +39,21 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
 
   const nextSlide = () => {
     if (!isLastSlide) {
-      setCurrentSlideIndex(currentSlideIndex + 1);
+      setSlideDirection('left');
+      setTimeout(() => {
+        setCurrentSlideIndex(currentSlideIndex + 1);
+        setSlideDirection(null);
+      }, 150);
     }
   };
 
   const prevSlide = () => {
     if (!isFirstSlide) {
-      setCurrentSlideIndex(currentSlideIndex - 1);
+      setSlideDirection('right');
+      setTimeout(() => {
+        setCurrentSlideIndex(currentSlideIndex - 1);
+        setSlideDirection(null);
+      }, 150);
     }
   };
 
@@ -104,7 +113,11 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
           onTouchEnd={handleTouchEnd}
         >
           {/* Main Content */}
-          <div className="mb-8">
+          <div className={`mb-8 transition-all duration-300 ${
+            slideDirection === 'left' ? 'animate-slide-out-left' : 
+            slideDirection === 'right' ? 'animate-slide-out-right' : 
+            'animate-fade-in'
+          }`}>
             <p className={`leading-normal text-foreground ${
               isFirstSlide 
                 ? "text-4xl font-bold uppercase" 
@@ -148,15 +161,22 @@ export function StoryCarousel({ story, topicName }: StoryCarouselProps) {
               </div>
               
               <div className="text-sm text-muted-foreground border-t pt-4 mt-4">
-                <p className="mb-2">Comment, like, share. Summarised by Reporter from Sussex Express.</p>
-                <p>Support local journalism, visit their site{" "}
+                <p className="mb-2">
+                  Comment, like, share. Summarised by{" "}
+                  {story.author && story.publication_name 
+                    ? `${story.author} from ${story.publication_name}` 
+                    : story.publication_name || "our editorial team"
+                  }.
+                </p>
+                <p>
+                  Support local journalism, visit their{" "}
                   <a 
-                    href="https://www.sussexexpress.co.uk" 
+                    href={story.article.source_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    www.sussexexpress.co.uk
+                    source website
                   </a>
                   {" "}for the full story.
                 </p>
