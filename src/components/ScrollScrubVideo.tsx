@@ -29,6 +29,11 @@ interface ScrollScrubVideoProps {
  * Notes
  * - For best results: use short, well‑encoded, muted videos (H.264, 24–30fps).
  * - iOS limits ultra‑rapid seeking; we use rAF smoothing to keep it stable.
+ *
+ * Performance & Tuning
+ * - Timing feels too fast/slow? Adjust pinHeight (300–800vh range works well).
+ * - Scrub starting/ending at wrong time? Tune startOffset/endOffset (e.g., "start 0.8", "end 0.2").
+ * - Jank on mobile? Keep bitrate modest, avoid 60fps, ensure poster is set.
  */
 export default function ScrollScrubVideo({
   src,
@@ -157,4 +162,24 @@ function clamp(n: number, min: number, max: number): number {
  *     </div>
  *   );
  * }
+ *
+ * TUNING TIPS
+ * 
+ * Problem: Animation feels too fast or slow
+ * Solution: Adjust pinHeight value
+ * - Too fast? Increase pinHeight (try 500-800)
+ * - Too slow? Decrease pinHeight (try 200-400)
+ * 
+ * Problem: Scrub starts/ends at wrong scroll position
+ * Solution: Fine-tune startOffset and endOffset
+ * - Start earlier: "start 0.8" (instead of "start end")
+ * - End later: "end 0.2" (instead of "end start")
+ * - More control: "center start", "center end", "center center"
+ * 
+ * Problem: Janky performance on mobile
+ * Solution: Optimize video settings
+ * - Keep bitrate modest (under 2Mbps recommended)
+ * - Use 24-30fps (avoid 60fps)
+ * - Always set poster prop for faster initial load
+ * - Consider shorter video duration (under 10 seconds)
  */
