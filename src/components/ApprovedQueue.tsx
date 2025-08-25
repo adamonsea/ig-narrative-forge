@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CarouselImageGenerator } from '@/components/CarouselImageGenerator';
+import { CarouselPreviewModal } from '@/components/CarouselPreviewModal';
 import { 
   CheckCircle2, 
   Clock, 
@@ -93,6 +94,9 @@ export const ApprovedQueue = () => {
   const [generatingVisual, setGeneratingVisual] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [generatingCarousel, setGeneratingCarousel] = useState<string | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedCarouselExport, setSelectedCarouselExport] = useState<CarouselExport | null>(null);
+  const [selectedStoryTitle, setSelectedStoryTitle] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -352,53 +356,22 @@ export const ApprovedQueue = () => {
            { status: 'unknown', label: latestExport.status };
   };
 
-  const downloadCarouselImages = async (storyId: string) => {
-    try {
-      const story = stories.find(s => s.id === storyId);
-      const carouselExport = story?.carousel_exports?.[0];
-      
-      if (!carouselExport || carouselExport.status !== 'completed') {
-        toast({
-          title: "Download Failed",
-          description: "Carousel images not ready yet",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Parse file_paths as it comes as JSON from Supabase
-      const filePaths = Array.isArray(carouselExport.file_paths) 
-        ? carouselExport.file_paths 
-        : JSON.parse(carouselExport.file_paths || '[]');
-
-      // Download individual files
-      for (const filePath of filePaths) {
-        const { data: fileData } = await supabase.storage
-          .from('exports')
-          .download(filePath);
-        
-        if (fileData) {
-          const url = URL.createObjectURL(fileData);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filePath.split('/').pop() || 'carousel_image.png';
-          link.click();
-          URL.revokeObjectURL(url);
-        }
-      }
-
+  const openPreviewModal = (storyId: string) => {
+    const story = stories.find(s => s.id === storyId);
+    const carouselExport = story?.carousel_exports?.[0];
+    
+    if (!story || !carouselExport || carouselExport.status !== 'completed') {
       toast({
-        title: "Download Started",
-        description: `Downloading ${filePaths.length} images`,
-      });
-    } catch (error: any) {
-      console.error('Error downloading carousel:', error);
-      toast({
-        title: "Download Failed",
-        description: error.message,
+        title: "Preview Failed",
+        description: "Carousel images not ready yet",
         variant: "destructive"
       });
+      return;
     }
+
+    setSelectedCarouselExport(carouselExport);
+    setSelectedStoryTitle(story.title);
+    setPreviewModalOpen(true);
   };
 
   if (loading) {
@@ -531,14 +504,24 @@ export const ApprovedQueue = () => {
                         Archive
                       </Button>
                       {carouselStatus.status === 'completed' && (
-                        <Button
-                          onClick={() => downloadCarouselImages(story.id)}
-                          variant="default"
-                          size="sm"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download Pack
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => openPreviewModal(story.id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Preview Images
+                          </Button>
+                          <Button
+                            onClick={() => openPreviewModal(story.id)}
+                            variant="default"
+                            size="sm"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Pack
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -614,6 +597,20 @@ export const ApprovedQueue = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Carousel Preview Modal */}
+      {selectedCarouselExport && (
+        <CarouselPreviewModal
+          isOpen={previewModalOpen}
+          onClose={() => {
+            setPreviewModalOpen(false);
+            setSelectedCarouselExport(null);
+            setSelectedStoryTitle('');
+          }}
+          storyTitle={selectedStoryTitle}
+          carouselExport={selectedCarouselExport}
+        />
       )}
     </div>
   );
