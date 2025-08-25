@@ -85,6 +85,7 @@ export const ApprovedStoriesPanel = () => {
   const loadApprovedStories = async () => {
     setLoadingApproved(true);
     try {
+      console.log('🔍 Loading approved stories...');
       const { data: stories, error } = await supabase
         .from('stories')
         .select(`
@@ -105,15 +106,21 @@ export const ApprovedStoriesPanel = () => {
 
       if (error) throw error;
       
+      console.log('📊 Raw stories data:', stories);
+      
       const storiesWithSlides = (stories || []).filter(story => 
         story.slides && story.slides.length > 0
       );
       
+      console.log('✅ Stories with slides:', storiesWithSlides.length, storiesWithSlides);
       setApprovedStories(storiesWithSlides);
 
       // Load carousel statuses for all approved stories
       if (storiesWithSlides.length > 0) {
+        console.log('🎠 Loading carousel statuses for stories:', storiesWithSlides.map(s => s.id));
         await loadCarouselStatuses(storiesWithSlides.map(s => s.id));
+      } else {
+        console.log('❌ No stories with slides found');
       }
     } catch (error) {
       console.error('Error loading approved stories:', error);
@@ -129,6 +136,7 @@ export const ApprovedStoriesPanel = () => {
 
   const loadCarouselStatuses = async (storyIds: string[]) => {
     try {
+      console.log('🎠 Fetching carousel exports for story IDs:', storyIds);
       const { data: exports, error } = await supabase
         .from('carousel_exports')
         .select('*')
@@ -136,20 +144,25 @@ export const ApprovedStoriesPanel = () => {
 
       if (error) throw error;
 
+      console.log('📦 Carousel exports data:', exports);
+
       const statusMap: Record<string, CarouselStatus> = {};
       
       storyIds.forEach(storyId => {
         const exportRecord = exports?.find(exp => exp.story_id === storyId);
         if (exportRecord) {
+          console.log(`✅ Found export for story ${storyId}:`, exportRecord);
           statusMap[storyId] = {
             status: exportRecord.status as 'generating' | 'completed' | 'failed',
             export: exportRecord
           };
         } else {
+          console.log(`❌ No export found for story ${storyId}, setting status to 'none'`);
           statusMap[storyId] = { status: 'none' };
         }
       });
 
+      console.log('🎯 Final status map:', statusMap);
       setCarouselStatuses(statusMap);
     } catch (error) {
       console.error('Error loading carousel statuses:', error);
@@ -157,10 +170,22 @@ export const ApprovedStoriesPanel = () => {
   };
 
   const handleGenerateCarousel = async (story: Story) => {
-    const success = await generateCarouselImages(story);
-    if (success) {
-      // Refresh carousel statuses
-      await loadCarouselStatuses([story.id]);
+    console.log('🚀 Generating carousel for story:', story.id, story.title);
+    try {
+      const success = await generateCarouselImages(story);
+      console.log('✅ Carousel generation result:', success);
+      if (success) {
+        // Refresh carousel statuses
+        console.log('🔄 Refreshing carousel statuses...');
+        await loadCarouselStatuses([story.id]);
+      }
+    } catch (error) {
+      console.error('❌ Error in handleGenerateCarousel:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate carousel images",
+        variant: "destructive",
+      });
     }
   };
 
@@ -222,6 +247,12 @@ export const ApprovedStoriesPanel = () => {
   const renderCarouselActions = (story: Story) => {
     const status = carouselStatuses[story.id];
     const generating = isGenerating(story.id);
+
+    console.log(`🎬 Rendering carousel actions for story ${story.id}:`, {
+      status: status?.status,
+      generating,
+      fullStatus: status
+    });
 
     if (generating) {
       return (
