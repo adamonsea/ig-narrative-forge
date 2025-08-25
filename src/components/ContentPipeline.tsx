@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Calendar,
   User,
-  BookOpen
+  BookOpen,
+  AlertTriangle
 } from 'lucide-react';
 
 // Slide and Story interfaces  
