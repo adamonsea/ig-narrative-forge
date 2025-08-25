@@ -276,14 +276,39 @@ export const ApprovedQueue = () => {
   };
 
   const getPostStatus = (posts: Post[]) => {
-    if (!posts || posts.length === 0) return { status: 'not_published', label: 'Not Published' };
+    console.log('🔍 Checking post status for posts:', posts);
+    
+    if (!posts || posts.length === 0) {
+      console.log('📝 No posts found - status: not_published');
+      return { status: 'not_published', label: 'Not Published' };
+    }
     
     const publishedPosts = posts.filter(p => p.status === 'published');
     const scheduledPosts = posts.filter(p => p.status === 'scheduled');
+    const draftPosts = posts.filter(p => p.status === 'draft');
     
-    if (publishedPosts.length > 0) return { status: 'published', label: 'Published' };
-    if (scheduledPosts.length > 0) return { status: 'scheduled', label: 'Scheduled' };
-    return { status: 'draft', label: 'Draft' };
+    console.log('📊 Post breakdown:', { 
+      total: posts.length, 
+      published: publishedPosts.length, 
+      scheduled: scheduledPosts.length, 
+      draft: draftPosts.length 
+    });
+    
+    if (publishedPosts.length > 0) {
+      console.log('✅ Status: published');
+      return { status: 'published', label: 'Published' };
+    }
+    if (scheduledPosts.length > 0) {
+      console.log('⏰ Status: scheduled');
+      return { status: 'scheduled', label: 'Scheduled' };
+    }
+    if (draftPosts.length > 0) {
+      console.log('📝 Status: draft (unpublished)');
+      return { status: 'not_published', label: 'Draft - Ready to Publish' };
+    }
+    
+    console.log('❓ Status: unknown');
+    return { status: 'not_published', label: 'Ready to Publish' };
   };
 
   const getVisualStatus = (slideId: string, visuals: Visual[]) => {
@@ -398,6 +423,14 @@ export const ApprovedQueue = () => {
             const visualsNeeded = story.slides.filter(slide => 
               getVisualStatus(slide.id, story.visuals || []) === 'needed'
             ).length;
+
+            console.log(`🎯 Story "${story.title}":`, {
+              id: story.id,
+              postStatus: postStatus.status,
+              carouselStatus: carouselStatus.status,
+              postsCount: story.posts?.length || 0,
+              carouselExportsCount: story.carousel_exports?.length || 0
+            });
 
             return (
               <Card key={story.id} className="overflow-hidden">
