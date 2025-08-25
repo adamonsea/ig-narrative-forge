@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CarouselImageGenerator } from '@/components/CarouselImageGenerator';
 import { 
   CheckCircle2, 
   Clock, 
@@ -14,7 +15,9 @@ import {
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Package
 } from 'lucide-react';
 
 interface Slide {
@@ -57,6 +60,18 @@ interface Post {
   scheduled_at?: string | null;
 }
 
+interface CarouselExport {
+  id: string;
+  story_id: string;
+  status: string;
+  export_formats: any;
+  file_paths: any; // This is JSON from Supabase, we'll parse it
+  zip_url?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Story {
   id: string;
   title: string;
@@ -67,6 +82,7 @@ interface Story {
   article?: StoryArticle;
   posts?: Post[];
   visuals?: Visual[];
+  carousel_exports?: CarouselExport[];
 }
 
 export const ApprovedQueue = () => {
@@ -75,6 +91,7 @@ export const ApprovedQueue = () => {
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [generatingVisual, setGeneratingVisual] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [generatingCarousel, setGeneratingCarousel] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,7 +110,8 @@ export const ApprovedQueue = () => {
           posts(*),
           visuals:slides(
             visuals(*)
-          )
+          ),
+          carousel_exports(*)
         `)
         .eq('status', 'ready')
         .order('created_at', { ascending: false });
@@ -182,6 +200,59 @@ export const ApprovedQueue = () => {
     }
   };
 
+  const generateCarouselImages = async (storyId: string) => {
+    setGeneratingCarousel(storyId);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel-images', {
+        body: {
+          storyId,
+          formats: ['instagram-square', 'instagram-story']
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Carousel Generated",
+        description: "Instagram images ready for download",
+      });
+
+      // Reload to show carousel export
+      await loadApprovedStories();
+    } catch (error: any) {
+      console.error('Error generating carousel:', error);
+      toast({
+        title: "Carousel Generation Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingCarousel(null);
+    }
+  };
+
+  const approveAndGenerateAll = async (storyId: string) => {
+    try {
+      // First publish to feed
+      await publishStory(storyId);
+      
+      // Then generate carousel images
+      await generateCarouselImages(storyId);
+      
+      toast({
+        title: "Story Approved",
+        description: "Published to feed and carousel images generated",
+      });
+    } catch (error: any) {
+      console.error('Error in approval process:', error);
+      toast({
+        title: "Approval Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const toggleStoryExpanded = (storyId: string) => {
     const newExpanded = new Set(expandedStories);
     if (newExpanded.has(storyId)) {
@@ -218,6 +289,72 @@ export const ApprovedQueue = () => {
   const getVisualStatus = (slideId: string, visuals: Visual[]) => {
     const slideVisuals = visuals.filter(v => v.slide_id === slideId);
     return slideVisuals.length > 0 ? 'generated' : 'needed';
+  };
+
+  const getCarouselStatus = (carouselExports?: CarouselExport[]) => {
+    if (!carouselExports || carouselExports.length === 0) {
+      return { status: 'not_generated', label: 'Not Generated' };
+    }
+    
+    const latestExport = carouselExports[carouselExports.length - 1];
+    const statusMap = {
+      pending: { status: 'pending', label: 'Pending' },
+      generating: { status: 'generating', label: 'Generating...' },
+      completed: { status: 'completed', label: 'Ready for Download' },
+      failed: { status: 'failed', label: 'Generation Failed' }
+    };
+    
+    return statusMap[latestExport.status as keyof typeof statusMap] || 
+           { status: 'unknown', label: latestExport.status };
+  };
+
+  const downloadCarouselImages = async (storyId: string) => {
+    try {
+      const story = stories.find(s => s.id === storyId);
+      const carouselExport = story?.carousel_exports?.[0];
+      
+      if (!carouselExport || carouselExport.status !== 'completed') {
+        toast({
+          title: "Download Failed",
+          description: "Carousel images not ready yet",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Parse file_paths as it comes as JSON from Supabase
+      const filePaths = Array.isArray(carouselExport.file_paths) 
+        ? carouselExport.file_paths 
+        : JSON.parse(carouselExport.file_paths || '[]');
+
+      // Download individual files
+      for (const filePath of filePaths) {
+        const { data: fileData } = await supabase.storage
+          .from('exports')
+          .download(filePath);
+        
+        if (fileData) {
+          const url = URL.createObjectURL(fileData);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filePath.split('/').pop() || 'carousel_image.png';
+          link.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${filePaths.length} images`,
+      });
+    } catch (error: any) {
+      console.error('Error downloading carousel:', error);
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -257,6 +394,7 @@ export const ApprovedQueue = () => {
             const isExpanded = expandedStories.has(story.id);
             const article = story.article;
             const postStatus = getPostStatus(story.posts || []);
+            const carouselStatus = getCarouselStatus(story.carousel_exports);
             const visualsNeeded = story.slides.filter(slide => 
               getVisualStatus(slide.id, story.visuals || []) === 'needed'
             ).length;
@@ -301,6 +439,15 @@ export const ApprovedQueue = () => {
                         }>
                           {postStatus.label}
                         </Badge>
+                        <Badge variant="outline" className={
+                          carouselStatus.status === 'completed' ? 'bg-blue-50 text-blue-700' :
+                          carouselStatus.status === 'generating' ? 'bg-yellow-50 text-yellow-700' :
+                          carouselStatus.status === 'failed' ? 'bg-red-50 text-red-700' :
+                          'bg-gray-50 text-gray-700'
+                        }>
+                          <Package className="h-3 w-3 mr-1" />
+                          {carouselStatus.label}
+                        </Badge>
                       </div>
 
                       {article && (
@@ -323,17 +470,57 @@ export const ApprovedQueue = () => {
 
                     <div className="flex items-center gap-2">
                       {postStatus.status === 'not_published' && (
+                        <>
+                          <Button
+                            onClick={() => approveAndGenerateAll(story.id)}
+                            disabled={publishing === story.id || generatingCarousel === story.id}
+                            size="sm"
+                          >
+                            {(publishing === story.id || generatingCarousel === story.id) ? (
+                              <Clock className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                            )}
+                            Approve & Generate
+                          </Button>
+                          <Button
+                            onClick={() => publishStory(story.id)}
+                            disabled={publishing === story.id}
+                            variant="outline"
+                            size="sm"
+                          >
+                            {publishing === story.id ? (
+                              <Clock className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Publish Only
+                          </Button>
+                        </>
+                      )}
+                      {carouselStatus.status === 'not_generated' && postStatus.status === 'published' && (
                         <Button
-                          onClick={() => publishStory(story.id)}
-                          disabled={publishing === story.id}
+                          onClick={() => generateCarouselImages(story.id)}
+                          disabled={generatingCarousel === story.id}
+                          variant="outline"
                           size="sm"
                         >
-                          {publishing === story.id ? (
+                          {generatingCarousel === story.id ? (
                             <Clock className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
-                            <Send className="h-4 w-4 mr-2" />
+                            <Package className="h-4 w-4 mr-2" />
                           )}
-                          Publish
+                          Generate Carousel
+                        </Button>
+                      )}
+                      {carouselStatus.status === 'completed' && (
+                        <Button
+                          onClick={() => downloadCarouselImages(story.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Pack
                         </Button>
                       )}
                     </div>

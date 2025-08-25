@@ -252,6 +252,50 @@ export type Database = {
           },
         ]
       }
+      carousel_exports: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          export_formats: Json
+          file_paths: Json
+          id: string
+          status: string
+          story_id: string
+          updated_at: string
+          zip_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          export_formats?: Json
+          file_paths?: Json
+          id?: string
+          status?: string
+          story_id: string
+          updated_at?: string
+          zip_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          export_formats?: Json
+          file_paths?: Json
+          id?: string
+          status?: string
+          story_id?: string
+          updated_at?: string
+          zip_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carousel_exports_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_generation_queue: {
         Row: {
           article_id: string
