@@ -620,12 +620,44 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   // In-house carousel generation function
   const generateCarouselImagesInHouse = async (story: Story): Promise<void> => {
     console.log('🎨 Starting in-house carousel generation for story:', story.id);
+    
+    // Validate story structure
+    if (!story?.slides || !Array.isArray(story.slides) || story.slides.length === 0) {
+      console.error('❌ Invalid story structure or no slides found:', story);
+      toast({
+        title: 'Invalid Story',
+        description: 'Story has no slides or invalid structure',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     toast({
       title: 'Generating carousel images...',
-      description: 'Please wait while we create your carousel images',
+      description: `Creating ${story.slides.length} carousel images`,
     });
     
     try {
+      // First, create or update carousel export record with pending status
+      console.log('💾 Creating pending carousel export record...');
+      const { error: pendingError } = await supabase
+        .from('carousel_exports')
+        .upsert({
+          story_id: story.id,
+          status: 'generating',
+          export_formats: { formats: ['instagram-square'] },
+          file_paths: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'story_id'
+        });
+      
+      if (pendingError) {
+        console.error('❌ Failed to create pending carousel export record:', pendingError);
+        throw new Error('Failed to initialize carousel export record');
+      }
+
       // Import html2canvas dynamically
       const html2canvas = (await import('html2canvas')).default;
       console.log('✅ html2canvas loaded');
@@ -635,48 +667,87 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       // Generate images for each slide
       for (let i = 0; i < story.slides.length; i++) {
         const slide = story.slides[i];
-        console.log(`🖼️ Generating image for slide ${i + 1}/${story.slides.length}`);
+        console.log(`🖼️ Generating image for slide ${i + 1}/${story.slides.length}:`, slide.content?.substring(0, 50) + '...');
         
         // Create slide element
-        const slideElement = createSlideElement(slide, story, i + 1);
-        document.body.appendChild(slideElement);
-        
-        // Wait a bit for fonts to load
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        let slideElement: HTMLDivElement | null = null;
         try {
-          // Generate image using html2canvas
+          slideElement = createSlideElement(slide, story, i + 1);
+          document.body.appendChild(slideElement);
+          
+          // Wait longer for fonts and rendering
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Generate image using html2canvas with better options
           const canvas = await html2canvas(slideElement, {
             width: 1080,
             height: 1080,
             backgroundColor: '#ffffff',
             scale: 1,
             useCORS: true,
-            allowTaint: false
+            allowTaint: false,
+            logging: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc) => {
+              // Ensure fonts are available in cloned document
+              const style = clonedDoc.createElement('style');
+              style.textContent = `
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
+              `;
+              clonedDoc.head.appendChild(style);
+            }
           });
           
           console.log(`✅ Canvas created for slide ${i + 1}, size: ${canvas.width}x${canvas.height}`);
           
+          // Validate canvas content
+          if (canvas.width === 0 || canvas.height === 0) {
+            throw new Error('Canvas has zero dimensions');
+          }
+          
           // Convert to base64
-          const imageData = canvas.toDataURL('image/png');
+          const imageData = canvas.toDataURL('image/png', 0.9);
+          if (!imageData || imageData === 'data:,') {
+            throw new Error('Failed to generate image data');
+          }
+          
           generatedImages.push(imageData);
+          console.log(`✅ Image data generated for slide ${i + 1} (${Math.round(imageData.length / 1024)}KB)`);
           
         } catch (canvasError) {
           console.error(`❌ Failed to generate canvas for slide ${i + 1}:`, canvasError);
           toast({
             title: 'Image Generation Failed',
-            description: `Failed to generate image for slide ${i + 1}`,
+            description: `Failed to generate image for slide ${i + 1}: ${canvasError instanceof Error ? canvasError.message : 'Unknown error'}`,
             variant: 'destructive',
           });
+          // Continue with other slides instead of stopping completely
         } finally {
-          // Clean up DOM element
-          document.body.removeChild(slideElement);
+          // Clean up DOM element safely
+          if (slideElement && slideElement.parentNode) {
+            try {
+              document.body.removeChild(slideElement);
+            } catch (removeError) {
+              console.warn('⚠️ Failed to remove slide element:', removeError);
+            }
+          }
         }
       }
       
       console.log(`🎯 Generated ${generatedImages.length} images out of ${story.slides.length} slides`);
       
       if (generatedImages.length === 0) {
+        // Update carousel export with failed status
+        await supabase
+          .from('carousel_exports')
+          .update({
+            status: 'failed',
+            error_message: 'No images could be generated',
+            updated_at: new Date().toISOString()
+          })
+          .eq('story_id', story.id);
+          
         toast({
           title: 'No Images Generated',
           description: 'Failed to generate any carousel images',
@@ -690,12 +761,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       const filePaths: string[] = [];
       
       for (let i = 0; i < generatedImages.length; i++) {
-        const fileName = `carousel_${story.id}_slide_${i + 1}.png`;
+        const fileName = `carousel_${story.id}_slide_${i + 1}_${Date.now()}.png`;
         const filePath = `carousels/${story.id}/${fileName}`;
         
         try {
-          // Convert base64 to blob
+          // Convert base64 to blob more efficiently
           const base64Data = generatedImages[i].split(',')[1];
+          if (!base64Data) {
+            throw new Error('Invalid base64 data');
+          }
+          
           const byteCharacters = atob(base64Data);
           const byteNumbers = new Array(byteCharacters.length);
           for (let j = 0; j < byteCharacters.length; j++) {
@@ -704,18 +779,19 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
           const byteArray = new Uint8Array(byteNumbers);
           const blob = new Blob([byteArray], { type: 'image/png' });
           
-          console.log(`⬆️ Uploading ${fileName} (${blob.size} bytes)`);
+          console.log(`⬆️ Uploading ${fileName} (${Math.round(blob.size / 1024)}KB)`);
           
           const { error: uploadError } = await supabase.storage
             .from('exports')
             .upload(filePath, blob, {
               contentType: 'image/png',
-              upsert: true
+              upsert: true,
+              cacheControl: '3600'
             });
           
           if (uploadError) {
             console.error(`❌ Failed to upload ${fileName}:`, uploadError);
-            continue;
+            throw uploadError;
           }
           
           filePaths.push(filePath);
@@ -723,12 +799,27 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
           
         } catch (uploadError) {
           console.error(`❌ Error processing upload for slide ${i + 1}:`, uploadError);
+          toast({
+            title: 'Upload Error',
+            description: `Failed to upload image ${i + 1}`,
+            variant: 'destructive',
+          });
         }
       }
       
       console.log(`☁️ Uploaded ${filePaths.length} files to storage`);
       
       if (filePaths.length === 0) {
+        // Update carousel export with failed status
+        await supabase
+          .from('carousel_exports')
+          .update({
+            status: 'failed',
+            error_message: 'Failed to upload any images to storage',
+            updated_at: new Date().toISOString()
+          })
+          .eq('story_id', story.id);
+          
         toast({
           title: 'Upload Failed',
           description: 'Failed to upload any images to storage',
@@ -737,26 +828,24 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         return;
       }
       
-      // Create carousel export record
-      console.log('💾 Creating carousel export record...');
+      // Update carousel export record with success
+      console.log('💾 Updating carousel export record with success...');
       const { error: exportError } = await supabase
         .from('carousel_exports')
-        .upsert({
-          story_id: story.id,
+        .update({
           status: 'completed',
           export_formats: { formats: ['instagram-square'] },
           file_paths: filePaths,
-          created_at: new Date().toISOString(),
+          error_message: null,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'story_id'
-        });
+        })
+        .eq('story_id', story.id);
       
       if (exportError) {
-        console.error('❌ Failed to create carousel export record:', exportError);
+        console.error('❌ Failed to update carousel export record:', exportError);
         toast({
           title: 'Database Error',
-          description: 'Failed to save carousel export record',
+          description: 'Images uploaded but failed to update record',
           variant: 'destructive',
         });
         return;
@@ -770,9 +859,24 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       
     } catch (error) {
       console.error('❌ Error in carousel generation:', error);
+      
+      // Update carousel export with error status
+      try {
+        await supabase
+          .from('carousel_exports')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+            updated_at: new Date().toISOString()
+          })
+          .eq('story_id', story.id);
+      } catch (dbError) {
+        console.error('❌ Failed to update error status:', dbError);
+      }
+      
       toast({
         title: 'Generation Failed',
-        description: 'Failed to generate carousel images: ' + (error as Error).message,
+        description: 'Failed to generate carousel images: ' + (error instanceof Error ? error.message : 'Unknown error'),
         variant: 'destructive',
       });
     }
@@ -787,7 +891,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       width: 1080px;
       height: 1080px;
       background: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -796,30 +900,72 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       padding: 60px;
       box-sizing: border-box;
       border: 1px solid #f0f0f0;
+      color: #1a1a1a;
     `;
     
-    const content = slide.content || '';
-    const title = story.title || '';
-    const author = story.article?.author || story.articles?.author || '';
+    // Safely extract content with fallbacks
+    const content = slide?.content || 'No content available';
+    const title = story?.title || 'Untitled Story';
+    const author = story?.article?.author || 
+                   story?.articles?.author || 
+                   'Unknown Author';
+    const totalSlides = story?.slides?.length || 1;
+    
+    // Escape HTML to prevent XSS and rendering issues
+    const escapeHtml = (str: string) => 
+      str.replace(/&/g, '&amp;')
+         .replace(/</g, '&lt;')
+         .replace(/>/g, '&gt;')
+         .replace(/"/g, '&quot;')
+         .replace(/'/g, '&#39;');
     
     element.innerHTML = `
-      <div style="position: absolute; top: 30px; right: 30px; font-size: 16px; color: #666666; font-weight: 500;">
-        ${slideNumber}/${story.slides.length}
+      <div style="position: absolute; top: 40px; right: 40px; font-size: 18px; color: #666666; font-weight: 500; z-index: 10;">
+        ${slideNumber}/${totalSlides}
       </div>
       
-      <div style="font-size: 36px; font-weight: 600; color: #1a1a1a; line-height: 1.2; max-width: 100%; word-wrap: break-word; hyphens: auto;">
-        ${content.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}
+      <div style="
+        font-size: 32px; 
+        font-weight: 600; 
+        color: #1a1a1a; 
+        line-height: 1.3; 
+        max-width: 100%; 
+        word-wrap: break-word; 
+        hyphens: auto;
+        text-align: center;
+        margin: 20px 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        ${escapeHtml(content)}
       </div>
       
-      <div style="position: absolute; bottom: 80px; left: 60px; right: 60px; text-align: center;">
-        <div style="font-size: 18px; color: #666666; margin-bottom: 20px; font-weight: 400;">
-          ${title.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}
+      <div style="
+        position: absolute; 
+        bottom: 40px; 
+        left: 60px; 
+        right: 60px; 
+        text-align: center;
+        z-index: 10;
+      ">
+        <div style="
+          font-size: 18px; 
+          color: #666666; 
+          margin-bottom: 20px; 
+          font-weight: 500;
+          line-height: 1.4;
+        ">
+          ${escapeHtml(title)}
         </div>
-        ${author ? `
-          <div style="font-size: 14px; color: #999999; font-weight: 400;">
-            By ${author.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}
-          </div>
-        ` : ''}
+        <div style="
+          font-size: 14px; 
+          color: #999999; 
+          font-weight: 400;
+        ">
+          By ${escapeHtml(author)}
+        </div>
       </div>
     `;
     
