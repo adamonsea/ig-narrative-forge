@@ -574,7 +574,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
-  // Story functions - only load completed stories with slides
+  // Story functions - only load draft stories for review
   const loadStories = async () => {
     setLoadingStories(true);
     try {
@@ -594,7 +594,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
           ),
           posts:posts(*)
         `)
-        .neq('status', 'processing') // Exclude processing stories - they show in queue
+        .eq('status', 'draft')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -706,6 +706,87 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       
     } catch (error: any) {
       console.error('❌ Failed to approve story:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to approve story: ${error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingApproval(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleApproveStoryWithImages = async (storyId: string) => {
+    if (processingApproval.has(storyId)) {
+      console.log('⚠️ Story approval already in progress:', storyId);
+      return;
+    }
+
+    console.log('🚀 Approving story with images:', storyId);
+    setProcessingApproval(prev => new Set(prev).add(storyId));
+    
+    try {
+      // First check current status
+      const { data: currentStory, error: fetchError } = await supabase
+        .from('stories')
+        .select('status, title, article_id')
+        .eq('id', storyId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      
+      console.log('📋 Current story status:', currentStory.status);
+
+      if (currentStory.status === 'ready') {
+        console.log('✅ Story already approved');
+        toast({
+          title: 'Already Approved',
+          description: 'This story is already approved',
+        });
+        return;
+      }
+
+      // Update status to ready
+      const { error: updateError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'ready',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (updateError) throw updateError;
+
+      // Generate carousel images automatically
+      try {
+        const { error: carouselError } = await supabase.functions.invoke('generate-carousel-images', {
+          body: {
+            storyId,
+            formats: ['instagram-square', 'instagram-story']
+          }
+        });
+
+        if (carouselError) {
+          console.warn('Carousel generation failed, but story was approved:', carouselError);
+        }
+      } catch (carouselError) {
+        console.warn('Error generating carousel images:', carouselError);
+      }
+
+      toast({
+        title: 'Story Approved',
+        description: 'Story approved and carousel images are being generated',
+      });
+
+      // Only refresh stories
+      await loadStories();
+      
+    } catch (error: any) {
+      console.error('❌ Failed to approve story with images:', error);
       toast({
         title: 'Error',
         description: `Failed to approve story: ${error.message || 'Unknown error'}`,
@@ -888,9 +969,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
-  // Separate stories by status
-  const draftStories = stories.filter(story => story.status === 'draft');
-  const processedStories = stories.filter(story => story.status !== 'draft');
+  // Only show draft stories in this component
+  const draftStories = stories;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1219,16 +1299,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         </Card>
       </div>
 
-      {/* Right Panel: Slide Review & Management */}
+      {/* Right Panel: Draft Stories Under Review */}
       <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5" />
-              Slide Review & Management
+              Draft Stories Under Review
             </CardTitle>
             <CardDescription>
-              Review, approve, and manage AI-generated slide carousels
+              Review and approve AI-generated slide carousels for publishing
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1239,16 +1319,15 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
             ) : stories.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No slide stories generated yet</p>
-                <p className="text-sm">Approve articles in the left panel to create slides</p>
+                <p>No draft stories to review</p>
+                <p className="text-sm">Approve articles in the left panel to generate slides for review</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Pending Review Section */}
                 {draftStories.length > 0 && (
                   <div className="space-y-4">
                      <div className="flex items-center gap-2">
-                       <Badge variant="outline">{draftStories.length} pending review</Badge>
+                       <Badge variant="outline">{draftStories.length} awaiting approval</Badge>
                        <Button variant="outline" size="sm" onClick={loadStories}>
                          <RotateCcw className="w-3 h-3 mr-1" />
                          Refresh
@@ -1356,6 +1435,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             {processingRejection.has(story.id) ? 'Rejecting...' : 'Reject'}
                           </Button>
                           <Button
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleApproveStory(story.id)}
                             disabled={processingApproval.has(story.id) || processingRejection.has(story.id)}
@@ -1367,132 +1447,20 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                             )}
                             {processingApproval.has(story.id) ? 'Approving...' : 'Approve'}
                           </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveStoryWithImages(story.id)}
+                            disabled={processingApproval.has(story.id) || processingRejection.has(story.id)}
+                          >
+                            {processingApproval.has(story.id) ? (
+                              <Clock className="w-4 h-4 mr-1 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 mr-1" />
+                            )}
+                            {processingApproval.has(story.id) ? 'Processing...' : 'Approve & Generate Images'}
+                          </Button>
                         </div>
                       </Card>
-                    ))}
-                  </div>
-                )}
-
-                {/* Processed Stories Section */}
-                {processedStories.length > 0 && (
-                  <div className="space-y-4 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">Processed Stories</h3>
-                      <Badge variant="secondary">{processedStories.length}</Badge>
-                    </div>
-                    
-                    {processedStories.map((story) => (
-                      <div key={story.id} className="border rounded-lg overflow-hidden">
-                        <div className="p-4 bg-muted/50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="font-medium">{story.title}</h3>
-                                {getStatusBadge(story.status)}
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <FileText className="w-3 h-3" />
-                                  <span>{story.slides?.length || 0} slides</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                                </div>
-                                {story.article?.author && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    <span>{story.article.author}</span>
-                                  </div>
-                                )}
-                                {story.article?.region && (
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    <span>{story.article.region}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {story.status !== 'draft' && story.status !== 'processing' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleReturnToReview(story.id)}
-                                  className="h-8 px-2 text-xs"
-                                >
-                                  <RotateCcw className="w-3 h-3 mr-1" />
-                                  Return to Review
-                                </Button>
-                              )}
-                              
-                              {story.status === 'processing' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRejectStory(story.id)}
-                                  className="h-8 px-2 text-xs text-red-600 hover:text-red-700"
-                                >
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                  Send Back to Pipeline
-                                </Button>
-                              )}
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(story.article?.source_url, '_blank')}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleStoryExpanded(story.id)}
-                              >
-                                <Eye className="w-3 h-3 mr-2" />
-                                {expandedStories.has(story.id) ? 'Hide' : 'View'}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {expandedStories.has(story.id) && story.slides && (
-                          <div className="p-4 space-y-3 border-t">
-                            {story.slides
-                              .sort((a, b) => a.slide_number - b.slide_number)
-                              .map((slide) => (
-                                <div key={slide.id} className="p-3 bg-muted/30 rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium">
-                                      Slide {slide.slide_number}
-                                    </span>
-                                    <span className={`text-xs ${getWordCountColor(slide.word_count, slide.slide_number)}`}>
-                                      {slide.word_count} words
-                                    </span>
-                                  </div>
-                                  
-                                  <p className="text-sm mb-2">{slide.content}</p>
-                                  
-                                  {slide.visual_prompt && (
-                                    <div className="text-xs text-muted-foreground">
-                                      <strong>Visual:</strong> {slide.visual_prompt}
-                                    </div>
-                                  )}
-                                  
-                                  {slide.alt_text && (
-                                    <div className="text-xs text-muted-foreground">
-                                      <strong>Alt text:</strong> {slide.alt_text}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                      </div>
                     ))}
                   </div>
                 )}

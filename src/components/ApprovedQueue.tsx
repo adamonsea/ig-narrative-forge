@@ -11,13 +11,14 @@ import {
   ExternalLink,
   Sparkles,
   Eye,
-  Send,
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
   RefreshCw,
   Download,
-  Package
+  Package,
+  RotateCcw,
+  Archive
 } from 'lucide-react';
 
 interface Slide {
@@ -231,22 +232,58 @@ export const ApprovedQueue = () => {
     }
   };
 
-  const approveAndGenerateAll = async (storyId: string) => {
+  const handleReturnToReview = async (storyId: string) => {
     try {
-      // First publish to feed
-      await publishStory(storyId);
-      
-      // Then generate carousel images
-      await generateCarouselImages(storyId);
-      
+      const { error } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (error) throw error;
+
       toast({
-        title: "Story Approved",
-        description: "Published to feed and carousel images generated",
+        title: "Story Returned",
+        description: "Story returned to review queue",
       });
+
+      // Reload to remove from approved queue
+      await loadApprovedStories();
     } catch (error: any) {
-      console.error('Error in approval process:', error);
+      console.error('Error returning story to review:', error);
       toast({
-        title: "Approval Failed",
+        title: "Return Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleArchiveStory = async (storyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'archived',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Story Archived",
+        description: "Story has been archived and removed from all feeds",
+      });
+
+      // Reload to remove from approved queue
+      await loadApprovedStories();
+    } catch (error: any) {
+      console.error('Error archiving story:', error);
+      toast({
+        title: "Archive Failed",
         description: error.message,
         variant: "destructive"
       });
@@ -276,39 +313,21 @@ export const ApprovedQueue = () => {
   };
 
   const getPostStatus = (posts: Post[]) => {
-    console.log('🔍 Checking post status for posts:', posts);
-    
     if (!posts || posts.length === 0) {
-      console.log('📝 No posts found - status: not_published');
-      return { status: 'not_published', label: 'Not Published' };
+      return { status: 'complete', label: 'Published to Feed' };
     }
     
     const publishedPosts = posts.filter(p => p.status === 'published');
     const scheduledPosts = posts.filter(p => p.status === 'scheduled');
-    const draftPosts = posts.filter(p => p.status === 'draft');
-    
-    console.log('📊 Post breakdown:', { 
-      total: posts.length, 
-      published: publishedPosts.length, 
-      scheduled: scheduledPosts.length, 
-      draft: draftPosts.length 
-    });
     
     if (publishedPosts.length > 0) {
-      console.log('✅ Status: published');
-      return { status: 'published', label: 'Published' };
+      return { status: 'published', label: 'Published to Social' };
     }
     if (scheduledPosts.length > 0) {
-      console.log('⏰ Status: scheduled');
       return { status: 'scheduled', label: 'Scheduled' };
     }
-    if (draftPosts.length > 0) {
-      console.log('📝 Status: draft (unpublished)');
-      return { status: 'not_published', label: 'Draft - Ready to Publish' };
-    }
     
-    console.log('❓ Status: unknown');
-    return { status: 'not_published', label: 'Ready to Publish' };
+    return { status: 'complete', label: 'Published to Feed' };
   };
 
   const getVisualStatus = (slideId: string, visuals: Visual[]) => {
@@ -395,7 +414,7 @@ export const ApprovedQueue = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Approved Queue</h2>
-          <p className="text-muted-foreground">Stories ready for visual generation and publishing</p>
+          <p className="text-muted-foreground">Published stories with completed image assets</p>
         </div>
         <Button onClick={loadApprovedStories} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -407,9 +426,9 @@ export const ApprovedQueue = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Approved Stories</h3>
+            <h3 className="text-lg font-medium mb-2">No Published Stories</h3>
             <p className="text-muted-foreground">
-              Approved stories will appear here ready for visual generation and publishing
+              Approved stories will appear here for management and asset downloads
             </p>
           </CardContent>
         </Card>
@@ -424,13 +443,6 @@ export const ApprovedQueue = () => {
               getVisualStatus(slide.id, story.visuals || []) === 'needed'
             ).length;
 
-            console.log(`🎯 Story "${story.title}":`, {
-              id: story.id,
-              postStatus: postStatus.status,
-              carouselStatus: carouselStatus.status,
-              postsCount: story.posts?.length || 0,
-              carouselExportsCount: story.carousel_exports?.length || 0
-            });
 
             return (
               <Card key={story.id} className="overflow-hidden">
@@ -502,54 +514,26 @@ export const ApprovedQueue = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {postStatus.status === 'not_published' && (
-                        <>
-                          <Button
-                            onClick={() => approveAndGenerateAll(story.id)}
-                            disabled={publishing === story.id || generatingCarousel === story.id}
-                            size="sm"
-                          >
-                            {(publishing === story.id || generatingCarousel === story.id) ? (
-                              <Clock className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                            )}
-                            Approve & Generate
-                          </Button>
-                          <Button
-                            onClick={() => publishStory(story.id)}
-                            disabled={publishing === story.id}
-                            variant="outline"
-                            size="sm"
-                          >
-                            {publishing === story.id ? (
-                              <Clock className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Send className="h-4 w-4 mr-2" />
-                            )}
-                            Publish Only
-                          </Button>
-                        </>
-                      )}
-                      {carouselStatus.status === 'not_generated' && postStatus.status === 'published' && (
-                        <Button
-                          onClick={() => generateCarouselImages(story.id)}
-                          disabled={generatingCarousel === story.id}
-                          variant="outline"
-                          size="sm"
-                        >
-                          {generatingCarousel === story.id ? (
-                            <Clock className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Package className="h-4 w-4 mr-2" />
-                          )}
-                          Generate Carousel
-                        </Button>
-                      )}
+                      <Button
+                        onClick={() => handleReturnToReview(story.id)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Return to Review
+                      </Button>
+                      <Button
+                        onClick={() => handleArchiveStory(story.id)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        Archive
+                      </Button>
                       {carouselStatus.status === 'completed' && (
                         <Button
                           onClick={() => downloadCarouselImages(story.id)}
-                          variant="outline"
+                          variant="default"
                           size="sm"
                         >
                           <Download className="h-4 w-4 mr-2" />
@@ -576,34 +560,36 @@ export const ApprovedQueue = () => {
                                 <span className="text-xs text-muted-foreground">
                                   {slide.word_count} words
                                 </span>
-                                {hasVisual ? (
-                                  <Badge variant="default" className="bg-green-100 text-green-800">
-                                    <ImageIcon className="h-3 w-3 mr-1" />
-                                    Visual Ready
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-orange-600">
-                                    <ImageIcon className="h-3 w-3 mr-1" />
-                                    Visual Needed
-                                  </Badge>
-                                )}
+                        {hasVisual ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800">
+                            <ImageIcon className="h-3 w-3 mr-1" />
+                            Image Ready
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-orange-600">
+                            <ImageIcon className="h-3 w-3 mr-1" />
+                            Auto-Generated
+                          </Badge>
+                        )}
                               </div>
-                              
-                              {!hasVisual && (
-                                <Button
-                                  onClick={() => generateVisualForSlide(slide.id, story.title, slide.content)}
-                                  disabled={generatingVisual === slide.id}
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  {generatingVisual === slide.id ? (
-                                    <Clock className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                  )}
-                                  Generate Visual
-                                </Button>
-                              )}
+                      <div className="flex items-center gap-2">
+                        
+                        {!hasVisual && (
+                          <Button
+                            onClick={() => generateVisualForSlide(slide.id, story.title, slide.content)}
+                            disabled={generatingVisual === slide.id}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {generatingVisual === slide.id ? (
+                              <Clock className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4 mr-2" />
+                            )}
+                            Generate Image
+                          </Button>
+                        )}
+                      </div>
                             </div>
                             
                             <p className="text-sm">{slide.content}</p>
