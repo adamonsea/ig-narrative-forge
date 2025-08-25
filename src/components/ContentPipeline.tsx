@@ -617,107 +617,197 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     }
   };
 
-  const handleApproveStory = async (storyId: string) => {
-    if (processingApproval.has(storyId)) {
-      console.log('⚠️ Story approval already in progress:', storyId);
-      return;
-    }
-
-    console.log('🚀 Approving story:', storyId);
-    setProcessingApproval(prev => new Set(prev).add(storyId));
-    
+  // In-house carousel generation function
+  const generateCarouselImagesInHouse = async (story: any) => {
     try {
-      // First check current status
-      const { data: currentStory, error: fetchError } = await supabase
-        .from('stories')
-        .select('status, title, article_id')
-        .eq('id', storyId)
+      // Create carousel export record
+      const { data: carouselExport, error: exportError } = await supabase
+        .from('carousel_exports')
+        .insert({
+          story_id: story.id,
+          status: 'generating',
+          export_formats: ['instagram-square', 'instagram-story'],
+          file_paths: []
+        })
+        .select()
         .single();
 
-      if (fetchError) throw fetchError;
-      
-      console.log('📋 Current story status:', currentStory.status);
+      if (exportError) throw exportError;
 
-      if (currentStory.status === 'ready') {
-        console.log('✅ Story already approved');
-        toast({
-          title: 'Already Approved',
-          description: 'This story is already approved',
-        });
-        return;
+      // Generate images for both formats
+      const formats = ['instagram-square', 'instagram-story'] as const;
+      const allFilePaths: string[] = [];
+
+      for (const format of formats) {
+        // Create a temporary CarouselImageGenerator instance
+        const images = await generateImagesForFormat(story, format);
+        
+        // Upload images to Supabase Storage
+        for (let i = 0; i < images.length; i++) {
+          const imageBlob = dataURLtoBlob(images[i]);
+          const filename = `${story.id}/${format}/slide_${i + 1}.png`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('exports')
+            .upload(filename, imageBlob, {
+              contentType: 'image/png',
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+          } else {
+            allFilePaths.push(filename);
+          }
+        }
       }
 
-      // Check for existing queue entries to prevent duplicates
-      const { data: existingQueue, error: queueCheckError } = await supabase
-        .from('content_generation_queue')
-        .select('id, status')
-        .eq('article_id', currentStory.article_id)
-        .neq('status', 'completed');
-
-      if (queueCheckError) {
-        console.error('Error checking queue:', queueCheckError);
-      } else if (existingQueue && existingQueue.length > 0) {
-        console.log('⚠️ Found existing queue entries:', existingQueue);
-        toast({
-          title: 'Processing In Progress',
-          description: 'This story has pending generation jobs. Please wait for completion.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Update status with proper error handling
-      const { data: updateResult, error: updateError } = await supabase
-        .from('stories')
-        .update({ 
-          status: 'ready',
+      // Update carousel export with completed status and file paths
+      const { error: updateError } = await supabase
+        .from('carousel_exports')
+        .update({
+          status: 'completed',
+          file_paths: allFilePaths,
           updated_at: new Date().toISOString()
         })
-        .eq('id', storyId)
-        .select('status, title');
+        .eq('id', carouselExport.id);
 
-      if (updateError) {
-        console.error('❌ Update error:', updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
-      console.log('✅ Update result:', updateResult);
-
-      // Verify the update was successful
-      const { data: verifyStory, error: verifyError } = await supabase
-        .from('stories')
-        .select('status')
-        .eq('id', storyId)
-        .single();
-
-      if (verifyError) {
-        console.error('❌ Verify error:', verifyError);
-      } else {
-        console.log('✅ Verified status:', verifyStory.status);
-      }
-
-      toast({
-        title: 'Story Approved',
-        description: 'Story approved and ready for publishing',
-      });
-
-      // Only refresh stories, don't call loadPendingArticles to prevent cascade
-      await loadStories();
-      
-    } catch (error: any) {
-      console.error('❌ Failed to approve story:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to approve story: ${error.message || 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setProcessingApproval(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(storyId);
-        return newSet;
-      });
+    } catch (error) {
+      console.error('Error generating carousel images:', error);
+      throw error;
     }
+  };
+
+  // Helper function to generate images for a specific format
+  const generateImagesForFormat = async (story: any, format: 'instagram-square' | 'instagram-story'): Promise<string[]> => {
+    const formatConfig = {
+      'instagram-square': { width: 1080, height: 1080 },
+      'instagram-story': { width: 1080, height: 1920 }
+    };
+    
+    const config = formatConfig[format];
+    const images: string[] = [];
+
+    for (const slide of story.slides) {
+      const slideElement = createSlideElement(slide, story, config);
+      document.body.appendChild(slideElement);
+
+      // Wait for fonts and content to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Generate image
+      const canvas = await (await import('html2canvas')).default(slideElement, {
+        width: config.width,
+        height: config.height,
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        allowTaint: false
+      });
+
+      const imageData = canvas.toDataURL('image/png', 1.0);
+      images.push(imageData);
+
+      // Clean up
+      document.body.removeChild(slideElement);
+    }
+
+    return images;
+  };
+
+  // Helper function to create slide element for rendering
+  const createSlideElement = (slide: any, story: any, config: any): HTMLDivElement => {
+    const element = document.createElement('div');
+    element.style.width = `${config.width}px`;
+    element.style.height = `${config.height}px`;
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    element.style.backgroundColor = '#ffffff';
+    element.style.display = 'flex';
+    element.style.flexDirection = 'column';
+    element.style.justifyContent = 'center';
+    element.style.alignItems = 'center';
+    element.style.padding = '60px';
+    element.style.boxSizing = 'border-box';
+    element.style.fontFamily = 'Lexend, system-ui, sans-serif';
+
+    // Add slide content
+    const content = document.createElement('div');
+    content.style.textAlign = 'center';
+    content.style.maxWidth = '100%';
+    content.style.wordWrap = 'break-word';
+
+    // Slide number indicator
+    const slideNumber = document.createElement('div');
+    slideNumber.textContent = `${slide.slide_number}/${story.slides.length}`;
+    slideNumber.style.position = 'absolute';
+    slideNumber.style.top = '30px';
+    slideNumber.style.right = '30px';
+    slideNumber.style.fontSize = '16px';
+    slideNumber.style.color = '#666666';
+    slideNumber.style.fontWeight = '500';
+
+    // Main content
+    const mainText = document.createElement('h1');
+    mainText.textContent = slide.content;
+    mainText.style.fontSize = config.height > config.width ? '42px' : '36px';
+    mainText.style.lineHeight = '1.2';
+    mainText.style.color = '#1a1a1a';
+    mainText.style.fontWeight = '600';
+    mainText.style.margin = '0';
+
+    // Story title (smaller, at bottom)
+    const storyTitle = document.createElement('div');
+    storyTitle.textContent = story.title;
+    storyTitle.style.position = 'absolute';
+    storyTitle.style.bottom = '60px';
+    storyTitle.style.left = '60px';
+    storyTitle.style.right = '60px';
+    storyTitle.style.fontSize = '18px';
+    storyTitle.style.color = '#666666';
+    storyTitle.style.textAlign = 'center';
+    storyTitle.style.fontWeight = '400';
+
+    // Author attribution
+    if (story.author || story.article?.author) {
+      const author = document.createElement('div');
+      author.textContent = `By ${story.author || story.article?.author}`;
+      author.style.position = 'absolute';
+      author.style.bottom = '30px';
+      author.style.left = '60px';
+      author.style.right = '60px';
+      author.style.fontSize = '14px';
+      author.style.color = '#999999';
+      author.style.textAlign = 'center';
+      element.appendChild(author);
+    }
+
+    content.appendChild(mainText);
+    element.appendChild(slideNumber);
+    element.appendChild(content);
+    element.appendChild(storyTitle);
+
+    return element;
+  };
+
+  // Helper function to convert data URL to blob
+  const dataURLtoBlob = (dataurl: string): Blob => {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)![1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  const handleApproveStory = async (storyId: string) => {
+    // Both approve buttons now generate carousel images automatically
+    await handleApproveStoryWithImages(storyId);
   };
 
   const handleApproveStoryWithImages = async (storyId: string) => {
@@ -730,10 +820,19 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     setProcessingApproval(prev => new Set(prev).add(storyId));
     
     try {
-      // First check current status
+      // First check current status and get story data
       const { data: currentStory, error: fetchError } = await supabase
         .from('stories')
-        .select('status, title, article_id')
+        .select(`
+          *,
+          slides(*),
+          article:articles!stories_article_id_fkey(
+            id,
+            title,
+            author,
+            source_url
+          )
+        `)
         .eq('id', storyId)
         .single();
 
@@ -761,25 +860,12 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       if (updateError) throw updateError;
 
-      // Generate carousel images automatically
-      try {
-        const { error: carouselError } = await supabase.functions.invoke('generate-carousel-images', {
-          body: {
-            storyId,
-            formats: ['instagram-square', 'instagram-story']
-          }
-        });
-
-        if (carouselError) {
-          console.warn('Carousel generation failed, but story was approved:', carouselError);
-        }
-      } catch (carouselError) {
-        console.warn('Error generating carousel images:', carouselError);
-      }
+      // Generate carousel images using in-house component
+      await generateCarouselImagesInHouse(currentStory);
 
       toast({
         title: 'Story Approved',
-        description: 'Story approved and carousel images are being generated',
+        description: 'Story approved and carousel images generated',
       });
 
       // Only refresh stories

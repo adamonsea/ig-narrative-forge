@@ -507,19 +507,19 @@ export const ApprovedQueue = () => {
                         <>
                           <Button
                             onClick={() => openPreviewModal(story.id)}
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
+                            className="h-8 w-8 p-0"
                           >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview Images
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button
                             onClick={() => openPreviewModal(story.id)}
-                            variant="default"
+                            variant="ghost"
                             size="sm"
+                            className="h-8 w-8 p-0"
                           >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Pack
+                            <Download className="h-4 w-4" />
                           </Button>
                         </>
                       )}
