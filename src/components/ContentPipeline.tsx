@@ -124,14 +124,14 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     try {
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'approved' })
+        .update({ status: 'ready' })
         .eq('id', storyId);
 
       if (error) throw error;
 
       toast({
         title: "Story Approved",
-        description: "Story has been approved and moved to approved queue",
+        description: "Story has been approved and moved to ready status",
       });
 
       loadStories();
@@ -280,8 +280,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         return <Badge className="bg-green-500">Published</Badge>;
       case 'draft':
         return <Badge variant="outline">Pending Review</Badge>;
-      case 'approved':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Approved</Badge>;
+      case 'ready':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Ready</Badge>;
       case 'processing':
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Processing</Badge>;
       case 'rejected':

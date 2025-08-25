@@ -100,7 +100,7 @@ export const ApprovedStoriesPanel = () => {
             word_count
           )
         `)
-        .eq('status', 'approved')
+        .eq('status', 'ready')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -328,7 +328,7 @@ export const ApprovedStoriesPanel = () => {
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-green-500 text-white">Approved</Badge>
+                            <Badge className="bg-green-500 text-white">Ready</Badge>
                             <Badge variant="outline" className="text-xs">
                               {story.slides.length} slides
                             </Badge>
