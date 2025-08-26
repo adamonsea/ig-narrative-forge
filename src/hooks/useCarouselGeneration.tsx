@@ -32,14 +32,43 @@ export const useCarouselGeneration = () => {
     return new Promise((resolve, reject) => {
       // Create a hidden container for rendering the carousel
       const container = document.createElement('div');
+      
+      // Get computed CSS variables from the root element
+      const rootStyles = getComputedStyle(document.documentElement);
+      const cssVars = {
+        '--background': rootStyles.getPropertyValue('--background'),
+        '--foreground': rootStyles.getPropertyValue('--foreground'),
+        '--card': rootStyles.getPropertyValue('--card'),
+        '--card-foreground': rootStyles.getPropertyValue('--card-foreground'),
+        '--primary': rootStyles.getPropertyValue('--primary'),
+        '--primary-foreground': rootStyles.getPropertyValue('--primary-foreground'),
+        '--secondary': rootStyles.getPropertyValue('--secondary'),
+        '--secondary-foreground': rootStyles.getPropertyValue('--secondary-foreground'),
+        '--muted': rootStyles.getPropertyValue('--muted'),
+        '--muted-foreground': rootStyles.getPropertyValue('--muted-foreground'),
+        '--accent': rootStyles.getPropertyValue('--accent'),
+        '--accent-foreground': rootStyles.getPropertyValue('--accent-foreground'),
+        '--border': rootStyles.getPropertyValue('--border'),
+        '--input': rootStyles.getPropertyValue('--input'),
+        '--ring': rootStyles.getPropertyValue('--ring'),
+        '--radius': rootStyles.getPropertyValue('--radius'),
+      };
+
+      // Apply CSS variables and positioning
+      const cssVarsString = Object.entries(cssVars)
+        .map(([key, value]) => `${key}: ${value.trim()};`)
+        .join(' ');
+        
       container.style.cssText = `
         position: fixed;
         left: -9999px;
         top: -9999px;
         width: 1080px;
         height: 1080px;
-        background: white;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        ${cssVarsString}
       `;
       document.body.appendChild(container);
 
