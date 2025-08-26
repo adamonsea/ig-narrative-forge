@@ -1,40 +1,16 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import EastbourneFeed from "./pages/EastbourneFeed";
-import AdminPanel from "./pages/AdminPanel";
-import Dashboard from "./pages/Dashboard";
-import TopicFeed from "./pages/TopicFeed";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
-            <Route path="/feed/topic/:slug" element={<TopicFeed />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="p-8">
+        <h1 className="text-2xl font-bold">eeZee News - Testing</h1>
+        <p>If you see this, React is working correctly.</p>
+      </div>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
