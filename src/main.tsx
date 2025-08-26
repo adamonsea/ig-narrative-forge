@@ -1,12 +1,9 @@
 import React from 'react'
-import { createRoot } from 'react-dom/client'
+import ReactDOM from 'react-dom'
 
 const App = () => React.createElement('div', { 
   style: { padding: '20px' } 
-}, React.createElement('h1', null, 'eeZee News - Testing'));
+}, React.createElement('h1', null, 'eeZee News - Testing Legacy Render'));
 
 const container = document.getElementById('root');
-if (container) {
-  const root = createRoot(container);
-  root.render(React.createElement(App));
-}
+ReactDOM.render(React.createElement(App), container);
