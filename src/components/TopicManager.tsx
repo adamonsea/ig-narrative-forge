@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Settings, Users, BarChart3, Globe, MapPin, Hash, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 interface Topic {
   id: string;
@@ -382,13 +383,9 @@ export const TopicManager = () => {
                   <div className="flex gap-2">
                     {topic.slug && (
                       <Button size="sm" variant="outline" asChild>
-                        <a 
-                          href={`/feed/topic/${topic.slug}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                        >
+                        <Link to={`/feed/topic/${topic.slug}`}>
                           View Feed
-                        </a>
+                        </Link>
                       </Button>
                     )}
                     <Button size="sm" variant="outline">

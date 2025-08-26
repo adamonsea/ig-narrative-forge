@@ -10,7 +10,8 @@ import { ContentManagement } from "@/components/ContentManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, Plus } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface DashboardStats {
   topics: number;
@@ -73,7 +74,7 @@ const Dashboard = () => {
               Please log in to access the dashboard.
             </p>
             <Button asChild>
-              <a href="/auth">Sign In</a>
+              <Link to="/auth">Sign In</Link>
             </Button>
           </div>
         </div>
@@ -197,9 +198,9 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <Button variant="outline" asChild>
-                          <a href="/admin">
+                          <Link to="/admin">
                             Open Admin Panel
-                          </a>
+                          </Link>
                         </Button>
                       </div>
                     </div>
