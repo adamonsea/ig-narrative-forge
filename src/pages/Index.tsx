@@ -106,15 +106,12 @@ const Index = () => {
   };
 
   const loadStats = async () => {
-    // Load source count
-    const { data: sources } = await supabase
-      .from('content_sources')
-      .select('id')
-      .eq('is_active', true);
+    // Load source count using secure function
+    const { data: sourceCount } = await supabase.rpc('get_content_sources_count');
     
     setStats(prev => ({
       ...prev,
-      sources: { count: sources?.length || 0, status: 'success' }
+      sources: { count: sourceCount || 0, status: 'success' }
     }));
 
     // Load slides count

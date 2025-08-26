@@ -33,7 +33,7 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
   const loadSources = async () => {
     try {
       const { data, error } = await supabase
-        .from('content_sources')
+        .from('content_sources_basic')
         .select('id, source_name, canonical_domain, is_active, articles_scraped, last_scraped_at')
         .eq('region', 'Eastbourne')
         .order('created_at', { ascending: false });
