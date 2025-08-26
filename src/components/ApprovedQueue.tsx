@@ -543,17 +543,17 @@ export const ApprovedQueue = () => {
                                 <span className="text-xs text-muted-foreground">
                                   {slide.word_count} words
                                 </span>
-                        {hasVisual ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            <ImageIcon className="h-3 w-3 mr-1" />
-                            Image Ready
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-orange-600">
-                            <ImageIcon className="h-3 w-3 mr-1" />
-                            Auto-Generated
-                          </Badge>
-                        )}
+                         {hasVisual ? (
+                           <Badge variant="default" className="bg-green-100 text-green-800">
+                             <ImageIcon className="h-3 w-3 mr-1" />
+                             Visual Ready
+                           </Badge>
+                         ) : (
+                           <Badge variant="outline" className="text-gray-600">
+                             <ImageIcon className="h-3 w-3 mr-1" />
+                             No Visual
+                           </Badge>
+                         )}
                               </div>
                       <div className="flex items-center gap-2">
                         

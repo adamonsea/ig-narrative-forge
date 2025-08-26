@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AdminPanel } from '@/components/AdminPanel';
 import { ContentManagement } from '@/components/ContentManagement';
 import { ContentPipeline } from '@/components/ContentPipeline';
-import { ApprovedQueue } from '@/components/ApprovedQueue';
+import { FixedApprovedStoriesPanel } from '@/components/FixedApprovedStoriesPanel';
 import IdeogramTestSuite from '@/components/IdeogramTestSuite';
 
 // import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
@@ -250,7 +250,7 @@ const Index = () => {
 
         {activeTab === 'approved' && (
           <div className="space-y-6">
-            <ApprovedQueue />
+            <FixedApprovedStoriesPanel />
           </div>
         )}
 

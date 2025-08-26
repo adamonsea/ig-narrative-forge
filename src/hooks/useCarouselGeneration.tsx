@@ -105,6 +105,7 @@ export const useCarouselGeneration = () => {
 
   const generateCarouselImages = async (story: Story): Promise<boolean> => {
     if (isGenerating.has(story.id)) {
+      console.log('⚠️ Generation already in progress for story:', story.id);
       toast({
         title: 'Already Generating',
         description: 'Carousel generation is already in progress for this story',
@@ -113,9 +114,14 @@ export const useCarouselGeneration = () => {
       return false;
     }
 
-    console.log('🎨 Starting carousel generation for story:', story.id);
+    console.log('🎨 Starting carousel generation for story:', story.id, {
+      title: story.title,
+      slideCount: story.slides?.length,
+      slides: story.slides?.map(s => ({ id: s.id, slideNumber: s.slide_number, wordCount: s.word_count }))
+    });
     
     if (!story?.slides?.length) {
+      console.log('❌ No slides found for story:', story.id);
       toast({
         title: 'No Slides Found',
         description: 'Story has no slides to generate images for',
@@ -126,10 +132,16 @@ export const useCarouselGeneration = () => {
 
     setIsGenerating(prev => new Set(prev.add(story.id)));
 
+    // Show initial progress toast
+    const progressToast = toast({
+      title: 'Carousel Generation Starting',
+      description: `Preparing to generate ${story.slides.length} carousel images...`,
+    });
+
     try {
       // Step 1: Create carousel export record
-      console.log('💾 Creating carousel export record...');
-      const { error: exportError } = await supabase
+      console.log('💾 Creating carousel export record for story:', story.id);
+      const { data: exportRecord, error: exportError } = await supabase
         .from('carousel_exports')
         .upsert({
           story_id: story.id,
@@ -141,38 +153,60 @@ export const useCarouselGeneration = () => {
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'story_id'
-        });
+        })
+        .select();
 
       if (exportError) {
         console.error('❌ Failed to create export record:', exportError);
-        throw new Error(`Failed to create export record: ${exportError.message}`);
+        throw new Error(`Database error: ${exportError.message}`);
       }
 
+      console.log('✅ Carousel export record created:', exportRecord);
+
+      // Update progress
       toast({
-        title: 'Generating Images',
-        description: `Creating ${story.slides.length} carousel images...`,
+        title: 'Loading Image Generator',
+        description: 'Preparing canvas generation tools...',
       });
 
-      // Step 2: Load html2canvas
-      const html2canvas = (await import('html2canvas')).default;
-      console.log('✅ html2canvas loaded');
+      // Step 2: Load html2canvas with error handling
+      let html2canvas;
+      try {
+        html2canvas = (await import('html2canvas')).default;
+        console.log('✅ html2canvas loaded successfully');
+      } catch (loadError) {
+        console.error('❌ Failed to load html2canvas:', loadError);
+        throw new Error('Failed to load image generation library');
+      }
 
       const filePaths: string[] = [];
+      const errors: string[] = [];
 
-      // Step 3: Generate images for each slide
+      // Step 3: Generate images for each slide with individual error handling
       for (let i = 0; i < story.slides.length; i++) {
         const slide = story.slides[i];
-        console.log(`🖼️ Generating image ${i + 1}/${story.slides.length}`);
+        console.log(`🖼️ Generating image ${i + 1}/${story.slides.length} for slide:`, {
+          slideId: slide.id,
+          slideNumber: slide.slide_number,
+          contentLength: slide.content?.length || 0
+        });
+
+        // Update progress toast
+        toast({
+          title: 'Generating Images',
+          description: `Creating image ${i + 1} of ${story.slides.length}...`,
+        });
 
         let slideElement: HTMLDivElement | null = null;
         try {
           slideElement = createSlideElement(slide, story, i + 1);
           document.body.appendChild(slideElement);
+          console.log(`📝 Slide element created and added to DOM`);
 
-          // Wait for rendering
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Wait for rendering and fonts to load
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-          // Generate canvas
+          // Generate canvas with enhanced options
           const canvas = await html2canvas(slideElement, {
             width: 1080,
             height: 1080,
@@ -181,26 +215,39 @@ export const useCarouselGeneration = () => {
             useCORS: true,
             allowTaint: false,
             logging: false,
+            foreignObjectRendering: true,
+            removeContainer: false
+          });
+
+          console.log(`🖼️ Canvas generated:`, {
+            width: canvas.width,
+            height: canvas.height,
+            dataUrl: canvas.toDataURL().substring(0, 50) + '...'
           });
 
           if (canvas.width === 0 || canvas.height === 0) {
-            throw new Error('Canvas has invalid dimensions');
+            throw new Error(`Canvas has invalid dimensions: ${canvas.width}x${canvas.height}`);
           }
 
-          // Convert to blob
-          const imageBlob = await new Promise<Blob>((resolve) => {
+          // Convert to blob with error handling
+          const imageBlob = await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((blob) => {
-              if (blob) resolve(blob);
-              else throw new Error('Failed to create blob');
+              if (blob) {
+                console.log(`✅ Blob created, size: ${blob.size} bytes`);
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create image blob from canvas'));
+              }
             }, 'image/png', 0.9);
           });
 
-          // Upload to storage
+          // Upload to storage with detailed logging
           const fileName = `carousel_${story.id}_slide_${i + 1}_${Date.now()}.png`;
           const filePath = `carousels/${story.id}/${fileName}`;
 
-          console.log(`⬆️ Uploading ${fileName}...`);
-          const { error: uploadError } = await supabase.storage
+          console.log(`⬆️ Uploading ${fileName} (${imageBlob.size} bytes) to ${filePath}...`);
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('exports')
             .upload(filePath, imageBlob, {
               contentType: 'image/png',
@@ -210,56 +257,81 @@ export const useCarouselGeneration = () => {
 
           if (uploadError) {
             console.error(`❌ Upload failed for ${fileName}:`, uploadError);
-            throw uploadError;
+            throw new Error(`Upload failed: ${uploadError.message}`);
           }
 
+          console.log(`✅ Successfully uploaded:`, uploadData);
           filePaths.push(filePath);
-          console.log(`✅ Uploaded: ${filePath}`);
 
+        } catch (slideError: any) {
+          console.error(`❌ Error generating slide ${i + 1}:`, slideError);
+          errors.push(`Slide ${i + 1}: ${slideError.message}`);
+          // Continue with other slides rather than failing completely
         } finally {
           if (slideElement?.parentNode) {
             document.body.removeChild(slideElement);
+            console.log(`🧹 Cleaned up slide element ${i + 1}`);
           }
         }
       }
 
+      // Check if we generated any images successfully
+      if (filePaths.length === 0) {
+        throw new Error(`Failed to generate any images. Errors: ${errors.join('; ')}`);
+      }
+
       // Step 4: Update export record with success
-      console.log('✅ Updating export record with file paths...');
+      console.log('✅ Updating export record with file paths:', filePaths);
       const { error: updateError } = await supabase
         .from('carousel_exports')
         .update({
           status: 'completed',
           file_paths: filePaths,
           updated_at: new Date().toISOString(),
-          error_message: null
+          error_message: errors.length > 0 ? `Partial success. Errors: ${errors.join('; ')}` : null
         })
         .eq('story_id', story.id);
 
       if (updateError) {
         console.error('❌ Failed to update export record:', updateError);
-        throw updateError;
+        throw new Error(`Database update failed: ${updateError.message}`);
       }
 
+      const successMessage = filePaths.length === story.slides.length 
+        ? `Generated all ${filePaths.length} carousel images successfully`
+        : `Generated ${filePaths.length} of ${story.slides.length} images (${errors.length} failed)`;
+
       toast({
-        title: 'Images Generated Successfully',
-        description: `Generated ${filePaths.length} carousel images`,
+        title: 'Carousel Generation Complete',
+        description: successMessage,
       });
 
-      console.log('🎉 Carousel generation completed successfully');
+      console.log('🎉 Carousel generation completed:', {
+        storyId: story.id,
+        generatedImages: filePaths.length,
+        totalSlides: story.slides.length,
+        errors: errors.length,
+        filePaths
+      });
+
       return true;
 
     } catch (error: any) {
-      console.error('❌ Carousel generation failed:', error);
+      console.error('❌ Carousel generation failed for story:', story.id, error);
 
       // Update export record with error
-      await supabase
+      const { error: updateError } = await supabase
         .from('carousel_exports')
         .update({
           status: 'failed',
-          error_message: error.message || 'Unknown error occurred',
+          error_message: error.message || 'Unknown error occurred during generation',
           updated_at: new Date().toISOString()
         })
         .eq('story_id', story.id);
+
+      if (updateError) {
+        console.error('❌ Failed to update error status:', updateError);
+      }
 
       toast({
         title: 'Generation Failed',
@@ -272,6 +344,7 @@ export const useCarouselGeneration = () => {
       setIsGenerating(prev => {
         const next = new Set(prev);
         next.delete(story.id);
+        console.log(`🏁 Finished carousel generation for story ${story.id}, removed from generating set`);
         return next;
       });
     }
