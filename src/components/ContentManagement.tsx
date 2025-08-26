@@ -7,7 +7,8 @@ import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SourceManager } from './SourceManager';
 
-interface ContentSource {
+// Full interface for admin users
+interface ContentSourceFull {
   id: string;
   source_name: string;
   feed_url: string | null;
@@ -17,16 +18,44 @@ interface ContentSource {
   articles_scraped: number | null;
   success_rate: number | null;
   avg_response_time_ms: number | null;
-  last_scraped_at: string | null;
+  last_scraped_at: string | null;  
   region: string | null;
   content_type: string | null;
   is_whitelisted: boolean | null;
   is_blacklisted: boolean | null;
   scrape_frequency_hours: number | null;
+  source_type: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
+// Limited interface for regular users (from content_sources_basic view)
+interface ContentSourceBasic {
+  id: string;
+  source_name: string;
+  canonical_domain: string | null;
+  region: string | null;
+  content_type: string | null;
+  credibility_score: number | null;
+  is_active: boolean | null;
+  articles_scraped: number | null;
+  last_scraped_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  source_type: string | null;
+  is_whitelisted: boolean | null;
+  is_blacklisted: boolean | null;
+  // Add null values for fields not available to regular users
+  feed_url: null;
+  success_rate: null;
+  avg_response_time_ms: null;
+  scrape_frequency_hours: null;
+}
+
+type ContentSource = ContentSourceFull | ContentSourceBasic;
+
 export const ContentManagement = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const [sources, setSources] = useState<ContentSource[]>([]);
 
@@ -39,10 +68,33 @@ export const ContentManagement = () => {
 
   const loadSources = async () => {
     try {
-      const { data, error } = await supabase
-        .from('content_sources')
-        .select('*')
-        .order('credibility_score', { ascending: false });
+      let data, error;
+      
+      if (isAdmin) {
+        // Admin users get full access to content_sources table
+        const result = await supabase
+          .from('content_sources')
+          .select('*')
+          .order('credibility_score', { ascending: false });
+        data = result.data;
+        error = result.error;
+      } else {
+        // Regular users get limited access via content_sources_basic view
+        const result = await supabase
+          .from('content_sources_basic')
+          .select('*')
+          .order('credibility_score', { ascending: false });
+        
+        // Transform data for regular users to match expected interface
+        data = result.data?.map(item => ({
+          ...item,
+          feed_url: null,
+          success_rate: null,
+          avg_response_time_ms: null,
+          scrape_frequency_hours: null,
+        } as ContentSourceBasic));
+        error = result.error;
+      }
 
       if (error) throw error;
       setSources(data || []);
