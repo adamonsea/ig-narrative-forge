@@ -593,6 +593,22 @@ async function generateSlides(article: Article, openAIApiKey: string, slideType:
   // Extract domain from source URL for final slide
   const sourceDomain = new URL(article.source_url).hostname;
   
+  // Get feed CTA configuration
+  const feedName = article.region || 'Default';
+  const { data: ctaConfig } = await supabase
+    .from('feed_cta_configs')
+    .select('*')
+    .eq('feed_name', feedName)
+    .eq('is_active', true)
+    .maybeSingle();
+  
+  // Fallback to default config if feed-specific config not found
+  const finalCtaConfig = ctaConfig || {
+    engagement_question: 'What do you think?',
+    show_like_share: true,
+    attribution_cta: null
+  };
+  
   const systemPrompt = `🚨 CRITICAL: FACTUAL ACCURACY IS NON-NEGOTIABLE 🚨
 
 FACTUAL ACCURACY CHECKLIST - COMPLETE BEFORE WRITING:
@@ -633,7 +649,7 @@ You are creating ${config.count} engaging slides from factual news content.
 3. BUILD TENSION: What actually happened according to the source
 4. CLIMAX/RESOLUTION: The real outcome described in the article
 5. IMPACT/CONSEQUENCE: Actual results mentioned in the source
-6. FINAL SLIDE: "What do you think about [story topic]? Like, share. Summarised${article.author ? ` by ${article.author}` : ''} from ${publicationName}. Support local journalism, visit their site ${sourceDomain} for the full story."
+6. FINAL SLIDE: "${finalCtaConfig.engagement_question}${finalCtaConfig.show_like_share ? ' Like, share.' : ''} Summary of a story${article.author ? ` by ${article.author}` : ''} from ${publicationName}.${finalCtaConfig.attribution_cta ? ` ${finalCtaConfig.attribution_cta},` : ''} visit ${sourceDomain} for the full story."
 
 🎯 FACTUAL NARRATIVE REQUIREMENTS:
 • SETUP: Describe the actual initial situation from the source

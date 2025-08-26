@@ -452,6 +452,39 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_cta_configs: {
+        Row: {
+          attribution_cta: string | null
+          created_at: string
+          engagement_question: string | null
+          feed_name: string
+          id: string
+          is_active: boolean
+          show_like_share: boolean
+          updated_at: string
+        }
+        Insert: {
+          attribution_cta?: string | null
+          created_at?: string
+          engagement_question?: string | null
+          feed_name: string
+          id?: string
+          is_active?: boolean
+          show_like_share?: boolean
+          updated_at?: string
+        }
+        Update: {
+          attribution_cta?: string | null
+          created_at?: string
+          engagement_question?: string | null
+          feed_name?: string
+          id?: string
+          is_active?: boolean
+          show_like_share?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       image_generation_tests: {
         Row: {
           api_provider: string

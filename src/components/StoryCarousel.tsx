@@ -216,12 +216,12 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
                       dangerouslySetInnerHTML={{
                         __html: ctaContent
                           .replace(
-                            /(https?:\/\/[^\s]+)/g, 
-                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>'
+                            /visit ([^\s]+)/gi, 
+                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
                           )
                           .replace(
-                            /Read more at.*$/i,
-                            '<a href="' + story.article.source_url + '" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">Read the full story</a>'
+                            /(https?:\/\/[^\s]+)/g, 
+                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
                           )
                       }}
                     />
