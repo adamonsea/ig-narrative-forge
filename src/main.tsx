@@ -1,9 +1,19 @@
 import React from 'react'
-import ReactDOM from 'react-dom'
+import { createRoot } from 'react-dom/client'
 
-const App = () => React.createElement('div', { 
-  style: { padding: '20px' } 
-}, React.createElement('h1', null, 'eeZee News - Testing Legacy Render'));
+const App = () => {
+  return React.createElement('div', null, 'Hello eeZee News');
+};
 
-const container = document.getElementById('root');
-ReactDOM.render(React.createElement(App), container);
+try {
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    const root = createRoot(rootElement);
+    root.render(React.createElement(App));
+  } else {
+    console.error('Root element not found');
+  }
+} catch (error) {
+  console.error('Error mounting app:', error);
+  document.body.innerHTML = '<div style="padding: 20px;">Error loading app: ' + error + '</div>';
+}
