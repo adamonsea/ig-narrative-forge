@@ -305,6 +305,7 @@ export type Database = {
       }
       content_generation_queue: {
         Row: {
+          ai_provider: string | null
           article_id: string
           attempts: number
           completed_at: string | null
@@ -318,6 +319,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          ai_provider?: string | null
           article_id: string
           attempts?: number
           completed_at?: string | null
@@ -331,6 +333,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          ai_provider?: string | null
           article_id?: string
           attempts?: number
           completed_at?: string | null

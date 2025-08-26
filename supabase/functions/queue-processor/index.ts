@@ -83,11 +83,12 @@ serve(async (req) => {
           continue;
         }
 
-        // Call the content-generator function with cost optimization
+        // Call the content-generator function with AI provider selection
         const { data: generationResult, error: generationError } = await supabase.functions.invoke('content-generator', {
           body: {
             articleId: job.article_id,
             slideType: job.slidetype,
+            aiProvider: job.ai_provider || 'deepseek', // Pass AI provider from queue
             costOptimized: true, // Enable cost optimizations
             batchMode: true // Enable batch processing mode
           }

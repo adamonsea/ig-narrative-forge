@@ -52,21 +52,24 @@ serve(async (req) => {
     }
     
     if (useDeepSeek && !deepSeekApiKey) {
-      throw new Error('DEEPSEEK_API_KEY is required when USE_DEEPSEEK=true');
+      throw new Error('DEEPSEEK_API_KEY is required when using DeepSeek');
     }
     
     if (!useDeepSeek && !openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is required when USE_DEEPSEEK=false');
+      throw new Error('OPENAI_API_KEY is required when using OpenAI');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { articleId, slideType = 'tabloid' } = await req.json();
+    const { articleId, slideType = 'tabloid', aiProvider } = await req.json();
 
-    console.log('Processing article ID:', articleId);
+    console.log('Processing article ID:', articleId, 'with AI provider:', aiProvider || 'from env');
 
     if (!articleId) {
       throw new Error('Article ID is required');
     }
+
+    // Determine AI provider - use from request if provided, otherwise fall back to env variable
+    const useDeepSeek = aiProvider ? aiProvider === 'deepseek' : Deno.env.get('USE_DEEPSEEK') === 'true';
 
     // Fetch the article with published_at for temporal context
     const { data: article, error: articleError } = await supabase
@@ -332,7 +335,7 @@ serve(async (req) => {
       throw new Error(`Failed to insert slides: ${insertError.message}`);
     }
 
-    // Update the story with publication info and source attribution
+    // Update the story with publication info, source attribution and AI provider
     const sourceAttribution = article.author 
       ? `Summarised from an article in ${publicationName}, by ${article.author}`
       : `Summarised from an article in ${publicationName}`;
