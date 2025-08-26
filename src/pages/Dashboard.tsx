@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopicManager } from "@/components/TopicManager";
-import { SlideGenerator } from "@/components/SlideGenerator";
-import { ContentManagement } from "@/components/ContentManagement";
+import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
+import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, Plus } from "lucide-react";
@@ -154,26 +154,11 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="content" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Content Pipeline</CardTitle>
-                  <CardDescription>
-                    Generate stories from approved articles
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SlideGenerator
-                    articles={[]}
-                    onRefresh={() => {}}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+            <TopicAwareContentPipeline />
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
-            <ContentManagement />
+            <TopicAwareSourceManager onSourcesChange={loadDashboardStats} />
           </TabsContent>
         </Tabs>
 
