@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Share2, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Story {
@@ -44,7 +44,7 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex + 1);
         setSlideDirection(null);
-      }, 200);
+      }, 150);
     }
   };
 
@@ -54,7 +54,7 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
       setTimeout(() => {
         setCurrentSlideIndex(currentSlideIndex - 1);
         setSlideDirection(null);
-      }, 200);
+      }, 150);
     }
   };
 
@@ -171,12 +171,34 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
 
         {/* Slide Content */}
         <div className="relative flex-1 flex items-center justify-center">
+          {/* Invisible navigation areas */}
+          {story.slides.length > 1 && (
+            <>
+              {/* Left area - previous slide */}
+              {!isFirstSlide && (
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                  aria-label="Previous slide"
+                />
+              )}
+              {/* Right area - next slide */}
+              {!isLastSlide && (
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                  aria-label="Next slide"
+                />
+              )}
+            </>
+          )}
+          
           <div className="p-8 w-full max-w-2xl">
             {/* Main Content */}
-            <div className={`mb-8 transition-all duration-500 ${
-              slideDirection === 'next' ? 'animate-slide-out-left' : 
-              slideDirection === 'prev' ? 'animate-slide-out-right' : 
-              'animate-slide-in'
+            <div className={`mb-8 transition-all duration-300 ${
+              slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
+              slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
+              'animate-fade-in'
             }`}>
               <div className={`text-center leading-relaxed ${
                   currentSlideIndex === 0 
@@ -208,30 +230,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
               </div>
             </div>
           </div>
-
-          {/* Navigation arrows */}
-          {story.slides.length > 1 && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={prevSlide}
-                disabled={currentSlideIndex === 0}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={nextSlide}
-                disabled={currentSlideIndex === story.slides.length - 1}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-            </>
-          )}
         </div>
 
         {/* Bottom section */}
