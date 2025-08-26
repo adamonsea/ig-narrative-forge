@@ -115,19 +115,19 @@ export const useCarouselGeneration = () => {
       const contentLength = mainContent.length;
       
       if (isFirstSlide) {
-        // Title slide - bold and larger
-        if (contentLength < 50) fontSize = 56;
-        else if (contentLength < 100) fontSize = 48;
-        else fontSize = 40;
+        // Title slide - bold and larger (50% bigger)
+        if (contentLength < 50) fontSize = 84;
+        else if (contentLength < 100) fontSize = 72;
+        else fontSize = 60;
         fontWeight = 'bold';
         // Convert to uppercase for title
         mainContent = mainContent.toUpperCase();
       } else {
-        // Content slide - lighter weight
-        if (contentLength < 80) fontSize = 42;
-        else if (contentLength < 150) fontSize = 34;
-        else if (contentLength < 250) fontSize = 28;
-        else fontSize = 24;
+        // Content slide - lighter weight (50% bigger)
+        if (contentLength < 80) fontSize = 63;
+        else if (contentLength < 150) fontSize = 51;
+        else if (contentLength < 250) fontSize = 42;
+        else fontSize = 36;
         fontWeight = '300';
       }
       
@@ -180,12 +180,12 @@ export const useCarouselGeneration = () => {
         ctx.fillStyle = '#e2e8f0';
         ctx.fillRect(340, contentStartY + totalMainHeight + 30, 400, 1);
         
-        // CTA text styling
+        // CTA text styling (50% bigger)
         ctx.fillStyle = '#64748b';
-        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = 'bold 27px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         
         const ctaLines = wrapText(ctaContent, maxWidth);
-        const ctaLineHeight = 24;
+        const ctaLineHeight = 36; // Increased from 24 for bigger text
         const ctaStartY = contentStartY + totalMainHeight + 70;
         
         ctaLines.forEach((line, index) => {
