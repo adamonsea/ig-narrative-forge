@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopicManager } from "@/components/TopicManager";
-import { SourceManager } from "@/components/SourceManager";
 import { SlideGenerator } from "@/components/SlideGenerator";
 import { ContentManagement } from "@/components/ContentManagement";
 import { useAuth } from "@/hooks/useAuth";
@@ -144,11 +143,10 @@ const Dashboard = () => {
 
         {/* Main Dashboard Content */}
         <Tabs defaultValue="topics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="topics">Topics</TabsTrigger>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
-            {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="topics" className="space-y-6">
@@ -177,39 +175,36 @@ const Dashboard = () => {
           <TabsContent value="sources" className="space-y-6">
             <ContentManagement />
           </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="admin" className="space-y-6">
-              <div className="grid grid-cols-1 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>System Administration</CardTitle>
-                    <CardDescription>
-                      System-wide settings and management
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium">Global Source Management</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Manage sources across all topics
-                          </p>
-                        </div>
-                        <Button variant="outline" asChild>
-                          <Link to="/admin">
-                            Open Admin Panel
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
         </Tabs>
+
+        {/* Admin Section (separate from tabs) */}
+        {isAdmin && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>System Administration</CardTitle>
+              <CardDescription>
+                System-wide settings and management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Global Source Management</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage sources across all topics
+                    </p>
+                  </div>
+                  <Button variant="outline" asChild>
+                    <Link to="/admin">
+                      Open Admin Panel
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
