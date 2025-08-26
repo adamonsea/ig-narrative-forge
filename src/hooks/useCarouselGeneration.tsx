@@ -27,80 +27,194 @@ export const useCarouselGeneration = () => {
   const { toast } = useToast();
 
   const createSlideElement = (slide: any, story: Story, slideNumber: number): HTMLDivElement => {
-    const slideDiv = document.createElement('div');
-    slideDiv.style.cssText = `
+    const slideContainer = document.createElement('div');
+    slideContainer.style.cssText = `
       width: 1080px;
       height: 1080px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: white;
       position: absolute;
       left: -9999px;
       top: -9999px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 60px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      overflow: hidden;
       box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: white;
-      text-align: center;
     `;
 
-    const slideNumberDiv = document.createElement('div');
-    slideNumberDiv.style.cssText = `
-      position: absolute;
-      top: 40px;
-      right: 40px;
-      background: rgba(255, 255, 255, 0.2);
-      padding: 12px 20px;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: 600;
-      backdrop-filter: blur(10px);
+    // Header section - matching StoryCarousel header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: white;
     `;
-    slideNumberDiv.textContent = `${slideNumber}/${story.slides.length}`;
+
+    const topicBadge = document.createElement('div');
+    topicBadge.style.cssText = `
+      background: #f1f5f9;
+      color: #475569;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    `;
+    topicBadge.textContent = 'News';
+
+    const slideCounter = document.createElement('div');
+    slideCounter.style.cssText = `
+      color: #64748b;
+      font-size: 14px;
+    `;
+    slideCounter.textContent = `${slideNumber} of ${story.slides.length}`;
+
+    header.appendChild(topicBadge);
+    header.appendChild(slideCounter);
+
+    // Content section - matching StoryCarousel main content area
+    const contentSection = document.createElement('div');
+    contentSection.style.cssText = `
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: white;
+    `;
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.cssText = `
+      padding: 32px;
+      width: 100%;
+      max-width: 672px;
+    `;
 
     const contentDiv = document.createElement('div');
     contentDiv.style.cssText = `
-      font-size: 32px;
-      line-height: 1.4;
-      font-weight: 600;
-      margin-bottom: 40px;
-      max-width: 900px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 32px;
     `;
-    contentDiv.textContent = slide.content;
 
-    const titleDiv = document.createElement('div');
-    titleDiv.style.cssText = `
-      position: absolute;
-      bottom: 80px;
-      left: 60px;
-      right: 60px;
-      font-size: 18px;
+    // Dynamic text sizing function matching StoryCarousel.tsx
+    const getTextSize = (content: string, isTitle: boolean) => {
+      const length = content.length;
+      if (isTitle) {
+        if (length < 50) return '80px';
+        if (length < 100) return '60px';
+        return '48px';
+      } else {
+        if (length < 80) return '48px';
+        if (length < 150) return '40px';
+        if (length < 250) return '32px';
+        return '28px';
+      }
+    };
+
+    // Parse content for last slide styling - matching StoryCarousel logic
+    const isFirstSlide = slideNumber === 1;
+    const isLastSlide = slideNumber === story.slides.length;
+    
+    let mainContent = slide.content;
+    let ctaContent = null;
+    
+    if (isLastSlide) {
+      const ctaPatterns = [
+        /Like, share\./i,
+        /Summarised by/i,
+        /Support local journalism/i
+      ];
+      
+      let splitIndex = -1;
+      for (const pattern of ctaPatterns) {
+        const match = slide.content.search(pattern);
+        if (match !== -1) {
+          splitIndex = match;
+          break;
+        }
+      }
+      
+      if (splitIndex !== -1) {
+        mainContent = slide.content.substring(0, splitIndex).trim();
+        ctaContent = slide.content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
+      }
+    }
+
+    // Apply styling exactly like StoryCarousel
+    const textDiv = document.createElement('div');
+    const fontSize = getTextSize(isLastSlide ? mainContent : slide.content, isFirstSlide);
+    
+    textDiv.style.cssText = `
+      text-align: center;
+      line-height: 1.25;
+      color: #0f172a;
+      word-wrap: break-word;
+      hyphens: auto;
+      font-size: ${fontSize};
+      ${isFirstSlide 
+        ? 'font-weight: 700; text-transform: uppercase;' 
+        : 'font-weight: 300;'
+      }
+    `;
+    
+    textDiv.textContent = mainContent;
+    contentDiv.appendChild(textDiv);
+
+    // Add CTA content with special styling if it exists (matching StoryCarousel)
+    if (isLastSlide && ctaContent) {
+      const ctaDiv = document.createElement('div');
+      ctaDiv.style.cssText = `
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+      `;
+      
+      const ctaText = document.createElement('div');
+      ctaText.style.cssText = `
+        font-size: 24px;
+        font-weight: 700;
+        color: #64748b;
+        text-align: center;
+        line-height: 1.25;
+      `;
+      
+      // Handle source website links like StoryCarousel
+      let processedCtaContent = ctaContent
+        .replace(/(https?:\/\/[^\s]+)/g, 'source website');
+      
+      ctaText.textContent = processedCtaContent;
+      ctaDiv.appendChild(ctaText);
+      contentDiv.appendChild(ctaDiv);
+    }
+
+    contentWrapper.appendChild(contentDiv);
+    contentSection.appendChild(contentWrapper);
+
+    // Footer attribution - matching StoryCarousel bottom section
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      padding: 16px;
+      text-align: center;
+      background: white;
+    `;
+
+    const attribution = document.createElement('div');
+    attribution.style.cssText = `
+      color: #64748b;
+      font-size: 12px;
       font-weight: 500;
-      opacity: 0.9;
-      border-top: 2px solid rgba(255, 255, 255, 0.3);
-      padding-top: 20px;
     `;
-    titleDiv.textContent = story.title;
+    attribution.textContent = 'eeZee News';
 
-    const authorDiv = document.createElement('div');
-    authorDiv.style.cssText = `
-      position: absolute;
-      bottom: 40px;
-      left: 60px;
-      font-size: 14px;
-      opacity: 0.7;
-    `;
-    authorDiv.textContent = story.article?.author || 'eeZee News';
+    footer.appendChild(attribution);
 
-    slideDiv.appendChild(slideNumberDiv);
-    slideDiv.appendChild(contentDiv);
-    slideDiv.appendChild(titleDiv);
-    slideDiv.appendChild(authorDiv);
+    // Assemble the slide exactly like StoryCarousel structure
+    slideContainer.appendChild(header);
+    slideContainer.appendChild(contentSection); 
+    slideContainer.appendChild(footer);
 
-    return slideDiv;
+    return slideContainer;
   };
 
   const generateCarouselImages = async (story: Story): Promise<boolean> => {
