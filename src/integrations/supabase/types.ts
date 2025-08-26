@@ -250,6 +250,13 @@ export type Database = {
             referencedRelation: "content_sources"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
         ]
       }
       carousel_exports: {
@@ -810,6 +817,13 @@ export type Database = {
             referencedRelation: "content_sources"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_scrape_jobs_source_id"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
         ]
       }
       scrape_schedules: {
@@ -858,6 +872,13 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: true
             referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_scrape_schedules_source_id"
+            columns: ["source_id"]
+            isOneToOne: true
+            referencedRelation: "content_sources_basic"
             referencedColumns: ["id"]
           },
         ]
@@ -1128,7 +1149,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      content_sources_basic: {
+        Row: {
+          articles_scraped: number | null
+          canonical_domain: string | null
+          content_type: string | null
+          created_at: string | null
+          credibility_score: number | null
+          id: string | null
+          is_active: boolean | null
+          is_blacklisted: boolean | null
+          is_whitelisted: boolean | null
+          last_scraped_at: string | null
+          region: string | null
+          source_name: string | null
+          source_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          articles_scraped?: number | null
+          canonical_domain?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          credibility_score?: number | null
+          id?: string | null
+          is_active?: boolean | null
+          is_blacklisted?: boolean | null
+          is_whitelisted?: boolean | null
+          last_scraped_at?: string | null
+          region?: string | null
+          source_name?: string | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          articles_scraped?: number | null
+          canonical_domain?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          credibility_score?: number | null
+          id?: string | null
+          is_active?: boolean | null
+          is_blacklisted?: boolean | null
+          is_whitelisted?: boolean | null
+          last_scraped_at?: string | null
+          region?: string | null
+          source_name?: string | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       approve_article_for_generation: {
@@ -1150,6 +1221,10 @@ export type Database = {
           duplicate_id: string
           similarity_score: number
         }[]
+      }
+      get_content_sources_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
