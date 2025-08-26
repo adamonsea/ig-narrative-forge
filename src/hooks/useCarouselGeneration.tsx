@@ -27,36 +27,44 @@ export const useCarouselGeneration = () => {
   const { toast } = useToast();
 
   const createSlideElement = (slide: any, story: Story, slideNumber: number): HTMLDivElement => {
+    // Create a container that mimics the exact StoryCarousel structure
     const slideContainer = document.createElement('div');
+    slideContainer.className = 'overflow-hidden';
     slideContainer.style.cssText = `
       width: 1080px;
       height: 1080px;
-      background: white;
       position: absolute;
       left: -9999px;
       top: -9999px;
-      display: flex;
-      flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      overflow: hidden;
       box-sizing: border-box;
     `;
 
-    // Header section - matching StoryCarousel header
+    // Create the inner content structure matching StoryCarousel exactly
+    const innerDiv = document.createElement('div');
+    innerDiv.style.cssText = `
+      position: relative;
+      background: hsl(0 0% 100%);
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    `;
+
+    // Header section - exactly matching StoryCarousel
     const header = document.createElement('div');
     header.style.cssText = `
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 16px;
-      border-bottom: 1px solid #e5e7eb;
-      background: white;
+      border-bottom: 1px solid hsl(214 32% 91%);
     `;
 
     const topicBadge = document.createElement('div');
     topicBadge.style.cssText = `
-      background: #f1f5f9;
-      color: #475569;
+      background: hsl(210 40% 98%);
+      color: hsl(215 20% 65%);
       padding: 4px 12px;
       border-radius: 6px;
       font-size: 14px;
@@ -66,7 +74,7 @@ export const useCarouselGeneration = () => {
 
     const slideCounter = document.createElement('div');
     slideCounter.style.cssText = `
-      color: #64748b;
+      color: hsl(215 16% 47%);
       font-size: 14px;
     `;
     slideCounter.textContent = `${slideNumber} of ${story.slides.length}`;
@@ -74,15 +82,14 @@ export const useCarouselGeneration = () => {
     header.appendChild(topicBadge);
     header.appendChild(slideCounter);
 
-    // Content section - matching StoryCarousel main content area
+    // Content section - matching StoryCarousel flex-1 structure
     const contentSection = document.createElement('div');
     contentSection.style.cssText = `
+      position: relative;
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-      background: white;
     `;
 
     const contentWrapper = document.createElement('div');
@@ -97,22 +104,7 @@ export const useCarouselGeneration = () => {
       margin-bottom: 32px;
     `;
 
-    // Dynamic text sizing function matching StoryCarousel.tsx
-    const getTextSize = (content: string, isTitle: boolean) => {
-      const length = content.length;
-      if (isTitle) {
-        if (length < 50) return '80px';
-        if (length < 100) return '60px';
-        return '48px';
-      } else {
-        if (length < 80) return '48px';
-        if (length < 150) return '40px';
-        if (length < 250) return '32px';
-        return '28px';
-      }
-    };
-
-    // Parse content for last slide styling - matching StoryCarousel logic
+    // Parse content for last slide styling exactly like StoryCarousel
     const isFirstSlide = slideNumber === 1;
     const isLastSlide = slideNumber === story.slides.length;
     
@@ -141,14 +133,29 @@ export const useCarouselGeneration = () => {
       }
     }
 
-    // Apply styling exactly like StoryCarousel
+    // Dynamic text sizing function matching StoryCarousel exactly
+    const getTextSize = (content: string, isTitle: boolean) => {
+      const length = content.length;
+      if (isTitle) {
+        if (length < 50) return '80px';
+        if (length < 100) return '60px';
+        return '48px';
+      } else {
+        if (length < 80) return '48px';
+        if (length < 150) return '40px';
+        if (length < 250) return '32px';
+        return '28px';
+      }
+    };
+
+    // Main text content with exact StoryCarousel styling
     const textDiv = document.createElement('div');
     const fontSize = getTextSize(isLastSlide ? mainContent : slide.content, isFirstSlide);
     
     textDiv.style.cssText = `
       text-align: center;
       line-height: 1.25;
-      color: #0f172a;
+      color: hsl(222 84% 5%);
       word-wrap: break-word;
       hyphens: auto;
       font-size: ${fontSize};
@@ -161,20 +168,20 @@ export const useCarouselGeneration = () => {
     textDiv.textContent = mainContent;
     contentDiv.appendChild(textDiv);
 
-    // Add CTA content with special styling if it exists (matching StoryCarousel)
+    // Add CTA content with special styling if it exists (exactly matching StoryCarousel)
     if (isLastSlide && ctaContent) {
       const ctaDiv = document.createElement('div');
       ctaDiv.style.cssText = `
         margin-top: 16px;
         padding-top: 16px;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid hsl(213 27% 84%);
       `;
       
       const ctaText = document.createElement('div');
       ctaText.style.cssText = `
         font-size: 24px;
         font-weight: 700;
-        color: #64748b;
+        color: hsl(215 16% 47%);
         text-align: center;
         line-height: 1.25;
       `;
@@ -191,28 +198,28 @@ export const useCarouselGeneration = () => {
     contentWrapper.appendChild(contentDiv);
     contentSection.appendChild(contentWrapper);
 
-    // Footer attribution - matching StoryCarousel bottom section
+    // Footer attribution - matching StoryCarousel exactly
     const footer = document.createElement('div');
     footer.style.cssText = `
       padding: 16px;
       text-align: center;
-      background: white;
     `;
 
     const attribution = document.createElement('div');
     attribution.style.cssText = `
-      color: #64748b;
+      color: hsl(215 16% 47%);
       font-size: 12px;
       font-weight: 500;
     `;
-    attribution.textContent = 'eeZee News';
+    attribution.textContent = 'News';
 
     footer.appendChild(attribution);
 
-    // Assemble the slide exactly like StoryCarousel structure
-    slideContainer.appendChild(header);
-    slideContainer.appendChild(contentSection); 
-    slideContainer.appendChild(footer);
+    // Assemble the complete slide structure
+    innerDiv.appendChild(header);
+    innerDiv.appendChild(contentSection); 
+    innerDiv.appendChild(footer);
+    slideContainer.appendChild(innerDiv);
 
     return slideContainer;
   };
