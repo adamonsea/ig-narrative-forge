@@ -1079,6 +1079,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_regions: {
+        Row: {
+          created_at: string
+          id: string
+          region: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          region: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          region?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1301,6 +1322,10 @@ export type Database = {
           relevance_score: number
           title: string
         }[]
+      }
+      user_has_region_access: {
+        Args: { check_region: string }
+        Returns: boolean
       }
     }
     Enums: {
