@@ -30,6 +30,7 @@ export const useCarouselGeneration = () => {
     return new Promise((resolve, reject) => {
       const slide = story.slides[slideIndex];
       const isFirstSlide = slideIndex === 0;
+      const isLastSlide = slideIndex === story.slides.length - 1;
       
       // Create canvas
       const canvas = document.createElement('canvas');
@@ -42,56 +43,108 @@ export const useCarouselGeneration = () => {
         return;
       }
 
-      // Fill background
+      // Fill background with design system background color
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 1080, 1080);
 
-      // Draw header
-      ctx.fillStyle = '#f3f4f6';
-      ctx.fillRect(0, 0, 1080, 80);
+      // Draw header area
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1080, 100);
       
       // Draw header border
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillRect(0, 80, 1080, 1);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(0, 100, 1080, 1);
 
-      // Header text
-      ctx.fillStyle = '#374151';
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('News', 32, 50);
+      // Header badge (News)
+      const badgeX = 32;
+      const badgeY = 32;
+      const badgeWidth = 80;
+      const badgeHeight = 36;
+      
+      // Badge background
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 6);
+      ctx.fill();
+      
+      // Badge text
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('News', badgeX + badgeWidth/2, badgeY + 23);
       
       // Counter text
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(`${slideIndex + 1} of ${story.slides.length}`, 1048, 50);
+      ctx.fillText(`${slideIndex + 1} of ${story.slides.length}`, 1048, 55);
 
-      // Main content
-      ctx.fillStyle = '#111827';
+      // Parse content for last slide (handle CTA content)
+      let mainContent = slide.content;
+      let ctaContent = null;
+      
+      if (isLastSlide) {
+        const ctaPatterns = [
+          /Like, share\./i,
+          /Summarised by/i,
+          /Support local journalism/i
+        ];
+        
+        let splitIndex = -1;
+        for (const pattern of ctaPatterns) {
+          const match = slide.content.search(pattern);
+          if (match !== -1) {
+            splitIndex = match;
+            break;
+          }
+        }
+        
+        if (splitIndex !== -1) {
+          mainContent = slide.content.substring(0, splitIndex).trim();
+          ctaContent = slide.content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
+        }
+      }
+
+      // Main content styling
+      ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'center';
       
-      // Dynamic font size based on content length and slide type
+      // Dynamic font size based on content length and slide type - matching StoryCarousel logic
       let fontSize;
       let fontWeight;
+      const contentLength = mainContent.length;
+      
       if (isFirstSlide) {
-        fontSize = slide.content.length < 50 ? 48 : slide.content.length < 100 ? 40 : 32;
+        // Title slide - bold and larger
+        if (contentLength < 50) fontSize = 56;
+        else if (contentLength < 100) fontSize = 48;
+        else fontSize = 40;
         fontWeight = 'bold';
+        // Convert to uppercase for title
+        mainContent = mainContent.toUpperCase();
       } else {
-        fontSize = slide.content.length < 80 ? 36 : slide.content.length < 150 ? 28 : slide.content.length < 250 ? 24 : 20;
+        // Content slide - lighter weight
+        if (contentLength < 80) fontSize = 42;
+        else if (contentLength < 150) fontSize = 34;
+        else if (contentLength < 250) fontSize = 28;
+        else fontSize = 24;
         fontWeight = '300';
       }
       
       ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-      // Word wrap function
+      // Enhanced word wrap function
       const wrapText = (text: string, maxWidth: number) => {
         const words = text.split(' ');
         const lines: string[] = [];
-        let currentLine = words[0];
+        let currentLine = words[0] || '';
 
         for (let i = 1; i < words.length; i++) {
           const word = words[i];
-          const width = ctx.measureText(currentLine + " " + word).width;
-          if (width < maxWidth) {
-            currentLine += " " + word;
+          const testLine = currentLine + " " + word;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width < maxWidth) {
+            currentLine = testLine;
           } else {
             lines.push(currentLine);
             currentLine = word;
@@ -101,20 +154,49 @@ export const useCarouselGeneration = () => {
         return lines;
       };
 
-      // Draw wrapped text
-      const maxWidth = 900; // Leave margins
-      const lines = wrapText(slide.content, maxWidth);
-      const lineHeight = fontSize * 1.4;
-      const totalHeight = lines.length * lineHeight;
-      const startY = (1080 - totalHeight) / 2 + (lineHeight / 2);
+      // Draw main content with proper spacing
+      const maxWidth = 900;
+      const lines = wrapText(mainContent, maxWidth);
+      const lineHeight = fontSize * 1.3;
+      const totalMainHeight = lines.length * lineHeight;
+      
+      // Calculate vertical centering
+      let contentStartY;
+      if (ctaContent) {
+        // Leave space for CTA content below
+        contentStartY = (1080 - totalMainHeight - 150) / 2 + (lineHeight / 2);
+      } else {
+        contentStartY = (1080 - totalMainHeight + 50) / 2 + (lineHeight / 2);
+      }
 
+      // Draw main content lines
       lines.forEach((line, index) => {
-        ctx.fillText(line, 540, startY + (index * lineHeight));
+        ctx.fillText(line, 540, contentStartY + (index * lineHeight));
       });
 
+      // Draw CTA content if it exists (last slide)
+      if (ctaContent && isLastSlide) {
+        // Separator line
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(340, contentStartY + totalMainHeight + 30, 400, 1);
+        
+        // CTA text styling
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        
+        const ctaLines = wrapText(ctaContent, maxWidth);
+        const ctaLineHeight = 24;
+        const ctaStartY = contentStartY + totalMainHeight + 70;
+        
+        ctaLines.forEach((line, index) => {
+          ctx.fillText(line, 540, ctaStartY + (index * ctaLineHeight));
+        });
+      }
+
       // Footer
-      ctx.fillStyle = '#6b7280';
-      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText('News', 540, 1050);
 
       // Convert to blob
