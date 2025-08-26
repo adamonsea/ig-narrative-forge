@@ -401,18 +401,18 @@ export const FixedApprovedStoriesPanel = () => {
       default:
         return (
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-gray-50 text-gray-700">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700">
               <ImageIcon className="h-3 w-3 mr-1" />
-              No Carousel Images
+              Auto-Generated Images
             </Badge>
             <Button
               onClick={() => handleGenerateCarousel(story)}
               size="sm"
-              variant="default"
-              className="bg-primary hover:bg-primary/90"
+              variant="outline"
+              className="text-orange-600 border-orange-200 hover:bg-orange-50"
             >
-              <Package className="h-4 w-4 mr-1" />
-              Generate Carousel
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Retry Generation
             </Button>
           </div>
         );
@@ -448,7 +448,7 @@ export const FixedApprovedStoriesPanel = () => {
                 Approved Queue
               </CardTitle>
               <CardDescription>
-                Stories ready for publishing and carousel generation
+                Stories ready for publishing with auto-generated carousels
               </CardDescription>
             </div>
             <Button 

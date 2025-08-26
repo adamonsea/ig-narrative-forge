@@ -290,7 +290,7 @@ export type Database = {
           {
             foreignKeyName: "carousel_exports_story_id_fkey"
             columns: ["story_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "stories"
             referencedColumns: ["id"]
           },

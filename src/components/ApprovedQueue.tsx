@@ -123,10 +123,11 @@ export const ApprovedQueue = () => {
 
       if (error) throw error;
 
-      // Flatten visuals from nested structure
+      // Flatten visuals from nested structure and fix carousel_exports type
       const storiesWithVisuals = data.map(story => ({
         ...story,
-        visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || []
+        visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || [],
+        carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
       }));
 
       setStories(storiesWithVisuals || []);

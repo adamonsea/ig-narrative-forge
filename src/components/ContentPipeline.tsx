@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArticlePipelinePanel } from '@/components/ArticlePipelinePanel';
 import { ApprovedStoriesPanel } from '@/components/ApprovedStoriesPanel';
+import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { 
   CheckCircle2, 
   X, 
@@ -71,6 +72,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [editContent, setEditContent] = useState('');
 
   const { toast } = useToast();
+  const { generateCarouselImages } = useCarouselGeneration();
 
   useEffect(() => {
     loadStories();
@@ -122,6 +124,13 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     setProcessingApproval(prev => new Set(prev.add(storyId)));
     
     try {
+      // Find the story to get its data for carousel generation
+      const story = stories.find(s => s.id === storyId);
+      if (!story) {
+        throw new Error('Story not found');
+      }
+
+      // Update story status to ready
       const { error } = await supabase
         .from('stories')
         .update({ status: 'ready' })
@@ -131,8 +140,23 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       toast({
         title: "Story Approved",
-        description: "Story has been approved and moved to ready status",
+        description: "Story approved and carousel generation started automatically",
       });
+
+      // Automatically trigger carousel generation
+      console.log('🎨 Auto-generating carousel for approved story:', storyId);
+      try {
+        await generateCarouselImages(story);
+        console.log('✅ Auto-carousel generation completed for story:', storyId);
+      } catch (carouselError) {
+        console.error('❌ Auto-carousel generation failed:', carouselError);
+        // Don't fail the approval if carousel generation fails
+        toast({
+          title: "Carousel Generation Issue",
+          description: "Story approved but carousel generation failed. You can retry from the Approved Queue.",
+          variant: "destructive",
+        });
+      }
 
       loadStories();
       onRefresh?.();
