@@ -282,10 +282,11 @@ export const useCarouselGeneration = () => {
 
       // Step 4: Update export record with success
       console.log('✅ Updating export record with file paths:', filePaths);
+      const finalStatus = filePaths.length === story.slides.length ? 'completed' : 'partial';
       const { error: updateError } = await supabase
         .from('carousel_exports')
         .update({
-          status: 'completed',
+          status: finalStatus,
           file_paths: filePaths,
           updated_at: new Date().toISOString(),
           error_message: errors.length > 0 ? `Partial success. Errors: ${errors.join('; ')}` : null
@@ -295,6 +296,8 @@ export const useCarouselGeneration = () => {
       if (updateError) {
         console.error('❌ Failed to update export record:', updateError);
         throw new Error(`Database update failed: ${updateError.message}`);
+      } else {
+        console.log(`✅ Updated carousel export status to ${finalStatus} for story ${story.id}`);
       }
 
       const successMessage = filePaths.length === story.slides.length 
@@ -311,7 +314,8 @@ export const useCarouselGeneration = () => {
         generatedImages: filePaths.length,
         totalSlides: story.slides.length,
         errors: errors.length,
-        filePaths
+        filePaths,
+        finalStatus
       });
 
       return true;
