@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 
@@ -25,22 +23,13 @@ interface Story {
 type SortOption = "newest" | "oldest";
 
 export default function EastbourneFeed() {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
   const [stories, setStories] = useState<Story[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-      return;
-    }
-    
-    if (user) {
-      loadStories();
-    }
-  }, [user, loading, navigate, sortBy]);
+    loadStories();
+  }, [sortBy]);
 
   const loadStories = async () => {
     try {
@@ -103,7 +92,7 @@ export default function EastbourneFeed() {
     }
   };
 
-  if (loading || loadingStories) {
+  if (loadingStories) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

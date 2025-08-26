@@ -36,15 +36,27 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    const useDeepSeek = Deno.env.get('USE_DEEPSEEK') === 'true';
     
     console.log('Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseKey,
-      hasOpenAIKey: !!openAIApiKey
+      hasOpenAIKey: !!openAIApiKey,
+      hasDeepSeekKey: !!deepSeekApiKey,
+      useDeepSeek: useDeepSeek
     });
     
-    if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
-      throw new Error('Missing required environment variables');
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required Supabase environment variables');
+    }
+    
+    if (useDeepSeek && !deepSeekApiKey) {
+      throw new Error('DEEPSEEK_API_KEY is required when USE_DEEPSEEK=true');
+    }
+    
+    if (!useDeepSeek && !openAIApiKey) {
+      throw new Error('OPENAI_API_KEY is required when USE_DEEPSEEK=false');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -138,15 +150,21 @@ serve(async (req) => {
     const hookPromises = extractHookPromises(article.title);
     console.log('🎯 Extracted hook promises from headline:', hookPromises);
     
-    // Generate slides using OpenAI with publication name and temporal context
-    console.log(`🎯 Generating slides with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
+    // Generate slides using selected AI provider
+    const aiProvider = useDeepSeek ? 'DeepSeek' : 'OpenAI';
+    const apiKey = useDeepSeek ? deepSeekApiKey : openAIApiKey;
+    console.log(`🎯 Generating slides using ${aiProvider} with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
+    
     let slides;
     let slideGenerationCost = 0;
     try {
-      const slideResult = await generateSlides(article, openAIApiKey, slideType, publicationName);
+      const slideResult = useDeepSeek 
+        ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName)
+        : await generateSlides(article, openAIApiKey, slideType, publicationName);
+      
       slides = slideResult.slides;
       slideGenerationCost = slideResult.estimatedCost || 0;
-      console.log(`📊 Generated ${slides?.length || 0} slides vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}, cost: $${slideGenerationCost.toFixed(4)}`);
+      console.log(`📊 Generated ${slides?.length || 0} slides using ${aiProvider} vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}, cost: $${slideGenerationCost.toFixed(4)}`);
       
       if (!slides || slides.length === 0) {
         console.error('❌ No slides generated for article:', article.title);
@@ -180,7 +198,10 @@ serve(async (req) => {
       if (!promisesDelivered) {
         console.log('⚠️ Slides failed promise delivery validation, regenerating...');
         // Regenerate with explicit promise delivery requirement
-        slides = await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
+        const regenerationResult = useDeepSeek 
+          ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName, hookPromises)
+          : await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
+        slides = regenerationResult.slides;
         
         // Validate again
         const secondValidation = validatePromiseDelivery(slides, hookPromises);
@@ -231,7 +252,9 @@ serve(async (req) => {
         console.log('🔄 Validation score too low, attempting regeneration with stricter constraints...');
         
         try {
-          const strictSlideResult = await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
+          const strictSlideResult = useDeepSeek 
+            ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName, hookPromises)
+            : await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
           const revalidation = validator.validateSlides(strictSlideResult.slides, article.title, article.body);
           
           if (revalidation.score > validationResult.score) {
@@ -247,7 +270,9 @@ serve(async (req) => {
     }
 
     // Generate social media post copy with hashtags
-    const postResult = await generatePostCopy(article, publicationName, openAIApiKey);
+    const postResult = useDeepSeek 
+      ? await generatePostCopyWithDeepSeek(article, publicationName, deepSeekApiKey)
+      : await generatePostCopy(article, publicationName, openAIApiKey);
     console.log('Generated post copy:', postResult.postCopy);
     
     const totalApiCost = slideGenerationCost + (postResult.estimatedCost || 0);
@@ -344,7 +369,7 @@ serve(async (req) => {
       await supabase
         .from('api_usage')
         .insert({
-          service_name: 'OpenAI',
+          service_name: aiProvider,
           operation: 'content-generation',
           tokens_used: Math.round(totalApiCost * 50000), // Estimate tokens from cost
           cost_usd: totalApiCost,
@@ -1023,6 +1048,331 @@ Replace relative dates with absolute dates in brackets.`;
     };
   } catch (error) {
     console.error('Error generating post copy:', error);
+    return {
+      postCopy: {
+        caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
+        hashtags: ['LocalNews', 'Sussex', 'Community', 'News']
+      },
+      estimatedCost: 0
+    };
+  }
+}
+
+// DeepSeek implementation for slide generation
+async function generateSlidesWithDeepSeek(article: Article, deepSeekApiKey: string, slideType: string = 'tabloid', publicationName: string, hookPromises?: string[]): Promise<{ slides: SlideContent[], estimatedCost: number }> {
+  // Use identical configuration and prompts as OpenAI version
+  const slideConfigs = {
+    short: { count: 4, style: 'conversational', wordLimits: '15/25/35/40' },
+    indepth: { count: 12, style: 'investigative', wordLimits: '15/25/30/30/30/30/35/35/35/35/40' },
+    tabloid: { count: 8, style: 'dramatic', wordLimits: '15/20/30/30/30/35/35/40' }
+  };
+  
+  const config = slideConfigs[slideType as keyof typeof slideConfigs] || slideConfigs.tabloid;
+  const temporalContext = calculateTemporalContext(article.published_at);
+  const storyTypeAnalysis = analyzeStoryType(article.title, article.body);
+  const sourceDomain = new URL(article.source_url).hostname;
+  
+  // Get feed CTA configuration (same as OpenAI version)
+  const feedName = article.region || 'Default';
+  const { data: ctaConfig } = await supabase
+    .from('feed_cta_configs')
+    .select('*')
+    .eq('feed_name', feedName)
+    .eq('is_active', true)
+    .maybeSingle();
+  
+  const finalCtaConfig = ctaConfig || {
+    engagement_question: 'What do you think?',
+    show_like_share: true,
+    attribution_cta: null
+  };
+  
+  // Use identical system prompt as OpenAI version
+  const systemPrompt = `🚨 CRITICAL: FACTUAL ACCURACY IS NON-NEGOTIABLE 🚨
+
+FACTUAL ACCURACY CHECKLIST - COMPLETE BEFORE WRITING:
+✅ Every claim must exist in the source material
+✅ No invented quotes, conversations, or events
+✅ No fabricated technology connections unless explicitly mentioned
+✅ No added controversies that don't exist in the original
+✅ Only use information directly from the provided content
+
+You are creating ${config.count} engaging slides from factual news content.
+
+🎯 HOOK MASTERY - Make real content compelling:
+❌ BLAND: "Rising concerns from visitors at popular natural sites urged by officials to prioritize safety"
+✅ PUNCHY: "Visitors risk safety at dangerous beauty spot as officials issue urgent warning"
+
+❌ WRONG: "AI study hacks help students achieve GCSE success" (FABRICATED - not in source)
+✅ RIGHT: "Students celebrate outstanding GCSE results at local school" (FACTUAL)
+
+❌ WRONG: "Social media trend sparks controversy" (if no social media mentioned)
+✅ RIGHT: Use only angles that exist in the source material
+
+🔥 ENGAGEMENT RULES - Work with what you have:
+• ONLY use angles present in the source content
+• Transform boring language into punchy language WITHOUT changing facts
+• Create intrigue from REAL events, not invented drama
+• STORY TYPE: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
+
+🚫 ABSOLUTELY FORBIDDEN:
+• Adding technology angles when none exist
+• Inventing social media connections
+• Creating generational conflicts not in source
+• Fabricating controversies or drama
+• Adding quotes or conversations not in original
+
+⚡ STORYTELLING FORMULA - COMPLETE NARRATIVE ARC:
+1. HOOK: Start with the most compelling FACTUAL angle (${config.wordLimits.split('/')[0]} words max)
+2. CONTEXT: "In [Location]..." with actual details from source
+3. BUILD TENSION: What actually happened according to the source
+4. CLIMAX/RESOLUTION: The real outcome described in the article
+5. IMPACT/CONSEQUENCE: Actual results mentioned in the source
+6. FINAL SLIDE: "${finalCtaConfig.engagement_question}${finalCtaConfig.show_like_share ? ' Like, share.' : ''} Summary of a story${article.author ? ` by ${article.author}` : ''} from ${publicationName}.${finalCtaConfig.attribution_cta ? ` ${finalCtaConfig.attribution_cta},` : ''} visit ${sourceDomain} for the full story."
+
+🎯 FACTUAL NARRATIVE REQUIREMENTS:
+• SETUP: Describe the actual initial situation from the source
+• CONFLICT: Use only tensions/problems mentioned in the article
+• RESOLUTION: Show only the real resolution described in the source
+• NEVER invent details not present in the original content
+
+🎪 LANGUAGE ENHANCEMENT (without changing facts):
+• Replace "officials say" → "authorities reveal/warn/confirm"
+• Replace "concerns raised" → "warnings issued/alerts raised"
+• Replace "incident occurred" → "event unfolded/situation developed"
+• Use engaging language but ONLY for facts already in the source
+• Replace temporal refs: "yesterday (${temporalContext.yesterday})"
+
+WORD LIMITS: ${config.wordLimits} - Use every word for FACTUAL impact
+
+FINAL VALIDATION: Before returning, confirm every claim exists in the source material.
+
+Return JSON: {"slides": [{"slideNumber": 1, "content": "text", "altText": "description"}]}`;
+
+  let userPrompt = `🚨 FACTUAL ACCURACY FIRST: Only use information from the source content below.
+
+ORIGINAL TITLE: "${article.title}"
+YOUR MISSION: Make this story engaging using ONLY the facts provided
+
+📊 STORY DETAILS:
+• Publication: ${temporalContext.publication_date}
+• Type: ${storyTypeAnalysis.type} (${storyTypeAnalysis.significance})
+• Detected angles (if present in source): ${storyTypeAnalysis.angles.join(', ')}
+
+📰 SOURCE CONTENT (YOUR ONLY REFERENCE):
+${article.body.substring(0, 1200)}
+
+🔒 STRICT TRANSFORMATION RULES:
+1. FACT CHECK FIRST: Read the source content completely
+2. IDENTIFY REAL HOOKS: What compelling angles actually exist in the source?
+3. ENHANCE LANGUAGE: Make boring facts sound interesting without changing them
+4. COMPLETE STORY ARC: Use only the setup, conflict, and resolution described in source
+5. PUNCHY BUT ACCURATE: Upgrade language while keeping facts identical
+6. NO FABRICATION: If it's not in the source, don't write it
+
+❌ FORBIDDEN FABRICATIONS (Examples):
+• Don't add "AI study hacks" if technology isn't mentioned
+• Don't create "social media trends" if social media isn't in source
+• Don't invent "controversy erupts" if no controversy described
+• Don't add "generational clash" if generations aren't mentioned
+• Don't create "viral moment" if viral activity isn't described
+
+✅ ALLOWED ENHANCEMENTS (Examples):
+• "Officials announce new rules" → "Authorities crack down with new rules"
+• "People were concerned" → "Residents raised alarm"
+• "Investigation ongoing" → "Mystery deepens as investigation continues"
+• But ONLY if the basic fact exists in the source
+
+📖 FACTUAL STORY CHECKLIST:
+• Rescue story? WHO rescued and HOW (from source only)
+• Problem story? HOW was it solved (from source only)
+• Conflict story? WHAT was the real outcome (from source only)
+• Celebration story? WHAT are they celebrating (from source only)
+• NEVER add details not present in the original
+
+🎯 CONTENT VALIDATION:
+Before writing each slide, ask: "Is this information in the source material?"
+If no, rewrite using only factual content.
+
+Transform boring language into engaging language, but keep identical facts!`;
+
+  if (hookPromises && hookPromises.length > 0) {
+    userPrompt += `\n\n🎯 HOOK PROMISES TO FULFILL: ${hookPromises.join(', ')} 
+- These promises MUST be delivered with specific details FROM THE SOURCE ONLY
+- Don't just mention them - show how they're addressed in the actual story
+- CRITICAL: Only use promise details that exist in the source material`;
+  }
+
+  userPrompt += `\n\n🔒 FINAL VALIDATION BEFORE SUBMITTING:
+1. Read each slide and ask: "Does this claim exist in the source?"
+2. Check for any technology/AI/social media angles not in original
+3. Verify all quotes and events are from the source material
+4. Confirm no controversies or conflicts were invented
+5. Ensure language is punchy but facts are identical to source`;
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepSeekApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: slideType === 'indepth' ? 2500 : 1500,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('DeepSeek API error:', errorData);
+    throw new Error(`DeepSeek API error: ${response.status} - ${errorData}`);
+  }
+
+  const data = await response.json();
+  console.log('DeepSeek API response data:', JSON.stringify(data, null, 2));
+  
+  // Calculate estimated cost based on DeepSeek pricing: $0.27/1M input, $1.10/1M output tokens
+  const inputTokens = data.usage?.prompt_tokens || 1000;
+  const outputTokens = data.usage?.completion_tokens || 500;
+  const estimatedCost = (inputTokens * 0.27 / 1000000) + (outputTokens * 1.10 / 1000000);
+  
+  let content = data.choices[0].message.content;
+  console.log('Raw DeepSeek response content:', content);
+  
+  // Use same JSON parsing logic as OpenAI version
+  try {
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+      console.log('Direct parse successful:', parsed);
+    } catch (directParseError) {
+      console.log('Direct parse failed, attempting extraction...');
+      
+      let jsonStart = content.indexOf('{"slides"');
+      if (jsonStart === -1) {
+        jsonStart = content.indexOf('{\n  "slides"');
+      }
+      if (jsonStart === -1) {
+        jsonStart = content.indexOf('{ "slides"');
+      }
+      if (jsonStart === -1) {
+        const slidesIndex = content.indexOf('"slides"');
+        if (slidesIndex > -1) {
+          for (let i = slidesIndex; i >= 0; i--) {
+            if (content[i] === '{') {
+              jsonStart = i;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (jsonStart === -1) {
+        throw new Error('No valid JSON structure found in response');
+      }
+      
+      let braceCount = 0;
+      let jsonEnd = jsonStart;
+      for (let i = jsonStart; i < content.length; i++) {
+        if (content[i] === '{') braceCount++;
+        if (content[i] === '}') braceCount--;
+        if (braceCount === 0) {
+          jsonEnd = i + 1;
+          break;
+        }
+      }
+      
+      content = content.substring(jsonStart, jsonEnd);
+      console.log('Cleaned JSON content:', content);
+      parsed = JSON.parse(content);
+    }
+    
+    console.log('Parsed DeepSeek response:', parsed);
+    
+    if (!parsed.slides || !Array.isArray(parsed.slides)) {
+      console.error('Invalid response structure:', parsed);
+      throw new Error(`Invalid response format from DeepSeek. Expected 'slides' array, got: ${typeof parsed.slides}`);
+    }
+    
+    if (parsed.slides.length === 0) {
+      throw new Error('DeepSeek returned empty slides array');
+    }
+    
+    // Validate slide structure
+    for (let i = 0; i < parsed.slides.length; i++) {
+      const slide = parsed.slides[i];
+      if (!slide.slideNumber || !slide.content || !slide.altText) {
+        console.error(`Invalid slide ${i}:`, slide);
+        throw new Error(`Slide ${i} missing required properties`);
+      }
+    }
+    
+    return { slides: parsed.slides, estimatedCost };
+  } catch (parseError) {
+    console.error('JSON Parse error:', parseError);
+    console.error('Raw DeepSeek response content:', content);
+    throw new Error(`Failed to parse DeepSeek response: ${parseError.message}`);
+  }
+}
+
+// DeepSeek implementation for post copy generation
+async function generatePostCopyWithDeepSeek(article: Article, publicationName: string, deepSeekApiKey: string): Promise<{ postCopy: { caption: string, hashtags: string[] }, estimatedCost: number }> {
+  const temporalContext = calculateTemporalContext(article.published_at);
+  
+  const systemPrompt = `Create Instagram caption for news carousel. Include hook, summary, attribution, hashtags (8-15). Under 2000 chars. Return JSON: {"caption": "text", "hashtags": ["tag1"]}`;
+
+  const userPrompt = `Story: ${article.title}
+Content: ${article.body?.substring(0, 400)}
+Published: ${temporalContext.publication_date}
+Source: ${publicationName}${article.author ? `, by ${article.author}` : ''}
+Region: ${article.region || 'Sussex'}
+
+Replace relative dates with absolute dates in brackets.`;
+
+  try {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${deepSeekApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 600,
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const parsedResponse = JSON.parse(data.choices[0].message.content);
+    
+    // Calculate estimated cost for DeepSeek
+    const inputTokens = data.usage?.prompt_tokens || 300;
+    const outputTokens = data.usage?.completion_tokens || 200;
+    const estimatedCost = (inputTokens * 0.27 / 1000000) + (outputTokens * 1.10 / 1000000);
+    
+    return {
+      postCopy: {
+        caption: parsedResponse.caption,
+        hashtags: parsedResponse.hashtags || []
+      },
+      estimatedCost
+    };
+  } catch (error) {
+    console.error('Error generating post copy with DeepSeek:', error);
     return {
       postCopy: {
         caption: `${article.title} 🗞️\n\n${article.body?.substring(0, 200)}...\n\nSummarised from an article in ${publicationName}${article.author ? `, by ${article.author}` : ''}`,
