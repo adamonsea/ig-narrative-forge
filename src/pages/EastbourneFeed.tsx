@@ -23,7 +23,6 @@ interface Story {
 }
 
 type SortOption = "newest" | "oldest";
-type FilterOption = "all" | "with-visuals" | "without-visuals";
 
 export default function EastbourneFeed() {
   const { user, loading } = useAuth();
@@ -31,7 +30,6 @@ export default function EastbourneFeed() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [filterBy, setFilterBy] = useState<FilterOption>("all");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,7 +40,7 @@ export default function EastbourneFeed() {
     if (user) {
       loadStories();
     }
-  }, [user, loading, navigate, sortBy, filterBy]);
+  }, [user, loading, navigate, sortBy]);
 
   const loadStories = async () => {
     try {
@@ -125,8 +123,6 @@ export default function EastbourneFeed() {
           <FeedFilters
             sortBy={sortBy}
             setSortBy={setSortBy}
-            filterBy={filterBy}
-            setFilterBy={setFilterBy}
             slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
           />
         </div>

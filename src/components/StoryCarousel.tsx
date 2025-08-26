@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Send, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Share2, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Story {
@@ -195,11 +195,11 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
                         __html: ctaContent
                           .replace(
                             /(https?:\/\/[^\s]+)/g, 
-                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">source website</a>'
+                            '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">$1</a>'
                           )
                           .replace(
-                            /source website/g,
-                            '<a href="' + story.article.source_url + '" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">source website</a>'
+                            /Read more at.*$/i,
+                            '<a href="' + story.article.source_url + '" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">Read the full story</a>'
                           )
                       }}
                     />
@@ -265,15 +265,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
               Share
             </Button>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShare}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Send className="h-4 w-4" />
-              Send  
-            </Button>
-            <Button
               variant={isLoved ? "default" : "outline"}
               size="sm"
               onClick={toggleLove}
@@ -282,11 +273,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
               <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
               {loveCount}
             </Button>
-          </div>
-
-          {/* Attribution */}
-          <div className="mt-4 text-center text-xs text-muted-foreground">
-            <span className="font-medium">{topicName}</span>
           </div>
         </div>
       </div>
