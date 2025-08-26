@@ -28,111 +28,113 @@ export const useCarouselGeneration = () => {
   const [isGenerating, setIsGenerating] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  const renderCarouselSlide = async (story: Story, slideIndex: number): Promise<HTMLElement> => {
-    return new Promise((resolve, reject) => {
-      // Create a hidden container for rendering the carousel
-      const container = document.createElement('div');
-      
-      // Get computed CSS variables from the root element
-      const rootStyles = getComputedStyle(document.documentElement);
-      const cssVars = {
-        '--background': rootStyles.getPropertyValue('--background'),
-        '--foreground': rootStyles.getPropertyValue('--foreground'),
-        '--card': rootStyles.getPropertyValue('--card'),
-        '--card-foreground': rootStyles.getPropertyValue('--card-foreground'),
-        '--primary': rootStyles.getPropertyValue('--primary'),
-        '--primary-foreground': rootStyles.getPropertyValue('--primary-foreground'),
-        '--secondary': rootStyles.getPropertyValue('--secondary'),
-        '--secondary-foreground': rootStyles.getPropertyValue('--secondary-foreground'),
-        '--muted': rootStyles.getPropertyValue('--muted'),
-        '--muted-foreground': rootStyles.getPropertyValue('--muted-foreground'),
-        '--accent': rootStyles.getPropertyValue('--accent'),
-        '--accent-foreground': rootStyles.getPropertyValue('--accent-foreground'),
-        '--border': rootStyles.getPropertyValue('--border'),
-        '--input': rootStyles.getPropertyValue('--input'),
-        '--ring': rootStyles.getPropertyValue('--ring'),
-        '--radius': rootStyles.getPropertyValue('--radius'),
-      };
+  const createSimpleSlideElement = (story: Story, slideIndex: number): HTMLElement => {
+    const slide = story.slides[slideIndex];
+    const isFirstSlide = slideIndex === 0;
+    
+    // Create container
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed;
+      left: -9999px;
+      top: -9999px;
+      width: 1080px;
+      height: 1080px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      border-radius: 8px;
+      overflow: hidden;
+    `;
 
-      // Apply CSS variables and positioning
-      const cssVarsString = Object.entries(cssVars)
-        .map(([key, value]) => `${key}: ${value.trim()};`)
-        .join(' ');
-        
-      container.style.cssText = `
-        position: fixed;
-        left: -9999px;
-        top: -9999px;
-        width: 1080px;
-        height: 1080px;
-        background: hsl(var(--background));
-        color: hsl(var(--foreground));
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        ${cssVarsString}
-      `;
-      document.body.appendChild(container);
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: white;
+    `;
+    
+    const badge = document.createElement('div');
+    badge.textContent = 'News';
+    badge.style.cssText = `
+      background: #f3f4f6;
+      color: #374151;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    `;
+    
+    const counter = document.createElement('span');
+    counter.textContent = `${slideIndex + 1} of ${story.slides.length}`;
+    counter.style.cssText = `
+      color: #6b7280;
+      font-size: 14px;
+    `;
+    
+    header.appendChild(badge);
+    header.appendChild(counter);
 
-      // Create a story object that forces the carousel to show the specific slide
-      const slideStory = {
-        ...story,
-        author: story.article?.author || 'Unknown',
-        publication_name: 'News',
-        created_at: new Date().toISOString(),
-        article: {
-          source_url: story.article?.source_url || '#',
-          region: 'News'
-        }
-      };
+    // Content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 64px;
+      background: white;
+    `;
 
-      try {
-        // Import React to create element
-        import('react').then((React) => {
-          const element = React.createElement(StoryCarousel, {
-            story: slideStory,
-            topicName: 'News'
-          });
+    const textContainer = document.createElement('div');
+    textContainer.style.cssText = `
+      max-width: 640px;
+      width: 100%;
+    `;
 
-          const root = createRoot(container);
-          root.render(element);
+    const text = document.createElement('div');
+    text.textContent = slide.content;
+    text.style.cssText = `
+      text-align: center;
+      line-height: 1.4;
+      color: #111827;
+      font-weight: ${isFirstSlide ? '700' : '300'};
+      font-size: ${isFirstSlide ? '48px' : '36px'};
+      ${isFirstSlide ? 'text-transform: uppercase;' : ''}
+    `;
 
-          // Wait for rendering and then simulate slide navigation
-          setTimeout(() => {
-            try {
-              // Force the carousel to show the specific slide by simulating clicks
-              const nextButtons = container.querySelectorAll('button');
-              let navigationPromise = Promise.resolve();
-              
-              for (let i = 0; i < slideIndex; i++) {
-                navigationPromise = navigationPromise.then(() => {
-                  return new Promise<void>((navResolve) => {
-                    const nextBtn = Array.from(nextButtons).find(btn => {
-                      const icon = btn.querySelector('svg');
-                      return icon && (icon as any)?.getAttribute?.('data-lucide') === 'chevron-right';
-                    });
-                    if (nextBtn) {
-                      (nextBtn as HTMLButtonElement).click();
-                    }
-                    setTimeout(navResolve, 100);
-                  });
-                });
-              }
+    textContainer.appendChild(text);
+    content.appendChild(textContainer);
 
-              navigationPromise.then(() => {
-                setTimeout(() => {
-                  resolve(container);
-                }, 300); // Wait for slide transitions
-              });
+    // Footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      padding: 24px;
+      text-align: center;
+      background: white;
+    `;
 
-            } catch (navError) {
-              console.warn('Navigation failed, using current slide:', navError);
-              resolve(container);
-            }
-          }, 800); // Wait for initial render
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
+    const attribution = document.createElement('div');
+    attribution.textContent = 'News';
+    attribution.style.cssText = `
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 500;
+    `;
+
+    footer.appendChild(attribution);
+
+    // Assemble
+    container.appendChild(header);
+    container.appendChild(content);
+    container.appendChild(footer);
+    
+    return container;
   };
 
   const generateCarouselImages = async (story: Story): Promise<boolean> => {
@@ -231,11 +233,12 @@ export const useCarouselGeneration = () => {
 
         let carouselContainer: HTMLElement | null = null;
         try {
-          carouselContainer = await renderCarouselSlide(story, i);
-          console.log(`📝 Carousel component rendered and added to DOM`);
+          carouselContainer = createSimpleSlideElement(story, i);
+          document.body.appendChild(carouselContainer);
+          console.log(`📝 Simple slide element created and added to DOM`);
 
-          // Wait for rendering and fonts to load
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait for fonts to load
+          await new Promise(resolve => setTimeout(resolve, 300));
 
           // Generate canvas with enhanced options
           const canvas = await html2canvas(carouselContainer, {
