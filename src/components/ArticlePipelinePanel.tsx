@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -54,6 +55,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [isResettingStalled, setIsResettingStalled] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'deepseek'>('deepseek');
 
   const { toast } = useToast();
 
@@ -215,6 +217,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
         .insert({
           article_id: article.id,
           slidetype: slideType,
+          ai_provider: selectedProvider,
           status: 'pending'
         })
         .select()
@@ -228,9 +231,14 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
         indepth: 'In-Depth Analysis'
       };
 
+      const providerLabels = {
+        openai: 'OpenAI',
+        deepseek: 'DeepSeek'
+      };
+
       toast({
         title: 'Generation Queued!',
-        description: `${typeLabels[slideType]} generation added to queue. Processing will start shortly.`,
+        description: `${typeLabels[slideType]} generation with ${providerLabels[selectedProvider]} added to queue. Processing will start shortly.`,
       });
 
       loadPendingArticles();
@@ -690,47 +698,73 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                     </>
                                   )}
                                 </Button>
-                              ) : (
+                               ) : (
                                 <>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => approveArticle(article, 'short')}
-                                    disabled={processingArticle === article.id}
-                                    className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600"
-                                  >
-                                    <Sparkles className="w-3 h-3" />
-                                    Short
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => approveArticle(article, 'tabloid')}
-                                    disabled={processingArticle === article.id}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Sparkles className="w-3 h-3" />
-                                    Tabloid
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => approveArticle(article, 'indepth')}
-                                    disabled={processingArticle === article.id}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Sparkles className="w-3 h-3" />
-                                    In-Depth
-                                  </Button>
+                                  <div className="flex flex-col gap-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium">AI Provider:</span>
+                                      <Select value={selectedProvider} onValueChange={(value: 'openai' | 'deepseek') => setSelectedProvider(value)}>
+                                        <SelectTrigger className="w-24 h-7 text-xs">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="deepseek" className="text-xs">
+                                            <div className="flex items-center gap-1">
+                                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                              DeepSeek
+                                            </div>
+                                          </SelectItem>
+                                          <SelectItem value="openai" className="text-xs">
+                                            <div className="flex items-center gap-1">
+                                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                              OpenAI
+                                            </div>
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => approveArticle(article, 'short')}
+                                      disabled={processingArticle === article.id}
+                                      className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600"
+                                    >
+                                      <Sparkles className="w-3 h-3" />
+                                      Short
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => approveArticle(article, 'tabloid')}
+                                      disabled={processingArticle === article.id}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Sparkles className="w-3 h-3" />
+                                      Tabloid
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => approveArticle(article, 'indepth')}
+                                      disabled={processingArticle === article.id}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Sparkles className="w-3 h-3" />
+                                      In-Depth
+                                    </Button>
+                                  </div>
                                 </>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => rejectArticle(article.id)}
-                                className="flex items-center gap-1"
-                              >
-                                <XCircle className="w-3 h-3" />
-                                Reject
-                              </Button>
+                               )}
+                               <Button
+                                 size="sm"
+                                 variant="destructive"
+                                 onClick={() => rejectArticle(article.id)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <XCircle className="w-3 h-3" />
+                                 Reject
+                               </Button>
                             </div>
                           </div>
                         </CardContent>
