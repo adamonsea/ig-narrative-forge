@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { createRoot } from 'react-dom/client';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import StoryCarousel from '@/components/StoryCarousel';
 
 interface Story {
   id: string;
@@ -28,113 +26,106 @@ export const useCarouselGeneration = () => {
   const [isGenerating, setIsGenerating] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  const createSimpleSlideElement = (story: Story, slideIndex: number): HTMLElement => {
-    const slide = story.slides[slideIndex];
-    const isFirstSlide = slideIndex === 0;
-    
-    // Create container
-    const container = document.createElement('div');
-    container.style.cssText = `
-      position: fixed;
-      left: -9999px;
-      top: -9999px;
-      width: 1080px;
-      height: 1080px;
-      background: white;
-      display: flex;
-      flex-direction: column;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      border-radius: 8px;
-      overflow: hidden;
-    `;
+  const generateImageUsingCanvas = (story: Story, slideIndex: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const slide = story.slides[slideIndex];
+      const isFirstSlide = slideIndex === 0;
+      
+      // Create canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
 
-    // Header
-    const header = document.createElement('div');
-    header.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 24px;
-      border-bottom: 1px solid #e5e7eb;
-      background: white;
-    `;
-    
-    const badge = document.createElement('div');
-    badge.textContent = 'News';
-    badge.style.cssText = `
-      background: #f3f4f6;
-      color: #374151;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 500;
-    `;
-    
-    const counter = document.createElement('span');
-    counter.textContent = `${slideIndex + 1} of ${story.slides.length}`;
-    counter.style.cssText = `
-      color: #6b7280;
-      font-size: 14px;
-    `;
-    
-    header.appendChild(badge);
-    header.appendChild(counter);
+      // Fill background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1080, 1080);
 
-    // Content area
-    const content = document.createElement('div');
-    content.style.cssText = `
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 64px;
-      background: white;
-    `;
+      // Draw header
+      ctx.fillStyle = '#f3f4f6';
+      ctx.fillRect(0, 0, 1080, 80);
+      
+      // Draw header border
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(0, 80, 1080, 1);
 
-    const textContainer = document.createElement('div');
-    textContainer.style.cssText = `
-      max-width: 640px;
-      width: 100%;
-    `;
+      // Header text
+      ctx.fillStyle = '#374151';
+      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('News', 32, 50);
+      
+      // Counter text
+      ctx.textAlign = 'right';
+      ctx.fillText(`${slideIndex + 1} of ${story.slides.length}`, 1048, 50);
 
-    const text = document.createElement('div');
-    text.textContent = slide.content;
-    text.style.cssText = `
-      text-align: center;
-      line-height: 1.4;
-      color: #111827;
-      font-weight: ${isFirstSlide ? '700' : '300'};
-      font-size: ${isFirstSlide ? '48px' : '36px'};
-      ${isFirstSlide ? 'text-transform: uppercase;' : ''}
-    `;
+      // Main content
+      ctx.fillStyle = '#111827';
+      ctx.textAlign = 'center';
+      
+      // Dynamic font size based on content length and slide type
+      let fontSize;
+      let fontWeight;
+      if (isFirstSlide) {
+        fontSize = slide.content.length < 50 ? 48 : slide.content.length < 100 ? 40 : 32;
+        fontWeight = 'bold';
+      } else {
+        fontSize = slide.content.length < 80 ? 36 : slide.content.length < 150 ? 28 : slide.content.length < 250 ? 24 : 20;
+        fontWeight = '300';
+      }
+      
+      ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-    textContainer.appendChild(text);
-    content.appendChild(textContainer);
+      // Word wrap function
+      const wrapText = (text: string, maxWidth: number) => {
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let currentLine = words[0];
 
-    // Footer
-    const footer = document.createElement('div');
-    footer.style.cssText = `
-      padding: 24px;
-      text-align: center;
-      background: white;
-    `;
+        for (let i = 1; i < words.length; i++) {
+          const word = words[i];
+          const width = ctx.measureText(currentLine + " " + word).width;
+          if (width < maxWidth) {
+            currentLine += " " + word;
+          } else {
+            lines.push(currentLine);
+            currentLine = word;
+          }
+        }
+        lines.push(currentLine);
+        return lines;
+      };
 
-    const attribution = document.createElement('div');
-    attribution.textContent = 'News';
-    attribution.style.cssText = `
-      color: #6b7280;
-      font-size: 12px;
-      font-weight: 500;
-    `;
+      // Draw wrapped text
+      const maxWidth = 900; // Leave margins
+      const lines = wrapText(slide.content, maxWidth);
+      const lineHeight = fontSize * 1.4;
+      const totalHeight = lines.length * lineHeight;
+      const startY = (1080 - totalHeight) / 2 + (lineHeight / 2);
 
-    footer.appendChild(attribution);
+      lines.forEach((line, index) => {
+        ctx.fillText(line, 540, startY + (index * lineHeight));
+      });
 
-    // Assemble
-    container.appendChild(header);
-    container.appendChild(content);
-    container.appendChild(footer);
-    
-    return container;
+      // Footer
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('News', 540, 1050);
+
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to create blob from canvas'));
+        }
+      }, 'image/png', 0.9);
+    });
   };
 
   const generateCarouselImages = async (story: Story): Promise<boolean> => {
@@ -199,19 +190,9 @@ export const useCarouselGeneration = () => {
 
       // Update progress
       toast({
-        title: 'Loading Image Generator',
-        description: 'Preparing canvas generation tools...',
+        title: 'Starting Canvas Generation',
+        description: 'Using direct canvas API for image generation...',
       });
-
-      // Step 2: Load html2canvas with error handling
-      let html2canvas;
-      try {
-        html2canvas = (await import('html2canvas')).default;
-        console.log('✅ html2canvas loaded successfully');
-      } catch (loadError) {
-        console.error('❌ Failed to load html2canvas:', loadError);
-        throw new Error('Failed to load image generation library');
-      }
 
       const filePaths: string[] = [];
       const errors: string[] = [];
@@ -231,49 +212,11 @@ export const useCarouselGeneration = () => {
           description: `Creating image ${i + 1} of ${story.slides.length}...`,
         });
 
-        let carouselContainer: HTMLElement | null = null;
         try {
-          carouselContainer = createSimpleSlideElement(story, i);
-          document.body.appendChild(carouselContainer);
-          console.log(`📝 Simple slide element created and added to DOM`);
+          console.log(`🎨 Generating image ${i + 1}/${story.slides.length} using Canvas API`);
 
-          // Wait for fonts to load
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          // Generate canvas with enhanced options
-          const canvas = await html2canvas(carouselContainer, {
-            width: 1080,
-            height: 1080,
-            backgroundColor: '#ffffff',
-            scale: 1,
-            useCORS: true,
-            allowTaint: false,
-            logging: false,
-            foreignObjectRendering: true,
-            removeContainer: false
-          });
-
-          console.log(`🖼️ Canvas generated:`, {
-            width: canvas.width,
-            height: canvas.height,
-            dataUrl: canvas.toDataURL().substring(0, 50) + '...'
-          });
-
-          if (canvas.width === 0 || canvas.height === 0) {
-            throw new Error(`Canvas has invalid dimensions: ${canvas.width}x${canvas.height}`);
-          }
-
-          // Convert to blob with error handling
-          const imageBlob = await new Promise<Blob>((resolve, reject) => {
-            canvas.toBlob((blob) => {
-              if (blob) {
-                console.log(`✅ Blob created, size: ${blob.size} bytes`);
-                resolve(blob);
-              } else {
-                reject(new Error('Failed to create image blob from canvas'));
-              }
-            }, 'image/png', 0.9);
-          });
+          const imageBlob = await generateImageUsingCanvas(story, i);
+          console.log(`✅ Canvas image generated, size: ${imageBlob.size} bytes`);
 
           // Upload to storage with detailed logging
           const fileName = `carousel_${story.id}_slide_${i + 1}_${Date.now()}.png`;
@@ -301,11 +244,6 @@ export const useCarouselGeneration = () => {
           console.error(`❌ Error generating slide ${i + 1}:`, slideError);
           errors.push(`Slide ${i + 1}: ${slideError.message}`);
           // Continue with other slides rather than failing completely
-        } finally {
-          if (carouselContainer?.parentNode) {
-            document.body.removeChild(carouselContainer);
-            console.log(`🧹 Cleaned up carousel container ${i + 1}`);
-          }
         }
       }
 
