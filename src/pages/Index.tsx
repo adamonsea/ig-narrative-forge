@@ -1,262 +1,126 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, Clock, LogOut, Settings, FileText, TestTube, Sparkles, ArrowRight, ExternalLink, Trash2, BarChart3 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Settings, FileText, ExternalLink, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { AdminPanel } from '@/components/AdminPanel';
-import { ContentManagement } from '@/components/ContentManagement';
-import { ContentPipeline } from '@/components/ContentPipeline';
-import { FixedApprovedStoriesPanel } from '@/components/FixedApprovedStoriesPanel';
-import IdeogramTestSuite from '@/components/IdeogramTestSuite';
-
-// import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
-  const { user, loading, signOut, isAdmin, isSuperAdmin } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  const [activeTab, setActiveTab] = useState<'content' | 'slides' | 'approved' | 'ideogram' | 'admin'>('content');
-  const [articles, setArticles] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    sources: { count: 0, status: 'loading' },
-    articles: { count: 0, status: 'loading' },
-    slides: { count: 0, status: 'loading' },
-    errors: { count: 0, status: 'success' }
-  });
 
   useEffect(() => {
     if (user) {
-      loadArticles();
-      loadStats();
+      // Redirect authenticated users to dashboard
+      navigate('/dashboard');
     }
-  }, [user]);
+  }, [user, navigate]);
 
-  useEffect(() => {
-    // Redirect to auth if not logged in and not loading
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
-
-  const loadArticles = async () => {
-    // Query for new articles only (using processing_status instead of story join)
-    const { data, error } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('processing_status', 'new') // Only truly unprocessed articles
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.error('Error loading new articles:', error);
-      setStats(prev => ({
-        ...prev,
-        articles: { count: 0, status: 'error', error: error.message }
-      }));
-    } else {
-      // Sort by Eastbourne relevance score (highest first), then by date
-      const sortedArticles = (data || []).sort((a, b) => {
-        const aMetadata = a.import_metadata as any;
-        const bMetadata = b.import_metadata as any;
-        const aScore = aMetadata?.eastbourne_relevance_score || 0;
-        const bScore = bMetadata?.eastbourne_relevance_score || 0;
-        
-        if (aScore !== bScore) {
-          return bScore - aScore; // Higher relevance first
-        }
-        
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      
-      setArticles(sortedArticles);
-      setStats(prev => ({
-        ...prev,
-        articles: { count: sortedArticles.length, status: 'success' }
-      }));
-    }
-  };
-
-  const deleteArticle = async (articleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('articles')
-        .delete()
-        .eq('id', articleId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Article Deleted",
-        description: "The article has been removed and won't reappear.",
-      });
-
-      await loadArticles(); // Refresh the list
-    } catch (error: any) {
-      toast({
-        title: "Delete Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadStats = async () => {
-    // Load source count using secure function
-    const { data: sourceCount } = await supabase.rpc('get_content_sources_count');
-    
-    setStats(prev => ({
-      ...prev,
-      sources: { count: sourceCount || 0, status: 'success' }
-    }));
-
-    // Load slides count
-    const { data: slides } = await supabase
-      .from('slides')
-      .select('id');
-    
-    setStats(prev => ({
-      ...prev,
-      slides: { count: slides?.length || 0, status: 'success' }
-    }));
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
+  // Show loading while auth is being determined
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect to auth
-  }
-
+  // Show landing page for non-authenticated users
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-primary">eeZee news</h1>
-              <p className="text-sm text-muted-foreground">turbo hyper local</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.open("/feed/eastbourne", "_blank")}
-              >
-                View Eastbourne Feed
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center space-y-8 max-w-4xl mx-auto">
+          {/* Hero Section */}
+          <div className="space-y-4">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              eeZee News
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Create and curate personalized news feeds for any topic or region. 
+              From local community updates to specialized industry insights.
+            </p>
+          </div>
+
+          {/* Features */}
+          <div className="grid md:grid-cols-3 gap-6 mt-12">
+            <Card className="text-left">
+              <CardHeader>
+                <Settings className="w-8 h-8 mb-2 text-primary" />
+                <CardTitle>Custom Topics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Create topics around any subject - from AI & Technology to local Eastbourne news. 
+                  Full control over sources and keywords.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-left">
+              <CardHeader>
+                <FileText className="w-8 h-8 mb-2 text-primary" />
+                <CardTitle>Smart Curation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  AI-powered content curation and story generation. 
+                  Turn raw news into engaging, shareable social media carousels.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-left">
+              <CardHeader>
+                <ExternalLink className="w-8 h-8 mb-2 text-primary" />
+                <CardTitle>Public Feeds</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Share your curated feeds with the world. 
+                  Build an audience around your expertise and interests.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Demo Feed */}
+          <div className="mt-16 space-y-6">
+            <h2 className="text-3xl font-bold">See it in Action</h2>
+            <p className="text-muted-foreground">
+              Check out our demo feed showcasing local news curation:
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" asChild>
+                <Link to="/feed/eastbourne">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Eastbourne Feed
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/auth">
+                  Get Started Free
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
               </Button>
             </div>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveTab('admin')}
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Admin
-              </Button>
-            )}
-            <span className="text-sm text-muted-foreground">
-              {user?.email}
-              {isSuperAdmin && <Badge variant="destructive" className="ml-2">SuperAdmin</Badge>}
-              {isAdmin && !isSuperAdmin && <Badge variant="secondary" className="ml-2">Admin</Badge>}
-            </span>
-            <Button onClick={handleSignOut} variant="outline" size="sm">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+          </div>
+
+          {/* CTA */}
+          <div className="mt-16 p-8 bg-primary/10 rounded-lg border">
+            <h3 className="text-2xl font-bold mb-4">Ready to Start Curating?</h3>
+            <p className="text-muted-foreground mb-6">
+              Join creators, journalists, and community leaders who are already building 
+              their audiences with personalized news curation.
+            </p>
+            <Button size="lg" asChild>
+              <Link to="/auth">
+                Create Your First Topic
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
             </Button>
           </div>
         </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="border-b bg-muted/50">
-        <div className="max-w-7xl mx-auto px-6 py-2">
-          <div className="flex gap-2">
-            <Button
-              variant={activeTab === 'content' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('content')}
-              className="flex items-center gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Get Stories
-            </Button>
-            <Button
-              variant={activeTab === 'slides' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('slides')}
-              className="flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              Pipeline
-            </Button>
-            <Button
-              variant={activeTab === 'approved' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('approved')}
-              className="flex items-center gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              Approved Queue
-            </Button>
-            <Button
-              variant={activeTab === 'ideogram' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('ideogram')}
-              className="flex items-center gap-2"
-            >
-              <TestTube className="w-4 h-4" />
-              AI Image Test
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'admin' && isAdmin && (
-          <div className="space-y-6">
-            <AdminPanel />
-          </div>
-        )}
-
-        {activeTab === 'content' && (
-          <div className="space-y-6">
-            <ContentManagement />
-          </div>
-        )}
-
-        {activeTab === 'slides' && (
-          <ContentPipeline onRefresh={loadArticles} />
-        )}
-
-        {activeTab === 'approved' && (
-          <div className="space-y-6">
-            <FixedApprovedStoriesPanel />
-          </div>
-        )}
-
-        {activeTab === 'ideogram' && (
-          <div className="space-y-6">
-            <IdeogramTestSuite />
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 };

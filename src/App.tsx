@@ -9,6 +9,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EastbourneFeed from "./pages/EastbourneFeed";
 import AdminPanel from "./pages/AdminPanel";
+import Dashboard from "./pages/Dashboard";
+import TopicFeed from "./pages/TopicFeed";
 
 const queryClient = new QueryClient();
 
@@ -22,8 +24,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
+            <Route path="/feed/topic/:slug" element={<TopicFeed />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
