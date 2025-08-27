@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopicManager } from "@/components/TopicManager";
-import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
+import { SourceManager } from "@/components/SourceManager";
+import { SlideGenerator } from "@/components/SlideGenerator";
+import { ContentManagement } from "@/components/ContentManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DashboardStats {
   topics: number;
@@ -73,7 +73,7 @@ const Dashboard = () => {
               Please log in to access the dashboard.
             </p>
             <Button asChild>
-              <Link to="/auth">Sign In</Link>
+              <a href="/auth">Sign In</a>
             </Button>
           </div>
         </div>
@@ -143,10 +143,11 @@ const Dashboard = () => {
 
         {/* Main Dashboard Content */}
         <Tabs defaultValue="topics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="topics">Topics</TabsTrigger>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
+            {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="topics" className="space-y-6">
@@ -154,42 +155,60 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="content" className="space-y-6">
-            <TopicAwareContentPipeline />
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Content Pipeline</CardTitle>
+                  <CardDescription>
+                    Generate stories from approved articles
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SlideGenerator
+                    articles={[]}
+                    onRefresh={() => {}}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
-            <TopicAwareSourceManager onSourcesChange={loadDashboardStats} />
+            <ContentManagement />
           </TabsContent>
-        </Tabs>
 
-        {/* Admin Section (separate from tabs) */}
-        {isAdmin && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>System Administration</CardTitle>
-              <CardDescription>
-                System-wide settings and management
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Global Source Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Manage sources across all topics
-                    </p>
-                  </div>
-                  <Button variant="outline" asChild>
-                    <Link to="/admin">
-                      Open Admin Panel
-                    </Link>
-                  </Button>
-                </div>
+          {isAdmin && (
+            <TabsContent value="admin" className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Administration</CardTitle>
+                    <CardDescription>
+                      System-wide settings and management
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Global Source Management</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Manage sources across all topics
+                          </p>
+                        </div>
+                        <Button variant="outline" asChild>
+                          <a href="/admin">
+                            Open Admin Panel
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   );

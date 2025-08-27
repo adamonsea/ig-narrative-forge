@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings, FileText, ExternalLink, ArrowRight } from 'lucide-react';
@@ -91,16 +91,16 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
-                <Link to="/feed/eastbourne">
+                <a href="/feed/eastbourne">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   View Eastbourne Feed
-                </Link>
+                </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link to="/auth">
+                <a href="/auth">
                   Get Started Free
                   <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
+                </a>
               </Button>
             </div>
           </div>
@@ -113,10 +113,10 @@ const Index = () => {
               their audiences with personalized news curation.
             </p>
             <Button size="lg" asChild>
-              <Link to="/auth">
+              <a href="/auth">
                 Create Your First Topic
                 <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
+              </a>
             </Button>
           </div>
         </div>
