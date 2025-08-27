@@ -1232,12 +1232,8 @@ Transform boring language into engaging language, but keep identical facts!`;
 
   if (!response.ok) {
     const errorData = await response.text();
-    console.error('DeepSeek API error details:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorData: errorData
-    });
-    throw new Error(`DeepSeek API error: ${response.status} ${response.statusText} - ${errorData}`);
+    console.error('DeepSeek API error:', errorData);
+    throw new Error(`DeepSeek API error: ${response.status} - ${errorData}`);
   }
 
   const data = await response.json();
@@ -1360,13 +1356,7 @@ Replace relative dates with absolute dates in brackets.`;
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('DeepSeek post copy API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData: errorData
-      });
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText} - ${errorData}`);
+      throw new Error(`DeepSeek API error: ${response.status}`);
     }
 
     const data = await response.json();
