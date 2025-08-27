@@ -179,7 +179,6 @@ export type Database = {
           summary: string | null
           tags: string[] | null
           title: string
-          topic_id: string | null
           updated_at: string
           word_count: number | null
         }
@@ -210,7 +209,6 @@ export type Database = {
           summary?: string | null
           tags?: string[] | null
           title: string
-          topic_id?: string | null
           updated_at?: string
           word_count?: number | null
         }
@@ -241,7 +239,6 @@ export type Database = {
           summary?: string | null
           tags?: string[] | null
           title?: string
-          topic_id?: string | null
           updated_at?: string
           word_count?: number | null
         }
@@ -258,13 +255,6 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "content_sources_basic"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "articles_topic_id_fkey"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -387,7 +377,6 @@ export type Database = {
           source_name: string
           source_type: string | null
           success_rate: number | null
-          topic_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -410,7 +399,6 @@ export type Database = {
           source_name: string
           source_type?: string | null
           success_rate?: number | null
-          topic_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -433,18 +421,9 @@ export type Database = {
           source_name?: string
           source_type?: string | null
           success_rate?: number | null
-          topic_id?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "content_sources_topic_id_fkey"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "topics"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       feature_flags: {
         Row: {
@@ -1136,98 +1115,6 @@ export type Database = {
         }
         Relationships: []
       }
-      topic_memberships: {
-        Row: {
-          created_at: string | null
-          id: string
-          role: string
-          topic_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          role?: string
-          topic_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          role?: string
-          topic_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "topic_memberships_topic_id_fkey"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "topics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      topics: {
-        Row: {
-          branding_config: Json | null
-          created_at: string | null
-          created_by: string
-          custom_css: Json | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          is_public: boolean | null
-          keywords: string[] | null
-          landmarks: string[] | null
-          name: string
-          organizations: string[] | null
-          postcodes: string[] | null
-          region: string | null
-          slug: string | null
-          topic_type: string
-          updated_at: string | null
-        }
-        Insert: {
-          branding_config?: Json | null
-          created_at?: string | null
-          created_by: string
-          custom_css?: Json | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_public?: boolean | null
-          keywords?: string[] | null
-          landmarks?: string[] | null
-          name: string
-          organizations?: string[] | null
-          postcodes?: string[] | null
-          region?: string | null
-          slug?: string | null
-          topic_type?: string
-          updated_at?: string | null
-        }
-        Update: {
-          branding_config?: Json | null
-          created_at?: string | null
-          created_by?: string
-          custom_css?: Json | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_public?: boolean | null
-          keywords?: string[] | null
-          landmarks?: string[] | null
-          name?: string
-          organizations?: string[] | null
-          postcodes?: string[] | null
-          region?: string | null
-          slug?: string | null
-          topic_type?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       user_regions: {
         Row: {
           created_at: string
@@ -1474,10 +1361,6 @@ export type Database = {
       }
       user_has_region_access: {
         Args: { check_region: string }
-        Returns: boolean
-      }
-      user_has_topic_access: {
-        Args: { p_required_role?: string; p_topic_id: string }
         Returns: boolean
       }
     }
