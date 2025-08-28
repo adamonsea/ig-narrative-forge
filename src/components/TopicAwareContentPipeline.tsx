@@ -129,10 +129,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     if (selectedTopicId) {
       loadTopicContent();
       
-      // Set up auto-refresh every 30 seconds
+      // Set up smart refresh - only for queue and stories, less frequent
       const interval = setInterval(() => {
-        loadTopicContent();
-      }, 30000);
+        refreshQueueAndStories();
+      }, 15000); // Reduced frequency
       
       setRefreshInterval(interval);
       
@@ -172,6 +172,142 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         description: "Failed to load topics",
         variant: "destructive"
       });
+    }
+  };
+
+  // Smart refresh for specific parts of the UI
+  const refreshQueueAndStories = async () => {
+    if (!selectedTopicId) return;
+
+    try {
+      // Only refresh queue and stories, not articles (they change less frequently)
+      const [queueRes, storiesRes] = await Promise.all([
+        supabase
+          .from('content_generation_queue')
+          .select(`
+            *,
+            articles!inner(
+              title,
+              source_url,
+              topic_id
+            )
+          `)
+          .eq('articles.topic_id', selectedTopicId)
+          .neq('status', 'completed')
+          .order('created_at', { ascending: false }),
+        
+        supabase
+          .from('stories')
+          .select(`
+            *,
+            articles!inner(
+              title,
+              source_url,
+              topic_id
+            ),
+            slides(
+              id,
+              content,
+              slide_number
+            )
+          `)
+          .eq('articles.topic_id', selectedTopicId)
+          .in('status', ['ready', 'draft'])
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ]);
+
+      if (queueRes.error) throw queueRes.error;
+      if (storiesRes.error) throw storiesRes.error;
+
+      setQueueItems((queueRes.data || []).map(item => ({
+        id: item.id,
+        status: item.status,
+        created_at: item.created_at,
+        attempts: item.attempts,
+        max_attempts: item.max_attempts,
+        error_message: item.error_message,
+        article: {
+          title: item.articles.title,
+          source_url: item.articles.source_url
+        }
+      })));
+
+      setStories((storiesRes.data || []).map(story => ({
+        id: story.id,
+        title: story.title,
+        status: story.status,
+        created_at: story.created_at,
+        is_published: story.is_published || false,
+        article: {
+          title: story.articles.title,
+          source_url: story.articles.source_url
+        },
+        slides: story.slides.sort((a, b) => a.slide_number - b.slide_number)
+      })));
+
+      // Update only relevant stats
+      setStats(prev => ({
+        ...prev,
+        processing_queue: queueRes.data?.filter(q => q.status === 'processing').length || 0,
+        ready_stories: storiesRes.data?.length || 0
+      }));
+
+    } catch (error) {
+      console.error('Error refreshing queue and stories:', error);
+    }
+  };
+
+  // Refresh specific article status after approval
+  const refreshArticleStatus = async (articleId: string) => {
+    if (!selectedTopicId) return;
+    
+    try {
+      // Check if article moved to queue
+      const { data: queueItem } = await supabase
+        .from('content_generation_queue')
+        .select(`
+          *,
+          articles!inner(title, source_url)
+        `)
+        .eq('article_id', articleId)
+        .single();
+
+      if (queueItem) {
+        // Add to queue items if found
+        setQueueItems(prev => {
+          const exists = prev.find(q => q.id === queueItem.id);
+          if (!exists) {
+            return [...prev, {
+              id: queueItem.id,
+              status: queueItem.status,
+              created_at: queueItem.created_at,
+              attempts: queueItem.attempts,
+              max_attempts: queueItem.max_attempts,
+              error_message: queueItem.error_message,
+              article: {
+                title: queueItem.articles.title,
+                source_url: queueItem.articles.source_url
+              }
+            }];
+          }
+          return prev;
+        });
+
+        // Remove from articles list
+        setArticles(prev => prev.filter(a => a.id !== articleId));
+        
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          pending_articles: prev.pending_articles - 1,
+          processing_queue: prev.processing_queue + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error refreshing article status:', error);
+      // Fall back to full refresh if needed
+      loadTopicContent();
     }
   };
 
@@ -281,6 +417,27 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setProcessingArticle(articleId);
       
+      // Check if article is already in queue
+      const { data: existingQueue, error: checkError } = await supabase
+        .from('content_generation_queue')
+        .select('id, status')
+        .eq('article_id', articleId)
+        .neq('status', 'completed')
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error(`Failed to check queue: ${checkError.message}`);
+      }
+
+      if (existingQueue) {
+        toast({
+          title: "Already Processing",
+          description: "This article is already in the processing queue",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { data: queueJob, error: queueError } = await supabase
         .from('content_generation_queue')
         .insert({
@@ -310,12 +467,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         description: `${typeLabels[slideType]} generation with ${providerLabels[selectedProvider]} queued for processing`
       });
 
-      loadTopicContent();
+      // Refresh specific article data instead of all topic content
+      refreshArticleStatus(articleId);
     } catch (error) {
       console.error('Error approving article:', error);
       toast({
         title: "Error",
-        description: "Failed to approve article",
+        description: error instanceof Error ? error.message : "Failed to approve article",
         variant: "destructive"
       });
     } finally {
