@@ -11,6 +11,7 @@ import { Loader2, Plus, Edit2, Save, X } from 'lucide-react';
 
 interface FeedCTAConfig {
   id: string;
+  topic_id: string | null;
   feed_name: string;
   engagement_question: string;
   show_like_share: boolean;
@@ -28,7 +29,8 @@ export default function FeedCTAManager() {
     engagement_question: 'What do you think?',
     show_like_share: true,
     attribution_cta: '',
-    is_active: true
+    is_active: true,
+    topic_id: null as string | null
   });
   const { toast } = useToast();
 
@@ -41,6 +43,7 @@ export default function FeedCTAManager() {
       const { data, error } = await supabase
         .from('feed_cta_configs')
         .select('*')
+        .is('topic_id', null) // Only show global/admin configs (no topic_id)
         .order('feed_name');
 
       if (error) throw error;
@@ -61,7 +64,8 @@ export default function FeedCTAManager() {
     try {
       const payload = {
         ...formData,
-        attribution_cta: formData.attribution_cta.trim() || null
+        attribution_cta: formData.attribution_cta.trim() || null,
+        topic_id: null // Admin configs are always global (no topic_id)
       };
 
       let error;
@@ -92,7 +96,8 @@ export default function FeedCTAManager() {
         engagement_question: 'What do you think?',
         show_like_share: true,
         attribution_cta: '',
-        is_active: true
+        is_active: true,
+        topic_id: null
       });
       loadConfigs();
     } catch (error) {
@@ -112,7 +117,8 @@ export default function FeedCTAManager() {
       engagement_question: config.engagement_question,
       show_like_share: config.show_like_share,
       attribution_cta: config.attribution_cta || '',
-      is_active: config.is_active
+      is_active: config.is_active,
+      topic_id: config.topic_id
     });
   };
 
@@ -124,7 +130,8 @@ export default function FeedCTAManager() {
       engagement_question: 'What do you think?',
       show_like_share: true,
       attribution_cta: '',
-      is_active: true
+      is_active: true,
+      topic_id: null
     });
   };
 
@@ -140,9 +147,9 @@ export default function FeedCTAManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Feed CTA Configuration</h2>
+          <h2 className="text-2xl font-bold">Global Feed CTA Configuration</h2>
           <p className="text-muted-foreground">
-            Manage call-to-action settings for each feed
+            Manage global call-to-action settings (admin only)
           </p>
         </div>
         <Button onClick={() => setIsCreating(true)} disabled={isCreating || !!editingId}>

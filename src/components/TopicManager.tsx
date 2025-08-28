@@ -8,11 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Settings, Users, BarChart3, Globe, MapPin, Hash, Trash2 } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, Globe, MapPin, Hash, Trash2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import TopicCTAManager from "@/components/topic/TopicCTAManager";
 
 interface Topic {
   id: string;
@@ -38,6 +39,7 @@ export const TopicManager = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [managingCTAForTopic, setManagingCTAForTopic] = useState<{ id: string; name: string } | null>(null);
   const [newTopic, setNewTopic] = useState({
     name: '',
     description: '',
@@ -180,6 +182,24 @@ export const TopicManager = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If managing CTA for a topic, show the CTA manager
+  if (managingCTAForTopic) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setManagingCTAForTopic(null)}>
+            ← Back to Topics
+          </Button>
+        </div>
+        <TopicCTAManager 
+          topicId={managingCTAForTopic.id}
+          topicName={managingCTAForTopic.name}
+          onClose={() => setManagingCTAForTopic(null)}
+        />
       </div>
     );
   }
@@ -388,6 +408,14 @@ export const TopicManager = () => {
                         </Link>
                       </Button>
                     )}
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setManagingCTAForTopic({ id: topic.id, name: topic.name })}
+                    >
+                      <MessageSquare className="w-3 h-3 mr-1" />
+                      CTA
+                    </Button>
                     <Button size="sm" variant="outline">
                       <Settings className="w-3 h-3" />
                     </Button>

@@ -485,6 +485,7 @@ export type Database = {
           id: string
           is_active: boolean
           show_like_share: boolean
+          topic_id: string | null
           updated_at: string
         }
         Insert: {
@@ -495,6 +496,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           show_like_share?: boolean
+          topic_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -505,9 +507,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           show_like_share?: boolean
+          topic_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feed_cta_configs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       image_generation_tests: {
         Row: {

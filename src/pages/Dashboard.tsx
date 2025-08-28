@@ -141,6 +141,26 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Legacy Eastbourne Access */}
+        <Card className="mb-8 border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-blue-500" />
+              Legacy Eastbourne Feed
+            </CardTitle>
+            <CardDescription>
+              Access the original Eastbourne news feed during transition period
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" asChild>
+              <Link to="/eastbourne">
+                Open Eastbourne Feed
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Main Dashboard Content */}
         <Tabs defaultValue="topics" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
