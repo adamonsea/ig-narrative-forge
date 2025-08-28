@@ -416,8 +416,11 @@ export const TopicManager = () => {
                       <MessageSquare className="w-3 h-3 mr-1" />
                       CTA
                     </Button>
-                    <Button size="sm" variant="outline">
-                      <Settings className="w-3 h-3" />
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/dashboard/topic/${topic.slug}`}>
+                        <Settings className="w-3 h-3 mr-1" />
+                        Manage
+                      </Link>
                     </Button>
                   </div>
                 </div>

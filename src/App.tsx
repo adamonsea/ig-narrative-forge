@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import EastbourneFeed from "./pages/EastbourneFeed";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
+import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
             <Route path="/feed/topic/:slug" element={<TopicFeed />} />
