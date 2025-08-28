@@ -344,6 +344,7 @@ serve(async (req) => {
       .from('stories')
       .update({ 
         status: 'draft',
+        is_published: true,
         publication_name: publicationName,
         author: article.author
       })
@@ -400,14 +401,36 @@ serve(async (req) => {
       // Don't throw error for post creation as slides are more important
     }
 
-    console.log('Updated story status to draft for review...');
+    console.log('Updated story status to draft and published for review...');
+
+    // Automatically trigger carousel image generation
+    try {
+      console.log('🖼️ Triggering automatic carousel image generation...');
+      const carouselResult = await supabase.functions.invoke('generate-carousel-images', {
+        body: { 
+          storyId: story.id,
+          formats: ['instagram_story', 'instagram_post', 'facebook_post']
+        }
+      });
+
+      if (carouselResult.error) {
+        console.error('Auto-carousel generation failed:', carouselResult.error);
+        // Don't fail the main process, just log it
+      } else {
+        console.log('✅ Auto-carousel generation started successfully');
+      }
+    } catch (carouselError) {
+      console.error('Auto-carousel generation error:', carouselError);
+      // Don't fail the main process, just log it
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         storyId: story.id,
         slideCount: slides.length,
-        slides: slides
+        slides: slides,
+        autoPublished: true
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

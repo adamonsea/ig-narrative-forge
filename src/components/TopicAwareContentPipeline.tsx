@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { PlayCircle, Clock, CheckCircle, AlertCircle, BarChart3, ExternalLink, Sparkles, XCircle, RefreshCw, Eye, Edit } from "lucide-react";
-import { CarouselGenerationButton } from './CarouselGenerationButton';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,6 +87,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     processing_queue: 0,
     ready_stories: 0
   });
+  const [isResettingStalled, setIsResettingStalled] = useState(false);
+  const [isResettingStuck, setIsResettingStuck] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -404,6 +405,56 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
+  const handleRestalledProcessing = async () => {
+    setIsResettingStalled(true);
+    try {
+      const { error } = await supabase.rpc('reset_stalled_processing');
+      if (error) throw error;
+      
+      toast({
+        title: "Processing Reset",
+        description: "Stalled processing jobs have been reset"
+      });
+      
+      loadTopicContent();
+    } catch (error: any) {
+      toast({
+        title: "Reset Failed", 
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsResettingStalled(false);
+    }
+  };
+
+  const resetStuckProcessing = async () => {
+    setIsResettingStuck(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-stuck-processing');
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Processing Reset",
+          description: data.message || "Reset stuck processing jobs",
+        });
+        loadTopicContent();
+      } else {
+        throw new Error(data.error || 'Reset failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Reset Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingStuck(false);
+    }
+  };
+
   const currentTopic = topics.find(t => t.id === selectedTopicId);
 
   return (
@@ -611,10 +662,32 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           <TabsContent value="queue" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Processing Queue - {currentTopic?.name}</CardTitle>
-                <CardDescription>
-                  Articles currently being processed into stories
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Processing Queue - {currentTopic?.name}</CardTitle>
+                    <CardDescription>
+                      Articles currently being processed into stories
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleRestalledProcessing}
+                      disabled={isResettingStalled}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isResettingStalled ? "Resetting..." : "Reset Stalled"}
+                    </Button>
+                    <Button 
+                      onClick={resetStuckProcessing}
+                      disabled={isResettingStuck}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isResettingStuck ? "Resetting..." : "Reset Stuck Processing"}
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -697,10 +770,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                </div>
                              </div>
                               <div className="flex items-center gap-2">
-                                <CarouselGenerationButton 
-                                  storyId={story.id} 
-                                  storyTitle={story.title}
-                                />
                                 <Button
                                   onClick={() => setEditingStory(story)}
                                   size="sm"
