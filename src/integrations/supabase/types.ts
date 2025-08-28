@@ -951,6 +951,59 @@ export type Database = {
           },
         ]
       }
+      scraping_automation: {
+        Row: {
+          created_at: string | null
+          failure_count: number | null
+          id: string
+          is_active: boolean | null
+          last_error: string | null
+          last_scraped_at: string | null
+          next_scrape_at: string | null
+          scrape_frequency_hours: number | null
+          source_url: string
+          success_count: number | null
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_error?: string | null
+          last_scraped_at?: string | null
+          next_scrape_at?: string | null
+          scrape_frequency_hours?: number | null
+          source_url: string
+          success_count?: number | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_error?: string | null
+          last_scraped_at?: string | null
+          next_scrape_at?: string | null
+          scrape_frequency_hours?: number | null
+          source_url?: string
+          success_count?: number | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraping_automation_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_queries: {
         Row: {
           created_at: string
