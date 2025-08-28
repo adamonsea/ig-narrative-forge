@@ -220,6 +220,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           .select(`
             *,
             articles!inner(
+              id,
               title,
               source_url,
               topic_id
@@ -380,6 +381,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         .select(`
           *,
           articles!inner(
+            id,
             title,
             source_url,
             topic_id
@@ -1076,18 +1078,18 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                      {stories.map((story) => (
                        <div key={story.id} className="border rounded-lg">
                          <div className="p-4">
-                           <div className="flex items-start justify-between mb-3">
-                             <div className="flex-1">
-                               <h3 className="font-medium mb-2">{story.title}</h3>
-                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                 <Badge variant={story.status === 'ready' ? 'default' : 'secondary'}>{story.status}</Badge>
-                                 <Badge variant={story.is_published ? 'default' : 'outline'}>
-                                   {story.is_published ? 'Published' : 'Draft'}
-                                 </Badge>
-                                 <span>{story.slides.length} slides</span>
-                                 <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                               </div>
-                             </div>
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h3 className="font-medium mb-2">{story.title}</h3>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <Badge variant={story.status === 'ready' ? 'default' : 'secondary'}>{story.status}</Badge>
+                                  <Badge variant={story.is_published ? 'default' : 'outline'}>
+                                    {story.is_published ? 'Published' : 'Draft'}
+                                  </Badge>
+                                  <span>{story.slides.length} slides</span>
+                                  <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
                               <div className="flex items-center gap-2">
                                 <Button 
                                   size="sm"
@@ -1128,54 +1130,54 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                   {expandedStories.has(story.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </Button>
                               </div>
+                            </div>
 
-                              {expandedStories.has(story.id) && (
-                                <div className="mt-4 space-y-3 border-t pt-3">
-                                  <div className="grid gap-2">
-                                    {story.slides?.map((slide: any) => (
-                                      <div key={slide.id} className="p-3 bg-background rounded border">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-xs">
-                                              Slide {slide.slide_number}
-                                            </Badge>
-                                            {getWordCountBadge(slide.content.split(' ').length)}
-                                            <span className={`text-xs font-medium ${getWordCountColor(slide.content.split(' ').length, slide.slide_number)}`}>
-                                              {slide.content.split(' ').length} words
-                                            </span>
-                                          </div>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => {
-                                              setEditingSlideId(slide.id);
-                                              setEditingSlideContent(slide.content);
-                                            }}
-                                            className="flex items-center gap-1"
-                                          >
-                                            <Edit3 className="w-3 h-3" />
-                                            Edit
-                                          </Button>
+                            {expandedStories.has(story.id) && (
+                              <div className="mt-4 space-y-3 border-t pt-3">
+                                <div className="grid gap-2">
+                                  {story.slides?.map((slide: any) => (
+                                    <div key={slide.id} className="p-3 bg-background rounded border">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline" className="text-xs">
+                                            Slide {slide.slide_number}
+                                          </Badge>
+                                          {getWordCountBadge(slide.content.split(' ').length)}
+                                          <span className={`text-xs font-medium ${getWordCountColor(slide.content.split(' ').length, slide.slide_number)}`}>
+                                            {slide.content.split(' ').length} words
+                                          </span>
                                         </div>
-                                        <p className="text-sm text-muted-foreground line-clamp-3">{slide.content}</p>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setEditingSlideId(slide.id);
+                                            setEditingSlideContent(slide.content);
+                                          }}
+                                          className="flex items-center gap-1"
+                                        >
+                                          <Edit3 className="w-3 h-3" />
+                                          Edit
+                                        </Button>
                                       </div>
-                                    ))}
-                                  </div>
-                                  
-                                  <div className="flex gap-2 pt-2 border-t">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleReturnToReview(story.id)}
-                                      className="flex items-center gap-1"
-                                    >
-                                      <RotateCcw className="w-3 h-3" />
-                                      Return to Review
-                                    </Button>
-                                  </div>
+                                      <p className="text-sm text-muted-foreground line-clamp-3">{slide.content}</p>
+                                    </div>
+                                  ))}
                                 </div>
-                              )}
-                           </div>
+                                
+                                <div className="flex gap-2 pt-2 border-t">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleReturnToReview(story.id)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <RotateCcw className="w-3 h-3" />
+                                    Return to Review
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                          </div>
                        </div>
                      ))}
