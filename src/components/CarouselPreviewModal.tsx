@@ -55,18 +55,29 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
       const imageData: ImageData[] = [];
 
       for (const filePath of filePaths) {
-        const { data: fileData } = await supabase.storage
+        // Generate signed URL for private bucket access
+        const { data: signedUrlData, error: urlError } = await supabase.storage
           .from('exports')
-          .download(filePath);
+          .createSignedUrl(filePath, 3600); // 1 hour expiry
         
-        if (fileData) {
-          const url = URL.createObjectURL(fileData);
-          const filename = filePath.split('/').pop() || 'carousel_image.png';
-          imageData.push({
-            url,
-            filename,
-            blob: fileData
-          });
+        if (urlError) {
+          console.error('Error creating signed URL:', urlError);
+          continue;
+        }
+
+        if (signedUrlData?.signedUrl) {
+          // Fetch the image data using the signed URL
+          const response = await fetch(signedUrlData.signedUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const filename = filePath.split('/').pop() || 'carousel_image.png';
+            imageData.push({
+              url,
+              filename,
+              blob
+            });
+          }
         }
       }
 
