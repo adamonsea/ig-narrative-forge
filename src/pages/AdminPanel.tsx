@@ -1,7 +1,9 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import FeedCTAManager from '@/components/admin/FeedCTAManager';
 
 export default function AdminPanel() {
@@ -23,6 +25,14 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8">
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
           <p className="text-muted-foreground">Manage your eeZee News configuration</p>
         </div>
