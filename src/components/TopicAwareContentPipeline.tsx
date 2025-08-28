@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { PlayCircle, Clock, CheckCircle, AlertCircle, BarChart3, ExternalLink, Sparkles, XCircle, RefreshCw, Eye, Edit } from "lucide-react";
+import { CarouselGenerationButton } from './CarouselGenerationButton';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -695,27 +696,31 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                  <span>{new Date(story.created_at).toLocaleDateString()}</span>
                                </div>
                              </div>
-                             <div className="flex items-center gap-2">
-                               <Button
-                                 onClick={() => setEditingStory(story)}
-                                 size="sm"
-                                 variant="outline"
-                               >
-                                 <Edit className="w-4 h-4" />
-                               </Button>
-                               <Button
-                                 onClick={() => toggleStoryPublication(story.id, story.is_published)}
-                                 size="sm"
-                                 variant={story.is_published ? 'outline' : 'default'}
-                               >
-                                 {story.is_published ? 'Unpublish' : 'Publish'}
-                               </Button>
-                               <Button size="sm" variant="outline" asChild>
-                                 <a href={story.article.source_url} target="_blank" rel="noopener noreferrer">
-                                   <ExternalLink className="w-4 h-4" />
-                                 </a>
-                               </Button>
-                             </div>
+                              <div className="flex items-center gap-2">
+                                <CarouselGenerationButton 
+                                  storyId={story.id} 
+                                  storyTitle={story.title}
+                                />
+                                <Button
+                                  onClick={() => setEditingStory(story)}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  onClick={() => toggleStoryPublication(story.id, story.is_published)}
+                                  size="sm"
+                                  variant={story.is_published ? 'outline' : 'default'}
+                                >
+                                  {story.is_published ? 'Unpublish' : 'Publish'}
+                                </Button>
+                                <Button size="sm" variant="outline" asChild>
+                                  <a href={story.article.source_url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                </Button>
+                              </div>
                            </div>
                          </div>
                        </div>

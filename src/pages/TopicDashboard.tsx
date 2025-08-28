@@ -10,6 +10,7 @@ import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipelin
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
+import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock } from "lucide-react";
@@ -307,7 +308,7 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            <TopicScheduleMonitor topicId={topic.id} topicName={topic.name} />
+            <ScrapingAutomationManager topicId={topic.id} topicName={topic.name} />
           </TabsContent>
 
           <TabsContent value="cta" className="space-y-6">
