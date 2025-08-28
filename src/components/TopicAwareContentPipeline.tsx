@@ -7,7 +7,25 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, Clock, CheckCircle, AlertCircle, BarChart3, ExternalLink, Sparkles, XCircle, RefreshCw, Eye, Edit } from "lucide-react";
+import { 
+  PlayCircle, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  BarChart3, 
+  ExternalLink, 
+  Sparkles, 
+  XCircle, 
+  RefreshCw, 
+  Eye, 
+  Edit, 
+  EyeOff, 
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+  Edit3
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -82,6 +100,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [editingStory, setEditingStory] = useState<Story | null>(null);
   const [editingSlideContent, setEditingSlideContent] = useState('');
   const [editingSlideId, setEditingSlideId] = useState('');
+  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+  const [processingStories, setProcessingStories] = useState<Set<string>>(new Set());
+  const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [stats, setStats] = useState({
     pending_articles: 0,
     processing_queue: 0,
@@ -106,8 +128,25 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   useEffect(() => {
     if (selectedTopicId) {
       loadTopicContent();
+      
+      // Set up auto-refresh every 30 seconds
+      const interval = setInterval(() => {
+        loadTopicContent();
+      }, 30000);
+      
+      setRefreshInterval(interval);
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
     }
   }, [selectedTopicId]);
+  
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) clearInterval(refreshInterval);
+    };
+  }, [refreshInterval]);
 
   const loadTopics = async () => {
     try {
@@ -322,6 +361,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   };
 
   const toggleStoryPublication = async (storyId: string, currentStatus: boolean) => {
+    if (publishingStories.has(storyId)) return;
+    
+    setPublishingStories(prev => new Set(prev.add(storyId)));
+    
     try {
       const { error } = await supabase
         .from('stories')
@@ -342,6 +385,12 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         title: "Error",
         description: "Failed to update publication status",
         variant: "destructive"
+      });
+    } finally {
+      setPublishingStories(prev => {
+        const next = new Set(prev);
+        next.delete(storyId);
+        return next;
       });
     }
   };
@@ -453,6 +502,79 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     } finally {
       setIsResettingStuck(false);
     }
+  };
+
+  const handleReturnToReview = async (storyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .update({ status: 'draft' })
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Story Returned to Review',
+        description: 'Story status changed to draft for re-review',
+      });
+
+      loadTopicContent();
+    } catch (error) {
+      console.error('Failed to return story:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to return story to review',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReturnToQueue = async (articleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'new' })
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Article Returned',
+        description: 'Article returned to queue for reprocessing',
+      });
+
+      loadTopicContent();
+    } catch (error) {
+      console.error('Failed to return article:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to return article to queue',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleStoryExpanded = (storyId: string) => {
+    const newExpanded = new Set(expandedStories);
+    if (newExpanded.has(storyId)) {
+      newExpanded.delete(storyId);
+    } else {
+      newExpanded.add(storyId);
+    }
+    setExpandedStories(newExpanded);
+  };
+
+  const getWordCountBadge = (wordCount: number) => {
+    if (wordCount <= 15) return <Badge variant="default" className="text-xs">Hook</Badge>;
+    if (wordCount <= 30) return <Badge variant="secondary" className="text-xs">Body</Badge>;
+    return <Badge variant="outline" className="text-xs">Long</Badge>;
+  };
+
+  const getWordCountColor = (wordCount: number, slideNumber: number) => {
+    const maxWords = slideNumber === 1 ? 15 : slideNumber <= 3 ? 25 : slideNumber <= 6 ? 35 : 40;
+    if (wordCount <= maxWords) return 'text-green-600';
+    if (wordCount <= maxWords + 5) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const currentTopic = topics.find(t => t.id === selectedTopicId);
@@ -770,26 +892,92 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                </div>
                              </div>
                               <div className="flex items-center gap-2">
+                                <Button 
+                                  size="sm"
+                                  onClick={() => toggleStoryPublication(story.id, story.is_published)}
+                                  disabled={publishingStories.has(story.id)}
+                                  variant={story.is_published ? "destructive" : "default"}
+                                >
+                                  {publishingStories.has(story.id) ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                      Processing...
+                                    </>
+                                  ) : story.is_published ? (
+                                    <>
+                                      <EyeOff className="w-4 h-4 mr-1" />
+                                      Unpublish
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="w-4 h-4 mr-1" />
+                                      Publish
+                                    </>
+                                  )}
+                                </Button>
                                 <Button
-                                  onClick={() => setEditingStory(story)}
                                   size="sm"
                                   variant="outline"
+                                  onClick={() => setEditingStory(story)}
                                 >
-                                  <Edit className="w-4 h-4" />
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  Preview
                                 </Button>
                                 <Button
-                                  onClick={() => toggleStoryPublication(story.id, story.is_published)}
                                   size="sm"
-                                  variant={story.is_published ? 'outline' : 'default'}
+                                  variant="ghost"
+                                  onClick={() => toggleStoryExpanded(story.id)}
                                 >
-                                  {story.is_published ? 'Unpublish' : 'Publish'}
-                                </Button>
-                                <Button size="sm" variant="outline" asChild>
-                                  <a href={story.article.source_url} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
+                                  {expandedStories.has(story.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                 </Button>
                               </div>
+
+                              {expandedStories.has(story.id) && (
+                                <div className="mt-4 space-y-3 border-t pt-3">
+                                  <div className="grid gap-2">
+                                    {story.slides?.map((slide: any) => (
+                                      <div key={slide.id} className="p-3 bg-background rounded border">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-xs">
+                                              Slide {slide.slide_number}
+                                            </Badge>
+                                            {getWordCountBadge(slide.content.split(' ').length)}
+                                            <span className={`text-xs font-medium ${getWordCountColor(slide.content.split(' ').length, slide.slide_number)}`}>
+                                              {slide.content.split(' ').length} words
+                                            </span>
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                              setEditingSlideId(slide.id);
+                                              setEditingSlideContent(slide.content);
+                                            }}
+                                            className="flex items-center gap-1"
+                                          >
+                                            <Edit3 className="w-3 h-3" />
+                                            Edit
+                                          </Button>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground line-clamp-3">{slide.content}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  
+                                  <div className="flex gap-2 pt-2 border-t">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleReturnToReview(story.id)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <RotateCcw className="w-3 h-3" />
+                                      Return to Review
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                            </div>
                          </div>
                        </div>

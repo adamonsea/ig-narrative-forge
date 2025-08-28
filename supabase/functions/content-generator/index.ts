@@ -69,7 +69,7 @@ serve(async (req) => {
     }
 
     // Determine AI provider - use from request if provided, otherwise fall back to env variable
-    const useDeepSeek = aiProvider ? aiProvider === 'deepseek' : Deno.env.get('USE_DEEPSEEK') === 'true';
+    const selectedProvider = aiProvider ? aiProvider === 'deepseek' : useDeepSeek;
 
     // Fetch the article with published_at for temporal context
     const { data: article, error: articleError } = await supabase
@@ -154,20 +154,20 @@ serve(async (req) => {
     console.log('🎯 Extracted hook promises from headline:', hookPromises);
     
     // Generate slides using selected AI provider
-    const aiProvider = useDeepSeek ? 'DeepSeek' : 'OpenAI';
-    const apiKey = useDeepSeek ? deepSeekApiKey : openAIApiKey;
-    console.log(`🎯 Generating slides using ${aiProvider} with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
+    const selectedAiProvider = selectedProvider ? 'DeepSeek' : 'OpenAI';
+    const apiKey = selectedProvider ? deepSeekApiKey : openAIApiKey;
+    console.log(`🎯 Generating slides using ${selectedAiProvider} with slideType: ${slideType}, expected count: ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}`);
     
     let slides;
     let slideGenerationCost = 0;
     try {
-      const slideResult = useDeepSeek 
+      const slideResult = selectedProvider 
         ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName)
         : await generateSlides(article, openAIApiKey, slideType, publicationName);
       
       slides = slideResult.slides;
       slideGenerationCost = slideResult.estimatedCost || 0;
-      console.log(`📊 Generated ${slides?.length || 0} slides using ${aiProvider} vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}, cost: $${slideGenerationCost.toFixed(4)}`);
+      console.log(`📊 Generated ${slides?.length || 0} slides using ${selectedAiProvider} vs expected ${slideType === 'short' ? 4 : slideType === 'indepth' ? 12 : 8}, cost: $${slideGenerationCost.toFixed(4)}`);
       
       if (!slides || slides.length === 0) {
         console.error('❌ No slides generated for article:', article.title);
@@ -201,7 +201,7 @@ serve(async (req) => {
       if (!promisesDelivered) {
         console.log('⚠️ Slides failed promise delivery validation, regenerating...');
         // Regenerate with explicit promise delivery requirement
-        const regenerationResult = useDeepSeek 
+        const regenerationResult = selectedProvider 
           ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName, hookPromises)
           : await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
         slides = regenerationResult.slides;
@@ -255,7 +255,7 @@ serve(async (req) => {
         console.log('🔄 Validation score too low, attempting regeneration with stricter constraints...');
         
         try {
-          const strictSlideResult = useDeepSeek 
+          const strictSlideResult = selectedProvider 
             ? await generateSlidesWithDeepSeek(article, deepSeekApiKey, slideType, publicationName, hookPromises)
             : await generateSlides(article, openAIApiKey, slideType, publicationName, hookPromises);
           const revalidation = validator.validateSlides(strictSlideResult.slides, article.title, article.body);
@@ -273,7 +273,7 @@ serve(async (req) => {
     }
 
     // Generate social media post copy with hashtags
-    const postResult = useDeepSeek 
+    const postResult = selectedProvider 
       ? await generatePostCopyWithDeepSeek(article, publicationName, deepSeekApiKey)
       : await generatePostCopy(article, publicationName, openAIApiKey);
     console.log('Generated post copy:', postResult.postCopy);
@@ -373,7 +373,7 @@ serve(async (req) => {
       await supabase
         .from('api_usage')
         .insert({
-          service_name: aiProvider,
+          service_name: selectedAiProvider,
           operation: 'content-generation',
           tokens_used: Math.round(totalApiCost * 50000), // Estimate tokens from cost
           cost_usd: totalApiCost,
