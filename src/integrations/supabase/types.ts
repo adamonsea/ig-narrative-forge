@@ -1073,6 +1073,7 @@ export type Database = {
           author: string | null
           created_at: string
           id: string
+          is_published: boolean
           last_quality_check: string | null
           publication_name: string | null
           quality_score: number | null
@@ -1085,6 +1086,7 @@ export type Database = {
           author?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
@@ -1097,6 +1099,7 @@ export type Database = {
           author?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
