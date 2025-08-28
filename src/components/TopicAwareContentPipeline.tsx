@@ -66,21 +66,36 @@ interface QueueItem {
   };
 }
 
+interface Slide {
+  id: string;
+  slide_number: number;
+  content: string;
+  visual_prompt?: string | null;
+  alt_text: string | null;
+  word_count: number;
+  story_id: string;
+}
+
+interface StoryArticle {
+  id?: string;
+  title: string;
+  author?: string;
+  source_url: string;
+  region?: string;
+  published_at?: string | null;
+  word_count?: number | null;
+}
+
 interface Story {
   id: string;
   title: string;
   status: string;
+  article_id: string;
   created_at: string;
-  is_published: boolean;
-  article: {
-    title: string;
-    source_url: string;
-  };
-  slides: Array<{
-    id: string;
-    content: string;
-    slide_number: number;
-  }>;
+  slides: Slide[];
+  article?: StoryArticle;
+  articles?: StoryArticle;
+  is_published?: boolean;
 }
 
 interface TopicAwareContentPipelineProps {
@@ -98,9 +113,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'deepseek'>('deepseek');
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [editingStory, setEditingStory] = useState<Story | null>(null);
+  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+  const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
+  const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
+  const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
+  const [editContent, setEditContent] = useState('');
   const [editingSlideContent, setEditingSlideContent] = useState('');
   const [editingSlideId, setEditingSlideId] = useState('');
-  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [processingStories, setProcessingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
@@ -238,12 +257,22 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         title: story.title,
         status: story.status,
         created_at: story.created_at,
+        article_id: story.article_id || '',
         is_published: story.is_published || false,
         article: {
+          id: story.articles?.id || '',
           title: story.articles.title,
           source_url: story.articles.source_url
         },
-        slides: story.slides.sort((a, b) => a.slide_number - b.slide_number)
+        slides: (story.slides || []).map((slide: any) => ({
+          id: slide.id,
+          content: slide.content,
+          slide_number: slide.slide_number,
+          word_count: slide.word_count || slide.content?.split(' ').length || 0,
+          alt_text: slide.alt_text || null,
+          visual_prompt: slide.visual_prompt || null,
+          story_id: story.id
+        })).sort((a: any, b: any) => a.slide_number - b.slide_number)
       })));
 
       // Update only relevant stats
@@ -386,12 +415,22 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         title: story.title,
         status: story.status,
         created_at: story.created_at,
+        article_id: story.article_id || '',
         is_published: story.is_published || false,
         article: {
+          id: story.articles?.id || '',
           title: story.articles.title,
           source_url: story.articles.source_url
         },
-        slides: story.slides.sort((a, b) => a.slide_number - b.slide_number)
+        slides: (story.slides || []).map((slide: any) => ({
+          id: slide.id,
+          content: slide.content,
+          slide_number: slide.slide_number,
+          word_count: slide.word_count || slide.content?.split(' ').length || 0,
+          alt_text: slide.alt_text || null,
+          visual_prompt: slide.visual_prompt || null,
+          story_id: story.id
+        })).sort((a: any, b: any) => a.slide_number - b.slide_number)
       })));
 
       // Update stats
@@ -569,7 +608,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         description: "Slide content updated successfully"
       });
 
-      setEditingStory(null);
+      setEditingSlide(null);
       setEditingSlideContent('');
       setEditingSlideId('');
       loadTopicContent();
