@@ -65,9 +65,13 @@ interface Story {
   }>;
 }
 
-export const TopicAwareContentPipeline = () => {
+interface TopicAwareContentPipelineProps {
+  selectedTopicId?: string; // Pre-selected topic ID from dashboard context
+}
+
+export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps> = ({ selectedTopicId: propTopicId }) => {
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [articles, setArticles] = useState<Article[]>([]);
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
@@ -85,6 +89,13 @@ export const TopicAwareContentPipeline = () => {
   });
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Update selectedTopicId if propTopicId changes
+  useEffect(() => {
+    if (propTopicId && propTopicId !== selectedTopicId) {
+      setSelectedTopicId(propTopicId);
+    }
+  }, [propTopicId]);
 
   useEffect(() => {
     loadTopics();
@@ -110,7 +121,7 @@ export const TopicAwareContentPipeline = () => {
         topic_type: topic.topic_type as 'regional' | 'keyword'
       })));
 
-      if (data && data.length > 0 && !selectedTopicId) {
+      if (data && data.length > 0 && !selectedTopicId && !propTopicId) {
         setSelectedTopicId(data[0].id);
       }
     } catch (error) {
@@ -408,23 +419,37 @@ export const TopicAwareContentPipeline = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="pipeline-topic-select">Select Topic</Label>
-              <Select value={selectedTopicId} onValueChange={setSelectedTopicId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a topic to view pipeline" />
-                </SelectTrigger>
-                <SelectContent>
-                  {topics.map((topic) => (
-                    <SelectItem key={topic.id} value={topic.id}>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={topic.topic_type === 'regional' ? 'default' : 'secondary'}>
-                          {topic.topic_type}
-                        </Badge>
-                        {topic.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {propTopicId ? (
+                // Read-only display when called from TopicDashboard
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                  <Badge variant={currentTopic?.topic_type === 'regional' ? 'default' : 'secondary'}>
+                    {currentTopic?.topic_type}
+                  </Badge>
+                  <span className="font-medium">
+                    {currentTopic?.name || 'Loading...'}
+                  </span>
+                  <Badge variant="outline">Topic-specific</Badge>
+                </div>
+              ) : (
+                // Dropdown selector when used standalone
+                <Select value={selectedTopicId} onValueChange={setSelectedTopicId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a topic to view pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topics.map((topic) => (
+                      <SelectItem key={topic.id} value={topic.id}>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={topic.topic_type === 'regional' ? 'default' : 'secondary'}>
+                            {topic.topic_type}
+                          </Badge>
+                          {topic.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             
             <div className="space-y-2">

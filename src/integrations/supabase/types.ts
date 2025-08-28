@@ -1454,6 +1454,10 @@ export type Database = {
         }
         Returns: string
       }
+      rescore_articles_for_topic: {
+        Args: { p_topic_id: string }
+        Returns: undefined
+      }
       reset_stalled_processing: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -8,6 +8,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
+import { KeywordManager } from "@/components/KeywordManager";
+import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock } from "lucide-react";
@@ -26,6 +28,9 @@ interface Topic {
   slug: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
+  landmarks?: string[];
+  postcodes?: string[];
+  organizations?: string[];
   region?: string;
   is_public: boolean;
   is_active: boolean;
@@ -78,7 +83,11 @@ const TopicDashboard = () => {
 
       setTopic({
         ...topicData,
-        topic_type: topicData.topic_type as 'regional' | 'keyword'
+        topic_type: topicData.topic_type as 'regional' | 'keyword',
+        keywords: topicData.keywords || [],
+        landmarks: topicData.landmarks || [],
+        postcodes: topicData.postcodes || [],
+        organizations: topicData.organizations || []
       });
 
       // Load stats
@@ -278,9 +287,10 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="sources" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
+            <TabsTrigger value="automation">Automation</TabsTrigger>
             <TabsTrigger value="cta">Feed Settings</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -293,7 +303,11 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="content" className="space-y-6">
-            <TopicAwareContentPipeline />
+            <TopicAwareContentPipeline selectedTopicId={topic.id} />
+          </TabsContent>
+
+          <TabsContent value="automation" className="space-y-6">
+            <TopicScheduleMonitor topicId={topic.id} topicName={topic.name} />
           </TabsContent>
 
           <TabsContent value="cta" className="space-y-6">
@@ -305,11 +319,22 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
+            <KeywordManager 
+              topic={topic} 
+              onTopicUpdate={(updatedTopic: Topic) => {
+                setTopic((prevTopic) => ({
+                  ...prevTopic!,
+                  ...updatedTopic
+                }));
+                loadTopicAndStats(); // Refresh stats after keyword update
+              }} 
+            />
+            
             <Card>
               <CardHeader>
-                <CardTitle>Topic Settings</CardTitle>
+                <CardTitle>Topic Configuration</CardTitle>
                 <CardDescription>
-                  Manage topic configuration and visibility
+                  Basic topic information and metadata
                 </CardDescription>
               </CardHeader>
               <CardContent>
