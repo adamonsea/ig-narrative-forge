@@ -103,17 +103,13 @@ serve(async (req) => {
 
     console.log(`🎯 Generating slides using ${actualProvider === 'deepseek' ? 'DeepSeek' : 'OpenAI'} with slideType: ${slideType}, expected count: ${getExpectedSlideCount(slideType)}`);
 
-    // Generate slides and post copy based on provider
+    // Generate slides first, then post copy (slides must be available for post copy generation)
     if (actualProvider === 'deepseek' && deepseekApiKey) {
-      [slides, postCopy] = await Promise.all([
-        generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase),
-        generatePostCopyWithDeepSeek(article, slides || [], deepseekApiKey, finalPublicationName)
-      ]);
+      slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase);
+      postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, finalPublicationName);
     } else {
-      [slides, postCopy] = await Promise.all([
-        generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase),
-        generatePostCopy(article, slides || [], openaiApiKey, finalPublicationName)
-      ]);
+      slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase);
+      postCopy = await generatePostCopy(article, slides, openaiApiKey, finalPublicationName);
     }
 
     console.log(`✅ Generated ${slides.length} slides and post copy successfully`);
