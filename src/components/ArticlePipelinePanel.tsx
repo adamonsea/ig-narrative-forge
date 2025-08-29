@@ -413,28 +413,73 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     }
   };
 
-  const resetStalledProcessing = async () => {
+  const resetProcessingIssues = async () => {
     setIsResettingStalled(true);
     try {
-      const { error } = await supabase.rpc('reset_stalled_processing');
+      // Use the comprehensive reset function instead of confusing multiple functions
+      const { data, error } = await supabase.functions.invoke('reset-stuck-processing', {
+        body: { action: 'reset_stuck_processing' }
+      });
+
       if (error) throw error;
-      
+
       toast({
-        title: "Success",
-        description: "Stalled processing jobs have been reset",
+        title: "Processing Issues Resolved",
+        description: data?.message || "All stuck processing jobs have been reset and returned to the pipeline",
       });
       
       loadPendingArticles();
+      loadQueuedArticles();
       onRefresh?.();
     } catch (error) {
-      console.error('Error resetting stalled processing:', error);
+      console.error('Error resetting processing issues:', error);
       toast({
-        title: "Error",
-        description: "Failed to reset stalled processing jobs",
+        title: "Reset Failed",
+        description: "Could not reset processing issues. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsResettingStalled(false);
+    }
+  };
+
+  const returnToPipeline = async (article: Article) => {
+    try {
+      // First remove from queue
+      if (article.queue_id) {
+        const { error: deleteError } = await supabase
+          .from('content_generation_queue')
+          .delete()
+          .eq('id', article.queue_id);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Then reset article status to new
+      const { error: resetError } = await supabase
+        .from('articles')
+        .update({ 
+          processing_status: 'new',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', article.id);
+
+      if (resetError) throw resetError;
+
+      toast({
+        title: "Returned to Pipeline",
+        description: `"${article.title}" has been returned to the pending pipeline`,
+      });
+      
+      loadQueuedArticles();
+      loadPendingArticles();
+    } catch (error: any) {
+      console.error('Error returning to pipeline:', error);
+      toast({
+        title: "Return Failed",
+        description: "Could not return article to pipeline. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -474,19 +519,35 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             <>
               {/* Queued Articles */}
               {queuedArticles.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-primary">Queued for Processing ({queuedArticles.length})</h3>
-                    <Button 
-                      onClick={loadQueuedArticles}
-                      variant="outline" 
-                      size="sm"
-                      className="text-xs"
-                    >
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      Refresh Queue
-                    </Button>
-                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-primary">Queued for Processing ({queuedArticles.length})</h3>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={resetProcessingIssues}
+                          variant="outline" 
+                          size="sm"
+                          disabled={isResettingStalled}
+                          className="text-xs"
+                        >
+                          {isResettingStalled ? (
+                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Zap className="w-3 h-3 mr-1" />
+                          )}
+                          Reset Issues
+                        </Button>
+                        <Button 
+                          onClick={loadQueuedArticles}
+                          variant="outline" 
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </div>
                   {queuedArticles.map((article) => (
                     <Card key={`queued-${article.id}`} className="border border-primary/30 bg-primary/5">
                       <CardContent className="p-4">
@@ -562,6 +623,15 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                 Cancel
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => returnToPipeline(article)}
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Return to Pipeline
+                            </Button>
                           </div>
                           <Button
                             size="sm"
@@ -610,7 +680,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                     <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
                     <div className="flex gap-2">
                       <Button 
-                        onClick={resetStalledProcessing}
+                        onClick={resetProcessingIssues}
                         variant="outline" 
                         size="sm"
                         disabled={isResettingStalled}
@@ -623,8 +693,8 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                           </>
                         ) : (
                           <>
-                            <RefreshCw className="w-3 h-3 mr-1" />
-                            Reset Stalled
+                            <Zap className="w-3 h-3 mr-1" />
+                            Reset Issues
                           </>
                         )}
                       </Button>

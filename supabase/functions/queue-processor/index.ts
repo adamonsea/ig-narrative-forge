@@ -151,22 +151,28 @@ serve(async (req) => {
             console.log(`🔄 Job ${job.id} scheduled for retry in ${nextAttemptDelay/1000/60} minutes`);
           }
         } else {
-          // Mark job as failed after max attempts
-          const { error: failError } = await supabase
+          // Return article to pipeline after max attempts instead of marking as failed
+          console.log(`♻️ Job ${job.id} failed after ${job.attempts} attempts - returning article to pipeline`);
+          
+          // Delete the failed job from queue
+          const { error: deleteError } = await supabase
             .from('content_generation_queue')
-            .update({
-              status: 'failed',
-              completed_at: new Date().toISOString(),
-              error_message: jobError.message,
-              result_data: {
-                success: false,
-                error: jobError.message
-              }
-            })
+            .delete()
             .eq('id', job.id);
             
-          if (failError) {
-            console.error(`Failed to mark job ${job.id} as failed:`, failError);
+          // Reset article status back to 'new' so it appears in pipeline again
+          const { error: resetArticleError } = await supabase
+            .from('articles')
+            .update({
+              processing_status: 'new',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.article_id);
+            
+          if (!deleteError && !resetArticleError) {
+            console.log(`✅ Successfully returned article ${job.article_id} to pipeline after ${job.attempts} failed attempts`);
+          } else {
+            console.error(`❌ Failed to return article to pipeline:`, deleteError || resetArticleError);
           }
         }
 

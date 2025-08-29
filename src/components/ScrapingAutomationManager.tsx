@@ -22,6 +22,7 @@ interface ScrapingRule {
   failure_count: number;
   last_error: string | null;
   created_at: string;
+  is_scraping?: boolean; // For UI state tracking
 }
 
 interface ScrapingAutomationManagerProps {
@@ -150,8 +151,17 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
   };
 
   const triggerManualScrape = async (rule: ScrapingRule) => {
+    const [scrapingRule] = rules.filter(r => r.id === rule.id);
+    
+    // Update UI to show scraping in progress
+    setRules(prev => prev.map(r => 
+      r.id === rule.id 
+        ? { ...r, last_error: null, is_scraping: true } 
+        : r
+    ));
+
     try {
-      const { error } = await supabase.functions.invoke('topic-aware-scraper', {
+      const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
         body: {
           feedUrl: rule.source_url,
           topicId: topicId
@@ -160,17 +170,38 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
 
       if (error) throw error;
 
+      // Update the rule with success info
+      await updateRule(rule.id, {
+        last_scraped_at: new Date().toISOString(),
+        success_count: rule.success_count + 1,
+        last_error: null
+      });
+
       toast({
-        title: "Scraping Started",
-        description: "Manual scraping has been triggered"
+        title: "Scraping Completed",
+        description: `Successfully scraped ${data?.articlesFound || 0} articles from ${new URL(rule.source_url).hostname}`
       });
     } catch (error: any) {
       console.error('Error triggering manual scrape:', error);
+      
+      // Update rule with error info
+      await updateRule(rule.id, {
+        failure_count: rule.failure_count + 1,
+        last_error: error.message.substring(0, 500) // Truncate long errors
+      });
+
       toast({
         title: "Scraping Failed",
-        description: error.message,
+        description: `Could not scrape from ${new URL(rule.source_url).hostname}. Check the URL and try again.`,
         variant: "destructive"
       });
+    } finally {
+      // Remove scraping indicator
+      setRules(prev => prev.map(r => 
+        r.id === rule.id 
+          ? { ...r, is_scraping: false } 
+          : r
+      ));
     }
   };
 
@@ -291,14 +322,26 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
                     size="sm"
                     variant="outline"
                     onClick={() => triggerManualScrape(rule)}
+                    disabled={rule.is_scraping}
+                    className="min-w-[100px]"
                   >
-                    <RefreshCw className="h-4 w-4 mr-1" />
-                    Scrape Now
+                    {rule.is_scraping ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                        Scraping...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        Scrape Now
+                      </>
+                    )}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => deleteRule(rule.id)}
+                    disabled={rule.is_scraping}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
