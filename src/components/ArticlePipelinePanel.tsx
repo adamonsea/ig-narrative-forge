@@ -211,6 +211,68 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     }
   };
 
+  const clearAllStuckJobs = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-stuck-processing', {
+        body: { 
+          action: 'clear_stuck_queue'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "All Stuck Jobs Cleared",
+        description: "Removed all failed and stuck processing jobs"
+      });
+      
+      loadQueuedArticles();
+      loadPendingArticles();
+    } catch (error) {
+      console.error('Error clearing stuck jobs:', error);
+      toast({
+        title: "Clear Failed",
+        description: "Could not clear stuck jobs",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const changeArticleStatus = async (articleId: string, newStatus: 'new' | 'processed' | 'discarded') => {
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({
+          processing_status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      const statusLabels = {
+        new: 'New',
+        processed: 'Processed', 
+        discarded: 'Discarded'
+      };
+
+      toast({
+        title: "Status Changed",
+        description: `Article status changed to ${statusLabels[newStatus]}`
+      });
+      
+      loadPendingArticles();
+      loadQueuedArticles();
+    } catch (error: any) {
+      console.error('Error changing article status:', error);
+      toast({
+        title: "Status Change Failed",
+        description: error.message || "Could not change article status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const approveArticle = async (article: Article, slideType: 'short' | 'tabloid' | 'indepth' = 'tabloid') => {
     try {
       setProcessingArticle(article.id);

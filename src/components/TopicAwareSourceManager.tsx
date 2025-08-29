@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Settings, Trash2, ExternalLink, AlertCircle } from "lucide-react";
+import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +43,12 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const [newUrl, setNewUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [scrapingSource, setScrapingSource] = useState<string | null>(null);
+  const [scrapingAll, setScrapingAll] = useState(false);
+  const [automationSettings, setAutomationSettings] = useState<{
+    scrape_frequency_hours: number;
+    is_active: boolean;
+  }>({ scrape_frequency_hours: 12, is_active: true });
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -53,6 +59,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   useEffect(() => {
     if (currentTopicId) {
       loadSourcesForTopic(currentTopicId);
+      loadAutomationSettings(currentTopicId);
     } else {
       setSources([]);
     }
@@ -106,6 +113,29 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAutomationSettings = async (topicId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('topic_automation_settings')
+        .select('*')
+        .eq('topic_id', topicId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        throw error;
+      }
+
+      if (data) {
+        setAutomationSettings({
+          scrape_frequency_hours: data.scrape_frequency_hours,
+          is_active: data.is_active
+        });
+      }
+    } catch (error) {
+      console.error('Error loading automation settings:', error);
     }
   };
 
@@ -235,6 +265,121 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     }
   };
 
+  const handleScrapeSource = async (source: ContentSource) => {
+    if (!source.feed_url) return;
+    
+    try {
+      setScrapingSource(source.id);
+      
+      const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
+        body: {
+          feedUrl: source.feed_url,
+          topicId: currentTopicId
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Scraping Started",
+        description: `Started scraping "${source.source_name}"`
+      });
+
+      // Refresh sources to show updated last_scraped_at
+      setTimeout(() => {
+        loadSourcesForTopic(currentTopicId);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error scraping source:', error);
+      toast({
+        title: "Scraping Failed",
+        description: `Failed to scrape "${source.source_name}"`,
+        variant: "destructive"
+      });
+    } finally {
+      setScrapingSource(null);
+    }
+  };
+
+  const handleScrapeAllSources = async () => {
+    const activeSources = sources.filter(s => s.is_active && s.feed_url);
+    if (activeSources.length === 0) {
+      toast({
+        title: "No Active Sources",
+        description: "Add some active sources with URLs first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setScrapingAll(true);
+      
+      // Scrape all active sources in parallel
+      const scrapePromises = activeSources.map(source => 
+        supabase.functions.invoke('topic-aware-scraper', {
+          body: {
+            feedUrl: source.feed_url,
+            topicId: currentTopicId
+          }
+        })
+      );
+
+      await Promise.allSettled(scrapePromises);
+
+      toast({
+        title: "Bulk Scraping Started", 
+        description: `Started scraping ${activeSources.length} sources`
+      });
+
+      // Refresh sources after scraping
+      setTimeout(() => {
+        loadSourcesForTopic(currentTopicId);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error bulk scraping:', error);
+      toast({
+        title: "Bulk Scraping Failed",
+        description: "Some sources may have failed to scrape",
+        variant: "destructive"
+      });
+    } finally {
+      setScrapingAll(false);
+    }
+  };
+
+  const updateAutomationSettings = async (newSettings: { scrape_frequency_hours: number; is_active: boolean }) => {
+    try {
+      const { error } = await supabase
+        .from('topic_automation_settings')
+        .upsert({
+          topic_id: currentTopicId,
+          scrape_frequency_hours: newSettings.scrape_frequency_hours,
+          is_active: newSettings.is_active,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      setAutomationSettings(newSettings);
+      
+      toast({
+        title: "Automation Updated",
+        description: `Sources will be scraped every ${newSettings.scrape_frequency_hours} hours`
+      });
+
+    } catch (error) {
+      console.error('Error updating automation settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update automation settings",
+        variant: "destructive"
+      });
+    }
+  };
+
   const currentTopic = topics.find(t => t.id === currentTopicId);
 
   return (
@@ -305,17 +450,84 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       {currentTopicId && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Sources for {currentTopic?.name}
-              <Badge variant="outline" className="ml-2">
-                {sources.length} sources
-              </Badge>
-            </CardTitle>
-            <CardDescription>
-              Website sources providing content for this topic
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  Sources for {currentTopic?.name}
+                  <Badge variant="outline">
+                    {sources.length} sources
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Website sources providing content for this topic
+                </CardDescription>
+              </div>
+              
+              {sources.filter(s => s.is_active && s.feed_url).length > 0 && (
+                <Button 
+                  onClick={handleScrapeAllSources}
+                  disabled={scrapingAll}
+                  variant="default"
+                >
+                  {scrapingAll ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  ) : (
+                    <Zap className="w-4 h-4 mr-2" />
+                  )}
+                  {scrapingAll ? 'Scraping All...' : 'Scrape All Active'}
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Automation Settings */}
+            <div className="p-4 border rounded-lg bg-muted/50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">Automation Settings</span>
+                </div>
+                <Badge variant={automationSettings.is_active ? "default" : "secondary"}>
+                  {automationSettings.is_active ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="frequency-select" className="text-sm">Scrape every:</Label>
+                  <Select 
+                    value={automationSettings.scrape_frequency_hours.toString()} 
+                    onValueChange={(value) => updateAutomationSettings({
+                      ...automationSettings,
+                      scrape_frequency_hours: parseInt(value)
+                    })}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6 hours</SelectItem>
+                      <SelectItem value="12">12 hours</SelectItem>
+                      <SelectItem value="24">Daily</SelectItem>
+                      <SelectItem value="48">2 days</SelectItem>
+                      <SelectItem value="168">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => updateAutomationSettings({
+                    ...automationSettings,
+                    is_active: !automationSettings.is_active
+                  })}
+                >
+                  {automationSettings.is_active ? 'Disable' : 'Enable'}
+                </Button>
+              </div>
+            </div>
+            
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -360,6 +572,22 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {source.feed_url && source.is_active && (
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => handleScrapeSource(source)}
+                          disabled={scrapingSource === source.id}
+                        >
+                          {scrapingSource === source.id ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1" />
+                          ) : (
+                            <Play className="w-3 h-3 mr-1" />
+                          )}
+                          {scrapingSource === source.id ? 'Scraping...' : 'Scrape Now'}
+                        </Button>
+                      )}
+                      
                       {source.feed_url && (
                         <Button 
                           size="sm" 

@@ -1203,6 +1203,47 @@ export type Database = {
         }
         Relationships: []
       }
+      topic_automation_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          next_run_at: string
+          scrape_frequency_hours: number
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string
+          scrape_frequency_hours?: number
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string
+          scrape_frequency_hours?: number
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_automation_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_memberships: {
         Row: {
           created_at: string | null
