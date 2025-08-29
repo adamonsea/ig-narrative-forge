@@ -302,14 +302,19 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     
     try {
       // Check if article moved to queue
-      const { data: queueItem } = await supabase
+      const { data: queueItem, error: queueError } = await supabase
         .from('content_generation_queue')
         .select(`
           *,
           articles!inner(title, source_url)
         `)
         .eq('article_id', articleId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid errors when no item found
+
+      if (queueError) {
+        console.error('Error checking queue status:', queueError);
+        return;
+      }
 
       if (queueItem) {
         // Add to queue items if found
@@ -341,6 +346,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           pending_articles: prev.pending_articles - 1,
           processing_queue: prev.processing_queue + 1
         }));
+      } else {
+        // If no queue item found, the job might have already completed
+        // Trigger a full refresh to update the UI properly
+        console.log('Job may have completed already, refreshing content...');
+        loadTopicContent();
       }
     } catch (error) {
       console.error('Error refreshing article status:', error);
