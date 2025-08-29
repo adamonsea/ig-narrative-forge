@@ -318,12 +318,52 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
     
     if (eventType === 'UPDATE' && newRecord) {
-      // Update existing story only if it belongs to current topic
-      setStories(prev => prev.map(story => 
-        story.id === newRecord.id 
-          ? { ...story, ...newRecord }
-          : story
-      ));
+      // Handle publication status changes properly
+      const existingStory = stories.find(s => s.id === newRecord.id);
+      
+      if (existingStory) {
+        // Story exists in our list
+        if (newRecord.is_published === false) {
+          // Story was unpublished - remove from list
+          setStories(prev => prev.filter(s => s.id !== newRecord.id));
+          setStats(prev => ({
+            ...prev,
+            ready_stories: Math.max(0, prev.ready_stories - 1)
+          }));
+        } else {
+          // Story is still published - update it
+          setStories(prev => prev.map(story => 
+            story.id === newRecord.id 
+              ? { ...story, ...newRecord }
+              : story
+          ));
+        }
+      } else {
+        // Story not in our list - check if it should be added (published story)
+        if (newRecord.is_published === true) {
+          // Fetch the full story data and add it if it belongs to current topic
+          const fetchAndAddStory = async () => {
+            const { data: storyWithTopic } = await supabase
+              .from('stories')
+              .select(`*, articles!inner(id, title, source_url, author, region, published_at, word_count, topic_id), slides(*)`)
+              .eq('id', newRecord.id)
+              .eq('articles.topic_id', selectedTopicId)
+              .single();
+              
+            if (storyWithTopic) {
+              setStories(prev => [...prev, {
+                ...storyWithTopic,
+                article: storyWithTopic.articles
+              }]);
+              setStats(prev => ({
+                ...prev,
+                ready_stories: prev.ready_stories + 1
+              }));
+            }
+          };
+          fetchAndAddStory();
+        }
+      }
     }
     
     if (eventType === 'DELETE' && payload.old) {

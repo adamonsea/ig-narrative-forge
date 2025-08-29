@@ -55,6 +55,7 @@ export default function EastbourneFeed() {
           )
         `)
         .eq("status", "ready")
+        .eq("is_published", true) // Only show published stories in live feed
         .ilike("articles.region", "%eastbourne%");
 
       if (error) {

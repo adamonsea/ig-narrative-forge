@@ -105,6 +105,7 @@ const TopicFeed = () => {
           )
         `)
         .eq('status', 'ready')
+        .eq('is_published', true) // Only show published stories in live feed
         .eq('articles.topic_id', topicData.id)
         .order('created_at', { ascending: sortBy === 'oldest' });
 
