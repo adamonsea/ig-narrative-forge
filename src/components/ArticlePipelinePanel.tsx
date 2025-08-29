@@ -550,7 +550,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
                             <div className="flex-1 pr-4">
-                              <h3 className="font-semibold text-lg mb-2 leading-tight">{article.title}</h3>
+                              <h3 className="font-semibold text-xl mb-2 leading-tight">{article.title}</h3>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                                 <span>{article.author || 'Unknown Author'}</span>
                                 <span>•</span>
@@ -563,11 +563,9 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                 )}
                               </div>
                               
-                              <div className="flex gap-2 flex-wrap">
+                              <div className="flex gap-2">
                                 {hasLowWordCount ? (
                                   <Button
-                                    size="sm"
-                                    variant="outline"
                                     onClick={() => handleExtractContent(article)}
                                     disabled={processingArticle === article.id}
                                   >
@@ -575,35 +573,26 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                   </Button>
                                 ) : (
                                   <Button
-                                    size="sm"
                                     onClick={() => approveArticle(article)}
                                     disabled={processingArticle === article.id}
                                   >
-                                    <Sparkles className="w-3 h-3 mr-1" />
                                     Approve
                                   </Button>
                                 )}
                                 
                                 <Button
-                                  size="sm"
                                   variant="outline"
                                   onClick={() => rejectArticle(article.id)}
                                 >
-                                  <XCircle className="w-3 h-3 mr-1" />
                                   Reject
                                 </Button>
                                 
                                 <Button
-                                  size="sm"
                                   variant="destructive"
                                   onClick={() => deleteArticle(article.id)}
                                   disabled={deletingArticle === article.id}
                                 >
-                                  {deletingArticle === article.id ? (
-                                    <div className="w-3 h-3 border-2 border-current border-t-transparent animate-spin rounded-full" />
-                                  ) : (
-                                    <Trash2 className="w-3 h-3" />
-                                  )}
+                                  {deletingArticle === article.id ? 'Deleting...' : 'Delete'}
                                 </Button>
                               </div>
                             </div>
