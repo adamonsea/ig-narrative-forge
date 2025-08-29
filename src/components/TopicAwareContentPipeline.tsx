@@ -156,24 +156,188 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     if (selectedTopicId) {
       loadTopicContent();
       
-      // Set up smart refresh - only for queue and stories, less frequent
-      const interval = setInterval(() => {
-        refreshQueueAndStories();
-      }, 15000); // Reduced frequency
-      
-      setRefreshInterval(interval);
-      
+      // Set up real-time subscriptions for live updates
+      const queueChannel = supabase
+        .channel('queue-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'content_generation_queue'
+          },
+          (payload) => {
+            console.log('🔄 Queue change detected:', payload);
+            handleQueueChange(payload);
+          }
+        )
+        .subscribe();
+
+      const storiesChannel = supabase
+        .channel('stories-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public', 
+            table: 'stories'
+          },
+          (payload) => {
+            console.log('📚 Story change detected:', payload);
+            handleStoryChange(payload);
+          }
+        )
+        .subscribe();
+
+      const articlesChannel = supabase
+        .channel('articles-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'articles'
+          },
+          (payload) => {
+            console.log('📰 Article update detected:', payload);
+            handleArticleChange(payload);
+          }
+        )
+        .subscribe();
+
       return () => {
-        if (interval) clearInterval(interval);
+        supabase.removeChannel(queueChannel);
+        supabase.removeChannel(storiesChannel);
+        supabase.removeChannel(articlesChannel);
       };
     }
   }, [selectedTopicId]);
   
-  useEffect(() => {
-    return () => {
-      if (refreshInterval) clearInterval(refreshInterval);
-    };
-  }, [refreshInterval]);
+  // Real-time event handlers
+  const handleQueueChange = async (payload: any) => {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    if (eventType === 'INSERT' && newRecord) {
+      // Article added to queue - remove from articles list, add to queue
+      if (newRecord.article_id) {
+        setArticles(prev => prev.filter(a => a.id !== newRecord.article_id));
+        
+        // Fetch full queue item with article details
+        const { data: queueWithArticle } = await supabase
+          .from('content_generation_queue')
+          .select(`*, articles!inner(title, source_url)`)
+          .eq('id', newRecord.id)
+          .single();
+          
+        if (queueWithArticle) {
+          setQueueItems(prev => {
+            const exists = prev.find(q => q.id === queueWithArticle.id);
+            if (!exists) {
+              return [...prev, {
+                id: queueWithArticle.id,
+                status: queueWithArticle.status,
+                created_at: queueWithArticle.created_at,
+                attempts: queueWithArticle.attempts,
+                max_attempts: queueWithArticle.max_attempts,
+                error_message: queueWithArticle.error_message,
+                article: {
+                  title: queueWithArticle.articles.title,
+                  source_url: queueWithArticle.articles.source_url
+                }
+              }];
+            }
+            return prev;
+          });
+          
+          setStats(prev => ({
+            ...prev,
+            pending_articles: prev.pending_articles - 1,
+            processing_queue: prev.processing_queue + 1
+          }));
+        }
+      }
+    }
+    
+    if (eventType === 'UPDATE' && newRecord) {
+      // Update queue item status
+      setQueueItems(prev => prev.map(item => 
+        item.id === newRecord.id 
+          ? { ...item, status: newRecord.status, attempts: newRecord.attempts, error_message: newRecord.error_message }
+          : item
+      ));
+    }
+    
+    if (eventType === 'DELETE' && oldRecord) {
+      // Remove completed queue item
+      setQueueItems(prev => prev.filter(q => q.id !== oldRecord.id));
+      setStats(prev => ({
+        ...prev,
+        processing_queue: Math.max(0, prev.processing_queue - 1)
+      }));
+    }
+  };
+
+  const handleStoryChange = async (payload: any) => {
+    const { eventType, new: newRecord } = payload;
+    
+    if (eventType === 'INSERT' && newRecord) {
+      // New story created - fetch with full details and add to stories
+      const { data: storyWithDetails } = await supabase
+        .from('stories')
+        .select(`*, articles!inner(id, title, source_url, author, region, published_at, word_count), slides(*)`)
+        .eq('id', newRecord.id)
+        .single();
+        
+      if (storyWithDetails) {
+        setStories(prev => {
+          const exists = prev.find(s => s.id === storyWithDetails.id);
+          if (!exists) {
+            return [...prev, {
+              ...storyWithDetails,
+              article: storyWithDetails.articles
+            }];
+          }
+          return prev;
+        });
+        
+        setStats(prev => ({
+          ...prev,
+          ready_stories: prev.ready_stories + 1
+        }));
+      }
+    }
+    
+    if (eventType === 'UPDATE' && newRecord) {
+      // Update existing story
+      setStories(prev => prev.map(story => 
+        story.id === newRecord.id 
+          ? { ...story, ...newRecord }
+          : story
+      ));
+    }
+    
+    if (eventType === 'DELETE' && payload.old) {
+      // Remove deleted story
+      setStories(prev => prev.filter(s => s.id !== payload.old.id));
+      setStats(prev => ({
+        ...prev,
+        ready_stories: Math.max(0, prev.ready_stories - 1)
+      }));
+    }
+  };
+
+  const handleArticleChange = (payload: any) => {
+    const { eventType, new: newRecord } = payload;
+    
+    if (eventType === 'UPDATE' && newRecord) {
+      // Update article in the list
+      setArticles(prev => prev.map(article => 
+        article.id === newRecord.id 
+          ? { ...article, ...newRecord }
+          : article
+      ));
+    }
+  };
 
   const loadTopics = async () => {
     try {
