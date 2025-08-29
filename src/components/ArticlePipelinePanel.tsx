@@ -119,7 +119,12 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             queue_error: queueInfo?.error_message,
             is_stuck: isStuck
           };
-        }) || [];
+        }).filter(article => 
+          // Filter out failed items - only show pending, processing, or stuck items
+          article.queue_status === 'pending' || 
+          article.queue_status === 'processing' || 
+          article.is_stuck
+        ) || [];
 
         setQueuedArticles(enrichedQueuedArticles);
       } else {
@@ -581,11 +586,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                               {getArticleWordCountBadge(article.word_count || 0)}
                             </div>
                             <h3 className="font-medium text-sm mb-1 line-clamp-2">{article.title}</h3>
-                            {article.is_stuck && article.queue_error && (
-                              <div className="text-xs text-red-600 mb-2 p-2 bg-red-50 rounded border border-red-200">
-                                <strong>Error:</strong> {article.queue_error}
-                              </div>
-                            )}
+                            {/* Error messages now shown via toast instead of inline */}
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                               <span>{article.author || 'Unknown Author'}</span>
                               <span>•</span>
@@ -679,25 +680,6 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
                     <div className="flex gap-2">
-                      <Button 
-                        onClick={resetProcessingIssues}
-                        variant="outline" 
-                        size="sm"
-                        disabled={isResettingStalled}
-                        className="text-xs"
-                      >
-                        {isResettingStalled ? (
-                          <>
-                            <div className="w-3 h-3 border-2 border-current border-t-transparent animate-spin rounded-full mr-1" />
-                            Resetting...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3 h-3 mr-1" />
-                            Reset Issues
-                          </>
-                        )}
-                      </Button>
                       <Button 
                         onClick={loadPendingArticles}
                         variant="outline" 
