@@ -117,8 +117,8 @@ export class EnhancedScrapingStrategies {
       
       console.log(`📄 Found ${itemMatches.length} RSS items`);
 
-      // Process RSS items with enhanced content extraction
-      for (const itemMatch of itemMatches.slice(0, 100)) { // Process up to 100 articles
+      // Process RSS items with enhanced content extraction - INCREASED LIMIT
+      for (const itemMatch of itemMatches.slice(0, 250)) { // Process up to 250 articles
         try {
           const article = await this.parseRSSItemEnhanced(itemMatch, feedUrl);
           if (article && this.isArticleQualified(article)) {
@@ -225,8 +225,8 @@ export class EnhancedScrapingStrategies {
       
       console.log(`📄 Found ${articleLinks.length} potential article links`);
 
-      // Process each article link with enhanced extraction
-      for (const articleUrl of articleLinks.slice(0, 8)) { // Reasonable limit
+      // Process each article link with enhanced extraction - INCREASED LIMIT
+      for (const articleUrl of articleLinks.slice(0, 25)) { // Increased limit for more articles
         try {
           const extractor = new UniversalContentExtractor(articleUrl);
           const articleHtml = await extractor.fetchWithRetry(articleUrl);
@@ -306,25 +306,25 @@ export class EnhancedScrapingStrategies {
   }
 
   private isArticleQualified(article: ArticleData): boolean {
-    // More lenient qualification criteria for better capture
-    const hasMinimumWords = (article.word_count || 0) >= 20; // Reduced threshold
-    const hasDecentQuality = (article.content_quality_score || 0) >= 15; // Reduced threshold  
-    const hasMinimumContent = (article.body?.length || 0) > 50; // Reduced threshold
+    // VOLUME-FIRST: Very lenient qualification - capture almost everything
+    const hasMinimumWords = (article.word_count || 0) >= 10; // Very low threshold
+    const hasMinimumContent = (article.body?.length || 0) > 20; // Very low threshold
+    const hasTitle = article.title && article.title.length > 5;
     
-    console.log(`🔍 Article qualification: "${article.title}"`);
-    console.log(`   Words: ${article.word_count || 0}, Quality: ${article.content_quality_score || 0}, Length: ${article.body?.length || 0}`);
-    console.log(`   Qualified: ${hasMinimumWords && hasDecentQuality && hasMinimumContent}`);
+    console.log(`🔍 VOLUME-FIRST Article qualification: "${article.title?.substring(0, 50)}..."`);
+    console.log(`   Words: ${article.word_count || 0}, Length: ${article.body?.length || 0}, Has Title: ${hasTitle}`);
+    console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle}`);
     
-    return hasMinimumWords && hasDecentQuality && hasMinimumContent;
+    return hasMinimumWords && hasMinimumContent && hasTitle;
   }
 
   private isContentQualified(content: any): boolean {
-    // More lenient content qualification
-    const hasMinimumWords = (content.word_count || 0) >= 20; 
-    const hasDecentQuality = (content.content_quality_score || 0) >= 15;
-    const hasMinimumContent = (content.body?.length || 0) > 50;
+    // VOLUME-FIRST: Very lenient content qualification
+    const hasMinimumWords = (content.word_count || 0) >= 10;
+    const hasMinimumContent = (content.body?.length || 0) > 20;
+    const hasTitle = content.title && content.title.length > 5;
     
-    return hasMinimumWords && hasDecentQuality && hasMinimumContent;
+    return hasMinimumWords && hasMinimumContent && hasTitle;
   }
 
   // Helper methods

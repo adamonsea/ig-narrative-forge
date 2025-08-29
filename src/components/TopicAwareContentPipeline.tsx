@@ -137,6 +137,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   });
   const [isResettingStalled, setIsResettingStalled] = useState(false);
   const [isResettingStuck, setIsResettingStuck] = useState(false);
+  const [minRelevanceScore, setMinRelevanceScore] = useState(0); // Filtering control
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -385,8 +386,9 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         .select('*')
         .eq('topic_id', selectedTopicId)
         .eq('processing_status', 'new')
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .order('regional_relevance_score', { ascending: false }) // Sort by relevance score first
+        .order('created_at', { ascending: false }) // Then by recency
+        .limit(50); // Increased limit to show more articles
 
       // Only add exclusion if there are IDs to exclude
       if (excludedIds.length > 0) {
@@ -1106,55 +1108,126 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
               <CardHeader>
                 <CardTitle>Pending Articles - {currentTopic?.name}</CardTitle>
                 <CardDescription>
-                  Articles waiting for approval to enter the generation pipeline
+                  Articles waiting for approval, sorted by relevance score (highest first)
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Filtering Controls */}
+                <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="min-score-filter">Minimum Relevance Score: {minRelevanceScore}%</Label>
+                      <input
+                        id="min-score-filter"
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={minRelevanceScore}
+                        onChange={(e) => setMinRelevanceScore(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>0%</span>
+                        <span>Show articles with {minRelevanceScore}%+ relevance</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Showing {articles.filter(a => (a.regional_relevance_score || 0) >= minRelevanceScore).length} of {articles.length} articles
+                    </div>
+                  </div>
+                </div>
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                   </div>
-                ) : articles.length > 0 ? (
-                  <div className="space-y-3">
-                     {articles.map((article) => (
-                       <div key={article.id} className="border rounded-lg">
-                         <div className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <h3 className="font-bold text-2xl mb-3 text-primary leading-tight">{article.title}</h3>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                                  <span className="font-medium">{article.author || 'Unknown Author'}</span>
-                                  <span>•</span>
-                                  <span>{new Date(article.created_at).toLocaleDateString()}</span>
-                                  <span>•</span>
-                                  <span className="font-medium">{article.word_count || 0} words</span>
-                                </div>
-                                <div className="flex items-center gap-2 mb-3 p-3 bg-muted/50 rounded-lg">
-                                  <Link className="w-4 h-4 text-primary" />
-                                  <a 
-                                    href={article.source_url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary/80 font-medium truncate flex-1"
-                                  >
-                                    {new URL(article.source_url).hostname}
-                                  </a>
-                                  <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                                </div>
-                                {article.summary && (
-                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  onClick={() => setPreviewArticle(article)}
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
+                ) : articles.filter(a => (a.regional_relevance_score || 0) >= minRelevanceScore).length > 0 ? (
+                   <div className="space-y-3">
+                      {articles
+                        .filter(a => (a.regional_relevance_score || 0) >= minRelevanceScore)
+                        .map((article) => (
+                        <div key={article.id} className="border rounded-lg">
+                          <div className="p-4">
+                             <div className="flex items-start justify-between mb-3">
+                               <div className="flex-1">
+                                 <div className="flex items-center gap-3 mb-2">
+                                   <h3 className="font-bold text-2xl text-primary leading-tight flex-1">{article.title}</h3>
+                                   {/* VOLUME-FIRST: Relevance Score Badge */}
+                                   <div className="flex items-center gap-2">
+                                     <Badge 
+                                       variant={
+                                         (article.regional_relevance_score || 0) >= 70 ? "default" :
+                                         (article.regional_relevance_score || 0) >= 40 ? "secondary" : "outline"
+                                       }
+                                       className="text-sm font-semibold"
+                                     >
+                                       {article.regional_relevance_score || 0}% relevance
+                                     </Badge>
+                                     {article.import_metadata?.topic_relevance?.details?.keyword_matches && (
+                                       <Badge variant="outline" className="text-xs">
+                                         {article.import_metadata.topic_relevance.details.keyword_matches.length} keywords
+                                       </Badge>
+                                     )}
+                                   </div>
+                                 </div>
+                                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                   <span className="font-medium">{article.author || 'Unknown Author'}</span>
+                                   <span>•</span>
+                                   <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                                   <span>•</span>
+                                   <span className="font-medium">{article.word_count || 0} words</span>
+                                   {article.content_quality_score && (
+                                     <>
+                                       <span>•</span>
+                                       <Badge variant="outline" className="text-xs">
+                                         Quality: {article.content_quality_score}%
+                                       </Badge>
+                                     </>
+                                   )}
+                                 </div>
+                                 
+                                 {/* VOLUME-FIRST: Keyword Matches Display */}
+                                 {article.import_metadata?.topic_relevance?.method === 'keyword' && 
+                                  article.import_metadata?.topic_relevance?.details?.keyword_matches && (
+                                   <div className="mb-3 p-2 bg-blue-50 rounded border-l-4 border-blue-200">
+                                     <div className="text-xs font-medium text-blue-800 mb-1">Keyword Matches:</div>
+                                     <div className="flex flex-wrap gap-1">
+                                       {article.import_metadata.topic_relevance.details.keyword_matches.map((match: any, idx: number) => (
+                                         <Badge key={idx} variant="secondary" className="text-xs">
+                                           {match.keyword} ({match.count}x)
+                                         </Badge>
+                                       ))}
+                                     </div>
+                                   </div>
+                                 )}
+                                 
+                                 <div className="flex items-center gap-2 mb-3 p-3 bg-muted/50 rounded-lg">
+                                   <Link className="w-4 h-4 text-primary" />
+                                   <a 
+                                     href={article.source_url} 
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="text-primary hover:text-primary/80 font-medium truncate flex-1"
+                                   >
+                                     {new URL(article.source_url).hostname}
+                                   </a>
+                                   <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                                 </div>
+                                 {article.summary && (
+                                   <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
+                                 )}
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <Button
+                                   onClick={() => setPreviewArticle(article)}
+                                   size="sm"
+                                   variant="outline"
+                                 >
+                                   <Eye className="w-4 h-4" />
+                                 </Button>
+                               </div>
+                             </div>
                            
                             <div className="space-y-3 pt-3 border-t">
                               <div className="space-y-2">
@@ -1212,14 +1285,33 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                      ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No pending articles</h3>
-                    <p className="text-muted-foreground">
-                      All articles for this topic have been processed
-                    </p>
-                  </div>
-                )}
+                   <div className="text-center py-8">
+                     <CheckCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                     {articles.length === 0 ? (
+                       <>
+                         <h3 className="text-lg font-semibold mb-2">No pending articles</h3>
+                         <p className="text-muted-foreground">
+                           All articles for this topic have been processed, or no articles have been scraped yet.
+                         </p>
+                       </>
+                     ) : (
+                       <>
+                         <h3 className="text-lg font-semibold mb-2">No articles match your filter</h3>
+                         <p className="text-muted-foreground">
+                           Try lowering the minimum relevance score to see more articles.
+                         </p>
+                         <Button 
+                           variant="outline" 
+                           size="sm" 
+                           className="mt-3"
+                           onClick={() => setMinRelevanceScore(0)}
+                         >
+                           Show All Articles
+                         </Button>
+                       </>
+                     )}
+                   </div>
+                 )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -65,7 +65,7 @@ export function calculateTopicRelevance(
 }
 
 /**
- * Simple keyword-based relevance scoring
+ * Enhanced keyword-based relevance scoring with better matching
  */
 function calculateKeywordRelevance(
   content: string,
@@ -84,42 +84,89 @@ function calculateKeywordRelevance(
     const normalizedKeyword = keyword.toLowerCase().trim();
     if (!normalizedKeyword) continue;
 
-    // Enhanced keyword matching - both exact and partial word matches
-    const exactRegex = new RegExp(`\\b${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-    const partialRegex = new RegExp(normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    
-    const exactMatches = (fullText.match(exactRegex) || []).length;
-    const partialMatches = (fullText.match(partialRegex) || []).length;
-    
-    // Prefer exact matches, but count partial matches with lower weight
-    const occurrences = exactMatches > 0 ? exactMatches : Math.ceil(partialMatches * 0.6);
+    // Generate keyword variations for better matching
+    const keywordVariations = generateKeywordVariations(normalizedKeyword);
+    let keywordScore = 0;
+    let keywordOccurrences = 0;
 
-    if (occurrences > 0) {
-      matches.push({ keyword, count: occurrences });
+    for (const variation of keywordVariations) {
+      // Enhanced keyword matching - both exact and partial word matches
+      const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      const partialRegex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       
-      // Scoring: title matches worth more, diminishing returns for multiple occurrences
-      const titleExactMatches = (title.toLowerCase().match(exactRegex) || []).length;
-      const titlePartialMatches = (title.toLowerCase().match(partialRegex) || []).length;
-      const titleMatches = titleExactMatches > 0 ? titleExactMatches : Math.ceil(titlePartialMatches * 0.6);
-      const contentMatches = Math.max(0, occurrences - titleMatches);
+      const exactMatches = (fullText.match(exactRegex) || []).length;
+      const partialMatches = (fullText.match(partialRegex) || []).length;
       
-      // Title matches: 10 points each, Content matches: 3 points each
-      // Diminishing returns: cap at 5 matches per keyword
-      const titleScore = Math.min(titleMatches * 10, 50);
-      const contentScore = Math.min(contentMatches * 3, 15);
-      
-      totalScore += titleScore + contentScore;
+      // Prefer exact matches, but count partial matches with lower weight
+      const occurrences = exactMatches > 0 ? exactMatches : Math.ceil(partialMatches * 0.5);
+      keywordOccurrences += occurrences;
+
+      if (occurrences > 0) {
+        // Context-aware scoring: title, first paragraph, and headings get bonus
+        const titleText = title.toLowerCase();
+        const firstParagraph = content.substring(0, 500).toLowerCase();
+        
+        const titleExactMatches = (titleText.match(exactRegex) || []).length;
+        const firstParaMatches = (firstParagraph.match(exactRegex) || []).length;
+        
+        // Enhanced scoring system
+        const titleScore = titleExactMatches * 15; // Higher weight for title
+        const firstParaScore = Math.min(firstParaMatches * 8, 24); // Bonus for early mentions
+        const contentScore = Math.min((occurrences - titleExactMatches - firstParaMatches) * 3, 15);
+        
+        keywordScore += titleScore + firstParaScore + contentScore;
+      }
+    }
+
+    if (keywordOccurrences > 0) {
+      matches.push({ keyword, count: keywordOccurrences });
+      totalScore += keywordScore;
     }
   }
 
-  // Normalize to 0-100 scale
-  // Base assumption: 3-4 keyword matches should give ~70-80 score
-  const normalizedScore = Math.min(Math.round(totalScore * 1.2), 100);
+  // Improved normalization: more generous scoring for multiple keyword matches
+  let normalizedScore = Math.min(Math.round(totalScore * 1.5), 100);
+  
+  // Bonus for multiple different keywords matching
+  if (matches.length > 1) {
+    normalizedScore = Math.min(normalizedScore + (matches.length - 1) * 5, 100);
+  }
   
   return {
     score: normalizedScore,
     matches
   };
+}
+
+/**
+ * Generate keyword variations for better matching
+ */
+function generateKeywordVariations(keyword: string): string[] {
+  const variations = [keyword];
+  
+  // Add plural/singular variations
+  if (keyword.endsWith('s') && keyword.length > 3) {
+    variations.push(keyword.slice(0, -1)); // Remove 's'
+  } else {
+    variations.push(keyword + 's'); // Add 's'
+  }
+  
+  // Add common word variations for film/movie keywords
+  const filmSynonyms: { [key: string]: string[] } = {
+    'film': ['movie', 'cinema', 'picture'],
+    'movie': ['film', 'cinema', 'picture'],
+    'children': ['kids', 'child', 'youth', 'young'],
+    'kids': ['children', 'child', 'youth', 'young'],
+    'family': ['families', 'parent', 'child'],
+    'animation': ['animated', 'cartoon', 'anime'],
+    'documentary': ['doc', 'docu', 'factual']
+  };
+  
+  if (filmSynonyms[keyword]) {
+    variations.push(...filmSynonyms[keyword]);
+  }
+  
+  return [...new Set(variations)]; // Remove duplicates
 }
 
 /**

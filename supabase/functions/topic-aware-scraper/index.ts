@@ -124,29 +124,27 @@ serve(async (req) => {
       });
     }
 
-    // Apply topic-aware filtering
-    const relevantArticles = scrapingResult.articles.filter(article => {
+    // VOLUME-FIRST APPROACH: Score ALL articles but store them all
+    const allArticlesWithScores = scrapingResult.articles.map(article => {
       const relevanceScore = calculateTopicRelevance(
         article.body, 
         article.title, 
         topicConfig,
-        'national' // Default source type, could be enhanced
+        sourceInfo.source_type || 'national'
       );
 
-      const threshold = getRelevanceThreshold(topicConfig.topic_type, 'national');
-      const isRelevant = relevanceScore.relevance_score >= threshold;
-
-      // Add scoring metadata
+      // Add comprehensive scoring metadata but DON'T filter
       article.regional_relevance_score = relevanceScore.relevance_score;
       article.import_metadata = {
         ...article.import_metadata,
         topic_relevance: relevanceScore,
         topic_id: topicId,
         topic_type: topicConfig.topic_type,
-        filtering_method: relevanceScore.method
+        filtering_method: relevanceScore.method,
+        scrape_approach: 'volume_first'
       };
 
-      console.log(`Article "${article.title}" relevance: ${relevanceScore.relevance_score}% (threshold: ${threshold}%) - ${isRelevant ? 'ACCEPTED' : 'REJECTED'}`);
+      console.log(`Article "${article.title.substring(0, 50)}..." relevance: ${relevanceScore.relevance_score}% - STORING ALL ARTICLES`);
       
       // Add detailed keyword matching debug info
       if (relevanceScore.method === 'keyword' && relevanceScore.details.keyword_matches) {
@@ -154,18 +152,18 @@ serve(async (req) => {
         console.log(`  Topic keywords:`, topicConfig.keywords);
       }
       
-      return isRelevant;
+      return article;
     });
 
-    // Store relevant articles
+    // Store ALL articles with their scores
     const { stored, duplicates, discarded } = await dbOps.storeArticles(
-      relevantArticles,
+      allArticlesWithScores,
       actualSourceId,
       topicConfig.region || 'general',
       topicId
     );
 
-    console.log(`📊 Storage summary - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
+    console.log(`📊 VOLUME-FIRST Storage - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
 
     // Update source metrics
     await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
@@ -177,11 +175,12 @@ serve(async (req) => {
       source_id: actualSourceId,
       feed_url: feedUrl,
       articles_found: scrapingResult.articlesFound,
-      articles_relevant: relevantArticles.length,
+      articles_with_scores: allArticlesWithScores.length,
       articles_stored: stored,
       duplicates_detected: duplicates,
       articles_discarded: discarded,
-      filtering_method: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching'
+      scoring_method: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
+      approach: 'volume_first'
     }, 'topic-aware-scraper');
 
     return new Response(JSON.stringify({
@@ -189,11 +188,12 @@ serve(async (req) => {
       topicName: topicData.name,
       topicType: topicConfig.topic_type,
       articlesFound: scrapingResult.articlesFound,
-      articlesRelevant: relevantArticles.length,
+      articlesWithScores: allArticlesWithScores.length,
       articlesStored: stored,
       duplicatesDetected: duplicates,
       articlesDiscarded: discarded,
-      filteringMethod: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching'
+      scoringMethod: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
+      approach: 'volume_first'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
