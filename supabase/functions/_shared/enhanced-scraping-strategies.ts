@@ -118,7 +118,7 @@ export class EnhancedScrapingStrategies {
       console.log(`📄 Found ${itemMatches.length} RSS items`);
 
       // Process RSS items with enhanced content extraction
-      for (const itemMatch of itemMatches.slice(0, 15)) { // Increased limit
+      for (const itemMatch of itemMatches.slice(0, 100)) { // Process up to 100 articles
         try {
           const article = await this.parseRSSItemEnhanced(itemMatch, feedUrl);
           if (article && this.isArticleQualified(article)) {

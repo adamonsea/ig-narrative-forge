@@ -354,12 +354,18 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setLoading(true);
 
-      // Load pending articles for this topic
+      // Load pending articles for this topic (exclude articles already in queue or with stories)
       const { data: articlesData, error: articlesError } = await supabase
         .from('articles')
         .select('*')
         .eq('topic_id', selectedTopicId)
         .eq('processing_status', 'new')
+        .not('id', 'in', `(
+          SELECT DISTINCT article_id FROM content_generation_queue 
+          WHERE status != 'completed'
+          UNION
+          SELECT DISTINCT article_id FROM stories
+        )`)
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -485,6 +491,14 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         });
         return;
       }
+
+      // Update article status to processed first
+      const { error: updateError } = await supabase
+        .from('articles')
+        .update({ processing_status: 'processed' })
+        .eq('id', articleId);
+
+      if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
       const { data: queueJob, error: queueError } = await supabase
         .from('content_generation_queue')

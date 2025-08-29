@@ -84,16 +84,24 @@ function calculateKeywordRelevance(
     const normalizedKeyword = keyword.toLowerCase().trim();
     if (!normalizedKeyword) continue;
 
-    // Count occurrences (case-insensitive, word boundary matching)
-    const regex = new RegExp(`\\b${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-    const occurrences = (fullText.match(regex) || []).length;
+    // Enhanced keyword matching - both exact and partial word matches
+    const exactRegex = new RegExp(`\\b${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    const partialRegex = new RegExp(normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    
+    const exactMatches = (fullText.match(exactRegex) || []).length;
+    const partialMatches = (fullText.match(partialRegex) || []).length;
+    
+    // Prefer exact matches, but count partial matches with lower weight
+    const occurrences = exactMatches > 0 ? exactMatches : Math.ceil(partialMatches * 0.6);
 
     if (occurrences > 0) {
       matches.push({ keyword, count: occurrences });
       
       // Scoring: title matches worth more, diminishing returns for multiple occurrences
-      const titleMatches = (title.toLowerCase().match(regex) || []).length;
-      const contentMatches = occurrences - titleMatches;
+      const titleExactMatches = (title.toLowerCase().match(exactRegex) || []).length;
+      const titlePartialMatches = (title.toLowerCase().match(partialRegex) || []).length;
+      const titleMatches = titleExactMatches > 0 ? titleExactMatches : Math.ceil(titlePartialMatches * 0.6);
+      const contentMatches = Math.max(0, occurrences - titleMatches);
       
       // Title matches: 10 points each, Content matches: 3 points each
       // Diminishing returns: cap at 5 matches per keyword
@@ -127,10 +135,10 @@ export function getRelevanceThreshold(
     if (sourceType === 'regional') return 25;
     return 40; // national
   } else {
-    // Keyword-based thresholds
-    if (sourceType === 'hyperlocal') return 30;
-    if (sourceType === 'regional') return 40;
-    return 50; // national - higher bar for general topics
+    // Keyword-based thresholds - lowered for better matching
+    if (sourceType === 'hyperlocal') return 20;
+    if (sourceType === 'regional') return 25;
+    return 30; // national - lowered from 50% to 30%
   }
 }
 

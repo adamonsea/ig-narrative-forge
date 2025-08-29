@@ -148,6 +148,12 @@ serve(async (req) => {
 
       console.log(`Article "${article.title}" relevance: ${relevanceScore.relevance_score}% (threshold: ${threshold}%) - ${isRelevant ? 'ACCEPTED' : 'REJECTED'}`);
       
+      // Add detailed keyword matching debug info
+      if (relevanceScore.method === 'keyword' && relevanceScore.details.keyword_matches) {
+        console.log(`  Keyword matches:`, relevanceScore.details.keyword_matches);
+        console.log(`  Topic keywords:`, topicConfig.keywords);
+      }
+      
       return isRelevant;
     });
 
@@ -157,6 +163,8 @@ serve(async (req) => {
       actualSourceId,
       topicConfig.region || 'general'
     );
+
+    console.log(`📊 Storage summary - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
 
     // Update source metrics
     await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
