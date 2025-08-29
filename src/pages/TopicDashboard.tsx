@@ -288,10 +288,9 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="sources" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
-            <TabsTrigger value="automation">Automation</TabsTrigger>
             <TabsTrigger value="cta">Feed Settings</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -307,9 +306,6 @@ const TopicDashboard = () => {
             <TopicAwareContentPipeline selectedTopicId={topic.id} />
           </TabsContent>
 
-          <TabsContent value="automation" className="space-y-6">
-            <ScrapingAutomationManager topicId={topic.id} topicName={topic.name} />
-          </TabsContent>
 
           <TabsContent value="cta" className="space-y-6">
             <TopicCTAManager 

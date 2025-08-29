@@ -274,7 +274,8 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
         body: {
           feedUrl: source.feed_url,
-          topicId: currentTopicId
+          topicId: currentTopicId,
+          sourceId: source.id
         }
       });
 
@@ -321,7 +322,8 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         supabase.functions.invoke('topic-aware-scraper', {
           body: {
             feedUrl: source.feed_url,
-            topicId: currentTopicId
+            topicId: currentTopicId,
+            sourceId: source.id
           }
         })
       );
