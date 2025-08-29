@@ -75,24 +75,37 @@ serve(async (req) => {
       organizations: topicData.organizations || []
     };
 
-  // Use the provided sourceId (source already exists in database)
-  const actualSourceId = sourceId;
+    // Get source information from database
+    const { data: sourceInfo, error: sourceError } = await supabase
+      .from('content_sources')
+      .select('*')
+      .eq('id', sourceId)
+      .single();
 
-    // Initialize scraping components
-    const scrapingStrategies = new EnhancedScrapingStrategies();
+    if (sourceError || !sourceInfo) {
+      console.error('Source not found:', sourceError);
+      return new Response(JSON.stringify({ error: 'Source not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Use the provided sourceId (source already exists in database)
+    const actualSourceId = sourceId;
+
+    // Initialize scraping components with proper constructor parameters
+    const scrapingStrategies = new EnhancedScrapingStrategies(
+      topicConfig.region || 'general', 
+      sourceInfo, 
+      feedUrl
+    );
     const dbOps = new DatabaseOperations(supabase);
 
     const startTime = Date.now();
 
-    // Perform scraping
+    // Perform scraping using unified strategy
     console.log(`Starting scraping for topic: ${topicConfig.topic_type} - ${topicData.name}`);
-    const scrapingResult = await scrapingStrategies.scrapeContent({
-      method: 'rss',
-      url: feedUrl,
-      retryAttempts: 3,
-      timeout: 30000,
-      userAgent: 'eeZee News Scraper 1.0'
-    }, topicConfig.region || 'general');
+    const scrapingResult = await scrapingStrategies.executeScrapingStrategy();
 
     if (!scrapingResult.success) {
       console.error('Scraping failed:', scrapingResult.errors);
