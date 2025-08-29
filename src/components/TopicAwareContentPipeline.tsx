@@ -460,67 +460,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
-  // Refresh specific article status after approval
+  // Simplified refresh for specific article status (now that we have real-time)
   const refreshArticleStatus = async (articleId: string) => {
-    if (!selectedTopicId) return;
-    
-    try {
-      // Check if article moved to queue
-      const { data: queueItem, error: queueError } = await supabase
-        .from('content_generation_queue')
-        .select(`
-          *,
-          articles!inner(title, source_url)
-        `)
-        .eq('article_id', articleId)
-        .maybeSingle(); // Use maybeSingle to avoid errors when no item found
-
-      if (queueError) {
-        console.error('Error checking queue status:', queueError);
-        return;
-      }
-
-      if (queueItem) {
-        // Add to queue items if found
-        setQueueItems(prev => {
-          const exists = prev.find(q => q.id === queueItem.id);
-          if (!exists) {
-            return [...prev, {
-              id: queueItem.id,
-              status: queueItem.status,
-              created_at: queueItem.created_at,
-              attempts: queueItem.attempts,
-              max_attempts: queueItem.max_attempts,
-              error_message: queueItem.error_message,
-              article: {
-                title: queueItem.articles.title,
-                source_url: queueItem.articles.source_url
-              }
-            }];
-          }
-          return prev;
-        });
-
-        // Remove from articles list
-        setArticles(prev => prev.filter(a => a.id !== articleId));
-        
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          pending_articles: prev.pending_articles - 1,
-          processing_queue: prev.processing_queue + 1
-        }));
-      } else {
-        // If no queue item found, the job might have already completed
-        // Trigger a full refresh to update the UI properly
-        console.log('Job may have completed already, refreshing content...');
-        loadTopicContent();
-      }
-    } catch (error) {
-      console.error('Error refreshing article status:', error);
-      // Fall back to full refresh if needed
-      loadTopicContent();
-    }
+    // With real-time subscriptions, we don't need complex refresh logic
+    // The UI will update automatically when changes occur
+    console.log(`✅ Article ${articleId} approved - real-time updates will handle UI sync`);
   };
 
   const loadTopicContent = async () => {
