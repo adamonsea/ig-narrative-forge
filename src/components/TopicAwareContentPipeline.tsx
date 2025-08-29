@@ -281,20 +281,21 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     const { eventType, new: newRecord } = payload;
     
     if (eventType === 'INSERT' && newRecord) {
-      // New story created - fetch with full details and add to stories
-      const { data: storyWithDetails } = await supabase
+      // Check if the new story belongs to the current topic
+      const { data: storyWithTopic } = await supabase
         .from('stories')
-        .select(`*, articles!inner(id, title, source_url, author, region, published_at, word_count), slides(*)`)
+        .select(`*, articles!inner(id, title, source_url, author, region, published_at, word_count, topic_id), slides(*)`)
         .eq('id', newRecord.id)
+        .eq('articles.topic_id', selectedTopicId)
         .single();
         
-      if (storyWithDetails) {
+      if (storyWithTopic) {
         setStories(prev => {
-          const exists = prev.find(s => s.id === storyWithDetails.id);
+          const exists = prev.find(s => s.id === storyWithTopic.id);
           if (!exists) {
             return [...prev, {
-              ...storyWithDetails,
-              article: storyWithDetails.articles
+              ...storyWithTopic,
+              article: storyWithTopic.articles
             }];
           }
           return prev;
@@ -308,7 +309,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
     
     if (eventType === 'UPDATE' && newRecord) {
-      // Update existing story
+      // Update existing story only if it belongs to current topic
       setStories(prev => prev.map(story => 
         story.id === newRecord.id 
           ? { ...story, ...newRecord }
@@ -317,12 +318,17 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
     
     if (eventType === 'DELETE' && payload.old) {
-      // Remove deleted story
-      setStories(prev => prev.filter(s => s.id !== payload.old.id));
-      setStats(prev => ({
-        ...prev,
-        ready_stories: Math.max(0, prev.ready_stories - 1)
-      }));
+      // Remove deleted story if it was in our current list
+      setStories(prev => {
+        const wasInList = prev.some(s => s.id === payload.old.id);
+        if (wasInList) {
+          setStats(prevStats => ({
+            ...prevStats,
+            ready_stories: Math.max(0, prevStats.ready_stories - 1)
+          }));
+        }
+        return prev.filter(s => s.id !== payload.old.id);
+      });
     }
   };
 
@@ -366,13 +372,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
-  // Smart refresh for specific parts of the UI
+      // Smart refresh for specific parts of the UI
   const refreshQueueAndStories = async () => {
     if (!selectedTopicId) return;
 
     try {
       // Only refresh queue and stories, not articles (they change less frequently)
-      const [queueRes, storiesRes] = await Promise.all([
+      const [queueRes, storiesRes, storiesCountRes] = await Promise.all([
         supabase
           .from('content_generation_queue')
           .select(`
@@ -406,11 +412,19 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           .eq('articles.topic_id', selectedTopicId)
           .in('status', ['ready', 'draft'])
           .order('created_at', { ascending: false })
-          .limit(10)
+          .limit(50), // Increase limit to show more stories
+
+        // Get actual count of ready stories for accurate counter
+        supabase
+          .from('stories')
+          .select('id, articles!inner(topic_id)', { count: 'exact' })
+          .eq('articles.topic_id', selectedTopicId)
+          .in('status', ['ready', 'draft'])
       ]);
 
       if (queueRes.error) throw queueRes.error;
       if (storiesRes.error) throw storiesRes.error;
+      if (storiesCountRes.error) throw storiesCountRes.error;
 
       setQueueItems((queueRes.data || []).map(item => ({
         id: item.id,
@@ -448,11 +462,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         })).sort((a: any, b: any) => a.slide_number - b.slide_number)
       })));
 
-      // Update only relevant stats
+      // Update stats with accurate counts
       setStats(prev => ({
         ...prev,
         processing_queue: queueRes.data?.filter(q => q.status === 'processing').length || 0,
-        ready_stories: storiesRes.data?.length || 0
+        ready_stories: storiesCountRes.count || 0 // Use actual count, not limited results
       }));
 
     } catch (error) {
@@ -547,29 +561,38 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       if (queueError) throw queueError;
 
-      // Load ready stories for this topic
-      const { data: storiesData, error: storiesError } = await supabase
-        .from('stories')
-        .select(`
-          *,
-          articles!inner(
-            id,
-            title,
-            source_url,
-            topic_id
-          ),
-          slides(
-            id,
-            content,
-            slide_number
-          )
-        `)
-        .eq('articles.topic_id', selectedTopicId)
-        .in('status', ['ready', 'draft'])
-        .order('created_at', { ascending: false })
-        .limit(10);
+      // Load ready stories for this topic with accurate count
+      const [storiesData, storiesCount] = await Promise.all([
+        supabase
+          .from('stories')
+          .select(`
+            *,
+            articles!inner(
+              id,
+              title,
+              source_url,
+              topic_id
+            ),
+            slides(
+              id,
+              content,
+              slide_number
+            )
+          `)
+          .eq('articles.topic_id', selectedTopicId)
+          .in('status', ['ready', 'draft'])
+          .order('created_at', { ascending: false })
+          .limit(50), // Increased limit
 
-      if (storiesError) throw storiesError;
+        supabase
+          .from('stories')
+          .select('id, articles!inner(topic_id)', { count: 'exact' })
+          .eq('articles.topic_id', selectedTopicId)
+          .in('status', ['ready', 'draft'])
+      ]);
+
+      if (storiesData.error) throw storiesData.error;
+      if (storiesCount.error) throw storiesCount.error;
 
       setArticles(filteredArticles || []);
       setQueueItems((queueData || []).map(item => ({
@@ -584,7 +607,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           source_url: item.articles.source_url
         }
       })));
-      setStories((storiesData || []).map(story => ({
+      setStories((storiesData.data || []).map(story => ({
         id: story.id,
         title: story.title,
         status: story.status,
@@ -607,11 +630,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         })).sort((a: any, b: any) => a.slide_number - b.slide_number)
       })));
 
-      // Update stats
+      // Update stats with accurate counts
       setStats({
         pending_articles: articlesData?.length || 0,
         processing_queue: queueData?.filter(q => q.status === 'processing').length || 0,
-        ready_stories: storiesData?.length || 0
+        ready_stories: storiesCount.count || 0 // Use actual count
       });
 
     } catch (error) {

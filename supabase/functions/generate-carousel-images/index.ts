@@ -167,7 +167,21 @@ function createSVGSlide(slide: any, story: any, config: any, slideNumber: number
   const fontSize = config.width === 1080 && config.height === 1920 ? 42 : 36;
   const titleFontSize = 18;
   
-  return `data:image/svg+xml;base64,${btoa(`
+  // Sanitize content to prevent encoding issues
+  const sanitizeText = (text: string) => {
+    return text
+      .replace(/[""]/g, '"')  // Replace smart quotes
+      .replace(/['']/g, "'")  // Replace smart apostrophes
+      .replace(/—/g, "-")     // Replace em dash
+      .replace(/–/g, "-")     // Replace en dash
+      .replace(/…/g, "...")   // Replace ellipsis
+      .replace(/[^\x00-\x7F]/g, "?"); // Replace any remaining non-ASCII with ?
+  };
+
+  const safeSlideContent = sanitizeText(slide.content || '');
+  const safeStoryTitle = sanitizeText(story.title || '');
+  
+  const svgContent = `
     <svg width="${config.width}" height="${config.height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#ffffff"/>
       
@@ -191,23 +205,41 @@ function createSVGSlide(slide: any, story: any, config: any, slideNumber: number
           line-height: 1.2;
           word-wrap: break-word;
         ">
-          ${slide.content}
+          ${safeSlideContent}
         </div>
       </foreignObject>
       
       <!-- Story title -->
       <text x="${config.width / 2}" y="${config.height - 80}" text-anchor="middle" fill="#666666" font-size="${titleFontSize}" font-family="Arial, sans-serif" font-weight="400">
-        ${story.title}
+        ${safeStoryTitle}
       </text>
       
-      <!-- Author -->
-      ${story.articles?.[0]?.author ? `
-        <text x="${config.width / 2}" y="${config.height - 50}" text-anchor="middle" fill="#999999" font-size="14" font-family="Arial, sans-serif">
-          By ${story.articles[0].author}
-        </text>
-      ` : ''}
+      <!-- Brand -->
+      <text x="${config.width / 2}" y="${config.height - 40}" text-anchor="middle" fill="#999999" font-size="14" font-family="Arial, sans-serif" font-weight="300">
+        eeZee News
+      </text>
     </svg>
-  `)}`;
+  `;
+
+  // Use TextEncoder for proper UTF-8 to base64 conversion
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(svgContent);
+    const base64 = btoa(String.fromCharCode(...data));
+    return `data:image/svg+xml;base64,${base64}`;
+  } catch (error) {
+    console.error('Error encoding SVG:', error);
+    // Fallback: create a simple error slide
+    const errorSvg = `
+      <svg width="${config.width}" height="${config.height}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f0f0f0"/>
+        <text x="${config.width / 2}" y="${config.height / 2}" text-anchor="middle" fill="#666" font-size="24">
+          Slide ${slideNumber}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(errorSvg)}`;
+  }
 }
 
 async function uploadImagesToStorage(supabase: any, storyId: string, format: string, images: string[]) {
