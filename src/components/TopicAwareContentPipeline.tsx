@@ -653,21 +653,22 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setProcessingArticle(articleId);
       
-      // Check for ANY existing queue entry for this article
-      const { data: existingQueue, error: checkError } = await supabase
+      // Check for ALL existing queue entries for this article (not just one)
+      const { data: existingQueueEntries, error: checkError } = await supabase
         .from('content_generation_queue')
         .select('id, status')
         .eq('article_id', articleId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (checkError) {
         throw new Error(`Failed to check queue: ${checkError.message}`);
       }
 
-      // If there's an active entry, prevent duplicate
-      if (existingQueue && ['pending', 'processing'].includes(existingQueue.status)) {
+      console.log(`🔍 Found ${existingQueueEntries?.length || 0} existing queue entries for article ${articleId}`);
+
+      // Check if there's an active entry
+      const activeEntry = existingQueueEntries?.find(entry => ['pending', 'processing'].includes(entry.status));
+      if (activeEntry) {
         toast({
           title: "Already Processing",
           description: "This article is already in the processing queue",
@@ -676,17 +677,17 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         return;
       }
 
-      // If there's a completed or failed entry, delete it first to avoid constraint issues
-      if (existingQueue && ['completed', 'failed'].includes(existingQueue.status)) {
-        console.log(`🗑️ Removing old queue entry with status: ${existingQueue.status}`);
+      // Delete ALL existing entries to avoid constraint issues
+      if (existingQueueEntries && existingQueueEntries.length > 0) {
+        console.log(`🗑️ Removing ${existingQueueEntries.length} old queue entries`);
         const { error: deleteError } = await supabase
           .from('content_generation_queue')
           .delete()
-          .eq('id', existingQueue.id);
+          .eq('article_id', articleId);
           
         if (deleteError) {
-          console.error('Failed to delete old queue entry:', deleteError);
-          // Continue anyway - the constraint will prevent duplicates
+          console.error('Failed to delete old queue entries:', deleteError);
+          // Don't throw - let the constraint handle duplicates
         }
       }
 
@@ -698,6 +699,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
+      // Try to insert with upsert logic to handle race conditions
       const { data: queueJob, error: queueError } = await supabase
         .from('content_generation_queue')
         .insert({
@@ -709,7 +711,32 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         .select()
         .single();
 
-      if (queueError) throw new Error(`Failed to queue job: ${queueError.message}`);
+      if (queueError) {
+        // If it's a duplicate key constraint, handle gracefully
+        if (queueError.code === '23505' && queueError.message.includes('idx_content_queue_unique_article_pending')) {
+          console.warn('⚠️ Duplicate queue entry detected, checking if article is already processing...');
+          
+          // Re-check for active entries
+          const { data: recheckQueue } = await supabase
+            .from('content_generation_queue')
+            .select('id, status')
+            .eq('article_id', articleId)
+            .in('status', ['pending', 'processing'])
+            .limit(1)
+            .maybeSingle();
+            
+          if (recheckQueue) {
+            toast({
+              title: "Already Processing",
+              description: "This article is already in the processing queue",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+        
+        throw new Error(`Failed to queue job: ${queueError.message}`);
+      }
 
       const typeLabels = {
         short: 'Short Carousel',
