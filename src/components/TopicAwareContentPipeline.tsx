@@ -58,6 +58,7 @@ interface Article {
 
 interface QueueItem {
   id: string;
+  article_id: string; // Add this field to track the article ID
   status: string;
   created_at: string;
   attempts: number;
@@ -235,6 +236,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             if (!exists) {
               return [...prev, {
                 id: queueWithArticle.id,
+                article_id: queueWithArticle.article_id,
                 status: queueWithArticle.status,
                 created_at: queueWithArticle.created_at,
                 attempts: queueWithArticle.attempts,
@@ -290,6 +292,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         .single();
         
       if (storyWithTopic) {
+        // Remove the article from pending articles since it now has a story
+        setArticles(prev => prev.filter(a => a.id !== storyWithTopic.articles.id));
+        
+        // Remove from queue items since story is complete
+        setQueueItems(prev => prev.filter(q => q.article_id !== storyWithTopic.articles.id));
+        
+        // Add to stories
         setStories(prev => {
           const exists = prev.find(s => s.id === storyWithTopic.id);
           if (!exists) {
@@ -428,6 +437,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       setQueueItems((queueRes.data || []).map(item => ({
         id: item.id,
+        article_id: item.article_id, // Add the missing article_id field
         status: item.status,
         created_at: item.created_at,
         attempts: item.attempts,
@@ -597,6 +607,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       setArticles(filteredArticles || []);
       setQueueItems((queueData || []).map(item => ({
         id: item.id,
+        article_id: item.article_id, // Preserve the article_id field
         status: item.status,
         created_at: item.created_at,
         attempts: item.attempts,
