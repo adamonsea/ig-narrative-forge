@@ -363,7 +363,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       const { data: queueArticles } = await supabase
         .from('content_generation_queue')
         .select('article_id')
-        .neq('status', 'completed');
+        .in('status', ['pending', 'processing', 'failed']); // More explicit status filtering
       
       console.log('📊 Queue articles:', queueArticles);
         
@@ -517,10 +517,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         .from('content_generation_queue')
         .select('id, status')
         .eq('article_id', articleId)
-        .neq('status', 'completed')
-        .single();
+        .in('status', ['pending', 'processing', 'failed'])
+        .maybeSingle(); // Use maybeSingle instead of single
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw new Error(`Failed to check queue: ${checkError.message}`);
       }
 
