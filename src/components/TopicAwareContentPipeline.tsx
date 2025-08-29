@@ -512,25 +512,41 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setProcessingArticle(articleId);
       
-      // Check if article is already in queue (only pending/processing due to unique constraint)
+      // Check for ANY existing queue entry for this article
       const { data: existingQueue, error: checkError } = await supabase
         .from('content_generation_queue')
         .select('id, status')
         .eq('article_id', articleId)
-        .in('status', ['pending', 'processing']) // Only check constraint-relevant statuses
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (checkError) {
         throw new Error(`Failed to check queue: ${checkError.message}`);
       }
 
-      if (existingQueue) {
+      // If there's an active entry, prevent duplicate
+      if (existingQueue && ['pending', 'processing'].includes(existingQueue.status)) {
         toast({
           title: "Already Processing",
           description: "This article is already in the processing queue",
           variant: "destructive"
         });
         return;
+      }
+
+      // If there's a completed or failed entry, delete it first to avoid constraint issues
+      if (existingQueue && ['completed', 'failed'].includes(existingQueue.status)) {
+        console.log(`🗑️ Removing old queue entry with status: ${existingQueue.status}`);
+        const { error: deleteError } = await supabase
+          .from('content_generation_queue')
+          .delete()
+          .eq('id', existingQueue.id);
+          
+        if (deleteError) {
+          console.error('Failed to delete old queue entry:', deleteError);
+          // Continue anyway - the constraint will prevent duplicates
+        }
       }
 
       // Update article status to processed first
