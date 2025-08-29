@@ -355,19 +355,35 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       setLoading(true);
 
       // Load pending articles for this topic (exclude articles already in queue or with stories)
-      const { data: articlesData, error: articlesError } = await supabase
+      // First get articles in queue or with stories to exclude them
+      const { data: queueArticles } = await supabase
+        .from('content_generation_queue')
+        .select('article_id')
+        .neq('status', 'completed');
+        
+      const { data: storyArticles } = await supabase
+        .from('stories')
+        .select('article_id');
+        
+      const excludedIds = [
+        ...(queueArticles?.map(q => q.article_id) || []),
+        ...(storyArticles?.map(s => s.article_id) || [])
+      ];
+
+      let articlesQuery = supabase
         .from('articles')
         .select('*')
         .eq('topic_id', selectedTopicId)
         .eq('processing_status', 'new')
-        .not('id', 'in', `(
-          SELECT DISTINCT article_id FROM content_generation_queue 
-          WHERE status != 'completed'
-          UNION
-          SELECT DISTINCT article_id FROM stories
-        )`)
         .order('created_at', { ascending: false })
         .limit(20);
+
+      // Only add exclusion if there are IDs to exclude
+      if (excludedIds.length > 0) {
+        articlesQuery = articlesQuery.not('id', 'in', `(${excludedIds.map(id => `'${id}'`).join(',')})`);
+      }
+
+      const { data: articlesData, error: articlesError } = await articlesQuery;
 
       if (articlesError) throw articlesError;
 
