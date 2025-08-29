@@ -125,6 +125,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
+  const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState({
     pending_articles: 0,
     processing_queue: 0,
@@ -803,6 +804,75 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
+  const handleDeleteQueueItem = async (queueItemId: string, articleTitle: string) => {
+    if (deletingQueueItems.has(queueItemId)) return;
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete "${articleTitle}" from the processing queue? This will reset the article back to pending status.`)) {
+      return;
+    }
+    
+    setDeletingQueueItems(prev => new Set(prev.add(queueItemId)));
+    
+    try {
+      // Get the article_id from the queue item first
+      const { data: queueItem, error: fetchError } = await supabase
+        .from('content_generation_queue')
+        .select('article_id')
+        .eq('id', queueItemId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete the queue item
+      const { error: deleteError } = await supabase
+        .from('content_generation_queue')
+        .delete()
+        .eq('id', queueItemId);
+
+      if (deleteError) throw deleteError;
+
+      // Reset the article processing status to 'new'
+      const { error: updateError } = await supabase
+        .from('articles')
+        .update({ processing_status: 'new' })
+        .eq('id', queueItem.article_id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Queue Item Deleted',
+        description: 'Article removed from queue and reset to pending status.',
+      });
+
+      // Remove from local state and refresh
+      setQueueItems(prev => prev.filter(item => item.id !== queueItemId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        processing_queue: prev.processing_queue - 1,
+        pending_articles: prev.pending_articles + 1
+      }));
+      
+      // Force refresh to get updated data
+      loadTopicContent();
+    } catch (error) {
+      console.error('Error deleting queue item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete queue item. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingQueueItems(prev => {
+        const next = new Set(prev);
+        next.delete(queueItemId);
+        return next;
+      });
+    }
+  };
+
   const toggleStoryExpanded = (storyId: string) => {
     const newExpanded = new Set(expandedStories);
     if (newExpanded.has(storyId)) {
@@ -1085,15 +1155,26 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                             <p className="text-sm text-red-600 mt-2">{item.error_message}</p>
                           )}
                         </div>
-                        {item.status === 'failed' && (
-                          <Button 
-                            onClick={() => reprocessQueueItem(item.id)}
-                            size="sm" 
-                            variant="outline"
+                        <div className="flex gap-2">
+                          {item.status === 'failed' && (
+                            <Button 
+                              onClick={() => reprocessQueueItem(item.id)}
+                              size="sm" 
+                              variant="outline"
+                            >
+                              Retry
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteQueueItem(item.id, item.article.title)}
+                            disabled={deletingQueueItems.has(item.id)}
                           >
-                            Retry
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            {deletingQueueItems.has(item.id) ? 'Deleting...' : 'Delete'}
                           </Button>
-                        )}
+                        </div>
                       </div>
                     ))}
                   </div>

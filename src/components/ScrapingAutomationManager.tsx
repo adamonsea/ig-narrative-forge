@@ -161,10 +161,50 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
     ));
 
     try {
+      // First, get or create a content source for this URL
+      let sourceId = null;
+      try {
+        // Try to find existing source
+        const { data: existingSource, error: sourceError } = await supabase
+          .from('content_sources')
+          .select('id')
+          .eq('feed_url', rule.source_url)
+          .single();
+
+        if (sourceError && sourceError.code !== 'PGRST116') {
+          throw sourceError;
+        }
+
+        if (existingSource) {
+          sourceId = existingSource.id;
+        } else {
+          // Create new source
+          const domain = new URL(rule.source_url).hostname;
+          const { data: newSource, error: createError } = await supabase
+            .from('content_sources')
+            .insert({
+              source_name: domain,
+              feed_url: rule.source_url,
+              canonical_domain: domain,
+              source_type: 'regional',
+              is_active: true
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          sourceId = newSource.id;
+        }
+      } catch (sourceErr) {
+        console.error('Error managing source:', sourceErr);
+        throw new Error('Failed to setup content source');
+      }
+
       const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
         body: {
           feedUrl: rule.source_url,
-          topicId: topicId
+          topicId: topicId,
+          sourceId: sourceId
         }
       });
 
@@ -177,9 +217,15 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
         last_error: null
       });
 
+      // Show detailed scraping results toast
+      const articlesFound = data?.articlesFound || 0;
+      const articlesStored = data?.articlesStored || 0;
+      const duplicatesDetected = data?.duplicatesDetected || 0;
+      const articlesDiscarded = data?.articlesDiscarded || 0;
+
       toast({
         title: "Scraping Completed",
-        description: `Successfully scraped ${data?.articlesFound || 0} articles from ${new URL(rule.source_url).hostname}`
+        description: `Found ${articlesFound} articles, stored ${articlesStored}, found ${duplicatesDetected} duplicates, disqualified ${articlesDiscarded} from ${new URL(rule.source_url).hostname}`
       });
     } catch (error: any) {
       console.error('Error triggering manual scrape:', error);
