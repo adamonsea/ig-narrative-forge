@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TopicManager } from "@/components/TopicManager";
-import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Users, Plus } from "lucide-react";
+import { BarChart3, Settings, FileText, Globe, Menu } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DashboardStats {
   topics: number;
@@ -85,13 +87,34 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-2">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your topics, content sources, and curated feeds
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-2">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your topics and curated feeds
+            </p>
+          </div>
+          
+          {/* Admin Hamburger Menu */}
+          {isAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/admin">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Panel
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -143,54 +166,9 @@ const Dashboard = () => {
 
 
         {/* Main Dashboard Content */}
-        <Tabs defaultValue="topics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="topics">Topics</TabsTrigger>
-            <TabsTrigger value="content">Content Pipeline</TabsTrigger>
-            <TabsTrigger value="sources">Sources</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="topics" className="space-y-6">
-            <TopicManager />
-          </TabsContent>
-
-          <TabsContent value="content" className="space-y-6">
-            <TopicAwareContentPipeline />
-          </TabsContent>
-
-          <TabsContent value="sources" className="space-y-6">
-            <TopicAwareSourceManager onSourcesChange={loadDashboardStats} />
-          </TabsContent>
-        </Tabs>
-
-        {/* Admin Section (separate from tabs) */}
-        {isAdmin && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>System Administration</CardTitle>
-              <CardDescription>
-                System-wide settings and management
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Global Source Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Manage sources across all topics
-                    </p>
-                  </div>
-                  <Button variant="outline" asChild>
-                    <Link to="/admin">
-                      Open Admin Panel
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <div className="space-y-6">
+          <TopicManager />
+        </div>
       </div>
     </div>
   );
