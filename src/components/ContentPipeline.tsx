@@ -20,7 +20,8 @@ import {
   Calendar,
   User,
   BookOpen,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 // Slide and Story interfaces  
@@ -66,6 +67,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
   const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
+  const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
 
   // Edit slide state
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
@@ -233,6 +235,55 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
         title: 'Error',
         description: 'Failed to return story to review',
         variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteStory = async (storyId: string, storyTitle: string) => {
+    if (deletingStories.has(storyId)) return;
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete "${storyTitle}"? This will permanently remove the story, its slides, visuals, and reset the article status.`)) {
+      return;
+    }
+    
+    setDeletingStories(prev => new Set(prev.add(storyId)));
+    
+    try {
+      const { data, error } = await supabase.rpc('delete_story_cascade', {
+        p_story_id: storyId
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete story');
+      }
+
+      toast({
+        title: 'Story Deleted',
+        description: `Story deleted successfully. Article reset to new status.`,
+      });
+
+      // Remove from local state and refresh
+      setStories(prev => prev.filter(story => story.id !== storyId));
+      
+      // Force refresh to update counters
+      loadStories();
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete story. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingStories(prev => {
+        const next = new Set(prev);
+        next.delete(storyId);
+        return next;
       });
     }
   };
@@ -444,6 +495,16 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
                               >
                                 <RotateCcw className="w-3 h-3" />
                                 Return to Review
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteStory(story.id, story.title)}
+                                disabled={deletingStories.has(story.id)}
+                                className="flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                {deletingStories.has(story.id) ? 'Deleting...' : 'Delete Story'}
                               </Button>
                             </div>
                           </div>

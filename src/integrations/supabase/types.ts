@@ -1484,6 +1484,10 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      delete_story_cascade: {
+        Args: { p_story_id: string }
+        Returns: Json
+      }
       detect_article_duplicates: {
         Args: { p_article_id: string }
         Returns: {
