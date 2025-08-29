@@ -126,6 +126,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
+  const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState({
     pending_articles: 0,
     processing_queue: 0,
@@ -559,6 +560,47 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       });
     } finally {
       setProcessingArticle(null);
+    }
+  };
+
+  const deleteArticle = async (articleId: string) => {
+    try {
+      setDeletingArticles(prev => new Set(prev).add(articleId));
+      
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setArticles(prev => prev.filter(a => a.id !== articleId));
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        pending_articles: prev.pending_articles - 1
+      }));
+
+      toast({
+        title: "Article Deleted",
+        description: "Article has been permanently removed"
+      });
+      
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete article",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
+      });
     }
   };
 
@@ -1023,12 +1065,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                          <div className="p-4">
                            <div className="flex items-start justify-between mb-3">
                              <div className="flex-1">
-                               <h3 className="font-medium mb-2">{article.title}</h3>
+                               <h3 className="font-semibold text-xl mb-2">{article.title}</h3>
                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                                 <Badge variant="outline">{article.word_count || 0} words</Badge>
-                                 <Badge variant="outline">Quality: {article.content_quality_score || 0}%</Badge>
-                                 <Badge variant="outline">Relevance: {article.regional_relevance_score || 0}%</Badge>
+                                 <span>{article.author || 'Unknown Author'}</span>
+                                 <span>•</span>
                                  <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                                 <span>•</span>
+                                 <span>{article.word_count || 0} words</span>
                                </div>
                                {article.summary && (
                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
@@ -1042,46 +1085,23 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                >
                                  <Eye className="w-4 h-4" />
                                </Button>
-                               <Button
-                                 onClick={() => handleExtractContent(article)}
-                                 size="sm"
-                                 variant="outline"
-                                 disabled={processingArticle === article.id}
-                               >
-                                 <Sparkles className="w-4 h-4" />
-                               </Button>
                              </div>
                            </div>
                            
                            <div className="flex items-center gap-2 pt-2 border-t">
-                             <div className="flex-1 grid grid-cols-3 gap-2">
-                               <Button 
-                                 onClick={() => approveArticle(article.id, 'short')}
-                                 size="sm"
-                                 variant="outline"
-                                 disabled={processingArticle === article.id}
-                               >
-                                 <PlayCircle className="w-4 h-4 mr-1" />
-                                 Short
-                               </Button>
-                               <Button 
-                                 onClick={() => approveArticle(article.id, 'tabloid')}
-                                 size="sm"
-                                 disabled={processingArticle === article.id}
-                               >
-                                 <PlayCircle className="w-4 h-4 mr-1" />
-                                 Tabloid
-                               </Button>
-                               <Button 
-                                 onClick={() => approveArticle(article.id, 'indepth')}
-                                 size="sm"
-                                 variant="outline"
-                                 disabled={processingArticle === article.id}
-                               >
-                                 <PlayCircle className="w-4 h-4 mr-1" />
-                                 In-Depth
-                               </Button>
-                             </div>
+                             <Button 
+                               onClick={() => approveArticle(article.id, 'tabloid')}
+                               disabled={processingArticle === article.id}
+                             >
+                               {processingArticle === article.id ? 'Processing...' : 'Approve'}
+                             </Button>
+                             <Button
+                               variant="destructive"
+                               onClick={() => deleteArticle(article.id)}
+                               disabled={deletingArticles.has(article.id)}
+                             >
+                               {deletingArticles.has(article.id) ? 'Deleting...' : 'Delete'}
+                             </Button>
                            </div>
                          </div>
                        </div>
