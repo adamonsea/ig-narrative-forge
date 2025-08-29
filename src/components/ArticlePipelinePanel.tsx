@@ -120,10 +120,8 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             is_stuck: isStuck
           };
         }).filter(article => 
-          // Filter out failed items - only show pending, processing, or stuck items
-          article.queue_status === 'pending' || 
-          article.queue_status === 'processing' || 
-          article.is_stuck
+          // Filter out failed items - exclude items that have exhausted all attempts
+          !(article.queue_attempts >= article.queue_max_attempts && article.queue_status !== 'processing')
         ) || [];
 
         setQueuedArticles(enrichedQueuedArticles);
@@ -421,16 +419,19 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
   const resetProcessingIssues = async () => {
     setIsResettingStalled(true);
     try {
-      // Use the comprehensive reset function instead of confusing multiple functions
+      // Clean up failed items and reset stuck processing
       const { data, error } = await supabase.functions.invoke('reset-stuck-processing', {
-        body: { action: 'reset_stuck_processing' }
+        body: { 
+          action: 'reset_stuck_processing',
+          cleanup_failed: true 
+        }
       });
 
       if (error) throw error;
 
       toast({
-        title: "Processing Issues Resolved",
-        description: data?.message || "All stuck processing jobs have been reset and returned to the pipeline",
+        title: "Queue Cleaned & Issues Reset",
+        description: "Removed failed items and reset stuck processing jobs",
       });
       
       loadPendingArticles();
@@ -530,17 +531,22 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                       <div className="flex gap-2">
                         <Button 
                           onClick={resetProcessingIssues}
-                          variant="outline" 
+                          variant="destructive" 
                           size="sm"
                           disabled={isResettingStalled}
-                          className="text-xs"
+                          className="text-xs font-medium"
                         >
                           {isResettingStalled ? (
-                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                            <>
+                              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                              Cleaning Queue...
+                            </>
                           ) : (
-                            <Zap className="w-3 h-3 mr-1" />
+                            <>
+                              <Zap className="w-3 h-3 mr-1" />
+                              Clean Queue & Reset Issues
+                            </>
                           )}
-                          Reset Issues
                         </Button>
                         <Button 
                           onClick={loadQueuedArticles}
