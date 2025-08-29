@@ -512,13 +512,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setProcessingArticle(articleId);
       
-      // Check if article is already in queue
+      // Check if article is already in queue (only pending/processing due to unique constraint)
       const { data: existingQueue, error: checkError } = await supabase
         .from('content_generation_queue')
         .select('id, status')
         .eq('article_id', articleId)
-        .in('status', ['pending', 'processing', 'failed'])
-        .maybeSingle(); // Use maybeSingle instead of single
+        .in('status', ['pending', 'processing']) // Only check constraint-relevant statuses
+        .maybeSingle();
 
       if (checkError) {
         throw new Error(`Failed to check queue: ${checkError.message}`);
