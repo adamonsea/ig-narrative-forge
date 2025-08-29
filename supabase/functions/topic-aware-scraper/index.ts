@@ -38,15 +38,15 @@ serve(async (req) => {
       });
     }
 
-    // Parse request body
-    const { feedUrl, topicId, sourceId } = await req.json();
+  // Parse request body
+  const { feedUrl, topicId, sourceId } = await req.json();
 
-    if (!feedUrl || !topicId) {
-      return new Response(JSON.stringify({ error: 'feedUrl and topicId are required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  if (!feedUrl || !topicId || !sourceId) {
+    return new Response(JSON.stringify({ error: 'feedUrl, topicId, and sourceId are required' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -75,37 +75,8 @@ serve(async (req) => {
       organizations: topicData.organizations || []
     };
 
-    // Get or create source record
-    let actualSourceId = sourceId;
-    if (!actualSourceId) {
-      const domain = new URL(feedUrl).hostname.replace(/^www\./, '');
-      const { data: sourceData, error: sourceInsertError } = await supabase
-        .from('content_sources')
-        .upsert({
-          source_name: domain,
-          feed_url: feedUrl,
-          canonical_domain: domain,
-          topic_id: topicId,
-          credibility_score: 70,
-          is_active: true,
-          scraping_method: 'rss'
-        }, {
-          onConflict: 'feed_url,topic_id',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
-
-      if (sourceInsertError) {
-        console.error('Failed to create/update source:', sourceInsertError);
-        return new Response(JSON.stringify({ error: 'Failed to manage source' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      actualSourceId = sourceData.id;
-    }
+  // Use the provided sourceId (source already exists in database)
+  const actualSourceId = sourceId;
 
     // Initialize scraping components
     const scrapingStrategies = new EnhancedScrapingStrategies();
