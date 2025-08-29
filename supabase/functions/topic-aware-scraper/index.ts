@@ -161,7 +161,8 @@ serve(async (req) => {
     const { stored, duplicates, discarded } = await dbOps.storeArticles(
       relevantArticles,
       actualSourceId,
-      topicConfig.region || 'general'
+      topicConfig.region || 'general',
+      topicId
     );
 
     console.log(`📊 Storage summary - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);

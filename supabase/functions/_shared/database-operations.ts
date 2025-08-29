@@ -6,7 +6,8 @@ export class DatabaseOperations {
   async storeArticles(
     articles: ArticleData[],
     sourceId: string,
-    region: string
+    region: string,
+    topicId?: string
   ): Promise<{ stored: number; duplicates: number; discarded: number }> {
     let stored = 0;
     let duplicates = 0;
@@ -75,6 +76,7 @@ export class DatabaseOperations {
           import_metadata: article.import_metadata,
           region: region,
           source_id: sourceId,
+          topic_id: topicId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
