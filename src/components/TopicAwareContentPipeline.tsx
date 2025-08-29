@@ -528,7 +528,90 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const refreshArticleStatus = async (articleId: string) => {
     // With real-time subscriptions, we don't need complex refresh logic
     // The UI will update automatically when changes occur
-    console.log(`✅ Article ${articleId} approved - real-time updates will handle UI sync`);
+    console.log(`🔄 Article ${articleId} status will update via real-time subscription`);
+  };
+  const calculateTitleSimilarity = (str1: string, str2: string): number => {
+    if (!str1 || !str2) return 0;
+    
+    // Normalize strings - remove common words and punctuation
+    const normalize = (str: string) => str
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\b(the|and|or|but|in|on|at|to|for|of|with|by|from|up|about|into|through|during|before|after|above|below|between|among|within|without|against|toward|upon|beneath|beside|behind|beyond|across|around|underneath|underneath|inside|outside|along|against)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+      
+    const norm1 = normalize(str1);
+    const norm2 = normalize(str2);
+    
+    if (!norm1 || !norm2) return 0;
+    
+    // Calculate Jaccard similarity (intersection over union of words)
+    const words1 = new Set(norm1.split(' '));
+    const words2 = new Set(norm2.split(' '));
+    
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    
+    return intersection.size / union.size;
+  };
+
+  // Cleanup function to remove duplicate articles
+  const cleanupDuplicateArticles = async () => {
+    if (!selectedTopicId) return;
+    
+    try {
+      console.log('🧹 Starting duplicate cleanup...');
+      
+      // Find articles that have stories but are still marked as 'new'
+      const { data: duplicateArticles } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          processing_status,
+          stories!inner(id, status)
+        `)
+        .eq('topic_id', selectedTopicId)
+        .eq('processing_status', 'new')
+        .in('stories.status', ['ready', 'draft']);
+        
+      if (duplicateArticles && duplicateArticles.length > 0) {
+        console.log(`🧹 Found ${duplicateArticles.length} articles with stories that should be marked processed`);
+        
+        // Update these articles to 'processed' status
+        const { error: updateError } = await supabase
+          .from('articles')
+          .update({ processing_status: 'processed' })
+          .in('id', duplicateArticles.map(a => a.id));
+          
+        if (updateError) {
+          console.error('Failed to update duplicate articles:', updateError);
+        } else {
+          console.log('✅ Updated duplicate articles status to processed');
+          
+          toast({
+            title: "Cleanup Complete",
+            description: `Fixed ${duplicateArticles.length} duplicate articles`,
+          });
+          
+          // Refresh the data
+          loadTopicContent();
+        }
+      } else {
+        toast({
+          title: "No Duplicates Found",
+          description: "All articles are properly organized",
+        });
+      }
+    } catch (error) {
+      console.error('Cleanup failed:', error);
+      toast({
+        title: "Cleanup Failed",
+        description: "Unable to clean up duplicate articles",
+        variant: "destructive"
+      });
+    }
   };
 
   const loadTopicContent = async () => {
@@ -552,15 +635,30 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       console.log('📊 Getting story articles...');
       const { data: storyArticles } = await supabase
         .from('stories')
-        .select('article_id');
+        .select('article_id, articles!inner(title)')
+        .eq('articles.topic_id', selectedTopicId);
       
       console.log('📊 Story articles:', storyArticles);
+
+      // Get processed articles to exclude duplicates
+      console.log('📊 Getting processed articles...');
+      const { data: processedArticles } = await supabase
+        .from('articles')
+        .select('id, title')
+        .eq('topic_id', selectedTopicId)
+        .eq('processing_status', 'processed');
+      
+      console.log('📊 Processed articles:', processedArticles);
         
       const excludedIds = [
         ...(queueArticles?.map(q => q.article_id) || []),
-        ...(storyArticles?.map(s => s.article_id) || [])
+        ...(storyArticles?.map(s => s.article_id) || []),
+        ...(processedArticles?.map(p => p.id) || []) // Exclude all processed articles
       ];
 
+      // Also exclude articles with titles similar to existing stories (to handle duplicates)
+      const storyTitles = storyArticles?.map(s => s.articles?.title?.toLowerCase().trim()) || [];
+      
       console.log('📊 Excluded IDs:', excludedIds);
 
       let articlesQuery = supabase
@@ -588,9 +686,24 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         throw new Error(`Failed to load articles: ${articlesError.message}`);
       }
 
-      // Filter out excluded articles on the frontend as backup
-      const filteredArticles = articlesData?.filter(article => !excludedIds.includes(article.id)) || [];
+      // Additional filtering to remove duplicates based on title similarity
+      const filteredArticles = (articlesData || []).filter(article => {
+        const articleTitle = article.title?.toLowerCase().trim();
+        if (!articleTitle) return true;
+        
+        // Check if title is too similar to any existing story
+        const isDuplicate = storyTitles.some(storyTitle => {
+          if (!storyTitle) return false;
+          // Simple similarity check - if titles are very similar (90%+ character overlap)
+          const similarity = calculateTitleSimilarity(articleTitle, storyTitle);
+          return similarity > 0.85;
+        });
+        
+        return !isDuplicate && !excludedIds.includes(article.id);
+      });
+      
       console.log('📊 Filtered articles count:', filteredArticles.length);
+      console.log('📊 Removed duplicates:', (articlesData?.length || 0) - filteredArticles.length);
 
       if (articlesError) throw articlesError;
 
@@ -1342,8 +1455,16 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             <Card>
               <CardHeader>
                 <CardTitle>Pending Articles - {currentTopic?.name}</CardTitle>
-                <CardDescription>
-                  Articles waiting for approval, sorted by relevance score (highest first)
+                <CardDescription className="flex items-center justify-between">
+                  <span>Articles waiting for approval, sorted by relevance score (highest first)</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={cleanupDuplicateArticles}
+                    className="ml-4"
+                  >
+                    🧹 Cleanup Duplicates
+                  </Button>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1895,3 +2016,5 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     </div>
   );
 };
+
+export default TopicAwareContentPipeline;
