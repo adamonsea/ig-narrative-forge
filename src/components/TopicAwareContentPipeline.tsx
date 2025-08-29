@@ -351,24 +351,34 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const loadTopicContent = async () => {
     if (!selectedTopicId) return;
 
+    console.log('🔍 Loading topic content for:', selectedTopicId);
+    
     try {
       setLoading(true);
 
       // Load pending articles for this topic (exclude articles already in queue or with stories)
       // First get articles in queue or with stories to exclude them
+      console.log('📊 Getting queue articles...');
       const { data: queueArticles } = await supabase
         .from('content_generation_queue')
         .select('article_id')
         .neq('status', 'completed');
+      
+      console.log('📊 Queue articles:', queueArticles);
         
+      console.log('📊 Getting story articles...');
       const { data: storyArticles } = await supabase
         .from('stories')
         .select('article_id');
+      
+      console.log('📊 Story articles:', storyArticles);
         
       const excludedIds = [
         ...(queueArticles?.map(q => q.article_id) || []),
         ...(storyArticles?.map(s => s.article_id) || [])
       ];
+
+      console.log('📊 Excluded IDs:', excludedIds);
 
       let articlesQuery = supabase
         .from('articles')
@@ -380,10 +390,23 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       // Only add exclusion if there are IDs to exclude
       if (excludedIds.length > 0) {
-        articlesQuery = articlesQuery.not('id', 'in', `(${excludedIds.map(id => `'${id}'`).join(',')})`);
+        console.log('📊 Adding exclusion filter for IDs:', excludedIds);
+        articlesQuery = articlesQuery.not('id', 'in', `(${excludedIds.join(',')})`);
       }
 
+      console.log('📊 Executing articles query...');
       const { data: articlesData, error: articlesError } = await articlesQuery;
+      
+      console.log('📊 Raw articles query result:', { articlesData, articlesError });
+      
+      if (articlesError) {
+        console.error('❌ Articles query error:', articlesError);
+        throw new Error(`Failed to load articles: ${articlesError.message}`);
+      }
+
+      // Filter out excluded articles on the frontend as backup
+      const filteredArticles = articlesData?.filter(article => !excludedIds.includes(article.id)) || [];
+      console.log('📊 Filtered articles count:', filteredArticles.length);
 
       if (articlesError) throw articlesError;
 
@@ -428,7 +451,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       if (storiesError) throw storiesError;
 
-      setArticles(articlesData || []);
+      setArticles(filteredArticles || []);
       setQueueItems((queueData || []).map(item => ({
         id: item.id,
         status: item.status,
