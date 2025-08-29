@@ -25,8 +25,10 @@ import {
   ChevronRight,
   RotateCcw,
   Edit3,
-  Trash2
+  Trash2,
+  Link
 } from "lucide-react";
+import { CarouselGenerationButton } from "./CarouselGenerationButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -127,6 +129,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
+  const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' }>({});
   const [stats, setStats] = useState({
     pending_articles: 0,
     processing_queue: 0,
@@ -1063,46 +1066,94 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                      {articles.map((article) => (
                        <div key={article.id} className="border rounded-lg">
                          <div className="p-4">
-                           <div className="flex items-start justify-between mb-3">
-                             <div className="flex-1">
-                               <h3 className="font-semibold text-xl mb-2">{article.title}</h3>
-                               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                                 <span>{article.author || 'Unknown Author'}</span>
-                                 <span>•</span>
-                                 <span>{new Date(article.created_at).toLocaleDateString()}</span>
-                                 <span>•</span>
-                                 <span>{article.word_count || 0} words</span>
-                               </div>
-                               {article.summary && (
-                                 <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
-                               )}
-                             </div>
-                             <div className="flex items-center gap-2">
-                               <Button
-                                 onClick={() => setPreviewArticle(article)}
-                                 size="sm"
-                                 variant="outline"
-                               >
-                                 <Eye className="w-4 h-4" />
-                               </Button>
-                             </div>
-                           </div>
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h3 className="font-bold text-2xl mb-3 text-primary leading-tight">{article.title}</h3>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                  <span className="font-medium">{article.author || 'Unknown Author'}</span>
+                                  <span>•</span>
+                                  <span>{new Date(article.created_at).toLocaleDateString()}</span>
+                                  <span>•</span>
+                                  <span className="font-medium">{article.word_count || 0} words</span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-3 p-3 bg-muted/50 rounded-lg">
+                                  <Link className="w-4 h-4 text-primary" />
+                                  <a 
+                                    href={article.source_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:text-primary/80 font-medium truncate flex-1"
+                                  >
+                                    {new URL(article.source_url).hostname}
+                                  </a>
+                                  <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                                {article.summary && (
+                                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  onClick={() => setPreviewArticle(article)}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
                            
-                           <div className="flex items-center gap-2 pt-2 border-t">
-                             <Button 
-                               onClick={() => approveArticle(article.id, 'tabloid')}
-                               disabled={processingArticle === article.id}
-                             >
-                               {processingArticle === article.id ? 'Processing...' : 'Approve'}
-                             </Button>
-                             <Button
-                               variant="destructive"
-                               onClick={() => deleteArticle(article.id)}
-                               disabled={deletingArticles.has(article.id)}
-                             >
-                               {deletingArticles.has(article.id) ? 'Deleting...' : 'Delete'}
-                             </Button>
-                           </div>
+                            <div className="space-y-3 pt-3 border-t">
+                              <div className="space-y-2">
+                                <Label htmlFor={`slide-qty-${article.id}`}>Slide Quantity</Label>
+                                <Select 
+                                  value={slideQuantities[article.id] || 'tabloid'} 
+                                  onValueChange={(value: 'short' | 'tabloid' | 'indepth') => 
+                                    setSlideQuantities(prev => ({ ...prev, [article.id]: value }))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select slide type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="short">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="secondary">3-4 slides</Badge>
+                                        Short Format
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="tabloid">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="default">5-6 slides</Badge>
+                                        Tabloid Style
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="indepth">
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline">7-8 slides</Badge>
+                                        In-Depth Analysis
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  onClick={() => approveArticle(article.id, slideQuantities[article.id] || 'tabloid')}
+                                  disabled={processingArticle === article.id}
+                                  className="flex-1"
+                                >
+                                  {processingArticle === article.id ? 'Processing...' : 'Approve for Generation'}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => deleteArticle(article.id)}
+                                  disabled={deletingArticles.has(article.id)}
+                                >
+                                  {deletingArticles.has(article.id) ? 'Deleting...' : 'Delete'}
+                                </Button>
+                              </div>
+                            </div>
                          </div>
                        </div>
                      ))}
@@ -1229,49 +1280,65 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                      {stories.map((story) => (
                        <div key={story.id} className="border rounded-lg">
                          <div className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <h3 className="font-medium mb-2">{story.title}</h3>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  <Badge variant={story.status === 'ready' ? 'default' : 'secondary'}>{story.status}</Badge>
-                                  <Badge variant={story.is_published ? 'default' : 'outline'}>
-                                    {story.is_published ? 'Published' : 'Draft'}
-                                  </Badge>
-                                  <span>{story.slides.length} slides</span>
-                                  <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  size="sm"
-                                  onClick={() => toggleStoryPublication(story.id, story.is_published)}
-                                  disabled={publishingStories.has(story.id)}
-                                  variant={story.is_published ? "destructive" : "default"}
-                                >
-                                  {publishingStories.has(story.id) ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                                      Processing...
-                                    </>
-                                  ) : story.is_published ? (
-                                    <>
-                                      <EyeOff className="w-4 h-4 mr-1" />
-                                      Unpublish
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Eye className="w-4 h-4 mr-1" />
-                                      Publish
-                                    </>
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setEditingStory(story)}
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  Preview
+                             <div className="flex items-start justify-between mb-3">
+                               <div className="flex-1">
+                                 <h3 className="font-bold text-xl mb-3 text-primary leading-tight">{story.title}</h3>
+                                 <div className="flex items-center gap-2 mb-3">
+                                   <Link className="w-4 h-4 text-primary" />
+                                   <a 
+                                     href={story.article?.source_url} 
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="text-primary hover:text-primary/80 font-medium text-sm"
+                                   >
+                                     {story.article?.source_url ? new URL(story.article.source_url).hostname : 'Source'}
+                                   </a>
+                                   <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                                 </div>
+                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                   <Badge variant={story.status === 'ready' ? 'default' : 'secondary'}>{story.status}</Badge>
+                                   <Badge variant={story.is_published ? 'default' : 'outline'}>
+                                     {story.is_published ? 'Published' : 'Draft'}
+                                   </Badge>
+                                   <span className="font-medium">{story.slides.length} slides</span>
+                                   <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                                 </div>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <CarouselGenerationButton 
+                                   storyId={story.id}
+                                   storyTitle={story.title}
+                                 />
+                                 <Button 
+                                   size="sm"
+                                   onClick={() => toggleStoryPublication(story.id, story.is_published)}
+                                   disabled={publishingStories.has(story.id)}
+                                   variant={story.is_published ? "destructive" : "default"}
+                                 >
+                                   {publishingStories.has(story.id) ? (
+                                     <>
+                                       <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                       Processing...
+                                     </>
+                                   ) : story.is_published ? (
+                                     <>
+                                       <EyeOff className="w-4 h-4 mr-1" />
+                                       Unpublish
+                                     </>
+                                   ) : (
+                                     <>
+                                       <Eye className="w-4 h-4 mr-1" />
+                                       Publish
+                                     </>
+                                   )}
+                                 </Button>
+                                 <Button
+                                   size="sm"
+                                   variant="outline"
+                                   onClick={() => setEditingStory(story)}
+                                 >
+                                   <Eye className="w-4 h-4 mr-1" />
+                                   Preview
                                 </Button>
                                 <Button
                                   size="sm"

@@ -68,6 +68,20 @@ serve(async (req) => {
 
     console.log(`Found article: ${article.title}`);
 
+    // Get topic CTA configuration if article has a topic
+    let ctaConfig = null;
+    if (article.topic_id) {
+      const { data: ctaData } = await supabase
+        .from('feed_cta_configs')
+        .select('*')
+        .eq('topic_id', article.topic_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      ctaConfig = ctaData;
+      console.log(`🎯 Found CTA config for topic: ${ctaConfig ? 'Yes' : 'No'}`);
+    }
+
     // Extract publication name with validation
     const publicationName = extractPublicationName(article.source_url);
     console.log(`🔍 Extracting publication from URL: ${article.source_url}`);
@@ -108,7 +122,7 @@ serve(async (req) => {
       // Generate slides first, then post copy (slides must be available for post copy generation)
       if (actualProvider === 'deepseek' && deepseekApiKey) {
         console.log('🔄 Generating slides with DeepSeek...');
-        slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase);
+        slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase, ctaConfig);
         console.log(`✅ Generated ${slides.length} slides with DeepSeek`);
         
         console.log('🔄 Generating post copy with DeepSeek...');
@@ -116,7 +130,7 @@ serve(async (req) => {
         console.log('✅ Generated post copy with DeepSeek');
       } else {
         console.log('🔄 Generating slides with OpenAI...');
-        slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase);
+        slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase, ctaConfig);
         console.log(`✅ Generated ${slides.length} slides with OpenAI`);
         
         console.log('🔄 Generating post copy with OpenAI...');
@@ -538,11 +552,16 @@ async function generateSlides(
   slideType: string, 
   apiKey: string, 
   publicationName: string,
-  supabaseClient: any
+  supabaseClient: any,
+  ctaConfig: any = null
 ): Promise<SlideContent[]> {
   const slideCount = getExpectedSlideCount(slideType);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
   const temporalContext = article.published_at ? calculateTemporalContext(article.published_at) : null;
+  
+  // Prepare CTA content
+  const ctaText = ctaConfig?.engagement_question || 'What are your thoughts on this story?';
+  const attributionCTA = ctaConfig?.attribution_cta || 'Read the full story via link in bio';
   
   const systemPrompt = `You are an expert content creator specializing in transforming news articles into engaging social media carousel slides for Instagram and Facebook.
 
@@ -560,6 +579,7 @@ SLIDE STRUCTURE for ${slideType} format:
 - Slide 1: Hook/Headline (15-20 words max) - Grab attention
 - Slide 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
 - Slide ${slideCount}: Call to action with source attribution (25-40 words)
+  ${ctaConfig ? `Final slide must include: "${ctaText}" and "${attributionCTA}"` : ''}
 
 STORY TYPE: ${storyAnalysis.type} (${storyAnalysis.significance} significance)
 ${storyAnalysis.angles.length > 0 ? `KEY ANGLES: ${storyAnalysis.angles.join(', ')}` : ''}
@@ -780,11 +800,16 @@ async function generateSlidesWithDeepSeek(
   slideType: string, 
   apiKey: string, 
   publicationName: string,
-  supabaseClient: any
+  supabaseClient: any,
+  ctaConfig: any = null
 ): Promise<SlideContent[]> {
   const slideCount = getExpectedSlideCount(slideType);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
   const temporalContext = article.published_at ? calculateTemporalContext(article.published_at) : null;
+  
+  // Prepare CTA content
+  const ctaText = ctaConfig?.engagement_question || 'What are your thoughts on this story?';
+  const attributionCTA = ctaConfig?.attribution_cta || 'Read the full story via link in bio';
   
   const systemPrompt = `You are an expert content creator specializing in transforming news articles into engaging social media carousel slides for Instagram and Facebook.
 
@@ -802,6 +827,7 @@ SLIDE STRUCTURE for ${slideType} format:
 - Slide 1: Hook/Headline (15-20 words max) - Grab attention
 - Slide 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
 - Slide ${slideCount}: Call to action with source attribution (25-40 words)
+  ${ctaConfig ? `Final slide must include: "${ctaText}" and "${attributionCTA}"` : ''}
 
 STORY TYPE: ${storyAnalysis.type} (${storyAnalysis.significance} significance)
 ${storyAnalysis.angles.length > 0 ? `KEY ANGLES: ${storyAnalysis.angles.join(', ')}` : ''}
