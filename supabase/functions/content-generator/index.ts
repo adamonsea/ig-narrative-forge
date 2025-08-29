@@ -97,19 +97,43 @@ serve(async (req) => {
     const finalPublicationName = publicationName;
     console.log(`📰 Final publication name: ${finalPublicationName}`);
 
-    let slides: SlideContent[];
-    let postCopy: { caption: string; hashtags: string[] };
+    // Initialize variables with safe defaults to prevent ReferenceError
+    let slides: SlideContent[] = [];
+    let postCopy: { caption: string; hashtags: string[] } = { caption: '', hashtags: [] };
     const actualProvider = aiProvider || 'openai';
 
     console.log(`🎯 Generating slides using ${actualProvider === 'deepseek' ? 'DeepSeek' : 'OpenAI'} with slideType: ${slideType}, expected count: ${getExpectedSlideCount(slideType)}`);
 
-    // Generate slides first, then post copy (slides must be available for post copy generation)
-    if (actualProvider === 'deepseek' && deepseekApiKey) {
-      slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase);
-      postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, finalPublicationName);
-    } else {
-      slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase);
-      postCopy = await generatePostCopy(article, slides, openaiApiKey, finalPublicationName);
+    try {
+      // Generate slides first, then post copy (slides must be available for post copy generation)
+      if (actualProvider === 'deepseek' && deepseekApiKey) {
+        console.log('🔄 Generating slides with DeepSeek...');
+        slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase);
+        console.log(`✅ Generated ${slides.length} slides with DeepSeek`);
+        
+        console.log('🔄 Generating post copy with DeepSeek...');
+        postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, finalPublicationName);
+        console.log('✅ Generated post copy with DeepSeek');
+      } else {
+        console.log('🔄 Generating slides with OpenAI...');
+        slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase);
+        console.log(`✅ Generated ${slides.length} slides with OpenAI`);
+        
+        console.log('🔄 Generating post copy with OpenAI...');
+        postCopy = await generatePostCopy(article, slides, openaiApiKey, finalPublicationName);
+        console.log('✅ Generated post copy with OpenAI');
+      }
+
+      // Validate that we have slides and post copy
+      if (!slides || slides.length === 0) {
+        throw new Error('No slides were generated');
+      }
+      if (!postCopy || !postCopy.caption) {
+        throw new Error('No post copy was generated');
+      }
+    } catch (error) {
+      console.error('❌ Error during content generation:', error);
+      throw new Error(`Content generation failed: ${error.message}`);
     }
 
     console.log(`✅ Generated ${slides.length} slides and post copy successfully`);
