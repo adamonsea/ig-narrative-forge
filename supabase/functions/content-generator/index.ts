@@ -245,7 +245,7 @@ serve(async (req) => {
     const { error: storyUpdateError } = await supabase
       .from('stories')
       .update({ 
-        status: 'draft',
+        status: 'ready',
         is_published: true,
         publication_name: finalPublicationName,
         author: article.author
@@ -255,6 +255,20 @@ serve(async (req) => {
     if (storyUpdateError) {
       console.error('Error updating story:', storyUpdateError);
       throw new Error(`Failed to update story: ${storyUpdateError.message}`);
+    }
+
+    // Update article processing status to processed
+    const { error: articleUpdateError } = await supabase
+      .from('articles')
+      .update({ 
+        processing_status: 'processed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', articleId);
+
+    if (articleUpdateError) {
+      console.error('Error updating article status:', articleUpdateError);
+      throw new Error(`Failed to update article status: ${articleUpdateError.message}`);
     }
 
     // Insert post copy for social media
