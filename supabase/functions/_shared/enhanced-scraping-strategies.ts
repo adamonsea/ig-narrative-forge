@@ -311,11 +311,40 @@ export class EnhancedScrapingStrategies {
     const hasMinimumContent = (article.body?.length || 0) > 20; // Very low threshold
     const hasTitle = article.title && article.title.length > 5;
     
+    // NEW: Check if article is reasonably recent (within last 6 months)
+    const isRecent = this.isArticleRecent(article.published_at);
+    
     console.log(`🔍 VOLUME-FIRST Article qualification: "${article.title?.substring(0, 50)}..."`);
     console.log(`   Words: ${article.word_count || 0}, Length: ${article.body?.length || 0}, Has Title: ${hasTitle}`);
-    console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle}`);
+    console.log(`   Published: ${article.published_at}, Recent: ${isRecent}`);
+    console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle && isRecent}`);
     
-    return hasMinimumWords && hasMinimumContent && hasTitle;
+    return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
+  }
+
+  private isArticleRecent(publishedAt?: string): boolean {
+    if (!publishedAt) {
+      console.log('⚠️ No publication date found, treating as recent');
+      return true; // If no date, assume it's recent
+    }
+
+    try {
+      const pubDate = new Date(publishedAt);
+      const now = new Date();
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+      const isRecent = pubDate >= sixMonthsAgo;
+      
+      if (!isRecent) {
+        console.log(`📅 Article too old: ${publishedAt} (${Math.round((now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24))} days ago)`);
+      }
+      
+      return isRecent;
+    } catch (error) {
+      console.log(`⚠️ Invalid date format: ${publishedAt}, treating as recent`);
+      return true; // If date parsing fails, assume it's recent
+    }
   }
 
   private isContentQualified(content: any): boolean {
@@ -324,7 +353,10 @@ export class EnhancedScrapingStrategies {
     const hasMinimumContent = (content.body?.length || 0) > 20;
     const hasTitle = content.title && content.title.length > 5;
     
-    return hasMinimumWords && hasMinimumContent && hasTitle;
+    // NEW: Check if content is reasonably recent (within last 6 months)
+    const isRecent = this.isArticleRecent(content.published_at);
+    
+    return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
   }
 
   // Helper methods
