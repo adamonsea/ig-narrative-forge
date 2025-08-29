@@ -34,6 +34,26 @@ export class DatabaseOperations {
 
     for (const article of articles) {
       try {
+        // Check if URL was previously scraped (even if article was deleted)
+        const { data: urlHistory } = await this.supabase
+          .from('scraped_urls_history')
+          .select('id')
+          .eq('url', article.source_url)
+          .limit(1);
+
+        if (urlHistory && urlHistory.length > 0) {
+          console.log(`⚠️ Previously scraped URL: ${article.title.substring(0, 50)}...`);
+          
+          // Update last_seen_at for existing URL
+          await this.supabase
+            .from('scraped_urls_history')
+            .update({ last_seen_at: new Date().toISOString() })
+            .eq('url', article.source_url);
+            
+          duplicates++;
+          continue;
+        }
+
         // Check for duplicates by title similarity
         const { data: existingArticles } = await this.supabase
           .from('articles')
@@ -94,6 +114,20 @@ export class DatabaseOperations {
 
         console.log(`✅ Stored: ${article.title.substring(0, 50)}... (${article.word_count} words, quality: ${article.content_quality_score})`);
         stored++;
+
+        // Track this URL in history to prevent future re-scraping
+        try {
+          await this.supabase
+            .from('scraped_urls_history')
+            .insert({
+              url: article.source_url,
+              topic_id: topicId,
+              source_id: sourceId
+            });
+        } catch (historyError) {
+          // Ignore errors (URL might already exist from concurrent operations)
+          console.log(`📝 URL history tracking: ${article.source_url}`);
+        }
 
       } catch (error) {
         console.error(`❌ Exception storing article: ${error.message}`);

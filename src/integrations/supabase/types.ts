@@ -951,6 +951,36 @@ export type Database = {
           },
         ]
       }
+      scraped_urls_history: {
+        Row: {
+          created_at: string
+          first_scraped_at: string
+          id: string
+          last_seen_at: string
+          source_id: string | null
+          topic_id: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          first_scraped_at?: string
+          id?: string
+          last_seen_at?: string
+          source_id?: string | null
+          topic_id?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          first_scraped_at?: string
+          id?: string
+          last_seen_at?: string
+          source_id?: string | null
+          topic_id?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       scraping_automation: {
         Row: {
           created_at: string | null
