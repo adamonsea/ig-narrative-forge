@@ -958,6 +958,7 @@ export type Database = {
           id: string
           last_seen_at: string
           source_id: string | null
+          status: string | null
           topic_id: string | null
           url: string
         }
@@ -967,6 +968,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           source_id?: string | null
+          status?: string | null
           topic_id?: string | null
           url: string
         }
@@ -976,6 +978,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           source_id?: string | null
+          status?: string | null
           topic_id?: string | null
           url?: string
         }

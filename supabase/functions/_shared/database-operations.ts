@@ -13,7 +13,7 @@ export class DatabaseOperations {
     let duplicates = 0;
     let discarded = 0;
 
-    console.log(`💾 Storing ${articles.length} articles for source ${sourceId}`);
+    console.log(`💾 Processing ${articles.length} articles for source ${sourceId}`);
 
     // Get source information to determine thresholds
     const { data: sourceInfo } = await this.supabase
@@ -34,15 +34,15 @@ export class DatabaseOperations {
 
     for (const article of articles) {
       try {
-        // Check if URL was previously scraped (even if article was deleted)
+        // FIRST: Check if URL was previously scraped and track this URL immediately
         const { data: urlHistory } = await this.supabase
           .from('scraped_urls_history')
-          .select('id')
+          .select('id, status')
           .eq('url', article.source_url)
           .limit(1);
 
         if (urlHistory && urlHistory.length > 0) {
-          console.log(`⚠️ Previously scraped URL: ${article.title.substring(0, 50)}...`);
+          console.log(`⚠️ Previously scraped URL: ${article.title.substring(0, 50)}... (status: ${urlHistory[0].status})`);
           
           // Update last_seen_at for existing URL
           await this.supabase
@@ -53,6 +53,20 @@ export class DatabaseOperations {
           duplicates++;
           continue;
         }
+
+        // Track this URL immediately to prevent future re-scraping
+        await this.supabase
+          .from('scraped_urls_history')
+          .insert({
+            url: article.source_url,
+            topic_id: topicId,
+            source_id: sourceId,
+            status: 'scraped'
+          })
+          .onConflict('url')
+          .merge({ last_seen_at: new Date().toISOString() });
+      
+        console.log(`📝 Tracked URL in history: ${article.source_url}`);
 
         // Check for duplicates by title similarity
         const { data: existingArticles } = await this.supabase
@@ -68,6 +82,13 @@ export class DatabaseOperations {
 
           if (isDuplicate) {
             console.log(`⚠️ Duplicate detected: ${article.title.substring(0, 50)}...`);
+            
+            // Update URL history status to 'duplicate'
+            await this.supabase
+              .from('scraped_urls_history')
+              .update({ status: 'duplicate' })
+              .eq('url', article.source_url);
+              
             duplicates++;
             continue;
           }
@@ -76,6 +97,13 @@ export class DatabaseOperations {
         // Apply quality and relevance filters with dynamic thresholds
         if (article.word_count < 50 || article.content_quality_score < 30 || article.regional_relevance_score < relevanceThreshold) {
           console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}, quality: ${article.content_quality_score}, relevance: ${article.regional_relevance_score}, threshold: ${relevanceThreshold})`);
+          
+          // Update URL history status to 'discarded'
+          await this.supabase
+            .from('scraped_urls_history')
+            .update({ status: 'discarded' })
+            .eq('url', article.source_url);
+            
           discarded++;
           continue;
         }
@@ -115,19 +143,11 @@ export class DatabaseOperations {
         console.log(`✅ Stored: ${article.title.substring(0, 50)}... (${article.word_count} words, quality: ${article.content_quality_score})`);
         stored++;
 
-        // Track this URL in history to prevent future re-scraping
-        try {
-          await this.supabase
-            .from('scraped_urls_history')
-            .insert({
-              url: article.source_url,
-              topic_id: topicId,
-              source_id: sourceId
-            });
-        } catch (historyError) {
-          // Ignore errors (URL might already exist from concurrent operations)
-          console.log(`📝 URL history tracking: ${article.source_url}`);
-        }
+        // Update URL history status to 'stored'
+        await this.supabase
+          .from('scraped_urls_history')
+          .update({ status: 'stored' })
+          .eq('url', article.source_url);
 
       } catch (error) {
         console.error(`❌ Exception storing article: ${error.message}`);
@@ -179,6 +199,32 @@ export class DatabaseOperations {
       }
     } catch (error) {
       console.error(`❌ Error updating source metrics: ${error.message}`);
+    }
+  }
+
+  async markArticleAsManuallyDiscarded(articleId: string): Promise<void> {
+    try {
+      // Get the article's source URL
+      const { data: article } = await this.supabase
+        .from('articles')
+        .select('source_url')
+        .eq('id', articleId)
+        .single();
+
+      if (article) {
+        // Update URL history status to 'manually_discarded'
+        await this.supabase
+          .from('scraped_urls_history')
+          .update({ 
+            status: 'manually_discarded',
+            last_seen_at: new Date().toISOString()
+          })
+          .eq('url', article.source_url);
+
+        console.log(`🚫 Marked article as manually discarded: ${article.source_url}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error marking article as manually discarded: ${error.message}`);
     }
   }
 

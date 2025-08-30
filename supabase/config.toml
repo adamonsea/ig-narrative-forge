@@ -82,3 +82,15 @@ verify_jwt = false
 
 [functions.midjourney-image-generator]
 verify_jwt = false
+
+# Topic-Aware Scraper
+[functions.topic-aware-scraper]
+verify_jwt = false
+
+# Keyword Rescan Trigger
+[functions.keyword-rescan-trigger]
+verify_jwt = false
+
+# Manual Article Management
+[functions.mark-article-discarded]
+verify_jwt = false
