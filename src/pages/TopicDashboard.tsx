@@ -287,13 +287,16 @@ const TopicDashboard = () => {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="sources" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="sources">Sources</TabsTrigger>
+        <Tabs defaultValue="content" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
-            <TabsTrigger value="cta">Feed Settings</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="sources">Sources</TabsTrigger>
+            <TabsTrigger value="management">Management</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="content" className="space-y-6">
+            <TopicAwareContentPipeline selectedTopicId={topic.id} />
+          </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
             <TopicAwareSourceManager 
@@ -302,69 +305,64 @@ const TopicDashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value="content" className="space-y-6">
-            <TopicAwareContentPipeline selectedTopicId={topic.id} />
-          </TabsContent>
-
-
-          <TabsContent value="cta" className="space-y-6">
-            <TopicCTAManager 
-              topicId={topic.id} 
-              topicName={topic.name}
-              onClose={() => {}} 
-            />
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <KeywordManager 
-              topic={topic} 
-              onTopicUpdate={(updatedTopic: Topic) => {
-                setTopic((prevTopic) => ({
-                  ...prevTopic!,
-                  ...updatedTopic
-                }));
-                loadTopicAndStats(); // Refresh stats after keyword update
-              }} 
-            />
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Topic Configuration</CardTitle>
-                <CardDescription>
-                  Basic topic information and metadata
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Topic Type</label>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        {topic.topic_type}
-                      </p>
+          <TabsContent value="management" className="space-y-6">
+            <div className="space-y-6">
+              <TopicCTAManager 
+                topicId={topic.id} 
+                topicName={topic.name}
+                onClose={() => {}} 
+              />
+              
+              <KeywordManager 
+                topic={topic} 
+                onTopicUpdate={(updatedTopic: Topic) => {
+                  setTopic((prevTopic) => ({
+                    ...prevTopic!,
+                    ...updatedTopic
+                  }));
+                  loadTopicAndStats(); // Refresh stats after keyword update
+                }} 
+              />
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Topic Configuration</CardTitle>
+                  <CardDescription>
+                    Basic topic information and metadata
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Topic Type</label>
+                        <p className="text-sm text-muted-foreground capitalize">
+                          {topic.topic_type}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Region</label>
+                        <p className="text-sm text-muted-foreground">
+                          {topic.region || 'Global'}
+                        </p>
+                      </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Region</label>
+                      <label className="text-sm font-medium">Created</label>
                       <p className="text-sm text-muted-foreground">
-                        {topic.region || 'Global'}
+                        {new Date(topic.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Slug</label>
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {topic.slug}
                       </p>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Created</label>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(topic.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Slug</label>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {topic.slug}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -1,0 +1,203 @@
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlayCircle, Eye, ExternalLink, RotateCcw } from "lucide-react";
+
+interface Article {
+  id: string;
+  title: string;
+  body: string;
+  source_url: string;
+  published_at: string | null;
+  created_at: string;
+  processing_status: string;
+  content_quality_score: number | null;
+  regional_relevance_score: number | null;
+  word_count: number | null;
+  author?: string;
+  summary?: string;
+  import_metadata?: any;
+}
+
+interface ArticlesListProps {
+  articles: Article[];
+  processingArticle: string | null;
+  slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' };
+  onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth') => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth') => void;
+  onPreview: (article: Article) => void;
+  minRelevanceScore: number;
+}
+
+export const ArticlesList: React.FC<ArticlesListProps> = ({
+  articles,
+  processingArticle,
+  slideQuantities,
+  onSlideQuantityChange,
+  onApprove,
+  onPreview,
+  minRelevanceScore
+}) => {
+  const getRelevanceColor = (score: number | null) => {
+    if (!score) return "text-muted-foreground";
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getQualityColor = (score: number | null) => {
+    if (!score) return "text-muted-foreground";
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getSlideTypeInfo = (type: string, wordCount: number) => {
+    const types = {
+      short: { slides: 4, desc: 'Quick read' },
+      tabloid: { slides: 6, desc: 'Standard' },
+      indepth: { slides: 8, desc: 'Detailed' }
+    };
+    
+    const isAutoSelected = 
+      (type === 'short' && wordCount < 300) ||
+      (type === 'tabloid' && wordCount >= 300 && wordCount <= 800) ||
+      (type === 'indepth' && wordCount > 800);
+
+    return { 
+      ...types[type as keyof typeof types], 
+      isAuto: isAutoSelected 
+    };
+  };
+
+  const filteredArticles = articles.filter(article => 
+    (article.regional_relevance_score || 0) >= minRelevanceScore
+  );
+
+  if (filteredArticles.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RotateCcw className="w-5 h-5" />
+            No Articles Available
+          </CardTitle>
+          <CardDescription>
+            No articles found for the current filters. Try adjusting the relevance score filter.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {filteredArticles.map((article) => {
+        const slideType = slideQuantities[article.id] || 'tabloid';
+        const slideInfo = getSlideTypeInfo(slideType, article.word_count || 0);
+        
+        return (
+          <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg mb-2 line-clamp-2">
+                    {article.title}
+                  </CardTitle>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                    <div>
+                      <span className={getRelevanceColor(article.regional_relevance_score)}>
+                        {article.regional_relevance_score || 0}% relevant
+                      </span>
+                    </div>
+                    <div>
+                      <span className={getQualityColor(article.content_quality_score)}>
+                        {article.content_quality_score || 0}% quality
+                      </span>
+                    </div>
+                    <div>
+                      {article.word_count || 0} words
+                    </div>
+                    {article.author && (
+                      <div>
+                        by {article.author}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2 min-w-0">
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onPreview(article)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(article.source_url, '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs">
+                      <Select
+                        value={slideType}
+                        onValueChange={(value: 'short' | 'tabloid' | 'indepth') => 
+                          onSlideQuantityChange(article.id, value)
+                        }
+                      >
+                        <SelectTrigger className="w-28 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="short">
+                            4 slides {getSlideTypeInfo('short', article.word_count || 0).isAuto && '(auto)'}
+                          </SelectItem>
+                          <SelectItem value="tabloid">
+                            6 slides {getSlideTypeInfo('tabloid', article.word_count || 0).isAuto && '(auto)'}
+                          </SelectItem>
+                          <SelectItem value="indepth">
+                            8 slides {getSlideTypeInfo('indepth', article.word_count || 0).isAuto && '(auto)'}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <Button
+                      onClick={() => onApprove(article.id, slideType)}
+                      disabled={processingArticle === article.id}
+                      size="sm"
+                      className="min-w-0"
+                    >
+                      {processingArticle === article.id ? (
+                        "Processing..."
+                      ) : (
+                        <>
+                          <PlayCircle className="w-4 h-4 mr-1" />
+                          Generate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {slideInfo.isAuto && (
+                    <Badge variant="secondary" className="text-xs self-end">
+                      Auto-selected
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        );
+      })}
+    </div>
+  );
+};
