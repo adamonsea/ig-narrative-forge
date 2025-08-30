@@ -34,7 +34,7 @@ export class DatabaseOperations {
 
     for (const article of articles) {
       try {
-        // FIRST: Check if URL was previously scraped and track this URL immediately
+        // Check if URL was previously scraped
         const { data: urlHistory } = await this.supabase
           .from('scraped_urls_history')
           .select('id, status')
@@ -54,21 +54,6 @@ export class DatabaseOperations {
           continue;
         }
 
-        // Track this URL immediately to prevent future re-scraping
-        await this.supabase
-          .from('scraped_urls_history')
-          .upsert({
-            url: article.source_url,
-            topic_id: topicId,
-            source_id: sourceId,
-            status: 'scraped',
-            last_seen_at: new Date().toISOString()
-          }, {
-            onConflict: 'url'
-          });
-      
-        console.log(`📝 Tracked URL in history: ${article.source_url}`);
-
         // Check for duplicates by title similarity
         const { data: existingArticles } = await this.supabase
           .from('articles')
@@ -84,11 +69,18 @@ export class DatabaseOperations {
           if (isDuplicate) {
             console.log(`⚠️ Duplicate detected: ${article.title.substring(0, 50)}...`);
             
-            // Update URL history status to 'duplicate'
+            // Track URL as duplicate
             await this.supabase
               .from('scraped_urls_history')
-              .update({ status: 'duplicate' })
-              .eq('url', article.source_url);
+              .upsert({
+                url: article.source_url,
+                topic_id: topicId,
+                source_id: sourceId,
+                status: 'duplicate',
+                last_seen_at: new Date().toISOString()
+              }, {
+                onConflict: 'url'
+              });
               
             duplicates++;
             continue;
@@ -99,11 +91,18 @@ export class DatabaseOperations {
         if (article.word_count < 50 || article.content_quality_score < 30 || article.regional_relevance_score < relevanceThreshold) {
           console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}, quality: ${article.content_quality_score}, relevance: ${article.regional_relevance_score}, threshold: ${relevanceThreshold})`);
           
-          // Update URL history status to 'discarded'
+          // Track URL as discarded
           await this.supabase
             .from('scraped_urls_history')
-            .update({ status: 'discarded' })
-            .eq('url', article.source_url);
+            .upsert({
+              url: article.source_url,
+              topic_id: topicId,
+              source_id: sourceId,
+              status: 'discarded',
+              last_seen_at: new Date().toISOString()
+            }, {
+              onConflict: 'url'
+            });
             
           discarded++;
           continue;
@@ -131,27 +130,75 @@ export class DatabaseOperations {
         };
 
         // Insert article
-        const { error } = await this.supabase
+        const { data: insertedArticle, error } = await this.supabase
           .from('articles')
-          .insert(articleData);
+          .insert(articleData)
+          .select('id')
+          .single();
 
         if (error) {
-          console.error(`❌ Error storing article: ${error.message}`);
-          console.error('Article data:', JSON.stringify(articleData, null, 2));
+          console.error(`❌ Error storing article "${article.title}": ${error.message}`);
+          console.error('Error details:', error);
+          console.error('Article data summary:', {
+            title: articleData.title,
+            word_count: articleData.word_count,
+            source_url: articleData.source_url,
+            source_id: articleData.source_id,
+            topic_id: articleData.topic_id
+          });
+          
+          // Log detailed error for debugging
+          await this.logSystemEvent(
+            'error',
+            `Failed to store article: ${error.message}`,
+            {
+              article_title: article.title,
+              source_url: article.source_url,
+              source_id: sourceId,
+              topic_id: topicId,
+              error_code: error.code,
+              error_details: error.details
+            },
+            'database-operations.storeArticles'
+          );
+          
           continue;
         }
 
-        console.log(`✅ Stored: ${article.title.substring(0, 50)}... (${article.word_count} words, quality: ${article.content_quality_score})`);
+        console.log(`✅ Stored: ${article.title.substring(0, 50)}... (ID: ${insertedArticle.id}, ${article.word_count} words, quality: ${article.content_quality_score})`);
         stored++;
 
-        // Update URL history status to 'stored'
+        // ONLY NOW track URL as successfully stored
         await this.supabase
           .from('scraped_urls_history')
-          .update({ status: 'stored' })
-          .eq('url', article.source_url);
+          .upsert({
+            url: article.source_url,
+            topic_id: topicId,
+            source_id: sourceId,
+            status: 'stored',
+            last_seen_at: new Date().toISOString()
+          }, {
+            onConflict: 'url'
+          });
 
       } catch (error) {
-        console.error(`❌ Exception storing article: ${error.message}`);
+        console.error(`❌ Exception processing article "${article.title}": ${error.message}`);
+        console.error('Exception details:', error);
+        
+        // Log system error for monitoring
+        await this.logSystemEvent(
+          'error',
+          `Exception processing article: ${error.message}`,
+          {
+            article_title: article.title,
+            source_url: article.source_url,
+            source_id: sourceId,
+            topic_id: topicId,
+            stack: error.stack
+          },
+          'database-operations.storeArticles'
+        );
+        
         continue;
       }
     }
@@ -286,5 +333,79 @@ export class DatabaseOperations {
     }
     
     return matrix[str2.length][str1.length];
+  }
+
+  // Recovery method to reset orphaned URLs that were marked as scraped but have no articles
+  async recoverOrphanedUrls(sourceId?: string, topicId?: string): Promise<number> {
+    try {
+      console.log('🔄 Starting recovery of orphaned URLs...');
+      
+      let query = this.supabase
+        .from('scraped_urls_history')
+        .select('url, id')
+        .eq('status', 'scraped');
+      
+      if (sourceId) {
+        query = query.eq('source_id', sourceId);
+      }
+      
+      if (topicId) {
+        query = query.eq('topic_id', topicId);
+      }
+      
+      const { data: scrapedUrls } = await query;
+      
+      if (!scrapedUrls || scrapedUrls.length === 0) {
+        console.log('✅ No orphaned URLs found');
+        return 0;
+      }
+      
+      let recovered = 0;
+      
+      for (const urlRecord of scrapedUrls) {
+        // Check if article exists for this URL
+        const { data: articleExists } = await this.supabase
+          .from('articles')
+          .select('id')
+          .eq('source_url', urlRecord.url)
+          .limit(1);
+        
+        if (!articleExists || articleExists.length === 0) {
+          // No article exists, reset this URL for retry
+          await this.supabase
+            .from('scraped_urls_history')
+            .delete()
+            .eq('id', urlRecord.id);
+          
+          console.log(`🔄 Reset orphaned URL: ${urlRecord.url}`);
+          recovered++;
+        }
+      }
+      
+      console.log(`✅ Recovery complete: ${recovered} URLs reset for retry`);
+      
+      // Log recovery action
+      await this.logSystemEvent(
+        'info',
+        `Recovered ${recovered} orphaned URLs`,
+        {
+          source_id: sourceId,
+          topic_id: topicId,
+          recovered_count: recovered
+        },
+        'database-operations.recoverOrphanedUrls'
+      );
+      
+      return recovered;
+    } catch (error) {
+      console.error(`❌ Error during URL recovery: ${error.message}`);
+      await this.logSystemEvent(
+        'error',
+        `Failed to recover orphaned URLs: ${error.message}`,
+        { source_id: sourceId, topic_id: topicId },
+        'database-operations.recoverOrphanedUrls'
+      );
+      return 0;
+    }
   }
 }

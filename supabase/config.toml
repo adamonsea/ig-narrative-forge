@@ -94,3 +94,7 @@ verify_jwt = false
 # Manual Article Management
 [functions.mark-article-discarded]
 verify_jwt = false
+
+# URL Recovery
+[functions.recover-orphaned-urls]
+verify_jwt = false

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock } from "lucide-react";
+import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const [showAddForm, setShowAddForm] = useState(false);
   const [scrapingSource, setScrapingSource] = useState<string | null>(null);
   const [scrapingAll, setScrapingAll] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [automationSettings, setAutomationSettings] = useState<{
     scrape_frequency_hours: number;
     is_active: boolean;
@@ -364,6 +365,48 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     }
   };
 
+  const handleRecoverOrphanedUrls = async () => {
+    if (!currentTopicId) return;
+    
+    try {
+      setRecovering(true);
+      
+      console.log('🔄 Starting URL recovery for topic:', currentTopicId);
+      
+      const { data, error } = await supabase.functions.invoke('recover-orphaned-urls', {
+        body: { 
+          topicId: currentTopicId,
+          sourceId: null // Recover for all sources in this topic
+        }
+      });
+      
+      if (error) throw error;
+      
+      console.log('✅ URL recovery result:', data);
+      
+      toast({
+        title: "Recovery Complete",
+        description: `${data.recoveredCount} orphaned URLs recovered and available for retry`,
+        variant: data.recoveredCount > 0 ? "default" : "destructive"
+      });
+      
+      // Refresh sources to update stats
+      if (currentTopicId) {
+        await loadSourcesForTopic(currentTopicId);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error recovering URLs:', error);
+      toast({
+        title: "Recovery Failed",
+        description: "Failed to recover orphaned URLs. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setRecovering(false);
+    }
+  };
+
   const updateAutomationSettings = async (newSettings: { scrape_frequency_hours: number; is_active: boolean }) => {
     try {
       const { error } = await supabase
@@ -478,18 +521,33 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
               </div>
               
               {sources.filter(s => s.is_active && s.feed_url).length > 0 && (
-                <Button 
-                  onClick={handleScrapeAllSources}
-                  disabled={scrapingAll}
-                  variant="default"
-                >
-                  {scrapingAll ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  ) : (
-                    <Zap className="w-4 h-4 mr-2" />
-                  )}
-                  {scrapingAll ? 'Scraping All...' : 'Scrape All Active'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleScrapeAllSources}
+                    disabled={scrapingAll}
+                    variant="default"
+                  >
+                    {scrapingAll ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    ) : (
+                      <Zap className="w-4 h-4 mr-2" />
+                    )}
+                    {scrapingAll ? 'Scraping All...' : 'Scrape All Active'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleRecoverOrphanedUrls}
+                    disabled={recovering}
+                    variant="outline"
+                  >
+                    {recovering ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    {recovering ? 'Recovering...' : 'Recover Failed URLs'}
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>
