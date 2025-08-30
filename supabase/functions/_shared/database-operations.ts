@@ -57,14 +57,15 @@ export class DatabaseOperations {
         // Track this URL immediately to prevent future re-scraping
         await this.supabase
           .from('scraped_urls_history')
-          .insert({
+          .upsert({
             url: article.source_url,
             topic_id: topicId,
             source_id: sourceId,
-            status: 'scraped'
-          })
-          .onConflict('url')
-          .merge({ last_seen_at: new Date().toISOString() });
+            status: 'scraped',
+            last_seen_at: new Date().toISOString()
+          }, {
+            onConflict: 'url'
+          });
       
         console.log(`📝 Tracked URL in history: ${article.source_url}`);
 
