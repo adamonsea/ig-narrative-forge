@@ -694,10 +694,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         // Check if title is too similar to any existing story
         const isDuplicate = storyTitles.some(storyTitle => {
           if (!storyTitle) return false;
-          // Simple similarity check - lowered threshold to 75% to be less aggressive
+          // Consistent with database - 90% threshold for duplicate detection
           const similarity = calculateTitleSimilarity(articleTitle, storyTitle);
           console.log(`📊 Similarity check: "${articleTitle}" vs "${storyTitle}" = ${similarity.toFixed(3)}`);
-          return similarity > 0.75;
+          return similarity > 0.9;
         });
         
         return !isDuplicate && !excludedIds.includes(article.id);

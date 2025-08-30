@@ -34,40 +34,58 @@ export class DatabaseOperations {
 
     for (const article of articles) {
       try {
-        // Check if URL was previously scraped
-        const { data: urlHistory } = await this.supabase
-          .from('scraped_urls_history')
-          .select('id, status')
-          .eq('url', article.source_url)
+        // Normalize URL for better comparison
+        const normalizedUrl = this.normalizeUrl(article.source_url);
+        
+        // Check if article already exists with this URL and is not discarded
+        const { data: existingArticle } = await this.supabase
+          .from('articles')
+          .select('id, title, processing_status')
+          .eq('source_url', article.source_url)
           .limit(1);
 
-        if (urlHistory && urlHistory.length > 0) {
-          console.log(`⚠️ Previously scraped URL: ${article.title.substring(0, 50)}... (status: ${urlHistory[0].status})`);
+        if (existingArticle && existingArticle.length > 0) {
+          const existing = existingArticle[0];
+          console.log(`⚠️ Article already exists: ${article.title.substring(0, 50)}... (ID: ${existing.id}, status: ${existing.processing_status})`);
           
-          // Update last_seen_at for existing URL
+          // Update URL history to reflect we've seen it again
           await this.supabase
             .from('scraped_urls_history')
-            .update({ last_seen_at: new Date().toISOString() })
-            .eq('url', article.source_url);
+            .upsert({
+              url: article.source_url,
+              topic_id: topicId,
+              source_id: sourceId,
+              status: 'duplicate',
+              last_seen_at: new Date().toISOString()
+            }, {
+              onConflict: 'url'
+            });
             
           duplicates++;
           continue;
         }
 
-        // Check for duplicates by title similarity
-        const { data: existingArticles } = await this.supabase
+        // Check for duplicates by title similarity (only if no exact URL match)
+        const { data: similarArticles } = await this.supabase
           .from('articles')
-          .select('id, title')
-          .ilike('title', `${article.title.substring(0, 50)}%`);
+          .select('id, title, source_url')
+          .neq('processing_status', 'discarded'); // Don't compare against discarded articles
 
-        if (existingArticles && existingArticles.length > 0) {
-          // Check for exact or very similar titles
-          const isDuplicate = existingArticles.some((existing: any) => 
-            this.calculateSimilarity(existing.title.toLowerCase(), article.title.toLowerCase()) > 0.85
-          );
+        if (similarArticles && similarArticles.length > 0) {
+          // Check for very similar titles with improved logic
+          const isDuplicate = similarArticles.some((existing: any) => {
+            const similarity = this.calculateTitleSimilarity(existing.title, article.title);
+            const isSimilar = similarity > 0.9; // More strict threshold
+            
+            if (isSimilar) {
+              console.log(`📊 Title similarity detected: "${existing.title}" vs "${article.title}" (${Math.round(similarity * 100)}%)`);
+            }
+            
+            return isSimilar;
+          });
 
           if (isDuplicate) {
-            console.log(`⚠️ Duplicate detected: ${article.title.substring(0, 50)}...`);
+            console.log(`⚠️ Duplicate title detected: ${article.title.substring(0, 50)}...`);
             
             // Track URL as duplicate
             await this.supabase
@@ -295,6 +313,33 @@ export class DatabaseOperations {
     } catch (error) {
       console.error(`❌ Error logging system event: ${error.message}`);
     }
+  }
+
+  private normalizeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      // Remove trailing slashes and normalize query parameters
+      return urlObj.href.replace(/\/$/, '').toLowerCase();
+    } catch {
+      return url.toLowerCase();
+    }
+  }
+
+  private calculateTitleSimilarity(title1: string, title2: string): number {
+    // Normalize titles by removing punctuation and extra whitespace
+    const normalize = (str: string) => str
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    const norm1 = normalize(title1);
+    const norm2 = normalize(title2);
+    
+    if (norm1 === norm2) return 1.0;
+    if (norm1.length === 0 || norm2.length === 0) return 0.0;
+    
+    return this.calculateSimilarity(norm1, norm2);
   }
 
   private calculateSimilarity(str1: string, str2: string): number {
