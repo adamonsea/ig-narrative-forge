@@ -142,6 +142,48 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Auto-select slide type based on word count
+  const getAutoSlideType = (wordCount: number): 'short' | 'tabloid' | 'indepth' => {
+    if (wordCount < 300) return 'short';
+    if (wordCount > 800) return 'indepth'; 
+    return 'tabloid';
+  };
+
+  // Calculate similarity between two strings using a simple comparison
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    if (!str1 || !str2) return 0;
+    
+    const a = str1.toLowerCase().trim();
+    const b = str2.toLowerCase().trim();
+    
+    if (a === b) return 1;
+    
+    // Simple character-based similarity
+    const maxLength = Math.max(a.length, b.length);
+    let matches = 0;
+    
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i] === b[i]) matches++;
+    }
+    
+    return matches / maxLength;
+  };
+
+  // Initialize slide quantities with auto-selected values
+  useEffect(() => {
+    if (articles.length > 0) {
+      const newSlideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' } = {};
+      articles.forEach(article => {
+        if (!slideQuantities[article.id]) {
+          newSlideQuantities[article.id] = getAutoSlideType(article.word_count || 0);
+        }
+      });
+      if (Object.keys(newSlideQuantities).length > 0) {
+        setSlideQuantities(prev => ({ ...prev, ...newSlideQuantities }));
+      }
+    }
+  }, [articles]);
+
   // Update selectedTopicId if propTopicId changes
   useEffect(() => {
     if (propTopicId && propTopicId !== selectedTopicId) {
@@ -818,6 +860,27 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       setProcessingArticle(articleId);
       
+      // Check if article already has a completed story
+      const { data: existingStory, error: storyCheckError } = await supabase
+        .from('stories')
+        .select('id, status, title')
+        .eq('article_id', articleId)
+        .in('status', ['ready', 'draft'])
+        .maybeSingle();
+
+      if (storyCheckError) {
+        throw new Error(`Failed to check for existing story: ${storyCheckError.message}`);
+      }
+
+      if (existingStory) {
+        toast({
+          title: "Story Already Exists",
+          description: `This article already has a ${existingStory.status} story. Check the "Ready Stories" tab to view it.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Check for ALL existing queue entries for this article (not just one)
       const { data: existingQueueEntries, error: checkError } = await supabase
         .from('content_generation_queue')
@@ -1157,9 +1220,14 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
   const handleReturnToReview = async (storyId: string) => {
     try {
+      setProcessingStories(prev => new Set(prev.add(storyId)));
+      
       const { error } = await supabase
         .from('stories')
-        .update({ status: 'draft' })
+        .update({ 
+          status: 'draft',
+          is_published: false 
+        })
         .eq('id', storyId);
 
       if (error) throw error;
@@ -1169,6 +1237,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         description: 'Story status changed to draft for re-review',
       });
 
+      // Update local state immediately
+      setStories(prev => prev.map(story => 
+        story.id === storyId 
+          ? { ...story, status: 'draft', is_published: false }
+          : story
+      ));
+
       loadTopicContent();
     } catch (error) {
       console.error('Failed to return story:', error);
@@ -1176,6 +1251,12 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         title: 'Error',
         description: 'Failed to return story to review',
         variant: 'destructive',
+      });
+    } finally {
+      setProcessingStories(prev => {
+        const next = new Set(prev);
+        next.delete(storyId);
+        return next;
       });
     }
   };
@@ -1586,48 +1667,53 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                                </div>
                              </div>
                            
-                            <div className="space-y-3 pt-3 border-t">
-                              <div className="space-y-2">
-                                <Label htmlFor={`slide-qty-${article.id}`}>Slide Quantity</Label>
-                                <Select 
-                                  value={slideQuantities[article.id] || 'tabloid'} 
-                                  onValueChange={(value: 'short' | 'tabloid' | 'indepth') => 
-                                    setSlideQuantities(prev => ({ ...prev, [article.id]: value }))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select slide type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="short">
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="secondary">3-4 slides</Badge>
-                                        Short Format
-                                      </div>
-                                    </SelectItem>
-                                    <SelectItem value="tabloid">
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="default">5-6 slides</Badge>
-                                        Tabloid Style
-                                      </div>
-                                    </SelectItem>
-                                    <SelectItem value="indepth">
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant="outline">7-8 slides</Badge>
-                                        In-Depth Analysis
-                                      </div>
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  onClick={() => approveArticle(article.id, slideQuantities[article.id] || 'tabloid')}
-                                  disabled={processingArticle === article.id}
-                                  className="flex-1"
-                                >
-                                  {processingArticle === article.id ? 'Processing...' : 'Approve for Generation'}
-                                </Button>
+                             <div className="space-y-3 pt-3 border-t">
+                               <div className="space-y-2">
+                                 <Label htmlFor={`slide-qty-${article.id}`}>
+                                   Slide Quantity 
+                                   <Badge variant="outline" className="ml-2 text-xs">
+                                     Auto: {getAutoSlideType(article.word_count || 0)}
+                                   </Badge>
+                                 </Label>
+                                 <Select 
+                                   value={slideQuantities[article.id] || getAutoSlideType(article.word_count || 0)} 
+                                   onValueChange={(value: 'short' | 'tabloid' | 'indepth') => 
+                                     setSlideQuantities(prev => ({ ...prev, [article.id]: value }))
+                                   }
+                                 >
+                                   <SelectTrigger>
+                                     <SelectValue placeholder="Select slide type" />
+                                   </SelectTrigger>
+                                   <SelectContent>
+                                      <SelectItem value="short">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="secondary">4 slides</Badge>
+                                          Short Format (&lt;300 words)
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="tabloid">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="default">6 slides</Badge>
+                                          Tabloid Style (300-800 words)
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="indepth">
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline">8 slides</Badge>
+                                          In-Depth Analysis (&gt;800 words)
+                                        </div>
+                                      </SelectItem>
+                                   </SelectContent>
+                                 </Select>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <Button 
+                                   onClick={() => approveArticle(article.id, slideQuantities[article.id] || getAutoSlideType(article.word_count || 0))}
+                                   disabled={processingArticle === article.id}
+                                   className="flex-1"
+                                 >
+                                   {processingArticle === article.id ? 'Processing...' : 'Approve for Generation'}
+                                 </Button>
                                 <Button
                                   variant="destructive"
                                   onClick={() => deleteArticle(article.id)}
