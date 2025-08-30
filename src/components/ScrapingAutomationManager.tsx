@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Globe, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 
 interface ScrapingRule {
   id: string;
@@ -28,9 +29,11 @@ interface ScrapingRule {
 interface ScrapingAutomationManagerProps {
   topicId: string;
   topicName: string;
+  topicType?: 'regional' | 'keyword';
+  region?: string;
 }
 
-export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutomationManagerProps) => {
+export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'keyword', region }: ScrapingAutomationManagerProps) => {
   const [rules, setRules] = useState<ScrapingRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -200,12 +203,15 @@ export const ScrapingAutomationManager = ({ topicId, topicName }: ScrapingAutoma
         throw new Error('Failed to setup content source');
       }
 
-      const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
-        body: {
-          feedUrl: rule.source_url,
-          topicId: topicId,
-          sourceId: sourceId
-        }
+      const scraperFunction = getScraperFunction(topicType);
+      const requestBody = createScraperRequestBody(
+        topicType,
+        rule.source_url,
+        { topicId, sourceId, region }
+      );
+
+      const { data, error } = await supabase.functions.invoke(scraperFunction, {
+        body: requestBody
       });
 
       if (error) throw error;

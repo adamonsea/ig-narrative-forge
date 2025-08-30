@@ -9,12 +9,14 @@ import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock } f
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getScraperFunction, createScraperRequestBody } from "@/lib/scraperUtils";
 
 interface Topic {
   id: string;
   name: string;
   topic_type: 'regional' | 'keyword';
   is_active: boolean;
+  region?: string;
 }
 
 interface ContentSource {
@@ -69,7 +71,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     try {
       const { data, error } = await supabase
         .from('topics')
-        .select('id, name, topic_type, is_active')
+        .select('id, name, topic_type, is_active, region')
         .eq('is_active', true)
         .order('name');
 
@@ -181,13 +183,17 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         description: `Source "${domain}" added successfully`
       });
 
-      // Trigger scraping for the new source
+      // Trigger scraping for the new source using appropriate scraper
       try {
-        await supabase.functions.invoke('topic-aware-scraper', {
-          body: {
-            feedUrl: newUrl,
-            topicId: currentTopicId
-          }
+        const scraperFunction = getScraperFunction(currentTopic!.topic_type);
+        const requestBody = createScraperRequestBody(
+          currentTopic!.topic_type,
+          newUrl,
+          { topicId: currentTopicId, sourceId: undefined, region: currentTopic!.region }
+        );
+        
+        await supabase.functions.invoke(scraperFunction, {
+          body: requestBody
         });
       } catch (scrapeError) {
         console.error('Scraping trigger failed:', scrapeError);
@@ -271,12 +277,15 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     try {
       setScrapingSource(source.id);
       
-      const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
-        body: {
-          feedUrl: source.feed_url,
-          topicId: currentTopicId,
-          sourceId: source.id
-        }
+      const scraperFunction = getScraperFunction(currentTopic!.topic_type);
+      const requestBody = createScraperRequestBody(
+        currentTopic!.topic_type,
+        source.feed_url,
+        { topicId: currentTopicId, sourceId: source.id, region: currentTopic!.region }
+      );
+      
+      const { data, error } = await supabase.functions.invoke(scraperFunction, {
+        body: requestBody
       });
 
       if (error) throw error;
@@ -317,16 +326,19 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     try {
       setScrapingAll(true);
       
-      // Scrape all active sources in parallel
-      const scrapePromises = activeSources.map(source => 
-        supabase.functions.invoke('topic-aware-scraper', {
-          body: {
-            feedUrl: source.feed_url,
-            topicId: currentTopicId,
-            sourceId: source.id
-          }
-        })
-      );
+      // Scrape all active sources in parallel using appropriate scraper
+      const scraperFunction = getScraperFunction(currentTopic!.topic_type);
+      const scrapePromises = activeSources.map(source => {
+        const requestBody = createScraperRequestBody(
+          currentTopic!.topic_type,
+          source.feed_url!,
+          { topicId: currentTopicId, sourceId: source.id, region: currentTopic!.region }
+        );
+        
+        return supabase.functions.invoke(scraperFunction, {
+          body: requestBody
+        });
+      });
 
       await Promise.allSettled(scrapePromises);
 

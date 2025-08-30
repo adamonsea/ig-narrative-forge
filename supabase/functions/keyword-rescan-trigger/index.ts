@@ -43,6 +43,28 @@ serve(async (req) => {
 
     console.log(`🔄 Keyword rescan trigger started for topic: ${topicId}`);
 
+    // Get topic information to determine scraper type
+    const { data: topicInfo, error: topicError } = await supabase
+      .from('topics')
+      .select('topic_type, region')
+      .eq('id', topicId)
+      .single();
+
+    if (topicError) {
+      console.error('❌ Failed to fetch topic info:', topicError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch topic information' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Determine which scraper to use based on topic type
+    const scraperFunction = topicInfo.topic_type === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
+    console.log(`📍 Using ${scraperFunction} for ${topicInfo.topic_type} topic`);
+
     // Get all active sources for this topic
     const { data: sources, error: sourcesError } = await supabase
       .from('content_sources')
@@ -75,15 +97,24 @@ serve(async (req) => {
       );
     }
 
-    // Trigger re-scraping for each source
+    // Trigger re-scraping for each source using appropriate scraper
     const triggerPromises = sources.map(async (source) => {
       try {
-        const { data, error } = await supabase.functions.invoke('topic-aware-scraper', {
-          body: {
-            feedUrl: source.feed_url,
-            topicId: topicId,
-            sourceId: source.id
-          }
+        // Create appropriate request body based on topic type
+        const requestBody = topicInfo.topic_type === 'regional'
+          ? {
+              feedUrl: source.feed_url,
+              sourceId: source.id,
+              region: topicInfo.region || 'default'
+            }
+          : {
+              feedUrl: source.feed_url,
+              topicId: topicId,
+              sourceId: source.id
+            };
+
+        const { data, error } = await supabase.functions.invoke(scraperFunction, {
+          body: requestBody
         });
 
         if (error) {
@@ -117,6 +148,8 @@ serve(async (req) => {
         context: {
           topicId,
           triggerType,
+          topicType: topicInfo.topic_type,
+          scraperUsed: scraperFunction,
           totalSources: sources.length,
           successful,
           failed,

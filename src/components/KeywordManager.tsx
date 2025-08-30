@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, X, Hash, MapPin, Building, Navigation, Save, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getScraperFunction } from "@/lib/scraperUtils";
 
 interface Topic {
   id: string;
@@ -138,11 +139,11 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
 
       if (error) throw error;
 
-      // Trigger re-scraping with updated keywords
-      const { error: rescrapError } = await supabase.functions.invoke('topic-aware-scraper', {
+      // Trigger re-scraping with updated keywords using appropriate scraper
+      const { error: rescrapError } = await supabase.functions.invoke('keyword-rescan-trigger', {
         body: {
-          feedUrl: 'rescan-trigger',
-          topicId: topic.id
+          topicId: topic.id,
+          triggerType: 'keyword_update'
         }
       });
 
