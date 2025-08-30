@@ -118,11 +118,31 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         slides: data.slides
       });
 
+      setGenerationProgress(85);
+      
+      // Automatically generate visuals for all slides
+      if (data.slides && data.slides.length > 0) {
+        toast({
+          title: "Generating Visuals...",
+          description: `Creating images for ${data.slides.length} slides`,
+        });
+        
+        // Generate visuals for each slide automatically
+        for (const slide of data.slides) {
+          try {
+            await generateVisual(slide);
+          } catch (error) {
+            console.error(`Failed to generate visual for slide ${slide.slide_number}:`, error);
+            // Continue with other slides even if one fails
+          }
+        }
+      }
+      
       setGenerationProgress(100);
       
       toast({
-        title: "Slides Generated!",
-        description: `Created ${data.slideCount} slides for "${article.title}"`,
+        title: "Story Complete!",
+        description: `Created ${data.slideCount} slides with images for "${article.title}"`,
       });
 
       // Refresh stories list

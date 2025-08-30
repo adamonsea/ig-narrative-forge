@@ -694,9 +694,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         // Check if title is too similar to any existing story
         const isDuplicate = storyTitles.some(storyTitle => {
           if (!storyTitle) return false;
-          // Simple similarity check - if titles are very similar (90%+ character overlap)
+          // Simple similarity check - lowered threshold to 75% to be less aggressive
           const similarity = calculateTitleSimilarity(articleTitle, storyTitle);
-          return similarity > 0.85;
+          console.log(`📊 Similarity check: "${articleTitle}" vs "${storyTitle}" = ${similarity.toFixed(3)}`);
+          return similarity > 0.75;
         });
         
         return !isDuplicate && !excludedIds.includes(article.id);
@@ -794,9 +795,9 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         })).sort((a: any, b: any) => a.slide_number - b.slide_number)
       })));
 
-      // Update stats with accurate counts
+      // Update stats with accurate counts - use filtered count for pending articles
       setStats({
-        pending_articles: articlesData?.length || 0,
+        pending_articles: filteredArticles.length, // Show actual displayed count
         processing_queue: queueData?.filter(q => q.status === 'processing').length || 0,
         ready_stories: storiesCount.count || 0 // Use actual count
       });
