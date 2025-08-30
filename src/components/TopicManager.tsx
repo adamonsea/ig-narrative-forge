@@ -209,9 +209,6 @@ export const TopicManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Your Topics</h2>
-          <p className="text-muted-foreground">
-            Manage your content topics and feeds
-          </p>
         </div>
         <Button onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -351,77 +348,87 @@ export const TopicManager = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         {topics.map((topic) => (
-          <Card key={topic.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {topic.topic_type === 'regional' ? (
-                      <MapPin className="w-4 h-4 text-blue-500" />
-                    ) : (
-                      <Hash className="w-4 h-4 text-green-500" />
-                    )}
-                    {topic.name}
-                  </CardTitle>
-                  {topic.description && (
-                    <CardDescription className="mt-1">
-                      {topic.description}
-                    </CardDescription>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {topic.is_public && (
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  <Switch
-                    checked={topic.is_active}
-                    onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-1">
-                  {topic.keywords.slice(0, 3).map((keyword, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {keyword}
-                    </Badge>
-                  ))}
-                  {topic.keywords.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{topic.keywords.length - 3} more
-                    </Badge>
-                  )}
-                </div>
+          <Card key={topic.id} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-card/50 hover:bg-card">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      {topic.topic_type === 'regional' ? (
+                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+                          <Hash className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-xl font-semibold tracking-tight">{topic.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={topic.is_active ? "default" : "secondary"} className="text-xs">
+                            {topic.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                          {topic.is_public && (
+                            <Badge variant="outline" className="text-xs">
+                              <Globe className="w-3 h-3 mr-1" />
+                              Public
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={topic.is_active}
+                        onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
+                      />
+                    </div>
+                  </div>
 
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Created {new Date(topic.created_at).toLocaleDateString()}</span>
-                  <div className="flex gap-2">
-                    {topic.slug && (
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/feed/topic/${topic.slug}`}>
-                          View Feed
-                        </Link>
-                      </Button>
-                    )}
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setManagingCTAForTopic({ id: topic.id, name: topic.name })}
-                    >
-                      <MessageSquare className="w-3 h-3 mr-1" />
-                      CTA
-                    </Button>
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/dashboard/topic/${topic.slug}`}>
-                        <Settings className="w-3 h-3 mr-1" />
-                        Manage
-                      </Link>
-                    </Button>
+                  {topic.description && (
+                    <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
+                      {topic.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap gap-2">
+                      {topic.keywords.slice(0, 5).map((keyword, index) => (
+                        <Badge key={index} variant="secondary" className="text-sm font-normal">
+                          {keyword}
+                        </Badge>
+                      ))}
+                      {topic.keywords.length > 5 && (
+                        <Badge variant="outline" className="text-sm">
+                          +{topic.keywords.length - 5} more
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        Created {new Date(topic.created_at).toLocaleDateString()}
+                      </span>
+                      <div className="flex gap-2">
+                        {topic.slug && (
+                          <Button variant="outline" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors">
+                            <Link to={`/feed/topic/${topic.slug}`}>
+                              View Feed
+                            </Link>
+                          </Button>
+                        )}
+                        <Button variant="outline" asChild className="hover:bg-secondary transition-colors">
+                          <Link to={`/dashboard/topic/${topic.slug}`}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Manage
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
