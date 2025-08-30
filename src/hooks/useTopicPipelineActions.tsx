@@ -2,6 +2,19 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface DeleteStoryResponse {
+  success: boolean;
+  error?: string;
+  story_id?: string;
+  article_reset?: boolean;
+  deleted_counts?: {
+    slides: number;
+    visuals: number;
+    posts: number;
+    exports: number;
+  };
+}
+
 export const useTopicPipelineActions = (onRefresh: () => void) => {
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
@@ -224,14 +237,15 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
 
       if (error) throw error;
 
-      if (data?.success) {
+      const result = data as unknown as DeleteStoryResponse;
+      if (result?.success) {
         toast({
           title: "Story Deleted",
           description: `"${storyTitle}" and all related content have been deleted`
         });
         onRefresh();
       } else {
-        throw new Error(data?.error || 'Unknown deletion error');
+        throw new Error(result?.error || 'Unknown deletion error');
       }
     } catch (error) {
       console.error('Error deleting story:', error);
