@@ -349,19 +349,30 @@ export const TopicManager = () => {
       )}
 
       <div className="space-y-6">
-        {topics.map((topic, index) => {
-          // Generate subtle random gradients based on topic ID
-          const gradients = [
-            'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
-            'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
-            'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
-            'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
-            'from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20',
-            'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20',
-            'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
-            'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
-          ];
-          const gradientClass = gradients[index % gradients.length];
+        {topics.map((topic) => {
+          // Generate consistent gradients based on topic ID (same method as TopicDashboard)
+          const getTopicGradient = (topicId: string) => {
+            const gradients = [
+              'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
+              'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
+              'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+              'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
+              'from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20',
+              'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20',
+              'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
+              'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
+            ];
+            
+            // Use topic ID to consistently select the same gradient
+            const hash = topicId.split('').reduce((a, b) => {
+              a = ((a << 5) - a) + b.charCodeAt(0);
+              return a & a;
+            }, 0);
+            
+            return gradients[Math.abs(hash) % gradients.length];
+          };
+
+          const gradientClass = getTopicGradient(topic.id);
 
           return (
             <Card 
