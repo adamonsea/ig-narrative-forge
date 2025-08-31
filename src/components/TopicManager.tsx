@@ -349,92 +349,110 @@ export const TopicManager = () => {
       )}
 
       <div className="space-y-6">
-        {topics.map((topic) => (
-          <Card key={topic.id} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-card/50 hover:bg-card">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      {topic.topic_type === 'regional' ? (
-                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                      ) : (
-                        <div className="p-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
-                          <Hash className="w-5 h-5" />
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="text-xl font-semibold tracking-tight">{topic.name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant={topic.is_active ? "default" : "secondary"} className="text-xs">
-                            {topic.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                          {topic.is_public && (
-                            <Badge variant="outline" className="text-xs">
-                              <Globe className="w-3 h-3 mr-1" />
-                              Public
+        {topics.map((topic, index) => {
+          // Generate subtle random gradients based on topic ID
+          const gradients = [
+            'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
+            'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
+            'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+            'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
+            'from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20',
+            'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20',
+            'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
+            'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
+          ];
+          const gradientClass = gradients[index % gradients.length];
+
+          return (
+            <Card 
+              key={topic.id} 
+              className={`group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-gradient-to-br ${gradientClass} hover:scale-[1.01] cursor-pointer overflow-hidden relative`}
+            >
+              <Link 
+                to={`/dashboard/topic/${topic.slug}`}
+                className="absolute inset-0 z-10"
+              />
+              <CardContent className="p-8 relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
+                        {topic.topic_type === 'regional' ? (
+                          <div className="p-2 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <MapPin className="w-5 h-5" />
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+                            <Hash className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-xl font-semibold tracking-tight">{topic.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant={topic.is_active ? "default" : "secondary"} className="text-xs">
+                              {topic.is_active ? "Active" : "Inactive"}
                             </Badge>
-                          )}
+                            {topic.is_public && (
+                              <Badge variant="outline" className="text-xs">
+                                <Globe className="w-3 h-3 mr-1" />
+                                Public
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={topic.is_active}
-                        onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
-                      />
-                    </div>
-                  </div>
-
-                  {topic.description && (
-                    <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
-                      {topic.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap gap-2">
-                      {topic.keywords.slice(0, 5).map((keyword, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm font-normal">
-                          {keyword}
-                        </Badge>
-                      ))}
-                      {topic.keywords.length > 5 && (
-                        <Badge variant="outline" className="text-sm">
-                          +{topic.keywords.length - 5} more
-                        </Badge>
-                      )}
+                      
+                      <div className="flex items-center gap-3 relative z-20">
+                        <Switch
+                          checked={topic.is_active}
+                          onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground">
-                        Created {new Date(topic.created_at).toLocaleDateString()}
-                      </span>
-                      <div className="flex gap-2">
+                    {topic.description && (
+                      <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
+                        {topic.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-2">
+                        {topic.keywords.slice(0, 5).map((keyword, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm font-normal">
+                            {keyword}
+                          </Badge>
+                        ))}
+                        {topic.keywords.length > 5 && (
+                          <Badge variant="outline" className="text-sm">
+                            +{topic.keywords.length - 5} more
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground">
+                          Created {new Date(topic.created_at).toLocaleDateString()}
+                        </span>
                         {topic.slug && (
-                          <Button variant="outline" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors">
+                          <Button 
+                            variant="outline" 
+                            asChild 
+                            className="hover:bg-primary hover:text-primary-foreground transition-colors relative z-20"
+                          >
                             <Link to={`/feed/topic/${topic.slug}`}>
                               View Feed
                             </Link>
                           </Button>
                         )}
-                        <Button variant="outline" asChild className="hover:bg-secondary transition-colors">
-                          <Link to={`/dashboard/topic/${topic.slug}`}>
-                            <Settings className="w-4 h-4 mr-2" />
-                            Manage
-                          </Link>
-                        </Button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {topics.length === 0 && (

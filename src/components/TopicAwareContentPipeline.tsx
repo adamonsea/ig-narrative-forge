@@ -251,36 +251,39 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       {selectedTopicId && (
         <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Articles</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pending_articles}</div>
-                <p className="text-xs text-muted-foreground">Ready for approval</p>
+          {/* Stats Cards - Compact */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="compact-stats">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.pending_articles}</div>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Processing Queue</CardTitle>
-                <Loader2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.processing_queue}</div>
-                <p className="text-xs text-muted-foreground">Being generated</p>
+            <Card className="compact-stats">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.processing_queue}</div>
+                    <p className="text-xs text-muted-foreground">Processing</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ready Stories</CardTitle>
-                <RefreshCw className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.ready_stories}</div>
-                <p className="text-xs text-muted-foreground">Available for review</p>
+            <Card className="compact-stats">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-lg font-bold">{stats.ready_stories}</div>
+                    <p className="text-xs text-muted-foreground">Ready</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
