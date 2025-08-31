@@ -291,10 +291,27 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
       if (error) throw error;
 
-      toast({
-        title: "Scraping Started",
-        description: `Started scraping "${source.source_name}"`
-      });
+      // Show detailed scraping results
+      if (data && data.success) {
+        const details = [
+          `Found: ${data.articlesFound || 0}`,
+          `Stored: ${data.articlesStored || 0}`,
+          `Duplicates: ${data.duplicatesSkipped || 0}`,
+          `Filtered: ${data.filteredForRelevance || 0}`
+        ].join(' | ');
+
+        toast({
+          title: `Scraping Complete - ${source.source_name}`,
+          description: `${details} | Method: ${data.method || 'unknown'}`,
+          variant: data.articlesStored > 0 ? "default" : "destructive"
+        });
+      } else {
+        toast({
+          title: "Scraping Issues",
+          description: data?.message || `Issues scraping "${source.source_name}"`,
+          variant: "destructive"
+        });
+      }
 
       // Refresh sources to show updated last_scraped_at
       setTimeout(() => {
@@ -305,7 +322,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       console.error('Error scraping source:', error);
       toast({
         title: "Scraping Failed",
-        description: `Failed to scrape "${source.source_name}"`,
+        description: `Failed to scrape "${source.source_name}": ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -341,11 +358,37 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         });
       });
 
-      await Promise.allSettled(scrapePromises);
+      const results = await Promise.allSettled(scrapePromises);
+      
+      // Aggregate results from all sources
+      let totalFound = 0;
+      let totalStored = 0;
+      let totalDuplicates = 0;
+      let totalFiltered = 0;
+      let successCount = 0;
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value?.data?.success) {
+          const data = result.value.data;
+          totalFound += data.articlesFound || 0;
+          totalStored += data.articlesStored || 0;
+          totalDuplicates += data.duplicatesSkipped || 0;
+          totalFiltered += data.filteredForRelevance || 0;
+          successCount++;
+        }
+      });
+
+      const summary = [
+        `Found: ${totalFound}`,
+        `Stored: ${totalStored}`,
+        `Duplicates: ${totalDuplicates}`,
+        `Filtered: ${totalFiltered}`
+      ].join(' | ');
 
       toast({
-        title: "Bulk Scraping Started", 
-        description: `Started scraping ${activeSources.length} sources`
+        title: `Bulk Scraping Complete`,
+        description: `${successCount}/${activeSources.length} sources scraped | ${summary}`,
+        variant: totalStored > 0 ? "default" : "destructive"
       });
 
       // Refresh sources after scraping
