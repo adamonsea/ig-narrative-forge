@@ -65,6 +65,29 @@ serve(async (req) => {
       );
     }
 
+    // Find the associated regional topic for this source and region
+    let topicId = null;
+    if (sourceInfo.topic_id) {
+      topicId = sourceInfo.topic_id;
+    } else {
+      // Fallback: find regional topic matching this region
+      const { data: topicData, error: topicError } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('topic_type', 'regional')
+        .eq('region', region)
+        .eq('is_active', true)
+        .single();
+
+      if (topicData && !topicError) {
+        topicId = topicData.id;
+        console.log(`📍 Found regional topic: ${topicId} for region: ${region}`);
+      } else {
+        console.warn(`⚠️ No regional topic found for region: ${region}`);
+      }
+    }
+
+
     // Initialize enhanced scraping system
     const scrapingStrategies = new EnhancedScrapingStrategies(region, sourceInfo, feedUrl);
     const dbOps = new DatabaseOperations(supabase);
@@ -80,11 +103,12 @@ serve(async (req) => {
     if (scrapingResult.success && scrapingResult.articles.length > 0) {
       console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
-      // Store articles with enhanced filtering
+      // Store articles with enhanced filtering and topic assignment
       const storageResult = await dbOps.storeArticles(
         scrapingResult.articles,
         sourceId,
-        region
+        region,
+        topicId
       );
       
       storedCount = storageResult.stored;
@@ -112,6 +136,7 @@ serve(async (req) => {
       {
         sourceId,
         region,
+        topicId,
         method: scrapingResult.method,
         articlesFound: scrapingResult.articlesFound,
         articlesScraped: scrapingResult.articlesScraped,
@@ -119,7 +144,8 @@ serve(async (req) => {
         duplicates: duplicateCount,
         discarded: discardedCount,
         responseTime,
-        errors: scrapingResult.errors
+        errors: scrapingResult.errors,
+        topicAssigned: topicId ? true : false
       },
       'universal-scraper'
     );
