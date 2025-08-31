@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { 
   BarChart3, 
   RefreshCw, 
@@ -66,7 +65,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
-  const [minRelevanceScore, setMinRelevanceScore] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -305,22 +303,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             </TabsList>
 
             <TabsContent value="articles" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="relevance-filter">Min Relevance Score:</Label>
-                  <div className="flex items-center gap-2 w-64">
-                    <Slider
-                      id="relevance-filter"
-                      min={0}
-                      max={100}
-                      step={10}
-                      value={[minRelevanceScore]}
-                      onValueChange={(value) => setMinRelevanceScore(value[0])}
-                      className="flex-1"
-                    />
-                    <span className="text-sm font-medium w-8">{minRelevanceScore}%</span>
-                  </div>
-                </div>
+              <div className="flex justify-end items-center">
                 <Button onClick={loadTopicContent} disabled={loading}>
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
@@ -336,7 +319,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 onApprove={(articleId, slideType) => approveArticle(articleId, slideType)}
                 onPreview={(article) => setPreviewArticle(article)}
                 onDelete={deleteArticle}
-                minRelevanceScore={minRelevanceScore}
               />
             </TabsContent>
 

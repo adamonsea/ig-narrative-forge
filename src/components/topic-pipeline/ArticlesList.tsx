@@ -29,7 +29,6 @@ interface ArticlesListProps {
   onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth') => void;
   onPreview: (article: Article) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
-  minRelevanceScore: number;
 }
 
 export const ArticlesList: React.FC<ArticlesListProps> = ({
@@ -40,8 +39,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   onSlideQuantityChange,
   onApprove,
   onPreview,
-  onDelete,
-  minRelevanceScore
+  onDelete
 }) => {
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";
@@ -67,11 +65,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return types[type as keyof typeof types];
   };
 
-  const filteredArticles = articles.filter(article => 
-    (article.regional_relevance_score || 0) >= minRelevanceScore
-  );
-
-  if (filteredArticles.length === 0) {
+  if (articles.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -80,7 +74,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             No Articles Available
           </CardTitle>
           <CardDescription>
-            No articles found for the current filters. Try adjusting the relevance score filter.
+            No articles found in the pipeline. Try running a scrape to import new content.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -89,7 +83,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
 
   return (
     <div className="space-y-4">
-      {filteredArticles.map((article) => {
+      {articles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
         
