@@ -296,6 +296,40 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     }
   };
 
+  const deleteArticle = async (articleId: string, articleTitle: string) => {
+    try {
+      setDeletingArticles(prev => new Set([...prev, articleId]));
+
+      // Set article status to discarded to prevent re-importing
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Article Deleted",
+        description: `"${articleTitle}" has been discarded and won't be re-imported`
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      toast({
+        title: "Deletion Failed",
+        description: "Failed to delete article",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
+      });
+    }
+  };
+
   return {
     processingArticle,
     processingApproval,
@@ -308,6 +342,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     rejectStory,
     returnToReview,
     deleteStory,
-    cancelQueueItem
+    cancelQueueItem,
+    deleteArticle
   };
 };

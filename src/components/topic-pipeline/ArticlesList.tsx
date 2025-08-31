@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, Eye, ExternalLink, RotateCcw } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2 } from "lucide-react";
 
 interface Article {
   id: string;
@@ -24,9 +24,11 @@ interface ArticlesListProps {
   articles: Article[];
   processingArticle: string | null;
   slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' };
+  deletingArticles: Set<string>;
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth') => void;
   onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth') => void;
   onPreview: (article: Article) => void;
+  onDelete: (articleId: string, articleTitle: string) => void;
   minRelevanceScore: number;
 }
 
@@ -34,9 +36,11 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   articles,
   processingArticle,
   slideQuantities,
+  deletingArticles,
   onSlideQuantityChange,
   onApprove,
   onPreview,
+  onDelete,
   minRelevanceScore
 }) => {
   const getRelevanceColor = (score: number | null) => {
@@ -53,22 +57,14 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return "text-red-600";
   };
 
-  const getSlideTypeInfo = (type: string, wordCount: number) => {
+  const getSlideTypeInfo = (type: string) => {
     const types = {
       short: { slides: 4, desc: 'Quick read' },
       tabloid: { slides: 6, desc: 'Standard' },
       indepth: { slides: 8, desc: 'Detailed' }
     };
     
-    const isAutoSelected = 
-      (type === 'short' && wordCount < 300) ||
-      (type === 'tabloid' && wordCount >= 300 && wordCount <= 800) ||
-      (type === 'indepth' && wordCount > 800);
-
-    return { 
-      ...types[type as keyof typeof types], 
-      isAuto: isAutoSelected 
-    };
+    return types[type as keyof typeof types];
   };
 
   const filteredArticles = articles.filter(article => 
@@ -95,7 +91,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     <div className="space-y-4">
       {filteredArticles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
-        const slideInfo = getSlideTypeInfo(slideType, article.word_count || 0);
+        const slideInfo = getSlideTypeInfo(slideType);
         
         return (
           <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
@@ -143,6 +139,14 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onDelete(article.id, article.title)}
+                      disabled={deletingArticles.has(article.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -158,13 +162,13 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="short">
-                            4 slides {getSlideTypeInfo('short', article.word_count || 0).isAuto && '(auto)'}
+                            4 slides
                           </SelectItem>
                           <SelectItem value="tabloid">
-                            6 slides {getSlideTypeInfo('tabloid', article.word_count || 0).isAuto && '(auto)'}
+                            6 slides
                           </SelectItem>
                           <SelectItem value="indepth">
-                            8 slides {getSlideTypeInfo('indepth', article.word_count || 0).isAuto && '(auto)'}
+                            8 slides
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -186,12 +190,6 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                       )}
                     </Button>
                   </div>
-                  
-                  {slideInfo.isAuto && (
-                    <Badge variant="secondary" className="text-xs self-end">
-                      Auto-selected
-                    </Badge>
-                  )}
                 </div>
               </div>
             </CardHeader>

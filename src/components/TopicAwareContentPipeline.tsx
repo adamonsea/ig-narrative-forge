@@ -86,12 +86,14 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     processingRejection,
     deletingStories,
     deletingQueueItems,
+    deletingArticles,
     approveArticle,
     approveStory,
     rejectStory,
     returnToReview,
     deleteStory,
-    cancelQueueItem
+    cancelQueueItem,
+    deleteArticle
   } = useTopicPipelineActions(loadTopicContent);
 
   // Initialize slide quantities with auto-selected values
@@ -329,9 +331,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 articles={articles}
                 processingArticle={processingArticle}
                 slideQuantities={slideQuantities}
+                deletingArticles={deletingArticles}
                 onSlideQuantityChange={handleSlideQuantityChange}
                 onApprove={(articleId, slideType) => approveArticle(articleId, slideType)}
                 onPreview={(article) => setPreviewArticle(article)}
+                onDelete={deleteArticle}
                 minRelevanceScore={minRelevanceScore}
               />
             </TabsContent>
