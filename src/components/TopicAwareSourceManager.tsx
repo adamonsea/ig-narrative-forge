@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock, RefreshCw } from "lucide-react";
+import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock, RefreshCw, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getScraperFunction, createScraperRequestBody } from "@/lib/scraperUtils";
+import { DiscardedArticlesViewer } from "./DiscardedArticlesViewer";
 
 interface Topic {
   id: string;
@@ -48,6 +49,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const [scrapingSource, setScrapingSource] = useState<string | null>(null);
   const [scrapingAll, setScrapingAll] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [showDiscardedViewer, setShowDiscardedViewer] = useState(false);
   const [automationSettings, setAutomationSettings] = useState<{
     scrape_frequency_hours: number;
     is_active: boolean;
@@ -566,6 +568,14 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
               {sources.filter(s => s.is_active && s.feed_url).length > 0 && (
                 <div className="flex gap-2">
                   <Button 
+                    onClick={() => setShowDiscardedViewer(true)}
+                    variant="outline"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Filtered Articles
+                  </Button>
+                  
+                  <Button 
                     onClick={handleScrapeAllSources}
                     disabled={scrapingAll}
                     variant="default"
@@ -761,6 +771,13 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           </CardContent>
         </Card>
       )}
+
+      {/* Discarded Articles Viewer */}
+      <DiscardedArticlesViewer 
+        topicId={currentTopicId}
+        isOpen={showDiscardedViewer}
+        onClose={() => setShowDiscardedViewer(false)}
+      />
     </div>
   );
 };
