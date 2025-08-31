@@ -125,6 +125,48 @@ const TopicDashboard = () => {
     }
   };
 
+  // Generate gradient based on topic ID for consistency with dashboard
+  const getTopicGradient = (topicId: string) => {
+    const gradients = [
+      'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
+      'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
+      'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+      'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
+      'from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20',
+      'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20',
+      'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
+      'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
+    ];
+    
+    // Use topic ID to consistently select the same gradient
+    const hash = topicId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const getAccentGradient = (topicId: string) => {
+    const accentGradients = [
+      'from-blue-500/10 to-indigo-500/5 dark:from-blue-400/10 dark:to-indigo-400/5',
+      'from-purple-500/10 to-pink-500/5 dark:from-purple-400/10 dark:to-pink-400/5',
+      'from-green-500/10 to-emerald-500/5 dark:from-green-400/10 dark:to-emerald-400/5',
+      'from-orange-500/10 to-red-500/5 dark:from-orange-400/10 dark:to-red-400/5',
+      'from-teal-500/10 to-cyan-500/5 dark:from-teal-400/10 dark:to-cyan-400/5',
+      'from-violet-500/10 to-purple-500/5 dark:from-violet-400/10 dark:to-purple-400/5',
+      'from-rose-500/10 to-pink-500/5 dark:from-rose-400/10 dark:to-pink-400/5',
+      'from-amber-500/10 to-yellow-500/5 dark:from-amber-400/10 dark:to-yellow-400/5',
+    ];
+    
+    const hash = topicId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return accentGradients[Math.abs(hash) % accentGradients.length];
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
@@ -173,8 +215,11 @@ const TopicDashboard = () => {
     );
   }
 
+  const topicGradient = topic ? getTopicGradient(topic.id) : '';
+  const accentGradient = topic ? getAccentGradient(topic.id) : '';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+    <div className={`min-h-screen bg-gradient-to-br ${topicGradient}`}>
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
         <Breadcrumb className="mb-6">
@@ -193,61 +238,65 @@ const TopicDashboard = () => {
 
         {/* Topic Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              {topic.topic_type === 'regional' ? (
-                <MapPin className="w-8 h-8 text-blue-500" />
-              ) : (
-                <Hash className="w-8 h-8 text-green-500" />
-              )}
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  {topic.name}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={topic.is_active ? "default" : "secondary"}>
-                    {topic.is_active ? "Active" : "Inactive"}
-                  </Badge>
-                  {topic.is_public ? (
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Globe className="w-3 h-3" />
-                      Public
-                    </Badge>
+          <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {topic.topic_type === 'regional' ? (
+                    <MapPin className="w-8 h-8 text-blue-500" />
                   ) : (
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Private
-                    </Badge>
+                    <Hash className="w-8 h-8 text-green-500" />
                   )}
+                  <div>
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                      {topic.name}
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={topic.is_active ? "default" : "secondary"}>
+                        {topic.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      {topic.is_public ? (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
+                          Public
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Private
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" asChild>
+                    <Link to={`/feed/topic/${topic.slug}`} target="_blank">
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Feed
+                    </Link>
+                  </Button>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <Link to={`/feed/topic/${topic.slug}`} target="_blank">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View Feed
-                </Link>
-              </Button>
-            </div>
-          </div>
 
-          {topic.description && (
-            <p className="text-muted-foreground mb-4">
-              {topic.description}
-            </p>
-          )}
+              {topic.description && (
+                <p className="text-muted-foreground mb-4">
+                  {topic.description}
+                </p>
+              )}
 
-          {/* Keywords */}
-          {topic.keywords.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {topic.keywords.map((keyword, index) => (
-                <Badge key={index} variant="secondary">
-                  {keyword}
-                </Badge>
-              ))}
-            </div>
-          )}
+              {/* Keywords */}
+              {topic.keywords.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {topic.keywords.map((keyword, index) => (
+                    <Badge key={index} variant="secondary">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Stats Cards */}
@@ -288,14 +337,23 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="content">Content Pipeline</TabsTrigger>
+          <TabsList className={`grid w-full grid-cols-3 bg-gradient-to-r ${accentGradient} border-border/50`}>
+            <TabsTrigger 
+              value="content" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-primary-foreground font-medium"
+            >
+              Content Pipeline
+            </TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
-            <TopicAwareContentPipeline selectedTopicId={topic.id} />
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardContent className="p-6">
+                <TopicAwareContentPipeline selectedTopicId={topic.id} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
