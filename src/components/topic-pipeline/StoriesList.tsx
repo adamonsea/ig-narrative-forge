@@ -115,7 +115,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
         return (
           <Card key={story.id} className="transition-all duration-200 hover:shadow-md">
             <CardHeader className="pb-3">
-              <div className="flex justify-between items-start gap-4">
+              <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <Button
@@ -134,7 +134,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                     </CardTitle>
                   </div>
                   
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
                     {getStatusBadge(story.status)}
                     <span>{story.slides?.length || 0} slides</span>
                     <span>{article?.word_count || 0} words</span>
@@ -147,34 +147,40 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                   </div>
                 </div>
                 
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
+                <div className="mobile-header-actions">
+                  <div className="mobile-button-group">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => onViewStory(story)}
+                      className="w-full sm:w-auto"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-4 h-4 sm:mr-0" />
+                      <span className="ml-2 sm:hidden">View</span>
                     </Button>
                     {article?.source_url && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => window.open(article.source_url, '_blank')}
+                        className="w-full sm:w-auto"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className="w-4 h-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Source</span>
                       </Button>
                     )}
                   </div>
                   
-                  <div className="flex gap-1">
+                  <div className="mobile-button-group">
                     {story.status === 'ready' && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => onReturnToReview(story.id)}
+                        className="w-full sm:w-auto"
                       >
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw className="w-4 h-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Return</span>
                       </Button>
                     )}
                     
@@ -184,11 +190,15 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                           size="sm"
                           onClick={() => onApprove(story.id)}
                           disabled={processingApproval.has(story.id)}
+                          className="w-full sm:w-auto"
                         >
                           {processingApproval.has(story.id) ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <CheckCircle className="w-4 h-4" />
+                            <>
+                              <CheckCircle className="w-4 h-4 sm:mr-0" />
+                              <span className="ml-2 sm:hidden">Approve</span>
+                            </>
                           )}
                         </Button>
                         
@@ -197,11 +207,15 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                           variant="outline"
                           onClick={() => onReject(story.id)}
                           disabled={processingRejection.has(story.id)}
+                          className="w-full sm:w-auto"
                         >
                           {processingRejection.has(story.id) ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <>
+                              <Trash2 className="w-4 h-4 sm:mr-0" />
+                              <span className="ml-2 sm:hidden">Reject</span>
+                            </>
                           )}
                         </Button>
                       </>

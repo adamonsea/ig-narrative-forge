@@ -251,8 +251,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       {selectedTopicId && (
         <>
-          {/* Stats Cards - Compact */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Stats Cards - Mobile Responsive */}
+          <div className="mobile-stats-grid">
             <Card className="compact-stats">
               <CardContent className="p-3">
                 <div className="flex items-center gap-2">
@@ -290,7 +290,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
           {/* Content Pipeline Tabs */}
           <Tabs defaultValue="articles" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full mobile-tabs">
               <TabsTrigger value="articles">
                 Pending Articles ({stats.pending_articles})
               </TabsTrigger>

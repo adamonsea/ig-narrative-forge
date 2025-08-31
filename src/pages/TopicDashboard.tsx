@@ -240,7 +240,7 @@ const TopicDashboard = () => {
         <div className="mb-8">
           <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mobile-card-header mb-4">
                 <div className="flex items-center gap-3">
                   {topic.topic_type === 'regional' ? (
                     <MapPin className="w-8 h-8 text-blue-500" />
@@ -248,10 +248,10 @@ const TopicDashboard = () => {
                     <Hash className="w-8 h-8 text-green-500" />
                   )}
                   <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                       {topic.name}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant={topic.is_active ? "default" : "secondary"}>
                         {topic.is_active ? "Active" : "Inactive"}
                       </Badge>
@@ -269,8 +269,8 @@ const TopicDashboard = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" asChild>
+                <div className="mobile-header-actions">
+                  <Button variant="outline" asChild className="w-full sm:w-auto">
                     <Link to={`/feed/topic/${topic.slug}`} target="_blank">
                       <ExternalLink className="w-4 h-4 mr-2" />
                       View Feed
@@ -300,7 +300,7 @@ const TopicDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="mobile-stats-grid mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Sources</CardTitle>
@@ -337,7 +337,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-3 bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger 
               value="content" 
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-primary-foreground font-medium"

@@ -6,6 +6,31 @@
   .compact-stats {
     @apply bg-card/30 hover:bg-card/50 transition-colors border-border/30;
   }
+  
+  /* Mobile-first responsive utilities */
+  .mobile-button-group {
+    @apply flex flex-col sm:flex-row gap-1 sm:gap-2;
+  }
+  
+  .mobile-stats-grid {
+    @apply grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4;
+  }
+  
+  .mobile-header-actions {
+    @apply flex flex-col sm:flex-row gap-2 w-full sm:w-auto;
+  }
+  
+  .mobile-tabs {
+    @apply grid grid-cols-1 sm:grid-cols-3 text-xs sm:text-sm;
+  }
+  
+  .mobile-card-header {
+    @apply flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-start;
+  }
+  
+  .mobile-text-wrap {
+    @apply text-xs sm:text-sm break-words;
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 

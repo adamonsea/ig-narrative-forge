@@ -74,7 +74,7 @@ export const QueueList: React.FC<QueueListProps> = ({
       {queueItems.map((item) => (
         <Card key={item.id} className="transition-all duration-200 hover:shadow-md">
           <CardHeader className="pb-3">
-            <div className="flex justify-between items-start gap-4">
+            <div className="mobile-card-header justify-between items-start">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   {getStatusIcon(item.status)}
@@ -83,7 +83,7 @@ export const QueueList: React.FC<QueueListProps> = ({
                   </CardTitle>
                 </div>
                 
-                <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
                   <Badge variant="outline" className={getStatusColor(item.status)}>
                     {item.status.toUpperCase()}
                   </Badge>
@@ -103,21 +103,24 @@ export const QueueList: React.FC<QueueListProps> = ({
                 )}
               </div>
               
-              <div className="flex flex-col gap-2">
+              <div className="mobile-header-actions">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => window.open(item.article.source_url, '_blank')}
+                  className="w-full sm:w-auto"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink className="w-4 h-4 sm:mr-0" />
+                  <span className="ml-2 sm:hidden">Source</span>
                 </Button>
                 
-                <div className="flex gap-1">
+                <div className="mobile-button-group">
                   {item.status === 'failed' && item.attempts < item.max_attempts && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => onRetry(item.id)}
+                      className="w-full sm:w-auto"
                     >
                       Retry
                     </Button>
@@ -128,11 +131,15 @@ export const QueueList: React.FC<QueueListProps> = ({
                     variant="outline"
                     onClick={() => onCancel(item.id)}
                     disabled={deletingQueueItems.has(item.id)}
+                    className="w-full sm:w-auto"
                   >
                     {deletingQueueItems.has(item.id) ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <XCircle className="w-4 h-4" />
+                      <>
+                        <XCircle className="w-4 h-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Cancel</span>
+                      </>
                     )}
                   </Button>
                 </div>

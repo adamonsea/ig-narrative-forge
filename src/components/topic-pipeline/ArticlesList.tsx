@@ -90,12 +90,12 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         return (
           <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
             <CardHeader className="pb-3">
-              <div className="flex justify-between items-start gap-4">
+              <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg mb-2 line-clamp-2">
                     {article.title}
                   </CardTitle>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
                     <div>
                       <span className={getRelevanceColor(article.regional_relevance_score)}>
                         {article.regional_relevance_score || 0}% relevant
@@ -117,33 +117,39 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                   </div>
                 </div>
                 
-                <div className="flex flex-col gap-2 min-w-0">
-                  <div className="flex gap-2">
+                <div className="mobile-header-actions min-w-0">
+                  <div className="mobile-button-group">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => onPreview(article)}
+                      className="w-full sm:w-auto"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-4 h-4 sm:mr-0" />
+                      <span className="ml-2 sm:hidden">Preview</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => window.open(article.source_url, '_blank')}
+                      className="w-full sm:w-auto"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4 sm:mr-0" />
+                      <span className="ml-2 sm:hidden">Source</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => onDelete(article.id, article.title)}
                       disabled={deletingArticles.has(article.id)}
+                      className="w-full sm:w-auto"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 sm:mr-0" />
+                      <span className="ml-2 sm:hidden">Delete</span>
                     </Button>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <div className="text-xs">
                       <Select
                         value={slideType}
@@ -151,7 +157,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                           onSlideQuantityChange(article.id, value)
                         }
                       >
-                        <SelectTrigger className="w-28 h-8">
+                        <SelectTrigger className="w-full sm:w-28 h-8">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -172,7 +178,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                       onClick={() => onApprove(article.id, slideType)}
                       disabled={processingArticle === article.id}
                       size="sm"
-                      className="min-w-0"
+                      className="w-full sm:w-auto"
                     >
                       {processingArticle === article.id ? (
                         "Processing..."
