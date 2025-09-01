@@ -65,9 +65,9 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
       const activeEntry = existingQueueEntries?.find(entry => ['pending', 'processing'].includes(entry.status));
       if (activeEntry) {
         toast({
-          title: "Already Processing",
-          description: "This article is already in the processing queue",
-          variant: "destructive"
+          title: "Article Queued",
+          description: "This article is already being processed - check the queue for progress",
+          variant: "default"
         });
         return;
       }
@@ -94,9 +94,9 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         // Check for duplicate key constraint violation
         if (queueError.code === '23505' && queueError.message.includes('idx_content_queue_unique_article_pending')) {
           toast({
-            title: "Already Processing",
+            title: "Article Queued",
             description: "This article is already being processed. Please wait for the current job to complete.",
-            variant: "destructive"
+            variant: "default"
           });
           return;
         }

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2 } from "lucide-react";
-import { CarouselGenerationButton } from "../CarouselGenerationButton";
+// Removed CarouselGenerationButton - using automatic generation only
 
 interface Slide {
   id: string;
@@ -221,12 +221,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                       </>
                     )}
                     
-                    {story.status === 'ready' && (
-                      <CarouselGenerationButton 
-                        storyId={story.id}
-                        storyTitle={story.title}
-                      />
-                    )}
+                    {/* Manual carousel generation removed - using automatic generation only */}
                   </div>
                 </div>
               </div>

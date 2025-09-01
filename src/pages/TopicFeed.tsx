@@ -59,13 +59,12 @@ const TopicFeed = () => {
 
   const loadTopicAndStories = async () => {
     try {
-      // First load the topic - use service role for public access
+      // First load the topic - allow access to active topics
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .select('*')
         .eq('slug', slug)
         .eq('is_active', true)
-        .eq('is_public', true) // Only allow public topics
         .single();
 
       if (topicError) {
