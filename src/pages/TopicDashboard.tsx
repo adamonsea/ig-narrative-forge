@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
@@ -13,13 +14,16 @@ import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock, Clock, CheckCircle } from "lucide-react";
+import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicDashboardStats {
   articles: number;
   stories: number;
   sources: number;
+  pending_articles: number;
+  processing_queue: number;
+  ready_stories: number;
 }
 
 interface Topic {
@@ -46,9 +50,13 @@ const TopicDashboard = () => {
   const [stats, setStats] = useState<TopicDashboardStats>({
     articles: 0,
     stories: 0,
-    sources: 0
+    sources: 0,
+    pending_articles: 0,
+    processing_queue: 0,
+    ready_stories: 0
   });
   const [loading, setLoading] = useState(true);
+  const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,7 +100,7 @@ const TopicDashboard = () => {
       });
 
       // Load stats
-      const [articlesRes, storiesRes, sourcesRes] = await Promise.all([
+      const [articlesRes, storiesRes, sourcesRes, pendingArticlesRes, queueRes] = await Promise.all([
         supabase
           .from('articles')
           .select('id', { count: 'exact' })
@@ -100,17 +108,55 @@ const TopicDashboard = () => {
         supabase
           .from('stories')
           .select('id', { count: 'exact' })
-          .eq('articles.topic_id', topicData.id),
+          .in('article_id', 
+            await supabase
+              .from('articles')
+              .select('id')
+              .eq('topic_id', topicData.id)
+              .then(res => res.data?.map(a => a.id) || [])
+          ),
         supabase
           .from('content_sources')
           .select('id', { count: 'exact' })
+          .eq('topic_id', topicData.id),
+        supabase
+          .from('articles')
+          .select('id', { count: 'exact' })
           .eq('topic_id', topicData.id)
+          .eq('processing_status', 'new'),
+        supabase
+          .from('content_generation_queue')
+          .select('id', { count: 'exact' })
+          .in('article_id', 
+            await supabase
+              .from('articles')
+              .select('id')
+              .eq('topic_id', topicData.id)
+              .then(res => res.data?.map(a => a.id) || [])
+          )
+          .neq('status', 'completed')
       ]);
+
+      // Get ready stories count
+      const readyStoriesRes = await supabase
+        .from('stories')
+        .select('id', { count: 'exact' })
+        .in('article_id', 
+          await supabase
+            .from('articles')
+            .select('id')
+            .eq('topic_id', topicData.id)
+            .then(res => res.data?.map(a => a.id) || [])
+        )
+        .eq('status', 'ready');
 
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
-        sources: sourcesRes.count || 0
+        sources: sourcesRes.count || 0,
+        pending_articles: pendingArticlesRes.count || 0,
+        processing_queue: queueRes.count || 0,
+        ready_stories: readyStoriesRes.count || 0
       });
 
     } catch (error) {
@@ -299,41 +345,94 @@ const TopicDashboard = () => {
           </Card>
         </div>
 
-        {/* Stats Cards */}
-        <div className="mobile-stats-grid mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sources</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.sources}</div>
-              <p className="text-xs text-muted-foreground">Active content sources</p>
-            </CardContent>
-          </Card>
+        {/* Collapsible Dashboard Overview */}
+        <Collapsible open={dashboardExpanded} onOpenChange={setDashboardExpanded} className="mb-8">
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="outline" 
+              className={`w-full justify-between p-4 h-auto bg-gradient-to-br ${accentGradient} border-border/30`}
+            >
+              <span className="font-medium">Dashboard Overview</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 mt-4">
+            {/* Pipeline Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-chart-2" />
+                    <div>
+                      <div className="text-2xl font-bold text-chart-2">{stats.pending_articles}</div>
+                      <p className="text-sm text-muted-foreground">Pending Articles</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 text-chart-3" />
+                    <div>
+                      <div className="text-2xl font-bold text-chart-3">{stats.processing_queue}</div>
+                      <p className="text-sm text-muted-foreground">Processing Queue</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5 text-chart-1" />
+                    <div>
+                      <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
+                      <p className="text-sm text-muted-foreground">Ready Stories</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Articles</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.articles}</div>
-              <p className="text-xs text-muted-foreground">Imported articles</p>
-            </CardContent>
-          </Card>
+            {/* Overview Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Sources</CardTitle>
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.sources}</div>
+                  <p className="text-xs text-muted-foreground">Active content sources</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Stories</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.stories}</div>
-              <p className="text-xs text-muted-foreground">Generated stories</p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Articles</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.articles}</div>
+                  <p className="text-xs text-muted-foreground">Imported articles</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Stories</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.stories}</div>
+                  <p className="text-xs text-muted-foreground">Generated stories</p>
+                </CardContent>
+              </Card>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
