@@ -660,33 +660,64 @@ REMINDER: Create EXACTLY ${slideCount} slides - this is mandatory. Do not create
 
     // Validate and enforce exact slide count
     let validatedSlides = result.slides;
+    
+    console.log(`🔍 OpenAI generated ${validatedSlides.length} slides, expected ${slideCount}`);
+    
     if (validatedSlides.length !== slideCount) {
       console.log(`⚠️ AI generated ${validatedSlides.length} slides but expected ${slideCount}. Adjusting...`);
       
       if (validatedSlides.length > slideCount) {
-        // Trim excess slides, keeping the first ones and the last one (which should contain CTA)
-        validatedSlides = [
-          ...validatedSlides.slice(0, slideCount - 1),
-          validatedSlides[validatedSlides.length - 1] // Keep the last slide (CTA)
-        ];
-        // Renumber slides
+        // Trim excess slides - keep first slides and ensure last slide has CTA content
+        const lastSlide = validatedSlides[validatedSlides.length - 1];
+        const hasCtaContent = lastSlide.content.toLowerCase().includes('thoughts') || 
+                             lastSlide.content.toLowerCase().includes('story') ||
+                             lastSlide.content.toLowerCase().includes('read');
+        
+        if (hasCtaContent && slideCount > 1) {
+          // Keep first (slideCount-1) slides and the CTA slide
+          validatedSlides = [
+            ...validatedSlides.slice(0, slideCount - 1),
+            lastSlide
+          ];
+        } else {
+          // Just take first slideCount slides
+          validatedSlides = validatedSlides.slice(0, slideCount);
+        }
+        
+        // Renumber slides sequentially
         validatedSlides = validatedSlides.map((slide, index) => ({
           ...slide,
           slideNumber: index + 1
         }));
       } else if (validatedSlides.length < slideCount) {
-        // If fewer slides than expected, duplicate content or add placeholder
+        // If fewer slides than expected, add content slides before final CTA
+        const lastSlide = validatedSlides[validatedSlides.length - 1];
+        const contentToExpand = article.body.substring(0, 200);
+        
         while (validatedSlides.length < slideCount) {
-          const lastSlide = validatedSlides[validatedSlides.length - 1];
-          validatedSlides.push({
-            slideNumber: validatedSlides.length + 1,
-            content: `Additional insight: ${article.title}`,
-            visualPrompt: `Visual representation of: ${article.title}`,
-            altText: `Additional information about ${article.title}`
+          const newSlideNum = validatedSlides.length;
+          validatedSlides.splice(-1, 0, { // Insert before last slide
+            slideNumber: newSlideNum,
+            content: `${contentToExpand.split('.')[newSlideNum - 2] || 'More details on this developing story'}.`,
+            visualPrompt: `Visual illustration for: ${article.title}`,
+            altText: `Additional details about ${article.title}`
           });
         }
+        
+        // Renumber all slides
+        validatedSlides = validatedSlides.map((slide, index) => ({
+          ...slide,
+          slideNumber: index + 1
+        }));
       }
+      
       console.log(`✅ Adjusted to exactly ${validatedSlides.length} slides`);
+    }
+    
+    // Final validation
+    if (validatedSlides.length !== slideCount) {
+      console.error(`❌ Failed to achieve target slide count. Got ${validatedSlides.length}, expected ${slideCount}`);
+      throw new Error(`Slide count validation failed: generated ${validatedSlides.length}, expected ${slideCount}`);
     }
 
     return validatedSlides;
@@ -948,33 +979,64 @@ REMINDER: Create EXACTLY ${slideCount} slides - this is mandatory. Do not create
 
     // Validate and enforce exact slide count
     let validatedSlides = result.slides;
+    
+    console.log(`🔍 DeepSeek generated ${validatedSlides.length} slides, expected ${slideCount}`);
+    
     if (validatedSlides.length !== slideCount) {
       console.log(`⚠️ AI generated ${validatedSlides.length} slides but expected ${slideCount}. Adjusting...`);
       
       if (validatedSlides.length > slideCount) {
-        // Trim excess slides, keeping the first ones and the last one (which should contain CTA)
-        validatedSlides = [
-          ...validatedSlides.slice(0, slideCount - 1),
-          validatedSlides[validatedSlides.length - 1] // Keep the last slide (CTA)
-        ];
-        // Renumber slides
+        // Trim excess slides - keep first slides and ensure last slide has CTA content
+        const lastSlide = validatedSlides[validatedSlides.length - 1];
+        const hasCtaContent = lastSlide.content.toLowerCase().includes('thoughts') || 
+                             lastSlide.content.toLowerCase().includes('story') ||
+                             lastSlide.content.toLowerCase().includes('read');
+        
+        if (hasCtaContent && slideCount > 1) {
+          // Keep first (slideCount-1) slides and the CTA slide
+          validatedSlides = [
+            ...validatedSlides.slice(0, slideCount - 1),
+            lastSlide
+          ];
+        } else {
+          // Just take first slideCount slides
+          validatedSlides = validatedSlides.slice(0, slideCount);
+        }
+        
+        // Renumber slides sequentially
         validatedSlides = validatedSlides.map((slide, index) => ({
           ...slide,
           slideNumber: index + 1
         }));
       } else if (validatedSlides.length < slideCount) {
-        // If fewer slides than expected, duplicate content or add placeholder
+        // If fewer slides than expected, add content slides before final CTA
+        const lastSlide = validatedSlides[validatedSlides.length - 1];
+        const contentToExpand = article.body.substring(0, 200);
+        
         while (validatedSlides.length < slideCount) {
-          const lastSlide = validatedSlides[validatedSlides.length - 1];
-          validatedSlides.push({
-            slideNumber: validatedSlides.length + 1,
-            content: `Additional insight: ${article.title}`,
-            visualPrompt: `Visual representation of: ${article.title}`,
-            altText: `Additional information about ${article.title}`
+          const newSlideNum = validatedSlides.length;
+          validatedSlides.splice(-1, 0, { // Insert before last slide
+            slideNumber: newSlideNum,
+            content: `${contentToExpand.split('.')[newSlideNum - 2] || 'More details on this developing story'}.`,
+            visualPrompt: `Visual illustration for: ${article.title}`,
+            altText: `Additional details about ${article.title}`
           });
         }
+        
+        // Renumber all slides
+        validatedSlides = validatedSlides.map((slide, index) => ({
+          ...slide,
+          slideNumber: index + 1
+        }));
       }
+      
       console.log(`✅ Adjusted to exactly ${validatedSlides.length} slides`);
+    }
+    
+    // Final validation
+    if (validatedSlides.length !== slideCount) {
+      console.error(`❌ Failed to achieve target slide count. Got ${validatedSlides.length}, expected ${slideCount}`);
+      throw new Error(`Slide count validation failed: generated ${validatedSlides.length}, expected ${slideCount}`);
     }
 
     return validatedSlides;

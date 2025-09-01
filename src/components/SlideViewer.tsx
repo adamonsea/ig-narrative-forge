@@ -88,7 +88,14 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
     if (visual.image_data) {
       return `data:image/jpeg;base64,${visual.image_data}`;
     }
-    return visual.image_url || '';
+    if (visual.image_url) {
+      // Handle Supabase storage URLs
+      if (visual.image_url.startsWith('carousels/')) {
+        return `https://fpoywkjgdapgjtdeooak.supabase.co/storage/v1/object/public/exports/${visual.image_url}`;
+      }
+      return visual.image_url;
+    }
+    return '';
   };
 
   if (loading) {
