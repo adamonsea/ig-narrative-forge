@@ -55,14 +55,18 @@ export const TopicManager = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    loadTopics();
-  }, []);
+    if (user) {
+      loadTopics();
+    }
+  }, [user]);
 
   const loadTopics = async () => {
     try {
+      // Only load topics created by the current user (admin dashboard shows owned topics only)
       const { data, error } = await supabase
         .from('topics')
         .select('*')
+        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
