@@ -81,13 +81,16 @@ const TopicDashboard = () => {
         throw topicError;
       }
 
-      // Check if user has access to this topic
-      const canAccess = topicData.created_by === user?.id || 
-                       isAdmin || 
-                       topicData.is_public;
+      // Check if user has ADMIN access to this topic (not just viewing access)
+      const hasAdminAccess = topicData.created_by === user?.id || isAdmin;
 
-      if (!canAccess) {
-        throw new Error('Access denied');
+      if (!hasAdminAccess) {
+        // If topic is public but user doesn't own it, redirect to public feed
+        if (topicData.is_public) {
+          window.location.href = `/feed/topic/${topicData.slug}`;
+          return;
+        }
+        throw new Error('Access denied - You can only manage topics you created');
       }
 
       setTopic({
