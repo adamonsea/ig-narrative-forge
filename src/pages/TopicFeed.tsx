@@ -59,12 +59,13 @@ const TopicFeed = () => {
 
   const loadTopicAndStories = async () => {
     try {
-      // First load the topic
+      // First load the topic - use service role for public access
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .select('*')
         .eq('slug', slug)
         .eq('is_active', true)
+        .eq('is_public', true) // Only allow public topics
         .single();
 
       if (topicError) {
@@ -142,6 +143,22 @@ const TopicFeed = () => {
       setStories(transformedStories);
     } catch (error) {
       console.error('Error loading topic feed:', error);
+      
+      // Log error to error tickets system
+      try {
+        await supabase.functions.invoke('error-logger', {
+          body: {
+            ticketType: 'topic_feed_error',
+            sourceInfo: { slug, topicId: topic?.id },
+            errorDetails: error instanceof Error ? error.message : "Failed to load topic feed",
+            severity: 'medium',
+            contextData: { slug, userAgent: navigator.userAgent }
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to load topic feed",

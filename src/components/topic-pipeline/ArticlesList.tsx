@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2 } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2, Bot } from "lucide-react";
 
 interface Article {
   id: string;
@@ -25,10 +25,12 @@ interface ArticlesListProps {
   processingArticle: string | null;
   slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
   deletingArticles: Set<string>;
+  aiProvider: 'openai' | 'deepseek';
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
-  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', aiProvider: 'openai' | 'deepseek') => void;
   onPreview: (article: Article) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
+  onAiProviderChange: (provider: 'openai' | 'deepseek') => void;
 }
 
 export const ArticlesList: React.FC<ArticlesListProps> = ({
@@ -36,10 +38,12 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   processingArticle,
   slideQuantities,
   deletingArticles,
+  aiProvider,
   onSlideQuantityChange,
   onApprove,
   onPreview,
-  onDelete
+  onDelete,
+  onAiProviderChange
 }) => {
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";
@@ -84,6 +88,30 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* AI Provider Selection */}
+      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-purple-200 dark:border-purple-800">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-purple-600" />
+              <label className="text-sm font-medium">AI Provider:</label>
+            </div>
+            <Select value={aiProvider} onValueChange={onAiProviderChange}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                <SelectItem value="deepseek">DeepSeek V3</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Choose the AI model for content generation
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {articles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
@@ -179,7 +207,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                     </div>
                     
                     <Button
-                      onClick={() => onApprove(article.id, slideType)}
+                      onClick={() => onApprove(article.id, slideType, aiProvider)}
                       disabled={processingArticle === article.id}
                       size="sm"
                       className="w-full sm:w-auto"

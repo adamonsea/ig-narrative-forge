@@ -44,7 +44,23 @@ export default function CarouselImageViewer({ storyId, storyTitle }: CarouselIma
         await loadSignedUrls(data.file_paths as string[]);
       }
     } catch (error) {
-      console.error('Error loading carousel export:', error);
+        // Enhanced error logging for CarouselImageViewer debugging
+        console.error('🖼️ CarouselImageViewer error:', error);
+        
+        // Log error to error tickets system
+        try {
+          await supabase.functions.invoke('error-logger', {
+            body: {
+              ticketType: 'carousel_image_viewer_error',
+              sourceInfo: { storyId, storyTitle },
+              errorDetails: error instanceof Error ? error.message : "Failed to load carousel images",
+              severity: 'medium',
+              contextData: { storyId, storyTitle, operation: 'loadCarouselExport' }
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log carousel error:', logError);
+        }
       toast({
         title: "Load Failed",
         description: "Failed to load carousel images",

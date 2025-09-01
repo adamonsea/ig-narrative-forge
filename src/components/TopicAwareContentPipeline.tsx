@@ -352,23 +352,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 </div>
               </CardContent>
             </Card>
-            
-            <Card className="col-span-2 md:col-span-1">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">AI Provider</Label>
-                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'deepseek') => setAiProvider(value)}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI GPT-4</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Content Pipeline Tabs */}
@@ -398,10 +381,12 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 processingArticle={processingArticle}
                 slideQuantities={slideQuantities}
                 deletingArticles={deletingArticles}
+                aiProvider={aiProvider}
                 onSlideQuantityChange={handleSlideQuantityChange}
-                onApprove={(articleId, slideType) => approveArticle(articleId, slideType, aiProvider)}
+                onApprove={(articleId, slideType, provider) => approveArticle(articleId, slideType, provider)}
                 onPreview={(article) => setPreviewArticle(article)}
                 onDelete={deleteArticle}
+                onAiProviderChange={setAiProvider}
               />
             </TabsContent>
 

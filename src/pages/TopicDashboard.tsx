@@ -11,6 +11,7 @@ import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
+import { TopicPipelineStats } from "@/components/TopicPipelineStats";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock } from "lucide-react";
@@ -299,8 +300,9 @@ const TopicDashboard = () => {
           </Card>
         </div>
 
-        {/* Stats Cards */}
-        <div className="mobile-stats-grid mb-8">
+        {/* Stats Cards - Combined Topic and Pipeline Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+          {/* Topic Stats */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Sources</CardTitle>
@@ -308,7 +310,7 @@ const TopicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.sources}</div>
-              <p className="text-xs text-muted-foreground">Active content sources</p>
+              <p className="text-xs text-muted-foreground">Active sources</p>
             </CardContent>
           </Card>
 
@@ -319,7 +321,7 @@ const TopicDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.articles}</div>
-              <p className="text-xs text-muted-foreground">Imported articles</p>
+              <p className="text-xs text-muted-foreground">Total articles</p>
             </CardContent>
           </Card>
 
@@ -333,6 +335,9 @@ const TopicDashboard = () => {
               <p className="text-xs text-muted-foreground">Generated stories</p>
             </CardContent>
           </Card>
+
+          {/* Pipeline Stats from TopicAwareContentPipeline */}
+          <TopicPipelineStats topicId={topic.id} />
         </div>
 
         {/* Main Content Tabs */}

@@ -287,6 +287,65 @@ export const useTopicPipeline = (selectedTopicId: string) => {
     }
   };
 
+  useEffect(() => {
+    if (selectedTopicId) {
+      loadTopicContent();
+    }
+  }, [selectedTopicId]);
+
+  // Set up real-time subscriptions for pipeline updates
+  useEffect(() => {
+    if (!selectedTopicId) return;
+
+    console.log('🔄 Setting up real-time subscriptions for topic:', selectedTopicId);
+
+    const channel = supabase
+      .channel('topic-pipeline-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'articles',
+          filter: `topic_id=eq.${selectedTopicId}`
+        },
+        () => {
+          console.log('🔄 Articles updated, refreshing pipeline');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content_generation_queue'
+        },
+        () => {
+          console.log('🔄 Queue updated, refreshing pipeline');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        () => {
+          console.log('🔄 Stories updated, refreshing pipeline');
+          loadTopicContent();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscriptions');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTopicId]);
+
   return {
     articles,
     queueItems,
