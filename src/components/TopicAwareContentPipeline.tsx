@@ -260,6 +260,16 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     });
   };
 
+  // Debug logging
+  console.log('TopicAwareContentPipeline render:', { 
+    user: !!user, 
+    selectedTopicId, 
+    propTopicId, 
+    loading, 
+    articlesCount: articles.length,
+    stats 
+  });
+
   if (!user) {
     return (
       <Card>

@@ -112,7 +112,10 @@ export const useTopicPipeline = (selectedTopicId: string) => {
   };
 
   const loadTopicContent = async () => {
-    if (!selectedTopicId) return;
+    if (!selectedTopicId) {
+      console.log('🔍 No selectedTopicId provided, skipping load');
+      return;
+    }
 
     console.log('🔍 Loading topic content for:', selectedTopicId);
     
@@ -271,8 +274,9 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         ready_stories: storiesCount.count || 0
       });
 
+      console.log('📊 Topic content loaded successfully');
     } catch (error) {
-      console.error('Error loading topic content:', error);
+      console.error('❌ Error loading topic content:', error);
       toast({
         title: "Error",
         description: "Failed to load content for this topic",
