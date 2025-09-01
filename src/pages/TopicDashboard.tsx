@@ -484,45 +484,6 @@ const TopicDashboard = () => {
                   loadTopicAndStats(); // Refresh stats after keyword update
                 }} 
               />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Topic Configuration</CardTitle>
-                  <CardDescription>
-                    Basic topic information and metadata
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium">Topic Type</label>
-                        <p className="text-sm text-muted-foreground capitalize">
-                          {topic.topic_type}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Region</label>
-                        <p className="text-sm text-muted-foreground">
-                          {topic.region || 'Global'}
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Created</label>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(topic.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Slug</label>
-                      <p className="text-sm text-muted-foreground font-mono">
-                        {topic.slug}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
         </Tabs>
