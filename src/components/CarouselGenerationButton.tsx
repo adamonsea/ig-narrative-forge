@@ -28,8 +28,28 @@ interface CarouselExport {
 export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: CarouselGenerationButtonProps) => {
   const [carouselExport, setCarouselExport] = useState<CarouselExport | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { generateCarouselImages, isGenerating } = useCarouselGeneration();
+
+  // Check for existing carousel on mount
+  React.useEffect(() => {
+    const loadExistingCarousel = async () => {
+      try {
+        const existing = await checkExistingCarousel();
+        if (existing && existing.status === 'completed') {
+          console.log('🖼️ Found existing carousel for story:', storyId, existing);
+          setCarouselExport(existing);
+        }
+      } catch (error) {
+        console.error('Error checking existing carousel:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExistingCarousel();
+  }, [storyId]);
 
   const checkExistingCarousel = async () => {
     const { data } = await supabase
@@ -94,11 +114,16 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
     <>
       <Button
         onClick={handleClick}
-        disabled={isGenerating(storyId)}
+        disabled={isGenerating(storyId) || loading}
         variant="outline"
         size="sm"
       >
-        {isGenerating(storyId) ? (
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Checking...
+          </>
+        ) : isGenerating(storyId) ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Generating...
@@ -107,6 +132,7 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
           <>
             <Download className="h-4 w-4 mr-2" />
             View Images
+            <Badge variant="secondary" className="ml-2">Ready</Badge>
           </>
         ) : (
           <>

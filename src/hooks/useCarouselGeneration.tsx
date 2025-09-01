@@ -47,28 +47,28 @@ export const useCarouselGeneration = () => {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 1080, 1080);
 
-      // Draw header area
-      ctx.fillStyle = '#ffffff';
+      // Draw header area with light background
+      ctx.fillStyle = '#f8fafc';
       ctx.fillRect(0, 0, 1080, 100);
       
       // Draw header border
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(0, 100, 1080, 1);
+      ctx.fillRect(0, 100, 1080, 2);
 
-      // Header badge (News)
+      // Header badge (News) with better visibility
       const badgeX = 32;
       const badgeY = 32;
       const badgeWidth = 80;
       const badgeHeight = 36;
       
-      // Badge background
-      ctx.fillStyle = '#f1f5f9';
+      // Badge background with solid color
+      ctx.fillStyle = '#3b82f6';
       ctx.beginPath();
       ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 6);
       ctx.fill();
       
-      // Badge text
-      ctx.fillStyle = '#475569';
+      // Badge text with white color
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('News', badgeX + badgeWidth/2, badgeY + 23);
