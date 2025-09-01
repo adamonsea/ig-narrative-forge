@@ -74,6 +74,15 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
         console.log(`🔍 Processing file ${i + 1}/${filePaths.length}: ${filePath}`);
         
         try {
+          // First check if file exists in storage
+          const { data: fileInfo, error: fileError } = await supabase.storage
+            .from('exports')
+            .list(filePath.substring(0, filePath.lastIndexOf('/')), {
+              search: filePath.substring(filePath.lastIndexOf('/') + 1)
+            });
+          
+          console.log(`📋 File exists check for ${filePath}:`, { fileInfo, fileError });
+          
           // Generate signed URL for private bucket access
           const { data: signedUrlData, error: urlError } = await supabase.storage
             .from('exports')
@@ -91,10 +100,17 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
             continue;
           }
 
-          console.log(`✅ Created signed URL for ${filePath}`);
+          console.log(`✅ Created signed URL for ${filePath}:`, signedUrlData.signedUrl.substring(0, 100) + '...');
 
           // Fetch the image data using the signed URL
           const response = await fetch(signedUrlData.signedUrl);
+          console.log(`🌐 Fetch response for ${filePath}:`, {
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+          });
+
           if (!response.ok) {
             console.error(`❌ Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
             errors.push(`Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
@@ -102,6 +118,15 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           }
 
           const blob = await response.blob();
+          console.log(`📦 Blob details for ${filePath}:`, {
+            size: blob.size,
+            type: blob.type
+          });
+
+          if (blob.size < 100) {
+            console.warn(`⚠️ Suspiciously small image: ${filePath} is only ${blob.size} bytes`);
+          }
+
           const url = URL.createObjectURL(blob);
           const filename = filePath.split('/').pop() || `carousel_image_${i + 1}.png`;
           
@@ -125,6 +150,11 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           title: `Loaded ${imageData.length} of ${filePaths.length} Images`,
           description: `${errors.length} images failed to load. Check console for details.`,
           variant: "destructive"
+        });
+      } else if (imageData.length > 0) {
+        toast({
+          title: "Images Loaded Successfully",
+          description: `Loaded all ${imageData.length} carousel images`,
         });
       }
 
