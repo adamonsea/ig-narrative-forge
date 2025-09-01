@@ -350,10 +350,11 @@ const TopicDashboard = () => {
           <CollapsibleTrigger asChild>
             <Button 
               variant="outline" 
-              className={`w-full justify-between p-4 h-auto bg-gradient-to-br ${accentGradient} border-border/30`}
+              size="sm"
+              className={`bg-gradient-to-br ${accentGradient} border-border/30 hover:bg-accent`}
             >
-              <span className="font-medium">Dashboard Overview</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
+              <BarChart3 className="h-4 w-4" />
+              <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">

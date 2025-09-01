@@ -315,45 +315,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       {selectedTopicId && (
         <>
-          {/* Combined Dashboard - Stats and AI Provider */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="col-span-2 md:col-span-1">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-chart-2" />
-                  <div>
-                    <div className="text-2xl font-bold text-chart-2">{stats.pending_articles}</div>
-                    <p className="text-sm text-muted-foreground">Pending Articles</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="col-span-2 md:col-span-1">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 text-chart-3" />
-                  <div>
-                    <div className="text-2xl font-bold text-chart-3">{stats.processing_queue}</div>
-                    <p className="text-sm text-muted-foreground">Processing Queue</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="col-span-2 md:col-span-1">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5 text-chart-1" />
-                  <div>
-                    <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
-                    <p className="text-sm text-muted-foreground">Ready Stories</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Content Pipeline Tabs */}
           <Tabs defaultValue="articles" className="space-y-6">
             <TabsList className="grid w-full mobile-tabs">
