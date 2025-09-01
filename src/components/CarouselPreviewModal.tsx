@@ -47,46 +47,93 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
   const loadImages = async () => {
     setLoading(true);
     try {
+      console.log('📸 Loading carousel images for export:', carouselExport);
+      
       // Parse file_paths as it comes as JSON from Supabase
       const filePaths = Array.isArray(carouselExport.file_paths) 
         ? carouselExport.file_paths 
         : JSON.parse(carouselExport.file_paths || '[]');
 
+      console.log('📁 File paths to load:', filePaths);
+
+      if (!filePaths || filePaths.length === 0) {
+        console.warn('⚠️ No file paths found in carousel export');
+        toast({
+          title: "No Images Found",
+          description: "This carousel export has no image files.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const imageData: ImageData[] = [];
+      const errors: string[] = [];
 
-      for (const filePath of filePaths) {
-        // Generate signed URL for private bucket access
-        const { data: signedUrlData, error: urlError } = await supabase.storage
-          .from('exports')
-          .createSignedUrl(filePath, 3600); // 1 hour expiry
+      for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i];
+        console.log(`🔍 Processing file ${i + 1}/${filePaths.length}: ${filePath}`);
         
-        if (urlError) {
-          console.error('Error creating signed URL:', urlError);
-          continue;
-        }
+        try {
+          // Generate signed URL for private bucket access
+          const { data: signedUrlData, error: urlError } = await supabase.storage
+            .from('exports')
+            .createSignedUrl(filePath, 3600); // 1 hour expiry
+          
+          if (urlError) {
+            console.error(`❌ Error creating signed URL for ${filePath}:`, urlError);
+            errors.push(`Failed to create access URL for ${filePath}: ${urlError.message}`);
+            continue;
+          }
 
-        if (signedUrlData?.signedUrl) {
+          if (!signedUrlData?.signedUrl) {
+            console.error(`❌ No signed URL received for ${filePath}`);
+            errors.push(`No access URL received for ${filePath}`);
+            continue;
+          }
+
+          console.log(`✅ Created signed URL for ${filePath}`);
+
           // Fetch the image data using the signed URL
           const response = await fetch(signedUrlData.signedUrl);
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const filename = filePath.split('/').pop() || 'carousel_image.png';
-            imageData.push({
-              url,
-              filename,
-              blob
-            });
+          if (!response.ok) {
+            console.error(`❌ Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
+            errors.push(`Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
+            continue;
           }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const filename = filePath.split('/').pop() || `carousel_image_${i + 1}.png`;
+          
+          console.log(`✅ Successfully loaded ${filename} (${blob.size} bytes)`);
+          imageData.push({
+            url,
+            filename,
+            blob
+          });
+        } catch (fileError: any) {
+          console.error(`❌ Error processing file ${filePath}:`, fileError);
+          errors.push(`Error processing ${filePath}: ${fileError.message}`);
         }
+      }
+
+      console.log(`📸 Loaded ${imageData.length}/${filePaths.length} images successfully`);
+      
+      if (errors.length > 0) {
+        console.warn('⚠️ Some images failed to load:', errors);
+        toast({
+          title: `Loaded ${imageData.length} of ${filePaths.length} Images`,
+          description: `${errors.length} images failed to load. Check console for details.`,
+          variant: "destructive"
+        });
       }
 
       setImages(imageData);
     } catch (error: any) {
-      console.error('Error loading carousel images:', error);
+      console.error('❌ Critical error loading carousel images:', error);
       toast({
         title: "Failed to Load Images",
-        description: error.message,
+        description: `Critical error: ${error.message}`,
         variant: "destructive"
       });
     } finally {

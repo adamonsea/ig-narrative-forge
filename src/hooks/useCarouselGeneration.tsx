@@ -300,8 +300,8 @@ export const useCarouselGeneration = () => {
           const imageBlob = await generateImageUsingCanvas(story, i);
           console.log(`✅ Canvas image generated, size: ${imageBlob.size} bytes`);
 
-          // Upload to storage with detailed logging
-          const fileName = `carousel_${story.id}_slide_${i + 1}_${Date.now()}.png`;
+          // Upload to storage with standardized naming
+          const fileName = `carousel_${story.id}_instagram-square_slide_${i + 1}.png`;
           const filePath = `carousels/${story.id}/${fileName}`;
 
           console.log(`⬆️ Uploading ${fileName} (${imageBlob.size} bytes) to ${filePath}...`);
