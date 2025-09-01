@@ -42,11 +42,42 @@ const Dashboard = () => {
 
   const loadDashboardStats = async () => {
     try {
+      // First get user's topic IDs
+      const { data: userTopics } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('created_by', user?.id);
+      
+      const topicIds = userTopics?.map(t => t.id) || [];
+
+      // Get article IDs from user's topics for stories count
+      let articleIds: string[] = [];
+      if (topicIds.length > 0) {
+        const { data: userArticles } = await supabase
+          .from('articles')
+          .select('id')
+          .in('topic_id', topicIds);
+        articleIds = userArticles?.map(a => a.id) || [];
+      }
+
       const [topicsRes, articlesRes, storiesRes, sourcesRes] = await Promise.all([
-        supabase.from('topics').select('id', { count: 'exact' }),
-        supabase.from('articles').select('id', { count: 'exact' }),
-        supabase.from('stories').select('id', { count: 'exact' }),
-        supabase.from('content_sources').select('id', { count: 'exact' })
+        // Count topics created by current user
+        supabase.from('topics').select('id', { count: 'exact' }).eq('created_by', user?.id),
+        
+        // Count articles from user's topics
+        topicIds.length > 0 
+          ? supabase.from('articles').select('id', { count: 'exact' }).in('topic_id', topicIds)
+          : Promise.resolve({ count: 0 }),
+        
+        // Count stories from articles in user's topics  
+        articleIds.length > 0
+          ? supabase.from('stories').select('id', { count: 'exact' }).in('article_id', articleIds)
+          : Promise.resolve({ count: 0 }),
+        
+        // Count content sources from user's topics
+        topicIds.length > 0
+          ? supabase.from('content_sources').select('id', { count: 'exact' }).in('topic_id', topicIds)
+          : Promise.resolve({ count: 0 })
       ]);
 
       setStats({
