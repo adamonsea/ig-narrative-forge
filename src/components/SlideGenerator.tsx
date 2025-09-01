@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { Sparkles, Image as ImageIcon, Clock, CheckCircle, AlertCircle, Eye, Download } from 'lucide-react';
 
 interface Article {
@@ -54,6 +55,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoadingStories, setIsLoadingStories] = useState(false);
   const { toast } = useToast();
+  const { generateCarouselImages } = useCarouselGeneration();
 
   const loadStories = async () => {
     setIsLoadingStories(true);
@@ -120,21 +122,39 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
 
       setGenerationProgress(85);
       
-      // Automatically generate visuals for all slides
+      // Automatically generate carousel images using local canvas rendering
       if (data.slides && data.slides.length > 0) {
         toast({
-          title: "Generating Visuals...",
-          description: `Creating images for ${data.slides.length} slides`,
+          title: "Generating Carousel Images...",
+          description: `Creating downloadable images for ${data.slides.length} slides`,
         });
         
-        // Generate visuals for each slide automatically
-        for (const slide of data.slides) {
-          try {
-            await generateVisual(slide);
-          } catch (error) {
-            console.error(`Failed to generate visual for slide ${slide.slide_number}:`, error);
-            // Continue with other slides even if one fails
+        // Create the complete story object for carousel generation
+        const completeStory = {
+          id: data.storyId,
+          title: article.title,
+          status: 'ready' as const,
+          slides: data.slides.map((slide: any) => ({
+            ...slide,
+            story_id: data.storyId
+          })),
+          article: {
+            title: article.title,
+            author: article.author,
+            source_url: `#${article.id}` // placeholder since we don't have source_url in the article interface
           }
+        };
+
+        try {
+          await generateCarouselImages(completeStory);
+        } catch (error) {
+          console.error('Failed to generate carousel images:', error);
+          // Don't fail the whole process if carousel generation fails
+          toast({
+            title: "Carousel Generation Failed",
+            description: "Slides created successfully but images could not be generated",
+            variant: "destructive",
+          });
         }
       }
       
@@ -142,7 +162,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
       
       toast({
         title: "Story Complete!",
-        description: `Created ${data.slideCount} slides with images for "${article.title}"`,
+        description: `Created ${data.slideCount} slides with downloadable images for "${article.title}"`,
       });
 
       // Refresh stories list
@@ -162,35 +182,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
     }
   };
 
-  const generateVisual = async (slide: Slide) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('image-generator', {
-        body: {
-          slideId: slide.id,
-          prompt: `Editorial illustration for: ${slide.content}`,
-          stylePreset: 'editorial'
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "Visual Generated",
-          description: "AI image created for slide",
-        });
-        await loadStories(); // Refresh to show new visual
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Visual Generation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  // Removed individual visual generation - now handled automatically via carousel generation
 
   const resetStuckProcessing = async () => {
     setIsResettingStuck(true);
@@ -356,19 +348,9 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
                   <div key={slide.id} className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Slide {slide.slide_number}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${getWordCountColor(slide.word_count, slide.slide_number)}`}>
-                          {slide.word_count} words
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => generateVisual(slide)}
-                        >
-                          <ImageIcon className="w-3 h-3 mr-1" />
-                          Generate Visual
-                        </Button>
-                      </div>
+                      <span className={`text-xs ${getWordCountColor(slide.word_count, slide.slide_number)}`}>
+                        {slide.word_count} words
+                      </span>
                     </div>
                     <p className="text-sm">{slide.content}</p>
                     {slide.alt_text && (
