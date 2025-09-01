@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { TopicManager } from "@/components/TopicManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown } from "lucide-react";
+import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import {
@@ -23,7 +23,7 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     topics: 0,
     articles: 0,
@@ -96,24 +96,28 @@ const Dashboard = () => {
             </h1>
           </div>
           
-          {/* Admin Hamburger Menu */}
-          {isAdmin && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isAdmin && (
                 <DropdownMenuItem asChild>
                   <Link to="/admin">
                     <Settings className="mr-2 h-4 w-4" />
                     Admin Panel
                   </Link>
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+              )}
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Collapsible Dashboard Overview */}
