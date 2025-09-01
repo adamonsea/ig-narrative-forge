@@ -270,32 +270,46 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
                   />
                 </div>
               ) : (
-                // Fallback to text display
-                <div className={`text-center leading-relaxed ${
-                    currentSlideIndex === 0 
-                    ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
-                    : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
-                }`}>
-                  {/* Main story content */}
-                  {isLastSlide ? mainContent : currentSlide.content}
+                // Fallback to text display or loading state
+                <div>
+                  {imagesLoading && (
+                    <div className="text-center mb-4">
+                      <div className="text-sm text-muted-foreground">Loading carousel images...</div>
+                    </div>
+                  )}
                   
-                  {/* CTA content with special styling on last slide */}
-                  {isLastSlide && ctaContent && (
-                    <div className="mt-4 pt-4 border-t border-muted">
-                      <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                        dangerouslySetInnerHTML={{
-                          __html: ctaContent
-                            .replace(
-                              /visit ([^\s]+)/gi, 
-                              'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                            )
-                            .replace(
-                              /(https?:\/\/[^\s]+)/g, 
-                              '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                            )
-                        }}
-                      />
+                  <div className={`text-center leading-relaxed ${
+                      currentSlideIndex === 0 
+                      ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
+                      : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+                  }`}>
+                    {/* Main story content */}
+                    {isLastSlide ? mainContent : currentSlide.content}
+                    
+                    {/* CTA content with special styling on last slide */}
+                    {isLastSlide && ctaContent && (
+                      <div className="mt-4 pt-4 border-t border-muted">
+                        <div 
+                          className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                          dangerouslySetInnerHTML={{
+                            __html: ctaContent
+                              .replace(
+                                /visit ([^\s]+)/gi, 
+                                'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                              )
+                              .replace(
+                                /(https?:\/\/[^\s]+)/g, 
+                                '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                              )
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {!imagesLoading && carouselImages.length === 0 && (
+                    <div className="text-center mt-4">
+                      <div className="text-xs text-muted-foreground">Carousel images will appear here once generated</div>
                     </div>
                   )}
                 </div>

@@ -155,6 +155,11 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
       if (storyError) throw storyError;
 
       // Generate carousel images
+      toast({
+        title: "Story Approved",
+        description: "Story approved - generating carousel images..."
+      });
+
       const { error: carouselError } = await supabase.functions.invoke('generate-carousel-images', {
         body: { storyId }
       });
@@ -162,14 +167,14 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
       if (carouselError) {
         console.warn('Carousel generation failed:', carouselError);
         toast({
-          title: "Story Approved",
-          description: "Story approved successfully. Carousel generation will be retried later.",
-          variant: "default"
+          title: "Carousel Generation Failed", 
+          description: "Story approved but carousel generation failed. You can retry later.",
+          variant: "destructive"
         });
       } else {
         toast({
-          title: "Story Approved",
-          description: "Story approved and carousel generation started"
+          title: "Success!",
+          description: "Story approved and carousel images generated successfully"
         });
       }
 
@@ -194,15 +199,25 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     try {
       setProcessingRejection(prev => new Set([...prev, storyId]));
 
+      // First get the article_id from the story
+      const { data: story, error: storyError } = await supabase
+        .from('stories')
+        .select('article_id')
+        .eq('id', storyId)
+        .single();
+
+      if (storyError) throw new Error(`Failed to get story details: ${storyError.message}`);
+
+      // Mark the article as discarded using the article_id
       const { error } = await supabase.functions.invoke('mark-article-discarded', {
-        body: { storyId }
+        body: { articleId: story.article_id }
       });
 
       if (error) throw error;
 
       toast({
         title: "Story Rejected",
-        description: "Story has been rejected and removed"
+        description: "Story has been rejected and article marked as discarded"
       });
 
       onRefresh();
