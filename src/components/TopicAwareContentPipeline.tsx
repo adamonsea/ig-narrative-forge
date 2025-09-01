@@ -62,7 +62,8 @@ interface TopicAwareContentPipelineProps {
 export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps> = ({ selectedTopicId: propTopicId }) => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
-  const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' }>({});
+  const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' }>({});
+  const [aiProvider, setAiProvider] = useState<'openai' | 'deepseek'>('openai');
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -100,7 +101,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   // Initialize slide quantities with auto-selected values
   useEffect(() => {
     if (articles.length > 0) {
-      const newSlideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' } = {};
+      const newSlideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' } = {};
       articles.forEach(article => {
         if (!slideQuantities[article.id]) {
           newSlideQuantities[article.id] = getAutoSlideType(article.word_count || 0);
@@ -111,6 +112,56 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       }
     }
   }, [articles]);
+
+  // Set up real-time subscriptions for pipeline updates
+  useEffect(() => {
+    if (!selectedTopicId) return;
+
+    const channel = supabase
+      .channel('topic-pipeline-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'articles',
+          filter: `topic_id=eq.${selectedTopicId}`
+        },
+        () => {
+          console.log('Article updated, refreshing content...');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public', 
+          table: 'content_generation_queue'
+        },
+        () => {
+          console.log('Queue updated, refreshing content...');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        () => {
+          console.log('Stories updated, refreshing content...');
+          loadTopicContent();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTopicId, loadTopicContent]);
 
   // Update selectedTopicId if propTopicId changes
   useEffect(() => {
@@ -156,7 +207,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
-  const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth') => {
+  const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({
       ...prev,
       [articleId]: quantity
@@ -254,38 +305,57 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
       {selectedTopicId && (
         <>
-          {/* Stats Cards - Mobile Responsive */}
-          <div className="mobile-stats-grid">
-            <Card className="compact-stats">
-              <CardContent className="p-3">
+          {/* Combined Dashboard - Stats and AI Provider */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card className="col-span-2 md:col-span-1">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <BarChart3 className="h-5 w-5 text-chart-2" />
                   <div>
-                    <div className="text-lg font-bold">{stats.pending_articles}</div>
-                    <p className="text-xs text-muted-foreground">Pending</p>
+                    <div className="text-2xl font-bold text-chart-2">{stats.pending_articles}</div>
+                    <p className="text-sm text-muted-foreground">Pending Articles</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="compact-stats">
-              <CardContent className="p-3">
+            
+            <Card className="col-span-2 md:col-span-1">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 text-muted-foreground" />
+                  <Loader2 className="h-5 w-5 text-chart-3" />
                   <div>
-                    <div className="text-lg font-bold">{stats.processing_queue}</div>
-                    <p className="text-xs text-muted-foreground">Processing</p>
+                    <div className="text-2xl font-bold text-chart-3">{stats.processing_queue}</div>
+                    <p className="text-sm text-muted-foreground">Processing Queue</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="compact-stats">
-              <CardContent className="p-3">
+            
+            <Card className="col-span-2 md:col-span-1">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  <RefreshCw className="h-5 w-5 text-chart-1" />
                   <div>
-                    <div className="text-lg font-bold">{stats.ready_stories}</div>
-                    <p className="text-xs text-muted-foreground">Ready</p>
+                    <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
+                    <p className="text-sm text-muted-foreground">Ready Stories</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="col-span-2 md:col-span-1">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">AI Provider</Label>
+                  <Select value={aiProvider} onValueChange={(value: 'openai' | 'deepseek') => setAiProvider(value)}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -319,7 +389,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 slideQuantities={slideQuantities}
                 deletingArticles={deletingArticles}
                 onSlideQuantityChange={handleSlideQuantityChange}
-                onApprove={(articleId, slideType) => approveArticle(articleId, slideType)}
+                onApprove={(articleId, slideType) => approveArticle(articleId, slideType, aiProvider)}
                 onPreview={(article) => setPreviewArticle(article)}
                 onDelete={deleteArticle}
               />

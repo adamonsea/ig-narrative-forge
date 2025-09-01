@@ -4,7 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import FeedCTAManager from '@/components/admin/FeedCTAManager';
+
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 
 export default function AdminPanel() {
@@ -39,18 +39,13 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="errors" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
-            <TabsTrigger value="cta">Feed CTA Settings</TabsTrigger>
             <TabsTrigger value="other">Other Settings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="errors" className="mt-6">
             <ErrorTicketDashboard />
-          </TabsContent>
-          
-          <TabsContent value="cta" className="mt-6">
-            <FeedCTAManager />
           </TabsContent>
           
           <TabsContent value="other" className="mt-6">

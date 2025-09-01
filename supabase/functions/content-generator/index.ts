@@ -385,7 +385,8 @@ function getExpectedSlideCount(slideType: string): number {
   switch (slideType) {
     case 'short': return 4;
     case 'tabloid': return 6;
-    case 'in-depth': return 8;
+    case 'indepth': return 8;
+    case 'extensive': return 12;
     default: return 6;
   }
 }

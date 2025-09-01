@@ -77,10 +77,11 @@ export const useTopicPipeline = (selectedTopicId: string) => {
   const { toast } = useToast();
 
   // Auto-select slide type based on word count
-  const getAutoSlideType = (wordCount: number): 'short' | 'tabloid' | 'indepth' => {
-    if (wordCount < 300) return 'short';
-    if (wordCount > 800) return 'indepth'; 
-    return 'tabloid';
+  const getAutoSlideType = (wordCount: number): 'short' | 'tabloid' | 'indepth' | 'extensive' => {
+    if (wordCount >= 1500) return 'extensive';
+    if (wordCount >= 800) return 'indepth';
+    if (wordCount >= 400) return 'tabloid';
+    return 'short';
   };
 
   // Calculate similarity between two strings

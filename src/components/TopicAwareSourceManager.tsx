@@ -57,9 +57,21 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Pre-select topic if provided via props
   useEffect(() => {
-    loadTopics();
-  }, []);
+    if (selectedTopicId && selectedTopicId !== currentTopicId) {
+      setCurrentTopicId(selectedTopicId);
+    }
+  }, [selectedTopicId]);
+
+  useEffect(() => {
+    if (!selectedTopicId) {
+      loadTopics();
+    } else {
+      // When selectedTopicId is provided, skip topic loading and use the provided topic
+      setCurrentTopicId(selectedTopicId);
+    }
+  }, [selectedTopicId]);
 
   useEffect(() => {
     if (currentTopicId) {
@@ -84,8 +96,8 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         topic_type: topic.topic_type as 'regional' | 'keyword'
       })));
 
-      // Auto-select first topic if none selected
-      if (data && data.length > 0 && !currentTopicId) {
+      // Auto-select first topic if none selected and no selectedTopicId prop
+      if (data && data.length > 0 && !currentTopicId && !selectedTopicId) {
         setCurrentTopicId(data[0].id);
       }
     } catch (error) {
@@ -486,298 +498,251 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
   return (
     <div className="space-y-6">
-      {/* Topic Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Content Sources by Topic</CardTitle>
-          <CardDescription>
-            Manage website sources for your topics. Each topic can have its own set of sources.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="topic-select">Select Topic</Label>
-            <Select value={currentTopicId} onValueChange={setCurrentTopicId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a topic to manage sources" />
-              </SelectTrigger>
-              <SelectContent>
-                {topics.map((topic) => (
-                  <SelectItem key={topic.id} value={topic.id}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={topic.topic_type === 'regional' ? 'default' : 'secondary'}>
-                        {topic.topic_type}
-                      </Badge>
-                      {topic.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {currentTopicId && !showAddForm && (
-            <Button onClick={() => setShowAddForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Source to {currentTopic?.name}
-            </Button>
-          )}
-
-          {showAddForm && (
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-              <div className="space-y-2">
-                <Label htmlFor="source-url">Website URL or RSS Feed</Label>
-                <Input
-                  id="source-url"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://example.com/rss or https://example.com"
-                  disabled={loading}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAddSource} disabled={loading || !newUrl.trim()}>
-                  {loading ? 'Adding...' : 'Add Source'}
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddForm(false)}>
-                  Cancel
-                </Button>
-              </div>
+      {/* Topic Selection - Only show when not pre-selected */}
+      {!selectedTopicId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Sources by Topic</CardTitle>
+            <CardDescription>
+              Manage website sources for your topics. Each topic can have its own set of sources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="topic-select">Select Topic</Label>
+              <Select value={currentTopicId} onValueChange={setCurrentTopicId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a topic to manage sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  {topics.map((topic) => (
+                    <SelectItem key={topic.id} value={topic.id}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={topic.topic_type === 'regional' ? 'default' : 'secondary'}>
+                          {topic.topic_type}
+                        </Badge>
+                        {topic.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Sources List */}
+      {/* Add Source Section */}
       {currentTopicId && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  Sources for {currentTopic?.name}
-                  <Badge variant="outline">
-                    {sources.length} sources
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  Website sources providing content for this topic
-                </CardDescription>
-              </div>
-              
-              {sources.filter(s => s.is_active && s.feed_url).length > 0 && (
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => setShowDiscardedViewer(true)}
-                    variant="outline"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Filtered Articles
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleScrapeAllSources}
-                    disabled={scrapingAll}
-                    variant="default"
-                  >
-                    {scrapingAll ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    ) : (
-                      <Zap className="w-4 h-4 mr-2" />
-                    )}
-                    {scrapingAll ? 'Scraping All...' : 'Scrape All Active'}
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleRecoverOrphanedUrls}
-                    disabled={recovering}
-                    variant="outline"
-                  >
-                    {recovering ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    {recovering ? 'Recovering...' : 'Recover Failed URLs'}
-                  </Button>
-                </div>
-              )}
-            </div>
+            <CardTitle>Add New Source {selectedTopicId && currentTopic ? `to ${currentTopic.name}` : ''}</CardTitle>
+            <CardDescription>
+              Add website URLs or RSS feeds to scrape content from.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Automation Settings */}
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-medium">Automation Settings</span>
+            {!showAddForm && (
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Source{currentTopic ? ` to ${currentTopic.name}` : ''}
+              </Button>
+            )}
+
+            {showAddForm && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                <div className="space-y-2">
+                  <Label htmlFor="source-url">Website URL or RSS Feed</Label>
+                  <Input
+                    id="source-url"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    placeholder="https://example.com/rss or https://example.com"
+                    disabled={loading}
+                  />
                 </div>
-                <Badge variant={automationSettings.is_active ? "default" : "secondary"}>
-                  {automationSettings.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="frequency-select" className="text-sm">Scrape every:</Label>
-                  <Select 
-                    value={automationSettings.scrape_frequency_hours.toString()} 
-                    onValueChange={(value) => updateAutomationSettings({
-                      ...automationSettings,
-                      scrape_frequency_hours: parseInt(value)
-                    })}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6">6 hours</SelectItem>
-                      <SelectItem value="12">12 hours</SelectItem>
-                      <SelectItem value="24">Daily</SelectItem>
-                      <SelectItem value="48">2 days</SelectItem>
-                      <SelectItem value="168">Weekly</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddSource} disabled={loading || !newUrl.trim()}>
+                    {loading ? 'Adding...' : 'Add Source'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                    Cancel
+                  </Button>
                 </div>
-                
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => updateAutomationSettings({
-                    ...automationSettings,
-                    is_active: !automationSettings.is_active
-                  })}
-                >
-                  {automationSettings.is_active ? 'Disable' : 'Enable'}
-                </Button>
-              </div>
-            </div>
-            
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
-            ) : sources.length > 0 ? (
-              <div className="space-y-4">
-                {sources.map((source) => (
-                  <div key={source.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{source.source_name}</h3>
-                        <Badge variant={source.is_active ? "default" : "secondary"}>
-                          {source.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                        {source.success_rate !== null && (
-                          <Badge variant="outline">
-                            {source.success_rate}% success
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {source.feed_url && (
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {source.feed_url}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Articles: {source.articles_scraped || 0}</span>
-                        <span>
-                          Last scraped: {source.last_scraped_at 
-                            ? new Date(source.last_scraped_at).toLocaleDateString()
-                            : 'Never'
-                          }
-                        </span>
-                        {source.scraping_method && (
-                          <Badge variant="outline" className="text-xs">
-                            {source.scraping_method}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {source.feed_url && source.is_active && (
-                        <Button 
-                          size="sm" 
-                          variant="default"
-                          onClick={() => handleScrapeSource(source)}
-                          disabled={scrapingSource === source.id}
-                        >
-                          {scrapingSource === source.id ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1" />
-                          ) : (
-                            <Play className="w-3 h-3 mr-1" />
-                          )}
-                          {scrapingSource === source.id ? 'Scraping...' : 'Scrape Now'}
-                        </Button>
-                      )}
-                      
-                      {source.feed_url && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => window.open(source.feed_url!, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      )}
-                      
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => toggleSourceStatus(source.id, !source.is_active)}
-                      >
-                        {source.is_active ? 'Disable' : 'Enable'}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRemoveSource(source.id, source.source_name)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No sources added</h3>
-                <p className="text-muted-foreground mb-4">
-                  Add website sources to start collecting content for this topic
-                </p>
-                <Button onClick={() => setShowAddForm(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add First Source
-                </Button>
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {!currentTopicId && topics.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No topics available</h3>
-            <p className="text-muted-foreground">
-              Create a topic first to start adding content sources
-            </p>
-          </CardContent>
-        </Card>
+      {currentTopicId && sources.length > 0 && (
+        <>
+          {/* Source Management Cards */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                Sources for {currentTopic?.name}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleScrapeAllSources}
+                    disabled={scrapingAll}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    {scrapingAll ? 'Scraping All...' : 'Scrape All'}
+                  </Button>
+                  <Button 
+                    onClick={handleRecoverOrphanedUrls}
+                    disabled={recovering}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {recovering ? 'Recovering...' : 'Recover URLs'}
+                  </Button>
+                  <Button 
+                    onClick={() => setShowDiscardedViewer(true)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Discarded
+                  </Button>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Manage and monitor your content sources
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {sources.map((source) => (
+                  <div key={source.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{source.source_name}</h4>
+                        <Badge variant={source.is_active ? 'default' : 'secondary'}>
+                          {source.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                        {source.credibility_score && (
+                          <Badge variant="outline">
+                            {source.credibility_score}% credible
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <p>Articles: {source.articles_scraped || 0}</p>
+                        <p>Last scraped: {source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleDateString() : 'Never'}</p>
+                        {source.feed_url && (
+                          <a 
+                            href={source.feed_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            {source.feed_url}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => toggleSourceStatus(source.id, !source.is_active)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {source.is_active ? 'Deactivate' : 'Activate'}
+                      </Button>
+                      {source.feed_url && (
+                        <Button
+                          onClick={() => handleScrapeSource(source)}
+                          disabled={scrapingSource === source.id}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          {scrapingSource === source.id ? 'Scraping...' : 'Scrape'}
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveSource(source.id, source.source_name)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Automation Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Automation Settings
+              </CardTitle>
+              <CardDescription>
+                Configure automatic scraping for this topic
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="frequency">Scrape Frequency (hours):</Label>
+                <Select 
+                  value={automationSettings.scrape_frequency_hours.toString()} 
+                  onValueChange={(value) => updateAutomationSettings({
+                    ...automationSettings,
+                    scrape_frequency_hours: parseInt(value)
+                  })}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="6">6 hours</SelectItem>
+                    <SelectItem value="12">12 hours</SelectItem>
+                    <SelectItem value="24">24 hours</SelectItem>
+                    <SelectItem value="48">48 hours</SelectItem>
+                    <SelectItem value="72">72 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => updateAutomationSettings({
+                    ...automationSettings,
+                    is_active: !automationSettings.is_active
+                  })}
+                  variant={automationSettings.is_active ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  {automationSettings.is_active ? 'Automation On' : 'Automation Off'}
+                </Button>
+                {automationSettings.is_active && (
+                  <p className="text-sm text-muted-foreground">
+                    Sources will be scraped automatically every {automationSettings.scrape_frequency_hours} hours
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Discarded Articles Viewer */}
-      <DiscardedArticlesViewer 
-        topicId={currentTopicId}
-        isOpen={showDiscardedViewer}
-        onClose={() => setShowDiscardedViewer(false)}
-      />
+      {showDiscardedViewer && (
+        <DiscardedArticlesViewer
+          isOpen={showDiscardedViewer}
+          topicId={currentTopicId}
+          onClose={() => setShowDiscardedViewer(false)}
+        />
+      )}
     </div>
   );
 };

@@ -23,10 +23,10 @@ interface Article {
 interface ArticlesListProps {
   articles: Article[];
   processingArticle: string | null;
-  slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' };
+  slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
   deletingArticles: Set<string>;
-  onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth') => void;
-  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth') => void;
+  onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
   onPreview: (article: Article) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
 }
@@ -59,7 +59,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     const types = {
       short: { slides: 4, desc: 'Quick read' },
       tabloid: { slides: 6, desc: 'Standard' },
-      indepth: { slides: 8, desc: 'Detailed' }
+      indepth: { slides: 8, desc: 'Detailed' },
+      extensive: { slides: 12, desc: 'Comprehensive' }
     };
     
     return types[type as keyof typeof types];
@@ -153,7 +154,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                     <div className="text-xs">
                       <Select
                         value={slideType}
-                        onValueChange={(value: 'short' | 'tabloid' | 'indepth') => 
+                        onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
                           onSlideQuantityChange(article.id, value)
                         }
                       >
@@ -169,6 +170,9 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                           </SelectItem>
                           <SelectItem value="indepth">
                             8 slides
+                          </SelectItem>
+                          <SelectItem value="extensive">
+                            12 slides
                           </SelectItem>
                         </SelectContent>
                       </Select>

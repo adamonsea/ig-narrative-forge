@@ -26,7 +26,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' = 'tabloid') => {
+  const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', aiProvider: 'openai' | 'deepseek' = 'openai') => {
     try {
       setProcessingArticle(articleId);
       
@@ -86,7 +86,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         .insert({
           article_id: articleId,
           slidetype: slideType,
-          ai_provider: 'deepseek',
+          ai_provider: aiProvider,
           status: 'pending'
         });
 
@@ -115,14 +115,15 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
       }
 
       const typeLabels = {
-        short: 'Short Carousel',
-        tabloid: 'Tabloid Style',
-        indepth: 'In-Depth Analysis'
+        short: 'Short Carousel (4 slides)',
+        tabloid: 'Tabloid Style (6 slides)', 
+        indepth: 'In-Depth Analysis (8 slides)',
+        extensive: 'Comprehensive Story (12 slides)'
       };
 
       toast({
         title: "Article Approved",
-        description: `${typeLabels[slideType]} generation started`
+        description: `${typeLabels[slideType]} generation started using ${aiProvider.toUpperCase()}`
       });
       
       onRefresh();
