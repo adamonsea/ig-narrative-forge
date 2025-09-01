@@ -34,57 +34,11 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [carouselImages, setCarouselImages] = useState<string[]>([]);
-  const [imagesLoading, setImagesLoading] = useState(true);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
   const isLastSlide = currentSlideIndex === story.slides.length - 1;
 
-  // Load carousel images on component mount
-  useEffect(() => {
-    const loadCarouselImages = async () => {
-      try {
-        setImagesLoading(true);
-        
-        // Fetch carousel export data
-        const { data: carouselData, error } = await supabase
-          .from('carousel_exports')
-          .select('file_paths, status')
-          .eq('story_id', story.id)
-          .eq('status', 'completed')
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching carousel data:', error);
-          return;
-        }
-
-        if (carouselData?.file_paths && Array.isArray(carouselData.file_paths) && carouselData.file_paths.length > 0) {
-          // Generate signed URLs for the images
-          const imageUrls: string[] = [];
-          
-          for (const filePath of carouselData.file_paths as string[]) {
-            const { data: signedUrlData } = await supabase.storage
-              .from('exports')
-              .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
-              
-            if (signedUrlData?.signedUrl) {
-              imageUrls.push(signedUrlData.signedUrl);
-            }
-          }
-          
-          setCarouselImages(imageUrls);
-        }
-      } catch (error) {
-        console.error('Error loading carousel images:', error);
-      } finally {
-        setImagesLoading(false);
-      }
-    };
-
-    loadCarouselImages();
-  }, [story.id]);
 
   const nextSlide = () => {
     if (!isLastSlide) {
@@ -129,14 +83,8 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
   };
 
   const handleDownloadImage = () => {
-    if (carouselImages[currentSlideIndex]) {
-      const link = document.createElement('a');
-      link.href = carouselImages[currentSlideIndex];
-      link.download = `${story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_slide_${currentSlideIndex + 1}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    // This function would be implemented when carousel images are available
+    console.log('Download image functionality will be available when carousel images are generated');
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -253,67 +201,39 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
           )}
           
           <div className="p-8 w-full max-w-2xl">
-            {/* Display carousel image if available, otherwise show text */}
             <div className={`mb-8 transition-all duration-300 ${
               slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
               slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
               'animate-fade-in'
             }`}>
-              {carouselImages[currentSlideIndex] && !imagesLoading ? (
-                // Display carousel image
-                <div className="flex justify-center">
-                  <img 
-                    src={carouselImages[currentSlideIndex]} 
-                    alt={`Slide ${currentSlideIndex + 1}`}
-                    className="max-w-full h-auto rounded-lg shadow-lg"
-                    style={{ maxHeight: '500px' }}
-                  />
-                </div>
-              ) : (
-                // Fallback to text display or loading state
-                <div>
-                  {imagesLoading && (
-                    <div className="text-center mb-4">
-                      <div className="text-sm text-muted-foreground">Loading carousel images...</div>
-                    </div>
-                  )}
-                  
-                  <div className={`text-center leading-relaxed ${
-                      currentSlideIndex === 0 
-                      ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
-                      : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
-                  }`}>
-                    {/* Main story content */}
-                    {isLastSlide ? mainContent : currentSlide.content}
+              <div className={`text-center leading-relaxed ${
+                  currentSlideIndex === 0 
+                  ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+              }`}>
+                {/* Main story content */}
+                {isLastSlide ? mainContent : currentSlide.content}
                     
-                    {/* CTA content with special styling on last slide */}
-                    {isLastSlide && ctaContent && (
-                      <div className="mt-4 pt-4 border-t border-muted">
-                        <div 
-                          className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                          dangerouslySetInnerHTML={{
-                            __html: ctaContent
-                              .replace(
-                                /visit ([^\s]+)/gi, 
-                                'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                              )
-                              .replace(
-                                /(https?:\/\/[^\s]+)/g, 
-                                '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                              )
-                          }}
-                        />
-                      </div>
-                    )}
+                {/* CTA content with special styling on last slide */}
+                {isLastSlide && ctaContent && (
+                  <div className="mt-4 pt-4 border-t border-muted">
+                    <div 
+                      className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                      dangerouslySetInnerHTML={{
+                        __html: ctaContent
+                          .replace(
+                            /visit ([^\s]+)/gi, 
+                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                          )
+                          .replace(
+                            /call (\d{5}\s?\d{6})/gi,
+                            'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                          )
+                      }}
+                    />
                   </div>
-                  
-                  {!imagesLoading && carouselImages.length === 0 && (
-                    <div className="text-center mt-4">
-                      <div className="text-xs text-muted-foreground">Carousel images will appear here once generated</div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -348,17 +268,6 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
               <Share2 className="h-4 w-4" />
               Share
             </Button>
-            {carouselImages[currentSlideIndex] && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadImage}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-            )}
             <Button
               variant={isLoved ? "default" : "outline"}
               size="sm"
