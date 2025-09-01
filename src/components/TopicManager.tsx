@@ -467,22 +467,6 @@ export const TopicManager = () => {
         })}
       </div>
 
-      {topics.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold">No topics yet</h3>
-              <p className="text-muted-foreground">
-                Create your first topic to start curating content
-              </p>
-              <Button onClick={() => setShowCreateForm(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Topic
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
