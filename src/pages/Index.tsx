@@ -33,11 +33,11 @@ const Index = () => {
           {/* Hero Section */}
           <div className="space-y-4">
             <h1 className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              eeZee News
+              curatr
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Create and curate personalized news feeds for any topic or region. 
-              From local community updates to specialized industry insights.
+              Create and share curated content feeds for any topic or community. 
+              From local updates to specialized interests and industry insights.
             </p>
           </div>
 
@@ -50,7 +50,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Create topics around any subject - from AI & Technology to local Eastbourne news. 
+                  Create topics around any subject - from AI & Technology to local community content. 
                   Full control over sources and keywords.
                 </p>
               </CardContent>
@@ -64,7 +64,7 @@ const Index = () => {
               <CardContent>
                 <p className="text-muted-foreground">
                   AI-powered content curation and story generation. 
-                  Turn raw news into engaging, shareable social media carousels.
+                  Turn raw content into engaging, shareable social media carousels.
                 </p>
               </CardContent>
             </Card>
@@ -87,7 +87,7 @@ const Index = () => {
           <div className="mt-16 space-y-6">
             <h2 className="text-3xl font-bold">See it in Action</h2>
             <p className="text-muted-foreground">
-              Check out our demo feed showcasing local news curation:
+              Check out our demo feed showcasing local content curation:
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
@@ -110,7 +110,7 @@ const Index = () => {
             <h3 className="text-2xl font-bold mb-4">Ready to Start Curating?</h3>
             <p className="text-muted-foreground mb-6">
               Join creators, journalists, and community leaders who are already building 
-              their audiences with personalized news curation.
+              their audiences with personalized content curation.
             </p>
             <Button size="lg" asChild>
               <Link to="/auth">
