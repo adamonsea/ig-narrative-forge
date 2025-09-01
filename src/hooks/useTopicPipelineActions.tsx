@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DeleteStoryResponse {
   success: boolean;
@@ -23,6 +24,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' = 'tabloid') => {
     try {
@@ -89,6 +91,26 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         });
 
       if (queueError) {
+        // Check for duplicate key constraint violation
+        if (queueError.code === '23505' && queueError.message.includes('idx_content_queue_unique_article_pending')) {
+          toast({
+            title: "Already Processing",
+            description: "This article is already being processed. Please wait for the current job to complete.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Log the error to the new error tracking system
+        await supabase.rpc('log_error_ticket', {
+          p_ticket_type: 'generation',
+          p_source_info: { article_id: articleId, slide_type: slideType },
+          p_error_details: `Failed to queue generation job: ${queueError.message}`,
+          p_error_code: queueError.code,
+          p_context_data: { function: 'approveArticle', user_id: user?.id },
+          p_severity: 'high'
+        });
+        
         throw new Error(`Failed to queue job: ${queueError.message}`);
       }
 

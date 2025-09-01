@@ -124,8 +124,28 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in generate-carousel-images:', error);
-
+    console.error('Error generating carousel images:', error);
+    
+    // Log error to error tracking system
+    try {
+      await supabase.rpc('log_error_ticket', {
+        p_ticket_type: 'image',
+        p_source_info: { 
+          story_id: storyId
+        },
+        p_error_details: `Carousel image generation failed: ${error.message}`,
+        p_error_code: error.name,
+        p_stack_trace: error.stack,
+        p_context_data: {
+          function: 'generate-carousel-images',
+          ai_provider: 'nebius'
+        },
+        p_severity: 'medium'
+      });
+    } catch (logError) {
+      console.error('Failed to log error ticket:', logError);
+    }
+    
     return new Response(
       JSON.stringify({
         error: error.message,

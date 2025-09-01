@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { 
   BarChart3, 
   RefreshCw, 
@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import CarouselImageViewer from '@/components/CarouselImageViewer';
+import { Textarea } from "@/components/ui/textarea";
 import { useTopicPipeline } from "@/hooks/useTopicPipeline";
 import { useTopicPipelineActions } from "@/hooks/useTopicPipelineActions";
 import { ArticlesList } from "./topic-pipeline/ArticlesList";
@@ -65,6 +67,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+  const [viewingStory, setViewingStory] = useState<any>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -345,10 +348,60 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 onDelete={deleteStory}
                 onReturnToReview={returnToReview}
                 onEditSlide={handleEditSlide}
-                onViewStory={(story) => console.log('View story:', story)}
+                onViewStory={setViewingStory}
               />
             </TabsContent>
           </Tabs>
+
+          {/* View Story Dialog */}
+          <Dialog open={!!viewingStory} onOpenChange={() => setViewingStory(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{viewingStory?.title}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-medium mb-2">Story Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Status:</span>
+                      <Badge variant={viewingStory?.status === 'ready' ? 'default' : 'secondary'} className="ml-2">
+                        {viewingStory?.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">Created:</span> {viewingStory ? new Date(viewingStory.created_at).toLocaleString() : ''}
+                    </div>
+                    <div>
+                      <span className="font-medium">Author:</span> {viewingStory?.author || 'Unknown'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Publication:</span> {viewingStory?.publication_name || 'Unknown'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Slides ({viewingStory?.slides?.length || 0})</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {viewingStory?.slides?.map((slide: any, index: number) => (
+                      <div key={slide.id} className="p-3 bg-muted rounded-lg">
+                        <div className="font-medium text-sm mb-1">Slide {index + 1}</div>
+                        <p className="text-sm">{slide.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {viewingStory?.status === 'ready' && (
+                  <CarouselImageViewer 
+                    storyId={viewingStory.id} 
+                    storyTitle={viewingStory.title}
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Edit Slide Dialog */}
           <Dialog open={!!editingSlide} onOpenChange={() => setEditingSlide(null)}>

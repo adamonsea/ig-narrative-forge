@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import FeedCTAManager from '@/components/admin/FeedCTAManager';
+import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -37,11 +38,16 @@ export default function AdminPanel() {
           <p className="text-muted-foreground">Manage your eeZee News configuration</p>
         </div>
 
-        <Tabs defaultValue="cta" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="errors" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
             <TabsTrigger value="cta">Feed CTA Settings</TabsTrigger>
             <TabsTrigger value="other">Other Settings</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="errors" className="mt-6">
+            <ErrorTicketDashboard />
+          </TabsContent>
           
           <TabsContent value="cta" className="mt-6">
             <FeedCTAManager />
