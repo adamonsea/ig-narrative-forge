@@ -32,6 +32,14 @@ export const useCarouselGeneration = () => {
       const isFirstSlide = slideIndex === 0;
       const isLastSlide = slideIndex === story.slides.length - 1;
       
+      console.log(`🎨 Generating Canvas image for slide ${slideIndex + 1}:`, {
+        slideId: slide.id,
+        content: slide.content?.substring(0, 50) + '...',
+        contentLength: slide.content?.length,
+        isFirstSlide,
+        isLastSlide
+      });
+      
       // Create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 1080;
@@ -39,21 +47,27 @@ export const useCarouselGeneration = () => {
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
+        console.error('❌ Could not get canvas context');
         reject(new Error('Could not get canvas context'));
         return;
       }
 
-      // Fill background with design system background color
+      console.log('✅ Canvas context created, dimensions:', canvas.width, 'x', canvas.height);
+
+      // Fill background with solid white
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 1080, 1080);
+      console.log('✅ White background filled');
 
       // Draw header area with light background
       ctx.fillStyle = '#f8fafc';
       ctx.fillRect(0, 0, 1080, 100);
+      console.log('✅ Header background filled');
       
       // Draw header border
       ctx.fillStyle = '#e2e8f0';
       ctx.fillRect(0, 100, 1080, 2);
+      console.log('✅ Header border drawn');
 
       // Header badge (News) with better visibility
       const badgeX = 32;
@@ -105,33 +119,41 @@ export const useCarouselGeneration = () => {
         }
       }
 
-      // Main content styling
-      ctx.fillStyle = '#0f172a';
+      // Main content styling with better contrast
+      ctx.fillStyle = '#1f2937'; // Dark gray for better readability
       ctx.textAlign = 'center';
       
-      // Dynamic font size based on content length and slide type - matching StoryCarousel logic
+      // Dynamic font size based on content length and slide type
       let fontSize;
       let fontWeight;
       const contentLength = mainContent.length;
       
       if (isFirstSlide) {
-        // Title slide - bold and larger (50% bigger)
-        if (contentLength < 50) fontSize = 84;
-        else if (contentLength < 100) fontSize = 72;
-        else fontSize = 60;
+        // Title slide - bold and larger
+        if (contentLength < 50) fontSize = 72;
+        else if (contentLength < 100) fontSize = 60;
+        else fontSize = 48;
         fontWeight = 'bold';
         // Convert to uppercase for title
         mainContent = mainContent.toUpperCase();
       } else {
-        // Content slide - lighter weight (50% bigger)
-        if (contentLength < 80) fontSize = 63;
-        else if (contentLength < 150) fontSize = 51;
-        else if (contentLength < 250) fontSize = 42;
-        else fontSize = 36;
-        fontWeight = '300';
+        // Content slide - lighter weight
+        if (contentLength < 80) fontSize = 48;
+        else if (contentLength < 150) fontSize = 40;
+        else if (contentLength < 250) fontSize = 32;
+        else fontSize = 28;
+        fontWeight = '400';
       }
       
+      console.log(`📝 Text styling for slide ${slideIndex + 1}:`, {
+        fontSize,
+        fontWeight,
+        contentLength,
+        mainContent: mainContent.substring(0, 30) + '...'
+      });
+      
       ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      console.log('✅ Font set:', ctx.font);
 
       // Enhanced word wrap function
       const wrapText = (text: string, maxWidth: number) => {
@@ -169,10 +191,14 @@ export const useCarouselGeneration = () => {
         contentStartY = (1080 - totalMainHeight + 50) / 2 + (lineHeight / 2);
       }
 
-      // Draw main content lines
+      // Draw main content lines with debugging
+      console.log(`📖 Drawing ${lines.length} lines of text starting at Y:${contentStartY}`);
       lines.forEach((line, index) => {
-        ctx.fillText(line, 540, contentStartY + (index * lineHeight));
+        const yPos = contentStartY + (index * lineHeight);
+        console.log(`📝 Drawing line ${index + 1}: "${line}" at Y:${yPos}`);
+        ctx.fillText(line, 540, yPos);
       });
+      console.log('✅ Main content drawn');
 
       // Draw CTA content if it exists (last slide)
       if (ctaContent && isLastSlide) {
@@ -199,11 +225,17 @@ export const useCarouselGeneration = () => {
       ctx.textAlign = 'center';
       ctx.fillText('News', 540, 1050);
 
-      // Convert to blob
+      // Convert to blob with debugging
+      console.log('🖼️ Converting canvas to blob...');
       canvas.toBlob((blob) => {
         if (blob) {
+          console.log(`✅ Canvas converted to blob: ${blob.size} bytes, type: ${blob.type}`);
+          if (blob.size < 1000) {
+            console.warn(`⚠️ Suspiciously small blob: ${blob.size} bytes - image may be blank`);
+          }
           resolve(blob);
         } else {
+          console.error('❌ Failed to create blob from canvas');
           reject(new Error('Failed to create blob from canvas'));
         }
       }, 'image/png', 0.9);
