@@ -68,10 +68,37 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     if (!selectedTopicId) {
       loadTopics();
     } else {
-      // When selectedTopicId is provided, skip topic loading and use the provided topic
-      setCurrentTopicId(selectedTopicId);
+      // When selectedTopicId is provided, load the specific topic
+      loadSpecificTopic(selectedTopicId);
     }
   }, [selectedTopicId]);
+
+  const loadSpecificTopic = async (topicId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('topics')
+        .select('id, name, topic_type, is_active, region')
+        .eq('id', topicId)
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        setTopics([{
+          ...data,
+          topic_type: data.topic_type as 'regional' | 'keyword'
+        }]);
+        setCurrentTopicId(data.id);
+      }
+    } catch (error) {
+      console.error('Error loading specific topic:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load topic configuration",
+        variant: "destructive"
+      });
+    }
+  };
 
   useEffect(() => {
     if (currentTopicId) {
@@ -200,16 +227,18 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
       // Trigger scraping for the new source using appropriate scraper
       try {
-        const scraperFunction = getScraperFunction(currentTopic!.topic_type);
-        const requestBody = createScraperRequestBody(
-          currentTopic!.topic_type,
-          newUrl,
-          { topicId: currentTopicId, sourceId: undefined, region: currentTopic!.region }
-        );
-        
-        await supabase.functions.invoke(scraperFunction, {
-          body: requestBody
-        });
+        if (currentTopic) {
+          const scraperFunction = getScraperFunction(currentTopic.topic_type);
+          const requestBody = createScraperRequestBody(
+            currentTopic.topic_type,
+            newUrl,
+            { topicId: currentTopicId, sourceId: undefined, region: currentTopic.region }
+          );
+          
+          await supabase.functions.invoke(scraperFunction, {
+            body: requestBody
+          });
+        }
       } catch (scrapeError) {
         console.error('Scraping trigger failed:', scrapeError);
         // Don't show error to user as source was still added
@@ -287,16 +316,23 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   };
 
   const handleScrapeSource = async (source: ContentSource) => {
-    if (!source.feed_url) return;
+    if (!source.feed_url || !currentTopic) {
+      toast({
+        title: "Error",
+        description: "Missing source URL or topic configuration",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       setScrapingSource(source.id);
       
-      const scraperFunction = getScraperFunction(currentTopic!.topic_type);
+      const scraperFunction = getScraperFunction(currentTopic.topic_type);
       const requestBody = createScraperRequestBody(
-        currentTopic!.topic_type,
+        currentTopic.topic_type,
         source.feed_url,
-        { topicId: currentTopicId, sourceId: source.id, region: currentTopic!.region }
+        { topicId: currentTopicId, sourceId: source.id, region: currentTopic.region }
       );
       
       const { data, error } = await supabase.functions.invoke(scraperFunction, {
@@ -355,16 +391,25 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       return;
     }
 
+    if (!currentTopic) {
+      toast({
+        title: "Error",
+        description: "Topic configuration not loaded",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setScrapingAll(true);
       
       // Scrape all active sources in parallel using appropriate scraper
-      const scraperFunction = getScraperFunction(currentTopic!.topic_type);
+      const scraperFunction = getScraperFunction(currentTopic.topic_type);
       const scrapePromises = activeSources.map(source => {
         const requestBody = createScraperRequestBody(
-          currentTopic!.topic_type,
+          currentTopic.topic_type,
           source.feed_url!,
-          { topicId: currentTopicId, sourceId: source.id, region: currentTopic!.region }
+          { topicId: currentTopicId, sourceId: source.id, region: currentTopic.region }
         );
         
         return supabase.functions.invoke(scraperFunction, {
