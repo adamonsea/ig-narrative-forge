@@ -446,6 +446,98 @@ export type Database = {
           },
         ]
       }
+      error_notifications: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notification_type: string
+          read_at: string | null
+          ticket_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notification_type?: string
+          read_at?: string | null
+          ticket_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notification_type?: string
+          read_at?: string | null
+          ticket_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "error_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      error_tickets: {
+        Row: {
+          archived_at: string | null
+          assigned_to: string | null
+          context_data: Json | null
+          created_at: string
+          error_code: string | null
+          error_details: string
+          id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          severity: string | null
+          source_info: Json
+          stack_trace: string | null
+          status: string
+          ticket_type: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          assigned_to?: string | null
+          context_data?: Json | null
+          created_at?: string
+          error_code?: string | null
+          error_details: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          source_info?: Json
+          stack_trace?: string | null
+          status?: string
+          ticket_type: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          assigned_to?: string | null
+          context_data?: Json | null
+          created_at?: string
+          error_code?: string | null
+          error_details?: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          source_info?: Json
+          stack_trace?: string | null
+          status?: string
+          ticket_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           config: Json | null
@@ -1575,6 +1667,18 @@ export type Database = {
       is_feature_enabled: {
         Args: { flag_name: string }
         Returns: boolean
+      }
+      log_error_ticket: {
+        Args: {
+          p_context_data?: Json
+          p_error_code?: string
+          p_error_details: string
+          p_severity?: string
+          p_source_info: Json
+          p_stack_trace?: string
+          p_ticket_type: string
+        }
+        Returns: string
       }
       log_event: {
         Args: {
