@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Image, Loader2, Download, Play } from 'lucide-react';
 import { CarouselPreviewModal } from './CarouselPreviewModal';
+import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 
 interface CarouselGenerationButtonProps {
   storyId: string;
@@ -25,10 +26,10 @@ interface CarouselExport {
 }
 
 export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: CarouselGenerationButtonProps) => {
-  const [generating, setGenerating] = useState(false);
   const [carouselExport, setCarouselExport] = useState<CarouselExport | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
+  const { generateCarouselImages, isGenerating } = useCarouselGeneration();
 
   const checkExistingCarousel = async () => {
     const { data } = await supabase
@@ -43,46 +44,31 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
   };
 
   const generateCarousel = async () => {
-    setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-carousel-images', {
-        body: { 
-          storyId,
-          formats: ['instagram_story', 'instagram_post', 'facebook_post']
-        }
-      });
+      // Get story data for generation
+      const { data: story, error: storyError } = await supabase
+        .from('stories')
+        .select(`
+          *,
+          slides(*)
+        `)
+        .eq('id', storyId)
+        .single();
 
-      if (error) throw error;
+      if (storyError || !story) {
+        throw new Error(`Failed to fetch story: ${storyError?.message}`);
+      }
 
-      toast({
-        title: "Carousel Generation Started",
-        description: "Images are being generated. This may take a few minutes."
-      });
-
-      // Poll for completion
-      const pollInterval = setInterval(async () => {
+      const success = await generateCarouselImages(story);
+      
+      if (success) {
+        // Check for the generated carousel
         const export_data = await checkExistingCarousel();
-        if (export_data && export_data.status === 'completed') {
-          clearInterval(pollInterval);
+        if (export_data) {
           setCarouselExport(export_data);
-          toast({
-            title: "Carousel Ready",
-            description: "Your carousel images are ready for download!"
-          });
-        } else if (export_data && export_data.status === 'failed') {
-          clearInterval(pollInterval);
-          toast({
-            title: "Generation Failed",
-            description: export_data.error_message || "Failed to generate carousel images",
-            variant: "destructive"
-          });
         }
-      }, 2000);
-
-      // Clear interval after 5 minutes to prevent infinite polling
-      setTimeout(() => clearInterval(pollInterval), 300000);
-
-      if (onGenerate) onGenerate();
+        if (onGenerate) onGenerate();
+      }
     } catch (error: any) {
       console.error('Error generating carousel:', error);
       toast({
@@ -90,8 +76,6 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
         description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -110,11 +94,11 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
     <>
       <Button
         onClick={handleClick}
-        disabled={generating}
+        disabled={isGenerating(storyId)}
         variant="outline"
         size="sm"
       >
-        {generating ? (
+        {isGenerating(storyId) ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             Generating...

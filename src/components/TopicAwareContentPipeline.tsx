@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,8 +79,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     loading,
     stats,
     loadTopicContent,
-    getAutoSlideType
+    getAutoSlideType: originalGetAutoSlideType
   } = useTopicPipeline(selectedTopicId);
+
+  // Memoize getAutoSlideType to prevent infinite loops
+  const getAutoSlideType = useCallback((wordCount: number) => {
+    return originalGetAutoSlideType(wordCount);
+  }, [originalGetAutoSlideType]);
 
   const {
     processingArticle,
@@ -102,17 +107,21 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   useEffect(() => {
     if (articles.length > 0) {
       const newSlideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' } = {};
+      let hasNewQuantities = false;
+      
       articles.forEach(article => {
         // Only set if not already set by user
         if (!slideQuantities[article.id]) {
           newSlideQuantities[article.id] = getAutoSlideType(article.word_count || 0);
+          hasNewQuantities = true;
         }
       });
-      if (Object.keys(newSlideQuantities).length > 0) {
+      
+      if (hasNewQuantities) {
         setSlideQuantities(prev => ({ ...prev, ...newSlideQuantities }));
       }
     }
-  }, [articles, slideQuantities, getAutoSlideType]);
+  }, [articles, getAutoSlideType]); // Removed slideQuantities from dependency array to prevent infinite loop
 
   // Set up real-time subscriptions for pipeline updates
   useEffect(() => {
