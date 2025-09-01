@@ -42,8 +42,6 @@ const Dashboard = () => {
 
   const loadDashboardStats = async () => {
     try {
-      console.log('Loading dashboard stats for user:', user?.id);
-      
       // First get user's topic IDs
       const { data: userTopics, error: topicsError } = await supabase
         .from('topics')
@@ -51,12 +49,10 @@ const Dashboard = () => {
         .eq('created_by', user?.id);
       
       if (topicsError) {
-        console.error('Error fetching user topics:', topicsError);
         throw topicsError;
       }
       
       const topicIds = userTopics?.map(t => t.id) || [];
-      console.log('User topic IDs:', topicIds);
 
       // Get article IDs from user's topics for stories count
       let articleIds: string[] = [];
@@ -67,13 +63,11 @@ const Dashboard = () => {
           .in('topic_id', topicIds);
           
         if (articlesError) {
-          console.error('Error fetching user articles:', articlesError);
           throw articlesError;
         }
         
         articleIds = userArticles?.map(a => a.id) || [];
       }
-      console.log('User article IDs:', articleIds);
 
       const [topicsRes, articlesRes, storiesRes, sourcesRes] = await Promise.all([
         // Count topics created by current user
@@ -94,13 +88,6 @@ const Dashboard = () => {
           ? supabase.from('content_sources').select('id', { count: 'exact' }).in('topic_id', topicIds)
           : { count: 0, data: [], error: null }
       ]);
-
-      console.log('Dashboard stats results:', {
-        topics: topicsRes.count,
-        articles: articlesRes.count,
-        stories: storiesRes.count,
-        sources: sourcesRes.count
-      });
 
       // Check for errors in any of the queries
       if (topicsRes.error) throw topicsRes.error;
