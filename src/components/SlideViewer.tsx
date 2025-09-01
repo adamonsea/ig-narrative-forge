@@ -46,22 +46,50 @@ export default function SlideViewer({ slideId }: SlideViewerProps) {
       // Load slide info
       const { data: slideData, error: slideError } = await supabase
         .from('slides')
-        .select('*')
+        .select('*, story_id')
         .eq('id', slideId)
         .single();
 
       if (slideError) throw slideError;
       setSlide(slideData);
 
-      // Load visuals for this slide
-      const { data: visualData, error: visualError } = await supabase
-        .from('visuals')
+      // Load carousel exports for this story (where the images actually are)
+      const { data: exportData, error: exportError } = await supabase
+        .from('carousel_exports')
         .select('*')
-        .eq('slide_id', slideId)
-        .order('created_at', { ascending: false });
+        .eq('story_id', slideData.story_id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (visualError) throw visualError;
-      setVisuals(visualData || []);
+      if (exportError) throw exportError;
+      
+      if (exportData && exportData.length > 0) {
+        const exportRecord = exportData[0];
+        const instagramPaths = exportRecord.export_formats?.['instagram-square']?.paths || [];
+        
+        // Convert storage paths to proper visual objects for compatibility
+        const mockVisuals = instagramPaths.map((path: string, index: number) => ({
+          id: `export-${index}`,
+          image_url: path,
+          alt_text: `Slide ${index + 1} carousel image`,
+          style_preset: 'instagram-square',
+          generation_prompt: `Carousel image for slide ${index + 1}`,
+          created_at: exportRecord.created_at
+        }));
+        
+        setVisuals(mockVisuals);
+      } else {
+        // Fallback to checking visuals table
+        const { data: visualData, error: visualError } = await supabase
+          .from('visuals')
+          .select('*')
+          .eq('slide_id', slideId)
+          .order('created_at', { ascending: false });
+
+        if (visualError) throw visualError;
+        setVisuals(visualData || []);
+      }
       
     } catch (error) {
       console.error('Error loading slide data:', error);

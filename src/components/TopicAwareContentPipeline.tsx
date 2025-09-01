@@ -98,11 +98,12 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     deleteArticle
   } = useTopicPipelineActions(loadTopicContent);
 
-  // Initialize slide quantities with auto-selected values
+  // Initialize slide quantities with auto-selected values, but allow user to change them
   useEffect(() => {
     if (articles.length > 0) {
       const newSlideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' } = {};
       articles.forEach(article => {
+        // Only set if not already set by user
         if (!slideQuantities[article.id]) {
           newSlideQuantities[article.id] = getAutoSlideType(article.word_count || 0);
         }
@@ -111,7 +112,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         setSlideQuantities(prev => ({ ...prev, ...newSlideQuantities }));
       }
     }
-  }, [articles]);
+  }, [articles, slideQuantities, getAutoSlideType]);
 
   // Set up real-time subscriptions for pipeline updates
   useEffect(() => {
