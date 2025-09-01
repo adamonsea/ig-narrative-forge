@@ -287,20 +287,18 @@ export const useTopicPipeline = (selectedTopicId: string) => {
     }
   };
 
-  useEffect(() => {
-    if (selectedTopicId) {
-      loadTopicContent();
-    }
-  }, [selectedTopicId]);
-
-  // Set up real-time subscriptions for pipeline updates
+  // Combined useEffect for loading and real-time subscriptions to maintain hooks order
   useEffect(() => {
     if (!selectedTopicId) return;
 
+    // Initial load
+    loadTopicContent();
+
+    // Set up real-time subscriptions
     console.log('🔄 Setting up real-time subscriptions for topic:', selectedTopicId);
 
     const channel = supabase
-      .channel('topic-pipeline-updates')
+      .channel(`topic-pipeline-${selectedTopicId}`)
       .on(
         'postgres_changes',
         {
