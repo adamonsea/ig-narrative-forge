@@ -63,7 +63,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' }>({});
-  const [aiProvider, setAiProvider] = useState<'openai' | 'deepseek'>('openai');
+  const [aiProvider, setAiProvider] = useState<'openai' | 'deepseek'>('deepseek');
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');

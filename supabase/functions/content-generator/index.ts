@@ -51,7 +51,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { articleId, slideType = 'tabloid', aiProvider = 'openai' } = await req.json();
+    const { articleId, slideType = 'tabloid', aiProvider = 'deepseek' } = await req.json();
     
     console.log(`Processing article ID: ${articleId} with AI provider: ${aiProvider}`);
 
@@ -571,14 +571,20 @@ CRITICAL REQUIREMENTS:
 2. Do not add speculation, opinion, or information not explicitly stated in the source
 3. Always attribute information to the source publication: "${publicationName}"
 4. Include temporal context: ${temporalContext ? `This story was published ${temporalContext.temporal}` : 'Recent story'}
-5. Generate exactly ${slideCount} slides
+5. Generate EXACTLY ${slideCount} slides - NO MORE, NO LESS
 6. Keep slides concise and engaging
 7. Use present tense for recent events, past tense for historical references
 8. Always include source attribution in the final slide
 
+MANDATORY SLIDE COUNT: ${slideCount} SLIDES ONLY
+${slideCount === 4 ? 'SHORT FORMAT: 4 slides total' : ''}
+${slideCount === 6 ? 'TABLOID FORMAT: 6 slides total' : ''}
+${slideCount === 8 ? 'IN-DEPTH FORMAT: 8 slides total' : ''}
+${slideCount === 12 ? 'EXTENSIVE FORMAT: 12 slides total' : ''}
+
 SLIDE STRUCTURE for ${slideType} format:
 - Slide 1: Hook/Headline (15-20 words max) - Grab attention
-- Slide 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
+- Slides 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
 - Slide ${slideCount}: Call to action with source attribution (25-40 words)
   ${ctaConfig ? `Final slide must include: "${ctaText}" and "${attributionCTA}"` : ''}
 
@@ -588,13 +594,15 @@ ${storyAnalysis.angles.length > 0 ? `KEY ANGLES: ${storyAnalysis.angles.join(', 
 SOURCE PUBLICATION: ${publicationName}
 TEMPORAL CONTEXT: ${temporalContext ? temporalContext.temporal : 'Recent'}
 
-Return a JSON object with "slides" array. Each slide must have:
+IMPORTANT: You must return exactly ${slideCount} slides. The response must contain slideNumber 1 through ${slideCount} only.
+
+Return a JSON object with "slides" array containing exactly ${slideCount} slides. Each slide must have:
 - slideNumber (1-${slideCount})
 - content (text for the slide)
 - visualPrompt (description for image generation)
 - altText (accessibility description)
 
-EXAMPLE RESPONSE:
+EXAMPLE RESPONSE STRUCTURE:
 {
   "slides": [
     {
@@ -603,10 +611,11 @@ EXAMPLE RESPONSE:
       "visualPrompt": "News breaking graphic with bold text overlay",
       "altText": "Breaking news announcement about local incident"
     }
+    // ... continue until slide ${slideCount}
   ]
 }`;
 
-  const userPrompt = `Transform this news article into ${slideCount} engaging carousel slides:
+  const userPrompt = `Transform this news article into EXACTLY ${slideCount} engaging carousel slides:
 
 HEADLINE: ${article.title}
 
@@ -617,7 +626,7 @@ SOURCE URL: ${article.source_url}
 AUTHOR: ${article.author || 'Staff Reporter'}
 PUBLISHED: ${temporalContext ? temporalContext.fullDateTime : 'Recently'}
 
-Create ${slideCount} slides that tell this story engagingly while maintaining factual accuracy and proper source attribution.`;
+REMINDER: Create EXACTLY ${slideCount} slides - this is mandatory. Do not create more or fewer slides.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -649,7 +658,38 @@ Create ${slideCount} slides that tell this story engagingly while maintaining fa
       throw new Error('Invalid response format from OpenAI');
     }
 
-    return result.slides;
+    // Validate and enforce exact slide count
+    let validatedSlides = result.slides;
+    if (validatedSlides.length !== slideCount) {
+      console.log(`⚠️ AI generated ${validatedSlides.length} slides but expected ${slideCount}. Adjusting...`);
+      
+      if (validatedSlides.length > slideCount) {
+        // Trim excess slides, keeping the first ones and the last one (which should contain CTA)
+        validatedSlides = [
+          ...validatedSlides.slice(0, slideCount - 1),
+          validatedSlides[validatedSlides.length - 1] // Keep the last slide (CTA)
+        ];
+        // Renumber slides
+        validatedSlides = validatedSlides.map((slide, index) => ({
+          ...slide,
+          slideNumber: index + 1
+        }));
+      } else if (validatedSlides.length < slideCount) {
+        // If fewer slides than expected, duplicate content or add placeholder
+        while (validatedSlides.length < slideCount) {
+          const lastSlide = validatedSlides[validatedSlides.length - 1];
+          validatedSlides.push({
+            slideNumber: validatedSlides.length + 1,
+            content: `Additional insight: ${article.title}`,
+            visualPrompt: `Visual representation of: ${article.title}`,
+            altText: `Additional information about ${article.title}`
+          });
+        }
+      }
+      console.log(`✅ Adjusted to exactly ${validatedSlides.length} slides`);
+    }
+
+    return validatedSlides;
   } catch (error) {
     console.error('Error generating slides with OpenAI:', error);
     throw error;
@@ -819,14 +859,20 @@ CRITICAL REQUIREMENTS:
 2. Do not add speculation, opinion, or information not explicitly stated in the source
 3. Always attribute information to the source publication: "${publicationName}"
 4. Include temporal context: ${temporalContext ? `This story was published ${temporalContext.temporal}` : 'Recent story'}
-5. Generate exactly ${slideCount} slides
+5. Generate EXACTLY ${slideCount} slides - NO MORE, NO LESS
 6. Keep slides concise and engaging
 7. Use present tense for recent events, past tense for historical references
 8. Always include source attribution in the final slide
 
+MANDATORY SLIDE COUNT: ${slideCount} SLIDES ONLY
+${slideCount === 4 ? 'SHORT FORMAT: 4 slides total' : ''}
+${slideCount === 6 ? 'TABLOID FORMAT: 6 slides total' : ''}
+${slideCount === 8 ? 'IN-DEPTH FORMAT: 8 slides total' : ''}
+${slideCount === 12 ? 'EXTENSIVE FORMAT: 12 slides total' : ''}
+
 SLIDE STRUCTURE for ${slideType} format:
 - Slide 1: Hook/Headline (15-20 words max) - Grab attention
-- Slide 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
+- Slides 2-${slideCount-1}: Key facts and details (20-35 words each) - Build the story
 - Slide ${slideCount}: Call to action with source attribution (25-40 words)
   ${ctaConfig ? `Final slide must include: "${ctaText}" and "${attributionCTA}"` : ''}
 
@@ -836,13 +882,15 @@ ${storyAnalysis.angles.length > 0 ? `KEY ANGLES: ${storyAnalysis.angles.join(', 
 SOURCE PUBLICATION: ${publicationName}
 TEMPORAL CONTEXT: ${temporalContext ? temporalContext.temporal : 'Recent'}
 
-Return a JSON object with "slides" array. Each slide must have:
+IMPORTANT: You must return exactly ${slideCount} slides. The response must contain slideNumber 1 through ${slideCount} only.
+
+Return a JSON object with "slides" array containing exactly ${slideCount} slides. Each slide must have:
 - slideNumber (1-${slideCount})
 - content (text for the slide)
 - visualPrompt (description for image generation)
 - altText (accessibility description)
 
-EXAMPLE RESPONSE:
+EXAMPLE RESPONSE STRUCTURE:
 {
   "slides": [
     {
@@ -851,10 +899,11 @@ EXAMPLE RESPONSE:
       "visualPrompt": "News breaking graphic with bold text overlay",
       "altText": "Breaking news announcement about local incident"
     }
+    // ... continue until slide ${slideCount}
   ]
 }`;
 
-  const userPrompt = `Transform this news article into ${slideCount} engaging carousel slides:
+  const userPrompt = `Transform this news article into EXACTLY ${slideCount} engaging carousel slides:
 
 HEADLINE: ${article.title}
 
@@ -865,7 +914,7 @@ SOURCE URL: ${article.source_url}
 AUTHOR: ${article.author || 'Staff Reporter'}
 PUBLISHED: ${temporalContext ? temporalContext.fullDateTime : 'Recently'}
 
-Create ${slideCount} slides that tell this story engagingly while maintaining factual accuracy and proper source attribution.`;
+REMINDER: Create EXACTLY ${slideCount} slides - this is mandatory. Do not create more or fewer slides.`;
 
   try {
     const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -897,7 +946,38 @@ Create ${slideCount} slides that tell this story engagingly while maintaining fa
       throw new Error('Invalid response format from DeepSeek');
     }
 
-    return result.slides;
+    // Validate and enforce exact slide count
+    let validatedSlides = result.slides;
+    if (validatedSlides.length !== slideCount) {
+      console.log(`⚠️ AI generated ${validatedSlides.length} slides but expected ${slideCount}. Adjusting...`);
+      
+      if (validatedSlides.length > slideCount) {
+        // Trim excess slides, keeping the first ones and the last one (which should contain CTA)
+        validatedSlides = [
+          ...validatedSlides.slice(0, slideCount - 1),
+          validatedSlides[validatedSlides.length - 1] // Keep the last slide (CTA)
+        ];
+        // Renumber slides
+        validatedSlides = validatedSlides.map((slide, index) => ({
+          ...slide,
+          slideNumber: index + 1
+        }));
+      } else if (validatedSlides.length < slideCount) {
+        // If fewer slides than expected, duplicate content or add placeholder
+        while (validatedSlides.length < slideCount) {
+          const lastSlide = validatedSlides[validatedSlides.length - 1];
+          validatedSlides.push({
+            slideNumber: validatedSlides.length + 1,
+            content: `Additional insight: ${article.title}`,
+            visualPrompt: `Visual representation of: ${article.title}`,
+            altText: `Additional information about ${article.title}`
+          });
+        }
+      }
+      console.log(`✅ Adjusted to exactly ${validatedSlides.length} slides`);
+    }
+
+    return validatedSlides;
   } catch (error) {
     console.error('Error generating slides with DeepSeek:', error);
     throw error;

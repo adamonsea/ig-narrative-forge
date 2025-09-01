@@ -26,7 +26,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', aiProvider: 'openai' | 'deepseek' = 'openai') => {
+  const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', aiProvider: 'openai' | 'deepseek' = 'deepseek') => {
     try {
       setProcessingArticle(articleId);
       
