@@ -206,10 +206,7 @@ export const TopicManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Your Topics</h2>
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={() => setShowCreateForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Create Topic
