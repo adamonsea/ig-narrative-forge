@@ -116,7 +116,7 @@ serve(async (req) => {
     let postCopy: { caption: string; hashtags: string[] } = { caption: '', hashtags: [] };
     const actualProvider = aiProvider || 'openai';
 
-    console.log(`🎯 Generating slides using ${actualProvider === 'deepseek' ? 'DeepSeek' : 'OpenAI'} with slideType: ${slideType}, expected count: ${getExpectedSlideCount(slideType)}`);
+    console.log(`🎯 Generating slides using ${actualProvider === 'deepseek' ? 'DeepSeek' : 'OpenAI'} with slideType: ${slideType}, expected count: ${getExpectedSlideCount(slideType, article)}`);
 
     try {
       // Generate slides first, then post copy (slides must be available for post copy generation)
@@ -381,7 +381,24 @@ serve(async (req) => {
 });
 
 // Helper functions
-function getExpectedSlideCount(slideType: string): number {
+function getExpectedSlideCount(slideType: string, article?: Article): number {
+  // If article is provided, calculate based on content length
+  if (article) {
+    const wordCount = article.word_count || 0;
+    const contentLength = article.body.length;
+    
+    console.log(`📊 Content analysis: ${wordCount} words, ${contentLength} chars`);
+    
+    // Content-based slide calculation
+    if (wordCount < 200) return 3;
+    if (wordCount < 400) return 4; 
+    if (wordCount < 600) return 5;
+    if (wordCount < 800) return 6;
+    if (wordCount < 1200) return 7;
+    return 8; // Maximum for very long articles
+  }
+  
+  // Fallback to slideType if no article provided
   switch (slideType) {
     case 'short': return 4;
     case 'tabloid': return 6;
@@ -556,7 +573,7 @@ async function generateSlides(
   supabaseClient: any,
   ctaConfig: any = null
 ): Promise<SlideContent[]> {
-  const slideCount = getExpectedSlideCount(slideType);
+  const slideCount = getExpectedSlideCount(slideType, article);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
   const temporalContext = article.published_at ? calculateTemporalContext(article.published_at) : null;
   
@@ -875,7 +892,7 @@ async function generateSlidesWithDeepSeek(
   supabaseClient: any,
   ctaConfig: any = null
 ): Promise<SlideContent[]> {
-  const slideCount = getExpectedSlideCount(slideType);
+  const slideCount = getExpectedSlideCount(slideType, article);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
   const temporalContext = article.published_at ? calculateTemporalContext(article.published_at) : null;
   

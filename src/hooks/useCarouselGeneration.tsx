@@ -26,221 +26,241 @@ export const useCarouselGeneration = () => {
   const [isGenerating, setIsGenerating] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  const generateImageUsingCanvas = (story: Story, slideIndex: number): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const slide = story.slides[slideIndex];
-      const isFirstSlide = slideIndex === 0;
-      const isLastSlide = slideIndex === story.slides.length - 1;
-      
-      console.log(`🎨 Generating Canvas image for slide ${slideIndex + 1}:`, {
-        slideId: slide.id,
-        content: slide.content?.substring(0, 50) + '...',
-        contentLength: slide.content?.length,
-        isFirstSlide,
-        isLastSlide
-      });
-      
-      // Create canvas
+// Canvas-based image generation function with enhanced debugging and font loading
+const generateImageUsingCanvas = async (story: Story, slideIndex: number): Promise<Blob> => {
+  console.log(`🎨 [DEBUG] Starting Canvas generation for slide ${slideIndex + 1}/${story.slides.length}`);
+  
+  const slide = story.slides[slideIndex];
+  console.log(`🎨 [DEBUG] Slide content: "${slide.content}" (${slide.content.length} chars)`);
+  
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Create canvas element
       const canvas = document.createElement('canvas');
-      canvas.width = 1080;
-      canvas.height = 1080;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false });
       
       if (!ctx) {
-        console.error('❌ Could not get canvas context');
-        reject(new Error('Could not get canvas context'));
-        return;
+        console.error('❌ [DEBUG] Failed to get canvas context');
+        return reject(new Error('Failed to get canvas context'));
       }
-
-      console.log('✅ Canvas context created, dimensions:', canvas.width, 'x', canvas.height);
-
-      // Fill background with solid white
+      
+      console.log(`✅ [DEBUG] Canvas 2D context created successfully`);
+      
+      // Set canvas dimensions for Instagram square format
+      canvas.width = 1080;
+      canvas.height = 1080;
+      
+      console.log(`✅ [DEBUG] Canvas dimensions set: ${canvas.width}x${canvas.height}`);
+      
+      // Wait for fonts to load
+      await document.fonts.ready;
+      console.log(`✅ [DEBUG] Fonts loaded and ready`);
+      
+      // Clear and set solid background
+      ctx.save();
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 1080, 1080);
-      console.log('✅ White background filled');
-
-      // Draw header area with light background
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, 1080, 100);
-      console.log('✅ Header background filled');
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      console.log(`✅ [DEBUG] Canvas background filled with solid white`);
       
-      // Draw header border
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(0, 100, 1080, 2);
-      console.log('✅ Header border drawn');
-
-      // Header badge (News) with better visibility
-      const badgeX = 32;
-      const badgeY = 32;
-      const badgeWidth = 80;
-      const badgeHeight = 36;
+      // Verify background was drawn
+      const imageData = ctx.getImageData(0, 0, 100, 100);
+      const isWhite = imageData.data[0] === 255 && imageData.data[1] === 255 && imageData.data[2] === 255;
+      console.log(`✅ [DEBUG] Background verification: ${isWhite ? 'WHITE' : 'NOT WHITE'}`);
       
-      // Badge background with solid color
+      // Add a border for visual confirmation
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+      console.log(`✅ [DEBUG] Border drawn`);
+      
+      // Header section with slide number
+      const headerHeight = 140;
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, canvas.width, headerHeight);
+      console.log(`✅ [DEBUG] Header background drawn (dark blue)`);
+      
+      // Slide number badge
+      const badgeSize = 80;
+      const badgeX = canvas.width - badgeSize - 30;
+      const badgeY = 30;
+      
+      // Badge background
       ctx.fillStyle = '#3b82f6';
       ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 6);
+      ctx.roundRect(badgeX, badgeY, badgeSize, badgeSize, 40);
       ctx.fill();
+      console.log(`✅ [DEBUG] Slide badge background drawn`);
       
-      // Badge text with white color
+      // Badge text with explicit font
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 32px "Arial", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('News', badgeX + badgeWidth/2, badgeY + 23);
+      ctx.textBaseline = 'middle';
+      const badgeText = (slideIndex + 1).toString();
+      ctx.fillText(badgeText, badgeX + badgeSize / 2, badgeY + badgeSize / 2);
+      console.log(`✅ [DEBUG] Badge text drawn: "${badgeText}"`);
       
-      // Counter text
-      ctx.fillStyle = '#64748b';
-      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(`${slideIndex + 1} of ${story.slides.length}`, 1048, 55);
-
-      // Parse content for last slide (handle CTA content)
-      let mainContent = slide.content;
-      let ctaContent = null;
-      
-      if (isLastSlide) {
-        const ctaPatterns = [
-          /Like, share\./i,
-          /Summarised by/i,
-          /Support local journalism/i
-        ];
+      // Story title in header (first slide only) or slide indicator
+      ctx.fillStyle = '#ffffff';
+      if (slideIndex === 0) {
+        ctx.font = 'bold 28px "Arial", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         
-        let splitIndex = -1;
-        for (const pattern of ctaPatterns) {
-          const match = slide.content.search(pattern);
-          if (match !== -1) {
-            splitIndex = match;
-            break;
-          }
-        }
+        const titleText = story.title.length > 50 ? 
+          story.title.substring(0, 47) + '...' : 
+          story.title;
         
-        if (splitIndex !== -1) {
-          mainContent = slide.content.substring(0, splitIndex).trim();
-          ctaContent = slide.content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
-        }
-      }
-
-      // Main content styling with better contrast
-      ctx.fillStyle = '#1f2937'; // Dark gray for better readability
-      ctx.textAlign = 'center';
-      
-      // Dynamic font size based on content length and slide type
-      let fontSize;
-      let fontWeight;
-      const contentLength = mainContent.length;
-      
-      if (isFirstSlide) {
-        // Title slide - bold and larger
-        if (contentLength < 50) fontSize = 72;
-        else if (contentLength < 100) fontSize = 60;
-        else fontSize = 48;
-        fontWeight = 'bold';
-        // Convert to uppercase for title
-        mainContent = mainContent.toUpperCase();
+        ctx.fillText(titleText, 40, headerHeight / 2);
+        console.log(`✅ [DEBUG] Story title drawn: "${titleText}"`);
       } else {
-        // Content slide - lighter weight
-        if (contentLength < 80) fontSize = 48;
-        else if (contentLength < 150) fontSize = 40;
-        else if (contentLength < 250) fontSize = 32;
-        else fontSize = 28;
-        fontWeight = '400';
+        ctx.font = '24px "Arial", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Slide ${slideIndex + 1} of ${story.slides.length}`, 40, headerHeight / 2);
+        console.log(`✅ [DEBUG] Slide indicator drawn`);
       }
       
-      console.log(`📝 Text styling for slide ${slideIndex + 1}:`, {
-        fontSize,
-        fontWeight,
-        contentLength,
-        mainContent: mainContent.substring(0, 30) + '...'
-      });
+      // Main content area with improved text rendering
+      const contentY = headerHeight + 60;
+      const maxWidth = canvas.width - 100;
+      const lineHeight = 50;
       
-      ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-      console.log('✅ Font set:', ctx.font);
-
-      // Enhanced word wrap function
-      const wrapText = (text: string, maxWidth: number) => {
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '34px "Arial", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      
+      console.log(`🎨 [DEBUG] Starting text wrapping for: "${slide.content}"`);
+      console.log(`🎨 [DEBUG] Max width: ${maxWidth}, Line height: ${lineHeight}`);
+      
+      // Enhanced word wrapping with better measurement
+      const wrapText = (text: string, maxWidth: number): string[] => {
         const words = text.split(' ');
         const lines: string[] = [];
-        let currentLine = words[0] || '';
-
-        for (let i = 1; i < words.length; i++) {
-          const word = words[i];
-          const testLine = currentLine + " " + word;
+        let currentLine = '';
+        
+        for (const word of words) {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          
+          // Measure the text width
+          ctx.save();
+          ctx.font = '34px "Arial", sans-serif';
           const metrics = ctx.measureText(testLine);
-          if (metrics.width < maxWidth) {
-            currentLine = testLine;
-          } else {
+          ctx.restore();
+          
+          console.log(`🎨 [DEBUG] Measuring "${testLine}": ${metrics.width}px (max: ${maxWidth}px)`);
+          
+          if (metrics.width > maxWidth && currentLine) {
             lines.push(currentLine);
+            console.log(`🎨 [DEBUG] Line break! Added: "${currentLine}"`);
             currentLine = word;
+          } else {
+            currentLine = testLine;
           }
         }
-        lines.push(currentLine);
+        
+        if (currentLine) {
+          lines.push(currentLine);
+          console.log(`🎨 [DEBUG] Final line: "${currentLine}"`);
+        }
+        
         return lines;
       };
-
-      // Draw main content with proper spacing
-      const maxWidth = 900;
-      const lines = wrapText(mainContent, maxWidth);
-      const lineHeight = fontSize * 1.3;
-      const totalMainHeight = lines.length * lineHeight;
       
-      // Calculate vertical centering
-      let contentStartY;
-      if (ctaContent) {
-        // Leave space for CTA content below
-        contentStartY = (1080 - totalMainHeight - 150) / 2 + (lineHeight / 2);
-      } else {
-        contentStartY = (1080 - totalMainHeight + 50) / 2 + (lineHeight / 2);
-      }
-
-      // Draw main content lines with debugging
-      console.log(`📖 Drawing ${lines.length} lines of text starting at Y:${contentStartY}`);
+      const lines = wrapText(slide.content, maxWidth);
+      console.log(`✅ [DEBUG] Text wrapped into ${lines.length} lines:`, lines);
+      
+      // Draw each line with verification
+      let currentY = contentY;
       lines.forEach((line, index) => {
-        const yPos = contentStartY + (index * lineHeight);
-        console.log(`📝 Drawing line ${index + 1}: "${line}" at Y:${yPos}`);
-        ctx.fillText(line, 540, yPos);
+        console.log(`🎨 [DEBUG] Drawing line ${index + 1}: "${line}" at Y: ${currentY}`);
+        
+        // Set text properties each time to ensure consistency
+        ctx.fillStyle = '#1e293b';
+        ctx.font = '34px "Arial", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        // Draw the text
+        ctx.fillText(line, 50, currentY);
+        
+        // Verify text was drawn by sampling pixel
+        const sampleData = ctx.getImageData(50, currentY + 10, 1, 1);
+        const isTextDrawn = sampleData.data[0] === 30; // Should be dark (30, 41, 59)
+        console.log(`✅ [DEBUG] Line ${index + 1} drawn verification: ${isTextDrawn ? 'SUCCESS' : 'FAILED'}`);
+        
+        currentY += lineHeight;
       });
-      console.log('✅ Main content drawn');
-
-      // Draw CTA content if it exists (last slide)
-      if (ctaContent && isLastSlide) {
-        // Separator line
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(340, contentStartY + totalMainHeight + 30, 400, 1);
-        
-        // CTA text styling (50% bigger)
-        ctx.fillStyle = '#64748b';
-        ctx.font = 'bold 27px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        
-        const ctaLines = wrapText(ctaContent, maxWidth);
-        const ctaLineHeight = 36; // Increased from 24 for bigger text
-        const ctaStartY = contentStartY + totalMainHeight + 70;
-        
-        ctaLines.forEach((line, index) => {
-          ctx.fillText(line, 540, ctaStartY + (index * ctaLineHeight));
-        });
-      }
-
-      // Footer
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      
+      // Footer with source attribution
+      const footerY = canvas.height - 80;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '22px "Arial", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('News', 540, 1050);
-
-      // Convert to blob with debugging
-      console.log('🖼️ Converting canvas to blob...');
+      ctx.textBaseline = 'middle';
+      
+      const attribution = story.article?.author 
+        ? `Story by ${story.article.author}` 
+        : 'Source: Local News';
+      
+      ctx.fillText(attribution, canvas.width / 2, footerY);
+      console.log(`✅ [DEBUG] Footer attribution drawn: "${attribution}"`);
+      
+      // Final verification - check if canvas has content
+      const finalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hasContent = Array.from(finalData.data).some((value, index) => {
+        // Skip alpha channel, check if any pixel is not white
+        if (index % 4 === 3) return false;
+        return value !== 255;
+      });
+      
+      console.log(`🎨 [DEBUG] Final canvas content check: ${hasContent ? 'HAS CONTENT' : 'IS BLANK'}`);
+      
+      ctx.restore();
+      
+      // Convert canvas to blob with high quality
+      console.log(`🎨 [DEBUG] Converting canvas to blob...`);
       canvas.toBlob((blob) => {
         if (blob) {
-          console.log(`✅ Canvas converted to blob: ${blob.size} bytes, type: ${blob.type}`);
-          if (blob.size < 1000) {
-            console.warn(`⚠️ Suspiciously small blob: ${blob.size} bytes - image may be blank`);
+          console.log(`✅ [DEBUG] Canvas converted to blob successfully. Size: ${blob.size} bytes`);
+          console.log(`✅ [DEBUG] Expected size range: 30,000-100,000 bytes for meaningful content`);
+          
+          if (blob.size < 10000) {
+            console.error(`❌ [DEBUG] CRITICAL: Blob size too small: ${blob.size} bytes - likely blank image!`);
+            const canvas2 = document.createElement('canvas');
+            const ctx2 = canvas2.getContext('2d');
+            if (ctx2) {
+              canvas2.width = 1080;
+              canvas2.height = 1080;
+              ctx2.fillStyle = '#ff0000';
+              ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+              ctx2.fillStyle = '#ffffff';
+              ctx2.font = 'bold 48px Arial';
+              ctx2.textAlign = 'center';
+              ctx2.fillText('ERROR: BLANK IMAGE', canvas2.width/2, canvas2.height/2);
+              canvas2.toBlob((errorBlob) => {
+                resolve(errorBlob || blob);
+              }, 'image/png', 1.0);
+            } else {
+              resolve(blob);
+            }
+          } else {
+            console.log(`✅ [DEBUG] Blob size looks good: ${blob.size} bytes`);
+            resolve(blob);
           }
-          resolve(blob);
         } else {
-          console.error('❌ Failed to create blob from canvas');
-          reject(new Error('Failed to create blob from canvas'));
+          console.error(`❌ [DEBUG] Failed to convert canvas to blob`);
+          reject(new Error('Failed to convert canvas to blob'));
         }
-      }, 'image/png', 0.9);
-    });
-  };
+      }, 'image/png', 1.0);
+      
+    } catch (error) {
+      console.error(`❌ [DEBUG] Error during canvas drawing:`, error);
+      reject(error);
+    }
+  });
+};
 
   const generateCarouselImages = async (story: Story): Promise<boolean> => {
     if (isGenerating.has(story.id)) {
