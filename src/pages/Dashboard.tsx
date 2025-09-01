@@ -42,23 +42,38 @@ const Dashboard = () => {
 
   const loadDashboardStats = async () => {
     try {
+      console.log('Loading dashboard stats for user:', user?.id);
+      
       // First get user's topic IDs
-      const { data: userTopics } = await supabase
+      const { data: userTopics, error: topicsError } = await supabase
         .from('topics')
         .select('id')
         .eq('created_by', user?.id);
       
+      if (topicsError) {
+        console.error('Error fetching user topics:', topicsError);
+        throw topicsError;
+      }
+      
       const topicIds = userTopics?.map(t => t.id) || [];
+      console.log('User topic IDs:', topicIds);
 
       // Get article IDs from user's topics for stories count
       let articleIds: string[] = [];
       if (topicIds.length > 0) {
-        const { data: userArticles } = await supabase
+        const { data: userArticles, error: articlesError } = await supabase
           .from('articles')
           .select('id')
           .in('topic_id', topicIds);
+          
+        if (articlesError) {
+          console.error('Error fetching user articles:', articlesError);
+          throw articlesError;
+        }
+        
         articleIds = userArticles?.map(a => a.id) || [];
       }
+      console.log('User article IDs:', articleIds);
 
       const [topicsRes, articlesRes, storiesRes, sourcesRes] = await Promise.all([
         // Count topics created by current user
@@ -67,18 +82,31 @@ const Dashboard = () => {
         // Count articles from user's topics
         topicIds.length > 0 
           ? supabase.from('articles').select('id', { count: 'exact' }).in('topic_id', topicIds)
-          : Promise.resolve({ count: 0 }),
+          : { count: 0, data: [], error: null },
         
         // Count stories from articles in user's topics  
         articleIds.length > 0
           ? supabase.from('stories').select('id', { count: 'exact' }).in('article_id', articleIds)
-          : Promise.resolve({ count: 0 }),
+          : { count: 0, data: [], error: null },
         
         // Count content sources from user's topics
         topicIds.length > 0
           ? supabase.from('content_sources').select('id', { count: 'exact' }).in('topic_id', topicIds)
-          : Promise.resolve({ count: 0 })
+          : { count: 0, data: [], error: null }
       ]);
+
+      console.log('Dashboard stats results:', {
+        topics: topicsRes.count,
+        articles: articlesRes.count,
+        stories: storiesRes.count,
+        sources: sourcesRes.count
+      });
+
+      // Check for errors in any of the queries
+      if (topicsRes.error) throw topicsRes.error;
+      if (articlesRes.error) throw articlesRes.error;
+      if (storiesRes.error) throw storiesRes.error;
+      if (sourcesRes.error) throw sourcesRes.error;
 
       setStats({
         topics: topicsRes.count || 0,
