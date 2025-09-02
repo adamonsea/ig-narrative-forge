@@ -12,6 +12,7 @@ import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
+import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
@@ -441,14 +442,10 @@ const TopicDashboard = () => {
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
           <TabsList className={`grid w-full mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
-            <TabsTrigger 
-              value="content" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-primary-foreground font-medium"
-            >
-              Content Pipeline
-            </TabsTrigger>
+            <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
+            <TabsTrigger value="subscribers">Newsletter</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -485,6 +482,10 @@ const TopicDashboard = () => {
                 }} 
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="subscribers" className="space-y-6">
+            <NewsletterSignupsManager topicId={topic.id} />
           </TabsContent>
         </Tabs>
       </div>

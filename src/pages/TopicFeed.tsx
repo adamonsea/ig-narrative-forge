@@ -1,179 +1,75 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useRef, useCallback } from "react";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Hash, Globe, Lock } from "lucide-react";
-
-type SortOption = "newest" | "oldest";
-
-interface Story {
-  id: string;
-  title: string;
-  author: string;
-  publication_name: string;
-  created_at: string;
-  slides: Array<{
-    id: string;
-    slide_number: number;
-    content: string;
-    word_count: number;
-    visual?: {
-      image_url: string;
-      alt_text: string;
-    };
-  }>;
-  article: {
-    source_url: string;
-    published_at: string;
-    region: string;
-  };
-}
-
-interface Topic {
-  id: string;
-  name: string;
-  description: string;
-  topic_type: 'regional' | 'keyword';
-  keywords: string[];
-  region?: string;
-  is_public: boolean;
-  created_by: string;
-}
+import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
+import { Hash, MapPin } from "lucide-react";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [stories, setStories] = useState<Story[]>([]);
-  const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const { toast } = useToast();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    stories,
+    topic,
+    loading,
+    loadingMore,
+    hasMore,
+    sortBy,
+    setSortBy,
+    loadMore
+  } = useInfiniteTopicFeed(slug || '');
+
+  // Intersection Observer for infinite scroll
+  const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (loading || loadingMore) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        loadMore();
+      }
+    }, {
+      threshold: 0.1,
+      rootMargin: '100px'
+    });
+    
+    if (node) observerRef.current.observe(node);
+  }, [loading, loadingMore, hasMore, loadMore]);
 
   useEffect(() => {
-    if (slug) {
-      loadTopicAndStories();
-    }
-  }, [slug, sortBy]);
-
-  const loadTopicAndStories = async () => {
-    try {
-      // First load the topic - allow access to active topics
-      const { data: topicData, error: topicError } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_active', true)
-        .single();
-
-      if (topicError) {
-        if (topicError.code === 'PGRST116') {
-          throw new Error('Topic not found');
-        }
-        throw topicError;
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
-
-      setTopic({
-        ...topicData,
-        topic_type: topicData.topic_type as 'regional' | 'keyword'
-      });
-
-      // Then load stories for this topic
-      let query = supabase
-        .from('stories')
-        .select(`
-          id,
-          title,
-          author,
-          publication_name,
-          created_at,
-          slides (
-            id,
-            slide_number,
-            content,
-            word_count,
-            visuals (
-              image_url,
-              alt_text
-            )
-          ),
-          articles!inner (
-            source_url,
-            published_at,
-            region
-          )
-        `)
-        .eq('status', 'ready')
-        .eq('is_published', true) // Only show published stories in live feed
-        .eq('articles.topic_id', topicData.id)
-        .order('created_at', { ascending: sortBy === 'oldest' });
-
-      const { data: storiesData, error: storiesError } = await query;
-
-      if (storiesError) throw storiesError;
-
-      // Transform the data to match the expected structure
-      const transformedStories = (storiesData || []).map(story => ({
-        id: story.id,
-        title: story.title,
-        author: story.author || 'Unknown',
-        publication_name: story.publication_name || 'Unknown Publication',
-        created_at: story.created_at,
-        slides: story.slides
-          .sort((a, b) => a.slide_number - b.slide_number)
-          .map(slide => ({
-            id: slide.id,
-            slide_number: slide.slide_number,
-            content: slide.content,
-            word_count: slide.word_count,
-            visual: slide.visuals && slide.visuals[0] ? {
-              image_url: slide.visuals[0].image_url,
-              alt_text: slide.visuals[0].alt_text || ''
-            } : undefined
-          })),
-        article: {
-          source_url: story.articles.source_url,
-          published_at: story.articles.published_at,
-          region: story.articles.region || topic.region || 'Unknown'
-        }
-      }));
-
-      setStories(transformedStories);
-    } catch (error) {
-      console.error('Error loading topic feed:', error);
-      
-      // Log error to error tickets system
-      try {
-        await supabase.functions.invoke('error-logger', {
-          body: {
-            ticketType: 'topic_feed_error',
-            sourceInfo: { slug, topicId: topic?.id },
-            errorDetails: error instanceof Error ? error.message : "Failed to load topic feed",
-            severity: 'medium',
-            contextData: { slug, userAgent: navigator.userAgent }
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log error:', logError);
-      }
-      
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load topic feed",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          {/* Loading skeleton for header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Skeleton className="w-6 h-6 rounded-full" />
+              <Skeleton className="w-64 h-10" />
+            </div>
+          </div>
+          
+          {/* Loading skeleton for filters */}
+          <div className="mb-8">
+            <Skeleton className="w-full h-12" />
+          </div>
+          
+          {/* Loading skeleton for stories */}
+          <div className="space-y-8">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="w-full h-96 rounded-lg" />
+            ))}
           </div>
         </div>
       </div>
@@ -198,9 +94,9 @@ const TopicFeed = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <div className="container mx-auto px-4 py-8">
-        {/* Topic Header */}
+        {/* Topic Header - Clean and minimal */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
             {topic.topic_type === 'regional' ? (
               <MapPin className="w-6 h-6 text-blue-500" />
             ) : (
@@ -209,34 +105,7 @@ const TopicFeed = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               {topic.name}
             </h1>
-            {topic.is_public ? (
-              <Globe className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <Lock className="w-5 h-5 text-muted-foreground" />
-            )}
           </div>
-          
-          {topic.description && (
-            <p className="text-lg text-muted-foreground mb-4 max-w-2xl mx-auto">
-              {topic.description}
-            </p>
-          )}
-
-          {/* Keywords */}
-          <div className="flex flex-wrap gap-2 justify-center mb-6">
-            {topic.keywords.map((keyword, index) => (
-              <Badge key={index} variant="secondary">
-                {keyword}
-              </Badge>
-            ))}
-          </div>
-
-          {/* Regional Info */}
-          {topic.topic_type === 'regional' && topic.region && (
-            <div className="text-sm text-muted-foreground">
-              Regional coverage: {topic.region}
-            </div>
-          )}
         </div>
 
         {/* Filters */}
@@ -248,16 +117,36 @@ const TopicFeed = () => {
           />
         </div>
 
-        {/* Stories */}
+        {/* Stories with infinite scroll */}
         {stories.length > 0 ? (
           <div className="space-y-8">
-            {stories.map((story) => (
-              <StoryCarousel 
-                key={story.id} 
-                story={story} 
-                topicName={topic.name}
-              />
+            {stories.map((story, index) => (
+              <div
+                key={story.id}
+                ref={index === stories.length - 1 ? lastStoryElementRef : null}
+              >
+                <StoryCarousel 
+                  story={story} 
+                  topicName={topic.name}
+                />
+              </div>
             ))}
+            
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div className="space-y-8">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="w-full h-96 rounded-lg" />
+                ))}
+              </div>
+            )}
+            
+            {/* End of feed CTA */}
+            {!hasMore && !loadingMore && (
+              <div className="pt-8">
+                <EndOfFeedCTA topicName={topic.name} topicId={topic.id} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-12">

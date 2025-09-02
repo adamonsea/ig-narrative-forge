@@ -1401,6 +1401,38 @@ export type Database = {
           },
         ]
       }
+      topic_newsletter_signups: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          topic_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_newsletter_signups_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           branding_config: Json | null
