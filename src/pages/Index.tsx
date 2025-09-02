@@ -27,94 +27,90 @@ const Index = () => {
 
   // Show landing page for non-authenticated users
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-8 max-w-4xl mx-auto">
-          {/* Hero Section */}
-          <div className="space-y-4">
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              curatr
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Create and share curated content feeds for any topic or community. 
-              From local updates to specialized interests and industry insights.
-            </p>
-          </div>
-
-          {/* Features */}
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <Card className="text-left">
-              <CardHeader>
-                <Settings className="w-8 h-8 mb-2 text-primary" />
-                <CardTitle>Custom Topics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Create topics around any subject - from AI & Technology to local community content. 
-                  Full control over sources and keywords.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-left">
-              <CardHeader>
-                <FileText className="w-8 h-8 mb-2 text-primary" />
-                <CardTitle>Smart Curation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  AI-powered content curation and story generation. 
-                  Turn raw content into engaging, shareable social media carousels.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-left">
-              <CardHeader>
-                <ExternalLink className="w-8 h-8 mb-2 text-primary" />
-                <CardTitle>Public Feeds</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Share your curated feeds with the world. 
-                  Build an audience around your expertise and interests.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Demo Feed */}
-          <div className="mt-16 space-y-6">
-            <h2 className="text-3xl font-bold">See it in Action</h2>
-            <p className="text-muted-foreground">
-              Check out our demo feed showcasing local content curation:
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link to="/feed/eastbourne">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View Eastbourne Feed
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5" />
+        <div className="container mx-auto px-6 py-24 relative">
+          <div className="text-center space-y-8 max-w-3xl mx-auto">
+            <div className="space-y-4">
+              <h1 className="text-7xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                curatr
+              </h1>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Automated content curation that aggregates, filters, and simplifies 
+                any topic into digestible feeds
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+              <Button size="lg" asChild className="text-base px-8">
+                <Link to="/auth">
+                  Start Curating
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link to="/auth">
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4 ml-2" />
+              <Button size="lg" variant="outline" asChild className="text-base px-8">
+                <Link to="/feed/eastbourne">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Demo
                 </Link>
               </Button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* CTA */}
-          <div className="mt-16 p-8 bg-primary/10 rounded-lg border">
-            <h3 className="text-2xl font-bold mb-4">Ready to Start Curating?</h3>
-            <p className="text-muted-foreground mb-6">
-              Join creators, journalists, and community leaders who are already building 
-              their audiences with personalized content curation.
+      {/* Features Section */}
+      <div className="container mx-auto px-6 py-16">
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Settings className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold">Automated Discovery</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              AI finds and aggregates content from thousands of sources, 
+              automatically filtering for quality and relevance
             </p>
-            <Button size="lg" asChild>
+          </div>
+
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <FileText className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold">Smart Simplification</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Complex topics broken down into clear, digestible summaries 
+              with visual carousels for easy consumption
+            </p>
+          </div>
+
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <ExternalLink className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold">Effortless Sharing</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Publish curated feeds that build your audience while 
+              maintaining full attribution to original sources
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Value Proposition */}
+      <div className="bg-muted/30">
+        <div className="container mx-auto px-6 py-16">
+          <div className="text-center max-w-2xl mx-auto space-y-6">
+            <h2 className="text-3xl font-bold">From Information Overload to Clarity</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Stop drowning in feeds. Start with focused, automated curation 
+              that turns any topic into an organized, shareable knowledge stream.
+            </p>
+            <Button size="lg" asChild className="mt-8">
               <Link to="/auth">
-                Create Your First Topic
+                Create Your Feed
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>

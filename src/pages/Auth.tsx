@@ -91,10 +91,10 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">IG Narrative Forge</CardTitle>
-          <CardDescription>
-            Transform local news into engaging social media content
+        <CardHeader className="text-center space-y-3">
+          <CardTitle className="text-3xl font-bold">curatr</CardTitle>
+          <CardDescription className="text-base">
+            Automated content curation for any topic
           </CardDescription>
         </CardHeader>
         <CardContent>
