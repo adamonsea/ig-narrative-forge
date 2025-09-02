@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
-import { SimpleTextSlideRenderer } from '@/components/SimpleTextSlideRenderer';
+import { CarouselSlideRenderer } from '@/components/CarouselSlideRenderer';
 
 // Global generating state that persists across hook instances
 const globalGeneratingState = new Set<string>();
@@ -83,7 +83,7 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       };
       
       root.render(
-        React.createElement(SimpleTextSlideRenderer, {
+        React.createElement(CarouselSlideRenderer, {
           story: storyForRenderer,
           slideIndex,
           topicName
@@ -95,7 +95,7 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       await document.fonts.ready;
 
       // Find the rendered slide element
-      const slideElement = tempContainer.querySelector('.simple-text-slide-renderer');
+      const slideElement = tempContainer.querySelector('.carousel-slide-renderer');
       
       if (!slideElement) {
         throw new Error('Failed to find rendered slide element');

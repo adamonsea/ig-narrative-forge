@@ -88,14 +88,14 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
     if (isTitle) {
-      if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
-      if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
-      return "text-xl md:text-2xl lg:text-3xl";
+      if (length < 50) return "text-5xl";
+      if (length < 100) return "text-4xl";
+      return "text-3xl";
     } else {
-      if (length < 80) return "text-xl md:text-2xl lg:text-3xl";
-      if (length < 150) return "text-lg md:text-xl lg:text-2xl";
-      if (length < 250) return "text-base md:text-lg lg:text-xl";
-      return "text-sm md:text-base lg:text-lg";
+      if (length < 80) return "text-3xl";
+      if (length < 150) return "text-2xl";
+      if (length < 250) return "text-xl";
+      return "text-lg";
     }
   };
 
@@ -139,7 +139,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
                 {isLastSlide && ctaContent && (
                   <div className="mt-6 pt-6 border-t border-muted">
                     <div 
-                      className="text-base md:text-lg lg:text-xl font-bold text-muted-foreground text-balance"
+                      className="text-xl font-bold text-muted-foreground text-balance"
                       dangerouslySetInnerHTML={{
                         __html: ctaContent
                           .replace(
@@ -166,7 +166,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
 
           {/* Footer with attribution */}
           <div className="p-6 border-t">
-            <div className="text-center text-base text-muted-foreground">
+            <div className="text-center text-lg text-muted-foreground">
               {story.author ? `Story by ${story.author}` : 'Source: Local News'}
             </div>
           </div>
