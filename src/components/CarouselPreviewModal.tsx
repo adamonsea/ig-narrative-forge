@@ -43,6 +43,15 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
   const { toast } = useToast();
 
+  // CACHE BUSTER DEBUG - Remove this after confirming new version loads
+  useEffect(() => {
+    console.log('🔥 NEW CarouselPreviewModal loaded - Version 2024.1.2 - Cache cleared!', {
+      hasInfoIcons: true,
+      hasTooltips: true,
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
   useEffect(() => {
     if (isOpen && carouselExport) {
       loadImages();
