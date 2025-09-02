@@ -45,7 +45,17 @@ export const InlineCarouselImages: React.FC<InlineCarouselImagesProps> = ({
   const loadCarouselImages = async () => {
     setLoading(true);
     try {
-      // Get carousel export
+      console.log('🔍 Loading carousel images for story:', storyId);
+      
+      // First check if any carousel export exists for this story (regardless of status)
+      const { data: allExports, error: allExportsError } = await supabase
+        .from('carousel_exports')
+        .select('*')
+        .eq('story_id', storyId);
+        
+      console.log('📋 All carousel exports for story:', storyId, { allExports, allExportsError });
+      
+      // Get completed carousel export
       const { data: exportData, error: exportError } = await supabase
         .from('carousel_exports')
         .select('*')
@@ -53,35 +63,48 @@ export const InlineCarouselImages: React.FC<InlineCarouselImagesProps> = ({
         .eq('status', 'completed')
         .single();
 
+      console.log('📦 Completed carousel export query result:', { exportData, exportError });
+
       if (exportError || !exportData) {
+        console.log('❌ No completed carousel export found for story:', storyId);
         setCarouselExport(null);
         setImages([]);
         return;
       }
 
       setCarouselExport(exportData);
+      console.log('✅ Found carousel export:', exportData);
 
       // Load image data
       if (exportData.file_paths && Array.isArray(exportData.file_paths)) {
+        console.log('🖼️ Loading images from file paths:', exportData.file_paths);
         const imageDataArray: ImageData[] = [];
 
         for (const filePath of exportData.file_paths) {
           try {
             // Ensure filePath is a string
             const filePathStr = String(filePath);
+            console.log('📁 Processing file path:', filePathStr);
             
             // Get signed URL
-            const { data: signedUrlData } = await supabase.storage
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from('exports')
               .createSignedUrl(filePathStr, 3600);
 
+            console.log('🔗 Signed URL result:', { signedUrlData, signedUrlError });
+
             if (signedUrlData?.signedUrl) {
+              console.log('⬇️ Fetching image from:', signedUrlData.signedUrl);
               // Fetch the image
               const response = await fetch(signedUrlData.signedUrl);
+              console.log('📥 Fetch response:', response.status, response.ok);
+              
               if (response.ok) {
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 const filename = filePathStr.split('/').pop() || 'slide.png';
+
+                console.log('✅ Successfully loaded image:', { filename, size: blob.size });
 
                 imageDataArray.push({
                   url,
@@ -89,17 +112,24 @@ export const InlineCarouselImages: React.FC<InlineCarouselImagesProps> = ({
                   filename,
                   size: blob.size
                 });
+              } else {
+                console.error('❌ Failed to fetch image:', response.status, response.statusText);
               }
+            } else {
+              console.error('❌ No signed URL generated for:', filePathStr, signedUrlError);
             }
           } catch (error) {
-            console.error('Error loading image:', filePath, error);
+            console.error('❌ Error loading image:', filePath, error);
           }
         }
 
+        console.log('🎯 Final image array:', imageDataArray);
         setImages(imageDataArray);
+      } else {
+        console.log('❌ No file_paths array found in export data');
       }
     } catch (error) {
-      console.error('Error loading carousel images:', error);
+      console.error('❌ Error loading carousel images:', error);
     } finally {
       setLoading(false);
     }
