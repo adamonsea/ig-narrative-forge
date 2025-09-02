@@ -96,6 +96,34 @@ export const SourceSuggestionTool = ({
     setAddingSourceId(sourceKey);
     
     try {
+      // Simple RSS feed validation for RSS sources
+      if (suggestion.type === 'RSS') {
+        try {
+          const response = await fetch(suggestion.url, {
+            method: 'HEAD',
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FeedValidator)' }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`RSS feed returned ${response.status}`);
+          }
+          
+          // Check content type hints for RSS
+          const contentType = response.headers.get('content-type') || '';
+          if (!contentType.includes('xml') && !contentType.includes('rss') && !contentType.includes('atom')) {
+            console.warn('RSS feed may not be valid - unusual content type:', contentType);
+          }
+        } catch (error) {
+          toast({
+            title: "Invalid RSS Feed",
+            description: `Cannot access RSS feed: ${error.message}`,
+            variant: "destructive"
+          });
+          setAddingSourceId(null);
+          return;
+        }
+      }
+      
       // Extract domain for canonical_domain
       const domain = new URL(suggestion.url).hostname.replace('www.', '');
       
