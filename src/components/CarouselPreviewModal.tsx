@@ -300,10 +300,10 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            Carousel Images Preview
+            🔥 Carousel Images Preview v2.0 [CACHE CLEARED]
           </DialogTitle>
           <DialogDescription>
-            Preview and download all carousel images for "{storyTitle}"
+            Preview and download all carousel images for "{storyTitle}" - Fixed image loading & UI!
           </DialogDescription>
         </DialogHeader>
 
@@ -311,10 +311,10 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           {/* Actions Bar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Badge variant="default">{images.length} Images</Badge>
+              <Badge variant="default">{images.length} Images ✨</Badge>
               {images.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  Click any image to download individually
+                  🖱️ Click images to download • 💡 Hover info icons for details
                 </span>
               )}
             </div>
