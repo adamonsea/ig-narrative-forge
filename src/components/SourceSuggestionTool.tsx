@@ -152,7 +152,7 @@ export const SourceSuggestionTool = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-muted-foreground">AI Source Suggestions</span>
+          <span className="text-sm font-medium text-muted-foreground">Source Suggestions</span>
         </div>
         <Button 
           onClick={getSuggestions}
@@ -168,7 +168,7 @@ export const SourceSuggestionTool = ({
           ) : (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              Get AI Suggestions
+              Get Suggestions
             </>
           )}
         </Button>
