@@ -445,7 +445,7 @@ const TopicDashboard = () => {
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
-            <TabsTrigger value="subscribers">Newsletter</TabsTrigger>
+            <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -485,7 +485,11 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="subscribers" className="space-y-6">
-            <NewsletterSignupsManager topicId={topic.id} />
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardContent className="p-6">
+                <NewsletterSignupsManager topicId={topic.id} />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
