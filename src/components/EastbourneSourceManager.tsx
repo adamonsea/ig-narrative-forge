@@ -53,6 +53,41 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
     }
   };
 
+  const normalizeUrl = (url: string): string => {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: URL must be a non-empty string');
+    }
+
+    let normalizedUrl = url.trim();
+    
+    // If URL already has protocol, validate and return
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+      try {
+        new URL(normalizedUrl);
+        return normalizedUrl;
+      } catch (error) {
+        throw new Error(`Invalid URL format: ${normalizedUrl}`);
+      }
+    }
+
+    // Add https:// as default protocol
+    normalizedUrl = 'https://' + normalizedUrl;
+    
+    try {
+      new URL(normalizedUrl);
+      return normalizedUrl;
+    } catch (error) {
+      // Try http as fallback
+      const httpUrl = 'http://' + url.trim();
+      try {
+        new URL(httpUrl);
+        return httpUrl;
+      } catch (httpError) {
+        throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+      }
+    }
+  };
+
   const handleAddSource = async () => {
     if (!newUrl.trim()) {
       toast({
@@ -63,14 +98,10 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
       return;
     }
 
-    // Ensure URL has protocol
-    let processedUrl = newUrl.trim();
-    if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
-      processedUrl = 'https://' + processedUrl;
-    }
-
-    setLoading(true);
     try {
+      const processedUrl = normalizeUrl(newUrl.trim());
+
+      setLoading(true);
       const domain = extractDomainFromUrl(processedUrl);
       
       const { error } = await supabase
@@ -90,8 +121,8 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
 
       if (error) throw error;
 
-      // Start background scraping
-      supabase.functions.invoke('rss-scraper', {
+      // Start background scraping using universal-scraper
+      supabase.functions.invoke('universal-scraper', {
         body: {
           feedUrl: processedUrl,
           region: 'Eastbourne',

@@ -170,9 +170,10 @@ export class UniversalContentExtractor {
   private requestCount: number = 0;
 
   constructor(url: string) {
-    this.domain = this.extractDomain(url);
+    const normalizedUrl = this.normalizeUrl(url);
+    this.domain = this.extractDomain(normalizedUrl);
     this.siteConfig = SITE_CONFIGS[this.domain] || SITE_CONFIGS['default'];
-    this.isGovernmentSite = this.detectGovernmentSite(url);
+    this.isGovernmentSite = this.detectGovernmentSite(normalizedUrl);
   }
 
   private extractDomain(url: string): string {
@@ -185,6 +186,46 @@ export class UniversalContentExtractor {
 
   private detectGovernmentSite(url: string): boolean {
     return GOVERNMENT_SITE_PATTERNS.some(pattern => pattern.test(url.toLowerCase()));
+  }
+
+  /**
+   * Normalizes URLs by adding protocol if missing and validating format
+   */
+  private normalizeUrl(url: string): string {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: URL must be a non-empty string');
+    }
+
+    let normalizedUrl = url.trim();
+    
+    // If URL already has protocol, validate and return
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+      try {
+        new URL(normalizedUrl); // Validate URL format
+        return normalizedUrl;
+      } catch (error) {
+        throw new Error(`Invalid URL format: ${normalizedUrl}`);
+      }
+    }
+
+    // Add https:// as default protocol for modern web
+    normalizedUrl = 'https://' + normalizedUrl;
+    
+    try {
+      new URL(normalizedUrl); // Validate the constructed URL
+      console.log(`🔧 URL normalized: ${url} → ${normalizedUrl}`);
+      return normalizedUrl;
+    } catch (error) {
+      // If https fails, try http as fallback for legacy sites
+      const httpUrl = 'http://' + url.trim();
+      try {
+        new URL(httpUrl);
+        console.log(`🔧 URL normalized (HTTP fallback): ${url} → ${httpUrl}`);
+        return httpUrl;
+      } catch (httpError) {
+        throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+      }
+    }
   }
 
   private getRotatingUserAgent(): string {
@@ -243,6 +284,9 @@ export class UniversalContentExtractor {
   async fetchWithRetry(url: string, maxRetries: number = 3): Promise<string> {
     let lastError: Error | null = null;
     
+    // Normalize URL before any fetch attempts
+    const normalizedUrl = this.normalizeUrl(url);
+    
     // Enhanced retry count for government sites
     const enhancedMaxRetries = this.isGovernmentSite ? Math.max(maxRetries, 5) : maxRetries;
     
@@ -253,7 +297,7 @@ export class UniversalContentExtractor {
           await this.addIntelligentDelay();
         }
         
-        console.log(`🌐 Fetching ${url} (attempt ${attempt}/${enhancedMaxRetries}) ${this.isGovernmentSite ? '[GOV SITE]' : ''}`);
+        console.log(`🌐 Fetching ${normalizedUrl} (attempt ${attempt}/${enhancedMaxRetries}) ${this.isGovernmentSite ? '[GOV SITE]' : ''}`);
         
         const fetchOptions: RequestInit = {
           headers: this.getEnhancedHeaders(),
@@ -283,7 +327,7 @@ export class UniversalContentExtractor {
           (fetchOptions.headers as any)['X-Forwarded-For'] = this.generateRandomIP();
         }
         
-        const response = await fetch(url, fetchOptions);
+        const response = await fetch(normalizedUrl, fetchOptions);
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);

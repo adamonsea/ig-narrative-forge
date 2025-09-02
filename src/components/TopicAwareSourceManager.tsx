@@ -183,6 +183,41 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     }
   };
 
+  const normalizeUrl = (url: string): string => {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: URL must be a non-empty string');
+    }
+
+    let normalizedUrl = url.trim();
+    
+    // If URL already has protocol, validate and return
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+      try {
+        new URL(normalizedUrl);
+        return normalizedUrl;
+      } catch (error) {
+        throw new Error(`Invalid URL format: ${normalizedUrl}`);
+      }
+    }
+
+    // Add https:// as default protocol
+    normalizedUrl = 'https://' + normalizedUrl;
+    
+    try {
+      new URL(normalizedUrl);
+      return normalizedUrl;
+    } catch (error) {
+      // Try http as fallback
+      const httpUrl = 'http://' + url.trim();
+      try {
+        new URL(httpUrl);
+        return httpUrl;
+      } catch (httpError) {
+        throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+      }
+    }
+  };
+
   const extractDomainFromUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
@@ -204,13 +239,14 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
     try {
       setLoading(true);
-      const domain = extractDomainFromUrl(newUrl);
+      const normalizedUrl = normalizeUrl(newUrl.trim());
+      const domain = extractDomainFromUrl(normalizedUrl);
 
       const { error } = await supabase
         .from('content_sources')
         .insert({
           source_name: domain,
-          feed_url: newUrl,
+          feed_url: normalizedUrl,
           canonical_domain: domain,
           topic_id: currentTopicId,
           credibility_score: 70,
@@ -231,7 +267,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           const scraperFunction = getScraperFunction(currentTopic.topic_type);
           const requestBody = createScraperRequestBody(
             currentTopic.topic_type,
-            newUrl,
+            normalizedUrl,
             { topicId: currentTopicId, sourceId: undefined, region: currentTopic.region }
           );
           
