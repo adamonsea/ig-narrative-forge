@@ -1,8 +1,27 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import html2canvas from 'html2canvas';
 import { CarouselSlideRenderer } from '@/components/CarouselSlideRenderer';
+
+// Global generating state that persists across hook instances
+const globalGeneratingState = new Set<string>();
+const generateStateListeners = new Set<() => void>();
+
+// Helper functions to manage global state
+const addToGenerating = (storyId: string) => {
+  globalGeneratingState.add(storyId);
+  generateStateListeners.forEach(listener => listener());
+};
+
+const removeFromGenerating = (storyId: string) => {
+  globalGeneratingState.delete(storyId);
+  generateStateListeners.forEach(listener => listener());
+};
+
+const isCurrentlyGenerating = (storyId: string) => {
+  return globalGeneratingState.has(storyId);
+};
 
 interface Story {
   id: string;
@@ -27,10 +46,6 @@ interface Story {
     region?: string;
   };
 }
-
-export const useCarouselGeneration = () => {
-  const [isGenerating, setIsGenerating] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
 
 // HTML2Canvas-based image generation using the existing StoryCarousel styling
 const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, topicName: string): Promise<Blob> => {
@@ -124,10 +139,21 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
   });
 };
 
+export const useCarouselGeneration = () => {
+  const [, forceUpdate] = useState({});
+  const { toast } = useToast();
+
+  // Subscribe to global state changes to trigger re-renders
+  useEffect(() => {
+    const listener = () => forceUpdate({});
+    generateStateListeners.add(listener);
+    return () => { generateStateListeners.delete(listener); };
+  }, []);
+
   const generateCarouselImages = async (story: Story, topicName: string = 'Story'): Promise<boolean> => {
-    // Check if generation is already in progress
-    if (isGenerating.has(story.id)) {
-      console.log('⚠️ Generation already in progress for story:', story.id);
+    // Check if generation is already in progress using global state
+    if (isCurrentlyGenerating(story.id)) {
+      console.log('⚠️ Generation already in progress for story:', story.id, 'Current generating stories:', Array.from(globalGeneratingState));
       toast({
         title: 'Already Generating',
         description: 'Carousel generation is already in progress for this story',
@@ -150,17 +176,17 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
     console.log('🎨 Starting carousel generation for story:', story.id, {
       title: story.title,
       slideCount: story.slides?.length,
-      slides: story.slides?.map(s => ({ id: s.id, slideNumber: s.slide_number, wordCount: s.word_count }))
+      slides: story.slides?.map(s => ({ id: s.id, slideNumber: s.slide_number, wordCount: s.word_count })),
+      currentlyGenerating: Array.from(globalGeneratingState)
     });
 
     // Add to generating set and show initial toast
-    setIsGenerating(prev => new Set(prev.add(story.id)));
+    addToGenerating(story.id);
     
     toast({
       title: 'Carousel Generation Started',
       description: `Generating ${story.slides.length} carousel images...`,
     });
-
 
     try {
       // Step 1: Create carousel export record
@@ -317,13 +343,9 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       return false;
     } finally {
       // Always ensure the story is removed from generating set
-      setIsGenerating(prev => {
-        const next = new Set(prev);
-        const wasInSet = next.has(story.id);
-        next.delete(story.id);
-        console.log(`🏁 Finished carousel generation for story ${story.id}, was in set: ${wasInSet}, removed from generating set`);
-        return next;
-      });
+      const wasInSet = isCurrentlyGenerating(story.id);
+      removeFromGenerating(story.id);
+      console.log(`🏁 Finished carousel generation for story ${story.id}, was in set: ${wasInSet}, remaining generating: [${Array.from(globalGeneratingState).join(', ')}]`);
     }
   };
 
@@ -335,6 +357,6 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
   return {
     generateCarouselImages,
     retryCarouselGeneration,
-    isGenerating: (storyId: string) => isGenerating.has(storyId)
+    isGenerating: (storyId: string) => isCurrentlyGenerating(storyId)
   };
 };
