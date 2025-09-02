@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
+import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
 
 interface Topic {
   id: string;
@@ -285,6 +286,14 @@ export const TopicManager = () => {
                 placeholder="ai, technology, innovation (comma-separated)"
               />
             </div>
+
+            <SourceSuggestionTool
+              topicName={newTopic.name}
+              description={newTopic.description}
+              keywords={newTopic.keywords}
+              topicType={newTopic.topic_type}
+              region={newTopic.region}
+            />
 
             {newTopic.topic_type === 'regional' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">

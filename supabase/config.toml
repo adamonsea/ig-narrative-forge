@@ -98,3 +98,7 @@ verify_jwt = false
 # URL Recovery
 [functions.recover-orphaned-urls]
 verify_jwt = false
+
+# AI Source Suggestions
+[functions.suggest-content-sources]
+verify_jwt = false
