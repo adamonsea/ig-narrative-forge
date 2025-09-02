@@ -43,14 +43,22 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
   const { toast } = useToast();
 
-  // CACHE BUSTER DEBUG - Remove this after confirming new version loads
+  // EXTREME CACHE BUSTER - FORCE RELOAD
   useEffect(() => {
-    console.log('🔥 NEW CarouselPreviewModal loaded - Version 2024.1.2 - Cache cleared!', {
-      hasInfoIcons: true,
-      hasTooltips: true,
-      timestamp: new Date().toISOString()
+    console.log('🚨🚨🚨 CACHE BUSTER v3.0 - NEW VERSION LOADED!!! 🚨🚨🚨', {
+      timestamp: new Date().toISOString(),
+      version: '2025.01.03.EXTREME',
+      fixedImages: true,
+      message: 'IF YOU SEE THIS THE NEW CODE IS RUNNING!'
     });
-  }, []);
+    
+    // Force immediate alert to confirm new code
+    if (isOpen) {
+      setTimeout(() => {
+        console.log('🔥 MODAL OPENED - NEW CODE CONFIRMED RUNNING!');
+      }, 100);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && carouselExport) {
@@ -298,12 +306,13 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-blue-500 text-white p-2 rounded">
             <Eye className="h-5 w-5" />
-            🔥 Carousel Images Preview v2.0 [CACHE CLEARED]
+            🚨 EXTREME CACHE BUST v3.0 - {new Date().toLocaleTimeString()} 🚨
           </DialogTitle>
-          <DialogDescription>
-            Preview and download all carousel images for "{storyTitle}" - Fixed image loading & UI!
+          <DialogDescription className="bg-yellow-100 p-2 rounded mt-2 text-black font-bold">
+            🔥 IF YOU SEE THIS COLORFUL HEADER, THE NEW CODE IS WORKING! 🔥<br/>
+            Preview: "{storyTitle}" - Images should now load properly!
           </DialogDescription>
         </DialogHeader>
 
