@@ -108,7 +108,7 @@ export function KeywordSuggestionTool({
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-amber-500" />
-          AI Keyword Suggestions
+          Keyword Suggestions
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -127,7 +127,7 @@ export function KeywordSuggestionTool({
             ) : (
               <>
                 <Lightbulb className="mr-2 h-4 w-4" />
-                Get AI keyword suggestions
+                Get keyword suggestions
               </>
             )}
           </Button>
