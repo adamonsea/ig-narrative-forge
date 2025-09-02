@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, X, Hash, MapPin, Building, Navigation, Save, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 
 interface Topic {
   id: string;
@@ -191,20 +190,6 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <KeywordSuggestionTool
-            topicName={topic.name}
-            description=""
-            keywords={keywords}
-            topicType={topic.topic_type}
-            region={topic.region}
-            onKeywordAdd={(keyword) => {
-              if (!keywords.includes(keyword)) {
-                setKeywords([...keywords, keyword]);
-              }
-            }}
-            existingKeywords={keywords}
-          />
-          
           {/* Main Keywords */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">

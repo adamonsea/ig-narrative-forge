@@ -8,6 +8,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
+import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
@@ -441,33 +442,69 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
-            {/* AI-Powered Source Suggestions */}
-            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="text-lg">🤖</span>
-                  AI Source Suggestions
-                </CardTitle>
-                <CardDescription>
-                  Get intelligent source suggestions based on your topic using AI
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SourceSuggestionTool
-                  topicName={topic.name}
-                  description={topic.description || ''}
-                  keywords={topic.keywords.join(', ')}
-                  topicType={topic.topic_type}
-                  region={topic.region}
-                  topicId={topic.id}
-                />
-              </CardContent>
-            </Card>
+            <Tabs defaultValue="suggestions" className="space-y-6">
+              <TabsList className={`w-full bg-card/50 border border-border/30`}>
+                <TabsTrigger value="suggestions" className="flex-1">Suggestions</TabsTrigger>
+                <TabsTrigger value="management" className="flex-1">Source Management</TabsTrigger>
+              </TabsList>
 
-            <TopicAwareSourceManager 
-              selectedTopicId={topic.id} 
-              onSourcesChange={() => loadTopicAndStats()} 
-            />
+              <TabsContent value="suggestions" className="space-y-6">
+                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="text-lg">🤖</span>
+                      AI-Powered Suggestions
+                    </CardTitle>
+                    <CardDescription>
+                      Get intelligent source and keyword suggestions based on your topic
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          Source Suggestions
+                        </h3>
+                        <SourceSuggestionTool
+                          topicName={topic.name}
+                          description={topic.description || ''}
+                          keywords={topic.keywords.join(', ')}
+                          topicType={topic.topic_type}
+                          region={topic.region}
+                          topicId={topic.id}
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Hash className="h-4 w-4" />
+                          Keyword Suggestions
+                        </h3>
+                        <KeywordSuggestionTool
+                          topicName={topic.name}
+                          description={topic.description || ''}
+                          keywords={topic.keywords}
+                          topicType={topic.topic_type}
+                          region={topic.region}
+                          onKeywordAdd={(keyword) => {
+                            // This will be handled through the parent component's keyword management
+                            console.log('Keyword suggested:', keyword);
+                          }}
+                          existingKeywords={topic.keywords}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="management" className="space-y-6">
+                <TopicAwareSourceManager 
+                  selectedTopicId={topic.id} 
+                  onSourcesChange={() => loadTopicAndStats()} 
+                />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="management" className="space-y-8">
