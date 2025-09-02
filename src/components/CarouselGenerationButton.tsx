@@ -10,6 +10,7 @@ import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 interface CarouselGenerationButtonProps {
   storyId: string;
   storyTitle: string;
+  topicName?: string;
   onGenerate?: () => void;
 }
 
@@ -25,7 +26,7 @@ interface CarouselExport {
   updated_at: string;
 }
 
-export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: CarouselGenerationButtonProps) => {
+export const CarouselGenerationButton = ({ storyId, storyTitle, topicName = 'Story', onGenerate }: CarouselGenerationButtonProps) => {
   const [carouselExport, setCarouselExport] = useState<CarouselExport | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -79,7 +80,7 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, onGenerate }: Ca
         throw new Error(`Failed to fetch story: ${storyError?.message}`);
       }
 
-      const success = await generateCarouselImages(story);
+      const success = await generateCarouselImages(story, topicName);
       
       if (success) {
         // Check for the generated carousel

@@ -148,7 +148,7 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
       // Automatically trigger carousel generation
       console.log('🎨 Auto-generating carousel for approved story:', storyId);
       try {
-        await generateCarouselImages(story);
+        await generateCarouselImages(story, 'News');
         console.log('✅ Auto-carousel generation completed for story:', storyId);
       } catch (carouselError) {
         console.error('❌ Auto-carousel generation failed:', carouselError);

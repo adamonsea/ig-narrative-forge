@@ -146,7 +146,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
         };
 
         try {
-          await generateCarouselImages(completeStory);
+          await generateCarouselImages(completeStory, 'Story');
         } catch (error) {
           console.error('Failed to generate carousel images:', error);
           // Don't fail the whole process if carousel generation fails

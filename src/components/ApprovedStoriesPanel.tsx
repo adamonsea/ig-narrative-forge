@@ -174,7 +174,7 @@ export const ApprovedStoriesPanel = () => {
   const handleGenerateCarousel = async (story: Story) => {
     console.log('🚀 Generating carousel for story:', story.id, story.title);
     try {
-      const success = await generateCarouselImages(story);
+      const success = await generateCarouselImages(story, 'News');
       console.log('✅ Carousel generation result:', success);
       if (success) {
         // Refresh carousel statuses

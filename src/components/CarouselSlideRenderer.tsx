@@ -1,0 +1,153 @@
+import React from 'react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+interface Slide {
+  id: string;
+  slide_number: number;
+  content: string;
+}
+
+interface Story {
+  id: string;
+  title: string;
+  author: string | null;
+  publication_name: string | null;
+  created_at: string;
+  slides: Slide[];
+  article: {
+    source_url: string;
+    region: string;
+  };
+}
+
+interface CarouselSlideRendererProps {
+  story: Story;
+  slideIndex: number;
+  topicName: string;
+}
+
+export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({ 
+  story, 
+  slideIndex, 
+  topicName 
+}) => {
+  const currentSlide = story.slides[slideIndex];
+  const isFirstSlide = slideIndex === 0;
+  const isLastSlide = slideIndex === story.slides.length - 1;
+
+  // Parse content for last slide styling (same logic as StoryCarousel)
+  const parseContentForLastSlide = (content: string) => {
+    if (!isLastSlide) return { mainContent: content, ctaContent: null };
+    
+    const ctaPatterns = [
+      /Like, share\./i,
+      /Summarised by/i,
+      /Support local journalism/i
+    ];
+    
+    let splitIndex = -1;
+    for (const pattern of ctaPatterns) {
+      const match = content.search(pattern);
+      if (match !== -1) {
+        splitIndex = match;
+        break;
+      }
+    }
+    
+    if (splitIndex === -1) {
+      return { mainContent: content, ctaContent: null };
+    }
+    
+    return {
+      mainContent: content.substring(0, splitIndex).trim(),
+      ctaContent: content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ')
+    };
+  };
+
+  const { mainContent, ctaContent } = parseContentForLastSlide(currentSlide.content);
+
+  // Dynamic text sizing (same logic as StoryCarousel)
+  const getTextSize = (content: string, isTitle: boolean) => {
+    const length = content.length;
+    if (isTitle) {
+      if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
+      if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
+      return "text-xl md:text-2xl lg:text-3xl";
+    } else {
+      if (length < 80) return "text-xl md:text-2xl lg:text-3xl";
+      if (length < 150) return "text-lg md:text-xl lg:text-2xl";
+      if (length < 250) return "text-base md:text-lg lg:text-xl";
+      return "text-sm md:text-base lg:text-lg";
+    }
+  };
+
+  return (
+    <div 
+      className="carousel-slide-renderer"
+      style={{ 
+        width: '1080px', 
+        height: '1080px',
+        position: 'fixed',
+        top: '-9999px',
+        left: '-9999px',
+        zIndex: -1000
+      }}
+    >
+      <Card className="overflow-hidden w-full h-full">
+        <div className="relative bg-background h-full flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <Badge variant="secondary" className="text-lg font-medium">
+              {topicName}
+            </Badge>
+            <span className="text-lg text-muted-foreground">
+              {slideIndex + 1} of {story.slides.length}
+            </span>
+          </div>
+
+          {/* Slide Content */}
+          <div className="flex-1 flex items-center justify-center p-12">
+            <div className="w-full max-w-4xl">
+              <div className={`text-center leading-relaxed ${
+                isFirstSlide 
+                  ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+              }`}>
+                {/* Main story content */}
+                {isLastSlide ? mainContent : currentSlide.content}
+                    
+                {/* CTA content with special styling on last slide */}
+                {isLastSlide && ctaContent && (
+                  <div className="mt-6 pt-6 border-t border-muted">
+                    <div 
+                      className="text-base md:text-lg lg:text-xl font-bold text-muted-foreground text-balance"
+                      dangerouslySetInnerHTML={{
+                        __html: ctaContent
+                          .replace(
+                            /visit ([^\s]+)/gi, 
+                            'visit <span class="text-primary font-extrabold">$1</span>'
+                          )
+                          .replace(
+                            /call (\d{5}\s?\d{6})/gi,
+                            'call <span class="text-primary font-extrabold">$1</span>'
+                          )
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer with attribution */}
+          <div className="p-6 border-t">
+            <div className="text-center text-base text-muted-foreground">
+              {story.author ? `Story by ${story.author}` : 'Source: Local News'}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};

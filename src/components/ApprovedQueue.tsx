@@ -224,7 +224,7 @@ export const ApprovedQueue = () => {
         throw new Error(`Failed to fetch story: ${storyError?.message}`);
       }
 
-      const success = await generateCarousel(story);
+      const success = await generateCarousel(story, 'News');
       
       if (success) {
         toast({

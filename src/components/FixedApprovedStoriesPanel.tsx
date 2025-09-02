@@ -194,7 +194,7 @@ export const FixedApprovedStoriesPanel = () => {
     }));
 
     try {
-      const success = await generateCarouselImages(story);
+      const success = await generateCarouselImages(story, 'News');
       console.log('✅ Carousel generation result:', success);
       if (success) {
         // Refresh carousel statuses
