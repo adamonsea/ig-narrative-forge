@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Plus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -69,13 +69,13 @@ export const SourceSuggestionTool = ({
       
       if (suggestions.length > 0) {
         toast({
-          title: "Success",
-          description: `Found ${suggestions.length} source suggestions`,
+          title: "Sources Found",
+          description: `Found ${suggestions.length} relevant sources`,
         });
       } else {
         toast({
           title: "No Results",
-          description: "No source suggestions found. Try adjusting your topic details.",
+          description: "No relevant sources found. Try adjusting your topic details.",
           variant: "destructive"
         });
       }
@@ -83,7 +83,7 @@ export const SourceSuggestionTool = ({
       console.error('Error getting suggestions:', error);
       toast({
         title: "Error",
-        description: "Failed to get source suggestions",
+        description: "Failed to find sources",
         variant: "destructive"
       });
     } finally {
@@ -184,10 +184,7 @@ export const SourceSuggestionTool = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-muted-foreground">Source Suggestions</span>
-        </div>
+        <h3 className="text-sm font-medium">Find Sources</h3>
         <Button 
           onClick={getSuggestions}
           disabled={loading}
@@ -197,12 +194,12 @@ export const SourceSuggestionTool = ({
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Getting Suggestions...
+              Finding...
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Get Suggestions
+              <Search className="w-4 h-4 mr-2" />
+              Find Sources
             </>
           )}
         </Button>
@@ -210,9 +207,6 @@ export const SourceSuggestionTool = ({
 
       {suggestions.length > 0 && (
         <div className="space-y-3">
-          <div className="text-sm text-muted-foreground">
-            Found {suggestions.length} relevant sources:
-          </div>
           <div className="grid gap-3">
             {suggestions.map((suggestion, index) => (
               <div
