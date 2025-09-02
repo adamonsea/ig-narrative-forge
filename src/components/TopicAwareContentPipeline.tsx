@@ -14,7 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import CarouselImageViewer from '@/components/CarouselImageViewer';
+import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { Textarea } from "@/components/ui/textarea";
 import { useTopicPipeline } from "@/hooks/useTopicPipeline";
 import { useTopicPipelineActions } from "@/hooks/useTopicPipelineActions";
@@ -430,7 +430,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 </div>
 
                 {viewingStory?.status === 'ready' && (
-                  <CarouselImageViewer 
+                  <InlineCarouselImages 
                     storyId={viewingStory.id} 
                     storyTitle={viewingStory.title}
                   />

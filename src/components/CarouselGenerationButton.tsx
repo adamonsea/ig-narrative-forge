@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Image, Loader2, Download, Play } from 'lucide-react';
-import { CarouselPreviewModal } from './CarouselPreviewModal';
+// Modal removed - carousel images now shown inline
 import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 
 interface CarouselGenerationButtonProps {
@@ -143,14 +143,7 @@ export const CarouselGenerationButton = ({ storyId, storyTitle, topicName = 'Sto
         )}
       </Button>
 
-      {carouselExport && (
-        <CarouselPreviewModal
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          storyTitle={storyTitle}
-          carouselExport={carouselExport}
-        />
-      )}
+      {/* Modal removed - images now shown inline in accordion */}
     </>
   );
 };

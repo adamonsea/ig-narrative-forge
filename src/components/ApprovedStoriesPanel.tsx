@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
-import { CarouselPreviewModal } from '@/components/CarouselPreviewModal';
+import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { 
   CheckCircle2, 
   X, 
@@ -74,7 +74,6 @@ export const ApprovedStoriesPanel = () => {
   const [loadingApproved, setLoadingApproved] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
-  const [previewModal, setPreviewModal] = useState<{ story: Story; export: CarouselExport } | null>(null);
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
@@ -325,20 +324,11 @@ export const ApprovedStoriesPanel = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setPreviewModal({ story, export: status.export! })}
+              onClick={() => toggleStoryExpanded(story.id)}
               className="flex items-center gap-1"
             >
               <Eye className="w-3 h-3" />
-              Preview
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setPreviewModal({ story, export: status.export! })}
-              className="flex items-center gap-1"
-            >
-              <Download className="w-3 h-3" />
-              Download
+              View Images
             </Button>
           </div>
         );
@@ -383,131 +373,126 @@ export const ApprovedStoriesPanel = () => {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-600" />
-            Approved Queue ({approvedStories.length})
-          </CardTitle>
-          <CardDescription>
-            Approved stories ready for carousel generation and publishing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loadingApproved ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : approvedStories.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No approved stories ready for publishing</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {approvedStories.map((story) => {
-                const isExpanded = expandedStories.has(story.id);
-                return (
-                  <Card key={story.id} className="border-green-200 bg-green-50">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className="bg-green-500 text-white">Ready</Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {story.slides.length} slides
-                            </Badge>
-                          </div>
-                          <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <User className="w-3 h-3" />
-                            <span>{story.article?.author || 'Unknown Author'}</span>
-                            <span>•</span>
-                            <Calendar className="w-3 h-3" />
-                            <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                            {story.article?.region && (
-                              <>
-                                <span>•</span>
-                                <Badge variant="outline" className="text-xs">{story.article.region}</Badge>
-                              </>
-                            )}
-                          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-green-600" />
+          Approved Queue ({approvedStories.length})
+        </CardTitle>
+        <CardDescription>
+          Approved stories ready for carousel generation and publishing
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingApproved ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : approvedStories.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No approved stories ready for publishing</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {approvedStories.map((story) => {
+              const isExpanded = expandedStories.has(story.id);
+              return (
+                <Card key={story.id} className="border-green-200 bg-green-50">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-green-500 text-white">Ready</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {story.slides.length} slides
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          {renderCarouselActions(story)}
+                        <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <User className="w-3 h-3" />
+                          <span>{story.article?.author || 'Unknown Author'}</span>
+                          <span>•</span>
+                          <Calendar className="w-3 h-3" />
+                          <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                          {story.article?.region && (
+                            <>
+                              <span>•</span>
+                              <Badge variant="outline" className="text-xs">{story.article.region}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        {renderCarouselActions(story)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleStoryExpanded(story.id)}
+                          className="ml-2"
+                        >
+                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {isExpanded && (
+                      <div className="mt-4 space-y-3 border-t pt-3">
+                        <div className="grid gap-2">
+                          {story.slides.map((slide) => (
+                            <div key={slide.id} className="p-3 bg-white rounded border">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    Slide {slide.slide_number}
+                                  </Badge>
+                                  {getWordCountBadge(slide.word_count)}
+                                  <span className={`text-xs font-medium ${getWordCountColor(slide.word_count, slide.slide_number)}`}>
+                                    {slide.word_count} words
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700 line-clamp-3">{slide.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Inline Carousel Images Section */}
+                        <InlineCarouselImages 
+                          storyId={story.id} 
+                          storyTitle={story.title}
+                        />
+                        
+                        <div className="flex gap-2 pt-2 border-t">
                           <Button
-                            variant="ghost"
                             size="sm"
-                            onClick={() => toggleStoryExpanded(story.id)}
-                            className="ml-2"
+                            variant="outline"
+                            onClick={() => handleReturnToReview(story.id)}
+                            className="flex items-center gap-1"
                           >
-                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            <RotateCcw className="w-3 h-3" />
+                            Return to Review
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteStory(story.id, story.title)}
+                            disabled={deletingStories.has(story.id)}
+                            className="flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            {deletingStories.has(story.id) ? 'Deleting...' : 'Delete Story'}
                           </Button>
                         </div>
                       </div>
-                      
-                      {isExpanded && (
-                        <div className="mt-4 space-y-3 border-t pt-3">
-                          <div className="grid gap-2">
-                            {story.slides.map((slide) => (
-                              <div key={slide.id} className="p-3 bg-white rounded border">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">
-                                      Slide {slide.slide_number}
-                                    </Badge>
-                                    {getWordCountBadge(slide.word_count)}
-                                    <span className={`text-xs font-medium ${getWordCountColor(slide.word_count, slide.slide_number)}`}>
-                                      {slide.word_count} words
-                                    </span>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-700 line-clamp-3">{slide.content}</p>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          <div className="flex gap-2 pt-2 border-t">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleReturnToReview(story.id)}
-                              className="flex items-center gap-1"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              Return to Review
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteStory(story.id, story.title)}
-                              disabled={deletingStories.has(story.id)}
-                              className="flex items-center gap-1"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              {deletingStories.has(story.id) ? 'Deleting...' : 'Delete Story'}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {previewModal && (
-        <CarouselPreviewModal
-          isOpen={true}
-          onClose={() => setPreviewModal(null)}
-          storyTitle={previewModal.story.title}
-          carouselExport={previewModal.export}
-        />
-      )}
-    </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

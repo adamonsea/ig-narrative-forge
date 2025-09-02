@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
-import { CarouselPreviewModal } from '@/components/CarouselPreviewModal';
+import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { 
   CheckCircle2, 
   Clock, 
@@ -78,9 +78,6 @@ export const FixedApprovedStoriesPanel = () => {
   const [loadingApproved, setLoadingApproved] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [selectedCarouselExport, setSelectedCarouselExport] = useState<CarouselExport | null>(null);
-  const [selectedStoryTitle, setSelectedStoryTitle] = useState('');
 
   const { toast } = useToast();
   const { generateCarouselImages, retryCarouselGeneration, isGenerating } = useCarouselGeneration();
@@ -276,29 +273,6 @@ export const FixedApprovedStoriesPanel = () => {
     setExpandedStories(newExpanded);
   };
 
-  const openPreviewModal = (story: Story) => {
-    const carouselExport = carouselStatuses[story.id]?.export;
-    
-    console.log('🖼️ Opening preview modal for story:', story.id, {
-      hasExport: !!carouselExport,
-      exportStatus: carouselExport?.status,
-      filePaths: carouselExport?.file_paths
-    });
-    
-    if (!carouselExport || carouselExport.status !== 'completed') {
-      toast({
-        title: "Preview Not Available",
-        description: "Carousel images are not ready yet. Please wait for generation to complete.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedCarouselExport(carouselExport);
-    setSelectedStoryTitle(story.title);
-    setPreviewModalOpen(true);
-  };
-
   const getWordCountColor = (wordCount: number) => {
     if (wordCount < 50) return 'text-red-600';
     if (wordCount < 100) return 'text-yellow-600';
@@ -349,22 +323,13 @@ export const FixedApprovedStoriesPanel = () => {
               Images Ready
             </Badge>
             <Button
-              onClick={() => openPreviewModal(story)}
+              onClick={() => toggleStoryExpanded(story.id)}
               size="sm"
               variant="outline"
               className="text-blue-600 border-blue-200 hover:bg-blue-50"
             >
               <Eye className="h-4 w-4 mr-1" />
-              Preview
-            </Button>
-            <Button
-              onClick={() => openPreviewModal(story)}
-              size="sm"
-              variant="default"
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              Download
+              View Images
             </Button>
           </div>
         );
@@ -438,148 +403,138 @@ export const FixedApprovedStoriesPanel = () => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5" />
-                Approved Queue
-              </CardTitle>
-              <CardDescription>
-                Stories ready for publishing with auto-generated carousels
-              </CardDescription>
-            </div>
-            <Button 
-              onClick={loadApprovedStories}
-              variant="outline" 
-              size="sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" />
+              Approved Queue
+            </CardTitle>
+            <CardDescription>
+              Stories ready for publishing with auto-generated carousels
+            </CardDescription>
           </div>
-        </CardHeader>
-        <CardContent>
-          {approvedStories.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No approved stories found</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {approvedStories.map((story) => {
-                const isExpanded = expandedStories.has(story.id);
-                const article = story.article;
+          <Button 
+            onClick={loadApprovedStories}
+            variant="outline" 
+            size="sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {approvedStories.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No approved stories found</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {approvedStories.map((story) => {
+              const isExpanded = expandedStories.has(story.id);
+              const article = story.article;
 
-                return (
-                  <Card key={story.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleStoryExpanded(story.id)}
-                              className="p-0 h-auto"
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Badge variant="outline" className="bg-green-50 text-green-700">Ready</Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {story.slides.length} slides
-                            </Badge>
-                          </div>
-                          <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <span>{story.author || article?.author || 'Unknown Author'}</span>
-                            <span>•</span>
-                            <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                            {article?.region && (
-                              <>
-                                <span>•</span>
-                                <Badge variant="outline" className="text-xs">{article.region}</Badge>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Carousel Actions */}
-                      <div className="mb-3">
-                        {renderCarouselActions(story)}
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
+              return (
+                <Card key={story.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
                           <Button
-                            onClick={() => handleReturnToReview(story.id)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            <RotateCcw className="w-3 h-3 mr-1" />
-                            Return to Review
-                          </Button>
-                        </div>
-                        {article?.source_url && (
-                          <Button
-                            size="sm"
                             variant="ghost"
-                            onClick={() => window.open(article.source_url, '_blank')}
+                            size="sm"
+                            onClick={() => toggleStoryExpanded(story.id)}
+                            className="p-0 h-auto"
                           >
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            View Original
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
                           </Button>
-                        )}
-                      </div>
-
-                      {/* Expanded content */}
-                      {isExpanded && (
-                        <div className="mt-4 pt-4 border-t space-y-3">
-                          <h4 className="font-medium text-sm text-muted-foreground">Slides</h4>
-                          {story.slides.map((slide) => (
-                            <div key={slide.id} className="border rounded-lg p-3 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline">Slide {slide.slide_number}</Badge>
-                                  {getWordCountBadge(slide.word_count)}
-                                </div>
-                              </div>
-                              <p className="text-sm">{slide.content}</p>
-                            </div>
-                          ))}
+                          <Badge variant="outline" className="bg-green-50 text-green-700">Ready</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {story.slides.length} slides
+                          </Badge>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        <h3 className="font-medium text-sm mb-1 line-clamp-2">{story.title}</h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <span>{story.author || article?.author || 'Unknown Author'}</span>
+                          <span>•</span>
+                          <span>{new Date(story.created_at).toLocaleDateString()}</span>
+                          {article?.region && (
+                            <>
+                              <span>•</span>
+                              <Badge variant="outline" className="text-xs">{article.region}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Carousel Actions */}
+                    <div className="mb-3">
+                      {renderCarouselActions(story)}
+                    </div>
 
-      {/* Preview Modal */}
-      {selectedCarouselExport && (
-        <CarouselPreviewModal
-          isOpen={previewModalOpen}
-          onClose={() => {
-            setPreviewModalOpen(false);
-            setSelectedCarouselExport(null);
-            setSelectedStoryTitle('');
-          }}
-          storyTitle={selectedStoryTitle}
-          carouselExport={selectedCarouselExport}
-        />
-      )}
-    </>
+                    {/* Action buttons */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleReturnToReview(story.id)}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Return to Review
+                        </Button>
+                      </div>
+                      {article?.source_url && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(article.source_url, '_blank')}
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View Original
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t space-y-3">
+                        <h4 className="font-medium text-sm text-muted-foreground">Slides</h4>
+                        {story.slides.map((slide) => (
+                          <div key={slide.id} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">Slide {slide.slide_number}</Badge>
+                                {getWordCountBadge(slide.word_count)}
+                              </div>
+                            </div>
+                            <p className="text-sm">{slide.content}</p>
+                          </div>
+                        ))}
+
+                        {/* Inline Carousel Images Section */}
+                        <InlineCarouselImages 
+                          storyId={story.id} 
+                          storyTitle={story.title}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

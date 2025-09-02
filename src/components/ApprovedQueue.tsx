@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { CarouselPreviewModal } from '@/components/CarouselPreviewModal';
+import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { 
   CheckCircle2, 
@@ -610,19 +610,7 @@ export const ApprovedQueue = () => {
         </div>
       )}
 
-      {/* Carousel Preview Modal */}
-      {selectedCarouselExport && (
-        <CarouselPreviewModal
-          isOpen={previewModalOpen}
-          onClose={() => {
-            setPreviewModalOpen(false);
-            setSelectedCarouselExport(null);
-            setSelectedStoryTitle('');
-          }}
-          storyTitle={selectedStoryTitle}
-          carouselExport={selectedCarouselExport}
-        />
-      )}
+      {/* Modal removed - images now shown inline in accordion */}
     </div>
   );
 };

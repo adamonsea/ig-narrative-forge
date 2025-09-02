@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2 } from "lucide-react";
-// Removed CarouselGenerationButton - using automatic generation only
+import { InlineCarouselImages } from "@/components/InlineCarouselImages";
 
 interface Slide {
   id: string;
@@ -51,6 +51,7 @@ interface StoriesListProps {
   onReturnToReview: (storyId: string) => void;
   onEditSlide: (slide: Slide) => void;
   onViewStory: (story: Story) => void;
+  expandCarouselSection?: (storyId: string) => void;
 }
 
 export const StoriesList: React.FC<StoriesListProps> = ({
@@ -66,7 +67,8 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   onDelete,
   onReturnToReview,
   onEditSlide,
-  onViewStory
+  onViewStory,
+  expandCarouselSection
 }) => {
   const getWordCountColor = (wordCount: number, slideNumber: number) => {
     if (slideNumber === 1) return "text-blue-600"; // Title slide
@@ -152,11 +154,19 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => onViewStory(story)}
+                      onClick={() => {
+                        onToggleExpanded(story.id);
+                        setTimeout(() => {
+                          const carouselSection = document.getElementById(`carousel-images-${story.id}`);
+                          if (carouselSection) {
+                            carouselSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        }, 100);
+                      }}
                       className="w-full sm:w-auto"
                     >
                       <Eye className="w-4 h-4 sm:mr-0" />
-                      <span className="ml-2 sm:hidden">View</span>
+                      <span className="ml-2 sm:hidden">View Images</span>
                     </Button>
                     {article?.source_url && (
                       <Button
@@ -262,6 +272,12 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                     </div>
                   ))}
                 </div>
+
+                {/* Inline Carousel Images Section */}
+                <InlineCarouselImages 
+                  storyId={story.id} 
+                  storyTitle={story.title}
+                />
               </CardContent>
             )}
           </Card>
