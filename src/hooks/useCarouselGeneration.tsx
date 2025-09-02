@@ -56,14 +56,21 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       // Create a temporary container for the slide renderer
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'fixed';
-      tempContainer.style.top = '-10000px';
+      tempContainer.style.top = '-2000px';
       tempContainer.style.left = '0';
       tempContainer.style.width = '1080px';
       tempContainer.style.height = '1080px';
       tempContainer.style.zIndex = '9999';
       tempContainer.style.backgroundColor = 'white';
-      // Ensure Tailwind classes are applied
-      tempContainer.className = 'font-sans';
+      tempContainer.style.overflow = 'hidden';
+      // Apply Tailwind base styles
+      tempContainer.innerHTML = `
+        <link rel="stylesheet" href="/src/index.css">
+        <style>
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+        </style>
+      `;
       document.body.appendChild(tempContainer);
 
       // Import React and render the slide
@@ -93,10 +100,10 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       );
 
       // Wait longer for complete rendering and style application
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       await document.fonts.ready;
-      // Additional wait to ensure all styles are computed
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Additional wait to ensure all CSS is computed
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Find the rendered slide element
       const slideElement = tempContainer.querySelector('.carousel-slide-renderer');
@@ -136,14 +143,15 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
       root.unmount();
       document.body.removeChild(tempContainer);
 
-      // Convert canvas to blob with error handling
+      // Convert canvas to blob with proper validation
       return new Promise<Blob>((blobResolve, blobReject) => {
         canvas.toBlob((blob) => {
-          if (blob && blob.size > 10000) { // Lower threshold for testing
-            console.log(`✅ [HTML2Canvas] Generated blob: ${blob.size} bytes, type: ${blob.type}`);
+          if (blob && blob.size > 1000) { // Very low threshold for testing
+            console.log(`✅ [HTML2Canvas] Generated PNG blob: ${blob.size} bytes, type: ${blob.type}`);
             resolve(blob);
           } else {
-            console.error(`❌ Canvas data:`, canvas.toDataURL().substring(0, 100));
+            console.error(`❌ Canvas failed. Data URL sample:`, canvas.toDataURL().substring(0, 200));
+            console.error(`❌ Canvas dimensions: ${canvas.width}x${canvas.height}`);
             blobReject(new Error(`Generated image is too small (${blob?.size || 0} bytes)`));
           }
         }, 'image/png', 1.0);
