@@ -15,7 +15,7 @@ import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManage
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Users, ExternalLink, MapPin, Hash, Lock, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicDashboardStats {
@@ -86,11 +86,6 @@ const TopicDashboard = () => {
       const hasAdminAccess = topicData.created_by === user?.id || isAdmin;
 
       if (!hasAdminAccess) {
-        // If topic is public but user doesn't own it, redirect to public feed
-        if (topicData.is_public) {
-          window.location.href = `/feed/topic/${topicData.slug}`;
-          return;
-        }
         throw new Error('Access denied - You can only manage topics you created');
       }
 
@@ -303,19 +298,8 @@ const TopicDashboard = () => {
                     </h1>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant={topic.is_active ? "default" : "secondary"}>
-                        {topic.is_active ? "Active" : "Inactive"}
+                        {topic.is_active ? "Published" : "Draft"}
                       </Badge>
-                      {topic.is_public ? (
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <Globe className="w-3 h-3" />
-                          Public
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <Lock className="w-3 h-3" />
-                          Private
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </div>

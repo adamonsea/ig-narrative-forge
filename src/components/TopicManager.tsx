@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Settings, Users, BarChart3, Globe, MapPin, Hash, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -116,7 +116,7 @@ export const TopicManager = () => {
         organizations: newTopic.topic_type === 'regional' && newTopic.organizations 
           ? newTopic.organizations.split(',').map(k => k.trim()) : [],
         slug,
-        is_public: newTopic.is_public,
+        is_active: newTopic.is_public, // Use is_public from form to set initial is_active state
         created_by: user?.id
       };
 
@@ -171,7 +171,7 @@ export const TopicManager = () => {
 
       toast({
         title: "Success",
-        description: `Topic ${isActive ? 'activated' : 'deactivated'}`
+        description: `Topic ${isActive ? 'published' : 'moved to draft'}`
       });
     } catch (error) {
       console.error('Error updating topic:', error);
@@ -341,11 +341,11 @@ export const TopicManager = () => {
 
             <div className="flex items-center space-x-2">
               <Switch
-                id="public"
+                id="published"
                 checked={newTopic.is_public}
                 onCheckedChange={(checked) => setNewTopic({ ...newTopic, is_public: checked })}
               />
-              <Label htmlFor="public">Make topic publicly visible</Label>
+              <Label htmlFor="published">Publish topic (make feed visible to public)</Label>
             </div>
 
             <div className="flex gap-2">
@@ -411,14 +411,8 @@ export const TopicManager = () => {
                           <h3 className="text-xl font-semibold tracking-tight">{topic.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant={topic.is_active ? "default" : "secondary"} className="text-xs">
-                              {topic.is_active ? "Active" : "Inactive"}
+                              {topic.is_active ? "Published" : "Draft"}
                             </Badge>
-                            {topic.is_public && (
-                              <Badge variant="outline" className="text-xs">
-                                <Globe className="w-3 h-3 mr-1" />
-                                Public
-                              </Badge>
-                            )}
                           </div>
                         </div>
                       </div>
