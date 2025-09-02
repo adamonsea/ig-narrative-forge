@@ -546,6 +546,24 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   };
 
   const updateAutomationSettings = async (newSettings: { scrape_frequency_hours: number; is_active: boolean }) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to update automation settings",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!currentTopicId) {
+      toast({
+        title: "Error",
+        description: "No topic selected",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('topic_automation_settings')
@@ -565,11 +583,15 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         description: `Sources will be scraped every ${newSettings.scrape_frequency_hours} hours`
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating automation settings:', error);
+      const errorMessage = error.message?.includes('row-level security') 
+        ? "Permission denied. Please ensure you're logged in and have access to this topic."
+        : "Failed to update automation settings";
+      
       toast({
         title: "Error",
-        description: "Failed to update automation settings",
+        description: errorMessage,
         variant: "destructive"
       });
     }

@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Globe, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 
@@ -40,6 +41,7 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [newFrequency, setNewFrequency] = useState('12');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadScrapingRules();
@@ -70,6 +72,15 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
   const addScrapingRule = async () => {
     if (!newSourceUrl.trim()) return;
 
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add scraping rules",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -93,9 +104,13 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
       });
     } catch (error: any) {
       console.error('Error adding scraping rule:', error);
+      const errorMessage = error.message?.includes('row-level security') 
+        ? "Permission denied. Please ensure you're logged in and have access to this topic."
+        : "Failed to add scraping rule";
+      
       toast({
         title: "Error",
-        description: "Failed to add scraping rule",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -104,10 +119,27 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
   };
 
   const updateRule = async (ruleId: string, updates: Partial<ScrapingRule>) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to update scraping rules",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      // For updates, use UPDATE instead of UPSERT since we know the record exists
       const { error } = await supabase
         .from('scraping_automation')
-        .update(updates)
+        .update({
+          is_active: updates.is_active,
+          scrape_frequency_hours: updates.scrape_frequency_hours,
+          last_scraped_at: updates.last_scraped_at,
+          success_count: updates.success_count,
+          failure_count: updates.failure_count,
+          last_error: updates.last_error
+        })
         .eq('id', ruleId);
 
       if (error) throw error;
@@ -120,9 +152,13 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
       });
     } catch (error: any) {
       console.error('Error updating scraping rule:', error);
+      const errorMessage = error.message?.includes('row-level security') 
+        ? "Permission denied. Please ensure you're logged in and have access to this topic."
+        : "Failed to update scraping rule";
+      
       toast({
         title: "Error",
-        description: "Failed to update scraping rule",
+        description: errorMessage,
         variant: "destructive"
       });
     }
