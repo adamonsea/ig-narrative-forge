@@ -105,10 +105,11 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       style={{ 
         width: '1080px', 
         height: '1080px',
-        position: 'fixed',
-        top: '-9999px',
-        left: '-9999px',
-        zIndex: -1000
+        position: 'absolute',
+        top: '0',
+        left: '-100vw',
+        zIndex: -1000,
+        visibility: 'hidden'
       }}
     >
       <Card className="overflow-hidden w-full h-full">

@@ -55,12 +55,13 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
     try {
       // Create a temporary container for the slide renderer
       const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'fixed';
-      tempContainer.style.top = '-9999px';
-      tempContainer.style.left = '-9999px';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.top = '0';
+      tempContainer.style.left = '-100vw';
       tempContainer.style.width = '1080px';
       tempContainer.style.height = '1080px';
       tempContainer.style.zIndex = '-1000';
+      tempContainer.style.visibility = 'hidden';
       document.body.appendChild(tempContainer);
 
       // Import React and render the slide
@@ -110,9 +111,13 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
         backgroundColor: '#ffffff',
         useCORS: true,
         allowTaint: true,
-        logging: false,
-        imageTimeout: 15000,
-        removeContainer: false
+        logging: true,
+        imageTimeout: 30000,
+        removeContainer: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1080,
+        windowHeight: 1080
       });
 
       console.log(`✅ [HTML2Canvas] Canvas captured: ${canvas.width}x${canvas.height}`);
@@ -123,12 +128,12 @@ const generateImageUsingHTML2Canvas = async (story: Story, slideIndex: number, t
 
       // Convert canvas to blob
       canvas.toBlob((blob) => {
-        if (blob && blob.size > 10000) {
+        if (blob && blob.size > 50000) {
           console.log(`✅ [HTML2Canvas] Generated blob: ${blob.size} bytes`);
           resolve(blob);
         } else {
-          console.error(`❌ [HTML2Canvas] Invalid blob: ${blob?.size || 0} bytes`);
-          reject(new Error('Generated image is too small or invalid'));
+          console.error(`❌ [HTML2Canvas] Invalid blob: ${blob?.size || 0} bytes, canvas size: ${canvas.width}x${canvas.height}`);
+          reject(new Error(`Generated image is too small (${blob?.size || 0} bytes) - expected >50KB for 1080x1080 PNG`));
         }
       }, 'image/png', 1.0);
 
