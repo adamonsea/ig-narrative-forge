@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Eye, X, Loader2 } from 'lucide-react';
+import { Download, Eye, X, Loader2, Info, AlertTriangle } from 'lucide-react';
 import JSZip from 'jszip';
 
 interface CarouselExport {
@@ -30,12 +31,16 @@ interface ImageData {
   url: string;
   filename: string;
   blob: Blob;
+  createdAt: string;
+  size: number;
+  error?: string;
 }
 
 export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExport }: CarouselPreviewModalProps) => {
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,15 +51,21 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
 
   const loadImages = async () => {
     setLoading(true);
+    setImages([]); // Clear previous images
     try {
-      console.log('📸 Loading carousel images for export:', carouselExport);
+      console.log('📸 Loading carousel images for export:', {
+        id: carouselExport.id,
+        status: carouselExport.status,
+        created_at: carouselExport.created_at
+      });
       
       // Parse file_paths as it comes as JSON from Supabase
       const filePaths = Array.isArray(carouselExport.file_paths) 
         ? carouselExport.file_paths 
         : JSON.parse(carouselExport.file_paths || '[]');
 
-      console.log('📁 File paths to load:', filePaths);
+      console.log('📁 Raw file paths:', carouselExport.file_paths);
+      console.log('📁 Parsed file paths to load:', filePaths);
 
       if (!filePaths || filePaths.length === 0) {
         console.warn('⚠️ No file paths found in carousel export');
@@ -66,23 +77,23 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
         return;
       }
 
+      setLoadingProgress({ current: 0, total: filePaths.length });
       const imageData: ImageData[] = [];
       const errors: string[] = [];
 
       for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i];
+        setLoadingProgress({ current: i + 1, total: filePaths.length });
         console.log(`🔍 Processing file ${i + 1}/${filePaths.length}: ${filePath}`);
         
         try {
-          // First check if file exists in storage
-          const { data: fileInfo, error: fileError } = await supabase.storage
-            .from('exports')
-            .list(filePath.substring(0, filePath.lastIndexOf('/')), {
-              search: filePath.substring(filePath.lastIndexOf('/') + 1)
-            });
-          
-          console.log(`📋 File exists check for ${filePath}:`, { fileInfo, fileError });
-          
+          // Skip if path is empty or invalid
+          if (!filePath || typeof filePath !== 'string') {
+            console.warn(`⚠️ Invalid file path at index ${i}:`, filePath);
+            errors.push(`Invalid file path at index ${i}`);
+            continue;
+          }
+
           // Generate signed URL for private bucket access
           const { data: signedUrlData, error: urlError } = await supabase.storage
             .from('exports')
@@ -90,13 +101,33 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           
           if (urlError) {
             console.error(`❌ Error creating signed URL for ${filePath}:`, urlError);
-            errors.push(`Failed to create access URL for ${filePath}: ${urlError.message}`);
+            errors.push(`Failed to create access URL: ${urlError.message}`);
+            
+            // Add failed image with error info
+            imageData.push({
+              url: '',
+              filename: filePath.split('/').pop() || `image_${i + 1}.png`,
+              blob: new Blob(),
+              createdAt: carouselExport.created_at,
+              size: 0,
+              error: urlError.message
+            });
             continue;
           }
 
           if (!signedUrlData?.signedUrl) {
             console.error(`❌ No signed URL received for ${filePath}`);
-            errors.push(`No access URL received for ${filePath}`);
+            errors.push(`No access URL received for file`);
+            
+            // Add failed image
+            imageData.push({
+              url: '',
+              filename: filePath.split('/').pop() || `image_${i + 1}.png`,
+              blob: new Blob(),
+              createdAt: carouselExport.created_at,
+              size: 0,
+              error: 'No signed URL received'
+            });
             continue;
           }
 
@@ -108,12 +139,23 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
             ok: response.ok,
             status: response.status,
             statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries())
+            contentType: response.headers.get('content-type')
           });
 
           if (!response.ok) {
-            console.error(`❌ Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
-            errors.push(`Failed to fetch ${filePath}: ${response.status} ${response.statusText}`);
+            const errorMsg = `${response.status} ${response.statusText}`;
+            console.error(`❌ Failed to fetch ${filePath}:`, errorMsg);
+            errors.push(`Failed to fetch image: ${errorMsg}`);
+            
+            // Add failed image
+            imageData.push({
+              url: '',
+              filename: filePath.split('/').pop() || `image_${i + 1}.png`,
+              blob: new Blob(),
+              createdAt: carouselExport.created_at,
+              size: 0,
+              error: errorMsg
+            });
             continue;
           }
 
@@ -134,11 +176,27 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           imageData.push({
             url,
             filename,
-            blob
+            blob,
+            createdAt: carouselExport.created_at,
+            size: blob.size
           });
+          
+          // Update images immediately for progressive loading
+          setImages([...imageData]);
+          
         } catch (fileError: any) {
           console.error(`❌ Error processing file ${filePath}:`, fileError);
-          errors.push(`Error processing ${filePath}: ${fileError.message}`);
+          errors.push(`Error processing file: ${fileError.message}`);
+          
+          // Add failed image
+          imageData.push({
+            url: '',
+            filename: filePath.split('/').pop() || `image_${i + 1}.png`,
+            blob: new Blob(),
+            createdAt: carouselExport.created_at,
+            size: 0,
+            error: fileError.message
+          });
         }
       }
 
@@ -168,6 +226,7 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
       });
     } finally {
       setLoading(false);
+      setLoadingProgress({ current: 0, total: 0 });
     }
   };
 
@@ -275,42 +334,91 @@ export const CarouselPreviewModal = ({ isOpen, onClose, storyTitle, carouselExpo
           <div className="overflow-y-auto max-h-[500px]">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin" />
                   <p className="text-sm text-muted-foreground">Loading images...</p>
+                  {loadingProgress.total > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {loadingProgress.current} of {loadingProgress.total}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : images.length === 0 ? (
               <div className="flex items-center justify-center py-12">
-                <p className="text-muted-foreground">No images found</p>
+                <div className="text-center">
+                  <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">No images found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Check console for detailed error information</p>
+                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
-                {images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
-                      <img 
-                        src={image.url} 
-                        alt={`Slide ${index + 1}`}
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => downloadSingleImage(image)}
-                      />
-                    </div>
-                    {/* Overlay for individual download */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center rounded-lg">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2">
-                        <Download className="h-4 w-4 text-gray-700" />
+              <TooltipProvider>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-2">
+                  {images.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
+                        {image.error ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-destructive/10 text-destructive">
+                            <AlertTriangle className="h-8 w-8 mb-2" />
+                            <p className="text-xs text-center px-2">Failed to load</p>
+                          </div>
+                        ) : image.url ? (
+                          <img 
+                            src={image.url} 
+                            alt={`Slide ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => !image.error && downloadSingleImage(image)}
+                            onError={(e) => {
+                              console.error(`Failed to display image ${image.filename}`);
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Download overlay for successful images */}
+                      {!image.error && image.url && (
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center rounded-lg">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2">
+                            <Download className="h-4 w-4 text-gray-700" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Info icon with tooltip */}
+                      <div className="absolute bottom-2 right-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-black/70 hover:bg-black/90 text-white rounded-full p-1.5 cursor-help transition-colors">
+                              {image.error ? (
+                                <AlertTriangle className="h-3 w-3 text-red-400" />
+                              ) : (
+                                <Info className="h-3 w-3" />
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1 text-xs">
+                              <p><strong>File:</strong> {image.filename}</p>
+                              <p><strong>Created:</strong> {new Date(image.createdAt).toLocaleString()}</p>
+                              {image.error ? (
+                                <p className="text-red-400"><strong>Error:</strong> {image.error}</p>
+                              ) : (
+                                <p><strong>Size:</strong> {(image.size / 1024).toFixed(1)} KB</p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
-                    {/* Filename label */}
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <div className="bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded truncate">
-                        {image.filename}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </TooltipProvider>
             )}
           </div>
         </div>
