@@ -441,11 +441,10 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
-            <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -463,33 +462,94 @@ const TopicDashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value="management" className="space-y-6">
-            <div className="space-y-6">
-              <TopicCTAManager 
-                topicId={topic.id} 
-                topicName={topic.name}
-                onClose={() => {}} 
-              />
-              
-              <KeywordManager 
-                topic={topic} 
-                onTopicUpdate={(updatedTopic: Topic) => {
-                  setTopic((prevTopic) => ({
-                    ...prevTopic!,
-                    ...updatedTopic
-                  }));
-                  loadTopicAndStats(); // Refresh stats after keyword update
-                }} 
-              />
-            </div>
-          </TabsContent>
+          <TabsContent value="management" className="space-y-8">
+            <Tabs defaultValue="settings" className="space-y-6">
+              <TabsList className={`w-full bg-card/50 border border-border/30`}>
+                <TabsTrigger value="settings" className="flex-1">Topic Settings</TabsTrigger>
+                <TabsTrigger value="subscribers" className="flex-1">Subscribers</TabsTrigger>
+                <TabsTrigger value="automation" className="flex-1">Automation</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="subscribers" className="space-y-6">
-            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-              <CardContent className="p-6">
-                <NewsletterSignupsManager topicId={topic.id} />
-              </CardContent>
-            </Card>
+              <TabsContent value="settings" className="space-y-8">
+                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5" />
+                      Topic Configuration
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your topic's call-to-action and keyword settings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-8">
+                    <TopicCTAManager 
+                      topicId={topic.id} 
+                      topicName={topic.name}
+                      onClose={() => {}} 
+                    />
+                    
+                    <div className="border-t pt-8">
+                      <KeywordManager 
+                        topic={topic} 
+                        onTopicUpdate={(updatedTopic: Topic) => {
+                          setTopic((prevTopic) => ({
+                            ...prevTopic!,
+                            ...updatedTopic
+                          }));
+                          loadTopicAndStats();
+                        }} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="subscribers" className="space-y-6">
+                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Topic Subscribers
+                    </CardTitle>
+                    <CardDescription>
+                      View and manage users who have subscribed to notifications for this topic
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <NewsletterSignupsManager topicId={topic.id} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="automation" className="space-y-6">
+                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
+                      Automation & Scheduling
+                    </CardTitle>
+                    <CardDescription>
+                      Configure automated content processing and scheduling settings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-8">
+                    <TopicScheduleMonitor 
+                      topicId={topic.id}
+                      topicName={topic.name}
+                    />
+                    
+                    <div className="border-t pt-8">
+                      <ScrapingAutomationManager 
+                        topicId={topic.id}
+                        topicName={topic.name}
+                        topicType={topic.topic_type}
+                        region={topic.region}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>

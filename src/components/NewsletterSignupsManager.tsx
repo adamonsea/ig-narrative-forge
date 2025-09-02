@@ -140,33 +140,17 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-primary animate-pulse" />
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 animate-pulse">
+            <div className="w-8 h-8 rounded-full bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-48 bg-muted rounded" />
+              <div className="h-3 w-32 bg-muted/50 rounded" />
             </div>
-            <div>
-              <div className="h-6 w-32 bg-muted rounded animate-pulse mb-1" />
-              <div className="h-4 w-48 bg-muted/50 rounded animate-pulse" />
-            </div>
+            <div className="h-3 w-24 bg-muted/50 rounded" />
           </div>
-        </div>
-        
-        <div className="rounded-lg border bg-card">
-          <div className="p-6 space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-muted" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-48 bg-muted rounded" />
-                  <div className="h-3 w-32 bg-muted/50 rounded" />
-                </div>
-                <div className="h-3 w-24 bg-muted/50 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     );
   }
@@ -175,26 +159,19 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Bell className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Topic Subscribers</h2>
-            <p className="text-sm text-muted-foreground">
-              {signups.length === 0 
-                ? "No subscribers yet" 
-                : `${signups.length} subscriber${signups.length === 1 ? '' : 's'} signed up for notifications`}
-            </p>
-          </div>
+        <div className="text-sm text-muted-foreground">
+          {signups.length === 0 
+            ? "No subscribers yet" 
+            : `${signups.length} subscriber${signups.length === 1 ? '' : 's'} signed up for notifications`}
         </div>
         
         {signups.length > 0 && (
           <Button
             onClick={downloadCSV}
             disabled={downloading}
-            className="gap-2"
+            size="sm"
             variant="outline"
+            className="gap-2"
           >
             <Download className="w-4 h-4" />
             {downloading ? 'Downloading...' : 'Export CSV'}
@@ -203,80 +180,78 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       </div>
 
       {/* Content Section */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        {signups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <Bell className="w-8 h-8 text-muted-foreground/60" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No subscribers yet</h3>
-            <p className="text-sm text-muted-foreground max-w-md">
-              When users subscribe to notifications for this topic, they'll appear here. 
-              Subscribers get notified when fresh content is published.
-            </p>
+      {signups.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+            <Bell className="w-8 h-8 text-muted-foreground/60" />
           </div>
-        ) : (
-          <div className="overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="font-medium">Subscriber</TableHead>
-                  <TableHead className="font-medium">Name</TableHead>
-                  {!topicId && <TableHead className="font-medium">Topic</TableHead>}
-                  <TableHead className="font-medium">Joined</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {signups.map((signup, index) => (
-                  <TableRow key={signup.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Mail className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{signup.email}</div>
-                          <div className="text-xs text-muted-foreground">Email notifications</div>
-                        </div>
+          <h3 className="text-lg font-medium mb-2">No subscribers yet</h3>
+          <p className="text-sm text-muted-foreground max-w-md">
+            When users subscribe to notifications for this topic, they'll appear here. 
+            Subscribers get notified when fresh content is published.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-background/50 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Subscriber</TableHead>
+                <TableHead>Name</TableHead>
+                {!topicId && <TableHead>Topic</TableHead>}
+                <TableHead>Joined</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {signups.map((signup, index) => (
+                <TableRow key={signup.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Mail className="w-4 h-4 text-primary" />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {signup.name ? (
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{signup.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm italic">Name not provided</span>
-                      )}
-                    </TableCell>
-                    {!topicId && (
-                      <TableCell>
-                        <Badge variant="secondary" className="font-medium">
-                          {signup.topic.name}
-                        </Badge>
-                      </TableCell>
+                      <div>
+                        <div className="font-medium">{signup.email}</div>
+                        <div className="text-xs text-muted-foreground">Email notifications</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {signup.name ? (
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{signup.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm italic">Name not provided</span>
                     )}
+                  </TableCell>
+                  {!topicId && (
                     <TableCell>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(signup.created_at), 'MMM d, yyyy')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(signup.created_at), 'HH:mm')}
-                          </div>
+                      <Badge variant="secondary" className="font-medium">
+                        {signup.topic.name}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">
+                          {format(new Date(signup.created_at), 'MMM d, yyyy')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(signup.created_at), 'HH:mm')}
                         </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };
