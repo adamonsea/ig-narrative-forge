@@ -565,16 +565,39 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     }
 
     try {
-      const { error } = await supabase
+      // First, check if a record exists
+      const { data: existing, error: checkError } = await supabase
         .from('topic_automation_settings')
-        .upsert({
-          topic_id: currentTopicId,
-          scrape_frequency_hours: newSettings.scrape_frequency_hours,
-          is_active: newSettings.is_active,
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('topic_id', currentTopicId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (checkError) throw checkError;
+
+      if (existing) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('topic_automation_settings')
+          .update({
+            scrape_frequency_hours: newSettings.scrape_frequency_hours,
+            is_active: newSettings.is_active,
+            updated_at: new Date().toISOString()
+          })
+          .eq('topic_id', currentTopicId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('topic_automation_settings')
+          .insert({
+            topic_id: currentTopicId,
+            scrape_frequency_hours: newSettings.scrape_frequency_hours,
+            is_active: newSettings.is_active
+          });
+
+        if (insertError) throw insertError;
+      }
 
       setAutomationSettings(newSettings);
       
@@ -587,7 +610,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       console.error('Error updating automation settings:', error);
       const errorMessage = error.message?.includes('row-level security') 
         ? "Permission denied. Please ensure you're logged in and have access to this topic."
-        : "Failed to update automation settings";
+        : `Failed to update automation settings: ${error.message}`;
       
       toast({
         title: "Error",
