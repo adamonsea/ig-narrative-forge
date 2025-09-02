@@ -36,9 +36,9 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
   const isFirstSlide = slideIndex === 0;
   const isLastSlide = slideIndex === story.slides.length - 1;
 
-  // Parse content for last slide styling (same logic as StoryCarousel)
+  // Parse content for last slide styling and ensure source attribution
   const parseContentForLastSlide = (content: string) => {
-    if (!isLastSlide) return { mainContent: content, ctaContent: null };
+    if (!isLastSlide) return { mainContent: content, ctaContent: null, sourceUrl: null };
     
     const ctaPatterns = [
       /Like, share\./i,
@@ -55,17 +55,34 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       }
     }
     
-    if (splitIndex === -1) {
-      return { mainContent: content, ctaContent: null };
+    let mainContent = content;
+    let ctaContent = null;
+    
+    if (splitIndex !== -1) {
+      mainContent = content.substring(0, splitIndex).trim();
+      ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
     
+    // Always add source attribution on final slide
+    const sourceDomain = story.article.source_url ? 
+      new URL(story.article.source_url).hostname.replace('www.', '') : 
+      'source';
+    
+    const sourceAttribution = `Read the full story at ${sourceDomain}`;
+    
+    // If we have existing CTA content, append source; otherwise, use source as CTA content
+    const finalCtaContent = ctaContent ? 
+      `${ctaContent}\n\n${sourceAttribution}` : 
+      sourceAttribution;
+    
     return {
-      mainContent: content.substring(0, splitIndex).trim(),
-      ctaContent: content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ')
+      mainContent,
+      ctaContent: finalCtaContent,
+      sourceUrl: story.article.source_url
     };
   };
 
-  const { mainContent, ctaContent } = parseContentForLastSlide(currentSlide.content);
+  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
 
   // Dynamic text sizing (same logic as StoryCarousel)
   const getTextSize = (content: string, isTitle: boolean) => {
@@ -131,6 +148,12 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
                           .replace(
                             /call (\d{5}\s?\d{6})/gi,
                             'call <span class="text-primary font-extrabold">$1</span>'
+                          )
+                          .replace(
+                            /Read the full story at ([^\s\n]+)/gi,
+                            sourceUrl ? 
+                              `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
+                              'Read the full story at <span class="text-primary font-extrabold">$1</span>'
                           )
                       }}
                     />
