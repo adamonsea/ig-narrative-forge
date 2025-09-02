@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, ExternalLink, RefreshCw } from 'lucide-react';
+import { Download, ExternalLink, RefreshCw, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CarouselImageViewerProps {
   storyId: string;
@@ -332,18 +333,25 @@ export default function CarouselImageViewer({ storyId, storyTitle }: CarouselIma
                     )}
                   </div>
                   
-                  <div className="text-center">
+                  <div className="flex items-center justify-center gap-2">
                     <p className="text-sm font-medium">Slide {index + 1}</p>
-                    <p className="text-xs text-muted-foreground">{filename}</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">{filename}</p>
+                          <p className="text-xs text-muted-foreground">Generated: {new Date(carouselExport.updated_at).toLocaleString()}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Generated: {new Date(carouselExport.updated_at).toLocaleString()}
-          </div>
         </div>
       </CardContent>
     </Card>
