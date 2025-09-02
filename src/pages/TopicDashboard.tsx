@@ -450,49 +450,28 @@ const TopicDashboard = () => {
 
               <TabsContent value="suggestions" className="space-y-6">
                 <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <span className="text-lg">🤖</span>
-                      AI-Powered Suggestions
-                    </CardTitle>
-                    <CardDescription>
-                      Get intelligent source and keyword suggestions based on your topic
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                          <Settings className="h-4 w-4" />
-                          Source Suggestions
-                        </h3>
-                        <SourceSuggestionTool
-                          topicName={topic.name}
-                          description={topic.description || ''}
-                          keywords={topic.keywords.join(', ')}
-                          topicType={topic.topic_type}
-                          region={topic.region}
-                          topicId={topic.id}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                          <Hash className="h-4 w-4" />
-                          Keyword Suggestions
-                        </h3>
-                        <KeywordSuggestionTool
-                          topicName={topic.name}
-                          description={topic.description || ''}
-                          keywords={topic.keywords}
-                          topicType={topic.topic_type}
-                          region={topic.region}
-                          onKeywordAdd={(keyword) => {
-                            // This will be handled through the parent component's keyword management
-                            console.log('Keyword suggested:', keyword);
-                          }}
-                          existingKeywords={topic.keywords}
-                        />
-                      </div>
+                      <SourceSuggestionTool
+                        topicName={topic.name}
+                        description={topic.description || ''}
+                        keywords={topic.keywords.join(', ')}
+                        topicType={topic.topic_type}
+                        region={topic.region}
+                        topicId={topic.id}
+                      />
+                      <KeywordSuggestionTool
+                        topicName={topic.name}
+                        description={topic.description || ''}
+                        keywords={topic.keywords}
+                        topicType={topic.topic_type}
+                        region={topic.region}
+                        onKeywordAdd={(keyword) => {
+                          // This will be handled through the parent component's keyword management
+                          console.log('Keyword suggested:', keyword);
+                        }}
+                        existingKeywords={topic.keywords}
+                      />
                     </div>
                   </CardContent>
                 </Card>
