@@ -59,12 +59,18 @@ export const SourceSuggestionTool = ({
 
       if (error) throw error;
 
-      setSuggestions(data.suggestions || []);
+      // Check if the response indicates an error
+      if (data && !data.success) {
+        throw new Error(data.error || 'Failed to get suggestions');
+      }
+
+      const suggestions = data?.suggestions || [];
+      setSuggestions(suggestions);
       
-      if (data.suggestions?.length > 0) {
+      if (suggestions.length > 0) {
         toast({
           title: "Success",
-          description: `Found ${data.suggestions.length} source suggestions`,
+          description: `Found ${suggestions.length} source suggestions`,
         });
       } else {
         toast({
