@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
+import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
 import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
@@ -440,6 +441,29 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
+            {/* AI-Powered Source Suggestions */}
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-lg">🤖</span>
+                  AI Source Suggestions
+                </CardTitle>
+                <CardDescription>
+                  Get intelligent source suggestions based on your topic using AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SourceSuggestionTool
+                  topicName={topic.name}
+                  description={topic.description || ''}
+                  keywords={topic.keywords.join(', ')}
+                  topicType={topic.topic_type}
+                  region={topic.region}
+                  topicId={topic.id}
+                />
+              </CardContent>
+            </Card>
+
             <TopicAwareSourceManager 
               selectedTopicId={topic.id} 
               onSourcesChange={() => loadTopicAndStats()} 

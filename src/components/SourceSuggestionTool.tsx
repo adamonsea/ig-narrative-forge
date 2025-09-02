@@ -106,7 +106,7 @@ export const SourceSuggestionTool = ({
         content_type: 'news',
         credibility_score: Math.round(suggestion.confidence_score * 0.8), // Convert to 0-80 range
         is_active: true,
-        topic_id: topicId || null,
+        topic_id: topicId, // Ensure topicId is always passed, not null
         source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
         region: topicType === 'regional' ? region : null
       };
