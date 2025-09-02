@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
+import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 
 interface Topic {
   id: string;
@@ -286,6 +287,20 @@ export const TopicManager = () => {
                 placeholder="ai, technology, innovation (comma-separated)"
               />
             </div>
+
+            <KeywordSuggestionTool
+              topicName={newTopic.name}
+              description={newTopic.description}
+              keywords={newTopic.keywords ? newTopic.keywords.split(',').map(k => k.trim()) : []}
+              topicType={newTopic.topic_type}
+              region={newTopic.region}
+              onKeywordAdd={(keyword) => {
+                const existingKeywords = newTopic.keywords ? newTopic.keywords.split(',').map(k => k.trim()) : [];
+                const updatedKeywords = [...existingKeywords, keyword].join(', ');
+                setNewTopic({ ...newTopic, keywords: updatedKeywords });
+              }}
+              existingKeywords={newTopic.keywords ? newTopic.keywords.split(',').map(k => k.trim()) : []}
+            />
 
             <SourceSuggestionTool
               topicName={newTopic.name}
