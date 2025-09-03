@@ -109,6 +109,18 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     }
   }, [currentTopicId]);
 
+  // Listen for source additions from suggestion tool
+  useEffect(() => {
+    const handleSourceAdded = () => {
+      if (currentTopicId) {
+        loadSourcesForTopic(currentTopicId);
+      }
+    };
+    
+    window.addEventListener('sourceAdded', handleSourceAdded);
+    return () => window.removeEventListener('sourceAdded', handleSourceAdded);
+  }, [currentTopicId]);
+
   const loadTopics = async () => {
     try {
       const { data, error } = await supabase
@@ -716,7 +728,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
                     variant="outline"
                   >
                     <Zap className="w-4 h-4 mr-2" />
-                    {scrapingAll ? 'Scraping All...' : 'Scrape All'}
+                    {scrapingAll ? 'Gathering All...' : 'Gather All'}
                   </Button>
                   <Button 
                     onClick={handleRecoverOrphanedUrls}
@@ -789,7 +801,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
                           variant="outline"
                         >
                           <Play className="w-4 h-4 mr-2" />
-                          {scrapingSource === source.id ? 'Scraping...' : 'Scrape'}
+                          {scrapingSource === source.id ? 'Gathering...' : 'Gather'}
                         </Button>
                       )}
                       <Button
@@ -814,12 +826,12 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
                 Automation Settings
               </CardTitle>
               <CardDescription>
-                Configure automatic scraping for this topic
+                Configure automatic gathering for this topic
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
-                <Label htmlFor="frequency">Scrape Frequency (hours):</Label>
+                <Label htmlFor="frequency">Gather Frequency (hours):</Label>
                 <Select 
                   value={automationSettings.scrape_frequency_hours.toString()} 
                   onValueChange={(value) => updateAutomationSettings({
@@ -851,9 +863,9 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
                   {automationSettings.is_active ? 'Automation On' : 'Automation Off'}
                 </Button>
                 {automationSettings.is_active && (
-                  <p className="text-sm text-muted-foreground">
-                    Sources will be scraped automatically every {automationSettings.scrape_frequency_hours} hours
-                  </p>
+                   <p className="text-sm text-muted-foreground">
+                     Sources will be gathered automatically every {automationSettings.scrape_frequency_hours} hours
+                   </p>
                 )}
               </div>
             </CardContent>

@@ -178,6 +178,9 @@ export const SourceSuggestionTool = ({
         
         // Remove from suggestions after adding
         setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
+        
+        // Trigger parent refresh to show new source in list
+        window.dispatchEvent(new CustomEvent('sourceAdded'));;
       }
     } catch (error) {
       console.error('Error adding source:', error);

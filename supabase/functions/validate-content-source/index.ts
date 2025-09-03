@@ -50,7 +50,7 @@ serve(async (req) => {
     // Test basic accessibility
     try {
       const response = await fetch(url, {
-        method: 'HEAD',
+        method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
           'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*'

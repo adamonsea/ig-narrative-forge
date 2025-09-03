@@ -421,7 +421,7 @@ export const ScrapingAutomationManager = ({ topicId, topicName, topicType = 'key
                     ) : (
                       <>
                         <RefreshCw className="h-4 w-4 mr-1" />
-                        Scrape Now
+                        Gather Now
                       </>
                     )}
                   </Button>
