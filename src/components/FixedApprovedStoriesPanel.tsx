@@ -23,6 +23,8 @@ import {
   Archive
 } from 'lucide-react';
 
+import { StyleTooltip } from '@/components/ui/style-tooltip';
+
 // Types
 interface Slide {
   id: string;
@@ -71,6 +73,7 @@ interface Story {
   created_at: string;
   slides: Slide[];
   article?: StoryArticle;
+  content_generation_queue?: any;
 }
 
 export const FixedApprovedStoriesPanel = () => {

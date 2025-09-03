@@ -133,7 +133,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .from('stories')
         .select('article_id, articles!inner(title)')
         .eq('articles.topic_id', selectedTopicId)
-        .eq('status', 'ready'); // Only exclude ready stories, allow draft ones to return to pending
+        .eq('status', 'ready'); // Only exclude ready stories, allow draft ones to appear in pending
 
       const { data: processedArticles } = await supabase
         .from('articles')
