@@ -76,6 +76,16 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return types[type as keyof typeof types];
   };
 
+  const getToneInfo = (tone: string) => {
+    const tones = {
+      formal: { label: 'Formal', desc: 'Professional, authoritative' },
+      conversational: { label: 'Conversational', desc: 'Accessible, friendly' },
+      engaging: { label: 'Engaging', desc: 'Dynamic, compelling' }
+    };
+    
+    return tones[tone as keyof typeof tones];
+  };
+
   if (articles.length === 0) {
     return (
       <Card>
@@ -121,6 +131,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
       {articles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
+        const toneOverride = toneOverrides[article.id] || defaultTone;
+        const toneInfo = getToneInfo(toneOverride);
         
         return (
           <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
