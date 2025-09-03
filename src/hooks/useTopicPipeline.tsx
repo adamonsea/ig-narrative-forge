@@ -164,15 +164,12 @@ export const useTopicPipeline = (selectedTopicId: string) => {
 
       const { data: articlesData, error: articlesError } = await articlesQuery;
 
-      // Get draft stories to include their articles in pending
+      // Get all draft stories for this topic to include their articles in pending
       const { data: draftStories } = await supabase
         .from('stories')
-        .select('article_id, status')
-        .eq('status', 'draft')
-        .in('article_id', (storyArticles || [])
-          .filter(s => s.article_id) // Filter out null article_ids
-          .map(s => s.article_id)
-        );
+        .select('article_id, articles!inner(topic_id)')
+        .eq('articles.topic_id', selectedTopicId)
+        .eq('status', 'draft');
 
       // Include articles that were returned to review from draft stories
       const { data: returnedArticles } = await supabase
