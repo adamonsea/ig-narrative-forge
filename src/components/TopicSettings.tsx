@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Settings, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,19 +12,22 @@ interface TopicSettingsProps {
   topicId: string;
   currentExpertise?: 'beginner' | 'intermediate' | 'expert';
   currentTone?: 'formal' | 'conversational' | 'engaging';
+  currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   onUpdate?: () => void;
 }
 
-export const TopicSettings = ({ topicId, currentExpertise, currentTone, onUpdate }: TopicSettingsProps) => {
+export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentWritingStyle, onUpdate }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
+  const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (currentExpertise) setExpertise(currentExpertise);
     if (currentTone) setTone(currentTone);
-  }, [currentExpertise, currentTone]);
+    if (currentWritingStyle) setWritingStyle(currentWritingStyle);
+  }, [currentExpertise, currentTone, currentWritingStyle]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -33,6 +37,7 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, onUpdate
         .update({
           audience_expertise: expertise,
           default_tone: tone,
+          default_writing_style: writingStyle,
           updated_at: new Date().toISOString()
         })
         .eq('id', topicId);
@@ -66,7 +71,7 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, onUpdate
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-3">
             <Label htmlFor="expertise">
               Audience Expertise Level
@@ -134,12 +139,67 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, onUpdate
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="writingStyle" className="flex items-center gap-2">
+              Default Writing Style
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm">
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Journalistic:</strong> Traditional news format with lead paragraph and supporting facts</p>
+                      <p><strong>Educational:</strong> Clear explanations with examples and key takeaways</p>
+                      <p><strong>Listicle:</strong> Organized points with clear structure and numbered format</p>
+                      <p><strong>Story-driven:</strong> Narrative approach with characters and resolution</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="text-xs text-muted-foreground block">
+                Structural format for generated content
+              </span>
+            </Label>
+            <Select value={writingStyle} onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => setWritingStyle(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="journalistic">
+                  <div>
+                    <div className="font-medium">Journalistic</div>
+                    <div className="text-xs text-muted-foreground">Traditional news structure</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="educational">
+                  <div>
+                    <div className="font-medium">Educational</div>
+                    <div className="text-xs text-muted-foreground">Clear explanations with examples</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="listicle">
+                  <div>
+                    <div className="font-medium">Listicle</div>
+                    <div className="text-xs text-muted-foreground">Numbered points and structure</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="story_driven">
+                  <div>
+                    <div className="font-medium">Story-driven</div>
+                    <div className="text-xs text-muted-foreground">Narrative with characters</div>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex justify-end">
           <Button 
             onClick={handleSave} 
-            disabled={saving || (expertise === currentExpertise && tone === currentTone)}
+            disabled={saving || (expertise === currentExpertise && tone === currentTone && writingStyle === currentWritingStyle)}
           >
             {saving ? "Saving..." : "Save Settings"}
           </Button>

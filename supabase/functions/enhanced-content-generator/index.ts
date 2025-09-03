@@ -476,11 +476,19 @@ function getDefaultPromptSystem(tone: string, expertise: string, slideType: stri
     extensive: 'Create comprehensive, detailed content with extensive analysis. Include multiple perspectives and thorough background information.'
   };
 
+  const writingStylePrompts = {
+    journalistic: 'Structure your content using traditional journalism principles: Lead with the most important information (who, what, when, where, why). Use inverted pyramid structure with key facts first. Include proper attribution and quotes where relevant.',
+    educational: 'Create educational content that teaches and informs: Start with clear learning objectives. Use simple, accessible language with definitions. Include concrete examples to illustrate concepts.',
+    listicle: 'Format content as an organized list structure: Use numbered or bulleted points for main ideas. Keep each point concise but complete. Make each point actionable or specific.',
+    story_driven: 'Tell the story using narrative techniques: Begin with a compelling hook or scene. Introduce characters and establish setting. Build narrative tension with resolution.'
+  };
+
   return {
     base: 'You are an expert content creator specializing in transforming news articles into engaging social media carousels. Your goal is to create compelling, accurate, and well-structured content that maintains journalistic integrity while being engaging for social media audiences.',
     tone: tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.conversational,
     expertise: expertisePrompts[expertise as keyof typeof expertisePrompts] || expertisePrompts.intermediate,
-    slideType: slideTypePrompts[slideType as keyof typeof slideTypePrompts] || slideTypePrompts.tabloid
+    slideType: slideTypePrompts[slideType as keyof typeof slideTypePrompts] || slideTypePrompts.tabloid,
+    writingStyle: writingStylePrompts[writingStyle as keyof typeof writingStylePrompts] || writingStylePrompts.journalistic
   };
 }
 

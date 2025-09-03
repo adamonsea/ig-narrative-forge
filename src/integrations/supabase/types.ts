@@ -331,6 +331,7 @@ export type Database = {
           started_at: string | null
           status: string
           tone: Database["public"]["Enums"]["tone_type"] | null
+          writing_style: string | null
         }
         Insert: {
           ai_provider?: string | null
@@ -349,6 +350,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           tone?: Database["public"]["Enums"]["tone_type"] | null
+          writing_style?: string | null
         }
         Update: {
           ai_provider?: string | null
@@ -367,6 +369,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           tone?: Database["public"]["Enums"]["tone_type"] | null
+          writing_style?: string | null
         }
         Relationships: [
           {
@@ -1506,6 +1509,7 @@ export type Database = {
           created_by: string
           custom_css: Json | null
           default_tone: Database["public"]["Enums"]["tone_type"] | null
+          default_writing_style: string | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -1529,6 +1533,7 @@ export type Database = {
           created_by: string
           custom_css?: Json | null
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
+          default_writing_style?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -1552,6 +1557,7 @@ export type Database = {
           created_by?: string
           custom_css?: Json | null
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
+          default_writing_style?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null

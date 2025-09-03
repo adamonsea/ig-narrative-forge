@@ -64,6 +64,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' }>({});
   const [toneOverrides, setToneOverrides] = useState<{ [key: string]: 'formal' | 'conversational' | 'engaging' }>({});
+  const [writingStyleOverrides, setWritingStyleOverrides] = useState<{ [key: string]: 'journalistic' | 'educational' | 'listicle' | 'story_driven' }>({});
   const [aiProvider, setAiProvider] = useState<'openai' | 'deepseek'>('deepseek');
   const [currentTopic, setCurrentTopic] = useState<any>(null);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
@@ -213,6 +214,13 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     setToneOverrides(prev => ({
       ...prev,
       [articleId]: tone
+    }));
+  };
+
+  const handleWritingStyleOverrideChange = (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => {
+    setWritingStyleOverrides(prev => ({
+      ...prev,
+      [articleId]: style
     }));
   };
 

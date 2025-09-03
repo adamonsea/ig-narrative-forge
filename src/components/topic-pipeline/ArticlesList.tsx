@@ -76,14 +76,15 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return types[type as keyof typeof types];
   };
 
-  const getToneInfo = (tone: string) => {
-    const tones = {
-      formal: { label: 'Formal', desc: 'Professional, authoritative' },
-      conversational: { label: 'Conversational', desc: 'Accessible, friendly' },
-      engaging: { label: 'Engaging', desc: 'Dynamic, compelling' }
+  const getWritingStyleInfo = (style: string) => {
+    const styles = {
+      journalistic: { label: 'Journalistic', desc: 'Traditional news structure' },
+      educational: { label: 'Educational', desc: 'Clear explanations with examples' },
+      listicle: { label: 'Listicle', desc: 'Numbered points and structure' },
+      story_driven: { label: 'Story-driven', desc: 'Narrative with characters' }
     };
     
-    return tones[tone as keyof typeof tones];
+    return styles[style as keyof typeof styles];
   };
 
   if (articles.length === 0) {
