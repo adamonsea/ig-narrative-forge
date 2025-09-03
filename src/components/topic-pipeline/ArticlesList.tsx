@@ -98,7 +98,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 transition-all duration-300">
       {articles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
@@ -108,9 +108,18 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         const isAnimating = animatingArticles.has(article.id);
         
         return (
-          <Card key={article.id} className={`transition-all duration-300 hover:shadow-md ${
-            isAnimating ? 'animate-slide-out-right opacity-0' : 'animate-fade-in'
-          }`}>
+          <Card 
+            key={article.id} 
+            className={`transition-all duration-500 hover:shadow-md transform-gpu ${
+              isAnimating 
+                ? 'animate-slide-out-right opacity-0 scale-95 -translate-x-full' 
+                : 'animate-fade-in opacity-100 scale-100 translate-x-0'
+            }`}
+            style={{
+              animationFillMode: 'forwards',
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0">

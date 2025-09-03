@@ -206,10 +206,8 @@ serve(async (req) => {
       }
     }
 
-    // Determine overall success - be more lenient
-    result.success = result.isAccessible && 
-      (sourceType !== 'RSS' || result.isValidRSS !== false) &&
-      result.warnings.length < 4; // Allow up to 3 warnings
+    // Determine overall success - be very lenient, focus on accessibility
+    result.success = result.isAccessible && result.warnings.length < 6; // Allow up to 5 warnings
 
     console.log('🎯 Validation complete:', { success: result.success, warnings: result.warnings.length });
 

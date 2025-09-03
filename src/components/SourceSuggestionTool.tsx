@@ -168,67 +168,52 @@ export const SourceSuggestionTool = ({
         }
       }
 
-      // Server-side validation for new sources (unless skipped)
+      // Simplified server-side validation for new sources (unless skipped)
       if (!skipValidation) {
-        const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
-          body: {
-            url: suggestion.url,
-            sourceType: suggestion.type,
-            topicType,
-            region,
-            topicId
-          }
-        });
-
-        if (validationError) {
-          toast({
-            title: "Validation Error", 
-            description: `Cannot validate source: ${validationError.message}. Add anyway?`,
-            variant: "destructive"
+        try {
+          const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
+            body: {
+              url: suggestion.url,
+              sourceType: suggestion.type,
+              topicType,
+              region,
+              topicId
+            }
           });
-          
-          // Offer to skip validation and add anyway
-          if (confirm("Source validation failed. Would you like to add it anyway?")) {
-            await addSource(suggestion, true);
-          }
-          setAddingSourceId(null);
-          return;
-        }
 
-        if (!validationResult?.success) {
-          const errorMsg = validationResult?.error || 'Source validation failed';
-          const warnings = validationResult?.warnings || [];
-          
-          // More detailed error handling
-          let description = errorMsg;
-          if (errorMsg.includes('SSL') || errorMsg.includes('certificate')) {
-            description = "SSL certificate issue - this source may have security problems. Add anyway?";
-          } else if (errorMsg.includes('RSS') && errorMsg.includes('empty')) {
-            description = "RSS feed appears empty - this source may not have recent content. Add anyway?";
-          } else if (errorMsg.includes('Network error')) {
-            description = "Could not connect to source - it may be temporarily unavailable. Add anyway?";
+          // If validation completely fails, add anyway with warning
+          if (validationError) {
+            console.warn('Source validation failed, adding anyway:', validationError.message);
+            toast({
+              title: "Added with Validation Warning", 
+              description: `Source added but validation failed: ${validationError.message.substring(0, 80)}...`,
+              variant: "default"
+            });
+          } else if (validationResult && !validationResult.success) {
+            // Show validation issues but continue adding
+            const errorMsg = validationResult?.error || 'Source validation issues detected';
+            const warnings = validationResult?.warnings || [];
+            
+            console.warn('Source validation issues:', { error: errorMsg, warnings });
+            toast({
+              title: "Source Added with Issues",
+              description: `Added successfully but with ${warnings.length} validation warnings - may need monitoring`,
+              variant: "default"
+            });
+          } else if (validationResult?.warnings?.length > 0) {
+            // Minor warnings only
+            toast({
+              title: "Source Added Successfully",
+              description: `Added with ${validationResult.warnings.length} minor warnings`,
+              variant: "default"
+            });
           }
-          
+        } catch (error) {
+          // Validation service failed completely, but still add the source
+          console.error('Validation service failed:', error);
           toast({
-            title: "Source Validation Issues",
-            description: `${description}${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`,
-            variant: "destructive"
-          });
-          
-          // Offer to add anyway
-          if (confirm(`${description}\n\nWould you like to add it anyway?`)) {
-            await addSource(suggestion, true);
-          }
-          setAddingSourceId(null);
-          return;
-        }
-
-        // Show warnings if any, but continue with adding
-        if (validationResult.warnings?.length > 0) {
-          console.warn('Source validation warnings:', validationResult.warnings);
-          toast({
-            title: "Source Added with Warnings",
-            description: `${validationResult.warnings.length} validation warnings - check console for details`,
+            title: "Added Without Validation",
+            description: "Source added successfully but validation service unavailable",
             variant: "default"
           });
         }
