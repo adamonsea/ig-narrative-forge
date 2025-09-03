@@ -91,53 +91,147 @@ export const SourceSuggestionTool = ({
     }
   };
 
-  const addSource = async (suggestion: SourceSuggestion) => {
+  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string, assignedToTopic?: boolean}> => {
+    const domain = new URL(suggestion.url).hostname.replace('www.', '');
+    
+    // Check if source exists globally by name or domain
+    const { data: existingSources } = await supabase
+      .from('content_sources')
+      .select('id, source_name, topic_id, canonical_domain')
+      .or(`source_name.eq.${suggestion.source_name},canonical_domain.eq.${domain}`);
+
+    if (existingSources && existingSources.length > 0) {
+      const matchingSource = existingSources[0];
+      return {
+        exists: true,
+        id: matchingSource.id,
+        assignedToTopic: matchingSource.topic_id === topicId
+      };
+    }
+    
+    return { exists: false };
+  };
+
+  const assignExistingSource = async (sourceId: string, suggestion: SourceSuggestion) => {
+    try {
+      const { error } = await supabase
+        .from('content_sources')
+        .update({ topic_id: topicId })
+        .eq('id', sourceId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Source Assigned",
+        description: `${suggestion.source_name} has been assigned to this topic`,
+      });
+      
+      // Remove from suggestions after assigning
+      setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
+      
+      // Trigger parent refresh to show source in list
+      window.dispatchEvent(new CustomEvent('sourceAdded'));
+    } catch (error) {
+      console.error('Error assigning source:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign existing source",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addSource = async (suggestion: SourceSuggestion, skipValidation = false) => {
     const sourceKey = suggestion.url;
     setAddingSourceId(sourceKey);
     
     try {
-      // Server-side validation for all sources
-      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
-        body: {
-          url: suggestion.url,
-          sourceType: suggestion.type,
-          topicType,
-          region,
-          topicId
+      // First check if source already exists
+      const existingCheck = await checkExistingSource(suggestion);
+      
+      if (existingCheck.exists) {
+        if (existingCheck.assignedToTopic) {
+          toast({
+            title: "Source Already Added",
+            description: "This source is already assigned to this topic",
+            variant: "destructive"
+          });
+          setAddingSourceId(null);
+          return;
+        } else {
+          // Offer to assign existing source to this topic
+          if (confirm(`This source already exists. Would you like to assign it to "${topicName}"?`)) {
+            await assignExistingSource(existingCheck.id!, suggestion);
+          }
+          setAddingSourceId(null);
+          return;
         }
-      });
-
-      if (validationError) {
-        toast({
-          title: "Validation Error",
-          description: `Cannot validate source: ${validationError.message}`,
-          variant: "destructive"
-        });
-        setAddingSourceId(null);
-        return;
       }
 
-      if (!validationResult?.success) {
-        const errorMsg = validationResult?.error || 'Source validation failed';
-        const warnings = validationResult?.warnings || [];
-        
-        toast({
-          title: "Source Validation Failed",
-          description: `${errorMsg}${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`,
-          variant: "destructive"
+      // Server-side validation for new sources (unless skipped)
+      if (!skipValidation) {
+        const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
+          body: {
+            url: suggestion.url,
+            sourceType: suggestion.type,
+            topicType,
+            region,
+            topicId
+          }
         });
-        setAddingSourceId(null);
-        return;
-      }
 
-      // Show warnings if any, but continue with adding
-      if (validationResult.warnings?.length > 0) {
-        console.warn('Source validation warnings:', validationResult.warnings);
-        toast({
-          title: "Source Added with Warnings",
-          description: `${validationResult.warnings.length} validation warnings - check console for details`,
-          variant: "default"
-        });
+        if (validationError) {
+          toast({
+            title: "Validation Error", 
+            description: `Cannot validate source: ${validationError.message}. Add anyway?`,
+            variant: "destructive"
+          });
+          
+          // Offer to skip validation and add anyway
+          if (confirm("Source validation failed. Would you like to add it anyway?")) {
+            await addSource(suggestion, true);
+          }
+          setAddingSourceId(null);
+          return;
+        }
+
+        if (!validationResult?.success) {
+          const errorMsg = validationResult?.error || 'Source validation failed';
+          const warnings = validationResult?.warnings || [];
+          
+          // More detailed error handling
+          let description = errorMsg;
+          if (errorMsg.includes('SSL') || errorMsg.includes('certificate')) {
+            description = "SSL certificate issue - this source may have security problems. Add anyway?";
+          } else if (errorMsg.includes('RSS') && errorMsg.includes('empty')) {
+            description = "RSS feed appears empty - this source may not have recent content. Add anyway?";
+          } else if (errorMsg.includes('Network error')) {
+            description = "Could not connect to source - it may be temporarily unavailable. Add anyway?";
+          }
+          
+          toast({
+            title: "Source Validation Issues",
+            description: `${description}${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`,
+            variant: "destructive"
+          });
+          
+          // Offer to add anyway
+          if (confirm(`${description}\n\nWould you like to add it anyway?`)) {
+            await addSource(suggestion, true);
+          }
+          setAddingSourceId(null);
+          return;
+        }
+
+        // Show warnings if any, but continue with adding
+        if (validationResult.warnings?.length > 0) {
+          console.warn('Source validation warnings:', validationResult.warnings);
+          toast({
+            title: "Source Added with Warnings",
+            description: `${validationResult.warnings.length} validation warnings - check console for details`,
+            variant: "default"
+          });
+        }
       }
       
       // Extract domain for canonical_domain
@@ -160,13 +254,21 @@ export const SourceSuggestionTool = ({
         .insert([sourceData]);
 
       if (error) {
-        // Check if it's a duplicate
+        // Enhanced duplicate handling
         if (error.code === '23505') {
-          toast({
-            title: "Source Already Exists",
-            description: "This source is already in your database",
-            variant: "destructive"
-          });
+          // This shouldn't happen now due to our pre-check, but just in case
+          const existingCheck = await checkExistingSource(suggestion);
+          if (existingCheck.exists && !existingCheck.assignedToTopic) {
+            if (confirm(`This source exists but isn't assigned to "${topicName}". Assign it now?`)) {
+              await assignExistingSource(existingCheck.id!, suggestion);
+            }
+          } else {
+            toast({
+              title: "Source Already Exists",
+              description: "This source is already in your database for this topic",
+              variant: "destructive"
+            });
+          }
         } else {
           throw error;
         }
@@ -180,7 +282,7 @@ export const SourceSuggestionTool = ({
         setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
         
         // Trigger parent refresh to show new source in list
-        window.dispatchEvent(new CustomEvent('sourceAdded'));;
+        window.dispatchEvent(new CustomEvent('sourceAdded'));
       }
     } catch (error) {
       console.error('Error adding source:', error);

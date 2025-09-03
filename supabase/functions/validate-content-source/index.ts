@@ -30,6 +30,50 @@ interface ValidationResult {
   };
 }
 
+// Helper function to test URL accessibility with better error handling
+async function testAccessibility(url: string): Promise<{success: boolean, contentType?: string, error?: string}> {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
+        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*'
+      },
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`
+      };
+    }
+
+    return {
+      success: true,
+      contentType: response.headers.get('content-type') || 'unknown'
+    };
+
+  } catch (error) {
+    // Better error categorization
+    let errorMsg = error.message;
+    if (errorMsg.includes('certificate') || errorMsg.includes('SSL') || errorMsg.includes('TLS')) {
+      errorMsg = 'SSL/TLS certificate error - source may have security issues';
+    } else if (errorMsg.includes('timeout') || errorMsg.includes('TIMEOUT')) {
+      errorMsg = 'Connection timeout - source may be slow or unreliable';
+    } else if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('getaddrinfo')) {
+      errorMsg = 'Domain not found - source may no longer exist';
+    } else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ECONNRESET')) {
+      errorMsg = 'Connection refused - source may be blocking requests';
+    }
+    
+    return {
+      success: false,
+      error: `Network error: ${errorMsg}`
+    };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -47,38 +91,31 @@ serve(async (req) => {
       warnings: []
     };
 
-    // Test basic accessibility
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
-          'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*'
-        },
-        redirect: 'follow'
-      });
-
-      result.isAccessible = response.ok;
-      result.contentType = response.headers.get('content-type') || 'unknown';
-
-      if (!response.ok) {
-        result.error = `HTTP ${response.status}: ${response.statusText}`;
-        return new Response(JSON.stringify(result), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+    // Test basic accessibility with fallbacks
+    let accessibilityResult = await testAccessibility(url);
+    
+    if (!accessibilityResult.success && url.startsWith('https://')) {
+      // Try HTTP fallback for HTTPS URLs that fail due to SSL issues
+      const httpUrl = url.replace('https://', 'http://');
+      console.log('🔄 Trying HTTP fallback:', httpUrl);
+      accessibilityResult = await testAccessibility(httpUrl);
+      if (accessibilityResult.success) {
+        result.warnings.push('HTTPS failed, but HTTP works - may have SSL certificate issues');
       }
-
-      console.log('✅ Source is accessible:', { status: response.status, contentType: result.contentType });
-
-    } catch (error) {
-      result.error = `Network error: ${error.message}`;
-      console.error('❌ Network error:', error);
+    }
+    
+    result.isAccessible = accessibilityResult.success;
+    result.contentType = accessibilityResult.contentType;
+    
+    if (!accessibilityResult.success) {
+      result.error = accessibilityResult.error;
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('✅ Source is accessible:', { contentType: result.contentType });
 
     // For RSS sources, validate feed format
     if (sourceType === 'RSS') {
@@ -169,10 +206,10 @@ serve(async (req) => {
       }
     }
 
-    // Determine overall success
+    // Determine overall success - be more lenient
     result.success = result.isAccessible && 
       (sourceType !== 'RSS' || result.isValidRSS !== false) &&
-      result.warnings.length < 3; // Allow up to 2 warnings
+      result.warnings.length < 4; // Allow up to 3 warnings
 
     console.log('🎯 Validation complete:', { success: result.success, warnings: result.warnings.length });
 

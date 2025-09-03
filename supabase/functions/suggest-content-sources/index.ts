@@ -47,13 +47,28 @@ ${region ? `Region: ${region}` : ''}
 
 ${context}
 
-Suggest 8-10 high-quality, regularly updated content sources that would be excellent for scraping relevant articles. Focus on sources that:
+Suggest 8-10 high-quality, RELIABLE content sources that would be excellent for scraping relevant articles. Focus on sources that:
 
-1. Are actively maintained and regularly updated
-2. Have good content quality and credibility  
-3. Are scrapeable via RSS feeds or standard web scraping
-4. Match the topic focus precisely
-5. Include a mix of RSS feeds, news websites, industry blogs, and publication sites
+1. Are well-established, mainstream sources with strong technical infrastructure
+2. Have working RSS feeds (prefer sources known to have RSS)
+3. Use proper SSL certificates and modern web standards
+4. Are actively maintained and regularly updated
+5. Have good content quality and credibility  
+6. Match the topic focus precisely
+7. Avoid sources known for SSL certificate issues or technical problems
+
+PREFER these types of reliable sources:
+- Major news organizations (BBC, Reuters, AP, etc.)
+- Government and official websites (.gov, .org)
+- Well-established local newspapers with good web presence
+- Major industry publications
+- Reputable blogs on established platforms
+
+AVOID suggesting:
+- Small independent sites with potential SSL issues
+- Sources ending in .co.uk that might have certificate problems
+- Very new or unknown domains
+- Sites known to block scrapers
 
 For each source, provide exactly this JSON format:
 {
