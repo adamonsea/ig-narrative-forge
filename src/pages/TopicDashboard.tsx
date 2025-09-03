@@ -15,6 +15,7 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
+import { TopicSettings } from "@/components/TopicSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
@@ -44,6 +45,8 @@ interface Topic {
   is_active: boolean;
   created_by: string;
   created_at: string;
+  audience_expertise?: 'beginner' | 'intermediate' | 'expert';
+  default_tone?: 'formal' | 'conversational' | 'engaging';
 }
 
 const TopicDashboard = () => {
@@ -506,11 +509,20 @@ const TopicDashboard = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-8">
-                    <TopicCTAManager 
-                      topicId={topic.id} 
-                      topicName={topic.name}
-                      onClose={() => {}} 
+                    <TopicSettings
+                      topicId={topic.id}
+                      currentExpertise={topic.audience_expertise}
+                      currentTone={topic.default_tone}
+                      onUpdate={() => loadTopicAndStats()}
                     />
+                    
+                    <div className="border-t pt-8">
+                      <TopicCTAManager 
+                        topicId={topic.id} 
+                        topicName={topic.name}
+                        onClose={() => {}} 
+                      />
+                    </div>
                     
                     <div className="border-t pt-8">
                       <KeywordManager 
