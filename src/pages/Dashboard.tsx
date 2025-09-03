@@ -42,7 +42,7 @@ const Dashboard = () => {
 
   const loadDashboardStats = async () => {
     try {
-      // First get user's topic IDs
+      // Get user's topic IDs first
       const { data: userTopics, error: topicsError } = await supabase
         .from('topics')
         .select('id')
@@ -54,22 +54,8 @@ const Dashboard = () => {
       
       const topicIds = userTopics?.map(t => t.id) || [];
 
-      // Get article IDs from user's topics for stories count
-      let articleIds: string[] = [];
-      if (topicIds.length > 0) {
-        const { data: userArticles, error: articlesError } = await supabase
-          .from('articles')
-          .select('id')
-          .in('topic_id', topicIds);
-          
-        if (articlesError) {
-          throw articlesError;
-        }
-        
-        articleIds = userArticles?.map(a => a.id) || [];
-      }
-
-      const [topicsRes, articlesRes, storiesRes, sourcesRes] = await Promise.all([
+      // Use more efficient queries to avoid URL length limits
+      const [topicsRes, articlesRes, sourcesRes] = await Promise.all([
         // Count topics created by current user
         supabase.from('topics').select('id', { count: 'exact' }).eq('created_by', user?.id),
         
@@ -78,27 +64,38 @@ const Dashboard = () => {
           ? supabase.from('articles').select('id', { count: 'exact' }).in('topic_id', topicIds)
           : { count: 0, data: [], error: null },
         
-        // Count stories from articles in user's topics  
-        articleIds.length > 0
-          ? supabase.from('stories').select('id', { count: 'exact' }).in('article_id', articleIds)
-          : { count: 0, data: [], error: null },
-        
         // Count content sources from user's topics
         topicIds.length > 0
           ? supabase.from('content_sources').select('id', { count: 'exact' }).in('topic_id', topicIds)
           : { count: 0, data: [], error: null }
       ]);
 
-      // Check for errors in any of the queries
+      // For stories count, use a join query to avoid URL length issues
+      let storiesCount = 0;
+      if (topicIds.length > 0) {
+        const { count, error: storiesError } = await supabase
+          .from('stories')
+          .select('article_id, articles!inner(topic_id)', { count: 'exact' })
+          .in('articles.topic_id', topicIds);
+          
+        if (storiesError) {
+          console.warn('Stories count query failed, using fallback:', storiesError);
+          // Fallback: if the join fails, just return 0 for stories
+          storiesCount = 0;
+        } else {
+          storiesCount = count || 0;
+        }
+      }
+
+      // Check for errors in the main queries
       if (topicsRes.error) throw topicsRes.error;
       if (articlesRes.error) throw articlesRes.error;
-      if (storiesRes.error) throw storiesRes.error;
       if (sourcesRes.error) throw sourcesRes.error;
 
       setStats({
         topics: topicsRes.count || 0,
         articles: articlesRes.count || 0,
-        stories: storiesRes.count || 0,
+        stories: storiesCount,
         sources: sourcesRes.count || 0
       });
     } catch (error) {
