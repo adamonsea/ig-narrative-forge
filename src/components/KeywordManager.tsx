@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,10 +38,36 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
   const [rescoring, setRescoring] = useState(false);
   const { toast } = useToast();
 
+  // Update local state when topic prop changes
+  useEffect(() => {
+    setKeywords(topic.keywords || []);
+    setLandmarks(topic.landmarks || []);
+    setPostcodes(topic.postcodes || []);
+    setOrganizations(topic.organizations || []);
+  }, [topic]);
+
+  // Listen for external keyword additions
+  useEffect(() => {
+    const handleKeywordAdded = () => {
+      // Refresh from topic prop - parent will have updated it
+      setKeywords(topic.keywords || []);
+    };
+    
+    window.addEventListener('keywordAdded', handleKeywordAdded);
+    return () => window.removeEventListener('keywordAdded', handleKeywordAdded);
+  }, [topic]);
+
   const addKeyword = () => {
     if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
       setKeywords([...keywords, newKeyword.trim()]);
       setNewKeyword('');
+      
+      // Trigger immediate parent update
+      const updatedTopic = {
+        ...topic,
+        keywords: [...keywords, newKeyword.trim()]
+      };
+      onTopicUpdate(updatedTopic);
     }
   };
 

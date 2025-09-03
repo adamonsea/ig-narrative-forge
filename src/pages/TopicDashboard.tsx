@@ -501,9 +501,38 @@ const TopicDashboard = () => {
                         keywords={topic.keywords}
                         topicType={topic.topic_type}
                         region={topic.region}
-                        onKeywordAdd={(keyword) => {
-                          // This will be handled through the parent component's keyword management
-                          console.log('Keyword suggested:', keyword);
+                        onKeywordAdd={async (keyword) => {
+                          // Add keyword to database immediately
+                          try {
+                            const updatedKeywords = [...topic.keywords, keyword];
+                            const { error } = await supabase
+                              .from('topics')
+                              .update({ 
+                                keywords: updatedKeywords,
+                                updated_at: new Date().toISOString()
+                              })
+                              .eq('id', topic.id);
+
+                            if (error) throw error;
+
+                            // Update local state immediately
+                            setTopic(prev => ({
+                              ...prev!,
+                              keywords: updatedKeywords
+                            }));
+                            
+                            toast({
+                              title: "Keyword Added",
+                              description: `"${keyword}" has been added to ${topic.name}`,
+                            });
+                          } catch (error) {
+                            console.error('Error adding keyword:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to add keyword",
+                              variant: "destructive"
+                            });
+                          }
                         }}
                         existingKeywords={topic.keywords}
                       />

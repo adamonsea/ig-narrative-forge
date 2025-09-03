@@ -77,8 +77,12 @@ export function KeywordSuggestionTool({
 
     setAddingKeyword(keyword);
     try {
+      // Trigger keyword addition notification  
       onKeywordAdd(keyword);
       toast.success(`Added keyword: "${keyword}"`);
+      
+      // Trigger parent refresh to show new keyword in list
+      window.dispatchEvent(new CustomEvent('keywordAdded'));
       
       // Remove the added suggestion from the list
       setSuggestions(prev => prev.filter(s => s.keyword !== keyword));
