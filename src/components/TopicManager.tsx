@@ -495,6 +495,18 @@ export const TopicManager = () => {
                 className="absolute inset-0 z-10"
               />
               <CardContent className="p-8 relative">
+                {topic.slug && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    asChild 
+                    className="absolute top-4 right-4 z-20 hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    <Link to={`/feed/topic/${topic.slug}`}>
+                      View Feed
+                    </Link>
+                  </Button>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-4">
@@ -519,18 +531,6 @@ export const TopicManager = () => {
                       </div>
                       
                       <div className="flex items-center gap-3 relative z-20">
-                        {topic.slug && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            asChild 
-                            className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                          >
-                            <Link to={`/feed/topic/${topic.slug}`}>
-                              View Feed
-                            </Link>
-                          </Button>
-                        )}
                         <Switch
                           checked={topic.is_active}
                           onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}

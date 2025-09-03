@@ -290,32 +290,30 @@ const TopicDashboard = () => {
         {/* Topic Header */}
         <div className="mb-8">
           <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-            <CardContent className="p-6">
+            <CardContent className="p-6 relative">
+              <Button variant="outline" asChild className="absolute top-4 right-4 z-10">
+                <Link to={`/feed/topic/${topic.slug}`} target="_blank">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Feed
+                </Link>
+              </Button>
               <div className="mobile-card-header mb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {topic.topic_type === 'regional' ? (
-                      <MapPin className="w-8 h-8 text-blue-500" />
-                    ) : (
-                      <Hash className="w-8 h-8 text-green-500" />
-                    )}
-                    <div>
-                      <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                        {topic.name}
-                      </h1>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant={topic.is_active ? "default" : "secondary"}>
-                          {topic.is_active ? "Published" : "Draft"}
-                        </Badge>
-                      </div>
+                <div className="flex items-center gap-3">
+                  {topic.topic_type === 'regional' ? (
+                    <MapPin className="w-8 h-8 text-blue-500" />
+                  ) : (
+                    <Hash className="w-8 h-8 text-green-500" />
+                  )}
+                  <div>
+                    <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                      {topic.name}
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <Badge variant={topic.is_active ? "default" : "secondary"}>
+                        {topic.is_active ? "Published" : "Draft"}
+                      </Badge>
                     </div>
                   </div>
-                  <Button variant="outline" asChild>
-                    <Link to={`/feed/topic/${topic.slug}`} target="_blank">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View Feed
-                    </Link>
-                  </Button>
                 </div>
               </div>
 
