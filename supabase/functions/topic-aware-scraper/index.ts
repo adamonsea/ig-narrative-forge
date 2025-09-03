@@ -3,22 +3,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
-import { calculateTopicRelevance, getRelevanceThreshold } from '../_shared/hybrid-content-scoring.ts';
+import { calculateTopicRelevance, getRelevanceThreshold, TopicConfig } from '../_shared/hybrid-content-scoring.ts';
+import { TopicRegionalConfig } from '../_shared/region-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface TopicConfig {
-  id: string;
-  topic_type: 'regional' | 'keyword';
-  keywords: string[];
-  region?: string;
-  landmarks?: string[];
-  postcodes?: string[];
-  organizations?: string[];
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -75,6 +67,25 @@ serve(async (req) => {
       organizations: topicData.organizations || []
     };
 
+    // Get other regional topics for dynamic negative scoring if this is a regional topic
+    let otherRegionalTopics: TopicRegionalConfig[] = [];
+    if (topicConfig.topic_type === 'regional') {
+      const { data: otherTopics } = await supabase
+        .from('topics')
+        .select('region, keywords, landmarks')
+        .eq('topic_type', 'regional')
+        .neq('id', topicId)
+        .eq('is_active', true);
+
+      otherRegionalTopics = otherTopics?.map(topic => ({
+        keywords: topic.keywords || [],
+        landmarks: topic.landmarks || [],
+        postcodes: [],
+        organizations: [],
+        region_name: topic.region || 'Unknown'
+      })) || [];
+    }
+
     // Get source information from database
     const { data: sourceInfo, error: sourceError } = await supabase
       .from('content_sources')
@@ -130,7 +141,8 @@ serve(async (req) => {
         article.body, 
         article.title, 
         topicConfig,
-        sourceInfo.source_type || 'national'
+        sourceInfo.source_type || 'national',
+        otherRegionalTopics
       );
 
       // Add comprehensive scoring metadata but DON'T filter

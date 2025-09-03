@@ -1,7 +1,7 @@
 // Hybrid content scoring system for topics
 // Uses regional relevance for 'regional' topics and keyword scoring for 'keyword' topics
 
-import { calculateRegionalRelevance } from './region-config.ts';
+import { calculateRegionalRelevance, TopicRegionalConfig } from './region-config.ts';
 
 export interface TopicConfig {
   id: string;
@@ -29,15 +29,25 @@ export function calculateTopicRelevance(
   content: string,
   title: string,
   topicConfig: TopicConfig,
-  sourceType: string = 'national'
+  sourceType: string = 'national',
+  otherRegionalTopics: TopicRegionalConfig[] = []
 ): ContentScore {
   if (topicConfig.topic_type === 'regional' && topicConfig.region) {
-    // Use existing sophisticated regional relevance scoring
+    // Use user-defined regional configuration
+    const regionalConfig: TopicRegionalConfig = {
+      keywords: topicConfig.keywords,
+      landmarks: topicConfig.landmarks,
+      postcodes: topicConfig.postcodes,
+      organizations: topicConfig.organizations,
+      region_name: topicConfig.region
+    };
+    
     const regionalScore = calculateRegionalRelevance(
       content, 
       title, 
-      topicConfig.region, 
-      sourceType
+      regionalConfig,
+      sourceType,
+      otherRegionalTopics
     );
     
     return {
@@ -46,7 +56,8 @@ export function calculateTopicRelevance(
       details: {
         regional_details: {
           region: topicConfig.region,
-          source_type: sourceType
+          source_type: sourceType,
+          user_defined: true
         }
       }
     };
@@ -196,9 +207,10 @@ export function meetsTopicRelevance(
   content: string,
   title: string,
   topicConfig: TopicConfig,
-  sourceType: string = 'national'
+  sourceType: string = 'national',
+  otherRegionalTopics: TopicRegionalConfig[] = []
 ): boolean {
-  const score = calculateTopicRelevance(content, title, topicConfig, sourceType);
+  const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics);
   const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceType);
   
   return score.relevance_score >= threshold;

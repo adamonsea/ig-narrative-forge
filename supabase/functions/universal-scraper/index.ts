@@ -67,13 +67,55 @@ serve(async (req) => {
 
     // Find the associated regional topic for this source and region
     let topicId = null;
+    let topicConfig = null;
+    let otherRegionalTopics = [];
+
     if (sourceInfo.topic_id) {
       topicId = sourceInfo.topic_id;
+      
+      // Get topic configuration
+      const { data: topicData, error: topicError } = await supabase
+        .from('topics')
+        .select('*')
+        .eq('id', topicId)
+        .single();
+
+      if (topicData && !topicError) {
+        topicConfig = {
+          id: topicData.id,
+          topic_type: topicData.topic_type,
+          keywords: topicData.keywords || [],
+          region: topicData.region,
+          landmarks: topicData.landmarks || [],
+          postcodes: topicData.postcodes || [],
+          organizations: topicData.organizations || []
+        };
+
+        // Get other regional topics for dynamic negative scoring
+        if (topicData.topic_type === 'regional') {
+          const { data: otherTopics } = await supabase
+            .from('topics')
+            .select('region, keywords, landmarks')
+            .eq('topic_type', 'regional')
+            .neq('id', topicId)
+            .eq('is_active', true);
+
+          otherRegionalTopics = otherTopics?.map(topic => ({
+            keywords: topic.keywords || [],
+            landmarks: topic.landmarks || [],
+            postcodes: [],
+            organizations: [],
+            region_name: topic.region || 'Unknown'
+          })) || [];
+        }
+
+        console.log(`📍 Using topic: ${topicData.name} (${topicData.topic_type})`);
+      }
     } else {
       // Fallback: find regional topic matching this region
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('id')
+        .select('*')
         .eq('topic_type', 'regional')
         .eq('region', region)
         .eq('is_active', true)
@@ -81,7 +123,33 @@ serve(async (req) => {
 
       if (topicData && !topicError) {
         topicId = topicData.id;
-        console.log(`📍 Found regional topic: ${topicId} for region: ${region}`);
+        topicConfig = {
+          id: topicData.id,
+          topic_type: topicData.topic_type,
+          keywords: topicData.keywords || [],
+          region: topicData.region,
+          landmarks: topicData.landmarks || [],
+          postcodes: topicData.postcodes || [],
+          organizations: topicData.organizations || []
+        };
+
+        // Get other regional topics for dynamic negative scoring
+        const { data: otherTopics } = await supabase
+          .from('topics')
+          .select('region, keywords, landmarks')
+          .eq('topic_type', 'regional')
+          .neq('id', topicId)
+          .eq('is_active', true);
+
+        otherRegionalTopics = otherTopics?.map(topic => ({
+          keywords: topic.keywords || [],
+          landmarks: topic.landmarks || [],
+          postcodes: [],
+          organizations: [],
+          region_name: topic.region || 'Unknown'
+        })) || [];
+
+        console.log(`📍 Found regional topic: ${topicData.name} for region: ${region}`);
       } else {
         console.warn(`⚠️ No regional topic found for region: ${region}`);
       }
@@ -108,7 +176,9 @@ serve(async (req) => {
         scrapingResult.articles,
         sourceId,
         region,
-        topicId
+        topicId,
+        topicConfig,
+        otherRegionalTopics
       );
       
       storedCount = storageResult.stored;

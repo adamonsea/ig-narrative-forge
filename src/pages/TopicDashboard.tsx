@@ -104,56 +104,48 @@ const TopicDashboard = () => {
         organizations: topicData.organizations || []
       });
 
-      // Load stats
-      const [articlesRes, storiesRes, sourcesRes, pendingArticlesRes, queueRes] = await Promise.all([
-        supabase
-          .from('articles')
-          .select('id', { count: 'exact' })
-          .eq('topic_id', topicData.id),
-        supabase
-          .from('stories')
-          .select('id', { count: 'exact' })
-          .in('article_id', 
-            await supabase
-              .from('articles')
-              .select('id')
-              .eq('topic_id', topicData.id)
-              .then(res => res.data?.map(a => a.id) || [])
-          ),
-        supabase
-          .from('content_sources')
-          .select('id', { count: 'exact' })
-          .eq('topic_id', topicData.id),
-        supabase
-          .from('articles')
-          .select('id', { count: 'exact' })
-          .eq('topic_id', topicData.id)
-          .eq('processing_status', 'new'),
-        supabase
-          .from('content_generation_queue')
-          .select('id', { count: 'exact' })
-          .in('article_id', 
-            await supabase
-              .from('articles')
-              .select('id')
-              .eq('topic_id', topicData.id)
-              .then(res => res.data?.map(a => a.id) || [])
-          )
-          .neq('status', 'completed')
-      ]);
+      // Load stats with sequential queries to avoid nested async issues
+      // First get article IDs for this topic
+      const { data: topicArticles } = await supabase
+        .from('articles')
+        .select('id')
+        .eq('topic_id', topicData.id);
 
-      // Get ready stories count
-      const readyStoriesRes = await supabase
+      const articleIds = topicArticles?.map(a => a.id) || [];
+
+      // Load stats sequentially
+      const articlesRes = await supabase
+        .from('articles')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id);
+
+      const storiesRes = articleIds.length > 0 ? await supabase
         .from('stories')
         .select('id', { count: 'exact' })
-        .in('article_id', 
-          await supabase
-            .from('articles')
-            .select('id')
-            .eq('topic_id', topicData.id)
-            .then(res => res.data?.map(a => a.id) || [])
-        )
-        .eq('status', 'ready');
+        .in('article_id', articleIds) : { count: 0 };
+
+      const sourcesRes = await supabase
+        .from('content_sources')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id);
+
+      const pendingArticlesRes = await supabase
+        .from('articles')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id)
+        .eq('processing_status', 'new');
+
+      const queueRes = articleIds.length > 0 ? await supabase
+        .from('content_generation_queue')
+        .select('id', { count: 'exact' })
+        .in('article_id', articleIds)
+        .neq('status', 'completed') : { count: 0 };
+
+      const readyStoriesRes = articleIds.length > 0 ? await supabase
+        .from('stories')
+        .select('id', { count: 'exact' })
+        .in('article_id', articleIds)
+        .eq('status', 'ready') : { count: 0 };
 
       setStats({
         articles: articlesRes.count || 0,

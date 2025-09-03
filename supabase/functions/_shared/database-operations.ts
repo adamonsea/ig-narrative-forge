@@ -7,7 +7,9 @@ export class DatabaseOperations {
     articles: ArticleData[],
     sourceId: string,
     region: string,
-    topicId?: string
+    topicId?: string,
+    topicConfig?: any,
+    otherRegionalTopics?: any[]
   ): Promise<{ stored: number; duplicates: number; discarded: number }> {
     let stored = 0;
     let duplicates = 0;
