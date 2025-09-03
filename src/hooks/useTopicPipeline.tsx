@@ -62,6 +62,12 @@ interface Story {
   article?: StoryArticle;
   articles?: StoryArticle;
   is_published?: boolean;
+  content_generation_queue?: Array<{
+    slidetype: string;
+    tone: string;
+    writing_style: string;
+    audience_expertise: string;
+  }>;
 }
 
 export const useTopicPipeline = (selectedTopicId: string) => {
@@ -135,16 +141,10 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .eq('articles.topic_id', selectedTopicId)
         .eq('status', 'ready'); // Only exclude ready stories, allow draft ones to appear in pending
 
-      const { data: processedArticles } = await supabase
-        .from('articles')
-        .select('id, title')
-        .eq('topic_id', selectedTopicId)
-        .eq('processing_status', 'processed');
-        
+      // Don't exclude processed articles - they should appear when returned to review
       const excludedIds = [
         ...(queueArticles?.map(q => q.article_id) || []),
-        ...(storyArticles?.map(s => s.article_id) || []),
-        ...(processedArticles?.map(p => p.id) || [])
+        ...(storyArticles?.map(s => s.article_id) || [])
       ];
 
       const storyTitles = storyArticles?.map(s => s.articles?.title?.toLowerCase().trim()) || [];
@@ -197,29 +197,46 @@ export const useTopicPipeline = (selectedTopicId: string) => {
 
       if (queueError) throw queueError;
 
-      // Load ready and draft stories for this topic
-      const [storiesData, storiesCount] = await Promise.all([
-        supabase
-          .from('stories')
-          .select(`
-            *,
-            articles!inner(
-              id,
-              title,
-              source_url,
-              topic_id
-            ),
-            slides(
-              id,
-              content,
-              slide_number
-            )
-          `)
-          .eq('articles.topic_id', selectedTopicId)
-          .in('status', ['ready', 'draft'])
-          .order('created_at', { ascending: false })
-          .limit(50),
+      // Load ready and draft stories for this topic with style choices
+      const { data: storiesWithQueue, error: storiesError } = await supabase
+        .from('stories')
+        .select(`
+          *,
+          articles!inner(
+            id,
+            title,
+            source_url,
+            topic_id
+          ),
+          slides(
+            id,
+            content,
+            slide_number
+          )
+        `)
+        .eq('articles.topic_id', selectedTopicId)
+        .in('status', ['ready', 'draft'])
+        .order('created_at', { ascending: false })
+        .limit(50);
 
+      if (storiesError) throw storiesError;
+
+      // Get style choices for each story by fetching from content_generation_queue
+      const storyIds = (storiesWithQueue || []).map(story => story.article_id);
+      let styleChoicesData = [];
+      
+      if (storyIds.length > 0) {
+        const { data: queueWithStyles } = await supabase
+          .from('content_generation_queue')
+          .select('article_id, slidetype, tone, writing_style, audience_expertise')
+          .in('article_id', storyIds)
+          .eq('status', 'completed');
+        
+        styleChoicesData = queueWithStyles || [];
+      }
+
+      const [_, storiesCount] = await Promise.all([
+        Promise.resolve(null), // placeholder for first promise
         supabase
           .from('stories')
           .select('id, articles!inner(topic_id)', { count: 'exact' })
@@ -227,7 +244,6 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           .in('status', ['ready', 'draft'])
       ]);
 
-      if (storiesData.error) throw storiesData.error;
       if (storiesCount.error) throw storiesCount.error;
 
       setArticles(filteredArticles || []);
@@ -245,28 +261,34 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         }
       })));
       
-      setStories((storiesData.data || []).map(story => ({
-        id: story.id,
-        title: story.title,
-        status: story.status,
-        created_at: story.created_at,
-        article_id: story.article_id || '',
-        is_published: story.is_published || false,
-        article: {
-          id: story.articles?.id || '',
-          title: story.articles.title,
-          source_url: story.articles.source_url
-        },
-        slides: (story.slides || []).map((slide: any) => ({
-          id: slide.id,
-          content: slide.content,
-          slide_number: slide.slide_number,
-          word_count: slide.word_count || slide.content?.split(' ').length || 0,
-          alt_text: slide.alt_text || null,
-          visual_prompt: slide.visual_prompt || null,
-          story_id: story.id
-        })).sort((a: any, b: any) => a.slide_number - b.slide_number)
-      })));
+      setStories((storiesWithQueue || []).map(story => {
+        // Find matching style choices for this story
+        const styleChoices = styleChoicesData.find(s => s.article_id === story.article_id);
+        
+        return {
+          id: story.id,
+          title: story.title,
+          status: story.status,
+          created_at: story.created_at,
+          article_id: story.article_id || '',
+          is_published: story.is_published || false,
+          article: {
+            id: story.articles?.id || '',
+            title: story.articles.title,
+            source_url: story.articles.source_url
+          },
+          slides: (story.slides || []).map((slide: any) => ({
+            id: slide.id,
+            content: slide.content,
+            slide_number: slide.slide_number,
+            word_count: slide.word_count || slide.content?.split(' ').length || 0,
+            alt_text: slide.alt_text || null,
+            visual_prompt: slide.visual_prompt || null,
+            story_id: story.id
+          })).sort((a: any, b: any) => a.slide_number - b.slide_number),
+          content_generation_queue: styleChoices ? [styleChoices] : []
+        };
+      }));
 
       setStats({
         pending_articles: filteredArticles.length,

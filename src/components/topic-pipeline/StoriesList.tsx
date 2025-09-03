@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2 } from "lucide-react";
 import { InlineCarouselImages } from "@/components/InlineCarouselImages";
+import { StyleTooltip } from "@/components/ui/style-tooltip";
 
 interface Slide {
   id: string;
@@ -35,6 +36,12 @@ interface Story {
   article?: StoryArticle;
   articles?: StoryArticle;
   is_published?: boolean;
+  content_generation_queue?: Array<{
+    slidetype: string;
+    tone: string;
+    writing_style: string;
+    audience_expertise: string;
+  }>;
 }
 
 interface StoriesListProps {
@@ -134,6 +141,16 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                     <CardTitle className="text-base line-clamp-2">
                       {story.title}
                     </CardTitle>
+                    {story.content_generation_queue?.[0] && (
+                      <StyleTooltip 
+                        styleChoices={{
+                          slidetype: story.content_generation_queue[0].slidetype || '',
+                          tone: story.content_generation_queue[0].tone || '',
+                          writing_style: story.content_generation_queue[0].writing_style || '',
+                          audience_expertise: story.content_generation_queue[0].audience_expertise || ''
+                        }}
+                      />
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
