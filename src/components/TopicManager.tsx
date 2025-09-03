@@ -519,6 +519,18 @@ export const TopicManager = () => {
                       </div>
                       
                       <div className="flex items-center gap-3 relative z-20">
+                        {topic.slug && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            asChild 
+                            className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                          >
+                            <Link to={`/feed/topic/${topic.slug}`}>
+                              View Feed
+                            </Link>
+                          </Button>
+                        )}
                         <Switch
                           checked={topic.is_active}
                           onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
@@ -532,58 +544,45 @@ export const TopicManager = () => {
                       </p>
                     )}
 
-                    <div className="flex items-center justify-between">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex flex-wrap gap-2 cursor-help">
-                              <Badge variant="outline" className="text-xs">
-                                <Hash className="w-3 h-3 mr-1" />
-                                {topic.keywords.length} Keywords
-                              </Badge>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-md">
-                            <div className="space-y-1">
-                              <p className="font-medium">Keywords:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {topic.keywords.map((keyword, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {keyword}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                     <div className="flex items-center gap-2">
+                       <TooltipProvider>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <div className="flex flex-wrap gap-2 cursor-help">
+                               <Badge variant="outline" className="text-xs">
+                                 <Hash className="w-3 h-3 mr-1" />
+                                 {topic.keywords.length} Keywords
+                               </Badge>
+                             </div>
+                           </TooltipTrigger>
+                           <TooltipContent className="max-w-md">
+                             <div className="space-y-1">
+                               <p className="font-medium">Keywords:</p>
+                               <div className="flex flex-wrap gap-1">
+                                 {topic.keywords.map((keyword, index) => (
+                                   <Badge key={index} variant="secondary" className="text-xs">
+                                     {keyword}
+                                   </Badge>
+                                 ))}
+                               </div>
+                             </div>
+                           </TooltipContent>
+                         </Tooltip>
+                       </TooltipProvider>
 
-                      <div className="flex items-center gap-3">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="cursor-help text-xs">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Created
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Created: {new Date(topic.created_at).toLocaleDateString()}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        {topic.slug && (
-                          <Button 
-                            variant="outline" 
-                            asChild 
-                            className="hover:bg-primary hover:text-primary-foreground transition-colors relative z-20"
-                          >
-                            <Link to={`/feed/topic/${topic.slug}`}>
-                              View Feed
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
+                       <TooltipProvider>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <Badge variant="outline" className="cursor-help text-xs">
+                               <Clock className="w-3 h-3 mr-1" />
+                               Created
+                             </Badge>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             <p>Created: {new Date(topic.created_at).toLocaleDateString()}</p>
+                           </TooltipContent>
+                         </Tooltip>
+                       </TooltipProvider>
                     </div>
                   </div>
                 </div>
