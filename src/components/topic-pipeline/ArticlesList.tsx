@@ -105,14 +105,18 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         const toneOverride = toneOverrides[article.id] || defaultTone;
         const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
         
-        const isAnimating = animatingArticles.has(article.id);
+        const isProcessing = processingArticle === article.id;
+        const isDeleting = deletingArticles.has(article.id);
+        const isAnimatingAway = animatingArticles.has(article.id);
         
         return (
           <Card 
             key={article.id} 
             className={`transition-all duration-300 hover:shadow-md transform-gpu ${
-              isAnimating 
+              isDeleting || isAnimatingAway
                 ? 'animate-discard' 
+                : isProcessing
+                ? 'animate-slide-out-right'
                 : 'animate-fade-in opacity-100 scale-100'
             }`}
           >
