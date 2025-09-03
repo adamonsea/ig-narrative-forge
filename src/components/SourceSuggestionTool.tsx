@@ -96,32 +96,48 @@ export const SourceSuggestionTool = ({
     setAddingSourceId(sourceKey);
     
     try {
-      // Simple RSS feed validation for RSS sources
-      if (suggestion.type === 'RSS') {
-        try {
-          const response = await fetch(suggestion.url, {
-            method: 'HEAD',
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FeedValidator)' }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`RSS feed returned ${response.status}`);
-          }
-          
-          // Check content type hints for RSS
-          const contentType = response.headers.get('content-type') || '';
-          if (!contentType.includes('xml') && !contentType.includes('rss') && !contentType.includes('atom')) {
-            console.warn('RSS feed may not be valid - unusual content type:', contentType);
-          }
-        } catch (error) {
-          toast({
-            title: "Invalid RSS Feed",
-            description: `Cannot access RSS feed: ${error.message}`,
-            variant: "destructive"
-          });
-          setAddingSourceId(null);
-          return;
+      // Server-side validation for all sources
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
+        body: {
+          url: suggestion.url,
+          sourceType: suggestion.type,
+          topicType,
+          region,
+          topicId
         }
+      });
+
+      if (validationError) {
+        toast({
+          title: "Validation Error",
+          description: `Cannot validate source: ${validationError.message}`,
+          variant: "destructive"
+        });
+        setAddingSourceId(null);
+        return;
+      }
+
+      if (!validationResult?.success) {
+        const errorMsg = validationResult?.error || 'Source validation failed';
+        const warnings = validationResult?.warnings || [];
+        
+        toast({
+          title: "Source Validation Failed",
+          description: `${errorMsg}${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`,
+          variant: "destructive"
+        });
+        setAddingSourceId(null);
+        return;
+      }
+
+      // Show warnings if any, but continue with adding
+      if (validationResult.warnings?.length > 0) {
+        console.warn('Source validation warnings:', validationResult.warnings);
+        toast({
+          title: "Source Added with Warnings",
+          description: `${validationResult.warnings.length} validation warnings - check console for details`,
+          variant: "default"
+        });
       }
       
       // Extract domain for canonical_domain

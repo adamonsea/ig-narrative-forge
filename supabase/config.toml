@@ -102,3 +102,7 @@ verify_jwt = false
 # AI Source Suggestions
 [functions.suggest-content-sources]
 verify_jwt = false
+
+# Source Validation
+[functions.validate-content-source]
+verify_jwt = false
