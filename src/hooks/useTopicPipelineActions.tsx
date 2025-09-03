@@ -289,15 +289,35 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     setAnimatingStories(prev => new Set([...prev, storyId]));
 
     try {
-      const { error } = await supabase
+      // First get the article_id from the story
+      const { data: story, error: storyFetchError } = await supabase
         .from('stories')
-        .update({ 
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', storyId);
+        .select('article_id')
+        .eq('id', storyId)
+        .single();
 
-      if (error) throw error;
+      if (storyFetchError) throw new Error(`Failed to get story details: ${storyFetchError.message}`);
+
+      // Update both story status to draft and article status back to new
+      const [storyUpdate, articleUpdate] = await Promise.all([
+        supabase
+          .from('stories')
+          .update({ 
+            status: 'draft',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', storyId),
+        supabase
+          .from('articles')
+          .update({ 
+            processing_status: 'new',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', story.article_id)
+      ]);
+
+      if (storyUpdate.error) throw new Error(`Failed to update story: ${storyUpdate.error.message}`);
+      if (articleUpdate.error) throw new Error(`Failed to update article: ${articleUpdate.error.message}`);
 
       toast({
         title: "Returned to Review",
@@ -325,7 +345,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
       
       toast({
         title: "Return Failed",
-        description: "Failed to return story to review",
+        description: error instanceof Error ? error.message : "Failed to return story to review",
         variant: "destructive"
       });
     }
