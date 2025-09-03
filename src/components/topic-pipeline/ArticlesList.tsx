@@ -113,10 +113,10 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
           <Card 
             key={article.id} 
             className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
-              isDeleting || isAnimatingAway
-                ? 'animate-discard' 
-                : isProcessing
-                ? 'animate-slide-out-right'
+              isProcessing && isAnimatingAway
+                ? 'animate-slide-out-right'  // Simplify: slide right for processing
+                : isDeleting || isAnimatingAway
+                ? 'animate-discard'          // Delete: discard animation  
                 : 'animate-fade-in opacity-100 scale-100'
             }`}
             style={{
