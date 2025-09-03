@@ -115,7 +115,8 @@ export default {
 					},
 					'100%': { 
 						transform: 'translateX(120%)',
-						opacity: '0.3'
+						opacity: '0',
+						visibility: 'hidden'
 					}
 				},
 				'slide-in': {
