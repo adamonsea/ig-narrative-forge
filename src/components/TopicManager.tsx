@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -532,23 +533,45 @@ export const TopicManager = () => {
                     )}
 
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap gap-2">
-                        {topic.keywords.slice(0, 5).map((keyword, index) => (
-                          <Badge key={index} variant="secondary" className="text-sm font-normal">
-                            {keyword}
-                          </Badge>
-                        ))}
-                        {topic.keywords.length > 5 && (
-                          <Badge variant="outline" className="text-sm">
-                            +{topic.keywords.length - 5} more
-                          </Badge>
-                        )}
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex flex-wrap gap-2 cursor-help">
+                              <Badge variant="outline" className="text-xs">
+                                <Hash className="w-3 h-3 mr-1" />
+                                {topic.keywords.length} Keywords
+                              </Badge>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-md">
+                            <div className="space-y-1">
+                              <p className="font-medium">Keywords:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {topic.keywords.map((keyword, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
 
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">
-                          Created {new Date(topic.created_at).toLocaleDateString()}
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="cursor-help text-xs">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Created
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Created: {new Date(topic.created_at).toLocaleDateString()}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         {topic.slug && (
                           <Button 
                             variant="outline" 
