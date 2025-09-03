@@ -238,7 +238,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           )
         `)
         .eq('articles.topic_id', selectedTopicId)
-        .in('status', ['ready', 'draft'])
+        .eq('status', 'ready') // Only fetch ready stories to prevent duplicates when returning to review
         .order('created_at', { ascending: false })
         .limit(50);
 
