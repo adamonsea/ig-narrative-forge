@@ -146,7 +146,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
 
       toast({
         title: "Article Approved",
-        description: `${typeLabels[slideType]} generation started using ${aiProvider.toUpperCase()}`
+        description: `${typeLabels[slideType]} generation started using DeepSeek`
       });
       
       onRefresh();
