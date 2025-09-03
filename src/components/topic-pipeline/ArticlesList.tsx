@@ -110,15 +110,11 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         return (
           <Card 
             key={article.id} 
-            className={`transition-all duration-500 hover:shadow-md transform-gpu ${
+            className={`transition-all duration-300 hover:shadow-md transform-gpu ${
               isAnimating 
-                ? 'animate-slide-out-right opacity-0 scale-95 -translate-x-full' 
-                : 'animate-fade-in opacity-100 scale-100 translate-x-0'
+                ? 'animate-discard' 
+                : 'animate-fade-in opacity-100 scale-100'
             }`}
-            style={{
-              animationFillMode: 'forwards',
-              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
           >
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
