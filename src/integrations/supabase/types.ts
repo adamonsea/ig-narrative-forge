@@ -734,6 +734,39 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_signup_rate_limits: {
+        Row: {
+          created_at: string | null
+          email_hash: string
+          id: string
+          ip_hash: string
+          signup_count: number | null
+          updated_at: string | null
+          window_duration: unknown | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_hash: string
+          id?: string
+          ip_hash: string
+          signup_count?: number | null
+          updated_at?: string | null
+          window_duration?: unknown | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_hash?: string
+          id?: string
+          ip_hash?: string
+          signup_count?: number | null
+          updated_at?: string | null
+          window_duration?: unknown | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           caption: string | null
@@ -1471,23 +1504,32 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          email_verified: boolean | null
           id: string
           name: string | null
           topic_id: string
+          verification_sent_at: string | null
+          verification_token: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          email_verified?: boolean | null
           id?: string
           name?: string | null
           topic_id: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          email_verified?: boolean | null
           id?: string
           name?: string | null
           topic_id?: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
         }
         Relationships: [
           {
@@ -1722,6 +1764,14 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      check_newsletter_signup_rate_limit: {
+        Args: { p_email: string; p_ip_hash?: string }
+        Returns: boolean
+      }
+      cleanup_old_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_story_cascade: {
         Args: { p_story_id: string }
         Returns: Json
@@ -1801,6 +1851,10 @@ export type Database = {
           p_message: string
         }
         Returns: string
+      }
+      record_newsletter_signup_attempt: {
+        Args: { p_email: string; p_ip_hash?: string }
+        Returns: undefined
       }
       rescore_articles_for_topic: {
         Args: { p_topic_id: string }

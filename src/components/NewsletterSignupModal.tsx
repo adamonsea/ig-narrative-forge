@@ -38,44 +38,81 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: N
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('topic_newsletter_signups')
-        .insert({
-          topic_id: topicId,
+      // Get client IP for rate limiting (best effort)
+      let clientIP: string | undefined;
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        clientIP = ipData.ip;
+      } catch {
+        // IP detection failed, continue without it
+        clientIP = undefined;
+      }
+
+      const { data, error } = await supabase.functions.invoke('secure-newsletter-signup', {
+        body: {
           email: email.trim(),
-          name: name.trim() || null
-        });
+          name: name.trim() || undefined,
+          topicId: topicId,
+          clientIP: clientIP
+        }
+      });
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+        throw error;
+      }
+
+      if (data?.error) {
+        if (data.rateLimited) {
+          toast({
+            title: "Too many attempts",
+            description: "Please wait before trying again. This helps prevent spam.",
+            variant: "destructive"
+          });
+        } else if (data.alreadySubscribed) {
           toast({
             title: "Already subscribed",
             description: "You're already subscribed to notifications for this topic!",
             variant: "default"
           });
         } else {
-          throw error;
+          toast({
+            title: "Error",
+            description: data.error,
+            variant: "destructive"
+          });
         }
-      } else {
+      } else if (data?.success) {
         toast({
           title: "Subscribed successfully!",
-          description: `You'll receive notifications when new ${topicName} content is available.`,
+          description: data.message,
           variant: "default"
         });
+        
+        // Reset form and close
+        setEmail('');
+        setName('');
+        onClose();
       }
-
-      // Reset form and close
-      setEmail('');
-      setName('');
-      onClose();
     } catch (error) {
       console.error('Error signing up for newsletter:', error);
       toast({
         title: "Error",
-        description: "Failed to subscribe. Please try again.",
+        description: "Failed to subscribe. Please try again later.",
         variant: "destructive"
       });
     } finally {

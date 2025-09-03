@@ -1,5 +1,8 @@
 project_id = "fpoywkjgdapgjtdeooak"
 
+[functions.secure-newsletter-signup]
+verify_jwt = false
+
 [api]
 enabled = true
 port = 54321
