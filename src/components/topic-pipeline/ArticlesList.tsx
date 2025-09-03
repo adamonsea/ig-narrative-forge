@@ -26,6 +26,7 @@ interface ArticlesListProps {
   processingArticle: string | null;
   slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
   deletingArticles: Set<string>;
+  animatingArticles: Set<string>;
   toneOverrides: { [key: string]: 'formal' | 'conversational' | 'engaging' };
   writingStyleOverrides: { [key: string]: 'journalistic' | 'educational' | 'listicle' | 'story_driven' };
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
@@ -43,6 +44,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   processingArticle,
   slideQuantities,
   deletingArticles,
+  animatingArticles,
   toneOverrides,
   writingStyleOverrides,
   defaultTone,
@@ -103,8 +105,12 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         const toneOverride = toneOverrides[article.id] || defaultTone;
         const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
         
+        const isAnimating = animatingArticles.has(article.id);
+        
         return (
-          <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
+          <Card key={article.id} className={`transition-all duration-300 hover:shadow-md ${
+            isAnimating ? 'animate-slide-out-right opacity-0' : 'animate-fade-in'
+          }`}>
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0">

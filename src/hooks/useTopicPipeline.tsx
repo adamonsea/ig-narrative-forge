@@ -163,11 +163,37 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       }
 
       const { data: articlesData, error: articlesError } = await articlesQuery;
+
+      // Get draft stories to include their articles in pending
+      const { data: draftStories } = await supabase
+        .from('stories')
+        .select('article_id, status')
+        .eq('status', 'draft')
+        .in('article_id', (storyArticles || [])
+          .filter(s => s.article_id) // Filter out null article_ids
+          .map(s => s.article_id)
+        );
+
+      // Include articles that were returned to review from draft stories
+      const { data: returnedArticles } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('topic_id', selectedTopicId)
+        .eq('processing_status', 'processed')
+        .in('id', (draftStories || [])
+          .map(s => s.article_id)
+        );
+
+      // Combine new articles with returned articles
+      const allPendingArticles = [
+        ...(articlesData || []),
+        ...(returnedArticles || [])
+      ];
       
       if (articlesError) throw new Error(`Failed to load articles: ${articlesError.message}`);
 
       // Additional filtering to remove duplicates based on title similarity
-      const filteredArticles = (articlesData || []).filter(article => {
+      const filteredArticles = allPendingArticles.filter(article => {
         const articleTitle = article.title?.toLowerCase().trim();
         if (!articleTitle) return true;
         
@@ -235,17 +261,6 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         styleChoicesData = queueWithStyles || [];
       }
 
-      const [_, storiesCount] = await Promise.all([
-        Promise.resolve(null), // placeholder for first promise
-        supabase
-          .from('stories')
-          .select('id, articles!inner(topic_id)', { count: 'exact' })
-          .eq('articles.topic_id', selectedTopicId)
-          .in('status', ['ready', 'draft'])
-      ]);
-
-      if (storiesCount.error) throw storiesCount.error;
-
       setArticles(filteredArticles || []);
       setQueueItems((queueData || []).map(item => ({
         id: item.id,
@@ -293,7 +308,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       setStats({
         pending_articles: filteredArticles.length,
         processing_queue: queueData?.filter(q => q.status === 'processing').length || 0,
-        ready_stories: storiesCount.count || 0
+        ready_stories: storiesWithQueue?.filter(s => s.status === 'ready').length || 0
       });
 
       console.log('📊 Topic content loaded successfully');

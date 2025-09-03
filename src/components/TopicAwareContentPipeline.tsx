@@ -97,6 +97,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     deletingStories,
     deletingQueueItems,
     deletingArticles,
+    animatingArticles,
+    animatingStories,
     approveArticle,
     approveStory,
     rejectStory,
@@ -386,6 +388,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 processingArticle={processingArticle}
                 slideQuantities={slideQuantities}
                 deletingArticles={deletingArticles}
+                animatingArticles={animatingArticles}
                 toneOverrides={toneOverrides}
                 writingStyleOverrides={writingStyleOverrides}
                 defaultTone={currentTopic?.default_tone || 'conversational'}
@@ -416,6 +419,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 processingRejection={processingRejection}
                 deletingStories={deletingStories}
                 publishingStories={new Set()}
+                animatingStories={animatingStories}
                 onToggleExpanded={toggleStoryExpanded}
                 onApprove={approveStory}
                 onReject={rejectStory}

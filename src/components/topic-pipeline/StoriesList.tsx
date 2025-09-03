@@ -51,6 +51,7 @@ interface StoriesListProps {
   processingRejection: Set<string>;
   deletingStories: Set<string>;
   publishingStories: Set<string>;
+  animatingStories: Set<string>;
   onToggleExpanded: (storyId: string) => void;
   onApprove: (storyId: string) => void;
   onReject: (storyId: string) => void;
@@ -68,6 +69,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   processingRejection,
   deletingStories,
   publishingStories,
+  animatingStories,
   onToggleExpanded,
   onApprove,
   onReject,
@@ -120,9 +122,12 @@ export const StoriesList: React.FC<StoriesListProps> = ({
       {stories.map((story) => {
         const article = story.article || story.articles;
         const isExpanded = expandedStories.has(story.id);
+        const isAnimating = animatingStories.has(story.id);
 
         return (
-          <Card key={story.id} className="transition-all duration-200 hover:shadow-md">
+          <Card key={story.id} className={`transition-all duration-300 hover:shadow-md ${
+            isAnimating ? 'animate-slide-out-left opacity-0' : 'animate-fade-in'
+          }`}>
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0">

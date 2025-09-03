@@ -23,6 +23,11 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
+  
+  // Animation states for immediate feedback
+  const [animatingArticles, setAnimatingArticles] = useState<Set<string>>(new Set());
+  const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
+  
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -32,8 +37,11 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     tone: 'formal' | 'conversational' | 'engaging' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
+    // Immediate animation feedback - trigger slide-out-right
+    setAnimatingArticles(prev => new Set([...prev, articleId]));
+    setProcessingArticle(articleId);
+
     try {
-      setProcessingArticle(articleId);
       
       // Check if article already has a completed story
       const { data: existingStory, error: storyCheckError } = await supabase
@@ -149,10 +157,26 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         description: `${typeLabels[slideType]} generation started using DeepSeek`
       });
       
-      onRefresh();
+      // Delay refresh to allow animation to complete
+      setTimeout(() => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(articleId);
+          return newSet;
+        });
+        onRefresh();
+      }, 300);
 
     } catch (error) {
       console.error('Error approving article:', error);
+      
+      // Reverse animation on error
+      setAnimatingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
+      });
+      
       toast({
         title: "Approval Failed",
         description: error instanceof Error ? error.message : "Unknown error occurred",
@@ -261,6 +285,9 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   };
 
   const returnToReview = async (storyId: string) => {
+    // Immediate animation feedback - trigger slide-out-left
+    setAnimatingStories(prev => new Set([...prev, storyId]));
+
     try {
       const { error } = await supabase
         .from('stories')
@@ -277,9 +304,25 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         description: "Story has been returned to draft status and will appear in pending articles"
       });
 
-      onRefresh();
+      // Delay refresh to allow animation to complete
+      setTimeout(() => {
+        setAnimatingStories(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(storyId);
+          return newSet;
+        });
+        onRefresh();
+      }, 300);
     } catch (error) {
       console.error('Error returning story to review:', error);
+      
+      // Reverse animation on error
+      setAnimatingStories(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
+      });
+      
       toast({
         title: "Return Failed",
         description: "Failed to return story to review",
@@ -398,6 +441,8 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
     deletingStories,
     deletingQueueItems,
     deletingArticles,
+    animatingArticles,
+    animatingStories,
     approveArticle,
     approveStory,
     rejectStory,
