@@ -129,34 +129,44 @@ export function KeywordSuggestionTool({
       </div>
 
       {suggestions.length > 0 && (
-        <div className="space-y-3">
-          <div className="grid gap-3">
+        <div className="space-y-2">
+          <div className="grid gap-2">
             {suggestions.map((suggestion, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                className="relative group rounded-lg border bg-card hover:bg-accent/50 transition-colors overflow-hidden"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{suggestion.keyword}</span>
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs"
-                    >
-                      {Math.round(suggestion.confidence_score * 100)}%
-                    </Badge>
+                <div 
+                  className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 pr-12 cursor-pointer"
+                  onClick={() => addKeyword(suggestion.keyword)}
+                >
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-sm text-foreground break-words">
+                        {suggestion.keyword}
+                      </span>
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs shrink-0"
+                      >
+                        {Math.round(suggestion.confidence_score * 100)}%
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                      {suggestion.rationale}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {suggestion.rationale}
-                  </p>
                 </div>
                 
                 <Button
-                  onClick={() => addKeyword(suggestion.keyword)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addKeyword(suggestion.keyword);
+                  }}
                   disabled={addingKeyword === suggestion.keyword}
                   size="sm"
                   variant="ghost"
-                  className="ml-3 h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+                  className="absolute top-3 right-3 h-8 w-8 p-0 shrink-0 hover:bg-primary hover:text-primary-foreground group-hover:bg-primary/10"
                 >
                   {addingKeyword === suggestion.keyword ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
