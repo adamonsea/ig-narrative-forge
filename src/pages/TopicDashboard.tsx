@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
 import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
@@ -305,6 +306,19 @@ const TopicDashboard = () => {
                       <Badge variant={topic.is_active ? "default" : "secondary"}>
                         {topic.is_active ? "Published" : "Draft"}
                       </Badge>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="cursor-help">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Created
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Created: {new Date(topic.created_at).toLocaleDateString()}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
                 </div>
@@ -326,13 +340,30 @@ const TopicDashboard = () => {
 
               {/* Keywords */}
               {topic.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {topic.keywords.map((keyword, index) => (
-                    <Badge key={index} variant="secondary">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-wrap gap-2 cursor-help">
+                        <Badge variant="outline" className="text-xs">
+                          <Hash className="w-3 h-3 mr-1" />
+                          {topic.keywords.length} Keywords
+                        </Badge>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-md">
+                      <div className="space-y-1">
+                        <p className="font-medium">Keywords:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {topic.keywords.map((keyword, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {keyword}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </CardContent>
           </Card>
