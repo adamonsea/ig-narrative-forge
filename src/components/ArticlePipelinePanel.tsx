@@ -576,7 +576,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                     onClick={() => approveArticle(article)}
                                     disabled={processingArticle === article.id}
                                   >
-                                    Approve
+                                    Simplify
                                   </Button>
                                 )}
                                 

@@ -269,7 +269,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                       ) : (
                         <>
                           <PlayCircle className="w-4 h-4 mr-1" />
-                          Generate
+                          Simplify
                         </>
                       )}
                     </Button>
