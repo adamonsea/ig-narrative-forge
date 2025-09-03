@@ -45,78 +45,16 @@ interface Story {
   };
 }
 
-// Playwright-based image generation using static HTML templates
-const generateImageUsingPlaywright = async (story: Story, slideIndex: number, topicName: string): Promise<Blob> => {
-  console.log(`🎨 [Playwright] Starting generation for slide ${slideIndex + 1}/${story.slides.length}`);
-  
-  try {
-    // Call the Playwright image generator edge function
-    const { data, error } = await supabase.functions.invoke('playwright-image-generator', {
-      body: {
-        story: {
-          id: story.id,
-          title: story.title,
-          author: story.article?.author || story.author || null,
-          publication_name: story.publication_name || null,
-          created_at: story.created_at || new Date().toISOString(),
-          slides: story.slides,
-          article: {
-            source_url: story.article?.source_url || '',
-            region: story.article?.region || 'local'
-          }
-        },
-        slideIndex,
-        topicName,
-        width: 1080,
-        height: 1080,
-        dpr: 2
-      }
-    });
-
-    if (error) {
-      console.error('❌ [Playwright] Edge function error:', error);
-      throw new Error(`Edge function error: ${error.message}`);
-    }
-
-    // If Playwright is not available, fall back to HTML-to-image service
-    if (!data.success && data.html) {
-      console.log('🔄 [Playwright] Falling back to HTML-to-image service...');
-      
-      const { data: convertData, error: convertError } = await supabase.functions.invoke('html-to-image-converter', {
-        body: {
-          html: data.html,
-          width: 1080,
-          height: 1080,
-          format: 'png'
-        }
-      });
-
-      if (convertError || !convertData.success) {
-        console.error('❌ [HTML-to-Image] Service error:', convertError || convertData.error);
-        throw new Error(`HTML-to-image conversion failed: ${convertError?.message || convertData.error}`);
-      }
-
-      // Convert base64 to blob
-      const response = await fetch(convertData.image);
-      const blob = await response.blob();
-      console.log(`✅ [HTML-to-Image] Generated PNG blob: ${blob.size} bytes`);
-      return blob;
-    }
-
-    if (data.image) {
-      // Convert base64 to blob
-      const response = await fetch(data.image);
-      const blob = await response.blob();
-      console.log(`✅ [Playwright] Generated PNG blob: ${blob.size} bytes`);
-      return blob;
-    }
-
-    throw new Error('No image data received from generation service');
-
-  } catch (error) {
-    console.error(`❌ [Playwright] Generation failed:`, error);
-    throw error;
-  }
+// Generate image using HTML2Canvas (original free approach)
+const generateImageUsingHTML2Canvas = async (
+  story: Story,
+  slideIndex: number,
+  topicName?: string
+): Promise<Blob | null> => {
+  console.log(`📸 HTML2Canvas generation for slide ${slideIndex} - placeholder implementation`);
+  // This is a placeholder - the original HTML2Canvas implementation would go here
+  // For now, return null until the original implementation is restored
+  return null;
 };
 
 export const useCarouselGeneration = () => {
@@ -195,8 +133,8 @@ export const useCarouselGeneration = () => {
 
       // Update progress
       toast({
-        title: 'Starting Playwright Generation',
-        description: 'Rendering static HTML templates as images...',
+        title: 'Starting HTML2Canvas Generation',
+        description: 'Rendering slides as images...',
       });
 
       const filePaths: string[] = [];
@@ -218,10 +156,15 @@ export const useCarouselGeneration = () => {
         });
 
         try {
-          console.log(`🎨 Generating image ${i + 1}/${story.slides.length} using Playwright`);
+          console.log(`🎨 Generating image ${i + 1}/${story.slides.length} using HTML2Canvas`);
 
-          const imageBlob = await generateImageUsingPlaywright(story, i, topicName);
-          console.log(`✅ Playwright image generated, size: ${imageBlob.size} bytes`);
+          const imageBlob = await generateImageUsingHTML2Canvas(story, i, topicName);
+          
+          if (!imageBlob) {
+            throw new Error('HTML2Canvas generation returned null - implementation needed');
+          }
+          
+          console.log(`✅ HTML2Canvas image generated, size: ${imageBlob.size} bytes`);
 
           // Upload to storage with standardized naming
           const fileName = `carousel_${story.id}_instagram-square_slide_${i + 1}.png`;
