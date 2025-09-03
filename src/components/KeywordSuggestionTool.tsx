@@ -37,13 +37,23 @@ export function KeywordSuggestionTool({
   const getSuggestions = async () => {
     setLoading(true);
     try {
+      // Get published stories and their keywords for learning context
+      const { data: publishedStories } = await supabase
+        .from('articles')
+        .select('title, body, keywords')
+        .eq('processing_status', 'processed')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
       const { data, error } = await supabase.functions.invoke('suggest-keywords', {
         body: {
           topicName,
           description,
           keywords,
           topicType,
-          region
+          region,
+          existingKeywords,
+          publishedStories: publishedStories || []
         }
       });
 

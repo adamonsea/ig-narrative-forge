@@ -21,10 +21,24 @@ serve(async (req) => {
   }
 
   try {
-    const { topicName, description, keywords, topicType, region } = await req.json();
+    const { topicName, description, keywords, topicType, region, existingKeywords = [], publishedStories = [] } = await req.json();
 
     if (!DEEPSEEK_API_KEY) {
       throw new Error('DEEPSEEK_API_KEY is not configured');
+    }
+
+    // Construct context from published stories
+    let publishedContext = '';
+    if (publishedStories.length > 0) {
+      const storyKeywords = publishedStories
+        .flatMap(story => story.keywords || [])
+        .filter(Boolean);
+      const storyTitles = publishedStories.map(story => story.title).join(', ');
+      
+      publishedContext = `
+Published Story Context:
+- Recent story titles: ${storyTitles}
+- Keywords from published stories: ${storyKeywords.join(', ')}`;
     }
 
     // Construct the prompt for keyword suggestions
@@ -33,27 +47,34 @@ serve(async (req) => {
 Topic: "${topicName}"
 Description: "${description}"
 Topic Type: ${topicType}
-Current Keywords: ${keywords?.join(', ') || 'None'}`;
+Current Keywords: ${keywords?.join(', ') || 'None'}
+Already Added Keywords: ${existingKeywords.join(', ') || 'None'}`;
 
     if (region) {
       prompt += `\nRegion: ${region}`;
     }
 
+    if (publishedContext) {
+      prompt += publishedContext;
+    }
+
     prompt += `
+
+CRITICAL: DO NOT suggest any keywords that are already in "Current Keywords" or "Already Added Keywords" lists above.
 
 TASK: Suggest 10-15 highly relevant keywords that will help identify quality content for this topic. Focus on:
 
-1. Industry-standard terminology (e.g., "medtech" not "medtec")
-2. Broad enough to capture relevant content but specific enough to filter noise
-3. Include both technical terms and common variations
-4. Consider SEO-friendly keyword variations
-5. Fix any spelling errors or improve vague terms from current keywords
-6. Include synonym variations and related terms
+1. **Learn from existing keywords**: Look at the patterns in already added keywords (e.g., if "st leonards on sea" is added, suggest related coastal terms, neighboring areas, local landmarks)
+2. **Build on published content**: Use insights from recent successful stories to suggest complementary keywords
+3. **Industry-standard terminology**: Use proper spellings and standard terms
+4. **Contextual expansion**: If regional keywords exist, suggest related places, local terms, and geographic variations
+5. **Semantic relationships**: Find synonyms, related concepts, and natural language variations
+6. **NO DUPLICATES**: Never suggest keywords that already exist in any form
 
 For each keyword suggestion, provide:
 - keyword: the exact keyword phrase
 - confidence_score: 0.0-1.0 (how confident you are this will find relevant content)
-- rationale: brief explanation of why this keyword is valuable
+- rationale: brief explanation of why this keyword is valuable and how it relates to existing keywords
 
 Respond in valid JSON format with this structure:
 {
@@ -61,12 +82,12 @@ Respond in valid JSON format with this structure:
     {
       "keyword": "example keyword",
       "confidence_score": 0.85,
-      "rationale": "Industry standard term that will capture..."
+      "rationale": "Complements existing 'st leonards on sea' keyword by targeting nearby coastal area..."
     }
   ]
 }
 
-Focus on practical keywords that content writers and publishers actually use when writing about this topic.`;
+Focus on expanding and building upon what has already been successful rather than repeating existing terms.`;
 
     // Call DeepSeek API
     const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -111,7 +132,13 @@ Focus on practical keywords that content writers and publishers actually use whe
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    // Validate and clean suggestions
+    // Normalize existing keywords for comparison
+    const allExistingKeywords = [
+      ...(keywords || []),
+      ...(existingKeywords || [])
+    ].map(k => k.toLowerCase().trim());
+
+    // Validate and clean suggestions, filtering out duplicates
     const suggestions: KeywordSuggestion[] = (parsedResponse.suggestions || [])
       .filter((suggestion: any) => 
         suggestion.keyword && 
@@ -123,6 +150,10 @@ Focus on practical keywords that content writers and publishers actually use whe
         confidence_score: Math.min(1.0, Math.max(0.0, suggestion.confidence_score)),
         rationale: suggestion.rationale
       }))
+      .filter((suggestion: KeywordSuggestion) => 
+        // Remove duplicates by checking against all existing keywords
+        !allExistingKeywords.includes(suggestion.keyword.toLowerCase().trim())
+      )
       .slice(0, 15); // Limit to 15 suggestions
 
     return new Response(JSON.stringify({
