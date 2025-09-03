@@ -133,7 +133,6 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
         const toneOverride = toneOverrides[article.id] || defaultTone;
-        const toneInfo = getToneInfo(toneOverride);
         
         return (
           <Card key={article.id} className="transition-all duration-200 hover:shadow-md">
