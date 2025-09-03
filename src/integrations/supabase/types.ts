@@ -318,6 +318,9 @@ export type Database = {
           ai_provider: string | null
           article_id: string
           attempts: number
+          audience_expertise:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           completed_at: string | null
           created_at: string
           error_message: string | null
@@ -327,11 +330,15 @@ export type Database = {
           slidetype: string
           started_at: string | null
           status: string
+          tone: Database["public"]["Enums"]["tone_type"] | null
         }
         Insert: {
           ai_provider?: string | null
           article_id: string
           attempts?: number
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           completed_at?: string | null
           created_at?: string
           error_message?: string | null
@@ -341,11 +348,15 @@ export type Database = {
           slidetype?: string
           started_at?: string | null
           status?: string
+          tone?: Database["public"]["Enums"]["tone_type"] | null
         }
         Update: {
           ai_provider?: string | null
           article_id?: string
           attempts?: number
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           completed_at?: string | null
           created_at?: string
           error_message?: string | null
@@ -355,6 +366,7 @@ export type Database = {
           slidetype?: string
           started_at?: string | null
           status?: string
+          tone?: Database["public"]["Enums"]["tone_type"] | null
         }
         Relationships: [
           {
@@ -768,6 +780,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      prompt_templates: {
+        Row: {
+          audience_expertise:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
+          category: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          prompt_content: string
+          slide_type: string | null
+          template_name: string
+          tone_type: Database["public"]["Enums"]["tone_type"] | null
+          updated_at: string | null
+          variables: Json | null
+          version: number
+        }
+        Insert: {
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
+          category: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          prompt_content: string
+          slide_type?: string | null
+          template_name: string
+          tone_type?: Database["public"]["Enums"]["tone_type"] | null
+          updated_at?: string | null
+          variables?: Json | null
+          version?: number
+        }
+        Update: {
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          prompt_content?: string
+          slide_type?: string | null
+          template_name?: string
+          tone_type?: Database["public"]["Enums"]["tone_type"] | null
+          updated_at?: string | null
+          variables?: Json | null
+          version?: number
+        }
+        Relationships: []
       }
       quality_reports: {
         Row: {
@@ -1435,10 +1498,14 @@ export type Database = {
       }
       topics: {
         Row: {
+          audience_expertise:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           branding_config: Json | null
           created_at: string | null
           created_by: string
           custom_css: Json | null
+          default_tone: Database["public"]["Enums"]["tone_type"] | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -1454,10 +1521,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           branding_config?: Json | null
           created_at?: string | null
           created_by: string
           custom_css?: Json | null
+          default_tone?: Database["public"]["Enums"]["tone_type"] | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -1473,10 +1544,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          audience_expertise?:
+            | Database["public"]["Enums"]["audience_expertise"]
+            | null
           branding_config?: Json | null
           created_at?: string | null
           created_by?: string
           custom_css?: Json | null
+          default_tone?: Database["public"]["Enums"]["tone_type"] | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -1768,6 +1843,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"
+      audience_expertise: "beginner" | "intermediate" | "expert"
+      tone_type: "formal" | "conversational" | "engaging"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1896,6 +1973,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "superadmin"],
+      audience_expertise: ["beginner", "intermediate", "expert"],
+      tone_type: ["formal", "conversational", "engaging"],
     },
   },
 } as const
