@@ -31,6 +31,8 @@ interface Topic {
   is_active: boolean;
   is_public: boolean;
   created_at: string;
+  audience_expertise?: 'beginner' | 'intermediate' | 'expert';
+  default_tone?: 'formal' | 'conversational' | 'engaging';
   _count?: {
     articles: number;
     sources: number;
@@ -51,7 +53,9 @@ export const TopicManager = () => {
     landmarks: '',
     postcodes: '',
     organizations: '',
-    is_public: false
+    is_public: false,
+    audience_expertise: 'intermediate' as 'beginner' | 'intermediate' | 'expert',
+    default_tone: 'conversational' as 'formal' | 'conversational' | 'engaging'
   });
   const { toast } = useToast();
   const { user } = useAuth();
@@ -118,7 +122,9 @@ export const TopicManager = () => {
           ? newTopic.organizations.split(',').map(k => k.trim()) : [],
         slug,
         is_active: newTopic.is_public, // Use is_public from form to set initial is_active state
-        created_by: user?.id
+        created_by: user?.id,
+        audience_expertise: newTopic.audience_expertise,
+        default_tone: newTopic.default_tone
       };
 
       const { error } = await supabase
@@ -142,7 +148,9 @@ export const TopicManager = () => {
         landmarks: '',
         postcodes: '',
         organizations: '',
-        is_public: false
+        is_public: false,
+        audience_expertise: 'intermediate',
+        default_tone: 'conversational'
       });
       setShowCreateForm(false);
       loadTopics();
@@ -286,6 +294,83 @@ export const TopicManager = () => {
                 onChange={(e) => setNewTopic({ ...newTopic, keywords: e.target.value })}
                 placeholder="ai, technology, innovation (comma-separated)"
               />
+            </div>
+
+            {/* Audience Configuration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/10 dark:to-purple-950/10">
+              <div className="space-y-2">
+                <Label htmlFor="audience_expertise">
+                  Audience Expertise Level
+                  <span className="text-xs text-muted-foreground block">Set once during topic creation</span>
+                </Label>
+                <Select 
+                  value={newTopic.audience_expertise} 
+                  onValueChange={(value: 'beginner' | 'intermediate' | 'expert') => 
+                    setNewTopic({ ...newTopic, audience_expertise: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">
+                      <div>
+                        <div className="font-medium">Beginner</div>
+                        <div className="text-xs text-muted-foreground">Clear explanations, more context</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="intermediate">
+                      <div>
+                        <div className="font-medium">Intermediate</div>
+                        <div className="text-xs text-muted-foreground">Balanced technical depth</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="expert">
+                      <div>
+                        <div className="font-medium">Expert</div>
+                        <div className="text-xs text-muted-foreground">Technical terminology, advanced insights</div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="default_tone">
+                  Default Tone
+                  <span className="text-xs text-muted-foreground block">Can be overridden per article</span>
+                </Label>
+                <Select 
+                  value={newTopic.default_tone} 
+                  onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                    setNewTopic({ ...newTopic, default_tone: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="formal">
+                      <div>
+                        <div className="font-medium">Formal</div>
+                        <div className="text-xs text-muted-foreground">Professional, authoritative</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="conversational">
+                      <div>
+                        <div className="font-medium">Conversational</div>
+                        <div className="text-xs text-muted-foreground">Accessible, friendly</div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="engaging">
+                      <div>
+                        <div className="font-medium">Engaging</div>
+                        <div className="text-xs text-muted-foreground">Dynamic, compelling</div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <KeywordSuggestionTool

@@ -51,9 +51,43 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { articleId, slideType = 'tabloid', aiProvider = 'deepseek' } = await req.json();
+    const { articleId, slideType = 'tabloid', aiProvider = 'deepseek', tone = 'conversational', audienceExpertise = 'intermediate' } = await req.json();
     
-    console.log(`Processing article ID: ${articleId} with AI provider: ${aiProvider}`);
+    console.log(`Processing article ID: ${articleId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
+
+    // Get prompt templates for the current tone and expertise
+    const { data: promptTemplates, error: promptError } = await supabase
+      .from('prompt_templates')
+      .select('*')
+      .eq('is_active', true)
+      .in('category', ['base', 'tone', 'expertise', 'slideType']);
+
+    if (promptError) {
+      console.warn('Failed to load prompt templates, using defaults:', promptError);
+    }
+
+    // Build enhanced prompts using template system
+    const getPromptByCategory = (category: string, specificType?: string) => {
+      if (!promptTemplates) return '';
+      
+      if (category === 'tone') {
+        return promptTemplates.find(t => t.category === 'tone' && t.tone_type === tone)?.prompt_content || '';
+      }
+      if (category === 'expertise') {
+        return promptTemplates.find(t => t.category === 'expertise' && t.audience_expertise === audienceExpertise)?.prompt_content || '';
+      }
+      if (category === 'slideType') {
+        return promptTemplates.find(t => t.category === 'slideType' && t.slide_type === slideType)?.prompt_content || '';
+      }
+      return promptTemplates.find(t => t.category === category)?.prompt_content || '';
+    };
+
+    const basePrompt = getPromptByCategory('base');
+    const tonePrompt = getPromptByCategory('tone');
+    const expertisePrompt = getPromptByCategory('expertise');
+    const slideTypePrompt = getPromptByCategory('slideType');
+
+    console.log(`🎯 Using enhanced prompting: Base: ${!!basePrompt}, Tone: ${tone}, Expertise: ${audienceExpertise}, SlideType: ${slideType}`);
 
     // Get the article data
     const { data: article, error: articleError } = await supabase
@@ -122,19 +156,31 @@ serve(async (req) => {
       // Generate slides first, then post copy (slides must be available for post copy generation)
       if (actualProvider === 'deepseek' && deepseekApiKey) {
         console.log('🔄 Generating slides with DeepSeek...');
-        slides = await generateSlidesWithDeepSeek(article, slideType, deepseekApiKey, finalPublicationName, supabase, ctaConfig);
+        slides = await generateSlidesWithDeepSeek(
+          article, slideType, deepseekApiKey, finalPublicationName, supabase, ctaConfig,
+          basePrompt, tonePrompt, expertisePrompt, slideTypePrompt
+        );
         console.log(`✅ Generated ${slides.length} slides with DeepSeek`);
         
         console.log('🔄 Generating post copy with DeepSeek...');
-        postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, finalPublicationName);
+        postCopy = await generatePostCopyWithDeepSeek(
+          article, slides, deepseekApiKey, finalPublicationName,
+          basePrompt, tonePrompt, expertisePrompt
+        );
         console.log('✅ Generated post copy with DeepSeek');
       } else {
         console.log('🔄 Generating slides with OpenAI...');
-        slides = await generateSlides(article, slideType, openaiApiKey, finalPublicationName, supabase, ctaConfig);
+        slides = await generateSlides(
+          article, slideType, openaiApiKey, finalPublicationName, supabase, ctaConfig,
+          basePrompt, tonePrompt, expertisePrompt, slideTypePrompt
+        );
         console.log(`✅ Generated ${slides.length} slides with OpenAI`);
         
         console.log('🔄 Generating post copy with OpenAI...');
-        postCopy = await generatePostCopy(article, slides, openaiApiKey, finalPublicationName);
+        postCopy = await generatePostCopy(
+          article, slides, openaiApiKey, finalPublicationName,
+          basePrompt, tonePrompt, expertisePrompt
+        );
         console.log('✅ Generated post copy with OpenAI');
       }
 
@@ -571,7 +617,11 @@ async function generateSlides(
   apiKey: string, 
   publicationName: string,
   supabaseClient: any,
-  ctaConfig: any = null
+  ctaConfig: any = null,
+  basePrompt: string = '',
+  tonePrompt: string = '', 
+  expertisePrompt: string = '',
+  slideTypePrompt: string = ''
 ): Promise<SlideContent[]> {
   const slideCount = getExpectedSlideCount(slideType, article);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
@@ -581,7 +631,15 @@ async function generateSlides(
   const ctaText = ctaConfig?.engagement_question || 'What are your thoughts on this story?';
   const attributionCTA = ctaConfig?.attribution_cta || 'Read the full story via link in bio';
   
-  const systemPrompt = `You are an expert content creator specializing in transforming news articles into engaging social media carousel slides for Instagram and Facebook.
+  // Build enhanced system prompt using templates
+  const enhancedSystemPrompt = `
+${basePrompt || 'You are an expert content creator specializing in transforming news articles into engaging social media carousel slides for Instagram and Facebook.'}
+
+${tonePrompt || 'Use professional, engaging language that balances credibility with accessibility.'}
+
+${expertisePrompt || 'Balance technical accuracy with accessibility. Briefly explain specialized terms.'}
+
+${slideTypePrompt || 'Create balanced content with good detail. Include context and key supporting information.'}
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY factual information from the source article
@@ -631,6 +689,8 @@ EXAMPLE RESPONSE STRUCTURE:
     // ... continue until slide ${slideCount}
   ]
 }`;
+
+  const systemPrompt = enhancedSystemPrompt;
 
   const userPrompt = `Transform this news article into EXACTLY ${slideCount} engaging carousel slides:
 
@@ -819,10 +879,19 @@ async function generatePostCopy(
   article: Article, 
   slides: SlideContent[], 
   apiKey: string, 
-  publicationName: string
+  publicationName: string,
+  basePrompt: string = '',
+  tonePrompt: string = '', 
+  expertisePrompt: string = ''
 ): Promise<{ caption: string; hashtags: string[] }> {
   
-  const systemPrompt = `You are a social media expert creating Instagram captions that drive engagement while maintaining journalistic integrity.
+  // Build enhanced system prompt using templates
+  const enhancedSystemPrompt = `
+${basePrompt || 'You are a social media expert creating Instagram captions that drive engagement while maintaining journalistic integrity.'}
+
+${tonePrompt || 'Use professional, engaging language that balances credibility with accessibility.'}
+
+${expertisePrompt || 'Balance technical accuracy with accessibility. Briefly explain specialized terms when needed.'}
 
 REQUIREMENTS:
 1. Create engaging caption that complements the carousel slides
@@ -840,6 +909,8 @@ CAPTION STRUCTURE:
 - Call to action
 
 Return JSON with "caption" and "hashtags" array.`;
+
+  const systemPrompt = enhancedSystemPrompt;
 
   const userPrompt = `Create an Instagram caption for this story:
 
@@ -890,7 +961,11 @@ async function generateSlidesWithDeepSeek(
   apiKey: string, 
   publicationName: string,
   supabaseClient: any,
-  ctaConfig: any = null
+  ctaConfig: any = null,
+  basePrompt: string = '',
+  tonePrompt: string = '', 
+  expertisePrompt: string = '',
+  slideTypePrompt: string = ''
 ): Promise<SlideContent[]> {
   const slideCount = getExpectedSlideCount(slideType, article);
   const storyAnalysis = analyzeStoryType(article.title, article.body);
@@ -900,7 +975,15 @@ async function generateSlidesWithDeepSeek(
   const ctaText = ctaConfig?.engagement_question || 'What are your thoughts on this story?';
   const attributionCTA = ctaConfig?.attribution_cta || 'Read the full story via link in bio';
   
-  const systemPrompt = `You are a world-class viral content strategist and master storyteller who creates scroll-stopping, engagement-driving Instagram carousel content. Your mission: transform news into irresistible, shareable stories that captivate audiences instantly.
+  // Build enhanced system prompt using templates
+  const enhancedSystemPrompt = `
+${basePrompt || 'You are a world-class viral content strategist and master storyteller who creates scroll-stopping, engagement-driving Instagram carousel content.'}
+
+${tonePrompt || 'Use engaging, dynamic language that draws readers in while maintaining credibility and professionalism.'}
+
+${expertisePrompt || 'Balance technical accuracy with accessibility. Briefly explain specialized terms.'}
+
+${slideTypePrompt || 'Create balanced content with good detail. Include context and key supporting information.'}
 
 🎯 VIRAL ENGAGEMENT MASTERY:
 - Generate exactly ${slideCount} slides that DEMAND attention and STOP the scroll
@@ -917,29 +1000,6 @@ async function generateSlidesWithDeepSeek(
 3. REVELATION SLIDES: Unveil facts like plot twists with emotional impact
 4. IMPACT SLIDE: "This means..." / "The consequences could be..." 
 5. CTA SLIDE: Action-driving conclusion with source attribution
-
-✨ ENGAGEMENT AMPLIFIERS (MANDATORY):
-- Lead with SHOCKING NUMBERS & STATS for instant credibility hooks
-- Use PROVOCATIVE QUESTIONS to spark comments: "What would YOU do?" / "Is this fair?"
-- Create CLIFFHANGERS between slides: "But wait, there's more..." / "The twist will shock you..."
-- Include RELATABLE scenarios: "Imagine if this happened to YOUR family..."
-- Use CONVERSATIONAL tone like talking to a best friend who needs to know NOW
-- Add URGENCY when relevant: "This is happening RIGHT NOW" / "Time is running out"
-- Include SOCIAL PROOF: "Thousands are already talking about this..."
-
-📱 PSYCHOLOGICAL ENGAGEMENT TRIGGERS:
-- CURIOSITY GAP: "The reason will leave you speechless" / "What happens next will amaze you"
-- FEAR OF MISSING OUT: "Don't be the last person to hear about this"
-- SOCIAL VALIDATION: "Everyone's sharing this story" / "You need to see this"
-- CONTROVERSY: Present conflicting viewpoints to drive debate
-- PERSONAL RELEVANCE: "This could change YOUR life" / "This affects YOUR community"
-
-🎭 STORYTELLING TECHNIQUES:
-- Use DRAMATIC TENSION: Build suspense between slides
-- Include HUMAN INTEREST: Focus on people affected, not just facts
-- Add VISUAL STORYTELLING: Each slide should paint a vivid mental picture
-- Create MEMORABLE MOMENTS: One surprising fact per slide that sticks
-- Use REPETITION for emphasis: Key phrases that reinforce your message
 
 MANDATORY CONTENT RULES:
 - Extract ONLY factual information from source article - NO speculation
@@ -970,6 +1030,8 @@ Return JSON with "slides" array containing exactly ${slideCount} slides:
     // ... continue until slide ${slideCount}
   ]
 }`;
+
+  const systemPrompt = enhancedSystemPrompt;
 
   const userPrompt = `Transform this news article into EXACTLY ${slideCount} engaging carousel slides:
 
@@ -1088,10 +1150,19 @@ async function generatePostCopyWithDeepSeek(
   article: Article, 
   slides: SlideContent[], 
   apiKey: string, 
-  publicationName: string
+  publicationName: string,
+  basePrompt: string = '',
+  tonePrompt: string = '', 
+  expertisePrompt: string = ''
 ): Promise<{ caption: string; hashtags: string[] }> {
   
-  const systemPrompt = `You are an elite social media strategist and viral content expert who creates Instagram captions that drive massive engagement, shares, and comments while maintaining journalistic integrity. Your mission: transform news content into scroll-stopping, conversation-starting captions that demand interaction.
+  // Build enhanced system prompt using templates
+  const enhancedSystemPrompt = `
+${basePrompt || 'You are an elite social media strategist and viral content expert who creates Instagram captions that drive massive engagement.'}
+
+${tonePrompt || 'Use dynamic, compelling language that draws readers in while maintaining credibility and professionalism.'}
+
+${expertisePrompt || 'Balance technical accuracy with accessibility. Make content approachable without dumbing it down.'}
 
 🎯 VIRAL CAPTION MASTERY:
 - Create captions that complement carousel slides with explosive engagement potential
@@ -1103,30 +1174,10 @@ async function generatePostCopyWithDeepSeek(
 
 🔥 ENGAGEMENT-DRIVEN CAPTION STRUCTURE:
 1. HOOK LINE: Jaw-dropping opener that stops the scroll instantly
-   - "You won't believe what just happened..."
-   - "This changes everything for..."
-   - "The moment everyone's talking about..."
-   - "BREAKING: This will shock you..."
-
 2. STORY AMPLIFICATION: Transform facts into compelling narrative
-   - Use emotional storytelling techniques
-   - Include shocking statistics or surprising angles
-   - Create urgency and relevance: "This affects YOU because..."
-
 3. IMPACT REVELATION: Make it personal and relevant
-   - "Here's why this matters to your community..."
-   - "The consequences could be massive..."
-   - "This could change everything for..."
-
 4. SOURCE ATTRIBUTION: Professional credibility anchor
-   - "Story first reported by ${publicationName}"
-   - "Full details via ${publicationName}"
-
 5. EXPLOSIVE CTA: Drive maximum interaction
-   - "What would YOU do in this situation? 👇"
-   - "Share your thoughts - are you surprised by this? 🤔"
-   - "Tag someone who needs to see this! 📢"
-   - "What's your prediction for what happens next? 🔮"
 
 ✨ VIRAL ENGAGEMENT TRIGGERS (MANDATORY):
 - Use PROVOCATIVE QUESTIONS that demand responses
@@ -1137,21 +1188,9 @@ async function generatePostCopyWithDeepSeek(
 - Use URGENCY: "This is happening NOW..." / "Don't miss out on this story"
 - Add COMMUNITY BUILDERS: "Who else is following this story?"
 
-📱 PSYCHOLOGICAL ENGAGEMENT AMPLIFIERS:
-- CURIOSITY GAPS: "The reason why will surprise you..."
-- FEAR OF MISSING OUT: "Everyone's talking about this story"
-- SOCIAL VALIDATION: "You need to see what people are saying"
-- CONTROVERSY: Present multiple viewpoints to spark healthy debate
-- PERSONAL STAKE: "This could affect YOUR neighborhood/family/future"
-
-🎭 CAPTION TONE MASTERY:
-- Conversational yet authoritative
-- Accessible but not dumbed down
-- Emotionally resonant while factually accurate
-- Urgent but not sensationalized
-- Inclusive and community-focused
-
 Return JSON with "caption" and "hashtags" array.`;
+
+  const systemPrompt = enhancedSystemPrompt;
 
   const userPrompt = `Create an Instagram caption for this story:
 

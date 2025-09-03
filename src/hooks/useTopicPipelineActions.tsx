@@ -26,7 +26,12 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const approveArticle = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', aiProvider: 'openai' | 'deepseek' = 'deepseek') => {
+  const approveArticle = async (
+    articleId: string, 
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', 
+    aiProvider: 'openai' | 'deepseek' = 'deepseek',
+    tone: 'formal' | 'conversational' | 'engaging' = 'conversational'
+  ) => {
     try {
       setProcessingArticle(articleId);
       
@@ -80,6 +85,21 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
 
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
+      // Get article and topic info for audience expertise
+      const { data: articleData, error: articleError } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          topic_id,
+          topics!inner(audience_expertise, default_tone)
+        `)
+        .eq('id', articleId)
+        .single();
+
+      if (articleError) throw new Error(`Failed to get article data: ${articleError.message}`);
+
+      const audienceExpertise = articleData.topics?.audience_expertise || 'intermediate';
+
       // Add to generation queue
       const { error: queueError } = await supabase
         .from('content_generation_queue')
@@ -87,6 +107,8 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
           article_id: articleId,
           slidetype: slideType,
           ai_provider: aiProvider,
+          tone: tone,
+          audience_expertise: audienceExpertise,
           status: 'pending'
         });
 

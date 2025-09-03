@@ -26,11 +26,14 @@ interface ArticlesListProps {
   slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
   deletingArticles: Set<string>;
   aiProvider: 'openai' | 'deepseek';
+  toneOverrides: { [key: string]: 'formal' | 'conversational' | 'engaging' };
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
-  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', aiProvider: 'openai' | 'deepseek') => void;
+  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging') => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', aiProvider: 'openai' | 'deepseek', tone: 'formal' | 'conversational' | 'engaging') => void;
   onPreview: (article: Article) => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onAiProviderChange: (provider: 'openai' | 'deepseek') => void;
+  defaultTone: 'formal' | 'conversational' | 'engaging';
 }
 
 export const ArticlesList: React.FC<ArticlesListProps> = ({
@@ -39,7 +42,10 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   slideQuantities,
   deletingArticles,
   aiProvider,
+  toneOverrides,
+  defaultTone,
   onSlideQuantityChange,
+  onToneOverrideChange,
   onApprove,
   onPreview,
   onDelete,
@@ -206,8 +212,38 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                       </Select>
                     </div>
                     
+                    <div className="text-xs">
+                      <Select
+                        value={toneOverrides[article.id] || defaultTone}
+                        onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                          onToneOverrideChange(article.id, value)
+                        }
+                      >
+                        <SelectTrigger className="w-full sm:w-32 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="formal">
+                            <div>
+                              <div className="font-medium text-xs">Formal</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="conversational">
+                            <div>
+                              <div className="font-medium text-xs">Conversational</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="engaging">
+                            <div>
+                              <div className="font-medium text-xs">Engaging</div>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
                     <Button
-                      onClick={() => onApprove(article.id, slideType, aiProvider)}
+                      onClick={() => onApprove(article.id, slideType, aiProvider, toneOverrides[article.id] || defaultTone)}
                       disabled={processingArticle === article.id}
                       size="sm"
                       className="w-full sm:w-auto"

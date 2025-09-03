@@ -63,7 +63,9 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [slideQuantities, setSlideQuantities] = useState<{ [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' }>({});
+  const [toneOverrides, setToneOverrides] = useState<{ [key: string]: 'formal' | 'conversational' | 'engaging' }>({});
   const [aiProvider, setAiProvider] = useState<'openai' | 'deepseek'>('deepseek');
+  const [currentTopic, setCurrentTopic] = useState<any>(null);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -184,11 +186,35 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     loadTopics();
   }, []);
 
+  // Load topic data including default tone
   useEffect(() => {
     if (selectedTopicId) {
+      loadCurrentTopic();
       loadTopicContent();
     }
   }, [selectedTopicId]);
+
+  const loadCurrentTopic = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('topics')
+        .select('id, name, topic_type, is_active, default_tone, audience_expertise')
+        .eq('id', selectedTopicId)
+        .single();
+
+      if (error) throw error;
+      setCurrentTopic(data);
+    } catch (error) {
+      console.error('Error loading current topic:', error);
+    }
+  };
+
+  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging') => {
+    setToneOverrides(prev => ({
+      ...prev,
+      [articleId]: tone
+    }));
+  };
 
   const loadTopics = async () => {
     try {
@@ -353,8 +379,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 slideQuantities={slideQuantities}
                 deletingArticles={deletingArticles}
                 aiProvider={aiProvider}
+                toneOverrides={toneOverrides}
+                defaultTone={currentTopic?.default_tone || 'conversational'}
                 onSlideQuantityChange={handleSlideQuantityChange}
-                onApprove={(articleId, slideType, provider) => approveArticle(articleId, slideType, provider)}
+                onToneOverrideChange={handleToneOverrideChange}
+                onApprove={(articleId, slideType, provider, tone) => approveArticle(articleId, slideType, provider)}
                 onPreview={(article) => setPreviewArticle(article)}
                 onDelete={deleteArticle}
                 onAiProviderChange={setAiProvider}
