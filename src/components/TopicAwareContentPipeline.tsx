@@ -386,15 +386,16 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 processingArticle={processingArticle}
                 slideQuantities={slideQuantities}
                 deletingArticles={deletingArticles}
-                aiProvider={aiProvider}
                 toneOverrides={toneOverrides}
+                writingStyleOverrides={writingStyleOverrides}
                 defaultTone={currentTopic?.default_tone || 'conversational'}
+                defaultWritingStyle={currentTone?.default_writing_style || 'journalistic'}
                 onSlideQuantityChange={handleSlideQuantityChange}
                 onToneOverrideChange={handleToneOverrideChange}
-                onApprove={(articleId, slideType, provider, tone) => approveArticle(articleId, slideType, provider)}
+                onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
                 onPreview={(article) => setPreviewArticle(article)}
                 onDelete={deleteArticle}
-                onAiProviderChange={setAiProvider}
               />
             </TabsContent>
 

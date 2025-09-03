@@ -106,8 +106,9 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         .insert({
           article_id: articleId,
           slidetype: slideType,
-          ai_provider: aiProvider,
+          ai_provider: 'deepseek',
           tone: tone,
+          writing_style: writingStyle,
           audience_expertise: audienceExpertise,
           status: 'pending'
         });

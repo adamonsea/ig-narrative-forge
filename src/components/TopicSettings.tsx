@@ -75,9 +75,6 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           <div className="space-y-3">
             <Label htmlFor="expertise">
               Audience Expertise Level
-              <span className="text-xs text-muted-foreground block">
-                Controls complexity and depth of generated content
-              </span>
             </Label>
             <Select value={expertise} onValueChange={(value: 'beginner' | 'intermediate' | 'expert') => setExpertise(value)}>
               <SelectTrigger>
@@ -109,9 +106,6 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           <div className="space-y-3">
             <Label htmlFor="tone">
               Default Content Tone
-              <span className="text-xs text-muted-foreground block">
-                Can be overridden per individual article
-              </span>
             </Label>
             <Select value={tone} onValueChange={(value: 'formal' | 'conversational' | 'engaging') => setTone(value)}>
               <SelectTrigger>
@@ -158,9 +152,6 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <span className="text-xs text-muted-foreground block">
-                Structural format for generated content
-              </span>
             </Label>
             <Select value={writingStyle} onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => setWritingStyle(value)}>
               <SelectTrigger>
