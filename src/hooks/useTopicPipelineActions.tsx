@@ -29,8 +29,8 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   const approveArticle = async (
     articleId: string, 
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', 
-    aiProvider: 'openai' | 'deepseek' = 'deepseek',
-    tone: 'formal' | 'conversational' | 'engaging' = 'conversational'
+    tone: 'formal' | 'conversational' | 'engaging' = 'conversational',
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
     try {
       setProcessingArticle(articleId);

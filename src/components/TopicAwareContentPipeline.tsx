@@ -389,7 +389,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 toneOverrides={toneOverrides}
                 writingStyleOverrides={writingStyleOverrides}
                 defaultTone={currentTopic?.default_tone || 'conversational'}
-                defaultWritingStyle={currentTone?.default_writing_style || 'journalistic'}
+                defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                 onSlideQuantityChange={handleSlideQuantityChange}
                 onToneOverrideChange={handleToneOverrideChange}
                 onWritingStyleOverrideChange={handleWritingStyleOverrideChange}

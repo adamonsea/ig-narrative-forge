@@ -20,6 +20,7 @@ interface Article {
   import_metadata?: any;
 }
 
+// Updated ArticlesList interface with writing style support
 interface ArticlesListProps {
   articles: Article[];
   processingArticle: string | null;
