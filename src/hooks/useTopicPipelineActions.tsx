@@ -274,7 +274,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
 
       toast({
         title: "Returned to Review",
-        description: "Story has been returned to draft status for review"
+        description: "Story has been returned to draft status and will appear in pending articles"
       });
 
       onRefresh();

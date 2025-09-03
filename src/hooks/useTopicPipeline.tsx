@@ -327,13 +327,19 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'stories'
         },
-        () => {
-          console.log('🔄 Stories updated, refreshing pipeline');
-          loadTopicContent();
+        (payload) => {
+          console.log('🔄 Story status updated:', payload);
+          // Only refresh if status changed to/from ready or draft
+          const oldRecord = payload.old as any;
+          const newRecord = payload.new as any;
+          if (oldRecord?.status !== newRecord?.status && 
+              (['ready', 'draft'].includes(oldRecord?.status) || ['ready', 'draft'].includes(newRecord?.status))) {
+            loadTopicContent();
+          }
         }
       )
       .subscribe();

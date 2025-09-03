@@ -87,6 +87,34 @@ export const FixedApprovedStoriesPanel = () => {
 
   useEffect(() => {
     loadApprovedStories();
+
+    // Set up real-time subscription for stories changes
+    const channel = supabase
+      .channel('approved-stories-panel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          console.log('🔄 Story status change detected:', payload);
+          const oldRecord = payload.old as any;
+          const newRecord = payload.new as any;
+          
+          // Refresh if a story moves to/from ready status
+          if (oldRecord?.status !== newRecord?.status && 
+              (oldRecord?.status === 'ready' || newRecord?.status === 'ready')) {
+            loadApprovedStories();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadApprovedStories = async () => {

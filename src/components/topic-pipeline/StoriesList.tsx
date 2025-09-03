@@ -137,12 +137,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                   </div>
                   
                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
-                    <div className="flex items-center gap-1">
-                      {getStatusBadge(story.status)}
-                      <StyleTooltip 
-                        styleChoices={story.content_generation_queue?.[0] || {}} 
-                      />
-                    </div>
+                    {getStatusBadge(story.status)}
                     <span>{story.slides?.length || 0} slides</span>
                     <span>{article?.word_count || 0} words</span>
                     <span>
