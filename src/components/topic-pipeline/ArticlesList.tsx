@@ -112,13 +112,16 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         return (
           <Card 
             key={article.id} 
-            className={`transition-all duration-300 hover:shadow-md transform-gpu ${
+            className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
               isDeleting || isAnimatingAway
                 ? 'animate-discard' 
                 : isProcessing
                 ? 'animate-slide-out-right'
                 : 'animate-fade-in opacity-100 scale-100'
             }`}
+            style={{
+              animationFillMode: 'forwards'
+            }}
           >
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
