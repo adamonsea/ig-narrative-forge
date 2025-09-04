@@ -179,6 +179,17 @@ export class UniversalContentExtractor {
     this.domain = this.extractDomain(normalizedUrl);
     this.siteConfig = SITE_CONFIGS[this.domain] || SITE_CONFIGS['default'];
     this.isGovernmentSite = this.detectGovernmentSite(normalizedUrl);
+    
+    // Enhanced configuration for better success rates
+    if (this.isGovernmentSite) {
+      this.siteConfig = {
+        ...this.siteConfig,
+        respectfulCrawling: true,
+        minDelay: 3000,
+        maxRetries: 5,
+        timeout: 45000
+      };
+    }
   }
 
   private extractDomain(url: string): string {

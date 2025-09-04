@@ -6,6 +6,49 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Generate smart recommendations based on error patterns
+function generateRecommendations(errorsByType, successRate) {
+  const recommendations = [];
+  
+  if (errorsByType.access_denied?.length > 0) {
+    recommendations.push({
+      type: 'access_denied',
+      title: 'Access Issues Detected',
+      description: `${errorsByType.access_denied.length} sources are blocking access. Consider checking if feeds have moved or require authentication.`,
+      actions: ['Check source websites manually', 'Look for alternative RSS feeds', 'Contact source administrators']
+    });
+  }
+  
+  if (errorsByType.not_found?.length > 0) {
+    recommendations.push({
+      type: 'not_found',
+      title: 'Missing Feeds Found',
+      description: `${errorsByType.not_found.length} feed URLs return 404 errors. These sources may have moved or discontinued their feeds.`,
+      actions: ['Verify source URLs are current', 'Search for updated RSS feed links', 'Consider removing inactive sources']
+    });
+  }
+  
+  if (errorsByType.timeout?.length > 0) {
+    recommendations.push({
+      type: 'timeout',
+      title: 'Connection Timeouts',
+      description: `${errorsByType.timeout.length} sources are timing out. This could be temporary server issues or slow responses.`,
+      actions: ['Retry gathering later', 'Check if sources are operational', 'Consider increasing timeout settings']
+    });
+  }
+  
+  if (successRate < 50) {
+    recommendations.push({
+      type: 'low_success_rate',
+      title: 'Low Success Rate',
+      description: `Only ${successRate}% of sources succeeded. Consider reviewing and updating your source list.`,
+      actions: ['Review source quality', 'Update problematic feed URLs', 'Add more reliable sources']
+    });
+  }
+  
+  return recommendations;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -97,7 +140,7 @@ serve(async (req) => {
       );
     }
 
-    // Trigger re-scraping for each source using appropriate scraper
+    // Trigger re-scraping for each source using appropriate scraper with enhanced error handling
     const triggerPromises = sources.map(async (source) => {
       try {
         // Create appropriate request body based on topic type
@@ -119,7 +162,29 @@ serve(async (req) => {
 
         if (error) {
           console.error(`❌ Re-scan failed for source ${source.source_name}:`, error);
-          return { success: false, sourceId: source.id, error: error.message };
+          
+          // Categorize error types for intelligent handling
+          let errorType = 'unknown';
+          let errorDetails = error.message || 'Unknown error';
+          
+          if (errorDetails.includes('403') || errorDetails.includes('Forbidden')) {
+            errorType = 'access_denied';
+          } else if (errorDetails.includes('404') || errorDetails.includes('Not Found')) {
+            errorType = 'not_found';
+          } else if (errorDetails.includes('timeout') || errorDetails.includes('Signal timed out')) {
+            errorType = 'timeout';
+          } else if (errorDetails.includes('500') || errorDetails.includes('Internal Server Error')) {
+            errorType = 'server_error';
+          }
+          
+          return { 
+            success: false, 
+            sourceId: source.id, 
+            sourceName: source.source_name,
+            error: errorDetails,
+            errorType: errorType,
+            articlesStored: 0
+          };
         }
 
         console.log(`✅ Re-scan successful for ${source.source_name}: ${data?.articlesStored || 0} articles`);
@@ -127,24 +192,61 @@ serve(async (req) => {
           success: true, 
           sourceId: source.id, 
           sourceName: source.source_name,
-          articlesStored: data?.articlesStored || 0 
+          articlesStored: data?.articlesStored || 0,
+          errorType: null,
+          error: null
         };
       } catch (error) {
         console.error(`❌ Re-scan error for source ${source.source_name}:`, error);
-        return { success: false, sourceId: source.id, error: error.message };
+        return { 
+          success: false, 
+          sourceId: source.id, 
+          sourceName: source.source_name,
+          error: error.message || 'Unknown error',
+          errorType: 'exception',
+          articlesStored: 0
+        };
       }
     });
 
     const results = await Promise.allSettled(triggerPromises);
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const fulfilledResults = results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+    const successful = fulfilledResults.filter(r => r.success).length;
     const failed = results.length - successful;
+    const totalArticles = fulfilledResults.reduce((sum, r) => sum + (r.articlesStored || 0), 0);
 
-    // Log the trigger event
+    // Calculate success rate and determine response status
+    const successRate = sources.length > 0 ? (successful / sources.length) * 100 : 0;
+    const isPartialSuccess = successful > 0 && failed > 0;
+    const isCompleteFailure = successful === 0 && failed > 0;
+    
+    // Group errors by type for better reporting
+    const errorsByType = {};
+    fulfilledResults.filter(r => !r.success).forEach(result => {
+      const type = result.errorType || 'unknown';
+      if (!errorsByType[type]) errorsByType[type] = [];
+      errorsByType[type].push({
+        source: result.sourceName,
+        error: result.error
+      });
+    });
+
+    // Create detailed response message
+    let message;
+    if (isCompleteFailure) {
+      message = `All ${failed} sources failed to gather content`;
+    } else if (isPartialSuccess) {
+      message = `Partial success: ${successful} of ${sources.length} sources gathered content successfully`;
+    } else {
+      message = `All ${successful} sources gathered content successfully`;
+    }
+
+    // Log the trigger event with enhanced context
     const { error: logError } = await supabase
       .from('system_logs')
       .insert({
-        level: 'info',
-        message: `Keyword rescan trigger completed`,
+        level: isCompleteFailure ? 'error' : isPartialSuccess ? 'warn' : 'info',
+        message: `Keyword rescan trigger completed: ${message}`,
         context: {
           topicId,
           triggerType,
@@ -153,7 +255,12 @@ serve(async (req) => {
           totalSources: sources.length,
           successful,
           failed,
-          results: results.map(r => r.status === 'fulfilled' ? r.value : { error: 'Promise rejected' })
+          successRate: Math.round(successRate),
+          totalArticles,
+          errorsByType,
+          detailedResults: fulfilledResults,
+          isPartialSuccess,
+          isCompleteFailure
         },
         function_name: 'keyword-rescan-trigger'
       });
@@ -162,17 +269,25 @@ serve(async (req) => {
       console.warn('⚠️  Failed to log trigger event:', logError);
     }
 
+    // Return response with detailed results
     return new Response(
       JSON.stringify({
-        success: true,
-        message: `Rescan trigger completed: ${successful}/${sources.length} sources processed successfully`,
+        success: !isCompleteFailure, // Success if we got any results
+        isPartialSuccess,
+        isCompleteFailure,
+        message,
         sourcesTriggered: sources.length,
         successful,
         failed,
-        topicId
+        successRate: Math.round(successRate),
+        totalArticles,
+        topicId,
+        detailedResults: fulfilledResults,
+        errorsByType,
+        recommendations: generateRecommendations(errorsByType, successRate)
       }),
       { 
-        status: 200, 
+        status: isCompleteFailure ? 206 : 200, // 206 Partial Content for partial success
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );

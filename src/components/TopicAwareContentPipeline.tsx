@@ -321,28 +321,52 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       const { data, error } = await supabase.functions.invoke('keyword-rescan-trigger', {
         body: { 
           topicId: selectedTopicId,
-          action: 'manual_gather'
+          triggerType: 'manual_gather'
         }
       });
 
       if (error) throw error;
 
-      if (data?.success) {
+      // Handle the enhanced response format with partial success support
+      if (data.isPartialSuccess) {
         toast({
-          title: "Content Gathering Complete",
-          description: `Found ${data.articlesFound || 0} new articles from ${data.sourcesProcessed || 0} sources`,
+          title: "Partial Success",
+          description: `${data.message}. ${data.totalArticles} new articles found. Some sources failed.`,
+          variant: "default",
         });
         
-        // Refresh the content after gathering
-        loadTopicContent();
+        console.log('Gathering completed with partial success:', {
+          successRate: data.successRate,
+          totalArticles: data.totalArticles,
+          recommendations: data.recommendations,
+          errorsByType: data.errorsByType
+        });
+        
+        // Show recommendations if available
+        if (data.recommendations?.length > 0) {
+          // You could enhance this to show recommendations in a modal or notification
+          console.log('Recommendations for improving gathering:', data.recommendations);
+        }
+        
+      } else if (data.isCompleteFailure) {
+        throw new Error(`All sources failed: ${data.message}`);
+        
+      } else if (data.success) {
+        toast({
+          title: "Content Gathering Complete",
+          description: `Successfully gathered ${data.totalArticles || 0} articles from ${data.successful}/${data.sourcesTriggered} sources`,
+        });
       } else {
         throw new Error(data?.error || 'Content gathering failed');
       }
 
+      // Always refresh the content after any gathering attempt
+      loadTopicContent();
+
     } catch (error: any) {
       console.error('Error gathering content:', error);
       toast({
-        title: "Gathering Failed",
+        title: "Gathering Failed", 
         description: error.message || "Failed to gather content from sources",
         variant: "destructive",
       });
