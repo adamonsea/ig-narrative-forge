@@ -524,101 +524,116 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       {selectedTopicId && (
         <>
           {/* Content Pipeline Tabs */}
-          <Tabs defaultValue="articles" className="space-y-6">
-            <TabsList className="grid w-full mobile-tabs">
-              <TabsTrigger value="articles">
-                Pending Articles ({stats.pending_articles})
+          <Tabs defaultValue="pending" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="pending">
+                Pending Articles ({articles.filter((a: any) => !a.is_low_score).length})
               </TabsTrigger>
               <TabsTrigger value="queue">
-                Processing Queue ({stats.processing_queue})
+                Generation Queue ({queueItems.length})
               </TabsTrigger>
               <TabsTrigger value="stories">
-                Published ({stats.ready_stories})
+                Ready Stories ({stories.length})
+              </TabsTrigger>
+              <TabsTrigger value="sentiment" className="relative">
+                Sentiment Analysis
                 {reviewCount > 0 && (
-                  <Bell className="ml-2 h-4 w-4 text-orange-500" />
+                  <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
+                    {reviewCount}
+                  </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="articles" className="space-y-6">
-              <div className="flex justify-end items-center">
-                <Button onClick={handleGatherAll} disabled={loading || isGathering}>
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isGathering ? 'animate-spin' : ''}`} />
-                  {isGathering ? 'Gathering...' : 'Gather All'}
-                </Button>
-              </div>
+              <TabsContent value="pending" className="space-y-4">
+                {/* High Quality Articles */}
+                <ArticlesList 
+                  articles={articles.filter((a: any) => !a.is_low_score)}
+                  processingArticle={processingArticle}
+                  slideQuantities={slideQuantities}
+                  deletingArticles={deletingArticles}
+                  animatingArticles={animatingArticles}
+                  toneOverrides={toneOverrides}
+                  writingStyleOverrides={writingStyleOverrides}
+                  defaultTone={currentTopic?.default_tone || 'conversational'}
+                  defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+                  topicKeywords={currentTopic?.keywords || []}
+                  topicLandmarks={currentTopic?.landmarks || []}
+                  onSlideQuantityChange={handleSlideQuantityChange}
+                  onToneOverrideChange={handleToneOverrideChange}
+                  onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                  onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
+                  onPreview={(article) => setPreviewArticle(article)}
+                  onDelete={deleteArticle}
+                />
+                
+                {/* Low Quality Articles Section */}
+                {articles.filter((a: any) => a.is_low_score).length > 0 && (
+                  <div className="space-y-4">
+                    <div className="border-t pt-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Badge variant="destructive" className="text-xs">
+                          Low Relevance
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {articles.filter((a: any) => a.is_low_score).length} articles with low relevance scores
+                        </span>
+                      </div>
+                      <ArticlesList 
+                        articles={articles.filter((a: any) => a.is_low_score)}
+                        processingArticle={processingArticle}
+                        slideQuantities={slideQuantities}
+                        deletingArticles={deletingArticles}
+                        animatingArticles={animatingArticles}
+                        toneOverrides={toneOverrides}
+                        writingStyleOverrides={writingStyleOverrides}
+                        defaultTone={currentTopic?.default_tone || 'conversational'}
+                        defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+                        topicKeywords={currentTopic?.keywords || []}
+                        topicLandmarks={currentTopic?.landmarks || []}
+                        onSlideQuantityChange={handleSlideQuantityChange}
+                        onToneOverrideChange={handleToneOverrideChange}
+                        onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                        onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
+                        onPreview={(article) => setPreviewArticle(article)}
+                        onDelete={deleteArticle}
+                      />
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
 
-              <ArticlesList
-                articles={articles}
-                processingArticle={processingArticle}
-                slideQuantities={slideQuantities}
-                deletingArticles={deletingArticles}
-                animatingArticles={animatingArticles}
-                toneOverrides={toneOverrides}
-                writingStyleOverrides={writingStyleOverrides}
-                defaultTone={currentTopic?.default_tone || 'conversational'}
-                defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-                topicKeywords={currentTopic?.keywords || []}
-                topicLandmarks={currentTopic?.landmarks || []}
-                onSlideQuantityChange={handleSlideQuantityChange}
-                onToneOverrideChange={handleToneOverrideChange}
-                onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
-                onPreview={(article) => setPreviewArticle(article)}
-                onDelete={deleteArticle}
-              />
-            </TabsContent>
+              <TabsContent value="queue" className="space-y-6">
+                <QueueList
+                  queueItems={queueItems}
+                  deletingQueueItems={deletingQueueItems}
+                  onCancel={cancelQueueItem}
+                  onRetry={(queueId) => console.log('Retry not implemented yet')}
+                />
+              </TabsContent>
 
-            <TabsContent value="queue" className="space-y-6">
-              <QueueList
-                queueItems={queueItems}
-                deletingQueueItems={deletingQueueItems}
-                onCancel={cancelQueueItem}
-                onRetry={(queueId) => console.log('Retry not implemented yet')}
-              />
-            </TabsContent>
+              <TabsContent value="stories" className="space-y-6">
+                <StoriesList
+                  stories={stories}
+                  expandedStories={expandedStories}
+                  processingApproval={processingApproval}
+                  processingRejection={processingRejection}
+                  deletingStories={deletingStories}
+                  publishingStories={new Set()}
+                  animatingStories={animatingStories}
+                  onToggleExpanded={toggleStoryExpanded}
+                  onApprove={approveStory}
+                  onReject={rejectStory}
+                  onDelete={deleteStory}
+                  onReturnToReview={returnToReview}
+                  onEditSlide={handleEditSlide}
+                  onViewStory={setViewingStory}
+                />
+              </TabsContent>
 
-            <TabsContent value="stories" className="space-y-6">
-              {/* Sub-tabs for Published content */}
-              <Tabs defaultValue="stories" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="stories">
-                    Stories ({stats.ready_stories})
-                  </TabsTrigger>
-                  <TabsTrigger value="sentiment">
-                    Sentiment Cards
-                    {reviewCount > 0 && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {reviewCount}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="stories">
-                  <StoriesList
-                    stories={stories}
-                    expandedStories={expandedStories}
-                    processingApproval={processingApproval}
-                    processingRejection={processingRejection}
-                    deletingStories={deletingStories}
-                    publishingStories={new Set()}
-                    animatingStories={animatingStories}
-                    onToggleExpanded={toggleStoryExpanded}
-                    onApprove={approveStory}
-                    onReject={rejectStory}
-                    onDelete={deleteStory}
-                    onReturnToReview={returnToReview}
-                    onEditSlide={handleEditSlide}
-                    onViewStory={setViewingStory}
-                  />
-                </TabsContent>
-
-                <TabsContent value="sentiment">
-                  <SentimentManager topicId={selectedTopicId} />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
+              <TabsContent value="sentiment" className="space-y-4">
+                <SentimentManager topicId={selectedTopicId} />
+              </TabsContent>
           </Tabs>
 
           {/* View Story Dialog */}

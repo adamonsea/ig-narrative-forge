@@ -137,6 +137,32 @@ export const useTopicPipeline = (selectedTopicId: string) => {
     try {
       setLoading(true);
 
+      // First get topic config for keyword overlap calculation
+      const { data: topicConfig } = await supabase
+        .from('topics')
+        .select('keywords, landmarks, postcodes, organizations')
+        .eq('id', selectedTopicId)
+        .single();
+
+      // Calculate keyword overlap between article and topic
+      const calculateKeywordOverlap = (article: any, topicConfig: any) => {
+        if (!article?.title || !topicConfig?.keywords) return 0;
+        
+        const articleText = `${article.title} ${article.body || ''}`.toLowerCase();
+        const topicKeywords = topicConfig.keywords || [];
+        
+        if (topicKeywords.length === 0) return 50; // Default if no topic keywords
+        
+        let matches = 0;
+        topicKeywords.forEach((keyword: string) => {
+          if (articleText.includes(keyword.toLowerCase())) {
+            matches++;
+          }
+        });
+        
+        return Math.round((matches / topicKeywords.length) * 100);
+      };
+
       // Get articles in queue or with stories to exclude them
       const { data: queueArticles } = await supabase
         .from('content_generation_queue')
@@ -198,7 +224,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       
       if (articlesError) throw new Error(`Failed to load articles: ${articlesError.message}`);
 
-      // Additional filtering to remove duplicates based on title similarity
+      // Additional filtering to remove duplicates based on title similarity and add relevance flagging
       const filteredArticles = allPendingArticles.filter(article => {
         const articleTitle = article.title?.toLowerCase().trim();
         if (!articleTitle) return true;
@@ -210,6 +236,16 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         });
         
         return !isDuplicate && !excludedIds.includes(article.id);
+      }).map(article => {
+        // Add keyword overlap scoring and low relevance flagging
+        const keywordOverlap = calculateKeywordOverlap(article, topicConfig);
+        const isLowScore = (article.regional_relevance_score || 0) < 70 || keywordOverlap < 30;
+        
+        return {
+          ...article,
+          keyword_overlap_score: keywordOverlap,
+          is_low_score: isLowScore
+        };
       });
 
       // Load content generation queue for this topic

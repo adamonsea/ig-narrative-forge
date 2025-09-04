@@ -97,11 +97,14 @@ export const SentimentCard = ({
       order: 3,
       metadata: { platform: externalData.platform, percentage: externalData.percentage }
     }] : []),
-    ...(content.key_quote ? [{
+    // Only include quote slide if there's a meaningful quote (not "No quote available" etc.)
+    ...(content.key_quote && 
+        !content.key_quote.toLowerCase().includes('no quote') &&
+        !content.key_quote.toLowerCase().includes('not available') &&
+        content.key_quote.trim().length > 10 ? [{
       type: 'quote' as const,
       content: content.key_quote,
-      order: 4,
-      metadata: {}
+      order: 4
     }] : []),
     {
       type: 'references' as const,

@@ -180,6 +180,13 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                         {article.content_quality_score || 0}% quality
                       </span>
                     </div>
+                    {(article as any).keyword_overlap_score !== undefined && (
+                      <div>
+                        <span className={(article as any).keyword_overlap_score < 30 ? "text-red-600" : "text-green-600"}>
+                          {(article as any).keyword_overlap_score}% keywords
+                        </span>
+                      </div>
+                    )}
                     <div>
                       {article.word_count || 0} words
                     </div>
@@ -187,6 +194,11 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                       <div>
                         by {article.author}
                       </div>
+                    )}
+                    {(article as any).is_low_score && (
+                      <Badge variant="destructive" className="text-xs">
+                        Low Relevance
+                      </Badge>
                     )}
                   </div>
                 </div>
