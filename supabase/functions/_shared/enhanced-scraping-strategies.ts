@@ -4,22 +4,59 @@ import { calculateRegionalRelevance } from './region-config.ts';
 
 export class EnhancedScrapingStrategies {
   private extractor: UniversalContentExtractor;
+  private retryAttempts: number = 0;
+  private maxRetries: number = 4; // Increased retry attempts
+  private fallbackMethods: string[] = [];
 
   constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
     this.extractor = new UniversalContentExtractor(baseUrl);
   }
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
-    console.log(`🚀 Starting enhanced scraping for ${this.sourceInfo?.source_name || this.baseUrl}`);
+    console.log(`🚀 Starting resilient multi-strategy scraping for ${this.sourceInfo?.source_name || this.baseUrl}`);
     
-    // Try RSS first, then HTML parsing with enhanced extraction
-    const rssResult = await this.tryRSSStrategy();
-    if (rssResult.success && rssResult.articles.length > 0) {
-      return rssResult;
+    // Multi-strategy approach with comprehensive fallbacks
+    const strategies = [
+      { name: 'RSS', method: () => this.tryRSSStrategy() },
+      { name: 'Enhanced HTML', method: () => this.tryEnhancedHTMLStrategy() },
+      { name: 'Sitemap Discovery', method: () => this.trySitemapStrategy() },
+      { name: 'Heuristic Parsing', method: () => this.tryHeuristicStrategy() }
+    ];
+
+    let lastError: Error | null = null;
+    this.fallbackMethods = [];
+
+    for (const strategy of strategies) {
+      try {
+        console.log(`🔄 Trying strategy: ${strategy.name}`);
+        const result = await strategy.method();
+        
+        if (result.success && result.articles.length > 0) {
+          console.log(`✅ Strategy ${strategy.name} succeeded with ${result.articles.length} articles`);
+          return { ...result, method: strategy.name.toLowerCase().replace(' ', '_') as any };
+        } else {
+          console.log(`⚠️ Strategy ${strategy.name} found no articles or failed`);
+          this.fallbackMethods.push(strategy.name);
+        }
+      } catch (error) {
+        console.log(`❌ Strategy ${strategy.name} failed: ${error.message}`);
+        this.fallbackMethods.push(`${strategy.name} (error)`);
+        lastError = error as Error;
+      }
     }
-    
-    console.log('📄 RSS failed or no articles found, trying enhanced HTML parsing...');
-    return await this.tryEnhancedHTMLStrategy();
+
+    // If all strategies failed, return failure result
+    return {
+      success: false,
+      articles: [],
+      articlesFound: 0,
+      articlesScraped: 0,
+      errors: [
+        `All scraping strategies failed. Tried: ${this.fallbackMethods.join(', ')}`,
+        ...(lastError ? [lastError.message] : [])
+      ],
+      method: 'fallback'
+    };
   }
 
   private async tryRSSStrategy(): Promise<ScrapingResult> {
@@ -388,6 +425,115 @@ export class EnhancedScrapingStrategies {
     } catch {
       return url.startsWith('http') ? url : `${baseUrl}${url}`;
     }
+  }
+
+  private async trySitemapStrategy(): Promise<ScrapingResult> {
+    console.log('🗺️ Attempting sitemap discovery...');
+    
+    try {
+      const sitemapUrls = [`${this.baseUrl}/sitemap.xml`, `${this.baseUrl}/sitemap_index.xml`];
+      
+      for (const sitemapUrl of sitemapUrls) {
+        try {
+          const sitemapContent = await this.extractor.fetchWithRetry(sitemapUrl, 2);
+          const articleUrls = this.extractUrlsFromSitemap(sitemapContent);
+          
+          if (articleUrls.length > 0) {
+            return await this.parseURLList(articleUrls, 'sitemap');
+          }
+        } catch (error) {
+          console.log(`⚠️ Sitemap ${sitemapUrl} failed: ${error.message}`);
+        }
+      }
+      
+      throw new Error('No valid sitemaps found');
+    } catch (error) {
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [error.message],
+        method: 'sitemap'
+      };
+    }
+  }
+
+  private async tryHeuristicStrategy(): Promise<ScrapingResult> {
+    console.log('🔍 Attempting heuristic content discovery...');
+    
+    try {
+      // Try common URL patterns for articles
+      const commonPaths = ['/news/', '/articles/', '/blog/', '/posts/'];
+      const urls: string[] = [];
+      
+      for (const path of commonPaths) {
+        urls.push(`${this.baseUrl}${path}`);
+      }
+      
+      return await this.parseURLList(urls.slice(0, 5), 'heuristic');
+    } catch (error) {
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [error.message],
+        method: 'heuristic'
+      };
+    }
+  }
+
+  private extractUrlsFromSitemap(sitemapContent: string): string[] {
+    const urlMatches = sitemapContent.match(/<loc>([^<]+)<\/loc>/gi) || [];
+    return urlMatches.map(match => match.replace(/<\/?loc>/g, '')).slice(0, 20);
+  }
+
+  private async parseURLList(urls: string[], method: string): Promise<ScrapingResult> {
+    const articles: ArticleData[] = [];
+    const errors: string[] = [];
+    
+    for (const url of urls) {
+      try {
+        const extractor = new UniversalContentExtractor(url);
+        const html = await extractor.fetchWithRetry(url);
+        const content = extractor.extractContentFromHTML(html, url);
+        
+        if (content.body && this.isContentQualified(content)) {
+          const relevance = this.calculateEnhancedRegionalRelevance(content.body, content.title, url);
+          
+          articles.push({
+            title: content.title,
+            body: content.body,
+            author: content.author,
+            published_at: content.published_at,
+            source_url: url,
+            canonical_url: url,
+            word_count: content.word_count,
+            regional_relevance_score: relevance,
+            content_quality_score: content.content_quality_score,
+            processing_status: 'new' as const,
+            import_metadata: {
+              extraction_method: method,
+              source_domain: this.sourceInfo?.canonical_domain,
+              scrape_timestamp: new Date().toISOString(),
+              extractor_version: '2.0'
+            }
+          });
+        }
+      } catch (error) {
+        errors.push(`${method} URL parsing error: ${error.message}`);
+      }
+    }
+    
+    return {
+      success: articles.length > 0,
+      articles,
+      articlesFound: urls.length,
+      articlesScraped: articles.length,
+      errors,
+      method: method as any
+    };
   }
 
   private countWords(text: string): number {
