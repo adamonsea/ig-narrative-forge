@@ -84,14 +84,8 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
     );
   }
 
-  if (hasExistingImage && !isGenerating) {
-    return (
-      <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
-        <ImageIcon className="w-3 h-3" />
-        Illustrated
-      </Badge>
-    );
-  }
+  // Always show dropdown when not generating - removed the hasExistingImage check
+  // This allows regeneration after deletion
 
   return (
     <DropdownMenu>

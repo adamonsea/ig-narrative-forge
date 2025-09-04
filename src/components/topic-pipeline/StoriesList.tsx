@@ -164,9 +164,11 @@ export const StoriesList: React.FC<StoriesListProps> = ({
           description: 'Cover illustration has been removed successfully.',
         });
         
-        // Refresh stories to remove the illustration
+        // Force refresh to update story data
         if (onRefresh) {
-          await onRefresh();
+          setTimeout(async () => {
+            await onRefresh();
+          }, 500); // Small delay to ensure backend update completes
         }
       } else {
         throw new Error(data?.error || 'Failed to delete illustration');
