@@ -76,14 +76,18 @@ serve(async (req) => {
       switch (modelName) {
         case 'gpt-image-1':
           return { credits: 10, cost: 0.06, provider: 'openai' };
+        case 'ideogram':
+          return { credits: 4, cost: 0.15, provider: 'ideogram' }; // Lower cost tier
         case 'dall-e-3':
           return { credits: 5, cost: 0.04, provider: 'openai' };
         case 'dall-e-2':
           return { credits: 3, cost: 0.02, provider: 'openai' };
         case 'flux-schnell':
           return { credits: 2, cost: 0.01, provider: 'huggingface' };
-        case 'ideogram':
-          return { credits: 8, cost: 0.05, provider: 'ideogram' };
+        case 'amazon-titan':
+          return { credits: 1, cost: 0.01, provider: 'amazon' }; // Very cost effective
+        case 'nebius-flux':
+          return { credits: 1, cost: 0.0013, provider: 'nebius' }; // Cheapest option
         default:
           return { credits: 5, cost: 0.04, provider: 'openai' };
       }
@@ -227,8 +231,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
             aspect_ratio: 'ASPECT_1_1', // Square format
             model: 'V_2',
             magic_prompt_option: 'AUTO',
-            style_type: 'GENERAL',
-            resolution: '512'  // Smaller resolution for cost savings
+            style_type: 'GENERAL'
           }
         }),
       })
@@ -249,6 +252,80 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         imageBase64 = btoa(String.fromCharCode(...uint8Array))
       } else {
         throw new Error('Ideogram generation failed or returned no image')
+      }
+    } else if (modelConfig.provider === 'amazon') {
+      // Amazon Titan Image Generator G1
+      const amazonResponse = await fetch('https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-image-generator-v1/invoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `AWS4-HMAC-SHA256 Credential=${Deno.env.get('AWS_ACCESS_KEY_ID')}/20241201/us-east-1/bedrock/aws4_request`,
+          'X-Amz-Target': 'DynamoDB_20120810.InvokeModel'
+        },
+        body: JSON.stringify({
+          taskType: 'TEXT_IMAGE',
+          textToImageParams: {
+            text: illustrationPrompt,
+            negativeText: 'text, words, letters, sentences, watermark, blurry, low quality'
+          },
+          imageGenerationConfig: {
+            numberOfImages: 1,
+            height: 512,
+            width: 512,
+            cfgScale: 8.0,
+            seed: Math.floor(Math.random() * 2147483647) // Random seed for variety
+          }
+        }),
+      })
+
+      if (!amazonResponse.ok) {
+        const errorData = await amazonResponse.text()
+        console.error('Amazon Titan API error:', errorData)
+        throw new Error(`Amazon Titan API error: ${amazonResponse.statusText}`)
+      }
+
+      const amazonData = await amazonResponse.json()
+      if (amazonData.images && amazonData.images[0]) {
+        imageBase64 = amazonData.images[0]
+      } else {
+        throw new Error('Amazon Titan generation failed or returned no image')
+      }
+    } else if (modelConfig.provider === 'nebius') {
+      // Nebius Studio - ultra cost-effective FLUX
+      const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('NEBIUS_API_KEY')}`,
+        },
+        body: JSON.stringify({
+          model: 'flux-1.1-pro-ultra',
+          prompt: illustrationPrompt,
+          width: 512,
+          height: 512,
+          num_images: 1,
+          guidance_scale: 3.5,
+          num_inference_steps: 28,
+          seed: Math.floor(Math.random() * 2147483647) // Random seed for variety
+        }),
+      })
+
+      if (!nebiusResponse.ok) {
+        const errorData = await nebiusResponse.text()
+        console.error('Nebius API error:', errorData)
+        throw new Error(`Nebius API error: ${nebiusResponse.statusText}`)
+      }
+
+      const nebiusData = await nebiusResponse.json()
+      if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].url) {
+        // Download the image and convert to base64
+        const imageResponse = await fetch(nebiusData.data[0].url)
+        const imageBlob = await imageResponse.blob()
+        const arrayBuffer = await imageBlob.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        imageBase64 = btoa(String.fromCharCode(...uint8Array))
+      } else {
+        throw new Error('Nebius generation failed or returned no image')
       }
     } else {
       throw new Error(`Model ${model} provider ${modelConfig.provider} not implemented`)

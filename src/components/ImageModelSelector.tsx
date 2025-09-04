@@ -26,8 +26,8 @@ export const imageModels: ImageModel[] = [
     id: 'ideogram',
     name: 'Premium Editorial',
     description: 'Ideogram V2 - High quality editorial style illustrations',
-    costUsd: 0.05,
-    credits: 8,
+    costUsd: 0.15,
+    credits: 4,
     provider: 'ideogram'
   },
   {
@@ -53,6 +53,22 @@ export const imageModels: ImageModel[] = [
     costUsd: 0.01,
     credits: 2,
     provider: 'huggingface'
+  },
+  {
+    id: 'amazon-titan',
+    name: 'Budget Quality',
+    description: 'Amazon Titan G1 - Very cost-effective at $0.01 per image',
+    costUsd: 0.01,
+    credits: 1,
+    provider: 'amazon'
+  },
+  {
+    id: 'nebius-flux',
+    name: 'Ultra Budget',
+    description: 'Nebius FLUX - Cheapest option at $0.0013 per image',
+    costUsd: 0.0013,
+    credits: 1,
+    provider: 'nebius'
   }
 ];
 
