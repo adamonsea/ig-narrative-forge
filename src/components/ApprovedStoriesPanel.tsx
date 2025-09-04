@@ -8,6 +8,7 @@ import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { useCredits } from '@/hooks/useCredits';
 import { CreditService } from '@/lib/creditService';
+import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
 import { 
   CheckCircle2, 
   X, 
@@ -179,24 +180,14 @@ export const ApprovedStoriesPanel = () => {
     }
   };
 
-  const handleGenerateIllustration = async (story: Story) => {
+  const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
-    
-    // Check if illustration already exists
-    if (story.cover_illustration_url) {
-      toast({
-        title: 'Illustration Already Exists',
-        description: 'This story already has a cover illustration.',
-        variant: 'default',
-      });
-      return;
-    }
 
     // Check credits
-    if (!credits || credits.credits_balance < 10) {
+    if (!credits || credits.credits_balance < model.credits) {
       toast({
         title: 'Insufficient Credits',
-        description: 'You need 10 credits to generate a story illustration.',
+        description: `You need ${model.credits} credits to generate with ${model.name}.`,
         variant: 'destructive',
       });
       return;
@@ -205,12 +196,12 @@ export const ApprovedStoriesPanel = () => {
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
 
     try {
-      const result = await CreditService.generateStoryIllustration(story.id);
+      const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
       if (result.success) {
         toast({
-          title: 'Illustration Generated Successfully',
-          description: `Used ${result.credits_used} credits. New balance: ${result.new_balance}`,
+          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
+          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
         });
         
         // Refresh stories to show the new illustration
@@ -493,28 +484,11 @@ export const ApprovedStoriesPanel = () => {
                       </div>
                       <div className="flex items-center gap-2 ml-4">
                         {/* Story Illustration Button */}
-                        {story.cover_illustration_url ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3" />
-                            Illustrated
-                          </Badge>
-                        ) : generatingIllustrations.has(story.id) ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Generating...
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleGenerateIllustration(story)}
-                            className="flex items-center gap-1"
-                            title="Generate cover illustration (10 credits)"
-                          >
-                            <ImageIcon className="w-3 h-3" />
-                            Generate Cover
-                          </Button>
-                        )}
+                        <ImageModelSelector
+                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                          isGenerating={generatingIllustrations.has(story.id)}
+                          hasExistingImage={!!story.cover_illustration_url}
+                        />
                         
                         {renderCarouselActions(story)}
                         <Button

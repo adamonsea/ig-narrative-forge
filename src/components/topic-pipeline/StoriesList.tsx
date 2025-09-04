@@ -10,6 +10,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/lib/creditService";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 
 interface Slide {
   id: string;
@@ -94,16 +95,16 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
 
-  const handleGenerateIllustration = async (story: Story) => {
+  const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
     
     // For regeneration, don't check if illustration exists
     
     // Check credits (bypass for super admin)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < 10)) {
+    if (!isSuperAdmin && (!credits || credits.credits_balance < model.credits)) {
       toast({
         title: 'Insufficient Credits',
-        description: 'You need 10 credits to generate a story illustration.',
+        description: `You need ${model.credits} credits to generate with ${model.name}.`,
         variant: 'destructive',
       });
       return;
@@ -112,12 +113,12 @@ export const StoriesList: React.FC<StoriesListProps> = ({
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
 
     try {
-      const result = await CreditService.generateStoryIllustration(story.id);
+      const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
       if (result.success) {
         toast({
           title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
-          description: `Used ${result.credits_used} credits. New balance: ${result.new_balance}`,
+          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
         });
         
         // Refresh stories to show the new illustration
@@ -307,29 +308,11 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                     {story.status === 'ready' && (
                       <>
                         {/* Story Illustration Button */}
-                        {story.cover_illustration_url ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3" />
-                            Illustrated
-                          </Badge>
-                        ) : generatingIllustrations.has(story.id) ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Generating...
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleGenerateIllustration(story)}
-                            className="flex items-center gap-1"
-                            title="Generate cover illustration (10 credits)"
-                          >
-                            <ImageIcon className="w-3 h-3" />
-                            <span className="hidden sm:inline">Generate Cover</span>
-                            <span className="sm:hidden">Cover</span>
-                          </Button>
-                        )}
+                        <ImageModelSelector
+                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                          isGenerating={generatingIllustrations.has(story.id)}
+                          hasExistingImage={!!story.cover_illustration_url}
+                        />
                         
                         <Button
                           size="sm"
@@ -395,19 +378,14 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium">Cover Illustration</h4>
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleGenerateIllustration(story)}
-                            disabled={generatingIllustrations.has(story.id)}
-                            className="text-xs"
-                          >
-                            {generatingIllustrations.has(story.id) ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              'Regenerate'
-                            )}
-                          </Button>
+                          <div className="text-xs">
+                            <ImageModelSelector
+                              onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                              isGenerating={generatingIllustrations.has(story.id)}
+                              hasExistingImage={false} // Force show regeneration options
+                              size="sm"
+                            />
+                          </div>
                           <Button
                             size="sm"
                             variant="outline"

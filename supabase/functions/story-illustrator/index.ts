@@ -27,7 +27,7 @@ serve(async (req) => {
       }
     )
 
-    const { storyId } = await req.json()
+    const { storyId, model = 'gpt-image-1' } = await req.json()
 
     if (!storyId) {
       return new Response(
@@ -71,6 +71,26 @@ serve(async (req) => {
     // Allow regeneration - don't check if illustration already exists
     // This enables the regenerate functionality
 
+    // Determine credit cost based on model
+    const getModelConfig = (modelName: string) => {
+      switch (modelName) {
+        case 'gpt-image-1':
+          return { credits: 10, cost: 0.06, provider: 'openai' };
+        case 'dall-e-2':
+          return { credits: 3, cost: 0.02, provider: 'openai' };
+        case 'flux-schnell':
+          return { credits: 2, cost: 0.01, provider: 'huggingface' };
+        case 'midjourney':
+          return { credits: 3, cost: 0.02, provider: 'midjourney' };
+        case 'nebius-flux':
+          return { credits: 2, cost: 0.015, provider: 'nebius' };
+        default:
+          return { credits: 10, cost: 0.06, provider: 'openai' };
+      }
+    };
+
+    const modelConfig = getModelConfig(model);
+
     // Check if user is super admin (bypass credit deduction)
     const { data: hasAdminRole } = await supabase.rpc('has_role', {
       _user_id: user.id,
@@ -80,12 +100,12 @@ serve(async (req) => {
     const isSuperAdmin = hasAdminRole === true
     let creditResult = null
 
-    // Deduct credits (10 credits for illustration) - skip for super admin
+    // Deduct credits based on model - skip for super admin
     if (!isSuperAdmin) {
       const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
         p_user_id: user.id,
-        p_credits_amount: 10,
-        p_description: 'Story illustration generation',
+        p_credits_amount: modelConfig.credits,
+        p_description: `Story illustration generation (${model})`,
         p_story_id: storyId
       })
 
@@ -95,7 +115,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: creditResult?.error || 'Failed to deduct credits',
-            credits_required: 10
+            credits_required: modelConfig.credits
           }),
           { 
             status: 400, 
@@ -112,43 +132,53 @@ Visual concept: "${story.title}"
 
 Style: Clean black ink line art on pure white background. Simple editorial illustration style, minimalist hand-drawn aesthetic, precise linework, newspaper-ready artwork. Technical drawing style with clear contours and uncluttered composition.`
 
-    // Generate image using OpenAI gpt-image-1 (premium model)
+    // Generate image based on selected model
     const startTime = Date.now()
-    const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: illustrationPrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'high',
-        output_format: 'png',
-        background: 'opaque'
-      }),
-    })
+    let imageBase64: string
+    let generationTime: number
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.text()
-      console.error('OpenAI API error:', errorData)
-      throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
+    if (modelConfig.provider === 'openai') {
+      const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          prompt: illustrationPrompt,
+          n: 1,
+          size: '1024x1024',
+          ...(model === 'gpt-image-1' ? {
+            quality: 'high',
+            output_format: 'png',
+            background: 'opaque'
+          } : {})
+        }),
+      })
+
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.text()
+        console.error('OpenAI API error:', errorData)
+        throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
+      }
+
+      const imageData = await openaiResponse.json()
+      imageBase64 = imageData.data[0].b64_json
+    } else {
+      // For non-OpenAI models, route to appropriate service
+      // This is a placeholder - you would implement routing to other services here
+      throw new Error(`Model ${model} not yet implemented. Please use OpenAI models for now.`)
     }
 
-    const imageData = await openaiResponse.json()
-    const imageBase64 = imageData.data[0].b64_json
-    const generationTime = Date.now() - startTime
-
-    // Estimate cost for gpt-image-1 (approximately $0.10 per high-quality 1024x1024 image)
-    const estimatedCost = 0.10
+    generationTime = Date.now() - startTime
+    const estimatedCost = modelConfig.cost
 
     // Track API usage and cost for analytics
     const { error: usageError } = await supabase
       .from('api_usage')
       .insert({
-        service_name: 'openai',
+        service_name: modelConfig.provider,
         operation: 'image_generation',
         cost_usd: estimatedCost,
         tokens_used: 0, // Not applicable for image generation
@@ -196,7 +226,8 @@ Style: Clean black ink line art on pure white background. Simple editorial illus
       JSON.stringify({
         success: true,
         illustration_url: imageUrl,
-        credits_used: isSuperAdmin ? 0 : 10,
+        model: model,
+        credits_used: isSuperAdmin ? 0 : modelConfig.credits,
         new_balance: creditResult?.new_balance || null
       }),
       { 

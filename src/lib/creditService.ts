@@ -107,7 +107,10 @@ export class CreditService {
     }
   }
 
-  static async generateStoryIllustration(storyId: string): Promise<{
+  static async generateStoryIllustration(
+    storyId: string, 
+    model?: string
+  ): Promise<{
     success: boolean;
     illustration_url?: string;
     error?: string;
@@ -116,7 +119,10 @@ export class CreditService {
   }> {
     try {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {
-        body: { storyId }
+        body: { 
+          storyId,
+          model: model || 'gpt-image-1'
+        }
       });
 
       if (error) {
