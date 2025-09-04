@@ -390,12 +390,13 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     }
   };
 
-  const extractTopKeywords = (content: string, title: string = ''): string[] => {
+  const extractRelevantKeywords = (content: string, title: string = ''): string[] => {
     if (!content && !title) return [];
     
     const combinedText = `${title} ${content}`.toLowerCase();
     
-    // Common stop words to exclude
+    // For ArticlePipelinePanel, we don't have topic keywords, so we'll do basic keyword extraction
+    // but with more relevant filtering than just frequent words
     const stopWords = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
       'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -406,28 +407,34 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
       'up', 'out', 'down', 'over', 'under', 'about', 'into', 'through', 'during', 'before',
       'after', 'above', 'below', 'between', 'among', 'since', 'until', 'while', 'where',
       'when', 'why', 'how', 'what', 'which', 'who', 'whom', 'whose', 'if', 'unless',
-      'mr', 'mrs', 'ms', 'dr'
+      'mr', 'mrs', 'ms', 'dr', 'one', 'two', 'three', 'first', 'last', 'new', 'old'
     ]);
     
-    // Extract words and filter
+    // Extract words and filter for meaningful keywords
     const words = combinedText
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(word => 
-        word.length > 2 && 
+        word.length > 3 && 
         !stopWords.has(word) &&
-        !/^\d+$/.test(word) // exclude pure numbers
+        !/^\d+$/.test(word) &&
+        /^[a-zA-Z]+$/.test(word) // Only alphabetic words
       );
     
-    // Count frequency
+    // Count frequency and prefer proper nouns and longer words
     const wordCount = words.reduce((acc, word) => {
-      acc[word] = (acc[word] || 0) + 1;
+      const isProperNoun = word[0] === word[0].toUpperCase();
+      const bonus = isProperNoun ? 2 : 1;
+      acc[word] = (acc[word] || 0) + bonus;
       return acc;
     }, {} as Record<string, number>);
     
-    // Sort by frequency and take top 3
+    // Sort by frequency and take top 3, prioritizing longer words
     return Object.entries(wordCount)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([a, countA], [b, countB]) => {
+        if (countA !== countB) return countB - countA;
+        return b.length - a.length;
+      })
       .slice(0, 3)
       .map(([word]) => word);
   };
@@ -596,11 +603,11 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                               
                               {/* Keyword flags */}
                               <div className="flex flex-wrap gap-1 mb-3">
-                                {extractTopKeywords(article.body || '', article.title).map((keyword, index) => (
+                                {extractRelevantKeywords(article.body || '', article.title).map((keyword, index) => (
                                   <Badge 
                                     key={`${article.id}-keyword-${index}`}
                                     variant="outline" 
-                                    className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors"
+                                    className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors md:bg-muted/20 md:border-muted-foreground/30"
                                   >
                                     {keyword}
                                   </Badge>

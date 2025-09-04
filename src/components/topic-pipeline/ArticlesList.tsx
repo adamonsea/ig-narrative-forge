@@ -37,6 +37,8 @@ interface ArticlesListProps {
   onDelete: (articleId: string, articleTitle: string) => void;
   defaultTone: 'formal' | 'conversational' | 'engaging';
   defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  topicKeywords?: string[];
+  topicLandmarks?: string[];
 }
 
 export const ArticlesList: React.FC<ArticlesListProps> = ({
@@ -49,6 +51,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   writingStyleOverrides,
   defaultTone,
   defaultWritingStyle,
+  topicKeywords = [],
+  topicLandmarks = [],
   onSlideQuantityChange,
   onToneOverrideChange,
   onWritingStyleOverrideChange,
@@ -81,46 +85,26 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return types[type as keyof typeof types];
   };
 
-  const extractTopKeywords = (content: string, title: string = ''): string[] => {
+  const extractRelevantKeywords = (content: string, title: string = ''): string[] => {
     if (!content && !title) return [];
     
     const combinedText = `${title} ${content}`.toLowerCase();
     
-    // Common stop words to exclude
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'they', 'them', 'their',
-      'he', 'she', 'him', 'her', 'his', 'we', 'us', 'our', 'you', 'your', 'i', 'me', 'my',
-      'said', 'says', 'say', 'also', 'very', 'much', 'more', 'most', 'than', 'from',
-      'up', 'out', 'down', 'over', 'under', 'about', 'into', 'through', 'during', 'before',
-      'after', 'above', 'below', 'between', 'among', 'since', 'until', 'while', 'where',
-      'when', 'why', 'how', 'what', 'which', 'who', 'whom', 'whose', 'if', 'unless',
-      'mr', 'mrs', 'ms', 'dr'
-    ]);
+    // Combine all topic-related keywords to match against
+    const allTopicKeywords = [...topicKeywords, ...topicLandmarks].map(k => k.toLowerCase());
     
-    // Extract words and filter
-    const words = combinedText
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter(word => 
-        word.length > 2 && 
-        !stopWords.has(word) &&
-        !/^\d+$/.test(word) // exclude pure numbers
-      );
+    if (allTopicKeywords.length === 0) return [];
     
-    // Count frequency
-    const wordCount = words.reduce((acc, word) => {
-      acc[word] = (acc[word] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    // Find matching topic keywords in the article content
+    const matchedKeywords = allTopicKeywords.filter(keyword => {
+      // Check for exact word match or phrase match
+      return combinedText.includes(keyword.toLowerCase());
+    });
     
-    // Sort by frequency and take top 3
-    return Object.entries(wordCount)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3)
-      .map(([word]) => word);
+    // Sort by keyword length (longer keywords first) and take top 3
+    return matchedKeywords
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 3);
   };
 
   if (articles.length === 0) {
@@ -174,11 +158,11 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                   
                   {/* Keyword flags */}
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {extractTopKeywords(article.body || '', article.title).map((keyword, index) => (
+                    {extractRelevantKeywords(article.body || '', article.title).map((keyword, index) => (
                       <Badge 
                         key={`${article.id}-keyword-${index}`}
                         variant="outline" 
-                        className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors"
+                        className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors md:bg-muted/20 md:border-muted-foreground/30"
                       >
                         {keyword}
                       </Badge>

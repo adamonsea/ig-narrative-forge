@@ -30,6 +30,13 @@ interface Topic {
   name: string;
   topic_type: 'regional' | 'keyword';
   is_active: boolean;
+  default_tone?: 'formal' | 'conversational' | 'engaging';
+  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  audience_expertise?: 'beginner' | 'intermediate' | 'expert';
+  keywords?: string[];
+  landmarks?: string[];
+  postcodes?: string[];
+  organizations?: string[];
 }
 
 interface Article {
@@ -221,7 +228,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       const { data, error } = await supabase
         .from('topics')
-        .select('id, name, topic_type, is_active, default_tone, default_writing_style, audience_expertise')
+        .select('id, name, topic_type, is_active, default_tone, default_writing_style, audience_expertise, keywords, landmarks, postcodes, organizations')
         .eq('id', selectedTopicId)
         .single();
 
@@ -433,6 +440,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 writingStyleOverrides={writingStyleOverrides}
                 defaultTone={currentTopic?.default_tone || 'conversational'}
                 defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+                topicKeywords={currentTopic?.keywords || []}
+                topicLandmarks={currentTopic?.landmarks || []}
                 onSlideQuantityChange={handleSlideQuantityChange}
                 onToneOverrideChange={handleToneOverrideChange}
                 onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
