@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { InlineCarouselImages } from '@/components/InlineCarouselImages';
+import { useCredits } from '@/hooks/useCredits';
+import { CreditService } from '@/lib/creditService';
 import { 
   CheckCircle2, 
   X, 
@@ -20,7 +22,9 @@ import {
   Calendar,
   User,
   BookOpen,
-  Trash2
+  Trash2,
+  ImageIcon,
+  Loader2
 } from 'lucide-react';
 
 interface Slide {
@@ -49,6 +53,9 @@ interface Story {
   status: string;
   article_id: string;
   created_at: string;
+  cover_illustration_url?: string | null;
+  cover_illustration_prompt?: string | null;
+  illustration_generated_at?: string | null;
   slides: Slide[];
   article?: StoryArticle;
 }
@@ -75,9 +82,11 @@ export const ApprovedStoriesPanel = () => {
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
+  const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
   const { generateCarouselImages, retryCarouselGeneration, isGenerating } = useCarouselGeneration();
+  const { credits } = useCredits();
 
   useEffect(() => {
     loadApprovedStories();
@@ -167,6 +176,65 @@ export const ApprovedStoriesPanel = () => {
       setCarouselStatuses(statusMap);
     } catch (error) {
       console.error('Error loading carousel statuses:', error);
+    }
+  };
+
+  const handleGenerateIllustration = async (story: Story) => {
+    if (generatingIllustrations.has(story.id)) return;
+    
+    // Check if illustration already exists
+    if (story.cover_illustration_url) {
+      toast({
+        title: 'Illustration Already Exists',
+        description: 'This story already has a cover illustration.',
+        variant: 'default',
+      });
+      return;
+    }
+
+    // Check credits
+    if (!credits || credits.credits_balance < 10) {
+      toast({
+        title: 'Insufficient Credits',
+        description: 'You need 10 credits to generate a story illustration.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+
+    try {
+      const result = await CreditService.generateStoryIllustration(story.id);
+      
+      if (result.success) {
+        toast({
+          title: 'Illustration Generated Successfully',
+          description: `Used ${result.credits_used} credits. New balance: ${result.new_balance}`,
+        });
+        
+        // Refresh stories to show the new illustration
+        await loadApprovedStories();
+      } else {
+        toast({
+          title: 'Generation Failed',
+          description: result.error || 'Failed to generate illustration',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating illustration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate story illustration',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingIllustrations(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
     }
   };
 
@@ -424,6 +492,30 @@ export const ApprovedStoriesPanel = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
+                        {/* Story Illustration Button */}
+                        {story.cover_illustration_url ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3" />
+                            Illustrated
+                          </Badge>
+                        ) : generatingIllustrations.has(story.id) ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Generating...
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGenerateIllustration(story)}
+                            className="flex items-center gap-1"
+                            title="Generate cover illustration (10 credits)"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            Generate Cover
+                          </Button>
+                        )}
+                        
                         {renderCarouselActions(story)}
                         <Button
                           variant="ghost"
@@ -438,6 +530,26 @@ export const ApprovedStoriesPanel = () => {
                     
                     {isExpanded && (
                       <div className="mt-4 space-y-3 border-t pt-3">
+                        {/* Show cover illustration if exists */}
+                        {story.cover_illustration_url && (
+                          <div className="mb-3">
+                            <h4 className="text-sm font-medium mb-2">Cover Illustration</h4>
+                            <div className="relative w-full max-w-md">
+                              <img
+                                src={story.cover_illustration_url}
+                                alt={`Cover illustration for ${story.title}`}
+                                className="w-full h-48 object-cover rounded-lg border"
+                              />
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                Generated: {story.illustration_generated_at ? 
+                                  new Date(story.illustration_generated_at).toLocaleString() : 
+                                  'Unknown'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="grid gap-2">
                           {story.slides.map((slide) => (
                             <div key={slide.id} className="p-3 bg-white rounded border">
