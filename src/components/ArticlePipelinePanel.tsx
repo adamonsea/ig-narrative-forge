@@ -390,6 +390,48 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     }
   };
 
+  const extractTopKeywords = (content: string, title: string = ''): string[] => {
+    if (!content && !title) return [];
+    
+    const combinedText = `${title} ${content}`.toLowerCase();
+    
+    // Common stop words to exclude
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'they', 'them', 'their',
+      'he', 'she', 'him', 'her', 'his', 'we', 'us', 'our', 'you', 'your', 'i', 'me', 'my',
+      'said', 'says', 'say', 'also', 'very', 'much', 'more', 'most', 'than', 'from',
+      'up', 'out', 'down', 'over', 'under', 'about', 'into', 'through', 'during', 'before',
+      'after', 'above', 'below', 'between', 'among', 'since', 'until', 'while', 'where',
+      'when', 'why', 'how', 'what', 'which', 'who', 'whom', 'whose', 'if', 'unless',
+      'mr', 'mrs', 'ms', 'dr'
+    ]);
+    
+    // Extract words and filter
+    const words = combinedText
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => 
+        word.length > 2 && 
+        !stopWords.has(word) &&
+        !/^\d+$/.test(word) // exclude pure numbers
+      );
+    
+    // Count frequency
+    const wordCount = words.reduce((acc, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Sort by frequency and take top 3
+    return Object.entries(wordCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([word]) => word);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -551,6 +593,20 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                           <div className="flex justify-between items-start">
                             <div className="flex-1 pr-4">
                               <h3 className="font-semibold text-xl mb-2 leading-tight">{article.title}</h3>
+                              
+                              {/* Keyword flags */}
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {extractTopKeywords(article.body || '', article.title).map((keyword, index) => (
+                                  <Badge 
+                                    key={`${article.id}-keyword-${index}`}
+                                    variant="outline" 
+                                    className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors"
+                                  >
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                              
                               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                                 <span>{article.author || 'Unknown Author'}</span>
                                 <span>•</span>
