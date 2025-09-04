@@ -127,16 +127,92 @@ serve(async (req) => {
     if (!scrapingResult?.success) {
       console.error('Resilient scraping failed:', scrapingResult?.errors || ['Unknown error']);
       
+    // Enhanced fallback: Try direct database query for existing source
+      console.log('🔄 Resilient scraper failed, attempting direct source fallback...');
+      
+      try {
+        // Get the source information directly and try basic scraping
+        const { data: sourceData, error: sourceError } = await supabase
+          .from('content_sources')
+          .select('*')
+          .eq('id', actualSourceId)
+          .single();
+        
+        if (!sourceError && sourceData && sourceData.feed_url) {
+          console.log(`🆘 Attempting direct scraping of source: ${sourceData.source_name}`);
+          
+          // Initialize basic scraping components if not already done
+          if (!dbOps) {
+            const { DatabaseOperations } = await import('../_shared/database-operations.ts');
+            dbOps = new DatabaseOperations(supabase);
+          }
+          
+          // Try to scrape directly using the UniversalContentExtractor
+          const { UniversalContentExtractor } = await import('../_shared/universal-content-extractor.ts');
+          const extractor = new UniversalContentExtractor();
+          
+          const basicResult = await extractor.extract(sourceData.feed_url, {
+            timeout: 30000,
+            retries: 2
+          });
+          
+          if (basicResult.success && basicResult.articles.length > 0) {
+            console.log(`✅ Direct scraping successful: ${basicResult.articles.length} articles found`);
+            
+            // Score articles and store them
+            const allArticlesWithScores = basicResult.articles.map(article => {
+              const topicRelevance = calculateTopicRelevance(article, topicConfig);
+              return {
+                ...article,
+                topic_relevance_score: topicRelevance,
+                topic_id: topicId,
+                source_id: actualSourceId
+              };
+            });
+            
+            // Store articles
+            const storeResult = await dbOps.storeArticles(allArticlesWithScores, supabase);
+            
+            // Update source metrics for successful direct scrape
+            await dbOps.updateSourceMetrics(actualSourceId, true, 'direct_fallback', Date.now() - startTime);
+            
+            return new Response(JSON.stringify({
+              success: true,
+              articlesFound: basicResult.articles.length,
+              articlesStored: storeResult.stored,
+              duplicatesFound: storeResult.duplicates,
+              method: 'direct_fallback',
+              source: sourceData.source_name
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        }
+        
+        console.log('❌ Direct source fallback also failed');
+        
+      } catch (fallbackError) {
+        console.error('❌ Direct scraping fallback error:', fallbackError);
+      }
+      
+      // Update source metrics for failed scrape (initialize dbOps if needed)
+      if (!dbOps) {
+        const { DatabaseOperations } = await import('../_shared/database-operations.ts');
+        dbOps = new DatabaseOperations(supabase);
+      }
+      
       // Update source metrics for failed scrape
       if (scrapingResult?.source) {
-        await dbOps.updateSourceMetrics(scrapingResult.source.id, false, 'unknown', Date.now() - startTime);
+        await dbOps.updateSourceMetrics(scrapingResult.source.id, false, 'resilient_scraper_failure', Date.now() - startTime);
       }
       
       return new Response(JSON.stringify({
         success: false,
         errors: scrapingResult?.errors || ['Unknown error'],
         articlesFound: 0,
-        articlesStored: 0
+        articlesStored: 0,
+        fallback_attempted: true
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

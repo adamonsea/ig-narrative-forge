@@ -59,28 +59,49 @@ export class SourcePoolManager {
   async updateSourcePools(supabase: any, region?: string, topicId?: string): Promise<void> {
     const now = Date.now();
     
-    // Skip update if pools were recently updated
-    if (now - this.lastPoolUpdate < this.POOL_UPDATE_INTERVAL / 2) {
+    // Skip update if pools were recently updated (reduce frequency to 1 minute)
+    if (now - this.lastPoolUpdate < 60000) {
       return;
     }
 
     console.log('🔄 Updating source pools...');
 
     try {
-      // Build query with filters
+      // For keyword-based topics, we need to be more flexible with source selection
+      // Don't filter by topic_id for keyword topics - let content-level filtering handle relevance
       let query = supabase
         .from('content_sources')
         .select('*')
         .eq('is_active', true);
 
+      // If we have a region, prefer sources from that region but also include general sources
       if (region) {
-        query = query.eq('region', region);
+        const { data: regionSources, error: regionError } = await query
+          .or(`region.eq.${region},region.is.null`);
+        
+        if (regionError) {
+          console.error('❌ Error fetching regional sources:', regionError);
+          // Fallback to all sources
+          const { data: allSources, error: allError } = await supabase
+            .from('content_sources')
+            .select('*')
+            .eq('is_active', true);
+          
+          if (allError) {
+            console.error('❌ Error fetching fallback sources:', allError);
+            return;
+          }
+          
+          await this.processSourcesData(allSources || []);
+          return;
+        }
+        
+        await this.processSourcesData(regionSources || []);
+        return;
       }
 
-      if (topicId) {
-        query = query.eq('topic_id', topicId);
-      }
-
+      // For topic-based requests, still include all active sources
+      // The relevance will be determined at the content level
       const { data: sources, error } = await query;
 
       if (error) {
@@ -88,21 +109,36 @@ export class SourcePoolManager {
         return;
       }
 
-      if (!sources || sources.length === 0) {
-        console.warn('⚠️ No active sources found for pool update');
-        return;
-      }
-
-      // Classify sources into tiers
-      await this.classifySourcesIntoTiers(sources);
-      this.lastPoolUpdate = now;
-      
-      console.log(`✅ Source pools updated with ${sources.length} sources`);
-      this.logPoolStatistics();
+      await this.processSourcesData(sources || []);
 
     } catch (error) {
       console.error('❌ Error updating source pools:', error);
     }
+  }
+
+  /**
+   * Process sources data and update pools
+   */
+  private async processSourcesData(sources: SourceInfo[]): Promise<void> {
+    if (!sources || sources.length === 0) {
+      console.warn('⚠️ No active sources found for pool update');
+      
+      // Don't return early - initialize empty pools so the system doesn't completely fail
+      this.pools.set('PRIMARY', []);
+      this.pools.set('SECONDARY', []);
+      this.pools.set('EMERGENCY', []);
+      this.lastPoolUpdate = Date.now();
+      return;
+    }
+
+    console.log(`📊 Processing ${sources.length} sources for pool classification`);
+
+    // Classify sources into tiers
+    await this.classifySourcesIntoTiers(sources);
+    this.lastPoolUpdate = Date.now();
+    
+    console.log(`✅ Source pools updated with ${sources.length} sources`);
+    this.logPoolStatistics();
   }
 
   /**
@@ -142,16 +178,23 @@ export class SourcePoolManager {
     if (circuitStatus) {
       if (circuitStatus.state === 'OPEN') return 'FAILED';
       if (circuitStatus.state === 'HALF_OPEN') return 'RECOVERING';
+      // If circuit breaker is CLOSED, continue with metrics-based assessment
     }
 
-    // Calculate health based on metrics
-    const successRate = source.success_rate || 0;
-    const responseTime = source.avg_response_time_ms || 0;
+    // Calculate health based on metrics - be more lenient for initial assessments
+    const successRate = source.success_rate || 100; // Default to healthy for new sources
+    const responseTime = source.avg_response_time_ms || 5000; // Assume reasonable response time
     const isRecent = this.isRecentlyActive(source.last_scraped_at);
-
-    if (successRate >= 80 && responseTime < 10000 && isRecent) {
+    
+    // For sources with no scraping history, default to healthy
+    if (!source.last_scraped_at || source.articles_scraped === 0) {
       return 'HEALTHY';
-    } else if (successRate >= 50 && responseTime < 20000 && isRecent) {
+    }
+
+    // More lenient thresholds for health assessment
+    if (successRate >= 60 && responseTime < 15000) {
+      return 'HEALTHY';
+    } else if (successRate >= 30 && responseTime < 30000) {
       return 'DEGRADED';
     } else {
       return 'FAILED';
@@ -164,19 +207,19 @@ export class SourcePoolManager {
   private determineSourceTier(source: SourceInfo, health: SourceHealth): SourceTier {
     const qualityScore = this.getSourceQualityScore(source);
     
-    // Primary tier: High quality, healthy sources
-    if (health === 'HEALTHY' && qualityScore >= 80 && source.success_rate >= 75) {
+    // Be much more lenient with tier assignment - prioritize getting sources working
+    
+    // Primary tier: Healthy sources with decent quality or credibility
+    if (health === 'HEALTHY' && (qualityScore >= 60 || source.credibility_score >= 70)) {
       return 'PRIMARY';
     }
     
-    // Secondary tier: Decent quality sources or recovering sources
-    if ((health === 'HEALTHY' && qualityScore >= 60) || 
-        (health === 'DEGRADED' && qualityScore >= 70) ||
-        health === 'RECOVERING') {
+    // Secondary tier: Most healthy/degraded sources and all recovering sources
+    if (health === 'HEALTHY' || health === 'DEGRADED' || health === 'RECOVERING') {
       return 'SECONDARY';
     }
     
-    // Emergency tier: Everything else that's still active
+    // Emergency tier: Even failed sources (circuit breaker will handle the actual failures)
     return 'EMERGENCY';
   }
 

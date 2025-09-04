@@ -78,14 +78,36 @@ export class ResilientScraper {
       if (!sourceSelection) {
         console.warn('⚠️ No healthy sources available for scraping');
         
+        // Critical fallback: Try to get ANY active source directly from database
+        console.log('🔄 Attempting emergency fallback to any active source...');
+        const emergencySource = await this.getEmergencyFallbackSource(supabase, region, topicId);
+        
+        if (emergencySource) {
+          console.log(`🆘 Using emergency fallback source: ${emergencySource.source_name}`);
+          fallbacksUsed.push('emergency_database_fallback');
+          
+          const emergencyResult = await this.scrapeSource(emergencySource, opts, supabase, region, topicId);
+          if (emergencyResult) {
+            emergencyResult.fallbacksUsed = [...fallbacksUsed, 'emergency_source_success'];
+            emergencyResult.totalAttempts = 1;
+            emergencyResult.responseTime = Date.now() - startTime;
+            return emergencyResult;
+          }
+        }
+        
         // Try to use cached content as last resort
         if (opts.fallbackToCache) {
+          console.log('🔍 Searching for any cached content as emergency fallback...');
           const cacheResult = await this.tryGlobalCacheFallback(region, topicId);
           if (cacheResult) {
+            cacheResult.fallbacksUsed = [...fallbacksUsed, 'cache_emergency_fallback'];
             return cacheResult;
           }
         }
         
+        // If all fails, return null but log extensive debugging information
+        console.error('❌ Complete scraping failure - no sources available and no cache fallback');
+        await this.logDebugInformation(supabase, region, topicId);
         return null;
       }
 
@@ -426,5 +448,115 @@ export class ResilientScraper {
     }
     
     console.log('✅ System refresh completed');
+  }
+
+  /**
+   * Emergency fallback: Get any active source directly from database
+   */
+  private async getEmergencyFallbackSource(
+    supabase: any,
+    region?: string,
+    topicId?: string
+  ): Promise<any | null> {
+    try {
+      console.log('🆘 Emergency database fallback: Searching for ANY active source...');
+      
+      // Try region-specific sources first
+      if (region) {
+        const { data: regionSources, error: regionError } = await supabase
+          .from('content_sources')
+          .select('*')
+          .eq('is_active', true)
+          .or(`region.eq.${region},region.is.null`)
+          .limit(1);
+        
+        if (!regionError && regionSources && regionSources.length > 0) {
+          console.log(`🆘 Found emergency regional source: ${regionSources[0].source_name}`);
+          return regionSources[0];
+        }
+      }
+      
+      // Fallback to any active source
+      const { data: anySources, error: anyError } = await supabase
+        .from('content_sources')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1);
+      
+      if (!anyError && anySources && anySources.length > 0) {
+        console.log(`🆘 Found emergency fallback source: ${anySources[0].source_name}`);
+        return anySources[0];
+      }
+      
+      console.error('❌ No emergency fallback sources found in database');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ Emergency fallback source query failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Log extensive debugging information for troubleshooting
+   */
+  private async logDebugInformation(
+    supabase: any,
+    region?: string,
+    topicId?: string
+  ): Promise<void> {
+    try {
+      console.log('🔍 === DEBUGGING INFORMATION ===');
+      
+      // Log source pool statistics
+      const poolStats = this.sourcePoolManager.getPoolStatistics();
+      console.log('📊 Pool Statistics:', JSON.stringify(poolStats, null, 2));
+      
+      // Log circuit breaker status
+      const circuitStats = this.circuitBreaker.getStatistics();
+      console.log('🔌 Circuit Breaker Statistics:', JSON.stringify(circuitStats, null, 2));
+      
+      // Log cache statistics
+      const cacheStats = this.contentCache.getStatistics();
+      console.log('💾 Cache Statistics:', JSON.stringify(cacheStats, null, 2));
+      
+      // Query database directly for source counts
+      const { data: allSources, error: allError } = await supabase
+        .from('content_sources')
+        .select('id, source_name, is_active, region, topic_id')
+        .eq('is_active', true);
+      
+      if (!allError && allSources) {
+        console.log(`📊 Database shows ${allSources.length} active sources total`);
+        console.log('📋 Active sources:', allSources.map(s => ({
+          name: s.source_name,
+          region: s.region,
+          topic_id: s.topic_id
+        })));
+      } else {
+        console.error('❌ Failed to query database for debug info:', allError);
+      }
+      
+      console.log('🔍 === END DEBUGGING INFORMATION ===');
+      
+      // Log to database for persistence
+      await this.dbOps.logSystemEvent(
+        'error',
+        'Complete scraping failure - no sources available',
+        {
+          region,
+          topicId,
+          poolStats,
+          circuitStats,
+          cacheStats,
+          activeSources: allSources?.length || 0,
+          debugQuery: allSources || null
+        },
+        'resilient-scraper-debug'
+      );
+      
+    } catch (error) {
+      console.error('❌ Failed to log debug information:', error);
+    }
   }
 }

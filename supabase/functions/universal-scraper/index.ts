@@ -199,6 +199,62 @@ serve(async (req) => {
       console.log(`📊 Storage complete: ${storedCount} stored, ${duplicateCount} duplicates, ${discardedCount} discarded`);
     } else {
       console.log(`❌ Resilient scraping failed or no articles found`);
+      
+      // Enhanced fallback: Try direct database query for existing source
+      console.log('🔄 Resilient scraper failed, attempting direct source fallback...');
+      
+      try {
+        // Get the source information directly and try basic scraping
+        if (sourceId && sourceInfo && sourceInfo.feed_url) {
+          console.log(`🆘 Attempting direct scraping of source: ${sourceInfo.source_name}`);
+          
+          // Try to scrape directly using the UniversalContentExtractor
+          const { UniversalContentExtractor } = await import('../_shared/universal-content-extractor.ts');
+          const extractor = new UniversalContentExtractor();
+          
+          const basicResult = await extractor.extract(sourceInfo.feed_url, {
+            timeout: 30000,
+            retries: 2
+          });
+          
+          if (basicResult.success && basicResult.articles.length > 0) {
+            console.log(`✅ Direct scraping successful: ${basicResult.articles.length} articles found`);
+            
+            // Store articles with fallback method
+            const storageResult = await dbOps.storeArticles(
+              basicResult.articles,
+              sourceId,
+              region,
+              topicId,
+              topicConfig,
+              otherRegionalTopics
+            );
+            
+            storedCount = storageResult.stored;
+            duplicateCount = storageResult.duplicates;
+            discardedCount = storageResult.discarded;
+            
+            // Update the scrapingResult for logging
+            scrapingResult = {
+              success: true,
+              articles: basicResult.articles,
+              method: 'direct_fallback',
+              source: sourceInfo,
+              cacheUsed: false,
+              fallbackUsed: true,
+              articlesFound: basicResult.articles.length,
+              articlesScraped: basicResult.articles.length
+            };
+            
+            console.log(`📊 Direct fallback storage summary - Stored: ${storedCount}, Duplicates: ${duplicateCount}, Discarded: ${discardedCount}`);
+          } else {
+            console.log('❌ Direct source fallback also failed');
+          }
+        }
+        
+      } catch (fallbackError) {
+        console.error('❌ Direct scraping fallback error:', fallbackError);
+      }
     }
 
     // Update source metrics
