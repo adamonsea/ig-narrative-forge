@@ -199,8 +199,8 @@ export const SentimentCard = ({
           <div className="space-y-8">
             {/* Large Keyword Flag */}
             <div className="flex justify-center">
-              <div className="inline-flex items-center rounded-full border-2 border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-3 shadow-lg">
-                <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary">
+              <div className="inline-flex items-center justify-center rounded-full bg-muted px-8 py-4">
+                <span className="text-lg md:text-xl lg:text-2xl font-semibold text-foreground text-center">
                   {slide.content}
                 </span>
               </div>
