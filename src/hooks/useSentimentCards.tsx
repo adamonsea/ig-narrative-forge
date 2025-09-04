@@ -27,7 +27,7 @@ interface SentimentCard {
   needs_review: boolean;
   created_at: string;
   slides?: Array<{
-    type: 'hero' | 'statistic' | 'quote' | 'references';
+    type: 'hero' | 'mention-count' | 'sentiment-score' | 'forum-insight' | 'quote' | 'references';
     content: string;
     order: number;
     metadata?: Record<string, any>;
