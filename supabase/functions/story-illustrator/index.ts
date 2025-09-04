@@ -84,13 +84,12 @@ serve(async (req) => {
     }
 
     // Check if user is super admin (bypass credit deduction)
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
+    const { data: hasAdminRole } = await supabase.rpc('has_role', {
+      _user_id: user.id,
+      _role: 'superadmin'
+    })
     
-    const isSuperAdmin = profile?.role === 'super_admin'
+    const isSuperAdmin = hasAdminRole === true
     let creditResult = null
 
     // Deduct credits (10 credits for illustration) - skip for super admin
