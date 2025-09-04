@@ -16,7 +16,7 @@ interface DeleteStoryResponse {
   };
 }
 
-export const useTopicPipelineActions = (onRefresh: () => void) => {
+export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRemoveArticle?: (articleId: string) => void) => {
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
   const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
@@ -421,6 +421,11 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   };
 
   const deleteArticle = async (articleId: string, articleTitle: string) => {
+    // Immediately remove from UI for smooth animation
+    if (optimisticallyRemoveArticle) {
+      optimisticallyRemoveArticle(articleId);
+    }
+    
     // Immediate animation feedback - trigger discard animation
     setAnimatingArticles(prev => new Set([...prev, articleId]));
     setDeletingArticles(prev => new Set([...prev, articleId]));
@@ -439,7 +444,7 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         description: `"${articleTitle}" has been discarded and won't be re-imported`
       });
 
-      // Delay refresh to allow animation to complete
+      // Clean up animation state after delay
       setTimeout(() => {
         setAnimatingArticles(prev => {
           const newSet = new Set(prev);
@@ -451,10 +456,13 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
           newSet.delete(articleId);
           return newSet;
         });
-        onRefresh();
       }, 300);
+      
     } catch (error) {
       console.error('Error deleting article:', error);
+      
+      // Reverse optimistic update on error by refreshing
+      onRefresh();
       
       // Reverse animation on error
       setAnimatingArticles(prev => {

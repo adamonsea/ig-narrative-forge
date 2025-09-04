@@ -82,6 +82,15 @@ export const useTopicPipeline = (selectedTopicId: string) => {
   });
   const { toast } = useToast();
 
+  // Optimistically remove article from local state
+  const optimisticallyRemoveArticle = (articleId: string) => {
+    setArticles(prev => prev.filter(article => article.id !== articleId));
+    setStats(prev => ({
+      ...prev,
+      pending_articles: Math.max(0, prev.pending_articles - 1)
+    }));
+  };
+
   // Auto-select slide type based on word count
   const getAutoSlideType = (wordCount: number): 'short' | 'tabloid' | 'indepth' | 'extensive' => {
     if (wordCount >= 1500) return 'extensive';
@@ -392,6 +401,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
     stats,
     loadTopicContent,
     getAutoSlideType,
+    optimisticallyRemoveArticle,
     setArticles,
     setQueueItems,
     setStories,

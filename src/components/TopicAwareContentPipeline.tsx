@@ -88,7 +88,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     loading,
     stats,
     loadTopicContent,
-    getAutoSlideType: originalGetAutoSlideType
+    getAutoSlideType: originalGetAutoSlideType,
+    optimisticallyRemoveArticle
   } = useTopicPipeline(selectedTopicId);
 
   // Memoize getAutoSlideType to prevent infinite loops
@@ -112,7 +113,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     deleteStory,
     cancelQueueItem,
     deleteArticle
-  } = useTopicPipelineActions(loadTopicContent);
+  } = useTopicPipelineActions(loadTopicContent, optimisticallyRemoveArticle);
 
   // Initialize slide quantities with auto-selected values, but allow user to change them
   useEffect(() => {
