@@ -207,27 +207,36 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             <Badge variant="secondary" className="text-sm font-medium">
               {topicName}
             </Badge>
-            {isNewlyPublished(story.created_at) && (
-              <Badge 
-                variant="outline" 
-                className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
-              >
-                New
-              </Badge>
-            )}
             {(() => {
               // Use article published_at for content age, story created_at for feed freshness
               const articleDate = story.article?.published_at || story.created_at;
               const timeLabel = getRelativeTimeLabel(articleDate);
-              if (!timeLabel) return null;
-              return (
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
-                >
-                  {timeLabel}
-                </Badge>
-              );
+              
+              // If we have a time label, show it
+              if (timeLabel) {
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
+                  >
+                    {timeLabel}
+                  </Badge>
+                );
+              }
+              
+              // Fallback: show "New" if story was published to feed recently
+              if (isNewlyPublished(story.created_at)) {
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
+                  >
+                    New
+                  </Badge>
+                );
+              }
+              
+              return null;
             })()}
           </div>
           <span className="text-sm text-muted-foreground">
