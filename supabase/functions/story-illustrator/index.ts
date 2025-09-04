@@ -105,38 +105,65 @@ serve(async (req) => {
       }
     }
 
-    // Generate illustration prompt based on story title
-    const illustrationPrompt = `Create a simple black and white line drawing illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image. 
-
-Visual concept: "${story.title}"
-
-Style: Minimalist hand-drawn line art using only solid black ink on pure solid white background. Simple visual illustration that represents the story concept without any written text elements. Clean sketch style illustration only.`
-
-    // Generate image using Hugging Face FLUX
-    const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
-      },
-      body: JSON.stringify({
-        inputs: illustrationPrompt,
-        parameters: {
-          width: 1024,
-          height: 1024,
-          num_inference_steps: 4
-        }
-      }),
-    })
-
-    if (!hfResponse.ok) {
-      throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
+    // Helper function to generate optimized illustration prompt
+    const createIllustrationPrompt = (title: string, variation = 0): string => {
+      const basePrompts = [
+        `Black ink line drawing of ${title}. Technical illustration style, clean pen strokes on white paper. Simple composition, minimal details, monochromatic artwork. Precise linework, hand-drawn aesthetic, sketch-like quality.`,
+        `Hand-drawn line art depicting ${title}. Bold black ink on pure white background. Minimalist technical drawing, clear contours, simple geometric forms. Editorial illustration style, newspaper-ready artwork.`,
+        `Simple line illustration representing ${title}. Black ink sketch, clean vector-style lines on white. Minimal graphic design, iconic representation, uncluttered composition. Professional editorial artwork.`
+      ]
+      return basePrompts[variation % basePrompts.length]
     }
 
-    // Get the image as blob from Hugging Face
-    const imageBlob = await hfResponse.blob()
-    const arrayBuffer = await imageBlob.arrayBuffer()
-    const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    // Generate image with retry logic for better results
+    const generateImage = async (promptVariation = 0, retryCount = 0): Promise<{ success: boolean; imageBase64?: string; error?: string }> => {
+      if (retryCount > 2) {
+        return { success: false, error: 'Max retries exceeded' }
+      }
+
+      const illustrationPrompt = createIllustrationPrompt(story.title, promptVariation)
+      
+      try {
+        const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
+          },
+          body: JSON.stringify({
+            inputs: illustrationPrompt,
+            parameters: {
+              width: 1024,
+              height: 1024,
+              num_inference_steps: 8,
+              guidance_scale: 7.5
+            }
+          }),
+        })
+
+        if (!hfResponse.ok) {
+          throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
+        }
+
+        const imageBlob = await hfResponse.blob()
+        const arrayBuffer = await imageBlob.arrayBuffer()
+        const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        
+        return { success: true, imageBase64, illustrationPrompt }
+      } catch (error) {
+        console.log(`Generation attempt ${retryCount + 1} failed:`, error.message)
+        // Try with different prompt variation on retry
+        return generateImage((promptVariation + 1) % 3, retryCount + 1)
+      }
+    }
+
+    // Generate the illustration
+    const result = await generateImage()
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to generate illustration after retries')
+    }
+
+    const { imageBase64, illustrationPrompt } = result
 
     // Upload to Supabase Storage
     const fileName = `story-${storyId}-${Date.now()}.png`
