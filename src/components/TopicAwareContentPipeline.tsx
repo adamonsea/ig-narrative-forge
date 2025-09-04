@@ -82,6 +82,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [editContent, setEditContent] = useState('');
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [viewingStory, setViewingStory] = useState<any>(null);
+  const [isGathering, setIsGathering] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -304,6 +305,52 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }));
   };
 
+  const handleGatherAll = async () => {
+    if (!selectedTopicId || isGathering) return;
+    
+    try {
+      setIsGathering(true);
+      console.log('Starting topic-wide content gathering for:', selectedTopicId);
+      
+      toast({
+        title: "Gathering Content",
+        description: "Starting to scrape all sources for this topic...",
+      });
+
+      // Use the keyword-rescan-trigger function which handles scraping all sources for a topic
+      const { data, error } = await supabase.functions.invoke('keyword-rescan-trigger', {
+        body: { 
+          topicId: selectedTopicId,
+          action: 'manual_gather'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Content Gathering Complete",
+          description: `Found ${data.articlesFound || 0} new articles from ${data.sourcesProcessed || 0} sources`,
+        });
+        
+        // Refresh the content after gathering
+        loadTopicContent();
+      } else {
+        throw new Error(data?.error || 'Content gathering failed');
+      }
+
+    } catch (error: any) {
+      console.error('Error gathering content:', error);
+      toast({
+        title: "Gathering Failed",
+        description: error.message || "Failed to gather content from sources",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGathering(false);
+    }
+  };
+
   const handleEditSlide = (slide: Slide) => {
     setEditingSlide(slide);
     setEditContent(slide.content);
@@ -424,9 +471,9 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
 
             <TabsContent value="articles" className="space-y-6">
               <div className="flex justify-end items-center">
-                <Button onClick={loadTopicContent} disabled={loading}>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
+                <Button onClick={handleGatherAll} disabled={loading || isGathering}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isGathering ? 'animate-spin' : ''}`} />
+                  {isGathering ? 'Gathering...' : 'Gather All'}
                 </Button>
               </div>
 
