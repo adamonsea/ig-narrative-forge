@@ -43,12 +43,12 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
 
     try {
       
-      // Check if article already has a completed story
+      // Check if article already has a ready story (exclude draft to allow re-processing)
       const { data: existingStory, error: storyCheckError } = await supabase
         .from('stories')
         .select('id, status, title')
         .eq('article_id', articleId)
-        .in('status', ['ready', 'draft'])
+        .eq('status', 'ready')
         .maybeSingle();
 
       if (storyCheckError) {

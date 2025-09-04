@@ -569,11 +569,6 @@ export const ApprovedStoriesPanel = () => {
                           ))}
                         </div>
                         
-                        {/* Inline Carousel Images Section */}
-                        <InlineCarouselImages 
-                          storyId={story.id} 
-                          storyTitle={story.title}
-                        />
                         
                         <div className="flex gap-2 pt-2 border-t">
                           <Button

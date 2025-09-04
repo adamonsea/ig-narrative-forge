@@ -295,11 +295,6 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                   ))}
                 </div>
 
-                {/* Inline Carousel Images Section */}
-                <InlineCarouselImages 
-                  storyId={story.id} 
-                  storyTitle={story.title}
-                />
               </CardContent>
             )}
           </Card>

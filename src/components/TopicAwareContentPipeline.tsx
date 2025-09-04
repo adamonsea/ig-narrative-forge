@@ -707,12 +707,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                   </div>
                 </div>
 
-                {viewingStory?.status === 'ready' && (
-                  <InlineCarouselImages 
-                    storyId={viewingStory.id} 
-                    storyTitle={viewingStory.title}
-                  />
-                )}
               </div>
             </DialogContent>
           </Dialog>

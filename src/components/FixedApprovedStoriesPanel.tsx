@@ -552,11 +552,6 @@ export const FixedApprovedStoriesPanel = () => {
                           </div>
                         ))}
 
-                        {/* Inline Carousel Images Section */}
-                        <InlineCarouselImages 
-                          storyId={story.id} 
-                          storyTitle={story.title}
-                        />
                       </div>
                     )}
                   </CardContent>
