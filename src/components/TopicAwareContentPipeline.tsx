@@ -351,6 +351,46 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     }
   };
 
+  const highlightKeywordsInText = (text: string, keywords: string[], landmarks: string[]): React.ReactNode => {
+    if (!text || (!keywords.length && !landmarks.length)) {
+      return <span className="whitespace-pre-wrap">{text}</span>;
+    }
+
+    // Combine all keywords and landmarks
+    const allKeywords = [...keywords, ...landmarks].filter(k => k && k.trim().length > 0);
+    
+    if (allKeywords.length === 0) {
+      return <span className="whitespace-pre-wrap">{text}</span>;
+    }
+
+    // Create a regex pattern that matches any of the keywords (case insensitive, whole words)
+    const pattern = new RegExp(`\\b(${allKeywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    
+    // Split the text and highlight matches
+    const parts = text.split(pattern);
+    let keywordIndex = 0;
+    
+    return (
+      <span className="whitespace-pre-wrap">
+        {parts.map((part, index) => {
+          const isKeyword = pattern.test(part);
+          if (isKeyword) {
+            keywordIndex++;
+            return (
+              <mark 
+                key={`keyword-${index}-${keywordIndex}`}
+                className="bg-accent/30 text-accent-foreground px-1 py-0.5 rounded font-medium border border-accent/20"
+              >
+                {part}
+              </mark>
+            );
+          }
+          return part;
+        })}
+      </span>
+    );
+  };
+
   const handleEditSlide = (slide: Slide) => {
     setEditingSlide(slide);
     setEditContent(slide.content);
@@ -635,6 +675,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 <DialogTitle>{previewArticle?.title}</DialogTitle>
                 <DialogDescription>
                   Article preview - {previewArticle?.word_count} words
+                  {currentTopic?.keywords?.length > 0 && (
+                    <span className="ml-2 text-accent">
+                      • Keywords highlighted below
+                    </span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -644,7 +689,11 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                   <p><strong>Source:</strong> <a href={previewArticle?.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{previewArticle?.source_url}</a></p>
                 </div>
                 <div className="prose max-w-none">
-                  <div className="whitespace-pre-wrap">{previewArticle?.body}</div>
+                  {highlightKeywordsInText(
+                    previewArticle?.body || '', 
+                    currentTopic?.keywords || [],
+                    currentTopic?.landmarks || []
+                  )}
                 </div>
               </div>
             </DialogContent>
