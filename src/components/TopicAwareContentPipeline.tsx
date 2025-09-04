@@ -177,6 +177,19 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
           loadTopicContent();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'topics',
+          filter: `id=eq.${selectedTopicId}`
+        },
+        () => {
+          console.log('Topic settings updated, refreshing...');
+          loadCurrentTopic();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -207,11 +220,28 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     try {
       const { data, error } = await supabase
         .from('topics')
-        .select('id, name, topic_type, is_active, default_tone, audience_expertise')
+        .select('id, name, topic_type, is_active, default_tone, default_writing_style, audience_expertise')
         .eq('id', selectedTopicId)
         .single();
 
       if (error) throw error;
+      
+      // Check if global settings changed and clear individual overrides
+      if (currentTopic && data) {
+        const toneChanged = currentTopic.default_tone !== data.default_tone;
+        const styleChanged = currentTopic.default_writing_style !== data.default_writing_style;
+        
+        if (toneChanged || styleChanged) {
+          console.log('Global topic settings changed, clearing individual overrides');
+          if (toneChanged) {
+            setToneOverrides({});
+          }
+          if (styleChanged) {
+            setWritingStyleOverrides({});
+          }
+        }
+      }
+      
       setCurrentTopic(data);
     } catch (error) {
       console.error('Error loading current topic:', error);
