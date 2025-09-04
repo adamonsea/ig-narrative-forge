@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, Hash, MapPin, Building, Navigation, Save, RotateCcw } from "lucide-react";
+import { Plus, X, Hash, MapPin, Building, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,7 +35,6 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
   const [newPostcode, setNewPostcode] = useState('');
   const [newOrganization, setNewOrganization] = useState('');
   const [saving, setSaving] = useState(false);
-  const [rescoring, setRescoring] = useState(false);
   const { toast } = useToast();
 
   // Update local state when topic prop changes
@@ -57,151 +56,352 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     return () => window.removeEventListener('keywordAdded', handleKeywordAdded);
   }, [topic]);
 
-  const addKeyword = () => {
+  const addKeyword = async () => {
     if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      setKeywords([...keywords, newKeyword.trim()]);
+      const newKeywords = [...keywords, newKeyword.trim()];
+      setKeywords(newKeywords);
       setNewKeyword('');
       
-      // Trigger immediate parent update
-      const updatedTopic = {
-        ...topic,
-        keywords: [...keywords, newKeyword.trim()]
-      };
-      onTopicUpdate(updatedTopic);
+      // Auto-save keyword immediately
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('topics')
+          .update({ 
+            keywords: newKeywords,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', topic.id);
+
+        if (error) throw error;
+
+        const updatedTopic = {
+          ...topic,
+          keywords: newKeywords
+        };
+        onTopicUpdate(updatedTopic);
+        
+        // Trigger immediate re-scoring
+        await supabase.rpc('rescore_articles_for_topic', {
+          p_topic_id: topic.id
+        });
+
+        toast({
+          title: "Keyword Added",
+          description: `"${newKeywords[newKeywords.length - 1]}" added and articles rescored`,
+        });
+      } catch (error) {
+        console.error('Error adding keyword:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add keyword",
+          variant: "destructive"
+        });
+        // Revert on error
+        setKeywords(keywords);
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
-  const removeKeyword = (index: number) => {
-    setKeywords(keywords.filter((_, i) => i !== index));
-  };
-
-  const addLandmark = () => {
-    if (newLandmark.trim() && !landmarks.includes(newLandmark.trim())) {
-      setLandmarks([...landmarks, newLandmark.trim()]);
-      setNewLandmark('');
-    }
-  };
-
-  const removeLandmark = (index: number) => {
-    setLandmarks(landmarks.filter((_, i) => i !== index));
-  };
-
-  const addPostcode = () => {
-    if (newPostcode.trim() && !postcodes.includes(newPostcode.trim())) {
-      setPostcodes([...postcodes, newPostcode.trim()]);
-      setNewPostcode('');
-    }
-  };
-
-  const removePostcode = (index: number) => {
-    setPostcodes(postcodes.filter((_, i) => i !== index));
-  };
-
-  const addOrganization = () => {
-    if (newOrganization.trim() && !organizations.includes(newOrganization.trim())) {
-      setOrganizations([...organizations, newOrganization.trim()]);
-      setNewOrganization('');
-    }
-  };
-
-  const removeOrganization = (index: number) => {
-    setOrganizations(organizations.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async () => {
+  const removeKeyword = async (index: number) => {
+    const newKeywords = keywords.filter((_, i) => i !== index);
+    setKeywords(newKeywords);
+    
+    // Auto-save removal immediately
     setSaving(true);
     try {
-      const updateData: any = {
-        keywords,
-        updated_at: new Date().toISOString()
-      };
-
-      if (topic.topic_type === 'regional') {
-        updateData.landmarks = landmarks;
-        updateData.postcodes = postcodes;
-        updateData.organizations = organizations;
-      }
-
       const { error } = await supabase
         .from('topics')
-        .update(updateData)
+        .update({ 
+          keywords: newKeywords,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', topic.id);
 
       if (error) throw error;
 
       const updatedTopic = {
         ...topic,
-        keywords,
-        landmarks: topic.topic_type === 'regional' ? landmarks : topic.landmarks,
-        postcodes: topic.topic_type === 'regional' ? postcodes : topic.postcodes,
-        organizations: topic.topic_type === 'regional' ? organizations : topic.organizations,
+        keywords: newKeywords
       };
-
       onTopicUpdate(updatedTopic);
-
+      
       toast({
-        title: "Success",
-        description: "Topic keywords updated successfully",
+        title: "Keyword Removed",
+        description: "Keyword removed successfully",
       });
     } catch (error) {
-      console.error('Error updating topic keywords:', error);
+      console.error('Error removing keyword:', error);
       toast({
         title: "Error",
-        description: "Failed to update topic keywords",
+        description: "Failed to remove keyword",
         variant: "destructive"
       });
+      // Revert on error
+      setKeywords(keywords);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRescore = async () => {
-    setRescoring(true);
-    try {
-      const { error } = await supabase.rpc('rescore_articles_for_topic', {
-        p_topic_id: topic.id
-      });
+  const addLandmark = async () => {
+    if (newLandmark.trim() && !landmarks.includes(newLandmark.trim())) {
+      const newLandmarks = [...landmarks, newLandmark.trim()];
+      setLandmarks(newLandmarks);
+      setNewLandmark('');
+      
+      // Auto-save for regional fields too
+      if (topic.topic_type === 'regional') {
+        setSaving(true);
+        try {
+          const { error } = await supabase
+            .from('topics')
+            .update({ 
+              landmarks: newLandmarks,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', topic.id);
 
-      if (error) throw error;
+          if (error) throw error;
 
-      // Trigger re-scraping with updated keywords using appropriate scraper
-      const { error: rescrapError } = await supabase.functions.invoke('keyword-rescan-trigger', {
-        body: {
-          topicId: topic.id,
-          triggerType: 'keyword_update'
+          const updatedTopic = {
+            ...topic,
+            landmarks: newLandmarks
+          };
+          onTopicUpdate(updatedTopic);
+          
+          toast({
+            title: "Landmark Added",
+            description: "Landmark added successfully",
+          });
+        } catch (error) {
+          console.error('Error adding landmark:', error);
+          toast({
+            title: "Error",
+            description: "Failed to add landmark",
+            variant: "destructive"
+          });
+          setLandmarks(landmarks);
+        } finally {
+          setSaving(false);
         }
-      });
-
-      if (rescrapError) {
-        console.warn('Re-scraping trigger failed:', rescrapError);
       }
-
-      toast({
-        title: "Success",
-        description: "Articles rescored and sources triggered for re-scanning",
-      });
-    } catch (error) {
-      console.error('Error rescoring articles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to rescore articles",
-        variant: "destructive"
-      });
-    } finally {
-      setRescoring(false);
     }
   };
 
-  const hasChanges = () => {
-    return (
-      JSON.stringify(keywords) !== JSON.stringify(topic.keywords) ||
-      (topic.topic_type === 'regional' && (
-        JSON.stringify(landmarks) !== JSON.stringify(topic.landmarks || []) ||
-        JSON.stringify(postcodes) !== JSON.stringify(topic.postcodes || []) ||
-        JSON.stringify(organizations) !== JSON.stringify(topic.organizations || [])
-      ))
-    );
+  const removeLandmark = async (index: number) => {
+    const newLandmarks = landmarks.filter((_, i) => i !== index);
+    setLandmarks(newLandmarks);
+    
+    if (topic.topic_type === 'regional') {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('topics')
+          .update({ 
+            landmarks: newLandmarks,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', topic.id);
+
+        if (error) throw error;
+
+        const updatedTopic = {
+          ...topic,
+          landmarks: newLandmarks
+        };
+        onTopicUpdate(updatedTopic);
+        
+        toast({
+          title: "Landmark Removed",
+          description: "Landmark removed successfully",
+        });
+      } catch (error) {
+        console.error('Error removing landmark:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to remove landmark",
+          variant: "destructive"
+        });
+        setLandmarks(landmarks);
+      } finally {
+        setSaving(false);
+      }
+    }
   };
+
+  const addPostcode = async () => {
+    if (newPostcode.trim() && !postcodes.includes(newPostcode.trim())) {
+      const newPostcodes = [...postcodes, newPostcode.trim()];
+      setPostcodes(newPostcodes);
+      setNewPostcode('');
+      
+      if (topic.topic_type === 'regional') {
+        setSaving(true);
+        try {
+          const { error } = await supabase
+            .from('topics')
+            .update({ 
+              postcodes: newPostcodes,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', topic.id);
+
+          if (error) throw error;
+
+          const updatedTopic = {
+            ...topic,
+            postcodes: newPostcodes
+          };
+          onTopicUpdate(updatedTopic);
+          
+          toast({
+            title: "Postcode Added",
+            description: "Postcode added successfully",
+          });
+        } catch (error) {
+          console.error('Error adding postcode:', error);
+          toast({
+            title: "Error",
+            description: "Failed to add postcode",
+            variant: "destructive"
+          });
+          setPostcodes(postcodes);
+        } finally {
+          setSaving(false);
+        }
+      }
+    }
+  };
+
+  const removePostcode = async (index: number) => {
+    const newPostcodes = postcodes.filter((_, i) => i !== index);
+    setPostcodes(newPostcodes);
+    
+    if (topic.topic_type === 'regional') {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('topics')
+          .update({ 
+            postcodes: newPostcodes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', topic.id);
+
+        if (error) throw error;
+
+        const updatedTopic = {
+          ...topic,
+          postcodes: newPostcodes
+        };
+        onTopicUpdate(updatedTopic);
+        
+        toast({
+          title: "Postcode Removed",
+          description: "Postcode removed successfully",
+        });
+      } catch (error) {
+        console.error('Error removing postcode:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove postcode",
+          variant: "destructive"
+        });
+        setPostcodes(postcodes);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const addOrganization = async () => {
+    if (newOrganization.trim() && !organizations.includes(newOrganization.trim())) {
+      const newOrganizations = [...organizations, newOrganization.trim()];
+      setOrganizations(newOrganizations);
+      setNewOrganization('');
+      
+      if (topic.topic_type === 'regional') {
+        setSaving(true);
+        try {
+          const { error } = await supabase
+            .from('topics')
+            .update({ 
+              organizations: newOrganizations,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', topic.id);
+
+          if (error) throw error;
+
+          const updatedTopic = {
+            ...topic,
+            organizations: newOrganizations
+          };
+          onTopicUpdate(updatedTopic);
+          
+          toast({
+            title: "Organization Added",
+            description: "Organization added successfully",
+          });
+        } catch (error) {
+          console.error('Error adding organization:', error);
+          toast({
+            title: "Error",
+            description: "Failed to add organization",
+            variant: "destructive"
+          });
+          setOrganizations(organizations);
+        } finally {
+          setSaving(false);
+        }
+      }
+    }
+  };
+
+  const removeOrganization = async (index: number) => {
+    const newOrganizations = organizations.filter((_, i) => i !== index);
+    setOrganizations(newOrganizations);
+    
+    if (topic.topic_type === 'regional') {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('topics')
+          .update({ 
+            organizations: newOrganizations,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', topic.id);
+
+        if (error) throw error;
+
+        const updatedTopic = {
+          ...topic,
+          organizations: newOrganizations
+        };
+        onTopicUpdate(updatedTopic);
+        
+        toast({
+          title: "Organization Removed",
+          description: "Organization removed successfully",
+        });
+      } catch (error) {
+        console.error('Error removing organization:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove organization", 
+          variant: "destructive"
+        });
+        setOrganizations(organizations);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -228,7 +428,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                 placeholder="Add new keyword..."
                 onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
               />
-              <Button onClick={addKeyword} size="sm" variant="outline">
+              <Button 
+                onClick={addKeyword} 
+                size="sm" 
+                variant="outline"
+                disabled={saving}
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -241,6 +446,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     variant="ghost"
                     onClick={() => removeKeyword(index)}
                     className="h-auto p-0 ml-1"
+                    disabled={saving}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -358,39 +564,14 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
             </>
           )}
 
-          <Separator />
-
-          <div className="flex gap-2 justify-between">
-            <Button
-              onClick={handleRescore}
-              disabled={rescoring || !hasChanges()}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className={`h-4 w-4 ${rescoring ? 'animate-spin' : ''}`} />
-              {rescoring ? 'Rescoring...' : 'Rescore Articles'}
-            </Button>
-            
-            <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges()}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
+          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            <p className="font-medium mb-1">💡 Keywords are saved automatically</p>
+            <ul className="text-xs space-y-1">
+              <li>• Articles are re-scored when you add/remove keywords</li>
+              <li>• Changes are applied immediately with visual feedback</li>
+              <li>• Previously discarded articles may become relevant again</li>
+            </ul>
           </div>
-
-          {hasChanges() && (
-            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-              <p className="font-medium mb-1">💡 After saving:</p>
-              <ul className="text-xs space-y-1">
-                <li>• Existing articles will be re-scored for relevance</li>
-                <li>• Sources will be triggered for re-scanning with new keywords</li>
-                <li>• Previously discarded articles may become relevant again</li>
-              </ul>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

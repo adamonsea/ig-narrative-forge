@@ -1262,8 +1262,10 @@ export type Database = {
         Row: {
           analysis_date: string
           card_type: string | null
+          card_version: number | null
           confidence_score: number | null
           content: Json
+          content_fingerprint: string | null
           created_at: string | null
           display_count: number | null
           id: string
@@ -1272,17 +1274,21 @@ export type Database = {
           keyword_phrase: string
           last_shown_at: string | null
           needs_review: boolean | null
+          previous_sentiment_score: number | null
           sentiment_score: number | null
           slides: Json | null
           sources: Json
           topic_id: string | null
+          update_reason: string | null
           updated_at: string | null
         }
         Insert: {
           analysis_date?: string
           card_type?: string | null
+          card_version?: number | null
           confidence_score?: number | null
           content?: Json
+          content_fingerprint?: string | null
           created_at?: string | null
           display_count?: number | null
           id?: string
@@ -1291,17 +1297,21 @@ export type Database = {
           keyword_phrase: string
           last_shown_at?: string | null
           needs_review?: boolean | null
+          previous_sentiment_score?: number | null
           sentiment_score?: number | null
           slides?: Json | null
           sources?: Json
           topic_id?: string | null
+          update_reason?: string | null
           updated_at?: string | null
         }
         Update: {
           analysis_date?: string
           card_type?: string | null
+          card_version?: number | null
           confidence_score?: number | null
           content?: Json
+          content_fingerprint?: string | null
           created_at?: string | null
           display_count?: number | null
           id?: string
@@ -1310,10 +1320,12 @@ export type Database = {
           keyword_phrase?: string
           last_shown_at?: string | null
           needs_review?: boolean | null
+          previous_sentiment_score?: number | null
           sentiment_score?: number | null
           slides?: Json | null
           sources?: Json
           topic_id?: string | null
+          update_reason?: string | null
           updated_at?: string | null
         }
         Relationships: [
