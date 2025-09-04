@@ -5,6 +5,8 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
+import { useSentimentCards } from "@/hooks/useSentimentCards";
+import { SentimentCard } from "@/components/SentimentCard";
 import { Hash, MapPin } from "lucide-react";
 
 const TopicFeed = () => {
@@ -22,6 +24,8 @@ const TopicFeed = () => {
     setSortBy,
     loadMore
   } = useInfiniteTopicFeed(slug || '');
+
+  const { sentimentCards } = useSentimentCards(topic?.id);
 
   // Intersection Observer for infinite scroll
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -117,20 +121,48 @@ const TopicFeed = () => {
           />
         </div>
 
-        {/* Stories with infinite scroll */}
+        {/* Stories with infinite scroll - mixed with sentiment cards */}
         {stories.length > 0 ? (
           <div className="space-y-8">
-            {stories.map((story, index) => (
-              <div
-                key={story.id}
-                ref={index === stories.length - 1 ? lastStoryElementRef : null}
-              >
-                <StoryCarousel 
-                  story={story} 
-                  topicName={topic.name}
-                />
-              </div>
-            ))}
+            {stories.map((story, index) => {
+              const items = [];
+              
+              // Add the story
+              items.push(
+                <div
+                  key={`story-${story.id}`}
+                  ref={index === stories.length - 1 ? lastStoryElementRef : null}
+                >
+                  <StoryCarousel 
+                    story={story} 
+                    topicName={topic.name}
+                  />
+                </div>
+              );
+
+              // Add sentiment card every 6 stories
+              if ((index + 1) % 6 === 0 && sentimentCards.length > 0) {
+                const sentimentIndex = Math.floor(index / 6) % sentimentCards.length;
+                const sentimentCard = sentimentCards[sentimentIndex];
+                
+                items.push(
+                  <div key={`sentiment-${sentimentCard.id}-${index}`}>
+                    <SentimentCard
+                      id={sentimentCard.id}
+                      keywordPhrase={sentimentCard.keyword_phrase}
+                      content={sentimentCard.content}
+                      sources={sentimentCard.sources}
+                      sentimentScore={sentimentCard.sentiment_score}
+                      confidenceScore={sentimentCard.confidence_score}
+                      analysisDate={sentimentCard.analysis_date}
+                      cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
+                    />
+                  </div>
+                );
+              }
+
+              return items;
+            }).flat()}
             
             {/* Loading more indicator */}
             {loadingMore && (

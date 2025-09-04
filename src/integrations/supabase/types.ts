@@ -1258,6 +1258,65 @@ export type Database = {
         }
         Relationships: []
       }
+      sentiment_cards: {
+        Row: {
+          analysis_date: string
+          card_type: string | null
+          confidence_score: number | null
+          content: Json
+          created_at: string | null
+          id: string
+          is_published: boolean | null
+          is_visible: boolean | null
+          keyword_phrase: string
+          needs_review: boolean | null
+          sentiment_score: number | null
+          sources: Json
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_date?: string
+          card_type?: string | null
+          confidence_score?: number | null
+          content?: Json
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          is_visible?: boolean | null
+          keyword_phrase: string
+          needs_review?: boolean | null
+          sentiment_score?: number | null
+          sources?: Json
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_date?: string
+          card_type?: string | null
+          confidence_score?: number | null
+          content?: Json
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          is_visible?: boolean | null
+          keyword_phrase?: string
+          needs_review?: boolean | null
+          sentiment_score?: number | null
+          sources?: Json
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_cards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       slides: {
         Row: {
           alt_text: string | null
@@ -1536,6 +1595,47 @@ export type Database = {
             foreignKeyName: "topic_newsletter_signups_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_sentiment_settings: {
+        Row: {
+          analysis_frequency_hours: number | null
+          created_at: string | null
+          enabled: boolean | null
+          excluded_keywords: string[] | null
+          id: string
+          last_analysis_at: string | null
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_frequency_hours?: number | null
+          created_at?: string | null
+          enabled?: boolean | null
+          excluded_keywords?: string[] | null
+          id?: string
+          last_analysis_at?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_frequency_hours?: number | null
+          created_at?: string | null
+          enabled?: boolean | null
+          excluded_keywords?: string[] | null
+          id?: string
+          last_analysis_at?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_sentiment_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },

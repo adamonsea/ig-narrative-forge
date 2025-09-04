@@ -1,0 +1,399 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Eye, EyeOff, Trash2, TrendingUp, TrendingDown, Minus, Bell } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format, parseISO } from "date-fns";
+
+interface SentimentCard {
+  id: string;
+  keyword_phrase: string;
+  content: any;
+  sources: any[];
+  sentiment_score: number;
+  confidence_score: number;
+  analysis_date: string;
+  card_type: string;
+  is_visible: boolean;
+  needs_review: boolean;
+  created_at: string;
+}
+
+interface SentimentManagerProps {
+  topicId: string;
+}
+
+export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
+  const [cards, setCards] = useState<SentimentCard[]>([]);
+  const [settings, setSettings] = useState({
+    enabled: true,
+    excluded_keywords: [] as string[],
+    analysis_frequency_hours: 24
+  });
+  const [newKeyword, setNewKeyword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Load sentiment cards and settings
+  useEffect(() => {
+    loadSentimentData();
+  }, [topicId]);
+
+  const loadSentimentData = async () => {
+    try {
+      // Load cards
+      const { data: cardsData, error: cardsError } = await supabase
+        .from('sentiment_cards')
+        .select('*')
+        .eq('topic_id', topicId)
+        .order('created_at', { ascending: false });
+
+      if (cardsError) throw cardsError;
+      setCards((cardsData || []).map(card => ({
+        ...card,
+        content: card.content as any,
+        sources: card.sources as any[]
+      })));
+
+      // Load settings
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('topic_sentiment_settings')
+        .select('*')
+        .eq('topic_id', topicId)
+        .single();
+
+      if (settingsData) {
+        setSettings({
+          enabled: settingsData.enabled,
+          excluded_keywords: settingsData.excluded_keywords || [],
+          analysis_frequency_hours: settingsData.analysis_frequency_hours || 24
+        });
+      }
+
+    } catch (error) {
+      console.error('Error loading sentiment data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load sentiment data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSettings = async (newSettings: Partial<typeof settings>) => {
+    try {
+      const updatedSettings = { ...settings, ...newSettings };
+      
+      const { error } = await supabase
+        .from('topic_sentiment_settings')
+        .upsert({
+          topic_id: topicId,
+          ...updatedSettings
+        });
+
+      if (error) throw error;
+
+      setSettings(updatedSettings);
+      toast({
+        title: "Settings Updated",
+        description: "Sentiment tracking settings have been saved"
+      });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update settings",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleCardVisibility = async (cardId: string, isVisible: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('sentiment_cards')
+        .update({ is_visible: isVisible })
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      setCards(cards.map(card => 
+        card.id === cardId ? { ...card, is_visible: isVisible } : card
+      ));
+
+      toast({
+        title: isVisible ? "Card Shown" : "Card Hidden",
+        description: `Sentiment card has been ${isVisible ? 'shown' : 'hidden'} from feeds`
+      });
+    } catch (error) {
+      console.error('Error toggling card visibility:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update card visibility",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const markAsReviewed = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sentiment_cards')
+        .update({ needs_review: false })
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      setCards(cards.map(card => 
+        card.id === cardId ? { ...card, needs_review: false } : card
+      ));
+    } catch (error) {
+      console.error('Error marking card as reviewed:', error);
+    }
+  };
+
+  const deleteCard = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sentiment_cards')
+        .delete()
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      setCards(cards.filter(card => card.id !== cardId));
+      toast({
+        title: "Card Deleted",
+        description: "Sentiment card has been permanently removed"
+      });
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete card",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addExcludedKeyword = () => {
+    if (newKeyword.trim() && !settings.excluded_keywords.includes(newKeyword.trim())) {
+      updateSettings({
+        excluded_keywords: [...settings.excluded_keywords, newKeyword.trim()]
+      });
+      setNewKeyword("");
+    }
+  };
+
+  const removeExcludedKeyword = (keyword: string) => {
+    updateSettings({
+      excluded_keywords: settings.excluded_keywords.filter(k => k !== keyword)
+    });
+  };
+
+  const getSentimentIcon = (score: number) => {
+    if (score > 20) return <TrendingUp className="h-4 w-4 text-green-600" />;
+    if (score < -20) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    return <Minus className="h-4 w-4 text-yellow-600" />;
+  };
+
+  const newCards = cards.filter(card => card.needs_review);
+  const reviewedCards = cards.filter(card => !card.needs_review);
+
+  if (loading) {
+    return <div className="p-4">Loading sentiment data...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            Sentiment Tracking Settings
+          </CardTitle>
+          <CardDescription>
+            Configure automated sentiment analysis for this topic
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sentiment-enabled">Enable sentiment tracking</Label>
+            <Switch
+              id="sentiment-enabled"
+              checked={settings.enabled}
+              onCheckedChange={(enabled) => updateSettings({ enabled })}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <Label>Excluded Keywords</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add keyword to exclude..."
+                value={newKeyword}
+                onChange={(e) => setNewKeyword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addExcludedKeyword()}
+              />
+              <Button onClick={addExcludedKeyword} variant="outline">
+                Add
+              </Button>
+            </div>
+            {settings.excluded_keywords.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {settings.excluded_keywords.map((keyword) => (
+                  <Badge
+                    key={keyword}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => removeExcludedKeyword(keyword)}
+                  >
+                    {keyword} ×
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* New Cards Needing Review */}
+      {newCards.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Bell className="h-5 w-5 text-orange-500" />
+              New Sentiment Cards ({newCards.length})
+            </CardTitle>
+            <CardDescription>
+              These cards were automatically generated and need review
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {newCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="border border-orange-200 bg-orange-50/30 rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getSentimentIcon(card.sentiment_score)}
+                        <Badge variant="outline">{card.keyword_phrase}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(card.created_at), 'MMM d, HH:mm')}
+                        </span>
+                      </div>
+                      <h4 className="font-medium">{card.content.headline}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {card.content.summary}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleCardVisibility(card.id, !card.is_visible)}
+                      >
+                        {card.is_visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markAsReviewed(card.id)}
+                      >
+                        Mark Reviewed
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteCard(card.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Sentiment Cards */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            All Sentiment Cards ({cards.length})
+          </CardTitle>
+          <CardDescription>
+            Manage all sentiment cards for this topic
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {cards.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No sentiment cards generated yet. Cards will appear automatically as trends are detected.
+            </p>
+          ) : (
+            <div className="grid gap-4">
+              {reviewedCards.map((card) => (
+                <div
+                  key={card.id}
+                  className={`border rounded-lg p-4 space-y-3 ${
+                    card.is_visible 
+                      ? 'border-border bg-background' 
+                      : 'border-border/50 bg-muted/30 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {getSentimentIcon(card.sentiment_score)}
+                        <Badge variant="outline">{card.keyword_phrase}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(card.analysis_date), 'MMM d')}
+                        </span>
+                      </div>
+                      <h4 className="font-medium">{card.content.headline}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {card.content.statistics}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleCardVisibility(card.id, !card.is_visible)}
+                      >
+                        {card.is_visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteCard(card.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

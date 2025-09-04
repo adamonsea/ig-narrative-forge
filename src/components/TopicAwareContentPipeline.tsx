@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   BarChart3, 
   RefreshCw, 
-  Loader2
+  Loader2,
+  Bell
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,8 @@ import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { Textarea } from "@/components/ui/textarea";
 import { useTopicPipeline } from "@/hooks/useTopicPipeline";
 import { useTopicPipelineActions } from "@/hooks/useTopicPipelineActions";
+import { useSentimentCards } from "@/hooks/useSentimentCards";
+import { SentimentManager } from "@/components/SentimentManager";
 import { ArticlesList } from "./topic-pipeline/ArticlesList";
 import { QueueList } from "./topic-pipeline/QueueList";
 import { StoriesList } from "./topic-pipeline/StoriesList";
@@ -74,6 +77,9 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const [viewingStory, setViewingStory] = useState<any>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Add sentiment cards hook
+  const { reviewCount } = useSentimentCards(selectedTopicId);
 
   const {
     articles,
@@ -371,7 +377,10 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 Processing Queue ({stats.processing_queue})
               </TabsTrigger>
               <TabsTrigger value="stories">
-                Ready Stories ({stats.ready_stories})
+                Published ({stats.ready_stories})
+                {reviewCount > 0 && (
+                  <Bell className="ml-2 h-4 w-4 text-orange-500" />
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -412,22 +421,45 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             </TabsContent>
 
             <TabsContent value="stories" className="space-y-6">
-              <StoriesList
-                stories={stories}
-                expandedStories={expandedStories}
-                processingApproval={processingApproval}
-                processingRejection={processingRejection}
-                deletingStories={deletingStories}
-                publishingStories={new Set()}
-                animatingStories={animatingStories}
-                onToggleExpanded={toggleStoryExpanded}
-                onApprove={approveStory}
-                onReject={rejectStory}
-                onDelete={deleteStory}
-                onReturnToReview={returnToReview}
-                onEditSlide={handleEditSlide}
-                onViewStory={setViewingStory}
-              />
+              {/* Sub-tabs for Published content */}
+              <Tabs defaultValue="stories" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="stories">
+                    Stories ({stats.ready_stories})
+                  </TabsTrigger>
+                  <TabsTrigger value="sentiment">
+                    Sentiment Cards
+                    {reviewCount > 0 && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {reviewCount}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="stories">
+                  <StoriesList
+                    stories={stories}
+                    expandedStories={expandedStories}
+                    processingApproval={processingApproval}
+                    processingRejection={processingRejection}
+                    deletingStories={deletingStories}
+                    publishingStories={new Set()}
+                    animatingStories={animatingStories}
+                    onToggleExpanded={toggleStoryExpanded}
+                    onApprove={approveStory}
+                    onReject={rejectStory}
+                    onDelete={deleteStory}
+                    onReturnToReview={returnToReview}
+                    onEditSlide={handleEditSlide}
+                    onViewStory={setViewingStory}
+                  />
+                </TabsContent>
+
+                <TabsContent value="sentiment">
+                  <SentimentManager topicId={selectedTopicId} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
 
