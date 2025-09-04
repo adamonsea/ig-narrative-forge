@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Zap, Eye, Share2, ArrowRight } from 'lucide-react';
+import { Zap, Eye, Share2, Heart, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
@@ -47,7 +47,7 @@ const Index = () => {
               </Link>
             </Button>
             <Button size="lg" variant="ghost" asChild>
-              <Link to="/feed/eastbourne">
+              <Link to="/feed/ai-agency">
                 View Demo
               </Link>
             </Button>
@@ -57,7 +57,7 @@ const Index = () => {
 
       {/* Features */}
       <div className="container mx-auto px-6 pb-32">
-        <div className="grid md:grid-cols-3 gap-16 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-12 max-w-4xl mx-auto">
           <div className="text-center space-y-3">
             <div className="w-8 h-8 mx-auto">
               <Zap className="w-8 h-8 text-foreground" />
@@ -75,6 +75,16 @@ const Index = () => {
             <h3 className="font-medium">Simplify</h3>
             <p className="text-sm text-muted-foreground">
               Complex topics made clear
+            </p>
+          </div>
+
+          <div className="text-center space-y-3">
+            <div className="w-8 h-8 mx-auto">
+              <Heart className="w-8 h-8 text-foreground" />
+            </div>
+            <h3 className="font-medium">Sentiment</h3>
+            <p className="text-sm text-muted-foreground">
+              Auto-detect emotional tone
             </p>
           </div>
 
