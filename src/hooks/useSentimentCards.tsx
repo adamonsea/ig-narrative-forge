@@ -46,23 +46,25 @@ export const useSentimentCards = (topicId?: string) => {
     return sentimentCards.filter(card => card.needs_review).length;
   };
 
-  // Load sentiment cards for topic or all public cards
+  // Load sentiment cards for topic only - don't load anything without a topic ID
   const loadSentimentCards = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      let query = supabase
+      // Don't load any cards if no topic ID is provided
+      if (!topicId || topicId.trim() === '') {
+        setSentimentCards([]);
+        return;
+      }
+
+      const query = supabase
         .from('sentiment_cards')
         .select('*')
         .eq('is_published', true)
         .eq('is_visible', true)
+        .eq('topic_id', topicId)
         .order('created_at', { ascending: false });
-
-      // If topicId provided, filter by topic, otherwise get all public cards
-      if (topicId) {
-        query = query.eq('topic_id', topicId);
-      }
 
       const { data, error: fetchError } = await query;
 
@@ -118,9 +120,14 @@ export const useSentimentCards = (topicId?: string) => {
     }
   };
 
-  // Load cards on mount and when topicId changes
+  // Load cards only when we have a valid topicId
   useEffect(() => {
-    loadSentimentCards();
+    if (topicId && topicId.trim() !== '') {
+      loadSentimentCards();
+    } else {
+      setSentimentCards([]);
+      setLoading(false);
+    }
   }, [topicId]);
 
   // Set up real-time subscription for sentiment cards

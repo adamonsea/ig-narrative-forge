@@ -86,8 +86,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Add sentiment cards hook
-  const { reviewCount } = useSentimentCards(selectedTopicId);
+  // Add sentiment cards hook - only pass topicId when it's properly loaded
+  const { reviewCount } = useSentimentCards(selectedTopicId && selectedTopicId.trim() !== '' ? selectedTopicId : undefined);
 
   const {
     articles,
