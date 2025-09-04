@@ -115,8 +115,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
               isProcessing && isAnimatingAway
                 ? 'animate-slide-out-right'  // Simplify: slide right for processing
-                : isDeleting || isAnimatingAway
-                ? 'animate-discard'          // Delete: discard animation  
+                : isDeleting && isAnimatingAway
+                ? 'animate-discard'          // Delete: discard animation only when actually deleting
                 : 'animate-fade-in opacity-100 scale-100'
             }`}
             style={{
