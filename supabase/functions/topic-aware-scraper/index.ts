@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
+import { ResilientScraper } from '../_shared/resilient-scraper.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
 import { calculateTopicRelevance, getRelevanceThreshold, TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 import { TopicRegionalConfig } from '../_shared/region-config.ts';
@@ -104,29 +104,37 @@ serve(async (req) => {
     // Use the provided sourceId (source already exists in database)
     const actualSourceId = sourceId;
 
-    // Initialize scraping components with proper constructor parameters
-    const scrapingStrategies = new EnhancedScrapingStrategies(
-      topicConfig.region || 'general', 
-      sourceInfo, 
-      feedUrl
-    );
+    // Initialize resilient scraping system
+    const resilientScraper = new ResilientScraper(supabase);
     const dbOps = new DatabaseOperations(supabase);
 
     const startTime = Date.now();
 
-    // Perform scraping using unified strategy
-    console.log(`Starting scraping for topic: ${topicConfig.topic_type} - ${topicData.name}`);
-    const scrapingResult = await scrapingStrategies.executeScrapingStrategy();
+    // Perform resilient scraping with intelligent fallbacks
+    console.log(`Starting resilient scraping for topic: ${topicConfig.topic_type} - ${topicData.name}`);
+    const scrapingResult = await resilientScraper.scrapeWithResilience(
+      supabase,
+      topicConfig.region || 'general',
+      topicId,
+      {
+        useCache: true,
+        enableHealthChecks: true,
+        maxRetries: 3,
+        enableFallbacks: true
+      }
+    );
 
-    if (!scrapingResult.success) {
-      console.error('Scraping failed:', scrapingResult.errors);
+    if (!scrapingResult?.success) {
+      console.error('Resilient scraping failed:', scrapingResult?.errors || ['Unknown error']);
       
       // Update source metrics for failed scrape
-      await dbOps.updateSourceMetrics(actualSourceId, false, 'rss', Date.now() - startTime);
+      if (scrapingResult?.source) {
+        await dbOps.updateSourceMetrics(scrapingResult.source.id, false, 'unknown', Date.now() - startTime);
+      }
       
       return new Response(JSON.stringify({
         success: false,
-        errors: scrapingResult.errors,
+        errors: scrapingResult?.errors || ['Unknown error'],
         articlesFound: 0,
         articlesStored: 0
       }), {
@@ -134,6 +142,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`✅ Resilient scraping successful: ${scrapingResult.articles.length} articles found`);
+    console.log(`🔄 Method used: ${scrapingResult.method}, Cache used: ${scrapingResult.cacheUsed}`);
 
     // VOLUME-FIRST APPROACH: Score ALL articles but store them all
     const allArticlesWithScores = scrapingResult.articles.map(article => {
@@ -178,7 +189,9 @@ serve(async (req) => {
     console.log(`📊 VOLUME-FIRST Storage - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
 
     // Update source metrics
-    await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
+    if (scrapingResult?.source) {
+      await dbOps.updateSourceMetrics(scrapingResult.source.id, true, scrapingResult.method, Date.now() - startTime);
+    }
 
     // Log the operation
     await dbOps.logSystemEvent('info', `Topic-aware scraping completed for ${topicData.name}`, {

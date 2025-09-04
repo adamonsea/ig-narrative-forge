@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -44,7 +43,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🚀 Universal scraper started for source: ${sourceId}, region: ${region}`);
+    console.log(`🚀 Hybrid scraper started for source: ${sourceId}, region: ${region}`);
     console.log(`🌐 Target URL: ${feedUrl}`);
 
     // Get source information
@@ -65,103 +64,32 @@ serve(async (req) => {
       );
     }
 
-    // Find the associated regional topic for this source and region
+    // Find associated topic
     let topicId = null;
-    let topicConfig = null;
-    let otherRegionalTopics = [];
-
     if (sourceInfo.topic_id) {
       topicId = sourceInfo.topic_id;
-      
-      // Get topic configuration
-      const { data: topicData, error: topicError } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('id', topicId)
-        .single();
-
-      if (topicData && !topicError) {
-        topicConfig = {
-          id: topicData.id,
-          topic_type: topicData.topic_type,
-          keywords: topicData.keywords || [],
-          region: topicData.region,
-          landmarks: topicData.landmarks || [],
-          postcodes: topicData.postcodes || [],
-          organizations: topicData.organizations || []
-        };
-
-        // Get other regional topics for dynamic negative scoring
-        if (topicData.topic_type === 'regional') {
-          const { data: otherTopics } = await supabase
-            .from('topics')
-            .select('region, keywords, landmarks')
-            .eq('topic_type', 'regional')
-            .neq('id', topicId)
-            .eq('is_active', true);
-
-          otherRegionalTopics = otherTopics?.map(topic => ({
-            keywords: topic.keywords || [],
-            landmarks: topic.landmarks || [],
-            postcodes: [],
-            organizations: [],
-            region_name: topic.region || 'Unknown'
-          })) || [];
-        }
-
-        console.log(`📍 Using topic: ${topicData.name} (${topicData.topic_type})`);
-      }
     } else {
       // Fallback: find regional topic matching this region
-      const { data: topicData, error: topicError } = await supabase
+      const { data: topicData } = await supabase
         .from('topics')
-        .select('*')
+        .select('id')
         .eq('topic_type', 'regional')
         .eq('region', region)
         .eq('is_active', true)
         .single();
 
-      if (topicData && !topicError) {
+      if (topicData) {
         topicId = topicData.id;
-        topicConfig = {
-          id: topicData.id,
-          topic_type: topicData.topic_type,
-          keywords: topicData.keywords || [],
-          region: topicData.region,
-          landmarks: topicData.landmarks || [],
-          postcodes: topicData.postcodes || [],
-          organizations: topicData.organizations || []
-        };
-
-        // Get other regional topics for dynamic negative scoring
-        const { data: otherTopics } = await supabase
-          .from('topics')
-          .select('region, keywords, landmarks')
-          .eq('topic_type', 'regional')
-          .neq('id', topicId)
-          .eq('is_active', true);
-
-        otherRegionalTopics = otherTopics?.map(topic => ({
-          keywords: topic.keywords || [],
-          landmarks: topic.landmarks || [],
-          postcodes: [],
-          organizations: [],
-          region_name: topic.region || 'Unknown'
-        })) || [];
-
-        console.log(`📍 Found regional topic: ${topicData.name} for region: ${region}`);
-      } else {
-        console.warn(`⚠️ No regional topic found for region: ${region}`);
       }
     }
 
-
-    // Initialize resilient scraping system
+    // Initialize resilient scraper
     const resilientScraper = new ResilientScraper(supabase);
     const dbOps = new DatabaseOperations(supabase);
 
-    // Execute resilient scraping with intelligent fallbacks
     console.log(`🔄 Starting resilient scraping for ${sourceInfo.source_name}`);
+    
+    // Use resilient scraping with intelligent fallbacks
     const scrapingResult = await resilientScraper.scrapeWithResilience(
       supabase,
       region,
@@ -182,14 +110,12 @@ serve(async (req) => {
       console.log(`✅ Resilient scraping successful: ${scrapingResult.articles.length} articles found`);
       console.log(`🔄 Method used: ${scrapingResult.method}, Cache used: ${scrapingResult.cacheUsed}`);
       
-      // Store articles with enhanced filtering and topic assignment
+      // Store articles with enhanced filtering
       const storageResult = await dbOps.storeArticles(
         scrapingResult.articles,
         sourceId,
         region,
-        topicId,
-        topicConfig,
-        otherRegionalTopics
+        topicId
       );
       
       storedCount = storageResult.stored;
@@ -215,7 +141,7 @@ serve(async (req) => {
     // Log system event with resilient scraping details
     await dbOps.logSystemEvent(
       scrapingResult?.success ? 'info' : 'warn',
-      `Universal scraper completed for ${sourceInfo.source_name}`,
+      `Hybrid scraper completed for ${sourceInfo.source_name}`,
       {
         sourceId,
         region,
@@ -231,10 +157,9 @@ serve(async (req) => {
         fallbackUsed: scrapingResult?.fallbackUsed || false,
         sourceHealth: scrapingResult?.sourceHealth || 'unknown',
         errors: scrapingResult?.errors || [],
-        topicAssigned: topicId ? true : false,
         circuitBreakerStatus: scrapingResult?.circuitBreakerStatus || 'unknown'
       },
-      'universal-scraper'
+      'hybrid-scraper'
     );
 
     const success = scrapingResult?.success || false;
@@ -264,22 +189,22 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('❌ Universal scraper error:', error);
+    console.error('❌ Hybrid scraper error:', error);
     
     // Log error event
     const dbOps = new DatabaseOperations(supabase);
     await dbOps.logSystemEvent(
       'error',
-      `Universal scraper failed: ${error.message}`,
+      `Hybrid scraper failed: ${error.message}`,
       { error: error.message, stack: error.stack },
-      'universal-scraper'
+      'hybrid-scraper'
     );
 
     return new Response(
       JSON.stringify({ 
         success: false,
         error: error.message || 'Internal server error',
-        message: 'Universal scraper encountered an error'
+        message: 'Hybrid scraper encountered an error'
       }),
       { 
         status: 500, 
