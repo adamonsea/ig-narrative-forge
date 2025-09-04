@@ -83,25 +83,39 @@ serve(async (req) => {
       )
     }
 
-    // Deduct credits (10 credits for illustration)
-    const { data: creditResult, error: creditError } = await supabase.rpc('deduct_user_credits', {
-      p_user_id: user.id,
-      p_credits_amount: 10,
-      p_description: 'Story illustration generation',
-      p_story_id: storyId
-    })
+    // Check if user is super admin (bypass credit deduction)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+    
+    const isSuperAdmin = profile?.role === 'super_admin'
+    let creditResult = null
 
-    if (creditError || !creditResult?.success) {
-      return new Response(
-        JSON.stringify({ 
-          error: creditResult?.error || 'Failed to deduct credits',
-          credits_required: 10
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    // Deduct credits (10 credits for illustration) - skip for super admin
+    if (!isSuperAdmin) {
+      const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
+        p_user_id: user.id,
+        p_credits_amount: 10,
+        p_description: 'Story illustration generation',
+        p_story_id: storyId
+      })
+
+      creditResult = result
+
+      if (creditError || !creditResult?.success) {
+        return new Response(
+          JSON.stringify({ 
+            error: creditResult?.error || 'Failed to deduct credits',
+            credits_required: 10
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
     }
 
     // Generate illustration prompt based on story title
@@ -167,8 +181,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         illustration_url: imageUrl,
-        credits_used: 10,
-        new_balance: creditResult.new_balance
+        credits_used: isSuperAdmin ? 0 : 10,
+        new_balance: creditResult?.new_balance || null
       }),
       { 
         status: 200, 
