@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { ResilientScraper } from '../_shared/resilient-scraper.ts';
+import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
 
 const corsHeaders = {
@@ -156,31 +156,20 @@ serve(async (req) => {
     }
 
 
-    // Initialize resilient scraping system
-    const resilientScraper = new ResilientScraper(supabase);
+    // Initialize enhanced scraping system
+    const scrapingStrategies = new EnhancedScrapingStrategies(region, sourceInfo, feedUrl);
     const dbOps = new DatabaseOperations(supabase);
 
-    // Execute resilient scraping with intelligent fallbacks
-    console.log(`🔄 Starting resilient scraping for ${sourceInfo.source_name}`);
-    const scrapingResult = await resilientScraper.scrapeWithResilience(
-      supabase,
-      region,
-      topicId,
-      {
-        useCache: true,
-        enableHealthChecks: true,
-        maxRetries: 3,
-        enableFallbacks: true
-      }
-    );
+    // Execute enhanced scraping
+    console.log(`🔄 Starting enhanced scraping for ${sourceInfo.source_name}`);
+    const scrapingResult = await scrapingStrategies.executeScrapingStrategy();
 
     let storedCount = 0;
     let duplicateCount = 0;
     let discardedCount = 0;
 
-    if (scrapingResult?.success && scrapingResult.articles.length > 0) {
-      console.log(`✅ Resilient scraping successful: ${scrapingResult.articles.length} articles found`);
-      console.log(`🔄 Method used: ${scrapingResult.method}, Cache used: ${scrapingResult.cacheUsed}`);
+    if (scrapingResult.success && scrapingResult.articles.length > 0) {
+      console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
       // Store articles with enhanced filtering and topic assignment
       const storageResult = await dbOps.storeArticles(
@@ -198,120 +187,53 @@ serve(async (req) => {
 
       console.log(`📊 Storage complete: ${storedCount} stored, ${duplicateCount} duplicates, ${discardedCount} discarded`);
     } else {
-      console.log(`❌ Resilient scraping failed or no articles found`);
-      
-      // Enhanced fallback: Try direct database query for existing source
-      console.log('🔄 Resilient scraper failed, attempting direct source fallback...');
-      
-      try {
-        // Get the source information directly and try basic scraping
-        if (sourceId && sourceInfo && sourceInfo.feed_url) {
-          console.log(`🆘 Attempting direct scraping of source: ${sourceInfo.source_name}`);
-          
-          // Try to scrape directly using the UniversalContentExtractor
-          const { UniversalContentExtractor } = await import('../_shared/universal-content-extractor.ts');
-          const extractor = new UniversalContentExtractor();
-          
-          const basicResult = await extractor.extract(sourceInfo.feed_url, {
-            timeout: 30000,
-            retries: 2
-          });
-          
-          if (basicResult.success && basicResult.articles.length > 0) {
-            console.log(`✅ Direct scraping successful: ${basicResult.articles.length} articles found`);
-            
-            // Store articles with fallback method
-            const storageResult = await dbOps.storeArticles(
-              basicResult.articles,
-              sourceId,
-              region,
-              topicId,
-              topicConfig,
-              otherRegionalTopics
-            );
-            
-            storedCount = storageResult.stored;
-            duplicateCount = storageResult.duplicates;
-            discardedCount = storageResult.discarded;
-            
-            // Update the scrapingResult for logging
-            scrapingResult = {
-              success: true,
-              articles: basicResult.articles,
-              method: 'direct_fallback',
-              source: sourceInfo,
-              cacheUsed: false,
-              fallbackUsed: true,
-              articlesFound: basicResult.articles.length,
-              articlesScraped: basicResult.articles.length
-            };
-            
-            console.log(`📊 Direct fallback storage summary - Stored: ${storedCount}, Duplicates: ${duplicateCount}, Discarded: ${discardedCount}`);
-          } else {
-            console.log('❌ Direct source fallback also failed');
-          }
-        }
-        
-      } catch (fallbackError) {
-        console.error('❌ Direct scraping fallback error:', fallbackError);
-      }
+      console.log(`❌ Scraping failed or no articles found`);
     }
 
     // Update source metrics
     const responseTime = Date.now() - startTime;
-    if (scrapingResult?.source) {
-      await dbOps.updateSourceMetrics(
-        scrapingResult.source.id,
-        scrapingResult.success,
-        scrapingResult.method,
-        responseTime
-      );
-    }
+    await dbOps.updateSourceMetrics(
+      sourceId,
+      scrapingResult.success,
+      scrapingResult.method,
+      responseTime
+    );
 
-    // Log system event with resilient scraping details
+    // Log system event
     await dbOps.logSystemEvent(
-      scrapingResult?.success ? 'info' : 'warn',
+      scrapingResult.success ? 'info' : 'warn',
       `Universal scraper completed for ${sourceInfo.source_name}`,
       {
         sourceId,
         region,
         topicId,
-        method: scrapingResult?.method || 'unknown',
-        articlesFound: scrapingResult?.articlesFound || 0,
-        articlesScraped: scrapingResult?.articlesScraped || 0,
+        method: scrapingResult.method,
+        articlesFound: scrapingResult.articlesFound,
+        articlesScraped: scrapingResult.articlesScraped,
         stored: storedCount,
         duplicates: duplicateCount,
         discarded: discardedCount,
         responseTime,
-        cacheUsed: scrapingResult?.cacheUsed || false,
-        fallbackUsed: scrapingResult?.fallbackUsed || false,
-        sourceHealth: scrapingResult?.sourceHealth || 'unknown',
-        errors: scrapingResult?.errors || [],
-        topicAssigned: topicId ? true : false,
-        circuitBreakerStatus: scrapingResult?.circuitBreakerStatus || 'unknown'
+        errors: scrapingResult.errors,
+        topicAssigned: topicId ? true : false
       },
       'universal-scraper'
     );
 
-    const success = scrapingResult?.success || false;
-    
     return new Response(
       JSON.stringify({
-        success,
-        method: scrapingResult?.method || 'unknown',
-        articlesFound: scrapingResult?.articlesFound || 0,
-        articlesScraped: scrapingResult?.articlesScraped || 0,
+        success: scrapingResult.success,
+        method: scrapingResult.method,
+        articlesFound: scrapingResult.articlesFound,
+        articlesScraped: scrapingResult.articlesScraped,
         articlesStored: storedCount,
         duplicatesSkipped: duplicateCount,
         filteredForRelevance: discardedCount,
         responseTime,
-        cacheUsed: scrapingResult?.cacheUsed || false,
-        fallbackUsed: scrapingResult?.fallbackUsed || false,
-        sourceHealth: scrapingResult?.sourceHealth || 'unknown',
-        errors: scrapingResult?.errors || [],
-        message: success 
-          ? `Successfully scraped ${storedCount} articles using resilient ${scrapingResult.method}`
-          : `Resilient scraping failed: ${scrapingResult?.errors.join(', ') || 'Unknown error'}`
+        errors: scrapingResult.errors,
+        message: scrapingResult.success 
+          ? `Successfully scraped ${storedCount} articles using ${scrapingResult.method}`
+          : `Scraping failed: ${scrapingResult.errors.join(', ')}`
       }),
       { 
         status: 200, 

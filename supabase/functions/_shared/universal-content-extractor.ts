@@ -266,116 +266,35 @@ export class UniversalContentExtractor {
 
   private getEnhancedHeaders(): Record<string, string> {
     const userAgent = this.getRotatingUserAgent();
-    const isBotAgent = userAgent.includes('bot') || userAgent.includes('facebook');
     
-    // Enhanced anti-detection headers with better browser mimicry
+    // Enhanced headers that look more browser-like
     const headers: Record<string, string> = {
       'User-Agent': userAgent,
-      'Accept': this.getRandomAcceptHeader(),
-      'Accept-Language': this.getRandomLanguageHeader(),
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
-      'Cache-Control': Math.random() > 0.5 ? 'max-age=0' : 'no-cache',
-      'Pragma': Math.random() > 0.7 ? 'no-cache' : undefined
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
     };
-
-    // Add browser-specific headers (avoid for bot agents)
-    if (!isBotAgent) {
-      headers['Sec-Fetch-Dest'] = 'document';
-      headers['Sec-Fetch-Mode'] = 'navigate';
-      headers['Sec-Fetch-Site'] = Math.random() > 0.5 ? 'none' : 'same-origin';
-      headers['Sec-Fetch-User'] = '?1';
-      headers['Sec-CH-UA'] = this.generateSecChUA(userAgent);
-      headers['Sec-CH-UA-Mobile'] = userAgent.includes('Mobile') ? '?1' : '?0';
-      headers['Sec-CH-UA-Platform'] = this.extractPlatform(userAgent);
-    }
 
     // Add government-site specific headers
     if (this.isGovernmentSite) {
       headers['DNT'] = '1'; // Do Not Track for privacy compliance
       headers['Sec-GPC'] = '1'; // Global Privacy Control
       delete headers['Sec-Fetch-Site']; // Remove some tracking headers for gov sites
-      // More conservative approach for government sites
-      delete headers['Sec-CH-UA'];
-      delete headers['Sec-CH-UA-Mobile'];
-      delete headers['Sec-CH-UA-Platform'];
     }
 
-    // Randomly add referrer (more realistic patterns)
-    const referrerChance = Math.random();
-    if (referrerChance > 0.6) {
-      headers['Referer'] = this.getRandomReferrer();
-    } else if (referrerChance > 0.3) {
-      headers['Referer'] = `https://${this.domain}/`; // Self-referrer
+    // Randomly add optional headers to vary fingerprint
+    if (Math.random() > 0.5) {
+      headers['Referer'] = 'https://www.google.com/';
     }
-
-    // Add viewport hint for mobile user agents
-    if (userAgent.includes('Mobile')) {
-      headers['Viewport-Width'] = String(360 + Math.floor(Math.random() * 200));
-    }
-
-    // Clean up undefined values
-    Object.keys(headers).forEach(key => {
-      if (headers[key] === undefined) {
-        delete headers[key];
-      }
-    });
 
     return headers;
-  }
-
-  private getRandomAcceptHeader(): string {
-    const acceptHeaders = [
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
-    ];
-    return acceptHeaders[Math.floor(Math.random() * acceptHeaders.length)];
-  }
-
-  private getRandomLanguageHeader(): string {
-    const languages = [
-      'en-US,en;q=0.9',
-      'en-GB,en;q=0.9',
-      'en-US,en;q=0.9,es;q=0.8',
-      'en-GB,en-US;q=0.9,en;q=0.8'
-    ];
-    return languages[Math.floor(Math.random() * languages.length)];
-  }
-
-  private generateSecChUA(userAgent: string): string {
-    if (userAgent.includes('Chrome/120')) {
-      return '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
-    } else if (userAgent.includes('Firefox')) {
-      return '"Firefox";v="120"';
-    } else if (userAgent.includes('Edge')) {
-      return '"Not_A Brand";v="8", "Chromium";v="120", "Microsoft Edge";v="120"';
-    }
-    return '"Not_A Brand";v="99", "Chromium";v="120"';
-  }
-
-  private extractPlatform(userAgent: string): string {
-    if (userAgent.includes('Windows')) return '"Windows"';
-    if (userAgent.includes('Mac OS X')) return '"macOS"';
-    if (userAgent.includes('Linux')) return '"Linux"';
-    if (userAgent.includes('Android')) return '"Android"';
-    return '"Windows"';
-  }
-
-  private getRandomReferrer(): string {
-    const referrers = [
-      'https://www.google.com/',
-      'https://www.google.co.uk/',
-      'https://www.bing.com/',
-      'https://duckduckgo.com/',
-      'https://search.yahoo.com/',
-      'https://www.facebook.com/',
-      'https://twitter.com/',
-      'https://linkedin.com/'
-    ];
-    return referrers[Math.floor(Math.random() * referrers.length)];
   }
 
   async fetchWithRetry(url: string, maxRetries: number = 3): Promise<string> {
