@@ -38,16 +38,96 @@ const StoryPage = () => {
   const [story, setStory] = useState<Story | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Check if this is a regional feed story URL
+  const isRegionalFeed = window.location.pathname.includes('/eastbourne-feed/story/');
 
   useEffect(() => {
     const loadStoryAndTopic = async () => {
-      if (!slug || !storyId) {
-        navigate('/');
-        return;
+      if (isRegionalFeed) {
+        // Handle regional feed story
+        if (!storyId) {
+          navigate('/eastbourne-feed');
+          return;
+        }
+        await loadRegionalStory();
+      } else {
+        // Handle topic feed story
+        if (!slug || !storyId) {
+          navigate('/');
+          return;
+        }
+        await loadTopicStory();
       }
+    };
 
+    const loadRegionalStory = async () => {
       try {
-        // Load topic first
+        // Load story for regional feed
+        const { data: storyData, error: storyError } = await supabase
+          .from('stories')
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            slides (
+              id,
+              slide_number,
+              content
+            ),
+            articles!inner (
+              source_url,
+              region
+            )
+          `)
+          .eq('id', storyId)
+          .eq('status', 'ready')
+          .eq('is_published', true)
+          .ilike('articles.region', '%eastbourne%')
+          .single();
+
+        if (storyError) {
+          throw new Error('Story not found in Eastbourne region');
+        }
+
+        const transformedStory = {
+          id: storyData.id,
+          title: storyData.title,
+          author: storyData.author,
+          publication_name: storyData.publication_name,
+          created_at: storyData.created_at,
+          slides: storyData.slides.sort((a, b) => a.slide_number - b.slide_number),
+          article: {
+            source_url: storyData.articles.source_url,
+            region: storyData.articles.region
+          }
+        };
+
+        setStory(transformedStory);
+        // Set a mock topic for regional feeds
+        setTopic({
+          id: 'eastbourne',
+          name: 'Eastbourne',
+          slug: 'eastbourne',
+          topic_type: 'regional'
+        });
+      } catch (error) {
+        console.error('Error loading regional story:', error);
+        toast({
+          title: "Error",
+          description: "Story not found",
+          variant: "destructive",
+        });
+        navigate('/eastbourne-feed');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadTopicStory = async () => {
+      try {
         const { data: topicData, error: topicError } = await supabase
           .from('topics')
           .select('id, name, slug, topic_type')
@@ -171,12 +251,12 @@ const StoryPage = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Back Button and Topic Header */}
         <div className="mb-6">
-          <Button variant="outline" asChild className="mb-4">
-            <Link to={`/feed/topic/${slug}`}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {topic.name}
-            </Link>
-          </Button>
+            <Button variant="outline" asChild className="mb-4">
+              <Link to={isRegionalFeed ? '/eastbourne-feed' : `/feed/topic/${slug}`}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to {topic.name}
+              </Link>
+            </Button>
           
           <div className="flex items-center gap-2 mb-2">
             {topic.topic_type === 'regional' ? (
@@ -195,7 +275,10 @@ const StoryPage = () => {
           <StoryCarousel 
             story={story} 
             topicName={topic.name}
-            storyUrl={`${window.location.origin}/feed/topic/${slug}/story/${story.id}`}
+            storyUrl={isRegionalFeed 
+              ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
+              : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
+            }
           />
         </div>
       </div>

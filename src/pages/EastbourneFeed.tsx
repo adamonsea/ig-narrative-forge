@@ -123,7 +123,12 @@ export default function EastbourneFeed() {
         {stories.length > 0 ? (
           <div className="space-y-8">
             {stories.map((story) => (
-              <StoryCarousel key={story.id} story={story} topicName="Eastbourne" />
+              <StoryCarousel 
+                key={story.id} 
+                story={story} 
+                topicName="Eastbourne"
+                storyUrl={`${window.location.origin}/eastbourne-feed/story/${story.id}`}
+              />
             ))}
           </div>
         ) : (
