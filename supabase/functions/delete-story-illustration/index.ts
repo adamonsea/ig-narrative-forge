@@ -51,10 +51,10 @@ serve(async (req) => {
       )
     }
 
-    // Get story details
+    // Get story details to verify it exists and get the illustration URL
     const { data: story, error: storyError } = await supabase
       .from('stories')
-      .select('*')
+      .select('cover_illustration_url')
       .eq('id', storyId)
       .single()
 
@@ -68,33 +68,38 @@ serve(async (req) => {
       )
     }
 
-    // Check if illustration exists
+    // If no illustration exists, return success anyway
     if (!story.cover_illustration_url) {
       return new Response(
-        JSON.stringify({ error: 'No illustration to delete' }),
+        JSON.stringify({ 
+          success: true,
+          message: 'No illustration to delete'
+        }),
         { 
-          status: 400, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
     }
 
-    // Extract file name from URL for deletion
-    const fileName = story.cover_illustration_url.split('/').pop()
+    // Extract filename from URL
+    const url = story.cover_illustration_url
+    const filename = url.substring(url.lastIndexOf('/') + 1)
 
-    // Delete from storage if we can extract the filename
-    if (fileName) {
+    // Delete from storage if it exists
+    try {
       const { error: deleteError } = await supabase.storage
         .from('visuals')
-        .remove([fileName])
+        .remove([filename])
       
       if (deleteError) {
-        console.error('Storage deletion error:', deleteError)
-        // Continue with database update even if storage deletion fails
+        console.warn('Failed to delete file from storage (non-critical):', deleteError)
       }
+    } catch (storageError) {
+      console.warn('Storage deletion error (non-critical):', storageError)
     }
 
-    // Update story to remove illustration
+    // Update story to remove illustration references
     const { error: updateError } = await supabase
       .from('stories')
       .update({
@@ -105,7 +110,7 @@ serve(async (req) => {
       .eq('id', storyId)
 
     if (updateError) {
-      throw new Error(`Update error: ${updateError.message}`)
+      throw new Error(`Failed to update story: ${updateError.message}`)
     }
 
     return new Response(

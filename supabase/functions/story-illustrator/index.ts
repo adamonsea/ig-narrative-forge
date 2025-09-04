@@ -149,6 +149,7 @@ Style: Clean black ink line art on pure white background. Simple editorial illus
           prompt: illustrationPrompt,
           n: 1,
           size: '1024x1024',
+          response_format: 'b64_json',
           ...(model === 'gpt-image-1' ? {
             quality: 'high',
             output_format: 'png',
@@ -164,46 +165,169 @@ Style: Clean black ink line art on pure white background. Simple editorial illus
       }
 
       const imageData = await openaiResponse.json()
-      imageBase64 = imageData.data[0].b64_json
+      
+      // Handle different response formats
+      if (model === 'gpt-image-1') {
+        // GPT-Image-1 returns base64 directly in the response
+        imageBase64 = imageData.data[0].b64_json || imageData.data[0].image
+      } else {
+        // DALL-E models return b64_json field
+        imageBase64 = imageData.data[0].b64_json
+      }
+      
+      if (!imageBase64) {
+        console.error('No image data received from OpenAI:', imageData)
+        throw new Error('No image data received from OpenAI API')
+      }
+    } else if (modelConfig.provider === 'huggingface') {
+      // FLUX.1-schnell via Hugging Face
+      const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: illustrationPrompt,
+          options: {
+            wait_for_model: true
+          }
+        }),
+      })
+
+      if (!hfResponse.ok) {
+        const errorData = await hfResponse.text()
+        console.error('Hugging Face API error:', errorData)
+        throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
+      }
+
+      const imageBlob = await hfResponse.blob()
+      const arrayBuffer = await imageBlob.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      imageBase64 = btoa(String.fromCharCode(...uint8Array))
+    } else if (modelConfig.provider === 'midjourney') {
+      // MidJourney via kie.ai
+      const mjResponse = await fetch('https://api.kie.ai/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('KIE_AI_API_KEY')}`,
+        },
+        body: JSON.stringify({
+          prompt: illustrationPrompt,
+          model: 'midjourney',
+          aspect_ratio: '1:1'
+        }),
+      })
+
+      if (!mjResponse.ok) {
+        const errorData = await mjResponse.text()
+        console.error('MidJourney API error:', errorData)
+        throw new Error(`MidJourney API error: ${mjResponse.statusText}`)
+      }
+
+      const mjData = await mjResponse.json()
+      if (mjData.status === 'success' && mjData.image_url) {
+        // Download the image and convert to base64
+        const imageResponse = await fetch(mjData.image_url)
+        const imageBlob = await imageResponse.blob()
+        const arrayBuffer = await imageBlob.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        imageBase64 = btoa(String.fromCharCode(...uint8Array))
+      } else {
+        throw new Error('MidJourney generation failed or returned no image')
+      }
+    } else if (modelConfig.provider === 'nebius') {
+      // Nebius FLUX
+      const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('NEBIUS_API_KEY')}`,
+        },
+        body: JSON.stringify({
+          model: 'flux-1.1-pro',
+          prompt: illustrationPrompt,
+          width: 1024,
+          height: 1024,
+          num_images: 1
+        }),
+      })
+
+      if (!nebiusResponse.ok) {
+        const errorData = await nebiusResponse.text()
+        console.error('Nebius API error:', errorData)
+        throw new Error(`Nebius API error: ${nebiusResponse.statusText}`)
+      }
+
+      const nebiusData = await nebiusResponse.json()
+      if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].url) {
+        // Download the image and convert to base64
+        const imageResponse = await fetch(nebiusData.data[0].url)
+        const imageBlob = await imageResponse.blob()
+        const arrayBuffer = await imageBlob.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        imageBase64 = btoa(String.fromCharCode(...uint8Array))
+      } else {
+        throw new Error('Nebius generation failed or returned no image')
+      }
     } else {
-      // For non-OpenAI models, route to appropriate service
-      // This is a placeholder - you would implement routing to other services here
-      throw new Error(`Model ${model} not yet implemented. Please use OpenAI models for now.`)
+      throw new Error(`Model ${model} provider ${modelConfig.provider} not implemented`)
     }
 
     generationTime = Date.now() - startTime
     const estimatedCost = modelConfig.cost
 
-    // Track API usage and cost for analytics
-    const { error: usageError } = await supabase
-      .from('api_usage')
-      .insert({
-        service_name: modelConfig.provider,
-        operation: 'image_generation',
-        cost_usd: estimatedCost,
-        tokens_used: 0, // Not applicable for image generation
-        region: null // Could be enhanced to track user region
-      })
+    // Track API usage and cost for analytics (skip if user lacks permission)
+    try {
+      const { error: usageError } = await supabase
+        .from('api_usage')
+        .insert({
+          service_name: modelConfig.provider,
+          operation: 'image_generation',
+          cost_usd: estimatedCost,
+          tokens_used: 0, // Not applicable for image generation
+          region: null // Could be enhanced to track user region
+        })
 
-    if (usageError) {
-      console.error('Failed to log API usage:', usageError)
-      // Don't fail the request if usage logging fails
+      if (usageError) {
+        console.error('Failed to log API usage (this is non-critical):', usageError)
+        // Don't fail the request if usage logging fails
+      }
+    } catch (error) {
+      console.error('API usage logging failed (this is non-critical):', error)
+      // Continue with the request even if logging fails
     }
 
     // Upload to Supabase Storage
     const fileName = `story-${storyId}-${Date.now()}.png`
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('visuals')
-      .upload(fileName, 
-        Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0)), 
-        {
+    
+    // Validate base64 data before processing
+    if (!imageBase64) {
+      throw new Error('No image data to upload')
+    }
+    
+    try {
+      // Convert base64 to Uint8Array with error handling
+      const binaryString = atob(imageBase64)
+      const uint8Array = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i)
+      }
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('visuals')
+        .upload(fileName, uint8Array, {
           contentType: 'image/png',
           upsert: false
-        }
-      )
-
-    if (uploadError) {
-      throw new Error(`Upload error: ${uploadError.message}`)
+        })
+      
+      if (uploadError) {
+        throw new Error(`Upload error: ${uploadError.message}`)
+      }
+    } catch (decodeError) {
+      console.error('Base64 decode error:', decodeError)
+      throw new Error(`Failed to process image data: ${decodeError.message}`)
     }
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
