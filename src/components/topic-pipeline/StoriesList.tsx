@@ -8,6 +8,7 @@ import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/lib/creditService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Slide {
   id: string;
@@ -90,6 +91,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { credits } = useCredits();
+  const { isSuperAdmin } = useAuth();
 
   const handleGenerateIllustration = async (story: Story) => {
     if (generatingIllustrations.has(story.id)) return;
@@ -104,8 +106,8 @@ export const StoriesList: React.FC<StoriesListProps> = ({
       return;
     }
 
-    // Check credits
-    if (!credits || credits.credits_balance < 10) {
+    // Check credits (bypass for super admin)
+    if (!isSuperAdmin && (!credits || credits.credits_balance < 10)) {
       toast({
         title: 'Insufficient Credits',
         description: 'You need 10 credits to generate a story illustration.',
