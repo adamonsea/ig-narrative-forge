@@ -461,6 +461,50 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          created_at: string
+          credits_amount: number
+          credits_balance_after: number
+          description: string | null
+          id: string
+          metadata: Json | null
+          related_story_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_amount: number
+          credits_balance_after: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          related_story_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_amount?: number
+          credits_balance_after?: number
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          related_story_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_related_story_id_fkey"
+            columns: ["related_story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_notifications: {
         Row: {
           created_at: string
@@ -1428,8 +1472,11 @@ export type Database = {
         Row: {
           article_id: string
           author: string | null
+          cover_illustration_prompt: string | null
+          cover_illustration_url: string | null
           created_at: string
           id: string
+          illustration_generated_at: string | null
           is_published: boolean
           last_quality_check: string | null
           publication_name: string | null
@@ -1441,8 +1488,11 @@ export type Database = {
         Insert: {
           article_id: string
           author?: string | null
+          cover_illustration_prompt?: string | null
+          cover_illustration_url?: string | null
           created_at?: string
           id?: string
+          illustration_generated_at?: string | null
           is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null
@@ -1454,8 +1504,11 @@ export type Database = {
         Update: {
           article_id?: string
           author?: string | null
+          cover_illustration_prompt?: string | null
+          cover_illustration_url?: string | null
           created_at?: string
           id?: string
+          illustration_generated_at?: string | null
           is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null
@@ -1737,6 +1790,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          created_at: string
+          credits_balance: number
+          id: string
+          total_credits_purchased: number
+          total_credits_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_balance?: number
+          id?: string
+          total_credits_purchased?: number
+          total_credits_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_balance?: number
+          id?: string
+          total_credits_purchased?: number
+          total_credits_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_regions: {
         Row: {
           created_at: string
@@ -1881,6 +1964,15 @@ export type Database = {
       }
     }
     Functions: {
+      add_user_credits: {
+        Args: {
+          p_credits_amount: number
+          p_description?: string
+          p_transaction_type?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       approve_article_for_generation: {
         Args: { article_uuid: string }
         Returns: boolean
@@ -1892,6 +1984,15 @@ export type Database = {
       cleanup_old_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      deduct_user_credits: {
+        Args: {
+          p_credits_amount: number
+          p_description?: string
+          p_story_id?: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       delete_story_cascade: {
         Args: { p_story_id: string }
