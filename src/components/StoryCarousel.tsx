@@ -20,6 +20,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
+    published_at?: string;
   };
 }
 
@@ -215,12 +216,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               </Badge>
             )}
             {(() => {
-              const timeLabel = getRelativeTimeLabel(story.created_at);
+              // Use article published_at for content age, story created_at for feed freshness
+              const articleDate = story.article?.published_at || story.created_at;
+              const timeLabel = getRelativeTimeLabel(articleDate);
               if (!timeLabel) return null;
               return (
                 <Badge 
                   variant="outline" 
-                  className={`text-xs px-2 py-1 ${getRelativeTimeColor(story.created_at)}`}
+                  className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
                 >
                   {timeLabel}
                 </Badge>
