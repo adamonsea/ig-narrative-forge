@@ -62,6 +62,9 @@ interface Story {
   article?: StoryArticle;
   articles?: StoryArticle;
   is_published?: boolean;
+  cover_illustration_url?: string | null;
+  cover_illustration_prompt?: string | null;
+  illustration_generated_at?: string | null;
   content_generation_queue?: Array<{
     slidetype: string;
     tone: string;
@@ -335,6 +338,9 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           created_at: story.created_at,
           article_id: story.article_id || '',
           is_published: story.is_published || false,
+          cover_illustration_url: story.cover_illustration_url || null,
+          cover_illustration_prompt: story.cover_illustration_prompt || null,
+          illustration_generated_at: story.illustration_generated_at || null,
           article: {
             id: story.articles?.id || '',
             title: story.articles.title,
