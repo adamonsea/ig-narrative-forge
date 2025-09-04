@@ -88,6 +88,37 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
     }
   };
 
+  const triggerAnalysis = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('sentiment-detector', {
+        body: {
+          topic_id: topicId,
+          force_analysis: true
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Analysis Started",
+        description: "Sentiment analysis has been triggered. Cards will appear shortly."
+      });
+
+      // Reload data after a short delay
+      setTimeout(() => {
+        loadSentimentData();
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error triggering sentiment analysis:', error);
+      toast({
+        title: "Error",
+        description: "Failed to trigger sentiment analysis",
+        variant: "destructive"
+      });
+    }
+  };
+
   const updateSettings = async (newSettings: Partial<typeof settings>) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
@@ -232,6 +263,20 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
               checked={settings.enabled}
               onCheckedChange={(enabled) => updateSettings({ enabled })}
             />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Manual Analysis</Label>
+              <p className="text-sm text-muted-foreground">
+                Generate sentiment cards from recent articles
+              </p>
+            </div>
+            <Button onClick={triggerAnalysis} variant="outline">
+              Run Analysis
+            </Button>
           </div>
 
           <Separator />
