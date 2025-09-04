@@ -525,18 +525,15 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         <>
           {/* Content Pipeline Tabs */}
           <Tabs defaultValue="pending" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="pending">
                 Pending Articles ({articles.filter((a: any) => !a.is_low_score).length})
               </TabsTrigger>
               <TabsTrigger value="queue">
                 Generation Queue ({queueItems.length})
               </TabsTrigger>
-              <TabsTrigger value="stories">
+              <TabsTrigger value="stories" className="relative">
                 Ready Stories ({stories.length})
-              </TabsTrigger>
-              <TabsTrigger value="sentiment" className="relative">
-                Sentiment Analysis
                 {reviewCount > 0 && (
                   <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                     {reviewCount}
@@ -631,26 +628,42 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
               </TabsContent>
 
               <TabsContent value="stories" className="space-y-6">
-                <StoriesList
-                  stories={stories}
-                  expandedStories={expandedStories}
-                  processingApproval={processingApproval}
-                  processingRejection={processingRejection}
-                  deletingStories={deletingStories}
-                  publishingStories={new Set()}
-                  animatingStories={animatingStories}
-                  onToggleExpanded={toggleStoryExpanded}
-                  onApprove={approveStory}
-                  onReject={rejectStory}
-                  onDelete={deleteStory}
-                  onReturnToReview={returnToReview}
-                  onEditSlide={handleEditSlide}
-                  onViewStory={setViewingStory}
-                />
-              </TabsContent>
+                <Tabs defaultValue="stories" className="space-y-4">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="stories" className="flex-1">Stories</TabsTrigger>
+                    <TabsTrigger value="sentiment" className="flex-1 relative">
+                      Sentiment Analysis
+                      {reviewCount > 0 && (
+                        <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
+                          {reviewCount}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="sentiment" className="space-y-4">
-                <SentimentManager topicId={selectedTopicId} />
+                  <TabsContent value="stories">
+                    <StoriesList
+                      stories={stories}
+                      expandedStories={expandedStories}
+                      processingApproval={processingApproval}
+                      processingRejection={processingRejection}
+                      deletingStories={deletingStories}
+                      publishingStories={new Set()}
+                      animatingStories={animatingStories}
+                      onToggleExpanded={toggleStoryExpanded}
+                      onApprove={approveStory}
+                      onReject={rejectStory}
+                      onDelete={deleteStory}
+                      onReturnToReview={returnToReview}
+                      onEditSlide={handleEditSlide}
+                      onViewStory={setViewingStory}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="sentiment">
+                    <SentimentManager topicId={selectedTopicId} />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
           </Tabs>
 
