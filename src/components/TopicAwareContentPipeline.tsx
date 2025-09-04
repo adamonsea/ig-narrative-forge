@@ -632,7 +632,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                   <TabsList className="w-full">
                     <TabsTrigger value="stories" className="flex-1">Stories</TabsTrigger>
                     <TabsTrigger value="sentiment" className="flex-1 relative">
-                      Sentiment Analysis
+                      Sentiment Cards
                       {reviewCount > 0 && (
                         <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                           {reviewCount}
