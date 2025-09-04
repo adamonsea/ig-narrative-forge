@@ -39,6 +39,10 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+# Story Illustration Generator
+[functions.story-illustrator]
+verify_jwt = true
+
 # New Enhanced Universal Scraper
 [functions.universal-scraper]
 verify_jwt = false
