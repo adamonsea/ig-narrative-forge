@@ -26,6 +26,14 @@ interface SentimentCard {
   is_visible: boolean;
   needs_review: boolean;
   created_at: string;
+  slides?: Array<{
+    type: 'hero' | 'statistic' | 'quote' | 'references';
+    content: string;
+    order: number;
+    metadata?: Record<string, any>;
+  }>;
+  display_count?: number;
+  last_shown_at?: string;
 }
 
 export const useSentimentCards = (topicId?: string) => {
@@ -66,6 +74,7 @@ export const useSentimentCards = (topicId?: string) => {
         ...card,
         content: card.content as any,
         sources: card.sources as any[],
+        slides: card.slides as any[] || [],
         card_type: card.card_type || 'trend',
         sentiment_score: card.sentiment_score || 0,
         confidence_score: card.confidence_score || 0,
@@ -73,7 +82,9 @@ export const useSentimentCards = (topicId?: string) => {
         is_published: card.is_published || false,
         is_visible: card.is_visible || false,
         needs_review: card.needs_review || false,
-        created_at: card.created_at || ''
+        created_at: card.created_at || '',
+        display_count: card.display_count || 0,
+        last_shown_at: card.last_shown_at || null
       })));
     } catch (err) {
       console.error('Error loading sentiment cards:', err);
