@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     // Generate illustration prompt based on story title
-    const illustrationPrompt = `Create a black and white hand-drawn style illustration for: "${story.title}". Simple, sketchy style as if quickly drawn by an expert illustrator. Descriptive and delightful, minimalist line art, clean white background. Should look like a quick expert sketch, not photorealistic. Black ink on pure white background only.`
+    const illustrationPrompt = `Create a simple black and white line illustration representing the concept of: "${story.title}". NO TEXT, NO WORDS, NO LETTERS in the image. Pure visual illustration only. Simple hand-drawn style sketch using only solid black lines on pure solid white background. No gray tones, no shading - only solid black and solid white. Minimalist line art that captures the essence of the story visually. Clean minimalist sketch style.`
 
     // Generate image using OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
