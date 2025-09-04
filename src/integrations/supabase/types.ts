@@ -1265,12 +1265,15 @@ export type Database = {
           confidence_score: number | null
           content: Json
           created_at: string | null
+          display_count: number | null
           id: string
           is_published: boolean | null
           is_visible: boolean | null
           keyword_phrase: string
+          last_shown_at: string | null
           needs_review: boolean | null
           sentiment_score: number | null
+          slides: Json | null
           sources: Json
           topic_id: string | null
           updated_at: string | null
@@ -1281,12 +1284,15 @@ export type Database = {
           confidence_score?: number | null
           content?: Json
           created_at?: string | null
+          display_count?: number | null
           id?: string
           is_published?: boolean | null
           is_visible?: boolean | null
           keyword_phrase: string
+          last_shown_at?: string | null
           needs_review?: boolean | null
           sentiment_score?: number | null
+          slides?: Json | null
           sources?: Json
           topic_id?: string | null
           updated_at?: string | null
@@ -1297,12 +1303,15 @@ export type Database = {
           confidence_score?: number | null
           content?: Json
           created_at?: string | null
+          display_count?: number | null
           id?: string
           is_published?: boolean | null
           is_visible?: boolean | null
           keyword_phrase?: string
+          last_shown_at?: string | null
           needs_review?: boolean | null
           sentiment_score?: number | null
+          slides?: Json | null
           sources?: Json
           topic_id?: string | null
           updated_at?: string | null
