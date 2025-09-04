@@ -239,11 +239,11 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
           {/* Cover Illustration */}
           {story.cover_illustration_url && currentSlideIndex === 0 && (
-            <div className="relative w-full h-64 md:h-80 mb-4 overflow-hidden">
+            <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
               <img
                 src={story.cover_illustration_url}
                 alt={`Cover illustration for ${story.title}`}
-                className="w-full h-full object-contain bg-white"
+                className="w-full h-full object-contain bg-white rounded-lg"
                 style={{ imageRendering: 'crisp-edges' }}
               />
             </div>
