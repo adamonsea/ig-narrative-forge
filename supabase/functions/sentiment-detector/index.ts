@@ -94,17 +94,45 @@ serve(async (req) => {
       .order('published_at', { ascending: false })
       .limit(50);
 
-    if (articlesError || !articles?.length) {
-      console.log('📭 No recent articles found for analysis');
+    // Also get published stories with their content from slides
+    const { data: publishedStories, error: storiesError } = await supabase
+      .from('stories')
+      .select(`
+        id, title, author, created_at,
+        article_id,
+        articles!inner(source_url, topic_id, published_at),
+        slides(content)
+      `)
+      .eq('articles.topic_id', topic_id)
+      .eq('is_published', true)
+      .gte('created_at', sevenDaysAgo)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    // Combine articles and published story content
+    const allContent: ArticleData[] = [
+      ...(articles || []),
+      ...(publishedStories || []).map(story => ({
+        id: story.id,
+        title: story.title,
+        body: story.slides?.map(s => s.content).join(' ') || '',
+        source_url: story.articles?.source_url || '',
+        published_at: story.articles?.published_at || story.created_at,
+        author: story.author
+      }))
+    ];
+
+    if (!allContent.length) {
+      console.log('📭 No recent content found for analysis');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No recent articles to analyze' 
+        message: 'No recent content to analyze' 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`📰 Found ${articles.length} articles for analysis`);
+    console.log(`📰 Found ${allContent.length} content items for analysis (${articles.length} articles + ${publishedStories?.length || 0} published stories)`);
 
     // Get topic info for context
     const { data: topic } = await supabase
@@ -115,7 +143,7 @@ serve(async (req) => {
 
     // Extract trending keywords and analyze sentiment using DeepSeek
     const keywordAnalysis = await analyzeKeywordsAndSentiment(
-      articles as ArticleData[], 
+      allContent, 
       topic?.keywords || [],
       settings?.excluded_keywords || [],
       deepseekApiKey
@@ -167,10 +195,12 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      articles_analyzed: articles.length,
+      content_analyzed: allContent.length,
+      articles_analyzed: articles?.length || 0,
+      stories_analyzed: publishedStories?.length || 0,
       keywords_found: keywordAnalysis.length,
       cards_created: cardsCreated,
-      message: `Analysis complete. ${cardsCreated} sentiment cards created.`
+      message: `Analysis complete. ${cardsCreated} sentiment cards created from ${allContent.length} content items.`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
