@@ -76,16 +76,16 @@ serve(async (req) => {
       switch (modelName) {
         case 'gpt-image-1':
           return { credits: 10, cost: 0.06, provider: 'openai' };
+        case 'dall-e-3':
+          return { credits: 5, cost: 0.04, provider: 'openai' };
         case 'dall-e-2':
           return { credits: 3, cost: 0.02, provider: 'openai' };
         case 'flux-schnell':
           return { credits: 2, cost: 0.01, provider: 'huggingface' };
-        case 'midjourney':
-          return { credits: 3, cost: 0.02, provider: 'midjourney' };
-        case 'nebius-flux':
-          return { credits: 2, cost: 0.015, provider: 'nebius' };
+        case 'ideogram':
+          return { credits: 8, cost: 0.05, provider: 'ideogram' };
         default:
-          return { credits: 10, cost: 0.06, provider: 'openai' };
+          return { credits: 5, cost: 0.04, provider: 'openai' };
       }
     };
 
@@ -209,71 +209,41 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
       const arrayBuffer = await imageBlob.arrayBuffer()
       const uint8Array = new Uint8Array(arrayBuffer)
       imageBase64 = btoa(String.fromCharCode(...uint8Array))
-    } else if (modelConfig.provider === 'midjourney') {
-      // MidJourney via kie.ai
-      const mjResponse = await fetch('https://api.kie.ai/generate', {
+    } else if (modelConfig.provider === 'ideogram') {
+      // Ideogram API
+      const ideogramResponse = await fetch('https://api.ideogram.ai/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('KIE_AI_API_KEY')}`,
+          'Api-Key': Deno.env.get('IDEOGRAM_API_KEY'),
         },
         body: JSON.stringify({
-          prompt: illustrationPrompt,
-          model: 'midjourney',
-          aspect_ratio: '1:1'
+          image_request: {
+            prompt: illustrationPrompt,
+            aspect_ratio: 'ASPECT_1_1',
+            model: 'V_2',
+            magic_prompt_option: 'AUTO',
+            style_type: 'GENERAL'
+          }
         }),
       })
 
-      if (!mjResponse.ok) {
-        const errorData = await mjResponse.text()
-        console.error('MidJourney API error:', errorData)
-        throw new Error(`MidJourney API error: ${mjResponse.statusText}`)
+      if (!ideogramResponse.ok) {
+        const errorData = await ideogramResponse.text()
+        console.error('Ideogram API error:', errorData)
+        throw new Error(`Ideogram API error: ${ideogramResponse.statusText}`)
       }
 
-      const mjData = await mjResponse.json()
-      if (mjData.status === 'success' && mjData.image_url) {
+      const ideogramData = await ideogramResponse.json()
+      if (ideogramData.data && ideogramData.data[0] && ideogramData.data[0].url) {
         // Download the image and convert to base64
-        const imageResponse = await fetch(mjData.image_url)
+        const imageResponse = await fetch(ideogramData.data[0].url)
         const imageBlob = await imageResponse.blob()
         const arrayBuffer = await imageBlob.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
         imageBase64 = btoa(String.fromCharCode(...uint8Array))
       } else {
-        throw new Error('MidJourney generation failed or returned no image')
-      }
-    } else if (modelConfig.provider === 'nebius') {
-      // Nebius FLUX
-      const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('NEBIUS_API_KEY')}`,
-        },
-        body: JSON.stringify({
-          model: 'flux-1.1-pro',
-          prompt: illustrationPrompt,
-          width: 1024,
-          height: 1024,
-          num_images: 1
-        }),
-      })
-
-      if (!nebiusResponse.ok) {
-        const errorData = await nebiusResponse.text()
-        console.error('Nebius API error:', errorData)
-        throw new Error(`Nebius API error: ${nebiusResponse.statusText}`)
-      }
-
-      const nebiusData = await nebiusResponse.json()
-      if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].url) {
-        // Download the image and convert to base64
-        const imageResponse = await fetch(nebiusData.data[0].url)
-        const imageBlob = await imageResponse.blob()
-        const arrayBuffer = await imageBlob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        imageBase64 = btoa(String.fromCharCode(...uint8Array))
-      } else {
-        throw new Error('Nebius generation failed or returned no image')
+        throw new Error('Ideogram generation failed or returned no image')
       }
     } else {
       throw new Error(`Model ${model} provider ${modelConfig.provider} not implemented`)
