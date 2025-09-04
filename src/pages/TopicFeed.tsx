@@ -123,7 +123,7 @@ const TopicFeed = () => {
 
         {/* Stories with infinite scroll - mixed with sentiment cards */}
         {stories.length > 0 ? (
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8 flex flex-col items-center">
             {stories.map((story, index) => {
               const items = [];
               

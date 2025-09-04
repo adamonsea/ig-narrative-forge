@@ -369,77 +369,79 @@ export const SentimentCard = ({
   const sentimentBadge = getSentimentBadge();
 
   return (
-    <Card className="overflow-hidden">
-      <div 
-        className="relative bg-background min-h-[600px] flex flex-col"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <Badge variant={sentimentBadge.variant} className="text-sm font-medium flex items-center gap-1">
-            {sentimentBadge.icon}
-            {sentimentBadge.text}
-          </Badge>
-          {displaySlides.length > 1 && (
-            <span className="text-sm text-muted-foreground">
-              {currentSlide + 1} of {displaySlides.length}
-            </span>
-          )}
-        </div>
+    <div className="flex justify-center px-4">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
+        <div 
+          className="relative bg-background min-h-[600px] flex flex-col"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <Badge variant={sentimentBadge.variant} className="text-sm font-medium flex items-center gap-1">
+              {sentimentBadge.icon}
+              {sentimentBadge.text}
+            </Badge>
+            {displaySlides.length > 1 && (
+              <span className="text-sm text-muted-foreground">
+                {currentSlide + 1} of {displaySlides.length}
+              </span>
+            )}
+          </div>
 
-        {/* Slide Content */}
-        <div className="relative flex-1 flex items-center justify-center">
-          {/* Invisible navigation areas */}
-          {displaySlides.length > 1 && (
-            <>
-              {/* Left area - previous slide */}
-              {currentSlide > 0 && (
-                <button
-                  onClick={prevSlide}
-                  className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                  aria-label="Previous slide"
-                />
-              )}
-              {/* Right area - next slide */}
-              {currentSlide < displaySlides.length - 1 && (
-                <button
-                  onClick={nextSlide}
-                  className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                  aria-label="Next slide"
-                />
-              )}
-            </>
-          )}
-          
-          <div className="p-8 w-full max-w-2xl">
-            <div className="transition-all duration-300 animate-fade-in">
-              {renderSlideContent(displaySlides[currentSlide])}
+          {/* Slide Content */}
+          <div className="relative flex-1 flex items-center justify-center">
+            {/* Invisible navigation areas */}
+            {displaySlides.length > 1 && (
+              <>
+                {/* Left area - previous slide */}
+                {currentSlide > 0 && (
+                  <button
+                    onClick={prevSlide}
+                    className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                    aria-label="Previous slide"
+                  />
+                )}
+                {/* Right area - next slide */}
+                {currentSlide < displaySlides.length - 1 && (
+                  <button
+                    onClick={nextSlide}
+                    className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                    aria-label="Next slide"
+                  />
+                )}
+              </>
+            )}
+            
+            <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
+              <div className="transition-all duration-300 animate-fade-in">
+                {renderSlideContent(displaySlides[currentSlide])}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Bottom section */}
-        <div className="p-4">
-          {/* Progress dots */}
-          {displaySlides.length > 1 && (
-            <div className="flex justify-center space-x-2">
-              {displaySlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentSlide 
-                      ? 'bg-primary scale-125' 
-                      : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
+          {/* Bottom section */}
+          <div className="p-4">
+            {/* Progress dots */}
+            {displaySlides.length > 1 && (
+              <div className="flex justify-center space-x-2">
+                {displaySlides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentSlide 
+                        ? 'bg-primary scale-125' 
+                        : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 };

@@ -184,166 +184,168 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   };
 
   return (
-    <Card className="overflow-hidden">
-      <div 
-        className="relative bg-background min-h-[600px] flex flex-col"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-sm font-medium">
-              {topicName}
-            </Badge>
-            {(() => {
-              // Use article published_at for content age, story created_at for feed freshness
-              const articleDate = story.article?.published_at || story.created_at;
-              const timeLabel = getRelativeTimeLabel(articleDate);
-              
-              // If we have a time label, show it
-              if (timeLabel) {
-                return (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
-                  >
-                    {timeLabel}
-                  </Badge>
-                );
-              }
-              
-              // Fallback: show "New" if story was published to feed recently
-              if (isNewlyPublished(story.created_at)) {
-                return (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
-                  >
-                    New
-                  </Badge>
-                );
-              }
-              
-              return null;
-            })()}
+    <div className="flex justify-center px-4">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
+        <div 
+          className="relative bg-background min-h-[600px] flex flex-col"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-sm font-medium">
+                {topicName}
+              </Badge>
+              {(() => {
+                // Use article published_at for content age, story created_at for feed freshness
+                const articleDate = story.article?.published_at || story.created_at;
+                const timeLabel = getRelativeTimeLabel(articleDate);
+                
+                // If we have a time label, show it
+                if (timeLabel) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
+                    >
+                      {timeLabel}
+                    </Badge>
+                  );
+                }
+                
+                // Fallback: show "New" if story was published to feed recently
+                if (isNewlyPublished(story.created_at)) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
+                    >
+                      New
+                    </Badge>
+                  );
+                }
+                
+                return null;
+              })()}
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {currentSlideIndex + 1} of {story.slides.length}
+            </span>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {currentSlideIndex + 1} of {story.slides.length}
-          </span>
-        </div>
 
-        {/* Slide Content */}
-        <div className="relative flex-1 flex items-center justify-center">
-          {/* Invisible navigation areas */}
-          {story.slides.length > 1 && (
-            <>
-              {/* Left area - previous slide */}
-              {!isFirstSlide && (
-                <button
-                  onClick={prevSlide}
-                  className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                  aria-label="Previous slide"
-                />
-              )}
-              {/* Right area - next slide */}
-              {!isLastSlide && (
-                <button
-                  onClick={nextSlide}
-                  className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                  aria-label="Next slide"
-                />
-              )}
-            </>
-          )}
-          
-          <div className="p-8 w-full max-w-2xl">
-            <div className={`mb-8 transition-all duration-300 ${
-              slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
-              slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
-              'animate-fade-in'
-            }`}>
-              <div className={`text-center leading-relaxed ${
-                  currentSlideIndex === 0 
-                  ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
-                  : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
-              }`}>
-                {/* Main story content */}
-                {isLastSlide ? mainContent : currentSlide.content}
-                    
-                {/* CTA content with special styling on last slide */}
-                {isLastSlide && ctaContent && (
-                  <div className="mt-4 pt-4 border-t border-muted">
-                    <div 
-                      className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                      dangerouslySetInnerHTML={{
-                        __html: ctaContent
-                          .replace(
-                            /visit ([^\s]+)/gi, 
-                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /call (\d{5}\s?\d{6})/gi,
-                            'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /Read the full story at ([^\s\n]+)/gi,
-                            sourceUrl ? 
-                              `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
-                              'Read the full story at <span class="text-primary font-extrabold">$1</span>'
-                          )
-                      }}
-                    />
-                  </div>
+          {/* Slide Content */}
+          <div className="relative flex-1 flex items-center justify-center">
+            {/* Invisible navigation areas */}
+            {story.slides.length > 1 && (
+              <>
+                {/* Left area - previous slide */}
+                {!isFirstSlide && (
+                  <button
+                    onClick={prevSlide}
+                    className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                    aria-label="Previous slide"
+                  />
                 )}
+                {/* Right area - next slide */}
+                {!isLastSlide && (
+                  <button
+                    onClick={nextSlide}
+                    className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                    aria-label="Next slide"
+                  />
+                )}
+              </>
+            )}
+            
+            <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
+              <div className={`mb-8 transition-all duration-300 ${
+                slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
+                slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
+                'animate-fade-in'
+              }`}>
+                <div className={`text-center leading-relaxed ${
+                    currentSlideIndex === 0 
+                    ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
+                    : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+                }`}>
+                  {/* Main story content */}
+                  {isLastSlide ? mainContent : currentSlide.content}
+                      
+                  {/* CTA content with special styling on last slide */}
+                  {isLastSlide && ctaContent && (
+                    <div className="mt-4 pt-4 border-t border-muted">
+                      <div 
+                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                        dangerouslySetInnerHTML={{
+                          __html: ctaContent
+                            .replace(
+                              /visit ([^\s]+)/gi, 
+                              'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                            )
+                            .replace(
+                              /call (\d{5}\s?\d{6})/gi,
+                              'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                            )
+                            .replace(
+                              /Read the full story at ([^\s\n]+)/gi,
+                              sourceUrl ? 
+                                `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
+                                'Read the full story at <span class="text-primary font-extrabold">$1</span>'
+                            )
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Bottom section */}
-        <div className="p-4">
-          {/* Progress dots */}
-          {story.slides.length > 1 && (
-            <div className="flex justify-center space-x-2 mb-4">
-              {story.slides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentSlideIndex 
-                      ? 'bg-primary scale-125' 
-                      : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                  }`}
-                />
-              ))}
+          {/* Bottom section */}
+          <div className="p-4">
+            {/* Progress dots */}
+            {story.slides.length > 1 && (
+              <div className="flex justify-center space-x-2 mb-4">
+                {story.slides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentSlideIndex 
+                        ? 'bg-primary scale-125' 
+                        : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                variant={isLoved ? "default" : "outline"}
+                size="sm"
+                onClick={toggleLove}
+                className="flex items-center gap-2"
+              >
+                <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
+                {loveCount}
+              </Button>
             </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex justify-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShare}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button
-              variant={isLoved ? "default" : "outline"}
-              size="sm"
-              onClick={toggleLove}
-              className="flex items-center gap-2"
-            >
-              <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
-              {loveCount}
-            </Button>
           </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
