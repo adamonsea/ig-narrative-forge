@@ -1,0 +1,43 @@
+import { differenceInDays, differenceInHours, isToday, isYesterday, isThisWeek } from 'date-fns';
+
+export const getRelativeTimeLabel = (dateString: string): string | null => {
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  if (isToday(date)) {
+    return 'Today';
+  }
+  
+  if (isYesterday(date)) {
+    return 'Yesterday';
+  }
+  
+  if (isThisWeek(date)) {
+    return 'This week';
+  }
+  
+  const daysDiff = differenceInDays(now, date);
+  if (daysDiff <= 7) {
+    return 'This week';
+  }
+  
+  if (daysDiff > 7) {
+    return 'Older than a week';
+  }
+  
+  return null;
+};
+
+export const getRelativeTimeColor = (dateString: string): string => {
+  const date = new Date(dateString);
+  
+  if (isToday(date)) {
+    return 'bg-green-500/20 text-green-700 border-green-200';
+  }
+  
+  if (isThisWeek(date)) {
+    return 'bg-blue-500/20 text-blue-700 border-blue-200';
+  }
+  
+  return 'bg-muted text-muted-foreground border-muted';
+};

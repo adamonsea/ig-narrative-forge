@@ -13,6 +13,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
+import StoryPage from "./pages/StoryPage";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
               <Route path="/feed/topic/:slug" element={<TopicFeed />} />
+              <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

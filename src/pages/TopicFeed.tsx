@@ -136,6 +136,7 @@ const TopicFeed = () => {
                   <StoryCarousel 
                     story={story} 
                     topicName={topic.name}
+                    storyUrl={`${window.location.origin}/feed/topic/${slug}/story/${story.id}`}
                   />
                 </div>
               );

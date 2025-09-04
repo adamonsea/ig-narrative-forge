@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { getRelativeTimeLabel, getRelativeTimeColor } from '@/lib/dateUtils';
 
 interface Story {
   id: string;
@@ -25,9 +26,10 @@ interface Story {
 interface StoryCarouselProps {
   story: Story;
   topicName: string;
+  storyUrl?: string;
 }
 
-export default function StoryCarousel({ story, topicName }: StoryCarouselProps) {
+export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
@@ -70,15 +72,23 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
   };
 
   const handleShare = () => {
+    const shareUrl = storyUrl || story.article.source_url;
+    const shareText = storyUrl ? 
+      `Check out this story: ${story.title}` : 
+      `${story.title}\n\n${currentSlide.content}`;
+    
     if (navigator.share) {
       navigator.share({
         title: story.title,
-        text: currentSlide.content,
-        url: story.article.source_url,
+        text: shareText,
+        url: shareUrl,
       });
     } else {
       // Fallback - copy to clipboard
-      navigator.clipboard.writeText(`${story.title}\n\n${currentSlide.content}\n\nRead more: ${story.article.source_url}`);
+      const clipboardText = storyUrl ? 
+        `${story.title}\n\n${shareUrl}` :
+        `${story.title}\n\n${currentSlide.content}\n\nRead more: ${shareUrl}`;
+      navigator.clipboard.writeText(clipboardText);
     }
   };
 
@@ -185,9 +195,23 @@ export default function StoryCarousel({ story, topicName }: StoryCarouselProps) 
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <Badge variant="secondary" className="text-sm font-medium">
-            {topicName}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-sm font-medium">
+              {topicName}
+            </Badge>
+            {(() => {
+              const timeLabel = getRelativeTimeLabel(story.created_at);
+              if (!timeLabel) return null;
+              return (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-2 py-1 ${getRelativeTimeColor(story.created_at)}`}
+                >
+                  {timeLabel}
+                </Badge>
+              );
+            })()}
+          </div>
           <span className="text-sm text-muted-foreground">
             {currentSlideIndex + 1} of {story.slides.length}
           </span>
