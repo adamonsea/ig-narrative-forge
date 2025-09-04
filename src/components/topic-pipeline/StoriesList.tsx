@@ -2,9 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2, ImageIcon } from "lucide-react";
 import { InlineCarouselImages } from "@/components/InlineCarouselImages";
 import { StyleTooltip } from "@/components/ui/style-tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { useCredits } from "@/hooks/useCredits";
+import { CreditService } from "@/lib/creditService";
 
 interface Slide {
   id: string;
@@ -32,6 +35,9 @@ interface Story {
   status: string;
   article_id: string;
   created_at: string;
+  cover_illustration_url?: string | null;
+  cover_illustration_prompt?: string | null;
+  illustration_generated_at?: string | null;
   slides: Slide[];
   article?: StoryArticle;
   articles?: StoryArticle;
@@ -59,6 +65,7 @@ interface StoriesListProps {
   onReturnToReview: (storyId: string) => void;
   onEditSlide: (slide: Slide) => void;
   onViewStory: (story: Story) => void;
+  onRefresh?: () => void;
   expandCarouselSection?: (storyId: string) => void;
 }
 
@@ -77,8 +84,73 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   onReturnToReview,
   onEditSlide,
   onViewStory,
+  onRefresh,
   expandCarouselSection
 }) => {
+  const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
+  const { credits } = useCredits();
+
+  const handleGenerateIllustration = async (story: Story) => {
+    if (generatingIllustrations.has(story.id)) return;
+    
+    // Check if illustration already exists
+    if (story.cover_illustration_url) {
+      toast({
+        title: 'Illustration Already Exists',
+        description: 'This story already has a cover illustration.',
+        variant: 'default',
+      });
+      return;
+    }
+
+    // Check credits
+    if (!credits || credits.credits_balance < 10) {
+      toast({
+        title: 'Insufficient Credits',
+        description: 'You need 10 credits to generate a story illustration.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+
+    try {
+      const result = await CreditService.generateStoryIllustration(story.id);
+      
+      if (result.success) {
+        toast({
+          title: 'Illustration Generated Successfully',
+          description: `Used ${result.credits_used} credits. New balance: ${result.new_balance}`,
+        });
+        
+        // Refresh stories to show the new illustration
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        toast({
+          title: 'Generation Failed',
+          description: result.error || 'Failed to generate illustration',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating illustration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate story illustration',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingIllustrations(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
+    }
+  };
   const getWordCountColor = (wordCount: number, slideNumber: number) => {
     if (slideNumber === 1) return "text-blue-600"; // Title slide
     if (wordCount > 25) return "text-red-600"; // Too long
@@ -205,15 +277,42 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                   
                   <div className="mobile-button-group">
                     {story.status === 'ready' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onReturnToReview(story.id)}
-                        className="w-full sm:w-auto"
-                      >
-                        <RotateCcw className="w-4 h-4 sm:mr-0" />
-                        <span className="ml-2 sm:hidden">Return</span>
-                      </Button>
+                      <>
+                        {/* Story Illustration Button */}
+                        {story.cover_illustration_url ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800 flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3" />
+                            Illustrated
+                          </Badge>
+                        ) : generatingIllustrations.has(story.id) ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Generating...
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGenerateIllustration(story)}
+                            className="flex items-center gap-1"
+                            title="Generate cover illustration (10 credits)"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            <span className="hidden sm:inline">Generate Cover</span>
+                            <span className="sm:hidden">Cover</span>
+                          </Button>
+                        )}
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onReturnToReview(story.id)}
+                          className="w-full sm:w-auto"
+                        >
+                          <RotateCcw className="w-4 h-4 sm:mr-0" />
+                          <span className="ml-2 sm:hidden">Return</span>
+                        </Button>
+                      </>
                     )}
                     
                     {story.status === 'draft' && (
@@ -262,6 +361,26 @@ export const StoriesList: React.FC<StoriesListProps> = ({
             {isExpanded && story.slides && story.slides.length > 0 && (
               <CardContent className="pt-0">
                 <div className="space-y-3 border-t pt-4">
+                  {/* Show cover illustration if exists */}
+                  {story.cover_illustration_url && (
+                    <div className="mb-3">
+                      <h4 className="text-sm font-medium mb-2">Cover Illustration</h4>
+                      <div className="relative w-full max-w-md">
+                        <img
+                          src={story.cover_illustration_url}
+                          alt={`Cover illustration for ${story.title}`}
+                          className="w-full h-48 object-cover rounded-lg border"
+                        />
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Generated: {story.illustration_generated_at ? 
+                            new Date(story.illustration_generated_at).toLocaleString() : 
+                            'Unknown'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {story.slides.map((slide) => (
                     <div
                       key={slide.id}

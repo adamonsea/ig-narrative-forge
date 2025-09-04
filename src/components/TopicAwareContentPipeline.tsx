@@ -657,6 +657,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                       onReturnToReview={returnToReview}
                       onEditSlide={handleEditSlide}
                       onViewStory={setViewingStory}
+                      onRefresh={loadTopicContent}
                     />
                   </TabsContent>
 
