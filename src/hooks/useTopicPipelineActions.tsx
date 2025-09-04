@@ -421,9 +421,11 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
   };
 
   const deleteArticle = async (articleId: string, articleTitle: string) => {
-    try {
-      setDeletingArticles(prev => new Set([...prev, articleId]));
+    // Immediate animation feedback - trigger discard animation
+    setAnimatingArticles(prev => new Set([...prev, articleId]));
+    setDeletingArticles(prev => new Set([...prev, articleId]));
 
+    try {
       // Set article status to discarded to prevent re-importing
       const { error } = await supabase
         .from('articles')
@@ -437,19 +439,39 @@ export const useTopicPipelineActions = (onRefresh: () => void) => {
         description: `"${articleTitle}" has been discarded and won't be re-imported`
       });
 
-      onRefresh();
+      // Delay refresh to allow animation to complete
+      setTimeout(() => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(articleId);
+          return newSet;
+        });
+        setDeletingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(articleId);
+          return newSet;
+        });
+        onRefresh();
+      }, 300);
     } catch (error) {
       console.error('Error deleting article:', error);
-      toast({
-        title: "Deletion Failed",
-        description: "Failed to delete article",
-        variant: "destructive"
+      
+      // Reverse animation on error
+      setAnimatingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
       });
-    } finally {
       setDeletingArticles(prev => {
         const newSet = new Set(prev);
         newSet.delete(articleId);
         return newSet;
+      });
+      
+      toast({
+        title: "Deletion Failed",
+        description: "Failed to delete article",
+        variant: "destructive"
       });
     }
   };
