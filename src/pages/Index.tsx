@@ -1,19 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Zap, Eye, Share2, Heart, ArrowRight } from 'lucide-react';
+import { Zap, Eye, Share2, Heart, ArrowRight, User, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (user) {
-      // Redirect authenticated users to dashboard
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
 
   // Show loading while auth is being determined
   if (loading) {
@@ -24,9 +16,25 @@ const Index = () => {
     );
   }
 
-  // Show landing page for non-authenticated users
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="absolute top-0 right-0 p-6 z-10">
+        {user ? (
+          <Button size="sm" variant="ghost" asChild>
+            <Link to="/dashboard">
+              <User className="w-4 h-4" />
+            </Link>
+          </Button>
+        ) : (
+          <Button size="sm" variant="ghost" asChild>
+            <Link to="/auth">
+              <LogIn className="w-4 h-4" />
+            </Link>
+          </Button>
+        )}
+      </div>
+
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-32 relative">
         <div className="text-center space-y-12 max-w-2xl mx-auto">
@@ -40,12 +48,21 @@ const Index = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" asChild>
-              <Link to="/auth">
-                Start Now
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
+            {user ? (
+              <Button size="lg" asChild>
+                <Link to="/dashboard">
+                  Go to Dashboard
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" asChild>
+                <Link to="/auth">
+                  Start Now
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            )}
             <Button size="lg" variant="ghost" asChild>
               <Link to="/feed/ai-agency">
                 View Demo
@@ -54,7 +71,6 @@ const Index = () => {
           </div>
         </div>
       </div>
-
       {/* Features */}
       <div className="container mx-auto px-6 pb-32">
         <div className="grid md:grid-cols-4 gap-12 max-w-4xl mx-auto">
