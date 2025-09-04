@@ -219,11 +219,17 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
       imageBase64 = btoa(String.fromCharCode(...uint8Array))
     } else if (modelConfig.provider === 'ideogram') {
       // Ideogram API - use smaller aspect ratio setting
+      const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY')
+      
+      if (!ideogramApiKey) {
+        throw new Error('Ideogram API key not configured')
+      }
+      
       const ideogramResponse = await fetch('https://api.ideogram.ai/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Api-Key': Deno.env.get('IDEOGRAM_API_KEY'),
+          'Api-Key': ideogramApiKey,
         },
         body: JSON.stringify({
           image_request: {
@@ -238,11 +244,13 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
 
       if (!ideogramResponse.ok) {
         const errorData = await ideogramResponse.text()
-        console.error('Ideogram API error:', errorData)
-        throw new Error(`Ideogram API error: ${ideogramResponse.statusText}`)
+        console.error('Ideogram API error:', ideogramResponse.status, errorData)
+        throw new Error(`Ideogram API error: ${ideogramResponse.status} - ${errorData}`)
       }
 
       const ideogramData = await ideogramResponse.json()
+      console.log('Ideogram response:', JSON.stringify(ideogramData, null, 2))
+      
       if (ideogramData.data && ideogramData.data[0] && ideogramData.data[0].url) {
         // Download the image and convert to base64
         const imageResponse = await fetch(ideogramData.data[0].url)
@@ -251,6 +259,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         const uint8Array = new Uint8Array(arrayBuffer)
         imageBase64 = btoa(String.fromCharCode(...uint8Array))
       } else {
+        console.error('Ideogram unexpected response format:', ideogramData)
         throw new Error('Ideogram generation failed or returned no image')
       }
     } else if (modelConfig.provider === 'amazon') {
