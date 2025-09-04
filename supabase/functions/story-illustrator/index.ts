@@ -149,10 +149,10 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         },
         body: JSON.stringify({
-          model: model, // Use the actual model name
+          model: model,
           prompt: illustrationPrompt,
           n: 1,
-          size: model === 'gpt-image-1' ? '1024x1024' : '512x512', // Use smaller size for DALL-E models
+          size: model === 'gpt-image-1' ? '1024x1024' : (model === 'dall-e-3' ? '1024x1024' : '512x512'),
           ...(model === 'gpt-image-1' ? {
             // GPT-Image-1 specific parameters
             quality: 'high',
