@@ -54,27 +54,61 @@ export function calculateRegionalRelevance(
     score += orgMatches * 12;
   }
 
-  // Dynamic negative scoring based on OTHER regional topics (user-defined)
+  // Enhanced negative scoring based on OTHER regional topics (user-defined)
   if (otherRegionalTopics?.length) {
     const otherRegionTerms = otherRegionalTopics
       .filter(other => other.region_name !== topicConfig.region_name)
-      .flatMap(other => [...other.keywords, ...(other.landmarks || [])])
+      .flatMap(other => [...other.keywords, ...(other.landmarks || []), ...(other.postcodes || [])])
       .filter(term => term && term.length > 2); // Filter short/empty terms
     
+    // Strong penalty for direct competing region mentions
+    const competingRegionNames = otherRegionalTopics
+      .filter(other => other.region_name !== topicConfig.region_name)
+      .map(other => other.region_name.toLowerCase());
+    
+    const directRegionMatches = competingRegionNames.filter(regionName =>
+      text.includes(regionName) && 
+      !text.includes(`${regionName} to ${topicConfig.region_name.toLowerCase()}`) &&
+      !text.includes(`${topicConfig.region_name.toLowerCase()} to ${regionName}`) &&
+      !text.includes(`${topicConfig.region_name.toLowerCase()} and ${regionName}`) &&
+      !text.includes(`${regionName} and ${topicConfig.region_name.toLowerCase()}`)
+    ).length;
+    
+    // Penalty for other specific regional terms
     const negativeMatches = otherRegionTerms.filter(term => 
       text.includes(term.toLowerCase()) && 
       !text.includes(`${term.toLowerCase()} to ${topicConfig.region_name.toLowerCase()}`) &&
-      !text.includes(`${topicConfig.region_name.toLowerCase()} to ${term.toLowerCase()}`)
+      !text.includes(`${topicConfig.region_name.toLowerCase()} to ${term.toLowerCase()}`) &&
+      !text.includes(`${topicConfig.region_name.toLowerCase()} and ${term.toLowerCase()}`) &&
+      !text.includes(`${term.toLowerCase()} and ${topicConfig.region_name.toLowerCase()}`)
     ).length;
-    score -= negativeMatches * 8; // Penalty for other user-defined regional areas
+    
+    // Apply strong penalties
+    score -= directRegionMatches * 50; // Heavy penalty for direct competing region mentions
+    score -= negativeMatches * 20; // Increased penalty for competing regional terms
   }
 
-  // Enhanced filtering for BBC and national sources - give them baseline UK relevance
+  // Enhanced filtering for national sources - reduce generic geographic boost
   if (sourceType === 'national') {
-    const ukKeywords = ['uk', 'britain', 'british', 'england', 'sussex', 'south east'];
-    const ukMatches = ukKeywords.filter(keyword => text.includes(keyword)).length;
-    if (ukMatches > 0) {
-      score += 30; // Baseline UK relevance for national sources
+    // Only give modest boost for very generic UK terms, prioritize specific regional terms
+    const specificUkKeywords = ['uk', 'britain', 'british', 'england'];
+    const genericGeographicTerms = ['sussex', 'south east', 'southeast'];
+    
+    const specificUkMatches = specificUkKeywords.filter(keyword => text.includes(keyword)).length;
+    const genericGeoMatches = genericGeographicTerms.filter(keyword => text.includes(keyword)).length;
+    
+    if (specificUkMatches > 0) {
+      score += 15; // Reduced baseline UK relevance for national sources
+    }
+    
+    // Minimal boost for generic geographic terms, only if no competing regions detected
+    const hasCompetingRegions = otherRegionalTopics?.some(other => 
+      other.region_name !== topicConfig.region_name && 
+      text.includes(other.region_name.toLowerCase())
+    );
+    
+    if (genericGeoMatches > 0 && !hasCompetingRegions) {
+      score += 5; // Very small boost for generic geographic terms
     }
   }
 
@@ -85,6 +119,10 @@ export function calculateRegionalRelevance(
     'national': 1.0
   }[sourceType] || 1.0;
 
-  // Ensure minimum score isn't negative
-  return Math.max(0, Math.round(score * sourceMultiplier));
+  // Apply source multiplier first, then ensure reasonable bounds
+  const finalScore = Math.round(score * sourceMultiplier);
+  
+  // Allow negative scores to indicate content that should be excluded
+  // But cap extreme negative scores to prevent overflow issues
+  return Math.max(-100, finalScore);
 }

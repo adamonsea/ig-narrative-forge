@@ -188,15 +188,15 @@ export function getRelevanceThreshold(
   sourceType: string = 'national'
 ): number {
   if (topicType === 'regional') {
-    // Use existing regional thresholds
-    if (sourceType === 'hyperlocal') return 15;
-    if (sourceType === 'regional') return 25;
-    return 40; // national
+    // Increased thresholds for regional content to ensure stronger local relevance
+    if (sourceType === 'hyperlocal') return 25; // Increased from 15
+    if (sourceType === 'regional') return 35; // Increased from 25
+    return 50; // Increased from 40 for national sources
   } else {
-    // Keyword-based thresholds - lowered for better matching
-    if (sourceType === 'hyperlocal') return 20;
-    if (sourceType === 'regional') return 25;
-    return 30; // national - lowered from 50% to 30%
+    // Keyword-based thresholds - moderate increase for better precision
+    if (sourceType === 'hyperlocal') return 25; // Increased from 20
+    if (sourceType === 'regional') return 30; // Increased from 25
+    return 35; // Increased from 30 for national sources
   }
 }
 
@@ -213,5 +213,67 @@ export function meetsTopicRelevance(
   const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics);
   const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceType);
   
-  return score.relevance_score >= threshold;
+  // For regional topics, also check for competing region exclusion
+  if (topicConfig.topic_type === 'regional' && score.relevance_score > 0) {
+    // Additional check: content should not be primarily about other regions
+    const hasStrongCompetingRegionSignals = checkForCompetingRegionSignals(
+      content, 
+      title, 
+      topicConfig, 
+      otherRegionalTopics
+    );
+    
+    if (hasStrongCompetingRegionSignals) {
+      return false; // Exclude content that's clearly about other regions
+    }
+  }
+  
+  return score.relevance_score >= threshold && score.relevance_score > 0;
+}
+
+/**
+ * Check for strong signals that content is primarily about competing regions
+ */
+function checkForCompetingRegionSignals(
+  content: string,
+  title: string,
+  topicConfig: TopicConfig,
+  otherRegionalTopics: TopicRegionalConfig[]
+): boolean {
+  if (!otherRegionalTopics?.length || !topicConfig.region) return false;
+  
+  const fullText = `${title} ${content}`.toLowerCase();
+  const currentRegion = topicConfig.region.toLowerCase();
+  
+  // Check for competing region names in title (strong signal)
+  const competingRegionsInTitle = otherRegionalTopics
+    .filter(other => other.region_name !== topicConfig.region)
+    .filter(other => title.toLowerCase().includes(other.region_name.toLowerCase()))
+    .length;
+  
+  if (competingRegionsInTitle > 0) {
+    // Allow if current region is also mentioned prominently
+    const currentRegionInTitle = title.toLowerCase().includes(currentRegion);
+    if (!currentRegionInTitle) {
+      return true; // Strong competing signal - exclude
+    }
+  }
+  
+  // Check landmark concentration (competing region landmarks mentioned more than current)
+  const competingLandmarkMentions = otherRegionalTopics
+    .filter(other => other.region_name !== topicConfig.region)
+    .flatMap(other => other.landmarks || [])
+    .filter(landmark => landmark && fullText.includes(landmark.toLowerCase()))
+    .length;
+  
+  const currentLandmarkMentions = (topicConfig.landmarks || [])
+    .filter(landmark => landmark && fullText.includes(landmark.toLowerCase()))
+    .length;
+  
+  // If competing landmarks mentioned significantly more than current region landmarks
+  if (competingLandmarkMentions > currentLandmarkMentions && competingLandmarkMentions >= 2) {
+    return true; // Strong competing signal - exclude
+  }
+  
+  return false;
 }
