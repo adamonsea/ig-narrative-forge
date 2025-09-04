@@ -546,8 +546,26 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             </TabsList>
 
               <TabsContent value="pending" className="space-y-4">
+                {/* Gather All Sources Button */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Pending Articles</h3>
+                  <Button 
+                    onClick={handleGatherAll}
+                    disabled={isGathering}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    {isGathering ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {isGathering ? 'Gathering...' : 'Gather All Sources'}
+                  </Button>
+                </div>
+                
                 {/* High Quality Articles */}
-                <ArticlesList 
+                <ArticlesList
                   articles={articles.filter((a: any) => !a.is_low_score)}
                   processingArticle={processingArticle}
                   slideQuantities={slideQuantities}
