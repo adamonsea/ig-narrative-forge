@@ -41,3 +41,15 @@ export const getRelativeTimeColor = (dateString: string): string => {
   
   return 'bg-muted text-muted-foreground border-muted';
 };
+
+export const isNewlyPublished = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const daysDiff = differenceInDays(now, date);
+  
+  return daysDiff <= 2;
+};
+
+export const getNewFlagColor = (): string => {
+  return 'bg-orange-500/20 text-orange-700 border-orange-200';
+};

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { getRelativeTimeLabel, getRelativeTimeColor } from '@/lib/dateUtils';
+import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor } from '@/lib/dateUtils';
 
 interface Story {
   id: string;
@@ -199,6 +199,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             <Badge variant="secondary" className="text-sm font-medium">
               {topicName}
             </Badge>
+            {isNewlyPublished(story.created_at) && (
+              <Badge 
+                variant="outline" 
+                className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
+              >
+                New
+              </Badge>
+            )}
             {(() => {
               const timeLabel = getRelativeTimeLabel(story.created_at);
               if (!timeLabel) return null;
