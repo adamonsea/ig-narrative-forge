@@ -32,7 +32,7 @@ interface StoryCarouselProps {
 export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
-  const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 8)); // Random 0-7 to show realistic engagement
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
@@ -69,6 +69,13 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const toggleLove = () => {
     setIsLoved(!isLoved);
     setLoveCount(prev => isLoved ? prev - 1 : prev + 1);
+  };
+
+  const formatLikeCount = (count: number) => {
+    if (count === 0) {
+      return 'likes';
+    }
+    return count.toString();
   };
 
   const handleShare = () => {
@@ -330,7 +337,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               className="flex items-center gap-2"
             >
               <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
-              {loveCount}
+              {formatLikeCount(loveCount)}
             </Button>
           </div>
         </div>
