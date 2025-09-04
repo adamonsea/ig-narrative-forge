@@ -145,17 +145,20 @@ Style: Clean black ink line art on pure white background. Simple editorial illus
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         },
         body: JSON.stringify({
-          model: model === 'gpt-image-1' ? 'dall-e-3' : model, // Use dall-e-3 for gpt-image-1
+          model: model, // Use the actual model name
           prompt: illustrationPrompt,
           n: 1,
           size: '1024x1024',
-          response_format: 'b64_json',
-          ...(model === 'dall-e-3' ? {
-            quality: 'hd',
-          } : {}),
           ...(model === 'gpt-image-1' ? {
-            quality: 'hd',
-          } : {})
+            // GPT-Image-1 specific parameters
+            quality: 'high',
+            output_format: 'png',
+            background: 'opaque'
+          } : {
+            // DALL-E models
+            response_format: 'b64_json',
+            ...(model === 'dall-e-3' ? { quality: 'hd' } : {})
+          })
         }),
       })
 
@@ -167,8 +170,14 @@ Style: Clean black ink line art on pure white background. Simple editorial illus
 
       const imageData = await openaiResponse.json()
       
-      // Both models return b64_json field
-      imageBase64 = imageData.data[0].b64_json
+      // Handle different response formats
+      if (model === 'gpt-image-1') {
+        // GPT-Image-1 returns base64 directly in different format
+        imageBase64 = imageData.data[0].b64_json || imageData.data[0].image
+      } else {
+        // DALL-E models return b64_json field
+        imageBase64 = imageData.data[0].b64_json
+      }
       
       if (!imageBase64) {
         console.error('No image data received from OpenAI:', imageData)
