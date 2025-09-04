@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, ChevronLeft, ChevronRight, Activity } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useState } from "react";
 
 interface SentimentSlide {
@@ -40,11 +38,11 @@ export const SentimentCard = ({
   content,
   sources,
   sentimentScore,
-  analysisDate,
-  cardType,
   slides = []
 }: SentimentCardProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   
   // Use slides if available, otherwise create from content
   const displaySlides = slides.length > 0 ? slides : [
@@ -52,7 +50,7 @@ export const SentimentCard = ({
       type: 'hero' as const,
       content: content.headline,
       order: 0,
-      metadata: { statistics: content.statistics, summary: content.summary }
+      metadata: {}
     },
     ...(content.key_quote ? [{
       type: 'quote' as const,
@@ -62,175 +60,170 @@ export const SentimentCard = ({
     }] : []),
     {
       type: 'references' as const,
-      content: `Based on ${sources.length} source${sources.length > 1 ? 's' : ''}`,
-      order: slides.length > 0 ? slides.length - 1 : 2,
-      metadata: { sources }
+      content: `${sources.length} source${sources.length > 1 ? 's' : ''}`,
+      order: 2,
+      metadata: {}
     }
   ];
-  const getSentimentIcon = () => {
-    if (sentimentScore > 20) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (sentimentScore < -20) return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4 text-yellow-600" />;
-  };
-
-  const getSentimentColor = () => {
-    if (sentimentScore > 20) return "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200";
-    if (sentimentScore < -20) return "bg-gradient-to-br from-red-50 to-rose-50 border-red-200";
-    return "bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200";
+  const getSentimentBadge = () => {
+    if (sentimentScore > 20) return { icon: <TrendingUp className="h-3 w-3" />, text: "Positive", variant: "secondary" as const };
+    if (sentimentScore < -20) return { icon: <TrendingDown className="h-3 w-3" />, text: "Negative", variant: "destructive" as const };
+    return { icon: <Minus className="h-3 w-3" />, text: "Neutral", variant: "outline" as const };
   };
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % displaySlides.length);
+    if (currentSlide < displaySlides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    }
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + displaySlides.length) % displaySlides.length);
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(0);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 30;
+    const isRightSwipe = distance < -30;
+
+    if (isLeftSwipe && currentSlide < displaySlides.length - 1) {
+      nextSlide();
+    }
+    if (isRightSwipe && currentSlide > 0) {
+      prevSlide();
+    }
+  };
+
+  const getTextSize = (content: string, isHero: boolean) => {
+    const length = content.length;
+    if (isHero) {
+      if (length < 50) return "text-2xl md:text-3xl lg:text-4xl";
+      if (length < 100) return "text-xl md:text-2xl lg:text-3xl";
+      return "text-lg md:text-xl lg:text-2xl";
+    } else {
+      if (length < 80) return "text-lg md:text-xl lg:text-2xl";
+      if (length < 150) return "text-base md:text-lg lg:text-xl";
+      return "text-sm md:text-base lg:text-lg";
+    }
   };
 
   const renderSlideContent = (slide: SentimentSlide) => {
+    const currentSlideData = displaySlides[currentSlide];
+    
     switch (slide.type) {
       case 'hero':
         return (
-          <div className="space-y-3">
-            <h3 className="font-bold text-lg text-foreground leading-tight">
-              {slide.content}
-            </h3>
-            {slide.metadata?.statistics && (
-              <p className="text-sm text-muted-foreground">
-                {slide.metadata.statistics}
-              </p>
-            )}
-            {slide.metadata?.summary && (
-              <p className="text-sm text-foreground/90 leading-relaxed">
-                {slide.metadata.summary}
-              </p>
-            )}
+          <div className={`text-center leading-relaxed ${getTextSize(slide.content, true)} font-bold text-balance`}>
+            {slide.content}
           </div>
         );
       
       case 'quote':
         return (
-          <blockquote className="border-l-4 border-primary/30 pl-4 py-2">
-            <p className="text-base italic text-foreground font-medium leading-relaxed">
-              "{slide.content}"
-            </p>
-          </blockquote>
+          <div className={`text-center leading-relaxed ${getTextSize(slide.content, false)} font-light italic text-balance`}>
+            "{slide.content}"
+          </div>
         );
       
       case 'statistic':
         return (
-          <div className="text-center space-y-2">
-            <div className="text-3xl font-bold text-primary">
-              {slide.content}
-            </div>
-            {slide.metadata?.description && (
-              <p className="text-sm text-muted-foreground">
-                {slide.metadata.description}
-              </p>
-            )}
+          <div className={`text-center leading-relaxed ${getTextSize(slide.content, false)} font-bold text-balance`}>
+            {slide.content}
           </div>
         );
       
       case 'references':
         return (
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-foreground">
-              {slide.content}
-            </p>
-            {slide.metadata?.sources && (
-              <div className="space-y-2">
-                {slide.metadata.sources.slice(0, 3).map((source: any, index: number) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline flex items-center gap-1 truncate"
-                    >
-                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{source.title}</span>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className={`text-center leading-relaxed ${getTextSize(slide.content, false)} font-light text-balance text-muted-foreground`}>
+            {slide.content}
           </div>
         );
       
       default:
-        return <p className="text-sm text-foreground">{slide.content}</p>;
+        return (
+          <div className={`text-center leading-relaxed ${getTextSize(slide.content, false)} font-light text-balance`}>
+            {slide.content}
+          </div>
+        );
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), 'MMM d');
-    } catch {
-      return 'Recent';
-    }
-  };
+  const sentimentBadge = getSentimentBadge();
 
   return (
-    <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${getSentimentColor()}`}>
-      {/* Distinct sentiment header with gradient */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-background/80 to-background/60 backdrop-blur-sm border-b border-border/30">
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
-          <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
-            Sentiment Analysis
-          </span>
-          {getSentimentIcon()}
-        </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          {formatDate(analysisDate)}
-        </div>
-      </div>
-
-      {/* Carousel content area */}
-      <div className="relative min-h-[200px] p-4">
-        <div className="transition-all duration-300 ease-in-out">
-          {renderSlideContent(displaySlides[currentSlide])}
-        </div>
-
-        {/* Navigation buttons - only show if multiple slides */}
-        {displaySlides.length > 1 && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={prevSlide}
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={nextSlide}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 bg-background/80 backdrop-blur-sm hover:bg-background/90"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-      </div>
-
-      {/* Bottom section with keyword and pagination dots */}
-      <div className="px-4 py-3 bg-background/50 border-t border-border/30">
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="text-xs px-2 py-1 bg-primary/5">
-            {keywordPhrase}
+    <Card className="overflow-hidden">
+      <div 
+        className="relative bg-background min-h-[600px] flex flex-col"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <Badge variant={sentimentBadge.variant} className="text-sm font-medium flex items-center gap-1">
+            {sentimentBadge.icon}
+            {sentimentBadge.text}
           </Badge>
-          
-          {/* Pagination dots - only show if multiple slides */}
           {displaySlides.length > 1 && (
-            <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground">
+              {currentSlide + 1} of {displaySlides.length}
+            </span>
+          )}
+        </div>
+
+        {/* Slide Content */}
+        <div className="relative flex-1 flex items-center justify-center">
+          {/* Invisible navigation areas */}
+          {displaySlides.length > 1 && (
+            <>
+              {/* Left area - previous slide */}
+              {currentSlide > 0 && (
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                  aria-label="Previous slide"
+                />
+              )}
+              {/* Right area - next slide */}
+              {currentSlide < displaySlides.length - 1 && (
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
+                  aria-label="Next slide"
+                />
+              )}
+            </>
+          )}
+          
+          <div className="p-8 w-full max-w-2xl">
+            <div className="transition-all duration-300 animate-fade-in">
+              {renderSlideContent(displaySlides[currentSlide])}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom section */}
+        <div className="p-4">
+          {/* Progress dots */}
+          {displaySlides.length > 1 && (
+            <div className="flex justify-center space-x-2">
               {displaySlides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                  className={`w-2 h-2 rounded-full transition-all ${
                     index === currentSlide 
                       ? 'bg-primary scale-125' 
                       : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
