@@ -378,7 +378,11 @@ REJECT any phrases about other locations outside ${topicName}. Only include loca
       throw new Error('No response from DeepSeek API');
     }
 
-    const keywords = JSON.parse(data.choices[0].message.content);
+    // Clean the response content to remove markdown code blocks
+    let content = data.choices[0].message.content.trim();
+    content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    
+    const keywords = JSON.parse(content);
     
     // Map to our structure and add source information
     return keywords.map((kw: any) => ({
@@ -477,7 +481,11 @@ Return as JSON:
       return null;
     }
 
-    const cardData = JSON.parse(data.choices[0].message.content);
+    // Clean the response content to remove markdown code blocks
+    let content = data.choices[0].message.content.trim();
+    content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    
+    const cardData = JSON.parse(content);
     
     return {
       content: cardData.content,
