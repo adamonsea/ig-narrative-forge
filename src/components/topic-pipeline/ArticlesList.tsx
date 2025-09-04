@@ -125,8 +125,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
           >
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg mb-2 line-clamp-2">
+                <div className="flex-1 min-w-0 pr-3">
+                  <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto">
                     {article.title}
                   </CardTitle>
                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
