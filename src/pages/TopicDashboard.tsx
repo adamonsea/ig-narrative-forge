@@ -17,9 +17,10 @@ import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
+import { SentimentManager } from "@/components/SentimentManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicDashboardStats {
@@ -452,10 +453,57 @@ const TopicDashboard = () => {
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Prominent Gather All Sources Button */}
+        <div className="mb-6">
+          <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Content Gathering</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Trigger content gathering from all active sources for this topic
+                  </p>
+                </div>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const { error } = await supabase.functions.invoke('topic-aware-scraper', {
+                        body: { topicId: topic.id, forceGather: true }
+                      });
+                      
+                      if (error) throw error;
+                      
+                      toast({
+                        title: "Gathering Started",
+                        description: "Content gathering has been triggered for all sources"
+                      });
+                    } catch (error) {
+                      console.error('Gather error:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to trigger content gathering",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Gather All Sources
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
+            <TabsTrigger value="sentiment">
+              <Activity className="h-4 w-4 mr-2" />
+              Sentiment
+            </TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
           </TabsList>
@@ -464,6 +512,23 @@ const TopicDashboard = () => {
             <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <TopicAwareContentPipeline selectedTopicId={topic.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sentiment" className="space-y-6">
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Sentiment Analysis
+                </CardTitle>
+                <CardDescription>
+                  Monitor and manage sentiment tracking for this topic
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SentimentManager topicId={topic.id} />
               </CardContent>
             </Card>
           </TabsContent>
