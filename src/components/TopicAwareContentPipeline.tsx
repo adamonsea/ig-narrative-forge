@@ -533,7 +533,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 Generation Queue ({queueItems.length})
               </TabsTrigger>
               <TabsTrigger value="stories" className="relative">
-                Ready Stories ({stories.length})
+                Published Stories ({stories.length})
                 {reviewCount > 0 && (
                   <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                     {reviewCount}
