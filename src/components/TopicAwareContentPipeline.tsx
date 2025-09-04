@@ -368,24 +368,31 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     
     // Split the text and highlight matches
     const parts = text.split(pattern);
-    let keywordIndex = 0;
+    const matches = text.match(pattern) || [];
+    let matchIndex = 0;
     
     return (
       <span className="whitespace-pre-wrap">
         {parts.map((part, index) => {
-          const isKeyword = pattern.test(part);
-          if (isKeyword) {
-            keywordIndex++;
+          if (index < parts.length - 1) {
+            // This is a non-keyword part followed by a keyword
+            const keyword = matches[matchIndex] || '';
+            matchIndex++;
             return (
-              <mark 
-                key={`keyword-${index}-${keywordIndex}`}
-                className="bg-accent/30 text-accent-foreground px-1 py-0.5 rounded font-medium border border-accent/20"
-              >
+              <span key={index}>
                 {part}
-              </mark>
+                <mark 
+                  className="bg-yellow-300 text-black px-1 py-0.5 rounded font-bold shadow-sm"
+                  style={{ backgroundColor: '#fef08a', color: '#000' }}
+                >
+                  {keyword}
+                </mark>
+              </span>
             );
+          } else {
+            // This is the last part (no keyword after it)
+            return <span key={index}>{part}</span>;
           }
-          return part;
         })}
       </span>
     );
