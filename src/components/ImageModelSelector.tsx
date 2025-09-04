@@ -17,9 +17,25 @@ export const imageModels: ImageModel[] = [
   {
     id: 'gpt-image-1',
     name: 'Premium Quality',
-    description: 'OpenAI GPT-Image-1 - Highest quality',
+    description: 'OpenAI GPT-Image-1 - Highest quality editorial illustrations',
     costUsd: 0.06,
     credits: 10,
+    provider: 'openai'
+  },
+  {
+    id: 'ideogram',
+    name: 'Premium Editorial',
+    description: 'Ideogram V2 - High quality editorial style illustrations',
+    costUsd: 0.05,
+    credits: 8,
+    provider: 'ideogram'
+  },
+  {
+    id: 'dall-e-3',
+    name: 'High Quality',
+    description: 'OpenAI DALL-E 3 - Professional quality illustrations',
+    costUsd: 0.04,
+    credits: 5,
     provider: 'openai'
   },
   {
@@ -33,26 +49,10 @@ export const imageModels: ImageModel[] = [
   {
     id: 'flux-schnell',
     name: 'Fast Generation',
-    description: 'FLUX.1-schnell via Hugging Face - Quick results',
+    description: 'FLUX.1-schnell via Hugging Face - Quick budget option',
     costUsd: 0.01,
     credits: 2,
     provider: 'huggingface'
-  },
-  {
-    id: 'midjourney',
-    name: 'Artistic Style',
-    description: 'MidJourney via kie.ai - Creative artistic style',
-    costUsd: 0.02,
-    credits: 3,
-    provider: 'midjourney'
-  },
-  {
-    id: 'nebius-flux',
-    name: 'Balanced Quality',
-    description: 'FLUX via Nebius AI - Good balance of quality and speed',
-    costUsd: 0.015,
-    credits: 2,
-    provider: 'nebius'
   }
 ];
 
