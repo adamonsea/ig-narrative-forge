@@ -8,6 +8,8 @@ interface Story {
   author: string;
   publication_name: string;
   created_at: string;
+  cover_illustration_url?: string;
+  cover_illustration_prompt?: string;
   slides: Array<{
     id: string;
     slide_number: number;
@@ -98,6 +100,8 @@ export const useInfiniteTopicFeed = (slug: string) => {
           author,
           publication_name,
           created_at,
+          cover_illustration_url,
+          cover_illustration_prompt,
           slides (
             id,
             slide_number,
@@ -139,6 +143,8 @@ export const useInfiniteTopicFeed = (slug: string) => {
         author: story.author || 'Unknown',
         publication_name: story.publication_name || 'Unknown Publication',
         created_at: story.created_at,
+        cover_illustration_url: story.cover_illustration_url,
+        cover_illustration_prompt: story.cover_illustration_prompt,
         slides: story.slides
           .sort((a, b) => a.slide_number - b.slide_number)
           .map(slide => ({

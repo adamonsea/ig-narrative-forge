@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditService } from "@/lib/creditService";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Slide {
   id: string;
@@ -96,16 +97,8 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   const handleGenerateIllustration = async (story: Story) => {
     if (generatingIllustrations.has(story.id)) return;
     
-    // Check if illustration already exists
-    if (story.cover_illustration_url) {
-      toast({
-        title: 'Illustration Already Exists',
-        description: 'This story already has a cover illustration.',
-        variant: 'default',
-      });
-      return;
-    }
-
+    // For regeneration, don't check if illustration exists
+    
     // Check credits (bypass for super admin)
     if (!isSuperAdmin && (!credits || credits.credits_balance < 10)) {
       toast({
@@ -123,7 +116,7 @@ export const StoriesList: React.FC<StoriesListProps> = ({
       
       if (result.success) {
         toast({
-          title: 'Illustration Generated Successfully',
+          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
           description: `Used ${result.credits_used} credits. New balance: ${result.new_balance}`,
         });
         
@@ -150,6 +143,39 @@ export const StoriesList: React.FC<StoriesListProps> = ({
         const next = new Set(prev);
         next.delete(story.id);
         return next;
+      });
+    }
+  };
+
+  const handleDeleteIllustration = async (storyId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-story-illustration', {
+        body: { storyId }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        toast({
+          title: 'Illustration Deleted',
+          description: 'Cover illustration has been removed successfully.',
+        });
+        
+        // Refresh stories to remove the illustration
+        if (onRefresh) {
+          await onRefresh();
+        }
+      } else {
+        throw new Error(data?.error || 'Failed to delete illustration');
+      }
+    } catch (error) {
+      console.error('Error deleting illustration:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete illustration',
+        variant: 'destructive',
       });
     }
   };
@@ -366,12 +392,38 @@ export const StoriesList: React.FC<StoriesListProps> = ({
                   {/* Show cover illustration if exists */}
                   {story.cover_illustration_url && (
                     <div className="mb-3">
-                      <h4 className="text-sm font-medium mb-2">Cover Illustration</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium">Cover Illustration</h4>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGenerateIllustration(story)}
+                            disabled={generatingIllustrations.has(story.id)}
+                            className="text-xs"
+                          >
+                            {generatingIllustrations.has(story.id) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              'Regenerate'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteIllustration(story.id)}
+                            className="text-xs text-red-600 hover:text-red-700"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
                       <div className="relative w-full max-w-md">
                         <img
                           src={story.cover_illustration_url}
                           alt={`Cover illustration for ${story.title}`}
-                          className="w-full h-48 object-cover rounded-lg border"
+                          className="w-full h-48 object-contain bg-white rounded-lg border"
+                          style={{ imageRendering: 'crisp-edges' }}
                         />
                         <div className="mt-2 text-xs text-muted-foreground">
                           Generated: {story.illustration_generated_at ? 

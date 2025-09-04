@@ -12,6 +12,8 @@ interface Story {
   author: string | null;
   publication_name: string | null;
   created_at: string;
+  cover_illustration_url?: string;
+  cover_illustration_prompt?: string;
   slides: Array<{
     id: string;
     slide_number: number;
@@ -234,6 +236,18 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               {currentSlideIndex + 1} of {story.slides.length}
             </span>
           </div>
+
+          {/* Cover Illustration */}
+          {story.cover_illustration_url && currentSlideIndex === 0 && (
+            <div className="relative w-full h-64 md:h-80 mb-4 overflow-hidden">
+              <img
+                src={story.cover_illustration_url}
+                alt={`Cover illustration for ${story.title}`}
+                className="w-full h-full object-contain bg-white"
+                style={{ imageRendering: 'crisp-edges' }}
+              />
+            </div>
+          )}
 
           {/* Slide Content */}
           <div className="relative flex-1 flex items-center justify-center">

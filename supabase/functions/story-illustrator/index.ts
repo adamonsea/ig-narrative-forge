@@ -68,20 +68,8 @@ serve(async (req) => {
       )
     }
 
-    // Check if illustration already exists
-    if (story.cover_illustration_url) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Illustration already exists',
-          illustration_url: story.cover_illustration_url 
-        }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
+    // Allow regeneration - don't check if illustration already exists
+    // This enables the regenerate functionality
 
     // Check if user is super admin (bypass credit deduction)
     const { data: hasAdminRole } = await supabase.rpc('has_role', {
@@ -118,7 +106,7 @@ serve(async (req) => {
     }
 
     // Generate illustration prompt based on story title
-    const illustrationPrompt = `Create a professional news story illustration for: "${story.title}". Modern editorial style, clean composition, suitable for news media.`
+    const illustrationPrompt = `Create a black and white hand-drawn style illustration for: "${story.title}". Simple, sketchy style as if quickly drawn by an expert illustrator. Descriptive and delightful, minimalist line art, clean white background. Should look like a quick expert sketch, not photorealistic. Black ink on pure white background only.`
 
     // Generate image using OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
@@ -133,7 +121,8 @@ serve(async (req) => {
         n: 1,
         size: '1024x1024',
         quality: 'high',
-        output_format: 'webp'
+        output_format: 'png',
+        background: 'opaque'
       }),
     })
 
@@ -145,13 +134,13 @@ serve(async (req) => {
     const imageBase64 = imageData.data[0].b64_json
 
     // Upload to Supabase Storage
-    const fileName = `story-${storyId}-${Date.now()}.webp`
+    const fileName = `story-${storyId}-${Date.now()}.png`
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('visuals')
       .upload(fileName, 
         Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0)), 
         {
-          contentType: 'image/webp',
+          contentType: 'image/png',
           upsert: false
         }
       )
