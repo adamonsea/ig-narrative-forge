@@ -106,36 +106,37 @@ serve(async (req) => {
     }
 
     // Generate illustration prompt based on story title
-    const illustrationPrompt = `IMPORTANT: Create a simple black and white line drawing illustration ONLY. NO TEXT whatsoever. NO WORDS. NO LETTERS. NO TYPOGRAPHY. NO CAPTIONS. NO LABELS. 
+    const illustrationPrompt = `Create a simple black and white line drawing illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image. 
 
 Visual concept: "${story.title}"
 
-Style: Pure minimalist line art sketch. Only solid black ink strokes on solid white background. Hand-drawn illustration style. Simple visual representation only - absolutely no textual elements of any kind. Think simple icon or pictogram style. Clean line drawing that represents the story concept visually without any written words.`
+Style: Minimalist hand-drawn line art using only solid black ink on pure solid white background. Simple visual illustration that represents the story concept without any written text elements. Clean sketch style illustration only.`
 
-    // Generate image using OpenAI
-    const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
+    // Generate image using Hugging Face FLUX
+    const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: illustrationPrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'high',
-        output_format: 'png',
-        background: 'opaque'
+        inputs: illustrationPrompt,
+        parameters: {
+          width: 1024,
+          height: 1024,
+          num_inference_steps: 4
+        }
       }),
     })
 
-    if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
+    if (!hfResponse.ok) {
+      throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
     }
 
-    const imageData = await openaiResponse.json()
-    const imageBase64 = imageData.data[0].b64_json
+    // Get the image as blob from Hugging Face
+    const imageBlob = await hfResponse.blob()
+    const arrayBuffer = await imageBlob.arrayBuffer()
+    const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
     // Upload to Supabase Storage
     const fileName = `story-${storyId}-${Date.now()}.png`
