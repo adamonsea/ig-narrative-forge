@@ -73,10 +73,9 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   };
 
   const handleShare = () => {
-    const shareUrl = storyUrl || story.article.source_url;
-    const shareText = storyUrl ? 
-      `Check out this story: ${story.title}` : 
-      `${story.title}\n\n${currentSlide.content}`;
+    // Always use the story URL if available, otherwise construct one
+    const shareUrl = storyUrl || `${window.location.origin}/story/${story.id}`;
+    const shareText = `Check out this story: ${story.title}`;
     
     if (navigator.share) {
       navigator.share({
@@ -86,9 +85,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
       });
     } else {
       // Fallback - copy to clipboard
-      const clipboardText = storyUrl ? 
-        `${story.title}\n\n${shareUrl}` :
-        `${story.title}\n\n${currentSlide.content}\n\nRead more: ${shareUrl}`;
+      const clipboardText = `${story.title}\n\n${shareUrl}`;
       navigator.clipboard.writeText(clipboardText);
     }
   };
