@@ -105,65 +105,60 @@ serve(async (req) => {
       }
     }
 
-    // Helper function to generate optimized illustration prompt
-    const createIllustrationPrompt = (title: string, variation = 0): string => {
-      const basePrompts = [
-        `Black ink line drawing of ${title}. Technical illustration style, clean pen strokes on white paper. Simple composition, minimal details, monochromatic artwork. Precise linework, hand-drawn aesthetic, sketch-like quality.`,
-        `Hand-drawn line art depicting ${title}. Bold black ink on pure white background. Minimalist technical drawing, clear contours, simple geometric forms. Editorial illustration style, newspaper-ready artwork.`,
-        `Simple line illustration representing ${title}. Black ink sketch, clean vector-style lines on white. Minimal graphic design, iconic representation, uncluttered composition. Professional editorial artwork.`
-      ]
-      return basePrompts[variation % basePrompts.length]
+    // Generate optimized illustration prompt
+    const illustrationPrompt = `Create a minimalist black and white line drawing illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+
+Visual concept: "${story.title}"
+
+Style: Clean black ink line art on pure white background. Simple editorial illustration style, minimalist hand-drawn aesthetic, precise linework, newspaper-ready artwork. Technical drawing style with clear contours and uncluttered composition.`
+
+    // Generate image using OpenAI gpt-image-1 (premium model)
+    const startTime = Date.now()
+    const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: illustrationPrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'high',
+        output_format: 'png',
+        background: 'opaque'
+      }),
+    })
+
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.text()
+      console.error('OpenAI API error:', errorData)
+      throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
     }
 
-    // Generate image with retry logic for better results
-    const generateImage = async (promptVariation = 0, retryCount = 0): Promise<{ success: boolean; imageBase64?: string; error?: string }> => {
-      if (retryCount > 2) {
-        return { success: false, error: 'Max retries exceeded' }
-      }
+    const imageData = await openaiResponse.json()
+    const imageBase64 = imageData.data[0].b64_json
+    const generationTime = Date.now() - startTime
 
-      const illustrationPrompt = createIllustrationPrompt(story.title, promptVariation)
-      
-      try {
-        const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
-          },
-          body: JSON.stringify({
-            inputs: illustrationPrompt,
-            parameters: {
-              width: 1024,
-              height: 1024,
-              num_inference_steps: 8,
-              guidance_scale: 7.5
-            }
-          }),
-        })
+    // Estimate cost for gpt-image-1 (approximately $0.10 per high-quality 1024x1024 image)
+    const estimatedCost = 0.10
 
-        if (!hfResponse.ok) {
-          throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
-        }
+    // Track API usage and cost for analytics
+    const { error: usageError } = await supabase
+      .from('api_usage')
+      .insert({
+        service_name: 'openai',
+        operation: 'image_generation',
+        cost_usd: estimatedCost,
+        tokens_used: 0, // Not applicable for image generation
+        region: null // Could be enhanced to track user region
+      })
 
-        const imageBlob = await hfResponse.blob()
-        const arrayBuffer = await imageBlob.arrayBuffer()
-        const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-        
-        return { success: true, imageBase64, illustrationPrompt }
-      } catch (error) {
-        console.log(`Generation attempt ${retryCount + 1} failed:`, error.message)
-        // Try with different prompt variation on retry
-        return generateImage((promptVariation + 1) % 3, retryCount + 1)
-      }
+    if (usageError) {
+      console.error('Failed to log API usage:', usageError)
+      // Don't fail the request if usage logging fails
     }
-
-    // Generate the illustration
-    const result = await generateImage()
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to generate illustration after retries')
-    }
-
-    const { imageBase64, illustrationPrompt } = result
 
     // Upload to Supabase Storage
     const fileName = `story-${storyId}-${Date.now()}.png`
