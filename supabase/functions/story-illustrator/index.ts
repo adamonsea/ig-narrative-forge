@@ -148,7 +148,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
           model: model, // Use the actual model name
           prompt: illustrationPrompt,
           n: 1,
-          size: '1024x1024',
+          size: model === 'gpt-image-1' ? '1024x1024' : '512x512', // Use smaller size for DALL-E models
           ...(model === 'gpt-image-1' ? {
             // GPT-Image-1 specific parameters
             quality: 'high',
@@ -184,7 +184,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         throw new Error('No image data received from OpenAI API')
       }
     } else if (modelConfig.provider === 'huggingface') {
-      // FLUX.1-schnell via Hugging Face
+      // FLUX.1-schnell via Hugging Face - smaller dimensions for cost savings
       const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
         method: 'POST',
         headers: {
@@ -193,6 +193,10 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         },
         body: JSON.stringify({
           inputs: illustrationPrompt,
+          parameters: {
+            width: 512,
+            height: 512
+          },
           options: {
             wait_for_model: true
           }
@@ -210,7 +214,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
       const uint8Array = new Uint8Array(arrayBuffer)
       imageBase64 = btoa(String.fromCharCode(...uint8Array))
     } else if (modelConfig.provider === 'ideogram') {
-      // Ideogram API
+      // Ideogram API - use smaller aspect ratio setting
       const ideogramResponse = await fetch('https://api.ideogram.ai/generate', {
         method: 'POST',
         headers: {
@@ -220,10 +224,11 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         body: JSON.stringify({
           image_request: {
             prompt: illustrationPrompt,
-            aspect_ratio: 'ASPECT_1_1',
+            aspect_ratio: 'ASPECT_1_1', // Square format
             model: 'V_2',
             magic_prompt_option: 'AUTO',
-            style_type: 'GENERAL'
+            style_type: 'GENERAL',
+            resolution: '512'  // Smaller resolution for cost savings
           }
         }),
       })
