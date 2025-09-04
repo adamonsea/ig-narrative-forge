@@ -126,11 +126,11 @@ serve(async (req) => {
     }
 
     // Generate optimized illustration prompt
-    const illustrationPrompt = `Create a minimalist black and white line drawing illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    const illustrationPrompt = `Create a detailed editorial cartoon illustration for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: Clean black ink line art on pure white background. Simple editorial illustration style, minimalist hand-drawn aesthetic, precise linework, newspaper-ready artwork. Technical drawing style with clear contours and uncluttered composition.`
+Style: Black and white editorial cartoon illustration in the style of newspaper political cartoons or magazine editorial art. Rich linework with expressive character, detailed but clean composition. Think New Yorker cartoon meets editorial illustration - sophisticated, engaging, and storytelling-focused rather than symbolic or icon-like. Use varied line weights, cross-hatching, and shading techniques to create depth and visual interest. The illustration should capture the mood and essence of the story with personality and editorial flair, while remaining professional and newspaper-appropriate.`
 
     // Generate image based on selected model
     const startTime = Date.now()
