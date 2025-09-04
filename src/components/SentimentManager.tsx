@@ -89,13 +89,19 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   };
 
   const triggerAnalysis = async () => {
+    console.log('🎯 Trigger Analysis button clicked for topic:', topicId);
+    
     try {
-      const { error } = await supabase.functions.invoke('sentiment-detector', {
+      console.log('📡 Calling sentiment-detector function...');
+      
+      const { data, error } = await supabase.functions.invoke('sentiment-detector', {
         body: {
           topic_id: topicId,
           force_analysis: true
         }
       });
+
+      console.log('📊 Function response:', { data, error });
 
       if (error) throw error;
 
@@ -104,16 +110,19 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         description: "Sentiment analysis has been triggered. Cards will appear shortly."
       });
 
+      console.log('✅ Analysis triggered successfully');
+
       // Reload data after a short delay
       setTimeout(() => {
+        console.log('🔄 Reloading sentiment data...');
         loadSentimentData();
       }, 3000);
 
     } catch (error) {
-      console.error('Error triggering sentiment analysis:', error);
+      console.error('❌ Error triggering sentiment analysis:', error);
       toast({
         title: "Error",
-        description: "Failed to trigger sentiment analysis",
+        description: `Failed to trigger sentiment analysis: ${error.message}`,
         variant: "destructive"
       });
     }
