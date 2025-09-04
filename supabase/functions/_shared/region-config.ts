@@ -24,6 +24,11 @@ export function calculateRegionalRelevance(
   const text = `${title} ${content}`.toLowerCase();
   let score = 0;
 
+  // Region name matching (highest priority - significant boost when topic's own region is mentioned)
+  const regionName = topicConfig.region_name.toLowerCase();
+  const regionNameMatches = (text.match(new RegExp(`\\b${regionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')) || []).length;
+  score += regionNameMatches * 30; // Major boost for region name mentions
+
   // Keyword matching (base score)
   const keywordMatches = topicConfig.keywords.filter(keyword => 
     text.includes(keyword.toLowerCase())
