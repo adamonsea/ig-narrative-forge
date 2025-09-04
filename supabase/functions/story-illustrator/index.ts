@@ -225,6 +225,8 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         throw new Error('Ideogram API key not configured')
       }
       
+      console.log('Making Ideogram API request...')
+      
       const ideogramResponse = await fetch('https://api.ideogram.ai/generate', {
         method: 'POST',
         headers: {
@@ -234,13 +236,15 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
         body: JSON.stringify({
           image_request: {
             prompt: illustrationPrompt,
-            aspect_ratio: 'ASPECT_1_1', // Square format
-            model: 'V_2',
-            magic_prompt_option: 'AUTO',
-            style_type: 'GENERAL'
+            aspect_ratio: 'ASPECT_1_1', // Square format 
+            model: 'V_2_TURBO', // Updated to use newer model
+            magic_prompt_option: 'ON', // Changed from AUTO
+            style_type: 'DESIGN'
           }
         }),
       })
+
+      console.log('Ideogram response status:', ideogramResponse.status)
 
       if (!ideogramResponse.ok) {
         const errorData = await ideogramResponse.text()
@@ -251,16 +255,19 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
       const ideogramData = await ideogramResponse.json()
       console.log('Ideogram response:', JSON.stringify(ideogramData, null, 2))
       
-      if (ideogramData.data && ideogramData.data[0] && ideogramData.data[0].url) {
+      if (ideogramData.data && ideogramData.data.length > 0 && ideogramData.data[0].url) {
         // Download the image and convert to base64
         const imageResponse = await fetch(ideogramData.data[0].url)
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image from Ideogram: ${imageResponse.status}`)
+        }
         const imageBlob = await imageResponse.blob()
         const arrayBuffer = await imageBlob.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
         imageBase64 = btoa(String.fromCharCode(...uint8Array))
       } else {
         console.error('Ideogram unexpected response format:', ideogramData)
-        throw new Error('Ideogram generation failed or returned no image')
+        throw new Error('Ideogram generation failed - no image URL in response')
       }
     } else if (modelConfig.provider === 'amazon') {
       // Amazon Titan Image Generator G1
