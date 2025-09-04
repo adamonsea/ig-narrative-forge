@@ -253,6 +253,13 @@ export const useTopicPipeline = (selectedTopicId: string) => {
 
       if (storiesError) throw storiesError;
 
+      // Get actual count of ready stories for accurate stats (without limit)
+      const { count: readyStoriesCount, error: countError } = await supabase
+        .from('stories')
+        .select('id, articles!inner(topic_id)', { count: 'exact', head: true })
+        .eq('status', 'ready')
+        .eq('articles.topic_id', selectedTopicId);
+
       // Get style choices for each story by fetching from content_generation_queue
       const storyIds = (storiesWithQueue || []).map(story => story.article_id);
       let styleChoicesData = [];
@@ -314,7 +321,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       setStats({
         pending_articles: filteredArticles.length,
         processing_queue: queueData?.filter(q => q.status === 'processing').length || 0,
-        ready_stories: storiesWithQueue?.filter(s => s.status === 'ready').length || 0
+        ready_stories: readyStoriesCount || storiesWithQueue?.filter(s => s.status === 'ready').length || 0
       });
 
       console.log('📊 Topic content loaded successfully');
