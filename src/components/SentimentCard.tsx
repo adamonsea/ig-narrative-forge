@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, Minus, MessageSquare, BarChart3, Quote, Exter
 import { useState } from "react";
 
 interface SentimentSlide {
-  type: 'hero' | 'mention-count' | 'sentiment-score' | 'forum-insight' | 'quote' | 'references';
+  type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
   content: string;
   order: number;
   metadata?: Record<string, any>;
@@ -83,18 +83,24 @@ export const SentimentCard = ({
       type: 'mention-count' as const,
       content: '',
       order: 1,
-      metadata: { mentionCount: getMentionCount(), timeframe: '24h' }
+      metadata: { mentionCount: getMentionCount(), timeframe: 'week' }
     },
     {
       type: 'sentiment-score' as const,
       content: '',
       order: 2,
-      metadata: { sentimentScore, confidenceScore }
+      metadata: { sentimentScore }
+    },
+    {
+      type: 'confidence-score' as const,
+      content: '',
+      order: 3,
+      metadata: { confidenceScore }
     },
     ...(externalData?.quote ? [{
       type: 'forum-insight' as const,
       content: externalData.quote,
-      order: 3,
+      order: 4,
       metadata: { platform: externalData.platform, percentage: externalData.percentage }
     }] : []),
     // Only include quote slide if there's a meaningful quote (not "No quote available" etc.)
@@ -104,19 +110,19 @@ export const SentimentCard = ({
         content.key_quote.trim().length > 10 ? [{
       type: 'quote' as const,
       content: content.key_quote,
-      order: 4
+      order: 5
     }] : []),
     {
       type: 'references' as const,
       content: '',
-      order: 5,
+      order: 6,
       metadata: { sources }
     }
   ];
   const getSentimentBadge = () => {
-    if (sentimentScore > 20) return { icon: <TrendingUp className="h-3 w-3" />, text: "Positive", variant: "secondary" as const };
-    if (sentimentScore < -20) return { icon: <TrendingDown className="h-3 w-3" />, text: "Negative", variant: "destructive" as const };
-    return { icon: <Minus className="h-3 w-3" />, text: "Neutral", variant: "outline" as const };
+    if (sentimentScore > 20) return { icon: <TrendingUp className="h-3 w-3" />, variant: "secondary" as const };
+    if (sentimentScore < -20) return { icon: <TrendingDown className="h-3 w-3" />, variant: "destructive" as const };
+    return { icon: <Minus className="h-3 w-3" />, variant: "outline" as const };
   };
 
   const nextSlide = () => {
@@ -225,36 +231,36 @@ export const SentimentCard = ({
     switch (slide.type) {
       case 'hero':
         return (
-          <div className="space-y-6">
-            {/* Temperature Emoji & Keyword */}
-            <div className="text-center space-y-4">
-              <div className="text-6xl mb-2">
-                {temperature.emoji}
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
-                  {slide.content}
-                </h2>
-                <div className="text-lg font-medium text-muted-foreground">
-                  {temperature.description} sentiment
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex-1 flex flex-col justify-center space-y-6">
+              {/* Temperature Emoji & Keyword */}
+              <div className="text-center space-y-4">
+                <div className="text-6xl mb-2">
+                  {temperature.emoji}
+                </div>
+                <div className="space-y-3">
+                  {/* Keyword as tablet/badge */}
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                    <span className="text-lg font-semibold text-primary">
+                      {slide.content}
+                    </span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50">
+                    <span className="text-2xl">{temperature.emoji}</span>
+                    <div className="w-16 h-3 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${temperature.barColor} transition-all duration-500`}
+                        style={{ width: `${Math.abs(sentimentScore)}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
             
-            {/* Context Information */}
-            <div className="text-center space-y-2">
-              <div className="text-sm text-muted-foreground">
-                Based on {sources.length} source{sources.length > 1 ? 's' : ''} • Last 24h
-              </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50">
-                <span className="text-sm font-medium">{temperature.label}</span>
-                <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${temperature.barColor} transition-all duration-500`}
-                    style={{ width: `${Math.abs(sentimentScore)}%` }}
-                  />
-                </div>
-              </div>
+            {/* Attribution at bottom */}
+            <div className="text-center text-xs text-muted-foreground">
+              Based on {sources.length} source{sources.length > 1 ? 's' : ''} • Last week
             </div>
           </div>
         );
@@ -262,47 +268,83 @@ export const SentimentCard = ({
       case 'mention-count':
         const mentionCount = slide.metadata?.mentionCount || 0;
         return (
-          <div className="space-y-6 text-center">
-            <div className="space-y-2">
-              <TrendingUp className="h-12 w-12 mx-auto text-primary/70" />
-              <h3 className="text-lg font-semibold text-muted-foreground">Mention Count</h3>
-            </div>
-            <div className="space-y-1">
-              <div className="text-5xl md:text-6xl font-bold text-foreground">
-                {mentionCount}
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex-1 flex flex-col justify-center space-y-6 text-center">
+              <div className="space-y-2">
+                <TrendingUp className="h-12 w-12 mx-auto text-primary/70" />
+                <h3 className="text-lg font-semibold text-muted-foreground">Discussion Volume</h3>
               </div>
-              <div className="text-sm text-muted-foreground">
-                mentions in the last {slide.metadata?.timeframe || '24h'}
+              <div className="space-y-1">
+                <div className="text-5xl md:text-6xl font-bold text-foreground">
+                  {mentionCount}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  mentions this {slide.metadata?.timeframe || 'week'}
+                </div>
+              </div>
+              <div className="text-base text-muted-foreground">
+                {mentionCount > 10 ? 'High activity' : mentionCount > 5 ? 'Moderate activity' : 'Low activity'}
               </div>
             </div>
-            <div className="text-base text-muted-foreground">
-              {mentionCount > 10 ? 'High activity' : mentionCount > 5 ? 'Moderate activity' : 'Low activity'}
+            
+            <div className="text-center text-xs text-muted-foreground">
+              Discussion intensity over past week
             </div>
           </div>
         );
 
       case 'sentiment-score':
+        return (
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex-1 flex flex-col justify-center space-y-6 text-center">
+              <div className="space-y-2">
+                <BarChart3 className="h-12 w-12 mx-auto text-primary/70" />
+                <h3 className="text-lg font-semibold text-muted-foreground">Overall Sentiment</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="text-4xl md:text-5xl font-bold text-foreground">
+                    {sentimentScore > 0 ? '+' : ''}{sentimentScore}
+                  </div>
+                  <div className="text-sm text-muted-foreground">community sentiment</div>
+                </div>
+                <div className="w-20 h-3 bg-muted rounded-full overflow-hidden mx-auto">
+                  <div 
+                    className={`h-full ${temperature.barColor} transition-all duration-500`}
+                    style={{ width: `${Math.abs(sentimentScore)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center text-xs text-muted-foreground">
+              Sentiment range: -100 (very negative) to +100 (very positive)
+            </div>
+          </div>
+        );
+        
+      case 'confidence-score':
         const confidence = slide.metadata?.confidenceScore || 0;
         return (
-          <div className="space-y-6 text-center">
-            <div className="space-y-2">
-              <BarChart3 className="h-12 w-12 mx-auto text-primary/70" />
-              <h3 className="text-lg font-semibold text-muted-foreground">Sentiment Analysis</h3>
+          <div className="flex flex-col justify-between h-full">
+            <div className="flex-1 flex flex-col justify-center space-y-6 text-center">
+              <div className="space-y-2">
+                <div className="text-4xl mx-auto">🎯</div>
+                <h3 className="text-lg font-semibold text-muted-foreground">Analysis Reliability</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="text-4xl md:text-5xl font-bold text-foreground">
+                    {confidence}%
+                  </div>
+                  <div className="text-sm text-muted-foreground">confidence level</div>
+                </div>
+                <Progress value={confidence} className="h-3" />
+              </div>
             </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="text-4xl md:text-5xl font-bold text-foreground">
-                  {sentimentScore > 0 ? '+' : ''}{sentimentScore}
-                </div>
-                <div className="text-sm text-muted-foreground">sentiment score</div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Confidence</span>
-                  <span className="font-medium">{confidence}%</span>
-                </div>
-                <Progress value={confidence} className="h-2" />
-              </div>
+            
+            <div className="text-center text-xs text-muted-foreground">
+              How reliable this sentiment analysis is based on source quality
             </div>
           </div>
         );
@@ -402,7 +444,7 @@ export const SentimentCard = ({
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
         <div 
-          className={`relative min-h-[600px] flex flex-col ${temperature.bgClass}`}
+          className={`relative h-[600px] flex flex-col overflow-hidden ${temperature.bgClass}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -411,7 +453,6 @@ export const SentimentCard = ({
           <div className="flex items-center justify-between p-4 border-b">
             <Badge variant={sentimentBadge.variant} className="text-sm font-medium flex items-center gap-1">
               {sentimentBadge.icon}
-              {sentimentBadge.text}
             </Badge>
             {displaySlides.length > 1 && (
               <span className="text-sm text-muted-foreground">
@@ -444,8 +485,8 @@ export const SentimentCard = ({
               </>
             )}
             
-            <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
-              <div className="transition-all duration-300 animate-fade-in">
+            <div className="p-6 md:p-8 w-full max-w-lg mx-auto h-full">
+              <div className="transition-all duration-300 animate-fade-in h-full">
                 {renderSlideContent(displaySlides[currentSlide])}
               </div>
             </div>

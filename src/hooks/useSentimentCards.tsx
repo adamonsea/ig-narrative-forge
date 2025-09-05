@@ -27,7 +27,7 @@ interface SentimentCard {
   needs_review: boolean;
   created_at: string;
   slides?: Array<{
-    type: 'hero' | 'mention-count' | 'sentiment-score' | 'forum-insight' | 'quote' | 'references';
+    type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
     content: string;
     order: number;
     metadata?: Record<string, any>;
@@ -72,7 +72,13 @@ export const useSentimentCards = (topicId?: string) => {
         throw fetchError;
       }
 
-      setSentimentCards((data || []).map(card => ({
+      setSentimentCards((data || [])
+        .filter(card => {
+          // Only show cards with at least 4 sources
+          const sources = Array.isArray(card.sources) ? card.sources : [];
+          return sources.length >= 4;
+        })
+        .map(card => ({
         ...card,
         content: card.content as any,
         sources: card.sources as any[],

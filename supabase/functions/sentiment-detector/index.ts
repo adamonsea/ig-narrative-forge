@@ -175,9 +175,9 @@ serve(async (req) => {
 
     let generatedCards = 0;
 
-    // Generate sentiment cards for keywords with frequency >= 3
+    // Generate sentiment cards for keywords with frequency >= 3 and at least 4 sources
     for (const keyword of keywordAnalysis) {
-      if (keyword.frequency >= 3) {
+      if (keyword.frequency >= 3 && keyword.sources.length >= 4) {
         console.log(`Checking if sentiment card needed for: ${keyword.phrase}`);
         
         // Check for existing cards in the last 7 days
@@ -330,6 +330,7 @@ CRITICAL: Only extract keywords that are directly relevant to ${topicName}. Reje
 - Area-specific issues and concerns
 - Local landmarks and places
 - Community discussions and sentiment
+- Include insights from Reddit, forums, and social media when available
 
 Content to analyze:
 ${combinedContent}
@@ -338,7 +339,8 @@ Extract 5-10 trending keywords or phrases and for each provide:
 1. The exact phrase (must be relevant to ${topicName})
 2. How many times it appears or is referenced
 3. Sentiment context (positive mentions, negative mentions, neutral mentions)
-4. Key sources mentioning it
+4. Key sources mentioning it (must include at least 4 sources)
+5. Reddit/forum sentiment if available
 
 Return as JSON array with this structure:
 [{
@@ -438,19 +440,19 @@ CRITICAL: This card must be specifically about ${topicName}. Do not include cont
 
 Create a sentiment card with:
 1. A compelling headline focused on ${topicName} (max 60 chars)
-2. Key statistics about mentions/sentiment in this area
+2. Key statistics about mentions/sentiment in this area over the past week
 3. A representative quote from local sources if available
-4. Brief summary of the local sentiment trend
-5. External sentiment from local forums/social media if relevant
+4. Brief summary of the local sentiment trend over the past week
+5. External sentiment from local forums/social media/Reddit if relevant
 
 Return as JSON:
 {
   "content": {
     "headline": "Brief compelling headline about ${topicName}",
-    "statistics": "X mentions, Y% positive sentiment in ${topicName}",
+    "statistics": "X mentions, Y% positive sentiment in ${topicName} this week",
     "key_quote": "Most relevant quote from local sources",
-    "external_sentiment": "Local social media/forum insights if available",
-    "summary": "2-3 sentence summary of the trend in ${topicName}"
+    "external_sentiment": "Local social media/forum/Reddit insights if available",
+    "summary": "2-3 sentence summary of the trend in ${topicName} over the past week"
   },
   "sentiment_score": 0-100,
   "confidence_score": 0-100,
