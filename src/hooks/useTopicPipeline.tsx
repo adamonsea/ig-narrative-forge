@@ -143,27 +143,63 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       // First get topic config for keyword overlap calculation
       const { data: topicConfig } = await supabase
         .from('topics')
-        .select('keywords, landmarks, postcodes, organizations')
+        .select('name, description, keywords, landmarks, postcodes, organizations')
         .eq('id', selectedTopicId)
         .single();
 
-      // Calculate keyword overlap between article and topic
+      // Enhanced keyword overlap calculation with topic name/description matching
       const calculateKeywordOverlap = (article: any, topicConfig: any) => {
-        if (!article?.title || !topicConfig?.keywords) return 0;
+        if (!article?.title) return { score: 0, matchedKeywords: [], topicMatches: [] };
         
         const articleText = `${article.title} ${article.body || ''}`.toLowerCase();
-        const topicKeywords = topicConfig.keywords || [];
+        const topicKeywords = topicConfig?.keywords || [];
         
-        if (topicKeywords.length === 0) return 50; // Default if no topic keywords
+        // Extract words from topic name and description as additional keywords
+        const topicNameWords = topicConfig?.name 
+          ? topicConfig.name.toLowerCase().split(/\W+/).filter(word => word.length > 2)
+          : [];
+        const topicDescWords = topicConfig?.description
+          ? topicConfig.description.toLowerCase().split(/\W+/).filter(word => word.length > 2)
+          : [];
         
         let matches = 0;
+        let matchedKeywords: string[] = [];
+        let topicMatches: string[] = [];
+        let scoreBoost = 0;
+        
+        // Check regular keywords
         topicKeywords.forEach((keyword: string) => {
           if (articleText.includes(keyword.toLowerCase())) {
             matches++;
+            matchedKeywords.push(keyword);
           }
         });
         
-        return Math.round((matches / topicKeywords.length) * 100);
+        // Check topic name words with significant boost
+        topicNameWords.forEach((word: string) => {
+          if (articleText.includes(word)) {
+            topicMatches.push(word);
+            scoreBoost += 40; // Major boost for topic name matches
+          }
+        });
+        
+        // Check topic description words with moderate boost  
+        topicDescWords.forEach((word: string) => {
+          if (articleText.includes(word) && !topicNameWords.includes(word)) {
+            topicMatches.push(word);
+            scoreBoost += 20; // Moderate boost for description matches
+          }
+        });
+        
+        const baseScore = topicKeywords.length > 0 
+          ? Math.round((matches / topicKeywords.length) * 100)
+          : 50; // Default if no topic keywords
+        
+        return {
+          score: Math.min(100, baseScore + scoreBoost),
+          matchedKeywords,
+          topicMatches
+        };
       };
 
       // Get articles in queue or with stories to exclude them
@@ -240,8 +276,12 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         
         return !isDuplicate && !excludedIds.includes(article.id);
       }).map(article => {
-        // Add keyword overlap scoring and low relevance flagging
-        const keywordOverlap = calculateKeywordOverlap(article, topicConfig);
+        // Add enhanced keyword overlap scoring and low relevance flagging
+        const keywordAnalysis = calculateKeywordOverlap(article, topicConfig);
+        
+        // Apply score boost to regional relevance score
+        const boostedScore = Math.min(100, (article.regional_relevance_score || 0) + 
+          (keywordAnalysis.topicMatches.length > 0 ? 30 : 0));
         
         // Use proper filtering thresholds based on topic type
         let relevanceThreshold = 25; // Default for regional topics
@@ -250,11 +290,14 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           relevanceThreshold = 20;
         }
         
-        const isLowScore = (article.regional_relevance_score || 0) < relevanceThreshold;
+        const isLowScore = boostedScore < relevanceThreshold;
         
         return {
           ...article,
-          keyword_overlap_score: keywordOverlap,
+          keyword_overlap_score: keywordAnalysis.score,
+          matched_keywords: keywordAnalysis.matchedKeywords,
+          topic_matches: keywordAnalysis.topicMatches,
+          boosted_relevance_score: boostedScore,
           is_low_score: isLowScore
         };
       });

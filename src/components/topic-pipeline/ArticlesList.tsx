@@ -14,6 +14,11 @@ interface Article {
   processing_status: string;
   content_quality_score: number | null;
   regional_relevance_score: number | null;
+  keyword_overlap_score?: number;
+  matched_keywords?: string[];
+  topic_matches?: string[];
+  boosted_relevance_score?: number;
+  is_low_score?: boolean;
   word_count: number | null;
   author?: string;
   summary?: string;
@@ -67,12 +72,13 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return "text-red-600";
   };
 
-  const getRelevanceLabel = (score: number | null) => {
-    if (!score) return "0% relevant";
-    if (score >= 50) return `${score}% relevant (High)`;
-    if (score >= 25) return `${score}% relevant (Medium)`;
-    if (score >= 20) return `${score}% relevant (Low)`;
-    return `${score}% relevant (Very Low)`;
+  const getRelevanceLabel = (score: number | null, boostedScore?: number) => {
+    const displayScore = boostedScore || score;
+    if (!displayScore) return "0% relevant";
+    if (displayScore >= 50) return `${displayScore}% relevant (High)`;
+    if (displayScore >= 25) return `${displayScore}% relevant (Medium)`;
+    if (displayScore >= 20) return `${displayScore}% relevant (Low)`;
+    return `${displayScore}% relevant (Very Low)`;
   };
 
   const getQualityColor = (score: number | null) => {
@@ -113,6 +119,38 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return matchedKeywords
       .sort((a, b) => b.length - a.length)
       .slice(0, 3);
+  };
+
+  // Extract relevant keywords from article content and topic matches
+  const getRelevantKeywords = (article: Article) => {
+    const keywords = [];
+    
+    // Add matched topic keywords with standard styling
+    if (article.matched_keywords && article.matched_keywords.length > 0) {
+      keywords.push(...article.matched_keywords.slice(0, 3).map(keyword => ({ 
+        text: keyword, 
+        type: 'keyword' as const 
+      })));
+    }
+    
+    // Add topic name/description matches with special styling
+    if (article.topic_matches && article.topic_matches.length > 0) {
+      keywords.push(...article.topic_matches.slice(0, 2).map(match => ({ 
+        text: match, 
+        type: 'topic' as const 
+      })));
+    }
+    
+    // Fallback to extracted keywords if no matches
+    if (keywords.length === 0) {
+      const extractedKeywords = extractRelevantKeywords(article.body || '', article.title);
+      keywords.push(...extractedKeywords.slice(0, 3).map(keyword => ({ 
+        text: keyword, 
+        type: 'common' as const 
+      })));
+    }
+    
+    return keywords.slice(0, 5); // Limit total keywords displayed
   };
 
   if (articles.length === 0) {
@@ -164,25 +202,35 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                     {article.title}
                   </CardTitle>
                   
-                  {/* Keyword flags */}
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {extractRelevantKeywords(article.body || '', article.title).map((keyword, index) => (
-                      <Badge 
-                        key={`${article.id}-keyword-${index}`}
-                        variant="outline" 
-                        className="text-xs px-2 py-0.5 bg-accent/10 text-accent-foreground border-accent/20 hover:bg-accent/20 transition-colors md:bg-muted/20 md:border-muted-foreground/30"
-                      >
-                        {keyword}
-                      </Badge>
-                    ))}
-                  </div>
+                   {/* Enhanced Keywords with Type-based Styling */}
+                   <div className="flex flex-wrap gap-1 mb-3">
+                     {getRelevantKeywords(article).map((keyword, idx) => (
+                       <Badge 
+                         key={idx} 
+                         variant={keyword.type === 'topic' ? 'default' : 'secondary'} 
+                         className={`text-xs px-2 py-1 ${
+                           keyword.type === 'topic' 
+                             ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                             : keyword.type === 'keyword'
+                             ? 'bg-blue-100 text-blue-800 border-blue-200'
+                             : 'bg-secondary text-secondary-foreground'
+                         }`}
+                       >
+                         {keyword.text}
+                         {keyword.type === 'topic' && <span className="ml-1">🎯</span>}
+                       </Badge>
+                     ))}
+                   </div>
                   
-                  <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
-                    <div>
-                      <span className={getRelevanceColor(article.regional_relevance_score)}>
-                        {getRelevanceLabel(article.regional_relevance_score)}
-                      </span>
-                    </div>
+                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
+                     <div>
+                       <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
+                         {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
+                         {article.boosted_relevance_score && article.boosted_relevance_score > (article.regional_relevance_score || 0) && (
+                           <span className="text-xs text-emerald-600 ml-1">↗ boosted</span>
+                         )}
+                       </span>
+                     </div>
                     <div>
                       <span className={getQualityColor(article.content_quality_score)}>
                         {article.content_quality_score || 0}% quality

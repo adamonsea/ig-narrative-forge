@@ -39,36 +39,12 @@ export const imageModels: ImageModel[] = [
     provider: 'openai'
   },
   {
-    id: 'dall-e-2',
-    name: 'Standard Quality',
-    description: 'OpenAI DALL-E 2 - Good quality, lower cost',
-    costUsd: 0.02,
-    credits: 3,
-    provider: 'openai'
-  },
-  {
     id: 'flux-schnell',
     name: 'Fast Generation',
-    description: 'FLUX.1-schnell via Hugging Face - Quick budget option',
+    description: 'FLUX.1-schnell via Hugging Face - Quick generation',
     costUsd: 0.01,
     credits: 2,
     provider: 'huggingface'
-  },
-  {
-    id: 'amazon-titan',
-    name: 'Budget Quality',
-    description: 'Amazon Titan G1 - Very cost-effective at $0.01 per image',
-    costUsd: 0.01,
-    credits: 1,
-    provider: 'amazon'
-  },
-  {
-    id: 'nebius-flux',
-    name: 'Ultra Budget',
-    description: 'Nebius FLUX - Cheapest option at $0.0013 per image',
-    costUsd: 0.0013,
-    credits: 1,
-    provider: 'nebius'
   }
 ];
 
