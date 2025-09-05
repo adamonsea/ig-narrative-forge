@@ -68,19 +68,26 @@ export class DatabaseOperations {
         }
 
         // Check for duplicates by title similarity (only if no exact URL match)
+        // FIXED: Less aggressive duplicate detection with better logic
         const { data: similarArticles } = await this.supabase
           .from('articles')
           .select('id, title, source_url')
-          .neq('processing_status', 'discarded'); // Don't compare against discarded articles
+          .neq('processing_status', 'discarded')
+          .limit(50); // Limit comparison to recent articles
 
         if (similarArticles && similarArticles.length > 0) {
           // Check for very similar titles with improved logic
           const isDuplicate = similarArticles.some((existing: any) => {
-            const similarity = this.calculateTitleSimilarity(existing.title, article.title);
-            const isSimilar = similarity > 0.9; // More strict threshold
+            // Skip comparison if same domain (different articles from same site)
+            const existingDomain = this.extractDomain(existing.source_url);
+            const articleDomain = this.extractDomain(article.source_url);
             
-            if (isSimilar) {
-              console.log(`📊 Title similarity detected: "${existing.title}" vs "${article.title}" (${Math.round(similarity * 100)}%)`);
+            const similarity = this.calculateTitleSimilarity(existing.title, article.title);
+            // FIXED: More lenient threshold (0.95 instead of 0.9) and domain check
+            const isSimilar = similarity > 0.95 && existingDomain === articleDomain;
+            
+            if (similarity > 0.8) { // Log high similarities for monitoring
+              console.log(`📊 Title similarity: "${existing.title.substring(0, 30)}..." vs "${article.title.substring(0, 30)}..." (${Math.round(similarity * 100)}%, domains: ${existingDomain} vs ${articleDomain})`);
             }
             
             return isSimilar;
@@ -107,9 +114,12 @@ export class DatabaseOperations {
           }
         }
 
-        // Apply quality and relevance filters with dynamic thresholds
-        if (article.word_count < 50 || article.content_quality_score < 30 || article.regional_relevance_score < relevanceThreshold) {
-          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}, quality: ${article.content_quality_score}, relevance: ${article.regional_relevance_score}, threshold: ${relevanceThreshold})`);
+        // FIXED: More lenient quality filters to allow more articles through
+        const minWordCount = sourceInfo?.source_type === 'hyperlocal' ? 20 : 30; // Reduced from 50
+        const minQualityScore = 20; // Reduced from 30
+        
+        if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < relevanceThreshold) {
+          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}/${minWordCount}, quality: ${article.content_quality_score}/${minQualityScore}, relevance: ${article.regional_relevance_score}/${relevanceThreshold})`);
           
           // Track URL as discarded
           await this.supabase
@@ -380,6 +390,15 @@ export class DatabaseOperations {
     }
     
     return matrix[str2.length][str1.length];
+  }
+
+  // NEW: Helper method to extract domain from URL
+  private extractDomain(url: string): string {
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return url.toLowerCase();
+    }
   }
 
   // Recovery method to reset orphaned URLs that were marked as scraped but have no articles

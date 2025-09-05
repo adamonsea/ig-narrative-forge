@@ -244,43 +244,68 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Universal scraper error:', error);
     
-    // Beautiful Soup fallback for failed scraping
+    // ENHANCED: Beautiful Soup fallback for failed scraping with better error handling
     console.log('🍲 Trying Beautiful Soup fallback...');
     try {
-      const beautifulSoupResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/beautiful-soup-scraper`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ feedUrl, sourceId, region })
+      const { feedUrl, sourceId, region } = await req.json();
+      
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      
+      // Call Beautiful Soup scraper directly
+      const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
+        body: { feedUrl, sourceId, region }
       });
 
-      if (beautifulSoupResponse.ok) {
-        const fallbackResult = await beautifulSoupResponse.json();
+      if (fallbackResult.data && !fallbackResult.error) {
         console.log('✅ Beautiful Soup fallback successful');
-        return new Response(JSON.stringify(fallbackResult), {
+        
+        // Update source metrics to reflect fallback success
+        const dbOps = new DatabaseOperations(supabase);
+        const responseTime = Date.now() - startTime;
+        await dbOps.updateSourceMetrics(sourceId, true, 'beautiful_soup_fallback', responseTime);
+        
+        return new Response(JSON.stringify({
+          ...fallbackResult.data,
+          method: 'beautiful_soup_fallback',
+          fallback_used: true
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      } else {
+        console.error('❌ Beautiful Soup fallback failed:', fallbackResult.error);
       }
     } catch (fallbackError) {
-      console.error('❌ Beautiful Soup fallback also failed:', fallbackError);
+      console.error('❌ Beautiful Soup fallback exception:', fallbackError);
     }
     
-    // Log error event
-    const dbOps = new DatabaseOperations(supabase);
-    await dbOps.logSystemEvent(
-      'error',
-      `Universal scraper failed: ${error.message}`,
-      { error: error.message, stack: error.stack },
-      'universal-scraper'
-    );
+    // Log error event with more context
+    try {
+      const dbOps = new DatabaseOperations(supabase);
+      await dbOps.logSystemEvent(
+        'error',
+        `Universal scraper failed: ${error.message}`,
+        { 
+          error: error.message, 
+          stack: error.stack,
+          sourceId: sourceId || 'unknown',
+          feedUrl: feedUrl || 'unknown',
+          region: region || 'unknown'
+        },
+        'universal-scraper'
+      );
+    } catch (logError) {
+      console.error('❌ Failed to log error:', logError);
+    }
 
     return new Response(
       JSON.stringify({ 
         success: false,
         error: error.message || 'Internal server error',
-        message: 'Universal scraper encountered an error'
+        message: 'Universal scraper encountered an error',
+        fallback_attempted: true
       }),
       { 
         status: 500, 

@@ -297,7 +297,7 @@ export class UniversalContentExtractor {
     return headers;
   }
 
-  async fetchWithRetry(url: string, maxRetries: number = 3): Promise<string> {
+  async fetchWithRetry(url: string, maxRetries: number = 5): Promise<string> {
     let lastError: Error | null = null;
     
     // Normalize URL before any fetch attempts
@@ -305,6 +305,7 @@ export class UniversalContentExtractor {
     
     // Enhanced retry count for government sites
     const enhancedMaxRetries = this.isGovernmentSite ? Math.max(maxRetries, 5) : maxRetries;
+    const isGovernmentSite = this.isGovernmentSite;
     
     for (let attempt = 1; attempt <= enhancedMaxRetries; attempt++) {
       try {
@@ -313,11 +314,15 @@ export class UniversalContentExtractor {
           await this.addIntelligentDelay();
         }
         
-        console.log(`🌐 Fetching ${normalizedUrl} (attempt ${attempt}/${enhancedMaxRetries}) ${this.isGovernmentSite ? '[GOV SITE]' : ''}`);
+        console.log(`🌐 Fetching ${normalizedUrl} (attempt ${attempt}/${enhancedMaxRetries})${isGovernmentSite ? ' [GOV SITE]' : ''}`);
+        
+        // ENHANCED: Better timeout and SSL handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
         const fetchOptions: RequestInit = {
+          signal: controller.signal,
           headers: this.getEnhancedHeaders(),
-          signal: AbortSignal.timeout(30000) // Increased timeout for gov sites
         };
 
         // Enhanced retry logic for different error types
@@ -345,6 +350,8 @@ export class UniversalContentExtractor {
         
         const response = await fetch(normalizedUrl, fetchOptions);
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -358,16 +365,14 @@ export class UniversalContentExtractor {
         console.log(`❌ Attempt ${attempt} failed: ${error.message}`);
         
         if (attempt < enhancedMaxRetries) {
-          // Enhanced delay calculation
-          let delay = Math.pow(2, attempt) * 1000;
+          // ENHANCED: Intelligent delay based on site type and request count
+          const baseDelay = isGovernmentSite ? 3000 : 1000; // Longer delays for gov sites
+          const backoffDelay = Math.pow(2, attempt - 1) * baseDelay;
+          const jitter = Math.random() * 1000; // Add randomness
+          const totalDelay = Math.min(backoffDelay + jitter, 35000); // Cap at 35 seconds
           
-          // Longer delays for government sites and 403 errors
-          if (this.isGovernmentSite || error.message.includes('403')) {
-            delay = delay * 2 + (Math.random() * 3000); // 2x delay + 0-3s jitter
-          }
-          
-          console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          console.log(`⏳ Retrying in ${Math.round(totalDelay)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, totalDelay));
         }
       }
     }

@@ -1,11 +1,11 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
-import { DatabaseOperations } from '../_shared/database-operations.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { DatabaseOperations } from '../_shared/database-operations.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,30 +13,28 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('❌ Missing Supabase environment variables');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const { sourceId, topicId } = await req.json().catch(() => ({}));
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify({ error: 'Missing environment configuration' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log(`🔄 Starting orphaned URL recovery for source: ${sourceId || 'all'}, topic: ${topicId || 'all'}`);
 
-    // Parse request body
-    const { sourceId, topicId } = await req.json();
-
-    console.log(`🔄 Starting URL recovery - Source: ${sourceId || 'all'}, Topic: ${topicId || 'all'}`);
-
-    // Initialize Supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Initialize database operations
     const dbOps = new DatabaseOperations(supabase);
-
-    // Run recovery
     const recoveredCount = await dbOps.recoverOrphanedUrls(sourceId, topicId);
 
     console.log(`✅ Recovery complete: ${recoveredCount} URLs recovered`);
@@ -47,23 +45,24 @@ serve(async (req) => {
         recoveredCount,
         message: `Successfully recovered ${recoveredCount} orphaned URLs`
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
 
   } catch (error) {
-    console.error('❌ Error in URL recovery:', error);
-    
+    console.error('❌ Orphaned URL recovery error:', error);
+
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
         success: false,
-        error: error.message || 'Unknown error occurred'
+        error: error.message || 'Internal server error',
+        message: 'Failed to recover orphaned URLs'
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
