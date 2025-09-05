@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
-import { SchedulerSettings } from '@/components/SchedulerSettings';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -40,9 +39,8 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="errors" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
-            <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
             <TabsTrigger value="other">Other Settings</TabsTrigger>
           </TabsList>
           
@@ -50,13 +48,11 @@ export default function AdminPanel() {
             <ErrorTicketDashboard />
           </TabsContent>
           
-          <TabsContent value="scheduler" className="mt-6">
-            <SchedulerSettings />
-          </TabsContent>
-          
           <TabsContent value="other" className="mt-6">
             <div className="text-center text-muted-foreground p-8">
               Additional admin features coming soon...
+              <br />
+              <small className="text-xs">Note: Topic-specific automation settings are available in each topic's source management.</small>
             </div>
           </TabsContent>
         </Tabs>

@@ -71,7 +71,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     if (!score) return "0% relevant";
     if (score >= 50) return `${score}% relevant (High)`;
     if (score >= 25) return `${score}% relevant (Medium)`;
-    return `${score}% relevant (Low)`;
+    if (score >= 20) return `${score}% relevant (Low)`;
+    return `${score}% relevant (Very Low)`;
   };
 
   const getQualityColor = (score: number | null) => {

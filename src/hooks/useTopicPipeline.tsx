@@ -242,7 +242,15 @@ export const useTopicPipeline = (selectedTopicId: string) => {
       }).map(article => {
         // Add keyword overlap scoring and low relevance flagging
         const keywordOverlap = calculateKeywordOverlap(article, topicConfig);
-        const isLowScore = (article.regional_relevance_score || 0) < 70 || keywordOverlap < 30;
+        
+        // Use proper filtering thresholds based on topic type
+        let relevanceThreshold = 25; // Default for regional topics
+        if (topicConfig && topicConfig.keywords && topicConfig.keywords.length > 0) {
+          // Keyword topic threshold
+          relevanceThreshold = 20;
+        }
+        
+        const isLowScore = (article.regional_relevance_score || 0) < relevanceThreshold;
         
         return {
           ...article,
