@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import * as cheerio from 'https://esm.sh/cheerio@1.0.0-rc.12';
 import { ContentExtractionResult, ArticleData } from './types.ts';
 
 // Beautiful Soup-inspired HTML parser using Cheerio
