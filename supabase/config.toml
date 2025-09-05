@@ -1,8 +1,5 @@
 project_id = "fpoywkjgdapgjtdeooak"
 
-[functions.secure-newsletter-signup]
-verify_jwt = false
-
 [api]
 enabled = true
 port = 54321
@@ -39,15 +36,19 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-# Story Illustration Generator
+# Core Functions
+[functions.secure-newsletter-signup]
+verify_jwt = false
+
+[functions.hybrid-scraper]
+verify_jwt = false
+
 [functions.story-illustrator]
 verify_jwt = true
 
-# New Enhanced Universal Scraper
 [functions.universal-scraper]
 verify_jwt = false
 
-# Core Content Processing
 [functions.content-generator]
 verify_jwt = false
 
@@ -60,14 +61,12 @@ verify_jwt = false
 [functions.duplicate-detector]
 verify_jwt = false
 
-# Queue and Job Processing
 [functions.queue-processor]
 verify_jwt = false
 
 [functions.job-processor]
 verify_jwt = false
 
-# Automation and Monitoring
 [functions.automated-scheduler]
 verify_jwt = false
 
@@ -80,7 +79,6 @@ verify_jwt = false
 [functions.reset-stuck-processing]
 verify_jwt = false
 
-# Testing and Analytics
 [functions.test-image-generator]
 verify_jwt = false
 
@@ -90,34 +88,26 @@ verify_jwt = false
 [functions.midjourney-image-generator]
 verify_jwt = false
 
-# Topic-Aware Scraper
 [functions.topic-aware-scraper]
 verify_jwt = false
 
-# Keyword Rescan Trigger
 [functions.keyword-rescan-trigger]
 verify_jwt = false
 
-# Manual Article Management
 [functions.mark-article-discarded]
 verify_jwt = false
 
-# URL Recovery
 [functions.recover-orphaned-urls]
 verify_jwt = false
 
-# AI Source Suggestions
 [functions.suggest-content-sources]
 verify_jwt = false
 
-# Source Validation
 [functions.validate-content-source]
 verify_jwt = false
 
-# Beautiful Soup Enhanced Scraper
 [functions.beautiful-soup-scraper]
 verify_jwt = false
 
-# Beautiful Soup Testing
 [functions.test-beautiful-soup]
 verify_jwt = false
