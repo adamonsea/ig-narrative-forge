@@ -124,13 +124,15 @@ export const useInfiniteTopicFeed = (slug: string) => {
         .eq('is_published', true)
         .eq('articles.topic_id', topicData.id)
         .eq('articles.processing_status', 'processed')
-        .gte('articles.regional_relevance_score', 0) // Exclude negatively scored content
         .order('created_at', { ascending: sortBy === 'oldest' })
         .range(from, to);
 
-      // For regional topics, add additional filtering
+      // Apply proper relevance thresholds based on topic type
       if (topicData.topic_type === 'regional' && topicData.region) {
-        query = query.gte('articles.regional_relevance_score', 25); // Higher threshold for regional content
+        query = query.gte('articles.regional_relevance_score', 25); // Regional content threshold
+      } else {
+        // Keyword-based topics need proper thresholds too (25-35 based on source type)
+        query = query.gte('articles.regional_relevance_score', 25); // Keyword content threshold
       }
 
       const { data: storiesData, error: storiesError } = await query;

@@ -183,13 +183,8 @@ const TopicFeed = () => {
             )}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold">No stories yet</h3>
-              <p className="text-muted-foreground">
-                Content for this topic is being curated. Check back soon!
-              </p>
-            </div>
+          <div className="pt-8">
+            <EndOfFeedCTA topicName={topic.name} topicId={topic.id} />
           </div>
         )}
       </div>
