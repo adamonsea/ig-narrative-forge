@@ -212,6 +212,30 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in topic-aware-scraper:', error);
+    
+    // Beautiful Soup fallback for failed scraping
+    console.log('🍲 Trying Beautiful Soup fallback for topic scraping...');
+    try {
+      const beautifulSoupResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/beautiful-soup-scraper`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ feedUrl, topicId, sourceId })
+      });
+
+      if (beautifulSoupResponse.ok) {
+        const fallbackResult = await beautifulSoupResponse.json();
+        console.log('✅ Beautiful Soup fallback successful for topic scraping');
+        return new Response(JSON.stringify(fallbackResult), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (fallbackError) {
+      console.error('❌ Beautiful Soup fallback also failed:', fallbackError);
+    }
+    
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       details: error.message 

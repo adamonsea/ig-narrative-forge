@@ -113,3 +113,11 @@ verify_jwt = false
 # Source Validation
 [functions.validate-content-source]
 verify_jwt = false
+
+# Beautiful Soup Enhanced Scraper
+[functions.beautiful-soup-scraper]
+verify_jwt = false
+
+# Beautiful Soup Testing
+[functions.test-beautiful-soup]
+verify_jwt = false
