@@ -188,15 +188,15 @@ export function getRelevanceThreshold(
   sourceType: string = 'national'
 ): number {
   if (topicType === 'regional') {
-    // Increased thresholds for regional content to ensure stronger local relevance
-    if (sourceType === 'hyperlocal') return 25; // Increased from 15
-    if (sourceType === 'regional') return 35; // Increased from 25
-    return 50; // Increased from 40 for national sources
+    // Regional content thresholds - keep reasonable to avoid too restrictive filtering
+    if (sourceType === 'hyperlocal') return 20; // Local sources should be more lenient
+    if (sourceType === 'regional') return 25; // Regional sources moderate threshold
+    return 30; // National sources need higher relevance for regional topics
   } else {
-    // Keyword-based thresholds - moderate increase for better precision
-    if (sourceType === 'hyperlocal') return 25; // Increased from 20
-    if (sourceType === 'regional') return 30; // Increased from 25
-    return 35; // Increased from 30 for national sources
+    // Keyword-based thresholds - more lenient since keyword matching can vary
+    if (sourceType === 'hyperlocal') return 20; // Local content can be relevant with lower scores
+    if (sourceType === 'regional') return 22; // Regional sources slight increase
+    return 25; // National sources need decent keyword relevance
   }
 }
 

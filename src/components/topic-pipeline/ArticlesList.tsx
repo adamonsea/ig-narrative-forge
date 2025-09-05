@@ -62,9 +62,16 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
 }) => {
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
+    if (score >= 50) return "text-green-600";
+    if (score >= 25) return "text-yellow-600";
     return "text-red-600";
+  };
+
+  const getRelevanceLabel = (score: number | null) => {
+    if (!score) return "0% relevant";
+    if (score >= 50) return `${score}% relevant (High)`;
+    if (score >= 25) return `${score}% relevant (Medium)`;
+    return `${score}% relevant (Low)`;
   };
 
   const getQualityColor = (score: number | null) => {
@@ -172,7 +179,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
                     <div>
                       <span className={getRelevanceColor(article.regional_relevance_score)}>
-                        {article.regional_relevance_score || 0}% relevant
+                        {getRelevanceLabel(article.regional_relevance_score)}
                       </span>
                     </div>
                     <div>
@@ -195,9 +202,9 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                         by {article.author}
                       </div>
                     )}
-                    {(article as any).is_low_score && (
+                    {article.regional_relevance_score && article.regional_relevance_score < 25 && (
                       <Badge variant="destructive" className="text-xs">
-                        Low Relevance
+                        Below Threshold
                       </Badge>
                     )}
                   </div>

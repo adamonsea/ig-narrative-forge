@@ -129,10 +129,12 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
       // Apply proper relevance thresholds based on topic type
       if (topicData.topic_type === 'regional' && topicData.region) {
-        query = query.gte('articles.regional_relevance_score', 25); // Regional content threshold
+        // Regional topics use regional_relevance_score with threshold 25
+        query = query.gte('articles.regional_relevance_score', 25);
       } else {
-        // Keyword-based topics need proper thresholds too (25-35 based on source type)
-        query = query.gte('articles.regional_relevance_score', 25); // Keyword content threshold
+        // Keyword topics should also use regional_relevance_score (which gets populated by keyword scoring)
+        // Use a lower threshold for keyword-based content since it's calculated differently
+        query = query.gte('articles.regional_relevance_score', 20);
       }
 
       const { data: storiesData, error: storiesError } = await query;
