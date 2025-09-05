@@ -266,10 +266,18 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                      </TooltipProvider>
                    </div>
                   
-                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                   <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                      <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
                        {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
                      </span>
+                     <span className="text-muted-foreground">
+                       {article.word_count || 0} words
+                     </span>
+                     {article.author && (
+                       <span className="text-muted-foreground">
+                         by {article.author}
+                       </span>
+                     )}
                      {article.regional_relevance_score && article.regional_relevance_score < 25 && (
                        <Badge variant="destructive" className="text-xs">
                          Below Threshold
