@@ -351,7 +351,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         `)
         .eq('articles.topic_id', selectedTopicId)
         .eq('status', 'ready') // Only fetch ready stories to prevent duplicates when returning to review
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (storiesError) throw storiesError;
 
