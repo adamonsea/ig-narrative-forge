@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2, ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2, ImageIcon, ChevronLeft, ChevronRightIcon } from "lucide-react";
 import { InlineCarouselImages } from "@/components/InlineCarouselImages";
 import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -94,6 +94,16 @@ export const StoriesList: React.FC<StoriesListProps> = ({
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const storiesPerPage = 10;
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(stories.length / storiesPerPage);
+  const startIndex = (currentPage - 1) * storiesPerPage;
+  const endIndex = startIndex + storiesPerPage;
+  const currentStories = stories.slice(startIndex, endIndex);
 
   const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
@@ -222,7 +232,39 @@ export const StoriesList: React.FC<StoriesListProps> = ({
 
   return (
     <div className="space-y-4">
-      {stories.map((story) => {
+      {/* Pagination Info */}
+      {stories.length > storiesPerPage && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg">
+          <span>
+            Showing {startIndex + 1}-{Math.min(endIndex, stories.length)} of {stories.length} stories
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </Button>
+            <span className="px-2">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRightIcon className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {currentStories.map((story) => {
         const article = story.article || story.articles;
         const isExpanded = expandedStories.has(story.id);
         const isAnimating = animatingStories.has(story.id);
@@ -453,6 +495,33 @@ export const StoriesList: React.FC<StoriesListProps> = ({
           </Card>
         );
       })}
+      
+      {/* Bottom Pagination Controls */}
+      {stories.length > storiesPerPage && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </Button>
+          <span className="px-4 text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRightIcon className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
