@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
+import { SchedulerSettings } from '@/components/SchedulerSettings';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -39,13 +40,18 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="errors" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
+            <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
             <TabsTrigger value="other">Other Settings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="errors" className="mt-6">
             <ErrorTicketDashboard />
+          </TabsContent>
+          
+          <TabsContent value="scheduler" className="mt-6">
+            <SchedulerSettings />
           </TabsContent>
           
           <TabsContent value="other" className="mt-6">

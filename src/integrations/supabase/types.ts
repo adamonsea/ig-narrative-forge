@@ -2144,6 +2144,14 @@ export type Database = {
           title: string
         }[]
       }
+      update_cron_schedules: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_scheduler_setting: {
+        Args: { p_setting_key: string; p_setting_value: Json }
+        Returns: boolean
+      }
       user_has_region_access: {
         Args: { check_region: string }
         Returns: boolean

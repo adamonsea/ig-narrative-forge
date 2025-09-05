@@ -32,6 +32,29 @@ serve(async (req) => {
     console.log('🤖 Starting automated scheduler run...');
     const startTime = Date.now();
     
+    // Get scheduler configuration from settings
+    const { data: schedulerSettings } = await supabase
+      .from('scheduler_settings')
+      .select('*')
+      .eq('setting_key', 'scraper_schedule')
+      .single();
+
+    // Check if scraping is enabled
+    if (!schedulerSettings?.setting_value?.enabled) {
+      console.log('⏭️ Automated scraping is disabled in settings');
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Scraping disabled in settings',
+        processed_sources: 0,
+        successful_scrapes: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const config = schedulerSettings.setting_value;
+    console.log('📋 Scheduler config:', config);
+    
     // 1. Reset stalled processing jobs first
     console.log('🔧 Resetting stalled processing jobs...');
     const { error: resetError } = await supabase.rpc('reset_stalled_processing');
@@ -217,7 +240,8 @@ serve(async (req) => {
       failed_scrapes: processedSources - successfulScrapes,
       queue_jobs_processed: queueProcessed,
       errors: errors,
-      next_scheduler_run: new Date(Date.now() + (6 * 60 * 60 * 1000)).toISOString() // 6 hours
+      scheduler_config: config,
+      next_scheduler_run: new Date(Date.now() + ((config?.frequency_hours || 24) * 60 * 60 * 1000)).toISOString()
     };
 
     console.log('🎉 Automated scheduler completed:', summary);
@@ -227,7 +251,7 @@ serve(async (req) => {
       .from('system_logs')
       .insert({
         level: 'info',
-        message: `Automated scheduler completed: ${processedSources} sources processed, ${successfulScrapes} successful, ${queueProcessed} queue jobs processed`,
+        message: `Timezone-aware automated scheduler completed: ${processedSources} sources processed, ${successfulScrapes} successful, ${queueProcessed} queue jobs processed`,
         context: summary,
         function_name: 'automated-scheduler'
       });
