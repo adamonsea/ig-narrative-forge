@@ -1062,6 +1062,36 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduler_settings: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       scrape_jobs: {
         Row: {
           completed_at: string | null
