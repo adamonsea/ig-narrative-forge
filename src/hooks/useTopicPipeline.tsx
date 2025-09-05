@@ -154,12 +154,25 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         const articleText = `${article.title} ${article.body || ''}`.toLowerCase();
         const topicKeywords = topicConfig?.keywords || [];
         
+        // Common words to filter out from topic matching
+        const commonWords = new Set([
+          'and', 'or', 'but', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 
+          'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 
+          'above', 'below', 'between', 'among', 'this', 'that', 'these', 'those', 'is', 
+          'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 
+          'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must'
+        ]);
+        
         // Extract words from topic name and description as additional keywords
         const topicNameWords = topicConfig?.name 
-          ? topicConfig.name.toLowerCase().split(/\W+/).filter(word => word.length > 2)
+          ? topicConfig.name.toLowerCase().split(/\W+/).filter(word => 
+              word.length > 2 && !commonWords.has(word)
+            )
           : [];
         const topicDescWords = topicConfig?.description
-          ? topicConfig.description.toLowerCase().split(/\W+/).filter(word => word.length > 2)
+          ? topicConfig.description.toLowerCase().split(/\W+/).filter(word => 
+              word.length > 2 && !commonWords.has(word)
+            )
           : [];
         
         let matches = 0;

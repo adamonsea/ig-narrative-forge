@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2, Info } from "lucide-react";
 
 interface Article {
   id: string;
@@ -203,7 +204,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                   </CardTitle>
                   
                    {/* Enhanced Keywords with Type-based Styling */}
-                   <div className="flex flex-wrap gap-1 mb-3">
+                   <div className="flex flex-wrap gap-1 mb-3 items-center">
                      {getRelevantKeywords(article).map((keyword, idx) => (
                        <Badge 
                          key={idx} 
@@ -220,43 +221,61 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                          {keyword.type === 'topic' && <span className="ml-1">🎯</span>}
                        </Badge>
                      ))}
+                     
+                     {/* Scoring Details Tooltip */}
+                     <TooltipProvider>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <Info className="w-3 h-3 text-muted-foreground cursor-help ml-1" />
+                         </TooltipTrigger>
+                         <TooltipContent side="bottom" className="max-w-xs">
+                           <div className="space-y-1 text-xs">
+                             <div className="flex justify-between">
+                               <span>Relevance:</span>
+                               <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
+                                 {article.boosted_relevance_score || article.regional_relevance_score || 0}%
+                               </span>
+                             </div>
+                             <div className="flex justify-between">
+                               <span>Quality:</span>
+                               <span className={getQualityColor(article.content_quality_score)}>
+                                 {article.content_quality_score || 0}%
+                               </span>
+                             </div>
+                             {(article as any).keyword_overlap_score !== undefined && (
+                               <div className="flex justify-between">
+                                 <span>Keywords:</span>
+                                 <span className={(article as any).keyword_overlap_score < 30 ? "text-red-600" : "text-green-600"}>
+                                   {(article as any).keyword_overlap_score}%
+                                 </span>
+                               </div>
+                             )}
+                             <div className="flex justify-between">
+                               <span>Word Count:</span>
+                               <span>{article.word_count || 0}</span>
+                             </div>
+                             {article.author && (
+                               <div className="flex justify-between">
+                                 <span>Author:</span>
+                                 <span>{article.author}</span>
+                               </div>
+                             )}
+                           </div>
+                         </TooltipContent>
+                       </Tooltip>
+                     </TooltipProvider>
                    </div>
                   
-                   <div className="flex items-center gap-2 sm:gap-4 mobile-text-wrap text-muted-foreground flex-wrap">
-                     <div>
-                       <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
-                         {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
-                         {article.boosted_relevance_score && article.boosted_relevance_score > (article.regional_relevance_score || 0) && (
-                           <span className="text-xs text-emerald-600 ml-1">↗ boosted</span>
-                         )}
-                       </span>
-                     </div>
-                    <div>
-                      <span className={getQualityColor(article.content_quality_score)}>
-                        {article.content_quality_score || 0}% quality
-                      </span>
-                    </div>
-                    {(article as any).keyword_overlap_score !== undefined && (
-                      <div>
-                        <span className={(article as any).keyword_overlap_score < 30 ? "text-red-600" : "text-green-600"}>
-                          {(article as any).keyword_overlap_score}% keywords
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      {article.word_count || 0} words
-                    </div>
-                    {article.author && (
-                      <div>
-                        by {article.author}
-                      </div>
-                    )}
-                    {article.regional_relevance_score && article.regional_relevance_score < 25 && (
-                      <Badge variant="destructive" className="text-xs">
-                        Below Threshold
-                      </Badge>
-                    )}
-                  </div>
+                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                     <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
+                       {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
+                     </span>
+                     {article.regional_relevance_score && article.regional_relevance_score < 25 && (
+                       <Badge variant="destructive" className="text-xs">
+                         Below Threshold
+                       </Badge>
+                     )}
+                   </div>
                 </div>
                 
                 <div className="mobile-header-actions min-w-0">
