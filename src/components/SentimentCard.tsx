@@ -170,23 +170,52 @@ export const SentimentCard = ({
   const getSentimentTemperature = () => {
     const normalized = Math.max(-100, Math.min(100, sentimentScore));
     const percentage = ((normalized + 100) / 2);
-    if (normalized > 20) return { 
-      gradient: "from-emerald-500 to-green-600", 
-      bgClass: "bg-gradient-to-r from-emerald-500 to-green-600",
+    
+    // Temperature system: Freezing -> Chilly -> Tepid -> Warm -> Hot
+    if (normalized >= 60) return { 
+      gradient: "from-red-500 to-orange-600", 
+      bgClass: "bg-gradient-to-br from-red-50 to-orange-50 border-red-200",
+      barColor: "bg-gradient-to-r from-red-500 to-orange-600",
       width: percentage,
-      label: "Positive"
+      label: "Very Positive",
+      emoji: "🔥",
+      description: "Hot"
     };
-    if (normalized < -20) return { 
-      gradient: "from-red-500 to-rose-600", 
-      bgClass: "bg-gradient-to-r from-red-500 to-rose-600",
+    if (normalized >= 20) return { 
+      gradient: "from-orange-500 to-yellow-600", 
+      bgClass: "bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-200",
+      barColor: "bg-gradient-to-r from-orange-500 to-yellow-600",
       width: percentage,
-      label: "Negative"
+      label: "Positive",
+      emoji: "🌡️",
+      description: "Warm"
+    };
+    if (normalized >= -20) return { 
+      gradient: "from-slate-400 to-slate-500", 
+      bgClass: "bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200",
+      barColor: "bg-gradient-to-r from-slate-400 to-slate-500",
+      width: percentage,
+      label: "Neutral",
+      emoji: "⚪",
+      description: "Tepid"
+    };
+    if (normalized >= -60) return { 
+      gradient: "from-blue-500 to-cyan-600", 
+      bgClass: "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200",
+      barColor: "bg-gradient-to-r from-blue-500 to-cyan-600",
+      width: percentage,
+      label: "Negative",
+      emoji: "❄️",
+      description: "Chilly"
     };
     return { 
-      gradient: "from-slate-400 to-slate-500", 
-      bgClass: "bg-gradient-to-r from-slate-400 to-slate-500",
+      gradient: "from-cyan-600 to-blue-700", 
+      bgClass: "bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200",
+      barColor: "bg-gradient-to-r from-cyan-600 to-blue-700",
       width: percentage,
-      label: "Neutral"
+      label: "Very Negative",
+      emoji: "🧊",
+      description: "Freezing"
     };
   };
 
@@ -196,36 +225,35 @@ export const SentimentCard = ({
     switch (slide.type) {
       case 'hero':
         return (
-          <div className="space-y-8">
-            {/* Large Keyword Flag */}
-            <div className="flex justify-center">
-              <div className="inline-flex items-center justify-center rounded-full bg-muted px-8 py-4">
-                <span className="text-lg md:text-xl lg:text-2xl font-semibold text-foreground text-center">
+          <div className="space-y-6">
+            {/* Temperature Emoji & Keyword */}
+            <div className="text-center space-y-4">
+              <div className="text-6xl mb-2">
+                {temperature.emoji}
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">
                   {slide.content}
-                </span>
+                </h2>
+                <div className="text-lg font-medium text-muted-foreground">
+                  {temperature.description} sentiment
+                </div>
               </div>
             </div>
             
-            {/* Sentiment Temperature Bar */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-center gap-4">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {sources.length} source{sources.length > 1 ? 's' : ''}
-                </span>
-                <div className="flex-1 max-w-32">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full ${temperature.bgClass} transition-all duration-500`}
-                      style={{ width: `${temperature.width}%` }}
-                    />
-                  </div>
-                </div>
-                <span className="text-sm font-bold">
-                  {sentimentScore > 0 ? '+' : ''}{sentimentScore}
-                </span>
+            {/* Context Information */}
+            <div className="text-center space-y-2">
+              <div className="text-sm text-muted-foreground">
+                Based on {sources.length} source{sources.length > 1 ? 's' : ''} • Last 24h
               </div>
-              <div className="text-center">
-                <span className="text-xs text-muted-foreground">{temperature.label} sentiment</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50">
+                <span className="text-sm font-medium">{temperature.label}</span>
+                <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${temperature.barColor} transition-all duration-500`}
+                    style={{ width: `${Math.abs(sentimentScore)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -368,11 +396,13 @@ export const SentimentCard = ({
 
   const sentimentBadge = getSentimentBadge();
 
+  const temperature = getSentimentTemperature();
+
   return (
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
         <div 
-          className="relative bg-background min-h-[600px] flex flex-col"
+          className={`relative min-h-[600px] flex flex-col ${temperature.bgClass}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -423,7 +453,7 @@ export const SentimentCard = ({
 
           {/* Bottom section */}
           <div className="p-4">
-            {/* Progress dots */}
+            {/* Progress dots with temperature theming */}
             {displaySlides.length > 1 && (
               <div className="flex justify-center space-x-2">
                 {displaySlides.map((_, index) => (
@@ -432,7 +462,7 @@ export const SentimentCard = ({
                     onClick={() => setCurrentSlide(index)}
                     className={`w-2 h-2 rounded-full transition-all ${
                       index === currentSlide 
-                        ? 'bg-primary scale-125' 
+                        ? `${temperature.barColor} scale-125` 
                         : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
                     }`}
                   />
