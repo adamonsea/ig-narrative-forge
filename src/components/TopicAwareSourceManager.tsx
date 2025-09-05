@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { getScraperFunction, createScraperRequestBody } from "@/lib/scraperUtils";
 import { DiscardedArticlesViewer } from "./DiscardedArticlesViewer";
+import { UnifiedSourceManager } from "./UnifiedSourceManager";
 
 interface Topic {
   id: string;
@@ -56,15 +57,6 @@ interface TopicAwareSourceManagerProps {
 }
 
 export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: TopicAwareSourceManagerProps) => {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [sources, setSources] = useState<ContentSource[]>([]);
-  const [currentTopicId, setCurrentTopicId] = useState(selectedTopicId || '');
-  const [newUrl, setNewUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [scrapingSource, setScrapingSource] = useState<string | null>(null);
-  const [scrapingAll, setScrapingAll] = useState(false);
-  const [recovering, setRecovering] = useState(false);
   const [showDiscardedViewer, setShowDiscardedViewer] = useState(false);
   const [automationSettings, setAutomationSettings] = useState<{
     scrape_frequency_hours: number;
@@ -73,6 +65,49 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const [sourceRules, setSourceRules] = useState<SourceAutomationRule[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // If selectedTopicId is provided, use UnifiedSourceManager
+  if (selectedTopicId) {
+    return (
+      <div className="space-y-6">
+        <UnifiedSourceManager
+          mode="topic"
+          topicId={selectedTopicId}
+          onSourcesChange={onSourcesChange}
+        />
+        
+        {/* Keep the automation and discarded articles functionality */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowDiscardedViewer(true)}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            View Discarded Articles
+          </Button>
+        </div>
+
+        {showDiscardedViewer && (
+          <DiscardedArticlesViewer
+            isOpen={showDiscardedViewer}
+            topicId={selectedTopicId}
+            onClose={() => setShowDiscardedViewer(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Legacy fallback for when no selectedTopicId is provided
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [sources, setSources] = useState<ContentSource[]>([]);
+  const [currentTopicId, setCurrentTopicId] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [scrapingSource, setScrapingSource] = useState<string | null>(null);
+  const [scrapingAll, setScrapingAll] = useState(false);
+  const [recovering, setRecovering] = useState(false);
 
   // Pre-select topic if provided via props
   useEffect(() => {

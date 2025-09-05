@@ -4,8 +4,9 @@ import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
+import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
+import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -35,14 +36,29 @@ export default function AdminPanel() {
             </Button>
           </div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage your eeZee News configuration</p>
+          <p className="text-muted-foreground">Manage system-wide settings and monitor platform health</p>
         </div>
 
-        <Tabs defaultValue="errors" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="sources" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="sources">Source Management</TabsTrigger>
+            <TabsTrigger value="health">Source Health</TabsTrigger>
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
-            <TabsTrigger value="other">Other Settings</TabsTrigger>
+            <TabsTrigger value="other">Other Features</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="sources" className="mt-6">
+            <UnifiedSourceManager 
+              mode="global"
+              onSourcesChange={() => {}}
+              title="Global Source Management"
+              description="Manage all content sources across the platform with enhanced validation and health monitoring"
+            />
+          </TabsContent>
+
+          <TabsContent value="health" className="mt-6">
+            <SourceHealthDashboard />
+          </TabsContent>
           
           <TabsContent value="errors" className="mt-6">
             <ErrorTicketDashboard />
@@ -50,9 +66,7 @@ export default function AdminPanel() {
           
           <TabsContent value="other" className="mt-6">
             <div className="text-center text-muted-foreground p-8">
-              Additional admin features coming soon...
-              <br />
-              <small className="text-xs">Note: Topic-specific automation settings are available in each topic's source management.</small>
+              Additional admin features will be added here in future updates.
             </div>
           </TabsContent>
         </Tabs>
