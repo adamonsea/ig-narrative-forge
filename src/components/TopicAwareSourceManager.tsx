@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock, RefreshCw, Eye } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Settings, Trash2, ExternalLink, AlertCircle, Zap, Play, Clock, RefreshCw, Eye, CheckCircle, XCircle, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,21 @@ interface ContentSource {
   topic_id: string | null;
   scraping_method: string | null;
   success_rate: number | null;
+  success_count?: number;
+  failure_count?: number;
+  last_error?: string | null;
+  scrape_frequency_hours?: number;
+}
+
+interface SourceAutomationRule {
+  id: string;
+  source_url: string;
+  success_count: number;
+  failure_count: number;
+  last_error: string | null;
+  scrape_frequency_hours: number;
+  is_active: boolean;
+  last_scraped_at: string | null;
 }
 
 interface TopicAwareSourceManagerProps {
@@ -54,6 +70,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     scrape_frequency_hours: number;
     is_active: boolean;
   }>({ scrape_frequency_hours: 12, is_active: true });
+  const [sourceRules, setSourceRules] = useState<SourceAutomationRule[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -104,8 +121,10 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     if (currentTopicId) {
       loadSourcesForTopic(currentTopicId);
       loadAutomationSettings(currentTopicId);
+      loadSourceAutomationRules(currentTopicId);
     } else {
       setSources([]);
+      setSourceRules([]);
     }
   }, [currentTopicId]);
 
@@ -192,6 +211,21 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       }
     } catch (error) {
       console.error('Error loading automation settings:', error);
+    }
+  };
+
+  const loadSourceAutomationRules = async (topicId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('scraping_automation')
+        .select('*')
+        .eq('topic_id', topicId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSourceRules(data || []);
+    } catch (error) {
+      console.error('Error loading source automation rules:', error);
     }
   };
 
@@ -389,7 +423,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
       if (error) throw error;
 
-      // Show detailed scraping results
+      // Show detailed scraping results and update automation rules
       if (data && data.success) {
         const details = [
           `Found: ${data.articlesFound || 0}`,
@@ -398,12 +432,29 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           `Filtered: ${data.filteredForRelevance || 0}`
         ].join(' | ');
 
+        // Update success count
+        if (source.feed_url) {
+          await updateSourceAutomationRule(source.feed_url, {
+            success_count: (sourceRules.find(r => r.source_url === source.feed_url)?.success_count || 0) + 1,
+            last_scraped_at: new Date().toISOString(),
+            last_error: null
+          });
+        }
+
         toast({
           title: `Scraping Complete - ${source.source_name}`,
           description: `${details} | Method: ${data.method || 'unknown'}`,
           variant: data.articlesStored > 0 ? "default" : "destructive"
         });
       } else {
+        // Update failure count
+        if (source.feed_url) {
+          await updateSourceAutomationRule(source.feed_url, {
+            failure_count: (sourceRules.find(r => r.source_url === source.feed_url)?.failure_count || 0) + 1,
+            last_error: data?.message || 'Scraping failed'
+          });
+        }
+
         toast({
           title: "Scraping Issues",
           description: data?.message || `Issues scraping "${source.source_name}"`,
@@ -554,6 +605,83 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       });
     } finally {
       setRecovering(false);
+    }
+  };
+
+  const getSourceSuccessRate = (source: ContentSource): number => {
+    const rule = sourceRules.find(r => r.source_url === source.feed_url);
+    if (!rule || (rule.success_count + rule.failure_count) === 0) return 0;
+    return Math.round((rule.success_count / (rule.success_count + rule.failure_count)) * 100);
+  };
+
+  const getSourceStatusBadge = (source: ContentSource) => {
+    const successRate = getSourceSuccessRate(source);
+    const rule = sourceRules.find(r => r.source_url === source.feed_url);
+    
+    if (!source.is_active) {
+      return <Badge variant="secondary">Inactive</Badge>;
+    }
+    
+    if (rule?.last_error) {
+      return <Badge variant="destructive">Failed</Badge>;
+    }
+    
+    if (successRate >= 80) {
+      return <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">Healthy</Badge>;
+    } else if (successRate >= 50) {
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">Warning</Badge>;
+    } else if (successRate > 0) {
+      return <Badge variant="destructive">Poor</Badge>;
+    }
+    
+    return <Badge variant="outline">New</Badge>;
+  };
+
+  const getRecommendedFrequency = (successRate: number): number => {
+    if (successRate >= 80) return 12; // High success - can scrape more frequently
+    if (successRate >= 50) return 24; // Moderate success - daily scraping
+    if (successRate > 0) return 48;   // Poor success - every 2 days
+    return 12; // New source - start with 12 hours
+  };
+
+  const updateSourceAutomationRule = async (sourceUrl: string, updates: Partial<SourceAutomationRule>) => {
+    if (!user || !currentTopicId) return;
+
+    try {
+      const { data: existing, error: checkError } = await supabase
+        .from('scraping_automation')
+        .select('id')
+        .eq('topic_id', currentTopicId)
+        .eq('source_url', sourceUrl)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from('scraping_automation')
+          .update(updates)
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('scraping_automation')
+          .insert({
+            topic_id: currentTopicId,
+            source_url: sourceUrl,
+            scrape_frequency_hours: updates.scrape_frequency_hours || 12,
+            is_active: updates.is_active ?? true,
+            success_count: updates.success_count || 0,
+            failure_count: updates.failure_count || 0
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      await loadSourceAutomationRules(currentTopicId);
+    } catch (error) {
+      console.error('Error updating source automation rule:', error);
     }
   };
 
@@ -755,118 +883,267 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sources.map((source) => (
-                  <div key={source.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-medium">{source.source_name}</h4>
-                        <Badge variant={source.is_active ? 'default' : 'secondary'}>
-                          {source.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                        {source.credibility_score && (
-                          <Badge variant="outline">
-                            {source.credibility_score}% credible
-                          </Badge>
+                {sources.map((source) => {
+                  const successRate = getSourceSuccessRate(source);
+                  const rule = sourceRules.find(r => r.source_url === source.feed_url);
+                  const recommendedFreq = getRecommendedFrequency(successRate);
+                  const currentFreq = rule?.scrape_frequency_hours || 12;
+                  const needsFrequencyAdjustment = successRate > 0 && successRate < 50 && currentFreq < 24;
+
+                  return (
+                    <div key={source.id} className="p-4 border rounded-lg space-y-3">
+                      {/* Source Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{source.source_name}</h4>
+                          {getSourceStatusBadge(source)}
+                          {source.credibility_score && (
+                            <Badge variant="outline">
+                              {source.credibility_score}% credible
+                            </Badge>
+                          )}
+                          {successRate > 0 && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              {successRate >= 80 ? (
+                                <TrendingUp className="w-3 h-3" />
+                              ) : successRate < 50 ? (
+                                <TrendingDown className="w-3 h-3" />
+                              ) : null}
+                              {successRate}% success
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => toggleSourceStatus(source.id, !source.is_active)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {source.is_active ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          {source.feed_url && (
+                            <Button
+                              onClick={() => handleScrapeSource(source)}
+                              disabled={scrapingSource === source.id}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Play className="w-4 h-4 mr-2" />
+                              {scrapingSource === source.id ? 'Gathering...' : 'Gather'}
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleRemoveSource(source.id, source.source_name)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Source Stats */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Articles</p>
+                          <p className="font-medium">{source.articles_scraped || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Last scraped</p>
+                          <p className="font-medium">{source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleDateString() : 'Never'}</p>
+                        </div>
+                        {rule && (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-green-500" />
+                              <span>{rule.success_count} success</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <XCircle className="w-3 h-3 text-red-500" />
+                              <span>{rule.failure_count} failed</span>
+                            </div>
+                          </>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Articles: {source.articles_scraped || 0}</p>
-                        <p>Last scraped: {source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleDateString() : 'Never'}</p>
+
+                      {/* Frequency Management */}
+                      {source.feed_url && (
+                        <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-md">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm">Gather every:</Label>
+                            <Select 
+                              value={currentFreq.toString()}
+                              onValueChange={(value) => {
+                                if (source.feed_url) {
+                                  updateSourceAutomationRule(source.feed_url, {
+                                    scrape_frequency_hours: parseInt(value)
+                                  });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-24 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="12">12h</SelectItem>
+                                <SelectItem value="24">24h</SelectItem>
+                                <SelectItem value="48">48h</SelectItem>
+                                <SelectItem value="72">72h</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          {needsFrequencyAdjustment && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-amber-600">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span className="text-sm">Consider {recommendedFreq}h frequency</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Poor success rate. Longer intervals may improve reliability.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          
+                          {successRate > 0 && successRate >= 80 && currentFreq > 12 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-green-600">
+                                    <Info className="w-4 h-4" />
+                                    <span className="text-sm">Can gather more frequently</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>High success rate allows more frequent gathering.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      )}
+
+                      {/* URL and Error */}
+                      <div className="space-y-2">
                         {source.feed_url && (
                           <a 
                             href={source.feed_url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline flex items-center gap-1"
+                            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 truncate"
                           >
                             {source.feed_url}
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
+                        {rule?.last_error && (
+                          <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+                            <strong>Last Error:</strong> {rule.last_error}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => toggleSourceStatus(source.id, !source.is_active)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        {source.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                      {source.feed_url && (
-                        <Button
-                          onClick={() => handleScrapeSource(source)}
-                          disabled={scrapingSource === source.id}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          {scrapingSource === source.id ? 'Gathering...' : 'Gather'}
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => handleRemoveSource(source.id, source.source_name)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
 
-          {/* Automation Settings */}
+          {/* Smart Automation Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                Smart Automation
               </CardTitle>
               <CardDescription>
-                Configure automatic gathering for this topic
+                Intelligent gathering optimizes frequency based on success rates. 
+                Individual source frequencies can be adjusted above.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Label htmlFor="frequency">Gather Frequency (hours):</Label>
-                <Select 
-                  value={automationSettings.scrape_frequency_hours.toString()} 
-                  onValueChange={(value) => updateAutomationSettings({
-                    ...automationSettings,
-                    scrape_frequency_hours: parseInt(value)
-                  })}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="6">6 hours</SelectItem>
-                    <SelectItem value="12">12 hours</SelectItem>
-                    <SelectItem value="24">24 hours</SelectItem>
-                    <SelectItem value="48">48 hours</SelectItem>
-                    <SelectItem value="72">72 hours</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {sourceRules.filter(r => {
+                      const rate = r.success_count + r.failure_count > 0 ? 
+                        (r.success_count / (r.success_count + r.failure_count)) * 100 : 0;
+                      return rate >= 80;
+                    }).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Healthy Sources</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-600">
+                    {sourceRules.filter(r => {
+                      const rate = r.success_count + r.failure_count > 0 ? 
+                        (r.success_count / (r.success_count + r.failure_count)) * 100 : 0;
+                      return rate < 80 && rate >= 50;
+                    }).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Warning Sources</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">
+                    {sourceRules.filter(r => {
+                      const rate = r.success_count + r.failure_count > 0 ? 
+                        (r.success_count / (r.success_count + r.failure_count)) * 100 : 0;
+                      return rate < 50 && rate > 0;
+                    }).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Failing Sources</p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => updateAutomationSettings({
-                    ...automationSettings,
-                    is_active: !automationSettings.is_active
-                  })}
-                  variant={automationSettings.is_active ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  {automationSettings.is_active ? 'Automation On' : 'Automation Off'}
-                </Button>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Global Automation</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enable automatic gathering for all active sources
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => updateAutomationSettings({
+                      ...automationSettings,
+                      is_active: !automationSettings.is_active
+                    })}
+                    variant={automationSettings.is_active ? 'default' : 'outline'}
+                  >
+                    {automationSettings.is_active ? 'Automation On' : 'Automation Off'}
+                  </Button>
+                </div>
+
                 {automationSettings.is_active && (
-                   <p className="text-sm text-muted-foreground">
-                     Sources will be gathered automatically every {automationSettings.scrape_frequency_hours} hours
-                   </p>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-800">Smart Mode Active</p>
+                    </div>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• High-performing sources (80%+ success) gather every 12 hours</li>
+                      <li>• Moderate sources (50-79% success) gather daily</li>
+                      <li>• Poor sources (&lt;50% success) gather every 2 days</li>
+                      <li>• Failed sources are paused automatically</li>
+                    </ul>
+                  </div>
                 )}
+
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-800">Optimal Gathering Practices</p>
+                  </div>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• Minimum 12-hour intervals prevent rate limiting</li>
+                    <li>• Longer intervals for unreliable sources improve success rates</li>
+                    <li>• Monitor source health and adjust frequencies accordingly</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>

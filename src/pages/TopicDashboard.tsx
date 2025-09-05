@@ -14,7 +14,7 @@ import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipelin
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
-import { ScrapingAutomationManager } from "@/components/ScrapingAutomationManager";
+
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
 import { SentimentManager } from "@/components/SentimentManager";
@@ -627,15 +627,6 @@ const TopicDashboard = () => {
                       topicId={topic.id}
                       topicName={topic.name}
                     />
-                    
-                    <div className="border-t pt-8">
-                      <ScrapingAutomationManager 
-                        topicId={topic.id}
-                        topicName={topic.name}
-                        topicType={topic.topic_type}
-                        region={topic.region}
-                      />
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
