@@ -3,10 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2, Info, AlertTriangle } from "lucide-react";
 import { SimilarArticleIndicator } from "@/components/SimilarArticleIndicator";
 import { BulkDeleteDialog } from "@/components/BulkDeleteDialog";
 import { useEnhancedDuplicateDetection } from "@/hooks/useEnhancedDuplicateDetection";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
 interface Article {
@@ -72,6 +75,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   onPreview,
   onDelete
 }) => {
+  const { toast } = useToast();
   const { 
     similarArticles, 
     updateFingerprints, 
@@ -85,6 +89,43 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
       updateFingerprints(articles);
     }
   }, [articles]); // Remove updateFingerprints to prevent infinite loop
+
+  // Separate articles by threshold
+  const aboveThresholdArticles = articles.filter(article => 
+    !article.is_low_score && (article.regional_relevance_score || 0) >= 25
+  );
+  const belowThresholdArticles = articles.filter(article => 
+    article.is_low_score || (article.regional_relevance_score || 0) < 25
+  );
+
+  const handleBulkDeleteLowRelevance = async () => {
+    try {
+      const articlesToDelete = belowThresholdArticles.map(article => article.id);
+      
+      if (articlesToDelete.length === 0) return;
+
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .in('id', articlesToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Low Relevance Articles Deleted',
+        description: `Removed ${articlesToDelete.length} low relevance articles`,
+      });
+
+      onRefresh?.();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'Failed to delete low relevance articles',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";
@@ -194,6 +235,255 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     console.log('Ignore similar:', articleId, similarId);
   };
 
+  const renderArticleCard = (article: Article) => {
+    const slideType = slideQuantities[article.id] || 'tabloid';
+    const slideInfo = getSlideTypeInfo(slideType);
+    const toneOverride = toneOverrides[article.id] || defaultTone;
+    const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
+    
+    const isProcessing = processingArticle === article.id;
+    const isDeleting = deletingArticles.has(article.id);
+    const isAnimatingAway = animatingArticles.has(article.id);
+    const currentSimilarArticles = similarArticles.get(article.id) || [];
+    const isSimilarToDeleted = checkAgainstRecentDeletions(article);
+    
+    return (
+      <Card 
+        key={article.id} 
+        className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
+          isProcessing && isAnimatingAway
+            ? 'animate-slide-out-right'
+            : isDeleting && isAnimatingAway
+            ? 'animate-discard'
+            : isSimilarToDeleted
+            ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-950/10'
+            : 'animate-fade-in opacity-100 scale-100'
+        }`}
+        style={{
+          animationFillMode: 'forwards'
+        }}
+      >
+        <CardHeader className="pb-3">
+          <div className="mobile-card-header justify-between items-start">
+            <div className="flex-1 min-w-0 pr-3">
+              <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto flex items-start gap-2">
+                {article.title}
+                {isSimilarToDeleted && (
+                  <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Similar to deleted
+                  </Badge>
+                )}
+              </CardTitle>
+              
+               {/* Enhanced Keywords with Type-based Styling */}
+               <div className="flex flex-wrap gap-1 mb-3 items-center">
+                 {getRelevantKeywords(article).map((keyword, idx) => (
+                   <Badge 
+                     key={idx} 
+                     variant={keyword.type === 'topic' ? 'default' : 'secondary'} 
+                     className={`text-xs px-2 py-1 ${
+                       keyword.type === 'topic' 
+                         ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                         : keyword.type === 'keyword'
+                         ? 'bg-blue-100 text-blue-800 border-blue-200'
+                         : 'bg-secondary text-secondary-foreground'
+                     }`}
+                   >
+                     {keyword.text}
+                     {keyword.type === 'topic' && <span className="ml-1">🎯</span>}
+                   </Badge>
+                 ))}
+                 
+                 {/* Scoring Details Tooltip */}
+                 <TooltipProvider>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Info className="w-3 h-3 text-muted-foreground cursor-help ml-1" />
+                     </TooltipTrigger>
+                     <TooltipContent side="bottom" className="max-w-xs">
+                       <div className="space-y-1 text-xs">
+                         <div className="flex justify-between">
+                           <span>Relevance:</span>
+                           <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
+                             {article.boosted_relevance_score || article.regional_relevance_score || 0}%
+                           </span>
+                         </div>
+                         <div className="flex justify-between">
+                           <span>Quality:</span>
+                           <span className={getQualityColor(article.content_quality_score)}>
+                             {article.content_quality_score || 0}%
+                           </span>
+                         </div>
+                         {(article as any).keyword_overlap_score !== undefined && (
+                           <div className="flex justify-between">
+                             <span>Keywords:</span>
+                             <span className={(article as any).keyword_overlap_score < 30 ? "text-red-600" : "text-green-600"}>
+                               {(article as any).keyword_overlap_score}%
+                             </span>
+                           </div>
+                         )}
+                         <div className="flex justify-between">
+                           <span>Word Count:</span>
+                           <span>{article.word_count || 0}</span>
+                         </div>
+                         {article.author && (
+                           <div className="flex justify-between">
+                             <span>Author:</span>
+                             <span>{article.author}</span>
+                           </div>
+                         )}
+                       </div>
+                     </TooltipContent>
+                   </Tooltip>
+                 </TooltipProvider>
+               </div>
+              
+               <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                 <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
+                   {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
+                 </span>
+                 <span className="text-muted-foreground">
+                   {article.word_count || 0} words
+                 </span>
+                 {article.author && (
+                   <span className="text-muted-foreground">
+                     by {article.author}
+                   </span>
+                 )}
+                 {article.regional_relevance_score && article.regional_relevance_score < 25 && (
+                   <Badge variant="destructive" className="text-xs">
+                     Below Threshold
+                   </Badge>
+                  )}
+                </div>
+
+                {/* Similar Articles Indicator */}
+                {currentSimilarArticles.length > 0 && (
+                  <div className="mt-3">
+                    <SimilarArticleIndicator
+                      articleId={article.id}
+                      similarArticles={currentSimilarArticles}
+                      onMerge={handleMergeSimilar}
+                      onIgnore={handleIgnoreSimilar}
+                      onBulkDelete={handleBulkDelete}
+                    />
+                  </div>
+                )}
+             </div>
+            
+            <div className="mobile-header-actions min-w-0">
+              <div className="mobile-button-group">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onPreview(article)}
+                  className="w-full sm:w-auto"
+                >
+                  <Eye className="w-4 h-4 sm:mr-0" />
+                  <span className="ml-2 sm:hidden">Preview</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(article.source_url, '_blank')}
+                  className="w-full sm:w-auto"
+                >
+                  <ExternalLink className="w-4 h-4 sm:mr-0" />
+                  <span className="ml-2 sm:hidden">Source</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onDelete(article.id, article.title)}
+                  disabled={deletingArticles.has(article.id)}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="w-4 h-4 sm:mr-0" />
+                  <span className="ml-2 sm:hidden">Delete</span>
+                </Button>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="text-xs">
+                  <Select
+                    value={slideType}
+                    onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
+                      onSlideQuantityChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-28 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">4 slides</SelectItem>
+                      <SelectItem value="tabloid">6 slides</SelectItem>
+                      <SelectItem value="indepth">8 slides</SelectItem>
+                      <SelectItem value="extensive">12 slides</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="text-xs">
+                  <Select
+                    value={toneOverride}
+                    onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                      onToneOverrideChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-32 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formal">Formal</SelectItem>
+                      <SelectItem value="conversational">Conversational</SelectItem>
+                      <SelectItem value="engaging">Engaging</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="text-xs">
+                  <Select
+                    value={writingStyleOverride}
+                    onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
+                      onWritingStyleOverrideChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-32 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="journalistic">Journalistic</SelectItem>
+                      <SelectItem value="educational">Educational</SelectItem>
+                      <SelectItem value="listicle">Listicle</SelectItem>
+                      <SelectItem value="story_driven">Story-driven</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Button
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
+                size="sm"
+                onClick={() => onApprove(article.id, slideType, toneOverride, writingStyleOverride)}
+                disabled={isProcessing}
+              >
+                {processingArticle === article.id ? (
+                  "Processing..."
+                ) : (
+                  <>
+                    <PlayCircle className="w-4 h-4 mr-1" />
+                    Simplify
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  };
+
   if (articles.length === 0) {
     return (
       <Card>
@@ -219,294 +509,62 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
       <div className="flex justify-between items-center">
         <div className="text-sm text-muted-foreground">
           {articles.length} article{articles.length !== 1 ? 's' : ''} in pipeline
+          {aboveThresholdArticles.length > 0 && belowThresholdArticles.length > 0 && (
+            <span className="ml-2">
+              ({aboveThresholdArticles.length} above threshold, {belowThresholdArticles.length} below)
+            </span>
+          )}
         </div>
         <BulkDeleteDialog onSuccess={onRefresh} />
       </div>
 
-      {articles.map((article) => {
-        const slideType = slideQuantities[article.id] || 'tabloid';
-        const slideInfo = getSlideTypeInfo(slideType);
-        const toneOverride = toneOverrides[article.id] || defaultTone;
-        const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
-        
-        const isProcessing = processingArticle === article.id;
-        const isDeleting = deletingArticles.has(article.id);
-        const isAnimatingAway = animatingArticles.has(article.id);
-        const currentSimilarArticles = similarArticles.get(article.id) || [];
-        const isSimilarToDeleted = checkAgainstRecentDeletions(article);
-        
-        return (
-          <Card 
-            key={article.id} 
-            className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
-              isProcessing && isAnimatingAway
-                ? 'animate-slide-out-right'  // Simplify: slide right for processing
-                : isDeleting && isAnimatingAway
-                ? 'animate-discard'          // Delete: discard animation only when actually deleting
-                : isSimilarToDeleted
-                ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-950/10'
-                : 'animate-fade-in opacity-100 scale-100'
-            }`}
-            style={{
-              animationFillMode: 'forwards'
-            }}
-          >
-            <CardHeader className="pb-3">
-              <div className="mobile-card-header justify-between items-start">
-                <div className="flex-1 min-w-0 pr-3">
-                  <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto flex items-start gap-2">
-                    {article.title}
-                    {isSimilarToDeleted && (
-                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Similar to deleted
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  
-                   {/* Enhanced Keywords with Type-based Styling */}
-                   <div className="flex flex-wrap gap-1 mb-3 items-center">
-                     {getRelevantKeywords(article).map((keyword, idx) => (
-                       <Badge 
-                         key={idx} 
-                         variant={keyword.type === 'topic' ? 'default' : 'secondary'} 
-                         className={`text-xs px-2 py-1 ${
-                           keyword.type === 'topic' 
-                             ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                             : keyword.type === 'keyword'
-                             ? 'bg-blue-100 text-blue-800 border-blue-200'
-                             : 'bg-secondary text-secondary-foreground'
-                         }`}
-                       >
-                         {keyword.text}
-                         {keyword.type === 'topic' && <span className="ml-1">🎯</span>}
-                       </Badge>
-                     ))}
-                     
-                     {/* Scoring Details Tooltip */}
-                     <TooltipProvider>
-                       <Tooltip>
-                         <TooltipTrigger asChild>
-                           <Info className="w-3 h-3 text-muted-foreground cursor-help ml-1" />
-                         </TooltipTrigger>
-                         <TooltipContent side="bottom" className="max-w-xs">
-                           <div className="space-y-1 text-xs">
-                             <div className="flex justify-between">
-                               <span>Relevance:</span>
-                               <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
-                                 {article.boosted_relevance_score || article.regional_relevance_score || 0}%
-                               </span>
-                             </div>
-                             <div className="flex justify-between">
-                               <span>Quality:</span>
-                               <span className={getQualityColor(article.content_quality_score)}>
-                                 {article.content_quality_score || 0}%
-                               </span>
-                             </div>
-                             {(article as any).keyword_overlap_score !== undefined && (
-                               <div className="flex justify-between">
-                                 <span>Keywords:</span>
-                                 <span className={(article as any).keyword_overlap_score < 30 ? "text-red-600" : "text-green-600"}>
-                                   {(article as any).keyword_overlap_score}%
-                                 </span>
-                               </div>
-                             )}
-                             <div className="flex justify-between">
-                               <span>Word Count:</span>
-                               <span>{article.word_count || 0}</span>
-                             </div>
-                             {article.author && (
-                               <div className="flex justify-between">
-                                 <span>Author:</span>
-                                 <span>{article.author}</span>
-                               </div>
-                             )}
-                           </div>
-                         </TooltipContent>
-                       </Tooltip>
-                     </TooltipProvider>
-                   </div>
-                  
-                   <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                     <span className={getRelevanceColor(article.boosted_relevance_score || article.regional_relevance_score)}>
-                       {getRelevanceLabel(article.regional_relevance_score, article.boosted_relevance_score)}
-                     </span>
-                     <span className="text-muted-foreground">
-                       {article.word_count || 0} words
-                     </span>
-                     {article.author && (
-                       <span className="text-muted-foreground">
-                         by {article.author}
-                       </span>
-                     )}
-                     {article.regional_relevance_score && article.regional_relevance_score < 25 && (
-                       <Badge variant="destructive" className="text-xs">
-                         Below Threshold
-                       </Badge>
-                      )}
-                    </div>
+      {/* Above Threshold Articles */}
+      {aboveThresholdArticles.map(article => renderArticleCard(article))}
 
-                    {/* Similar Articles Indicator */}
-                    {currentSimilarArticles.length > 0 && (
-                      <div className="mt-3">
-                        <SimilarArticleIndicator
-                          articleId={article.id}
-                          similarArticles={currentSimilarArticles}
-                          onMerge={handleMergeSimilar}
-                          onIgnore={handleIgnoreSimilar}
-                          onBulkDelete={handleBulkDelete}
-                        />
-                      </div>
-                    )}
-                 </div>
-                
-                <div className="mobile-header-actions min-w-0">
-                  <div className="mobile-button-group">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onPreview(article)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Eye className="w-4 h-4 sm:mr-0" />
-                      <span className="ml-2 sm:hidden">Preview</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(article.source_url, '_blank')}
-                      className="w-full sm:w-auto"
-                    >
-                      <ExternalLink className="w-4 h-4 sm:mr-0" />
-                      <span className="ml-2 sm:hidden">Source</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onDelete(article.id, article.title)}
-                      disabled={deletingArticles.has(article.id)}
-                      className="w-full sm:w-auto"
-                    >
-                      <Trash2 className="w-4 h-4 sm:mr-0" />
-                      <span className="ml-2 sm:hidden">Delete</span>
-                    </Button>
+      {/* Below Threshold Articles in Accordion */}
+      {belowThresholdArticles.length > 0 && (
+        <div className="mt-6">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="low-relevance" className="border-orange-200">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center justify-between w-full pr-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-medium text-orange-700">
+                      Low Relevance Articles ({belowThresholdArticles.length})
+                    </span>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <div className="text-xs">
-                      <Select
-                        value={slideType}
-                        onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
-                          onSlideQuantityChange(article.id, value)
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-28 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="short">
-                            4 slides
-                          </SelectItem>
-                          <SelectItem value="tabloid">
-                            6 slides
-                          </SelectItem>
-                          <SelectItem value="indepth">
-                            8 slides
-                          </SelectItem>
-                          <SelectItem value="extensive">
-                            12 slides
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="text-xs">
-                      <Select
-                        value={toneOverrides[article.id] || defaultTone}
-                        onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
-                          onToneOverrideChange(article.id, value)
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-32 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="formal">
-                            <div>
-                              <div className="font-medium text-xs">Formal</div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="conversational">
-                            <div>
-                              <div className="font-medium text-xs">Conversational</div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="engaging">
-                            <div>
-                              <div className="font-medium text-xs">Engaging</div>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="text-xs">
-                      <Select
-                        value={writingStyleOverrides[article.id] || defaultWritingStyle}
-                        onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
-                          onWritingStyleOverrideChange(article.id, value)
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-32 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="journalistic">
-                            <div>
-                              <div className="font-medium text-xs">Journalistic</div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="educational">
-                            <div>
-                              <div className="font-medium text-xs">Educational</div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="listicle">
-                            <div>
-                              <div className="font-medium text-xs">Listicle</div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="story_driven">
-                            <div>
-                              <div className="font-medium text-xs">Story-driven</div>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <Button
-                      onClick={() => onApprove(article.id, slideType, toneOverrides[article.id] || defaultTone, writingStyleOverrides[article.id] || defaultWritingStyle)}
-                      disabled={processingArticle === article.id}
-                      size="sm"
-                      className="w-full sm:w-auto"
-                    >
-                      {processingArticle === article.id ? (
-                        "Processing..."
-                      ) : (
-                        <>
-                          <PlayCircle className="w-4 h-4 mr-1" />
-                          Simplify
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBulkDeleteLowRelevance();
+                    }}
+                    className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete All
+                  </Button>
                 </div>
-              </div>
-            </CardHeader>
-          </Card>
-        );
-      })}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 pt-2">
+                  <div className="text-xs text-muted-foreground bg-orange-50 p-3 rounded border-orange-200 border">
+                    These articles scored below the relevance threshold and are hidden by default. 
+                    Review them manually or delete all at once if they're not relevant.
+                  </div>
+                  {belowThresholdArticles.map(article => (
+                    <div key={article.id} className="opacity-75">
+                      {renderArticleCard(article)}
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      )}
     </div>
   );
 };
