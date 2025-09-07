@@ -104,35 +104,55 @@ serve(async (req) => {
       });
 
       if (fallbackResult.error) {
-        console.error('❌ Fallback scraper also failed:', fallbackResult.error);
+        console.error('❌ Fallback scraper also failed, trying AI recovery:', fallbackResult.error);
         
-        // Update source metrics with failure
-        await supabase.rpc('log_error_ticket', {
-          p_ticket_type: 'scraping_failure',
-          p_source_info: { 
-            source_id: sourceId, 
-            source_name: source.source_name,
-            feed_url: feedUrl 
-          },
-          p_error_details: `Both primary and fallback scrapers failed: ${scrapeResult.error?.message || 'Unknown error'}`,
-          p_severity: 'medium',
-          p_context_data: { 
-            primary_error: scrapeResult.error,
-            fallback_error: fallbackResult.error
+        // Try AI-powered recovery as final fallback
+        const aiRecoveryResult = await supabase.functions.invoke('ai-scraper-recovery', {
+          body: { 
+            feedUrl,
+            sourceId,
+            region: region || 'General',
+            topicId,
+            failureType: 'parsing_failed',
+            originalError: fallbackResult.error?.message || 'Beautiful Soup scraper failed'
           }
         });
 
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `All scrapers failed: ${scrapeResult.error?.message || 'Unknown error'}`,
-            articles_imported: 0 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+        if (aiRecoveryResult.error || !aiRecoveryResult.data?.success) {
+          console.error('❌ AI recovery also failed:', aiRecoveryResult.error);
+          
+          // Update source metrics with failure
+          await supabase.rpc('log_error_ticket', {
+            p_ticket_type: 'scraping_failure',
+            p_source_info: { 
+              source_id: sourceId, 
+              source_name: source.source_name,
+              feed_url: feedUrl 
+            },
+            p_error_details: `All scrapers failed including AI recovery: ${scrapeResult.error?.message || 'Unknown error'}`,
+            p_severity: 'high',
+            p_context_data: { 
+              primary_error: scrapeResult.error,
+              fallback_error: fallbackResult.error,
+              ai_recovery_error: aiRecoveryResult.error
+            }
+          });
 
-      scrapeResult = fallbackResult;
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `All scrapers failed: ${scrapeResult.error?.message || 'Unknown error'}`,
+              articles_imported: 0 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('✅ AI recovery succeeded after traditional scrapers failed');
+        scrapeResult = aiRecoveryResult;
+      } else {
+        scrapeResult = fallbackResult;
+      }
     }
 
     const result = scrapeResult.data || scrapeResult;

@@ -111,3 +111,6 @@ verify_jwt = false
 
 [functions.test-beautiful-soup]
 verify_jwt = false
+
+[functions.ai-scraper-recovery]
+verify_jwt = false
