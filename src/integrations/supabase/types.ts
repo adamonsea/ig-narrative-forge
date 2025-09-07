@@ -2011,6 +2011,10 @@ export type Database = {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
       }
+      cleanup_duplicate_articles: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_existing_duplicates: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2106,6 +2110,10 @@ export type Database = {
           p_level: string
           p_message: string
         }
+        Returns: string
+      }
+      normalize_url: {
+        Args: { input_url: string }
         Returns: string
       }
       record_newsletter_signup_attempt: {

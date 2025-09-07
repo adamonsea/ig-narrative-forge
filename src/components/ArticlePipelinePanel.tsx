@@ -14,8 +14,15 @@ import {
   Trash2,
   X,
   FileText,
-  Eye
+  Eye,
+  WrenchIcon,
+  User,
+  Calendar,
+  Loader2
 } from 'lucide-react';
+import { formatDistanceToNow } from "date-fns";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DuplicateCleanupDialog } from "./DuplicateCleanupDialog";
 
 interface Article {
   id: string;
@@ -151,6 +158,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
         .from('articles')
         .select('*')
         .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
+        .not('processing_status', 'eq', 'duplicate_pending') // Exclude duplicate pending articles
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
         .order('created_at', { ascending: false })
         .limit(100); // Increased limit to show more recovered articles
@@ -489,14 +497,18 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                           </>
                         )}
                       </Button>
-                      <Button 
-                        onClick={loadQueuedArticles}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <RefreshCw className="w-3 h-3 mr-1" />
-                        Refresh
-                      </Button>
+                       <Button 
+                         onClick={loadQueuedArticles}
+                         variant="outline" 
+                         size="sm"
+                       >
+                         <RefreshCw className="w-3 h-3 mr-1" />
+                         Refresh
+                       </Button>
+                       <DuplicateCleanupDialog onSuccess={() => {
+                         loadPendingArticles();
+                         loadQueuedArticles();
+                       }} />
                     </div>
                   </div>
                   {queuedArticles.map((article) => (

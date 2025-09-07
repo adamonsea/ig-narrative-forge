@@ -241,6 +241,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .select('*')
         .eq('topic_id', selectedTopicId)
         .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
+        .not('processing_status', 'eq', 'duplicate_pending') // Exclude duplicate pending articles
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
         .order('regional_relevance_score', { ascending: false })
         .order('created_at', { ascending: false })
