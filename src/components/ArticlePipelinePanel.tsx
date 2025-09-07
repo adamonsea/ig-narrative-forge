@@ -689,30 +689,64 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
 
               {/* Available Articles */}
               {articles.length > 0 && (
-                 <div className="space-y-3">
-                   <div className="flex items-center justify-between">
-                     <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
-                     <div className="flex gap-2">
-                       {selectedArticles.size > 0 && (
-                         <Button 
-                           onClick={() => setShowBulkDeleteConfirm(true)}
-                           variant="destructive" 
-                           size="sm"
-                         >
-                           <Trash2 className="w-3 h-3 mr-1" />
-                           Delete Selected ({selectedArticles.size})
-                         </Button>
-                       )}
-                       <Button 
-                         onClick={loadPendingArticles}
-                         variant="outline" 
-                         size="sm"
-                       >
-                         <RefreshCw className="w-3 h-3 mr-1" />
-                         Refresh
-                       </Button>
-                     </div>
-                   </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
+                        {articles.length > 0 && (
+                          <Checkbox
+                            checked={selectedArticles.size === articles.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedArticles(new Set(articles.map(a => a.id)));
+                              } else {
+                                setSelectedArticles(new Set());
+                              }
+                            }}
+                            aria-label="Select all articles"
+                            className="ml-2"
+                          />
+                        )}
+                        <span className="text-sm text-muted-foreground">
+                          Select All
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        {selectedArticles.size > 0 && (
+                          <Button 
+                            onClick={() => setShowBulkDeleteConfirm(true)}
+                            variant="destructive" 
+                            size="sm"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete Selected ({selectedArticles.size})
+                          </Button>
+                        )}
+                        {articles.length > 0 && (
+                          <Button 
+                            onClick={() => {
+                              // Select all articles for bulk delete
+                              const allIds = new Set(articles.map(a => a.id));
+                              setSelectedArticles(allIds);
+                              setShowBulkDeleteConfirm(true);
+                            }}
+                            variant="destructive" 
+                            size="sm"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete All ({articles.length})
+                          </Button>
+                        )}
+                        <Button 
+                          onClick={loadPendingArticles}
+                          variant="outline" 
+                          size="sm"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </div>
                   
                   {articles.map((article) => {
                     const hasLowWordCount = !article.word_count || article.word_count < 50;

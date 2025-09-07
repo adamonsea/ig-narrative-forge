@@ -236,6 +236,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
 
       const storyTitles = storyArticles?.map(s => s.articles?.title?.toLowerCase().trim()) || [];
 
+      // Build query with proper ordering: published articles first, then by relevance
       let articlesQuery = supabase
         .from('articles')
         .select('*')
@@ -243,8 +244,8 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
         .not('processing_status', 'eq', 'duplicate_pending') // Exclude duplicate pending articles
         .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
-        .order('regional_relevance_score', { ascending: false })
-        .order('created_at', { ascending: false })
+        .order('regional_relevance_score', { ascending: false }) // Order by relevance first
+        .order('created_at', { ascending: false }) // Then by creation date
         .limit(100); // Increased limit to show more recovered articles
 
       if (excludedIds.length > 0) {
@@ -315,6 +316,25 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           boosted_relevance_score: boostedScore,
           is_low_score: isLowScore
         };
+      }).sort((a, b) => {
+        // Custom sorting: recently published articles first, then by relevance, then by creation date
+        const aPublished = a.published_at ? new Date(a.published_at).getTime() : 0;
+        const bPublished = b.published_at ? new Date(b.published_at).getTime() : 0;
+        
+        // If both have published dates, sort by most recent published first
+        if (aPublished && bPublished) {
+          return bPublished - aPublished;
+        }
+        
+        // If one has published date and other doesn't, prioritize the published one
+        if (aPublished && !bPublished) return -1;
+        if (!aPublished && bPublished) return 1;
+        
+        // If neither has published date, sort by relevance score then creation date
+        const relevanceDiff = (b.regional_relevance_score || 0) - (a.regional_relevance_score || 0);
+        if (relevanceDiff !== 0) return relevanceDiff;
+        
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
       // Load content generation queue for this topic
