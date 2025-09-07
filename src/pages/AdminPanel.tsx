@@ -4,6 +4,8 @@ import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { DuplicateDetection } from '@/components/DuplicateDetection';
+import { DuplicateCleanup } from '@/components/DuplicateCleanup';
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
@@ -65,8 +67,9 @@ export default function AdminPanel() {
           </TabsContent>
           
           <TabsContent value="other" className="mt-6">
-            <div className="text-center text-muted-foreground p-8">
-              Additional admin features will be added here in future updates.
+            <div className="space-y-6">
+              <DuplicateCleanup />
+              <DuplicateDetection />
             </div>
           </TabsContent>
         </Tabs>

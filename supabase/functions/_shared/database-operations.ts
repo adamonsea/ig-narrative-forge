@@ -67,52 +67,9 @@ export class DatabaseOperations {
           continue;
         }
 
-        // Check for duplicates by title similarity (only if no exact URL match)
-        // FIXED: Less aggressive duplicate detection with better logic
-        const { data: similarArticles } = await this.supabase
-          .from('articles')
-          .select('id, title, source_url')
-          .neq('processing_status', 'discarded')
-          .limit(50); // Limit comparison to recent articles
-
-        if (similarArticles && similarArticles.length > 0) {
-          // Check for very similar titles with improved logic
-          const isDuplicate = similarArticles.some((existing: any) => {
-            // Skip comparison if same domain (different articles from same site)
-            const existingDomain = this.extractDomain(existing.source_url);
-            const articleDomain = this.extractDomain(article.source_url);
-            
-            const similarity = this.calculateTitleSimilarity(existing.title, article.title);
-            // FIXED: More lenient threshold (0.95 instead of 0.9) and domain check
-            const isSimilar = similarity > 0.95 && existingDomain === articleDomain;
-            
-            if (similarity > 0.8) { // Log high similarities for monitoring
-              console.log(`📊 Title similarity: "${existing.title.substring(0, 30)}..." vs "${article.title.substring(0, 30)}..." (${Math.round(similarity * 100)}%, domains: ${existingDomain} vs ${articleDomain})`);
-            }
-            
-            return isSimilar;
-          });
-
-          if (isDuplicate) {
-            console.log(`⚠️ Duplicate title detected: ${article.title.substring(0, 50)}...`);
-            
-            // Track URL as duplicate
-            await this.supabase
-              .from('scraped_urls_history')
-              .upsert({
-                url: article.source_url,
-                topic_id: topicId,
-                source_id: sourceId,
-                status: 'duplicate',
-                last_seen_at: new Date().toISOString()
-              }, {
-                onConflict: 'url'
-              });
-              
-            duplicates++;
-            continue;
-          }
-        }
+        // Simplified duplicate detection - let the database trigger handle detailed detection
+        // Only do basic URL check here for immediate feedback
+        console.log(`✨ Article will be processed with automatic duplicate detection: ${article.title.substring(0, 50)}...`);
 
         // FIXED: More lenient quality filters to allow more articles through
         const minWordCount = sourceInfo?.source_type === 'hyperlocal' ? 20 : 30; // Reduced from 50
