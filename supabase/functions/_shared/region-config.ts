@@ -17,12 +17,46 @@ export function calculateRegionalRelevance(
   title: string,
   topicConfig: TopicRegionalConfig,
   sourceType: string = 'national',
-  otherRegionalTopics: TopicRegionalConfig[] = []
+  otherRegionalTopics: TopicRegionalConfig[] = [],
+  sourceUrl?: string
 ): number {
   if (!topicConfig || !topicConfig.keywords?.length) return 0;
 
   const text = `${title} ${content}`.toLowerCase();
   let score = 0;
+
+  // Check for competing Sussex towns in source URL (strong signal)
+  if (sourceUrl) {
+    const sussexTowns = ['eastbourne', 'brighton', 'hastings', 'lewes', 'uckfield', 'crowborough', 'heathfield'];
+    const currentRegion = topicConfig.region_name.toLowerCase();
+    
+    const competingTownInUrl = sussexTowns.find(town => 
+      town !== currentRegion && sourceUrl.toLowerCase().includes(town)
+    );
+    
+    if (competingTownInUrl) {
+      return -75; // Strong penalty for source URL pointing to different Sussex town
+    }
+  }
+
+  // Enhanced competing Sussex towns detection (hardcoded for Sussex region)
+  const sussexCompetingTowns = ['eastbourne', 'brighton', 'hastings', 'lewes', 'uckfield', 'crowborough', 'heathfield'];
+  const currentRegion = topicConfig.region_name.toLowerCase();
+  
+  const competingTownMatches = sussexCompetingTowns
+    .filter(town => town !== currentRegion)
+    .filter(town => {
+      const townRegex = new RegExp(`\\b${town.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      return townRegex.test(text) && 
+        !text.includes(`${town} to ${currentRegion}`) &&
+        !text.includes(`${currentRegion} to ${town}`) &&
+        !text.includes(`${currentRegion} and ${town}`) &&
+        !text.includes(`${town} and ${currentRegion}`);
+    }).length;
+
+  if (competingTownMatches > 0) {
+    score -= competingTownMatches * 60; // Heavy penalty for competing Sussex towns
+  }
 
   // Region name matching (highest priority - significant boost when topic's own region is mentioned)
   const regionName = topicConfig.region_name.toLowerCase();
@@ -106,14 +140,14 @@ export function calculateRegionalRelevance(
       score += 15; // Reduced baseline UK relevance for national sources
     }
     
-    // Minimal boost for generic geographic terms, only if no competing regions detected
+    // Minimal boost for generic geographic terms, only if no competing regions or Sussex towns detected
     const hasCompetingRegions = otherRegionalTopics?.some(other => 
       other.region_name !== topicConfig.region_name && 
       text.includes(other.region_name.toLowerCase())
-    );
+    ) || competingTownMatches > 0;
     
     if (genericGeoMatches > 0 && !hasCompetingRegions) {
-      score += 5; // Very small boost for generic geographic terms
+      score += 3; // Reduced boost for generic geographic terms
     }
   }
 

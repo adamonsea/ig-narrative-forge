@@ -30,7 +30,8 @@ export function calculateTopicRelevance(
   title: string,
   topicConfig: TopicConfig,
   sourceType: string = 'national',
-  otherRegionalTopics: TopicRegionalConfig[] = []
+  otherRegionalTopics: TopicRegionalConfig[] = [],
+  sourceUrl?: string
 ): ContentScore {
   if (topicConfig.topic_type === 'regional' && topicConfig.region) {
     // Use user-defined regional configuration
