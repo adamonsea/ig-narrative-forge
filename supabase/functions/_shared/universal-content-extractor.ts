@@ -316,7 +316,13 @@ export class UniversalContentExtractor {
         
         console.log(`🌐 Fetching ${normalizedUrl} (attempt ${attempt}/${enhancedMaxRetries})${isGovernmentSite ? ' [GOV SITE]' : ''}`);
         
-        // ENHANCED: Better timeout and SSL handling
+        // ENHANCED: SSL certificate error handling - try HTTP fallback
+        let currentUrl = normalizedUrl;
+        if (attempt > 2 && lastError?.message.includes('certificate')) {
+          console.log('🔐 SSL certificate issue detected, trying HTTP fallback...');
+          currentUrl = normalizedUrl.replace('https://', 'http://');
+        }
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
@@ -348,15 +354,25 @@ export class UniversalContentExtractor {
           (fetchOptions.headers as any)['X-Forwarded-For'] = this.generateRandomIP();
         }
         
-        const response = await fetch(normalizedUrl, fetchOptions);
+        const response = await fetch(currentUrl, fetchOptions);
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          // Enhanced error messages for better debugging
+          const errorType = response.status === 404 ? 'NOT_FOUND' : 
+                           response.status === 403 ? 'FORBIDDEN' : 
+                           response.status >= 500 ? 'SERVER_ERROR' : 'HTTP_ERROR';
+          throw new Error(`${errorType}: HTTP ${response.status} (${response.statusText}) for ${currentUrl}`);
         }
 
         const html = await response.text();
+        
+        // Validate that we got actual content, not an error page
+        if (html.length < 100 || html.includes('404') || html.includes('not found')) {
+          throw new Error('INVALID_CONTENT: Received minimal or error content');
+        }
+        
         console.log(`✅ Successfully fetched ${html.length} characters from ${this.domain}`);
         return html;
         

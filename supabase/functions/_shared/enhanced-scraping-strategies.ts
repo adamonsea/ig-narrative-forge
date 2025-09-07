@@ -35,6 +35,22 @@ export class EnhancedScrapingStrategies {
       } catch (primaryError) {
         console.log(`❌ Primary RSS URL failed: ${primaryError.message}`);
         
+        // Smart URL discovery - try common RSS patterns
+        const discoveredFeeds = await this.discoverRSSFeeds(this.baseUrl);
+        
+        for (const discoveredFeedUrl of discoveredFeeds) {
+          try {
+            console.log(`🔍 Trying discovered RSS feed: ${discoveredFeedUrl}`);
+            const rssContent = await this.extractor.fetchWithRetry(discoveredFeedUrl);
+            const result = await this.parseRSSContent(rssContent, discoveredFeedUrl);
+            if (result.success && result.articles.length > 0) {
+              return { ...result, method: 'rss_discovery' };
+            }
+          } catch (discoverError) {
+            console.log(`⚠️ Discovered RSS feed ${discoveredFeedUrl} failed: ${discoverError.message}`);
+          }
+        }
+        
         // For government sites, try alternative RSS patterns
         const governmentFeeds = await this.extractor.tryGovernmentRSSFeeds(this.baseUrl);
         
@@ -51,7 +67,7 @@ export class EnhancedScrapingStrategies {
           }
         }
         
-        // Re-throw the primary error if no government feeds worked
+        // Re-throw the primary error if no feeds worked
         throw primaryError;
       }
       
@@ -393,5 +409,59 @@ export class EnhancedScrapingStrategies {
   private countWords(text: string): number {
     if (!text) return 0;
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  // Smart RSS feed discovery - try common patterns
+  private async discoverRSSFeeds(baseUrl: string): Promise<string[]> {
+    console.log('🔍 Attempting smart RSS feed discovery...');
+    const commonPatterns = [
+      '/feed/',
+      '/rss/',
+      '/rss.xml',
+      '/feed.xml',
+      '/atom.xml',
+      '/news/feed/',
+      '/blog/feed/',
+      '/feeds/all.xml',
+      '/index.xml'
+    ];
+    
+    const validFeeds: string[] = [];
+    
+    for (const pattern of commonPatterns) {
+      try {
+        const feedUrl = new URL(pattern, baseUrl).href;
+        console.log(`🔗 Checking RSS pattern: ${feedUrl}`);
+        
+        // Quick validation fetch with short timeout
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 5000); // 5 second timeout for discovery
+        
+        const response = await fetch(feedUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; FeedDiscovery/1.0)',
+            'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
+          }
+        });
+        
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          const content = await response.text();
+          
+          // Validate RSS/Atom content
+          if ((contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom')) &&
+              (content.includes('<rss') || content.includes('<feed') || content.includes('<atom'))) {
+            console.log(`✅ Found valid RSS feed: ${feedUrl}`);
+            validFeeds.push(feedUrl);
+          }
+        }
+      } catch (error) {
+        // Silently continue - expected for many URLs
+        console.log(`⚠️ RSS pattern ${pattern} failed: ${error.message}`);
+      }
+    }
+    
+    return validFeeds;
   }
 }
