@@ -48,7 +48,8 @@ export function calculateTopicRelevance(
       title, 
       regionalConfig,
       sourceType,
-      otherRegionalTopics
+      otherRegionalTopics,
+      sourceUrl
     );
     
     return {
@@ -209,9 +210,10 @@ export function meetsTopicRelevance(
   title: string,
   topicConfig: TopicConfig,
   sourceType: string = 'national',
-  otherRegionalTopics: TopicRegionalConfig[] = []
+  otherRegionalTopics: TopicRegionalConfig[] = [],
+  sourceUrl?: string
 ): boolean {
-  const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics);
+  const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics, sourceUrl);
   const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceType);
   
   // For regional topics, also check for competing region exclusion
