@@ -574,6 +574,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                   defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                   topicKeywords={currentTopic?.keywords || []}
                   topicLandmarks={currentTopic?.landmarks || []}
+                  onRefresh={loadTopicContent}
                   onSlideQuantityChange={handleSlideQuantityChange}
                   onToneOverrideChange={handleToneOverrideChange}
                   onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
@@ -606,6 +607,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                         defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                         topicKeywords={currentTopic?.keywords || []}
                         topicLandmarks={currentTopic?.landmarks || []}
+                        onRefresh={loadTopicContent}
                         onSlideQuantityChange={handleSlideQuantityChange}
                         onToneOverrideChange={handleToneOverrideChange}
                         onWritingStyleOverrideChange={handleWritingStyleOverrideChange}

@@ -3,7 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2, Info } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, RotateCcw, Trash2, Info, AlertTriangle } from "lucide-react";
+import { SimilarArticleIndicator } from "@/components/SimilarArticleIndicator";
+import { BulkDeleteDialog } from "@/components/BulkDeleteDialog";
+import { useEnhancedDuplicateDetection } from "@/hooks/useEnhancedDuplicateDetection";
+import { useEffect } from "react";
 
 interface Article {
   id: string;
@@ -45,6 +49,7 @@ interface ArticlesListProps {
   defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   topicKeywords?: string[];
   topicLandmarks?: string[];
+  onRefresh?: () => void;
 }
 
 export const ArticlesList: React.FC<ArticlesListProps> = ({
@@ -59,6 +64,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   defaultWritingStyle,
   topicKeywords = [],
   topicLandmarks = [],
+  onRefresh,
   onSlideQuantityChange,
   onToneOverrideChange,
   onWritingStyleOverrideChange,
@@ -66,6 +72,20 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
   onPreview,
   onDelete
 }) => {
+  const { 
+    similarArticles, 
+    updateFingerprints, 
+    bulkDeleteArticles,
+    checkAgainstRecentDeletions 
+  } = useEnhancedDuplicateDetection();
+
+  // Update fingerprints when articles change
+  useEffect(() => {
+    if (articles.length > 0) {
+      updateFingerprints(articles);
+    }
+  }, [articles, updateFingerprints]);
+
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";
     if (score >= 50) return "text-green-600";
@@ -154,13 +174,36 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     return keywords.slice(0, 5); // Limit total keywords displayed
   };
 
+  const handleBulkDelete = async (keywords: string[]) => {
+    try {
+      await bulkDeleteArticles({ keywords });
+      onRefresh?.();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+    }
+  };
+
+  const handleMergeSimilar = async (originalId: string, duplicateId: string) => {
+    // Implementation would call merge API
+    console.log('Merge articles:', originalId, duplicateId);
+    onRefresh?.();
+  };
+
+  const handleIgnoreSimilar = (articleId: string, similarId: string) => {
+    // Implementation would mark as ignored
+    console.log('Ignore similar:', articleId, similarId);
+  };
+
   if (articles.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RotateCcw className="w-5 h-5" />
-            No Articles Available
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5" />
+              No Articles Available
+            </div>
+            <BulkDeleteDialog onSuccess={onRefresh} />
           </CardTitle>
           <CardDescription>
             No articles found in the pipeline. Try running a scrape to import new content.
@@ -172,6 +215,14 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
 
   return (
     <div className="space-y-4 transition-all duration-300">
+      {/* Bulk actions header */}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-muted-foreground">
+          {articles.length} article{articles.length !== 1 ? 's' : ''} in pipeline
+        </div>
+        <BulkDeleteDialog onSuccess={onRefresh} />
+      </div>
+
       {articles.map((article) => {
         const slideType = slideQuantities[article.id] || 'tabloid';
         const slideInfo = getSlideTypeInfo(slideType);
@@ -181,6 +232,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
         const isProcessing = processingArticle === article.id;
         const isDeleting = deletingArticles.has(article.id);
         const isAnimatingAway = animatingArticles.has(article.id);
+        const currentSimilarArticles = similarArticles.get(article.id) || [];
+        const isSimilarToDeleted = checkAgainstRecentDeletions(article);
         
         return (
           <Card 
@@ -190,6 +243,8 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                 ? 'animate-slide-out-right'  // Simplify: slide right for processing
                 : isDeleting && isAnimatingAway
                 ? 'animate-discard'          // Delete: discard animation only when actually deleting
+                : isSimilarToDeleted
+                ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-950/10'
                 : 'animate-fade-in opacity-100 scale-100'
             }`}
             style={{
@@ -199,8 +254,14 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             <CardHeader className="pb-3">
               <div className="mobile-card-header justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
-                  <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto">
+                  <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto flex items-start gap-2">
                     {article.title}
+                    {isSimilarToDeleted && (
+                      <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Similar to deleted
+                      </Badge>
+                    )}
                   </CardTitle>
                   
                    {/* Enhanced Keywords with Type-based Styling */}
@@ -282,9 +343,22 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
                        <Badge variant="destructive" className="text-xs">
                          Below Threshold
                        </Badge>
-                     )}
-                   </div>
-                </div>
+                      )}
+                    </div>
+
+                    {/* Similar Articles Indicator */}
+                    {currentSimilarArticles.length > 0 && (
+                      <div className="mt-3">
+                        <SimilarArticleIndicator
+                          articleId={article.id}
+                          similarArticles={currentSimilarArticles}
+                          onMerge={handleMergeSimilar}
+                          onIgnore={handleIgnoreSimilar}
+                          onBulkDelete={handleBulkDelete}
+                        />
+                      </div>
+                    )}
+                 </div>
                 
                 <div className="mobile-header-actions min-w-0">
                   <div className="mobile-button-group">
