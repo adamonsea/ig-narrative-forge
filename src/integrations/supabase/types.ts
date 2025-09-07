@@ -1751,6 +1751,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config: Json | null
+          competing_regions: string[] | null
           created_at: string | null
           created_by: string
           custom_css: Json | null
@@ -1763,6 +1764,7 @@ export type Database = {
           keywords: string[] | null
           landmarks: string[] | null
           name: string
+          negative_keywords: string[] | null
           organizations: string[] | null
           postcodes: string[] | null
           region: string | null
@@ -1775,6 +1777,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config?: Json | null
+          competing_regions?: string[] | null
           created_at?: string | null
           created_by: string
           custom_css?: Json | null
@@ -1787,6 +1790,7 @@ export type Database = {
           keywords?: string[] | null
           landmarks?: string[] | null
           name: string
+          negative_keywords?: string[] | null
           organizations?: string[] | null
           postcodes?: string[] | null
           region?: string | null
@@ -1799,6 +1803,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config?: Json | null
+          competing_regions?: string[] | null
           created_at?: string | null
           created_by?: string
           custom_css?: Json | null
@@ -1811,6 +1816,7 @@ export type Database = {
           keywords?: string[] | null
           landmarks?: string[] | null
           name?: string
+          negative_keywords?: string[] | null
           organizations?: string[] | null
           postcodes?: string[] | null
           region?: string | null

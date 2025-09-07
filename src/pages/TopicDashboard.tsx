@@ -18,6 +18,8 @@ import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
 import { SentimentManager } from "@/components/SentimentManager";
+import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
+import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity } from "lucide-react";
@@ -42,6 +44,8 @@ interface Topic {
   landmarks?: string[];
   postcodes?: string[];
   organizations?: string[];
+  negative_keywords?: string[];
+  competing_regions?: string[];
   region?: string;
   is_public: boolean;
   is_active: boolean;
@@ -55,6 +59,8 @@ const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAdmin } = useAuth();
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
+  const [competingRegions, setCompetingRegions] = useState<string[]>([]);
   const [stats, setStats] = useState<TopicDashboardStats>({
     articles: 0,
     stories: 0,
@@ -102,8 +108,13 @@ const TopicDashboard = () => {
         keywords: topicData.keywords || [],
         landmarks: topicData.landmarks || [],
         postcodes: topicData.postcodes || [],
-        organizations: topicData.organizations || []
+        organizations: topicData.organizations || [],
+        negative_keywords: topicData.negative_keywords || [],
+        competing_regions: topicData.competing_regions || []
       });
+
+      setNegativeKeywords(topicData.negative_keywords || []);
+      setCompetingRegions(topicData.competing_regions || []);
 
       // Load stats with sequential queries to avoid nested async issues
       // First get article IDs for this topic
@@ -592,6 +603,22 @@ const TopicDashboard = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Advanced Filtering for Regional Topics */}
+                {topic.topic_type === 'regional' && (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <TopicNegativeKeywords
+                      topicId={topic.id}
+                      negativeKeywords={negativeKeywords}
+                      onUpdate={setNegativeKeywords}
+                    />
+                    <TopicCompetingRegions
+                      topicId={topic.id}
+                      competingRegions={competingRegions}
+                      onUpdate={setCompetingRegions}
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="subscribers" className="space-y-6">

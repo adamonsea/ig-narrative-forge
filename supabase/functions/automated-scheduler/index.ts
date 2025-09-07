@@ -126,12 +126,20 @@ serve(async (req) => {
             continue;
           }
 
-          // Call the hybrid scraper (more reliable than universal-scraper)
+          // Get the topic associated with this source for proper region handling
+          const { data: sourceWithTopic } = await supabase
+            .from('content_sources')
+            .select('topic_id, topics(region)')
+            .eq('id', schedule.source_id)
+            .single();
+
+          // Call the hybrid scraper with proper region from topic
           const scrapeResponse = await supabase.functions.invoke('hybrid-scraper', {
             body: {
               feedUrl: source.feed_url,
               sourceId: schedule.source_id,
-              region: 'Eastbourne'
+              topicId: sourceWithTopic?.topic_id,
+              region: sourceWithTopic?.topics?.region || 'default'
             }
           });
 

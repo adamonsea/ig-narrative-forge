@@ -313,8 +313,9 @@ export class EnhancedScrapingStrategies {
       relevance = Math.max(relevance, 20);
     }
 
-    // Additional boost for local domains
-    if (url.includes('eastbourne') || url.includes('local')) {
+    // Additional boost for topic-specific local domains
+    const regionName = this.region.toLowerCase();
+    if (url.includes(regionName) || url.includes('local')) {
       relevance += 10;
     }
 

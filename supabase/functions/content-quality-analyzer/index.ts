@@ -135,7 +135,7 @@ ANALYSIS REQUIREMENTS:
    - Writing quality and flow
 
 3. REGIONAL RELEVANCE (Rate 0-100):
-   - Local connection strength for Eastbourne/East Sussex
+   - Local connection strength for the specified region
    - Geographic context inclusion
    - Community impact relevance
 

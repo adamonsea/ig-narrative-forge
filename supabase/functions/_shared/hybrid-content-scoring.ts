@@ -7,6 +7,7 @@ export interface TopicConfig {
   id: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
+  negative_keywords?: string[];
   region?: string;
   landmarks?: string[];
   postcodes?: string[];
@@ -213,6 +214,18 @@ export function meetsTopicRelevance(
   otherRegionalTopics: TopicRegionalConfig[] = [],
   sourceUrl?: string
 ): boolean {
+  // Check for negative keywords first - immediate disqualification
+  if (topicConfig.negative_keywords?.length) {
+    const text = `${title} ${content}`.toLowerCase();
+    const hasNegativeKeyword = topicConfig.negative_keywords.some(negKeyword => 
+      text.includes(negKeyword.toLowerCase())
+    );
+    
+    if (hasNegativeKeyword) {
+      return false; // Immediate rejection for negative keywords
+    }
+  }
+
   const score = calculateTopicRelevance(content, title, topicConfig, sourceType, otherRegionalTopics, sourceUrl);
   const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceType);
   
