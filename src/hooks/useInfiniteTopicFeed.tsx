@@ -8,6 +8,7 @@ interface Story {
   author: string;
   publication_name: string;
   created_at: string;
+  updated_at: string;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
   slides: Array<{
@@ -100,6 +101,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
           author,
           publication_name,
           created_at,
+          updated_at,
           cover_illustration_url,
           cover_illustration_prompt,
           slides (
@@ -141,6 +143,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
         author: story.author || 'Unknown',
         publication_name: story.publication_name || 'Unknown Publication',
         created_at: story.created_at,
+        updated_at: story.updated_at,
         cover_illustration_url: story.cover_illustration_url,
         cover_illustration_prompt: story.cover_illustration_prompt,
         slides: story.slides

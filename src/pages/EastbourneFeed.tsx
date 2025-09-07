@@ -9,6 +9,7 @@ interface Story {
   author: string | null;
   publication_name: string | null;
   created_at: string;
+  updated_at: string;
   slides: Array<{
     id: string;
     slide_number: number;
@@ -17,6 +18,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
+    published_at?: string;
   };
 }
 
@@ -43,6 +45,7 @@ export default function EastbourneFeed() {
           author,
           publication_name,
           created_at,
+          updated_at,
           status,
           slides (
             id,
@@ -51,7 +54,8 @@ export default function EastbourneFeed() {
           ),
           articles!inner (
             source_url,
-            region
+            region,
+            published_at
           )
         `)
         .eq("status", "ready")
@@ -70,10 +74,12 @@ export default function EastbourneFeed() {
         author: story.author,
         publication_name: story.publication_name,
         created_at: story.created_at,
+        updated_at: story.updated_at,
         slides: story.slides.sort((a, b) => a.slide_number - b.slide_number),
         article: {
           source_url: story.articles.source_url,
-          region: story.articles.region
+          region: story.articles.region,
+          published_at: story.articles.published_at
         }
       }));
 

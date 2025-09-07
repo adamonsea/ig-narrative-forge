@@ -58,6 +58,19 @@ export const isNewlyPublished = (dateString: string): boolean => {
   return daysDiff <= 2;
 };
 
+// New function for 24-hour "New" flag based on story publication to feed
+export const isNewInFeed = (dateString: string): boolean => {
+  if (!dateString) {
+    return false;
+  }
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const hoursDiff = differenceInHours(now, date);
+  
+  return hoursDiff <= 24;
+};
+
 export const getNewFlagColor = (): string => {
   return 'bg-orange-500/20 text-orange-700 border-orange-200';
 };

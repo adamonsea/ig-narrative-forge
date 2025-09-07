@@ -13,6 +13,7 @@ interface Story {
   author: string | null;
   publication_name: string | null;
   created_at: string;
+  updated_at: string;
   slides: Array<{
     id: string;
     slide_number: number;
@@ -21,6 +22,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
+    published_at?: string;
   };
 }
 
@@ -72,6 +74,7 @@ const StoryPage = () => {
             author,
             publication_name,
             created_at,
+            updated_at,
             slides (
               id,
               slide_number,
@@ -79,7 +82,8 @@ const StoryPage = () => {
             ),
             articles!inner (
               source_url,
-              region
+              region,
+              published_at
             )
           `)
           .eq('id', storyId)
@@ -98,10 +102,12 @@ const StoryPage = () => {
           author: storyData.author,
           publication_name: storyData.publication_name,
           created_at: storyData.created_at,
+          updated_at: storyData.updated_at,
           slides: storyData.slides.sort((a, b) => a.slide_number - b.slide_number),
           article: {
             source_url: storyData.articles.source_url,
-            region: storyData.articles.region
+            region: storyData.articles.region,
+            published_at: storyData.articles.published_at
           }
         };
 
@@ -153,6 +159,7 @@ const StoryPage = () => {
             author,
             publication_name,
             created_at,
+            updated_at,
             slides (
               id,
               slide_number,
@@ -160,7 +167,8 @@ const StoryPage = () => {
             ),
             articles!inner (
               source_url,
-              region
+              region,
+              published_at
             )
           `)
           .eq('id', storyId)
@@ -179,6 +187,7 @@ const StoryPage = () => {
           author: storyData.author,
           publication_name: storyData.publication_name,
           created_at: storyData.created_at,
+          updated_at: storyData.updated_at,
           slides: storyData.slides
             .sort((a, b) => a.slide_number - b.slide_number)
             .map(slide => ({
@@ -188,7 +197,8 @@ const StoryPage = () => {
             })),
           article: {
             source_url: storyData.articles.source_url,
-            region: storyData.articles.region
+            region: storyData.articles.region,
+            published_at: storyData.articles.published_at
           }
         };
 

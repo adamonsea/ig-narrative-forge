@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 interface Slide {
   id: string;
@@ -18,6 +19,7 @@ interface Story {
   article: {
     source_url: string;
     region: string;
+    published_at?: string;
   };
 }
 
@@ -63,12 +65,17 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
     
-    // Always add source attribution on final slide
+    // Always add source attribution with original article date on final slide
     const sourceDomain = story.article.source_url ? 
       new URL(story.article.source_url).hostname.replace('www.', '') : 
       'source';
     
-    const sourceAttribution = `Read the full story at ${sourceDomain}`;
+    // Format original article date if available
+    const originalDateText = story.article?.published_at ? 
+      ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
+      '';
+    
+    const sourceAttribution = `Read the full story at ${sourceDomain}${originalDateText}`;
     
     // If we have existing CTA content, append source; otherwise, use source as CTA content
     const finalCtaContent = ctaContent ? 

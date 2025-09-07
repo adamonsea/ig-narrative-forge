@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor } from '@/lib/dateUtils';
+import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed } from '@/lib/dateUtils';
+import { format } from 'date-fns';
 
 interface Story {
   id: string;
@@ -12,6 +13,7 @@ interface Story {
   author: string | null;
   publication_name: string | null;
   created_at: string;
+  updated_at: string;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
   slides: Array<{
@@ -149,12 +151,17 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
     
-    // Always add source attribution on final slide
+    // Always add source attribution with original article date on final slide
     const sourceDomain = story.article?.source_url ? 
       new URL(story.article.source_url).hostname.replace('www.', '') : 
       'source';
     
-    const sourceAttribution = `Read the full story at ${sourceDomain}`;
+    // Format original article date if available
+    const originalDateText = story.article?.published_at ? 
+      ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
+      '';
+    
+    const sourceAttribution = `Read the full story at ${sourceDomain}${originalDateText}`;
     
     // If we have existing CTA content, append source; otherwise, use source as CTA content
     const finalCtaContent = ctaContent ? 
@@ -201,30 +208,30 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                 {topicName}
               </Badge>
               {(() => {
-                // Use article published_at for content age, story created_at for feed freshness
-                const articleDate = story.article?.published_at || story.created_at;
-                const timeLabel = getRelativeTimeLabel(articleDate);
+                // Use story updated_at for feed freshness (when it was published to feed)
+                const storyPublishDate = story.updated_at;
                 
-                // If we have a time label, show it
-                if (timeLabel) {
-                  return (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(articleDate)}`}
-                    >
-                      {timeLabel}
-                    </Badge>
-                  );
-                }
-                
-                // Fallback: show "New" if story was published to feed recently
-                if (isNewlyPublished(story.created_at)) {
+                // Show "New" if story was published to feed in last 24 hours
+                if (isNewInFeed(storyPublishDate)) {
                   return (
                     <Badge 
                       variant="outline" 
                       className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
                     >
                       New
+                    </Badge>
+                  );
+                }
+                
+                // Otherwise show relative time based on story publish date
+                const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                if (timeLabel) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
+                    >
+                      {timeLabel}
                     </Badge>
                   );
                 }
@@ -303,10 +310,10 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                               'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
                             )
                             .replace(
-                              /Read the full story at ([^\s\n]+)/gi,
-                              sourceUrl ? 
-                                `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
-                                'Read the full story at <span class="text-primary font-extrabold">$1</span>'
+                              /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
+                              (match, domain, dateText) => sourceUrl ? 
+                                `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
+                                `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
                             )
                         }}
                       />
