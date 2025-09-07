@@ -2011,6 +2011,10 @@ export type Database = {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
       }
+      cleanup_existing_duplicates: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_old_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
