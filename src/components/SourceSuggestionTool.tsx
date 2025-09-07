@@ -91,81 +91,45 @@ export const SourceSuggestionTool = ({
     }
   };
 
-  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string, assignedToTopic?: boolean}> => {
+  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
-    // Check if source exists globally by name or domain
+    // Check if source exists for THIS specific topic (topic-scoped check)
     const { data: existingSources } = await supabase
       .from('content_sources')
-      .select('id, source_name, topic_id, canonical_domain')
+      .select('id, source_name, canonical_domain')
+      .eq('topic_id', topicId)
       .or(`source_name.eq.${suggestion.source_name},canonical_domain.eq.${domain}`);
 
     if (existingSources && existingSources.length > 0) {
       const matchingSource = existingSources[0];
       return {
         exists: true,
-        id: matchingSource.id,
-        assignedToTopic: matchingSource.topic_id === topicId
+        id: matchingSource.id
       };
     }
     
     return { exists: false };
   };
 
-  const assignExistingSource = async (sourceId: string, suggestion: SourceSuggestion) => {
-    try {
-      const { error } = await supabase
-        .from('content_sources')
-        .update({ topic_id: topicId })
-        .eq('id', sourceId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Source Assigned",
-        description: `${suggestion.source_name} has been assigned to this topic`,
-      });
-      
-      // Remove from suggestions after assigning
-      setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
-      
-      // Trigger parent refresh to show source in list
-      window.dispatchEvent(new CustomEvent('sourceAdded'));
-    } catch (error) {
-      console.error('Error assigning source:', error);
-      toast({
-        title: "Error",
-        description: "Failed to assign existing source",
-        variant: "destructive"
-      });
-    }
-  };
+  // Removed assignExistingSource function - no longer needed with topic-scoped approach
 
   const addSource = async (suggestion: SourceSuggestion, skipValidation = false) => {
     const sourceKey = suggestion.url;
     setAddingSourceId(sourceKey);
     
     try {
-      // First check if source already exists
+      // Check if source already exists for THIS topic (topic-scoped check)
       const existingCheck = await checkExistingSource(suggestion);
       
       if (existingCheck.exists) {
-        if (existingCheck.assignedToTopic) {
-          toast({
-            title: "Source Already Added",
-            description: "This source is already assigned to this topic",
-            variant: "destructive"
-          });
-          setAddingSourceId(null);
-          return;
-        } else {
-          // Offer to assign existing source to this topic
-          if (confirm(`This source already exists. Would you like to assign it to "${topicName}"?`)) {
-            await assignExistingSource(existingCheck.id!, suggestion);
-          }
-          setAddingSourceId(null);
-          return;
-        }
+        toast({
+          title: "Source Already Added",
+          description: "This source is already assigned to this topic",
+          variant: "destructive"
+        });
+        setAddingSourceId(null);
+        return;
       }
 
       // Simplified server-side validation for new sources (unless skipped)
@@ -239,21 +203,13 @@ export const SourceSuggestionTool = ({
         .insert([sourceData]);
 
       if (error) {
-        // Enhanced duplicate handling
+        // Handle duplicate constraint errors
         if (error.code === '23505') {
-          // This shouldn't happen now due to our pre-check, but just in case
-          const existingCheck = await checkExistingSource(suggestion);
-          if (existingCheck.exists && !existingCheck.assignedToTopic) {
-            if (confirm(`This source exists but isn't assigned to "${topicName}". Assign it now?`)) {
-              await assignExistingSource(existingCheck.id!, suggestion);
-            }
-          } else {
-            toast({
-              title: "Source Already Exists",
-              description: "This source is already in your database for this topic",
-              variant: "destructive"
-            });
-          }
+          toast({
+            title: "Source Already Exists",
+            description: "This source is already assigned to this topic",
+            variant: "destructive"
+          });
         } else {
           throw error;
         }
