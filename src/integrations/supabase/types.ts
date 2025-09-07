@@ -1745,6 +1745,58 @@ export type Database = {
           },
         ]
       }
+      topic_sources: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          source_config: Json | null
+          source_id: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_config?: Json | null
+          source_id: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          source_config?: Json | null
+          source_id?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_topic_sources_source_id"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_topic_sources_source_id"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_topic_sources_topic_id"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           audience_expertise:
@@ -2000,6 +2052,14 @@ export type Database = {
       }
     }
     Functions: {
+      add_source_to_topic: {
+        Args: {
+          p_source_config?: Json
+          p_source_id: string
+          p_topic_id: string
+        }
+        Returns: boolean
+      }
       add_user_credits: {
         Args: {
           p_credits_amount: number
@@ -2066,6 +2126,31 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_source_topics: {
+        Args: { p_source_id: string }
+        Returns: {
+          is_active: boolean
+          region: string
+          source_config: Json
+          topic_id: string
+          topic_name: string
+          topic_type: string
+        }[]
+      }
+      get_topic_sources: {
+        Args: { p_topic_id: string }
+        Returns: {
+          articles_scraped: number
+          canonical_domain: string
+          credibility_score: number
+          feed_url: string
+          is_active: boolean
+          last_scraped_at: string
+          source_config: Json
+          source_id: string
+          source_name: string
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -2122,9 +2207,17 @@ export type Database = {
         Args: { input_url: string }
         Returns: string
       }
+      populate_topic_sources_from_existing: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       record_newsletter_signup_attempt: {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: undefined
+      }
+      remove_source_from_topic: {
+        Args: { p_source_id: string; p_topic_id: string }
+        Returns: boolean
       }
       rescore_articles_for_topic: {
         Args: { p_topic_id: string }
