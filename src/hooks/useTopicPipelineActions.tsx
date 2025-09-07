@@ -484,6 +484,107 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
     }
   };
 
+  const deleteMultipleArticles = async (articleIds: string[]) => {
+    try {
+      // Set all articles as being deleted
+      articleIds.forEach(id => {
+        setDeletingArticles(prev => new Set([...prev, id]));
+        setAnimatingArticles(prev => new Set([...prev, id]));
+      });
+
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .in('id', articleIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Articles Deleted",
+        description: `${articleIds.length} articles have been discarded and won't be re-imported`
+      });
+
+      // Clean up animation state after delay
+      setTimeout(() => {
+        articleIds.forEach(id => {
+          setAnimatingArticles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+          setDeletingArticles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+        });
+        onRefresh();
+      }, 300);
+      
+    } catch (error) {
+      console.error('Error deleting articles:', error);
+      
+      // Reverse animation on error
+      articleIds.forEach(id => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        setDeletingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      });
+      
+      onRefresh();
+      
+      toast({
+        title: "Deletion Failed",
+        description: "Failed to delete articles",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cancelMultipleQueueItems = async (queueIds: string[]) => {
+    try {
+      queueIds.forEach(id => {
+        setDeletingQueueItems(prev => new Set([...prev, id]));
+      });
+
+      const { error } = await supabase
+        .from('content_generation_queue')
+        .delete()
+        .in('id', queueIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Jobs Cancelled",
+        description: `${queueIds.length} processing jobs have been cancelled`
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error('Error cancelling jobs:', error);
+      toast({
+        title: "Cancellation Failed",
+        description: "Failed to cancel processing jobs",
+        variant: "destructive"
+      });
+    } finally {
+      queueIds.forEach(id => {
+        setDeletingQueueItems(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      });
+    }
+  };
+
   return {
     processingArticle,
     processingApproval,
@@ -499,6 +600,8 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
     returnToReview,
     deleteStory,
     cancelQueueItem,
-    deleteArticle
+    deleteArticle,
+    deleteMultipleArticles,
+    cancelMultipleQueueItems
   };
 };

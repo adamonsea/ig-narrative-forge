@@ -18,11 +18,15 @@ import {
   WrenchIcon,
   User,
   Calendar,
-  Loader2
+  Loader2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { formatDistanceToNow } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DuplicateCleanupDialog } from "./DuplicateCleanupDialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface Article {
   id: string;
@@ -62,6 +66,12 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [deletingArticle, setDeletingArticle] = useState<string | null>(null);
   const [isResettingStalled, setIsResettingStalled] = useState(false);
+  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
+  const [selectedQueueItems, setSelectedQueueItems] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showBulkCancelConfirm, setShowBulkCancelConfirm] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const { toast } = useToast();
 
@@ -253,14 +263,14 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
       
       const { error } = await supabase
         .from('articles')
-        .delete()
+        .update({ processing_status: 'discarded' })
         .eq('id', articleId);
 
       if (error) throw error;
 
       toast({
         title: 'Article Deleted',
-        description: 'Article permanently removed from system',
+        description: 'Article has been discarded and won\'t be re-imported',
       });
 
       setArticles(articles.filter(article => article.id !== articleId));
@@ -274,6 +284,68 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
       });
     } finally {
       setDeletingArticle(null);
+    }
+  };
+
+  const handleBulkDeleteArticles = async () => {
+    if (selectedArticles.size === 0) return;
+
+    try {
+      const articleIds = Array.from(selectedArticles);
+      
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .in('id', articleIds);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Articles Deleted',
+        description: `${articleIds.length} articles have been discarded and won't be re-imported`,
+      });
+
+      setArticles(articles.filter(article => !selectedArticles.has(article.id)));
+      setSelectedArticles(new Set());
+      
+    } catch (error: any) {
+      console.error('Error deleting articles:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete articles',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkCancelQueue = async () => {
+    if (selectedQueueItems.size === 0) return;
+
+    try {
+      const queueIds = Array.from(selectedQueueItems);
+      
+      const { error } = await supabase
+        .from('content_generation_queue')
+        .delete()
+        .in('id', queueIds);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Jobs Cancelled',
+        description: `${queueIds.length} processing jobs have been cancelled`,
+      });
+
+      setQueuedArticles(queuedArticles.filter(article => !selectedQueueItems.has(article.queue_id!)));
+      setSelectedQueueItems(new Set());
+      
+    } catch (error: any) {
+      console.error('Error cancelling jobs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel jobs',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -475,103 +547,128 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             <>
               {/* Queued Articles */}
               {queuedArticles.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-primary">Queued for Processing ({queuedArticles.length})</h3>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={resetProcessingIssues}
-                        variant="destructive" 
-                        size="sm"
-                        disabled={isResettingStalled}
-                      >
-                        {isResettingStalled ? (
-                          <>
-                            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                            Cleaning...
-                          </>
-                        ) : (
-                          <>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-primary">Queued for Processing ({queuedArticles.length})</h3>
+                      <div className="flex gap-2">
+                        {selectedQueueItems.size > 0 && (
+                          <Button 
+                            onClick={() => setShowBulkCancelConfirm(true)}
+                            variant="destructive" 
+                            size="sm"
+                          >
                             <Trash2 className="w-3 h-3 mr-1" />
-                            Clean Queue
-                          </>
+                            Cancel Selected ({selectedQueueItems.size})
+                          </Button>
                         )}
-                      </Button>
-                       <Button 
-                         onClick={loadQueuedArticles}
-                         variant="outline" 
-                         size="sm"
-                       >
-                         <RefreshCw className="w-3 h-3 mr-1" />
-                         Refresh
-                       </Button>
-                       <DuplicateCleanupDialog onSuccess={() => {
-                         loadPendingArticles();
-                         loadQueuedArticles();
-                       }} />
-                    </div>
-                  </div>
-                  {queuedArticles.map((article) => (
-                    <Card key={`queued-${article.id}`} className="border border-primary/30 bg-primary/5">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 pr-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className={
-                                article.is_stuck 
-                                  ? 'bg-red-50 text-red-700 border-red-200' 
-                                  : article.queue_status === 'processing' 
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                    : 'bg-primary/10 text-primary border-primary/30'
-                              }>
-                                {article.is_stuck ? (
-                                  <>
-                                    <AlertTriangle className="w-3 h-3 mr-1" />
-                                    Stuck
-                                  </>
-                                ) : article.queue_status === 'processing' ? (
-                                  <>
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    Processing
-                                  </>
-                                ) : (
-                                  <>
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    Queued
-                                  </>
-                                )}
-                              </Badge>
+                        <Button 
+                          onClick={resetProcessingIssues}
+                          variant="destructive" 
+                          size="sm"
+                          disabled={isResettingStalled}
+                        >
+                          {isResettingStalled ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                              Cleaning...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Clean Queue
+                            </>
+                          )}
+                        </Button>
+                        <Button 
+                          onClick={loadQueuedArticles}
+                          variant="outline" 
+                          size="sm"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh
+                        </Button>
+                        <DuplicateCleanupDialog onSuccess={() => {
+                          loadPendingArticles();
+                          loadQueuedArticles();
+                        }} />
+                     </div>
+                   </div>
+                   {queuedArticles.map((article) => (
+                     <Card key={`queued-${article.id}`} className="border border-primary/30 bg-primary/5">
+                       <CardContent className="p-4">
+                         <div className="flex justify-between items-start">
+                           <div className="flex items-start gap-3 flex-1 pr-4">
+                             <Checkbox
+                               checked={selectedQueueItems.has(article.queue_id!)}
+                               onCheckedChange={(checked) => {
+                                 const newSelected = new Set(selectedQueueItems);
+                                 if (checked) {
+                                   newSelected.add(article.queue_id!);
+                                 } else {
+                                   newSelected.delete(article.queue_id!);
+                                 }
+                                 setSelectedQueueItems(newSelected);
+                               }}
+                               className="mt-1"
+                             />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className={
+                                    article.is_stuck 
+                                      ? 'bg-red-50 text-red-700 border-red-200' 
+                                      : article.queue_status === 'processing' 
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                        : 'bg-primary/10 text-primary border-primary/30'
+                                  }>
+                                    {article.is_stuck ? (
+                                      <>
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        Stuck
+                                      </>
+                                    ) : article.queue_status === 'processing' ? (
+                                      <>
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        Processing
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        Queued
+                                      </>
+                                    )}
+                                  </Badge>
+                                </div>
+                                <h3 className="font-semibold text-base mb-1 leading-tight">{article.title}</h3>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                                  <span>{article.author || 'Unknown Author'}</span>
+                                  <span>•</span>
+                                  <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                  {article.is_stuck ? (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => clearStuckJob(article)}
+                                    >
+                                      <Trash2 className="w-3 h-3 mr-1" />
+                                      Clear
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => cancelQueuedJob(article)}
+                                    >
+                                      <X className="w-3 h-3 mr-1" />
+                                      Cancel
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <h3 className="font-semibold text-base mb-1 leading-tight">{article.title}</h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                              <span>{article.author || 'Unknown Author'}</span>
-                              <span>•</span>
-                              <span>{new Date(article.published_at || article.created_at).toLocaleDateString()}</span>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              {article.is_stuck ? (
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => clearStuckJob(article)}
-                                >
-                                  <Trash2 className="w-3 h-3 mr-1" />
-                                  Clear
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => cancelQueuedJob(article)}
-                                >
-                                  <X className="w-3 h-3 mr-1" />
-                                  Cancel
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          <Button
+                            <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => {
@@ -592,27 +689,53 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
 
               {/* Available Articles */}
               {articles.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
-                    <Button 
-                      onClick={loadPendingArticles}
-                      variant="outline" 
-                      size="sm"
-                    >
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      Refresh
-                    </Button>
-                  </div>
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-between">
+                     <h3 className="text-lg font-medium">Available Articles ({articles.length})</h3>
+                     <div className="flex gap-2">
+                       {selectedArticles.size > 0 && (
+                         <Button 
+                           onClick={() => setShowBulkDeleteConfirm(true)}
+                           variant="destructive" 
+                           size="sm"
+                         >
+                           <Trash2 className="w-3 h-3 mr-1" />
+                           Delete Selected ({selectedArticles.size})
+                         </Button>
+                       )}
+                       <Button 
+                         onClick={loadPendingArticles}
+                         variant="outline" 
+                         size="sm"
+                       >
+                         <RefreshCw className="w-3 h-3 mr-1" />
+                         Refresh
+                       </Button>
+                     </div>
+                   </div>
                   
                   {articles.map((article) => {
                     const hasLowWordCount = !article.word_count || article.word_count < 50;
                     
                     return (
-                      <Card key={article.id} className="border">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1 pr-4">
+                       <Card key={article.id} className="border">
+                         <CardContent className="p-4">
+                           <div className="flex justify-between items-start">
+                             <div className="flex items-start gap-3 flex-1 pr-4">
+                               <Checkbox
+                                 checked={selectedArticles.has(article.id)}
+                                 onCheckedChange={(checked) => {
+                                   const newSelected = new Set(selectedArticles);
+                                   if (checked) {
+                                     newSelected.add(article.id);
+                                   } else {
+                                     newSelected.delete(article.id);
+                                   }
+                                   setSelectedArticles(newSelected);
+                                 }}
+                                 className="mt-1"
+                               />
+                               <div className="flex-1">
                               <h3 className="font-semibold text-xl mb-2 leading-tight">{article.title}</h3>
                               
                               {/* Recovery indicator for articles that were returned from processed status */}
@@ -671,16 +794,20 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                                   Reject
                                 </Button>
                                 
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => deleteArticle(article.id)}
-                                  disabled={deletingArticle === article.id}
-                                >
-                                  {deletingArticle === article.id ? 'Deleting...' : 'Delete'}
-                                </Button>
+                                 <Button
+                                   variant="destructive"
+                                   onClick={() => {
+                                     setArticleToDelete({ id: article.id, title: article.title });
+                                     setShowDeleteConfirm(true);
+                                   }}
+                                   disabled={deletingArticle === article.id}
+                                 >
+                                   {deletingArticle === article.id ? 'Deleting...' : 'Delete'}
+                                 </Button>
                               </div>
-                            </div>
-                            <Button
+                               </div>
+                             </div>
+                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => {
@@ -702,6 +829,44 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
             </>
           )}
         </div>
+
+        {/* Confirmation Dialogs */}
+        <ConfirmationDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setArticleToDelete(null);
+          }}
+          onConfirm={() => {
+            if (articleToDelete) {
+              deleteArticle(articleToDelete.id);
+            }
+          }}
+          title="Delete Article"
+          description={`Are you sure you want to delete "${articleToDelete?.title}"? This action cannot be undone and the article will be marked as discarded.`}
+          confirmText="Delete"
+          variant="destructive"
+        />
+
+        <ConfirmationDialog
+          isOpen={showBulkDeleteConfirm}
+          onClose={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={handleBulkDeleteArticles}
+          title="Delete Multiple Articles"
+          description={`Are you sure you want to delete ${selectedArticles.size} selected articles? This action cannot be undone and the articles will be marked as discarded.`}
+          confirmText="Delete All"
+          variant="destructive"
+        />
+
+        <ConfirmationDialog
+          isOpen={showBulkCancelConfirm}
+          onClose={() => setShowBulkCancelConfirm(false)}
+          onConfirm={handleBulkCancelQueue}
+          title="Cancel Multiple Jobs"
+          description={`Are you sure you want to cancel ${selectedQueueItems.size} selected processing jobs? This action cannot be undone.`}
+          confirmText="Cancel All"
+          variant="destructive"
+        />
       </CardContent>
     </Card>
   );
