@@ -91,18 +91,18 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
 
   const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
 
-  // Dynamic text sizing (same logic as StoryCarousel)
+  // Dynamic text sizing - increased for better mobile readability
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
     if (isTitle) {
-      if (length < 50) return "text-5xl";
-      if (length < 100) return "text-4xl";
-      return "text-3xl";
+      if (length < 50) return "text-6xl";
+      if (length < 100) return "text-5xl";
+      return "text-4xl";
     } else {
-      if (length < 80) return "text-3xl";
-      if (length < 150) return "text-2xl";
-      if (length < 250) return "text-xl";
-      return "text-lg";
+      if (length < 80) return "text-4xl";
+      if (length < 150) return "text-3xl";
+      if (length < 250) return "text-2xl";
+      return "text-xl";
     }
   };
 
@@ -122,10 +122,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
       <Card className="overflow-hidden w-full h-full">
         <div className="relative bg-background h-full flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <Badge variant="secondary" className="text-lg font-medium">
-              {topicName}
-            </Badge>
+          <div className="flex items-center justify-end p-6 border-b">
             <span className="text-lg text-muted-foreground">
               {slideIndex + 1} of {story.slides.length}
             </span>
