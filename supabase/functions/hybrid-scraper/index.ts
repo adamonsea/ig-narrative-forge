@@ -41,119 +41,32 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🎯 Hybrid scraper starting for source: ${sourceId}`);
-    console.log(`🌐 Target URL: ${feedUrl}`);
+    console.log(`🧠 Hybrid scraper starting - delegating to intelligent scraper`);
+    console.log(`🎯 Target: ${sourceId} - ${feedUrl}`);
 
-    // Get source information to determine the best scraping approach
-    const { data: source, error: sourceError } = await supabase
-      .from('content_sources')
-      .select('*')
-      .eq('id', sourceId)
-      .single();
+    // Delegate to intelligent scraper for optimal method selection and execution
+    const intelligentResult = await supabase.functions.invoke('intelligent-scraper', {
+      body: { 
+        feedUrl, 
+        sourceId, 
+        region: region || 'General',
+        topicId 
+      }
+    });
 
-    if (sourceError || !source) {
-      console.error('❌ Failed to fetch source information:', sourceError);
+    if (intelligentResult.error) {
+      console.error('❌ Intelligent scraper failed:', intelligentResult.error);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Source not found',
+          error: `Intelligent scraper failed: ${intelligentResult.error?.message || 'Unknown error'}`,
           articles_imported: 0 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    let scrapeResult;
-
-    // Choose scraping strategy based on topic type and source
-    if (topicId) {
-      // Get topic information
-      const { data: topic } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('id', topicId)
-        .single();
-
-      if (topic && topic.topic_type === 'keyword') {
-        console.log('🔍 Using topic-aware scraper for keyword-based topic');
-        // Use topic-aware scraper for keyword topics
-        scrapeResult = await supabase.functions.invoke('topic-aware-scraper', {
-          body: { feedUrl, sourceId, topicId }
-        });
-      } else {
-        console.log('🌍 Using universal scraper for regional topic');
-        // Use universal scraper for regional topics
-        scrapeResult = await supabase.functions.invoke('universal-scraper', {
-          body: { feedUrl, sourceId, region: region || 'General' }
-        });
-      }
-    } else {
-      console.log('📰 Using universal scraper for general scraping');
-      // Default to universal scraper
-      scrapeResult = await supabase.functions.invoke('universal-scraper', {
-        body: { feedUrl, sourceId, region: region || 'General' }
-      });
-    }
-
-    if (scrapeResult.error) {
-      console.error('❌ Primary scraper failed, trying Beautiful Soup fallback:', scrapeResult.error);
-      
-      // Try Beautiful Soup as fallback
-      const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
-        body: { feedUrl, sourceId, region: region || 'General' }
-      });
-
-      if (fallbackResult.error) {
-        console.error('❌ Fallback scraper also failed, trying AI recovery:', fallbackResult.error);
-        
-        // Try AI-powered recovery as final fallback
-        const aiRecoveryResult = await supabase.functions.invoke('ai-scraper-recovery', {
-          body: { 
-            feedUrl,
-            sourceId,
-            region: region || 'General',
-            topicId,
-            failureType: 'parsing_failed',
-            originalError: fallbackResult.error?.message || 'Beautiful Soup scraper failed'
-          }
-        });
-
-        if (aiRecoveryResult.error || !aiRecoveryResult.data?.success) {
-          console.error('❌ AI recovery also failed:', aiRecoveryResult.error);
-          
-          // Update source metrics with failure
-          await supabase.rpc('log_error_ticket', {
-            p_ticket_type: 'scraping_failure',
-            p_source_info: { 
-              source_id: sourceId, 
-              source_name: source.source_name,
-              feed_url: feedUrl 
-            },
-            p_error_details: `All scrapers failed including AI recovery: ${scrapeResult.error?.message || 'Unknown error'}`,
-            p_severity: 'high',
-            p_context_data: { 
-              primary_error: scrapeResult.error,
-              fallback_error: fallbackResult.error,
-              ai_recovery_error: aiRecoveryResult.error
-            }
-          });
-
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `All scrapers failed: ${scrapeResult.error?.message || 'Unknown error'}`,
-              articles_imported: 0 
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log('✅ AI recovery succeeded after traditional scrapers failed');
-        scrapeResult = aiRecoveryResult;
-      } else {
-        scrapeResult = fallbackResult;
-      }
-    }
+    const scrapeResult = intelligentResult;
 
     const result = scrapeResult.data || scrapeResult;
     console.log(`✅ Hybrid scraper completed for ${source.source_name}:`, result);
