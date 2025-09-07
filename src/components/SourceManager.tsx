@@ -56,7 +56,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
   const [newSource, setNewSource] = useState({
     source_name: '',
     feed_url: '',
-    region: 'Eastbourne',
+        region: 'general',
     credibility_score: 70,
     scrape_frequency_hours: 24,
     content_type: 'news',
@@ -101,7 +101,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       setNewSource({
         source_name: '',
         feed_url: '',
-        region: 'Eastbourne',
+        region: 'general',
         credibility_score: 70,
         scrape_frequency_hours: 24,
         content_type: 'news',
@@ -245,7 +245,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
         body: {
           feedUrl: source.feed_url,
           sourceId: source.id,
-          region: source.region || 'Eastbourne'
+            region: source.region || 'general'
         }
       });
 
@@ -339,7 +339,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
             body: {
               feedUrl: source.feed_url,
               sourceId: source.id,
-              region: source.region || 'Eastbourne'
+              region: source.region || 'general'
             }
           });
 
@@ -457,7 +457,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                 <Label htmlFor="feed-url">Website or RSS URL *</Label>
                 <Input
                   id="feed-url"
-                  placeholder="https://eastbourneherald.co.uk OR https://example.com/feed.xml"
+                  placeholder="https://localnews.com OR https://example.com/feed.xml"
                   value={newSource.feed_url}
                   onChange={(e) => setNewSource(prev => ({ ...prev, feed_url: e.target.value }))}
                 />
@@ -477,9 +477,8 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Eastbourne">Eastbourne</SelectItem>
-                    <SelectItem value="general">General</SelectItem>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
                     <SelectItem value="local">Local</SelectItem>
                     <SelectItem value="national">National</SelectItem>
                     <SelectItem value="international">International</SelectItem>

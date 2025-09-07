@@ -16,11 +16,14 @@ interface ContentSource {
   last_scraped_at: string | null;
 }
 
-interface EastbourneSourceManagerProps {
+interface TopicSourceManagerProps {
+  topicId: string;
+  topicName: string;
+  region: string;
   onSourcesChange: () => void;
 }
 
-export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceManagerProps) => {
+export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange }: TopicSourceManagerProps) => {
   const { toast } = useToast();
   const [sources, setSources] = useState<ContentSource[]>([]);
   const [newUrl, setNewUrl] = useState('');
@@ -28,14 +31,14 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
 
   useEffect(() => {
     loadSources();
-  }, []);
+  }, [topicId]);
 
   const loadSources = async () => {
     try {
       const { data, error } = await supabase
-        .from('content_sources_basic')
+        .from('content_sources')
         .select('id, source_name, canonical_domain, is_active, articles_scraped, last_scraped_at')
-        .eq('region', 'Eastbourne')
+        .eq('topic_id', topicId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -108,11 +111,12 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
         .from('content_sources')
         .insert({
           source_name: domain,
-          feed_url: processedUrl, // We'll use this for scraping the site
+          feed_url: processedUrl,
           canonical_domain: domain,
-          region: 'Eastbourne', // Always Eastbourne
-          credibility_score: 70, // Default score
-          scrape_frequency_hours: 24, // Daily scraping
+          topic_id: topicId,
+          region: region,
+          credibility_score: 70,
+          scrape_frequency_hours: 24,
           content_type: 'news',
           is_active: true,
           is_whitelisted: true,
@@ -121,11 +125,11 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
 
       if (error) throw error;
 
-      // Start background scraping using universal-scraper
-      supabase.functions.invoke('universal-scraper', {
+      // Start background scraping using topic-aware scraper
+      supabase.functions.invoke('topic-aware-scraper', {
         body: {
           feedUrl: processedUrl,
-          region: 'Eastbourne',
+          topicId: topicId,
         },
       }).catch(err => {
         console.error('Background scraping failed:', err);
@@ -192,7 +196,7 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
         <CardContent>
           <div className="flex gap-2">
             <Input
-              placeholder="Enter website URL (e.g., eastbourneherald.co.uk)"
+              placeholder={`Enter website URL (e.g., localnews.com)`}
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSource()}
@@ -204,7 +208,7 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Add news websites to scrape articles from. All content will be tagged as Eastbourne region.
+            Add news websites to scrape articles from. All content will be tagged for {topicName} topic.
           </p>
         </CardContent>
       </Card>
@@ -247,7 +251,7 @@ export const EastbourneSourceManager = ({ onSourcesChange }: EastbourneSourceMan
               <div className="text-center py-8">
                 <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  No website sources added yet. Add your first Eastbourne news source above.
+                  No website sources added yet. Add your first {topicName} news source above.
                 </p>
               </div>
             )}

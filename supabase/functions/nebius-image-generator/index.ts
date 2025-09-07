@@ -34,10 +34,23 @@ serve(async (req) => {
 
     console.log(`Generating image with Nebius AI using ${model} model`);
 
-    // Get slide content for text-based slide generation
+    // Get slide content and fetch topic/region information
     const { data: slideData, error: slideDataError } = await supabase
       .from('slides')
-      .select('content, slide_number, story_id, alt_text')
+      .select(`
+        content, 
+        slide_number, 
+        story_id, 
+        alt_text,
+        stories!inner(
+          article_id,
+          articles!inner(
+            topic_id,
+            region,
+            topics(region)
+          )
+        )
+      `)
       .eq('id', slideId)
       .single();
 
@@ -48,6 +61,19 @@ serve(async (req) => {
     const slideContent = slideData?.content || prompt;
     const isTitle = slideData?.slide_number === 1;
     const textCase = isTitle ? 'UPPERCASE BOLD TITLE TEXT' : 'Clear readable sentence case text';
+    
+    // Extract region name with fallback hierarchy
+    let regionName = 'News';
+    try {
+      if (slideData?.stories?.articles?.topics?.region) {
+        regionName = slideData.stories.articles.topics.region;
+      } else if (slideData?.stories?.articles?.region) {
+        regionName = slideData.stories.articles.region;
+      }
+      console.log(`Using region name: ${regionName}`);
+    } catch (error) {
+      console.error('Failed to extract region name, using default:', error);
+    }
     
     // Enhanced FLUX prompt optimized for longer text with better line breaking
     const wordsArray = slideContent.split(' ');
@@ -70,7 +96,7 @@ TYPOGRAPHY SPECIFICATIONS:
 LAYOUT REQUIREMENTS:
 - Main text: Centered with generous white space
 - Allow text to flow across multiple lines if needed
-- Bottom left corner: "Eastbourne" (small text, 12pt)
+- Bottom left corner: "${regionName}" (small text, 12pt)
 - Clean white/light background
 - High contrast dark text
 

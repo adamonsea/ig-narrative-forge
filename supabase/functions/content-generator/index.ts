@@ -830,15 +830,7 @@ function extractPublicationName(sourceUrl: string): string {
       'itv.com': 'ITV News',
       'www.itv.com': 'ITV News',
       'channel4.com': 'Channel 4 News',
-      'www.channel4.com': 'Channel 4 News',
-      'sussexexpress.co.uk': 'Sussex Express',
-      'www.sussexexpress.co.uk': 'Sussex Express',
-      'theargus.co.uk': 'The Argus',
-      'www.theargus.co.uk': 'The Argus',
-      'brightonandhovenews.org': 'Brighton and Hove News',
-      'www.brightonandhovenews.org': 'Brighton and Hove News',
-      'sussexbylines.co.uk': 'Sussexbylines',
-      'www.sussexbylines.co.uk': 'Sussexbylines'
+      'www.channel4.com': 'Channel 4 News'
     };
 
     // Check for exact match first

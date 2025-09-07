@@ -218,7 +218,7 @@ export const Phase4Validator = () => {
               body: {
                 feedUrl: source.feed_url,
                 sourceId: source.id,
-                region: source.region || 'Eastbourne',
+                region: source.region || 'general',
                 testMode: true
               }
             });

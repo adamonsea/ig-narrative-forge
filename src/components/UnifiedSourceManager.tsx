@@ -783,7 +783,7 @@ export const UnifiedSourceManager = ({
                       <SelectItem value="local">Local</SelectItem>
                       <SelectItem value="national">National</SelectItem>
                       <SelectItem value="international">International</SelectItem>
-                      <SelectItem value="Eastbourne">Eastbourne</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

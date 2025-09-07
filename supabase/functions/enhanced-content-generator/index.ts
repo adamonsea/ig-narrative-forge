@@ -624,7 +624,7 @@ function extractPublicationName(sourceUrl: string): string {
     const url = new URL(sourceUrl);
     const hostname = url.hostname.toLowerCase();
     
-    // Publication mapping
+    // Publication mapping - generic major news sources only
     const publicationMap: { [key: string]: string } = {
       'bbc.co.uk': 'BBC',
       'bbc.com': 'BBC',
@@ -635,10 +635,7 @@ function extractPublicationName(sourceUrl: string): string {
       'thetimes.co.uk': 'The Times',
       'mirror.co.uk': 'The Mirror',
       'express.co.uk': 'The Express',
-      'metro.co.uk': 'Metro',
-      'theargus.co.uk': 'The Argus',
-      'sussexlive.co.uk': 'Sussex Live',
-      'brightonandhovenews.org': 'Brighton & Hove News',
+      'metro.co.uk': 'Metro'
     };
     
     const matchedPublication = Object.keys(publicationMap).find(domain => hostname.includes(domain));

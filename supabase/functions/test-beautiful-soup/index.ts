@@ -24,7 +24,7 @@ serve(async (req) => {
     // Test URLs - mix of RSS and HTML-only sites
     const testUrls = [
       'https://www.bbc.com/news/england/sussex',
-      'https://www.eastbourneherald.co.uk',
+      'https://www.localnews.co.uk',
       'https://feeds.bbci.co.uk/news/england/sussex/rss.xml',
       'https://www.hastingsobserver.co.uk'
     ];
