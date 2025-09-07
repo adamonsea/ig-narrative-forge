@@ -240,10 +240,11 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .from('articles')
         .select('*')
         .eq('topic_id', selectedTopicId)
-        .eq('processing_status', 'new')
+        .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
         .order('regional_relevance_score', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100); // Increased limit to show more recovered articles
 
       if (excludedIds.length > 0) {
         articlesQuery = articlesQuery.not('id', 'in', `(${excludedIds.join(',')})`);

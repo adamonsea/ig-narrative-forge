@@ -28,6 +28,7 @@ interface Article {
   word_count: number | null;
   import_metadata: any;
   created_at: string;
+  processing_status: string;
   category?: string;
   tags?: string[];
   reading_time_minutes?: number;
@@ -88,7 +89,7 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
           .select(`
             id, title, author, published_at, category, tags, word_count, 
             reading_time_minutes, source_url, region, summary, body, created_at,
-            import_metadata
+            import_metadata, processing_status
           `)
           .in('id', queuedIds);
 
@@ -149,9 +150,10 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
       const { data: articles, error: articlesError } = await supabase
         .from('articles')
         .select('*')
-        .eq('processing_status', 'new')
+        .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100); // Increased limit to show more recovered articles
 
       if (articlesError) throw articlesError;
 
@@ -600,6 +602,13 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                           <div className="flex justify-between items-start">
                             <div className="flex-1 pr-4">
                               <h3 className="font-semibold text-xl mb-2 leading-tight">{article.title}</h3>
+                              
+                              {/* Recovery indicator for articles that were returned from processed status */}
+                              {article.processing_status === 'processed' && (
+                                <Badge variant="secondary" className="mb-2 bg-blue-100 text-blue-800 border-blue-200">
+                                  📥 Recovered Article
+                                </Badge>
+                              )}
                               
                               {/* Keyword flags */}
                               <div className="flex flex-wrap gap-1 mb-3">
