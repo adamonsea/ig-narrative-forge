@@ -141,7 +141,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
         setSlideQuantities(prev => ({ ...prev, ...newSlideQuantities }));
       }
     }
-  }, [articles, getAutoSlideType]); // Removed slideQuantities from dependency array to prevent infinite loop
+  }, [articles]); // Remove getAutoSlideType to prevent infinite loop
 
   // Set up real-time subscriptions for pipeline updates
   useEffect(() => {

@@ -84,7 +84,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     if (articles.length > 0) {
       updateFingerprints(articles);
     }
-  }, [articles, updateFingerprints]);
+  }, [articles]); // Remove updateFingerprints to prevent infinite loop
 
   const getRelevanceColor = (score: number | null) => {
     if (!score) return "text-muted-foreground";

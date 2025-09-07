@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -311,7 +311,7 @@ export const useEnhancedDuplicateDetection = () => {
   };
 
   // Update content fingerprints when articles change
-  const updateFingerprints = (articles: any[]) => {
+  const updateFingerprints = useCallback((articles: any[]) => {
     const newFingerprints = new Map<string, ContentFingerprint>();
     
     articles.forEach(article => {
@@ -335,7 +335,7 @@ export const useEnhancedDuplicateDetection = () => {
     });
     
     setSimilarArticles(newSimilarArticles);
-  };
+  }, [contentFingerprints]); // Add contentFingerprints as dependency for detectSimilarContent
 
   // Clean up old deletion records
   useEffect(() => {
