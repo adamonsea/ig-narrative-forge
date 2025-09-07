@@ -127,15 +127,9 @@ export const useInfiniteTopicFeed = (slug: string) => {
         .order('created_at', { ascending: sortBy === 'oldest' })
         .range(from, to);
 
-      // Apply proper relevance thresholds based on topic type
-      if (topicData.topic_type === 'regional' && topicData.region) {
-        // Regional topics use regional_relevance_score with threshold 25
-        query = query.gte('articles.regional_relevance_score', 25);
-      } else {
-        // Keyword topics should also use regional_relevance_score (which gets populated by keyword scoring)
-        // Use a lower threshold for keyword-based content since it's calculated differently
-        query = query.gte('articles.regional_relevance_score', 20);
-      }
+      // Note: Regional relevance filtering is only applied during article processing.
+      // Published stories should appear in feeds regardless of their regional relevance score.
+      // This ensures user editorial decisions (publication status) are respected.
 
       const { data: storiesData, error: storiesError } = await query;
 

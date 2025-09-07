@@ -458,9 +458,9 @@ async function buildPromptSystem(supabase: any, tone: string, expertise: string,
 // Default prompt system fallback
 function getDefaultPromptSystem(tone: string, expertise: string, slideType: string) {
   const tonePrompts = {
-    formal: 'Use professional, authoritative language. Maintain objective reporting standards. Use clear, structured sentences. Avoid colloquialisms or casual expressions.',
-    conversational: 'Use accessible, friendly language that feels like explaining to a knowledgeable friend. Balance professionalism with approachability. Use "you" when appropriate.',
-    engaging: 'Use dynamic, compelling language that draws readers in. Include contextually appropriate personality while maintaining credibility. Focus on human interest angles.'
+    formal: 'Write with authority and precision. Use clear, direct language. Maintain credibility through factual accuracy.',
+    conversational: 'Explain like you would to a friend. Use accessible language and relate to everyday experiences.',
+    engaging: 'Create compelling, interesting content that hooks readers while staying truthful and informative.'
   };
 
   const expertisePrompts = {
@@ -671,25 +671,18 @@ async function generateSlidesWithDeepSeek(
 ): Promise<SlideContent[]> {
   const expectedSlideCount = getExpectedSlideCount(slideType, article);
   
-  const prompt = systemPrompt || `You are an expert content creator specializing in transforming news articles into engaging social media carousels.
+  // Simplified, focused prompt for DeepSeek
+  const prompt = systemPrompt || `Transform this news article into ${expectedSlideCount} engaging carousel slides.
 
-Create exactly ${expectedSlideCount} slides from this article. Each slide should be substantial and informative.
+ARTICLE: "${article.title}"
+${article.body}
 
-Article Title: ${article.title}
-Article Content: ${article.body}
-Publication: ${publicationName}
+SOURCE: ${publicationName}
 
-Format your response as a JSON array with this structure:
-[
-  {
-    "slideNumber": 1,
-    "content": "Slide content here",
-    "visualPrompt": "Description for visual",
-    "altText": "Alt text for accessibility"
-  }
-]
+Create exactly ${expectedSlideCount} slides. Make each slide conversational and engaging while staying accurate to the source material.
 
-Make each slide engaging and informative while maintaining accuracy.`;
+Response format:
+[{"slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..."}]`;
 
   try {
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -706,7 +699,7 @@ Make each slide engaging and informative while maintaining accuracy.`;
             content: prompt
           }
         ],
-        temperature: 0.7,
+        temperature: 1.4,
         max_tokens: 4000
       })
     });
