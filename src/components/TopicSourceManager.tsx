@@ -49,35 +49,15 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
   const loadSources = async () => {
     try {
       const { data, error } = await supabase
-        .from('topic_sources')
-        .select(`
-          id,
-          is_active,
-          content_sources!inner(
-            id,
-            source_name,
-            canonical_domain,
-            articles_scraped,
-            last_scraped_at
-          )
-        `)
+        .from('content_sources')
+        .select('id, source_name, canonical_domain, articles_scraped, last_scraped_at, is_active')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform data to match expected interface
-      const transformedSources = (data || []).map(item => ({
-        id: item.content_sources.id,
-        source_name: item.content_sources.source_name,
-        canonical_domain: item.content_sources.canonical_domain,
-        is_active: item.is_active,
-        articles_scraped: item.content_sources.articles_scraped,
-        last_scraped_at: item.content_sources.last_scraped_at,
-      }));
-      
-      setSources(transformedSources);
+      setSources(data || []);
     } catch (error) {
       console.error('Failed to load sources:', error);
     }
@@ -142,18 +122,14 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
       const domain = extractDomainFromUrl(processedUrl);
 
       // Check if this URL already exists for this specific topic
-      const { data: existingTopicSource } = await supabase
-        .from('topic_sources')
-        .select(`
-          id,
-          content_sources!inner(feed_url, source_name)
-        `)
+      const { data: existingSource } = await supabase
+        .from('content_sources')
+        .select('id, source_name')
+        .eq('feed_url', processedUrl)
         .eq('topic_id', topicId)
-        .eq('content_sources.feed_url', processedUrl)
-        .eq('is_active', true)
         .maybeSingle();
 
-      if (existingTopicSource) {
+      if (existingSource) {
         toast({
           title: 'Source Already Added',
           description: `This source is already active for this topic`,
@@ -162,17 +138,7 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
         return;
       }
 
-      // Check if source exists globally (we can reuse it)
-      const { data: existingSource } = await supabase
-        .from('content_sources')
-        .select('id, source_name')
-        .eq('feed_url', processedUrl)
-        .maybeSingle();
-
-      let sourceId = existingSource?.id;
-
-      // If source doesn't exist globally, create it
-      if (!sourceId) {
+      // Create new source with direct topic_id
         // ONBOARDING PROTECTION: Validate source before adding
         try {
           const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
@@ -207,45 +173,32 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
             description: 'Source added but validation service unavailable',
           });
         }
-        
-        const { data: newSource, error: createError } = await supabase
-          .from('content_sources')
-          .insert({
-            source_name: domain,
-            feed_url: processedUrl,
-            canonical_domain: domain,
-            region: region,
-            credibility_score: 70,
-            scrape_frequency_hours: 24,
-            content_type: 'news',
-            is_active: true,
-            is_whitelisted: true,
-            is_blacklisted: false,
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        sourceId = newSource.id;
-      }
-
-      // Add source to topic via junction table
-      const { error: junctionError } = await supabase
-        .from('topic_sources')
+      
+      const { data: newSource, error: createError } = await supabase
+        .from('content_sources')
         .insert({
+          source_name: domain,
+          feed_url: processedUrl,
+          canonical_domain: domain,
+          region: region,
           topic_id: topicId,
-          source_id: sourceId,
+          credibility_score: 70,
+          scrape_frequency_hours: 24,
+          content_type: 'news',
           is_active: true,
-        });
+          is_whitelisted: true,
+          is_blacklisted: false,
+        })
+        .select('id')
+        .single();
 
-      if (junctionError) throw junctionError;
+      if (createError) throw createError;
 
-      // Start background scraping using intelligent scraper for auto-method selection
-      supabase.functions.invoke('intelligent-scraper', {
+      // Start background scraping using universal scraper for regional topics
+      supabase.functions.invoke('universal-scraper', {
         body: {
           feedUrl: processedUrl,
-          sourceId: null,
-          topicId: topicId,
+          sourceId: newSource.id,
           region: region
         },
       }).catch(err => {
@@ -254,9 +207,7 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
 
       toast({
         title: 'Website Added',
-        description: existingSource 
-          ? 'Existing source added to this topic successfully'
-          : 'Website validated and added successfully. Articles will be scraped automatically.',
+        description: 'Website validated and added successfully. Articles will be scraped automatically.',
       });
 
       setNewUrl('');
@@ -282,14 +233,14 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
     try {
       setLoading(true);
       
-      // Remove from topic via junction table
-      const { error: junctionError } = await supabase
-        .from('topic_sources')
-        .update({ is_active: false })
-        .eq('topic_id', topicId)
-        .eq('source_id', sourceId);
+      // Delete the source directly (since it's topic-specific)
+      const { error } = await supabase
+        .from('content_sources')
+        .delete()
+        .eq('id', sourceId)
+        .eq('topic_id', topicId);
 
-      if (junctionError) throw junctionError;
+      if (error) throw error;
 
       toast({
         title: 'Success',

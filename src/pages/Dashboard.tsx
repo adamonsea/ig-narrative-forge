@@ -64,9 +64,9 @@ const Dashboard = () => {
           ? supabase.from('articles').select('id', { count: 'exact' }).in('topic_id', topicIds)
           : { count: 0, data: [], error: null },
         
-        // Count content sources linked to user's topics via junction table
+        // Count content sources linked to user's topics directly
         topicIds.length > 0
-          ? supabase.from('topic_sources').select('id', { count: 'exact' }).in('topic_id', topicIds).eq('is_active', true)
+          ? supabase.from('content_sources').select('id', { count: 'exact' }).in('topic_id', topicIds).eq('is_active', true)
           : { count: 0, data: [], error: null }
       ]);
 

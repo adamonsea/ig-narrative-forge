@@ -94,26 +94,18 @@ export const SourceSuggestionTool = ({
   const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
-    // Check if source already exists for this topic via junction table
-    const { data: existingJunction } = await supabase
-      .from('topic_sources')
-      .select(`
-        id,
-        content_sources!inner(
-          id,
-          source_name,
-          canonical_domain,
-          feed_url
-        )
-      `)
+    // Check if source already exists for this topic directly
+    const { data: existingSource } = await supabase
+      .from('content_sources')
+      .select('id, source_name, feed_url')
       .eq('topic_id', topicId)
-      .eq('is_active', true)
-      .or(`content_sources.feed_url.eq.${suggestion.url},content_sources.canonical_domain.eq.${domain}`);
+      .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
+      .maybeSingle();
 
-    if (existingJunction && existingJunction.length > 0) {
+    if (existingSource) {
       return {
         exists: true,
-        id: existingJunction[0].content_sources.id
+        id: existingSource.id
       };
     }
     
@@ -193,62 +185,37 @@ export const SourceSuggestionTool = ({
       // Extract domain for canonical_domain
       const domain = new URL(suggestion.url).hostname.replace('www.', '');
       
-      // Check if source exists globally first (we can reuse it)
-      const { data: existingSource } = await supabase
+      // Create source directly with topic_id
+      const { data: newSource, error: createError } = await supabase
         .from('content_sources')
-        .select('id, source_name')
-        .eq('feed_url', suggestion.url)
-        .maybeSingle();
-
-      let sourceId = existingSource?.id;
-
-      // If source doesn't exist globally, create it
-      if (!sourceId) {
-        const { data: newSource, error: createError } = await supabase
-          .from('content_sources')
-          .insert({
-            source_name: suggestion.source_name,
-            feed_url: suggestion.url,
-            canonical_domain: domain,
-            content_type: 'news',
-            credibility_score: Math.round(suggestion.confidence_score * 0.8),
-            is_active: true,
-            source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
-            region: topicType === 'regional' ? region : null
-            // NO topic_id - sources are now global
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        sourceId = newSource.id;
-      }
-
-      // Add source to topic via junction table
-      const { error: junctionError } = await supabase
-        .from('topic_sources')
         .insert({
-          topic_id: topicId,
-          source_id: sourceId,
+          source_name: suggestion.source_name,
+          feed_url: suggestion.url,
+          canonical_domain: domain,
+          content_type: 'news',
+          credibility_score: Math.round(suggestion.confidence_score * 0.8),
           is_active: true,
-        });
+          source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
+          region: topicType === 'regional' ? region : null,
+          topic_id: topicId
+        })
+        .select('id')
+        .single();
 
-      if (junctionError) {
-        if (junctionError.code === '23505') {
+      if (createError) {
+        if (createError.code === '23505') {
           toast({
             title: "Source Already Added",
             description: "This source is already active for this topic",
             variant: "destructive"
           });
         } else {
-          throw junctionError;
+          throw createError;
         }
       } else {
         toast({
           title: "Source Added Successfully",
-          description: existingSource 
-            ? `${suggestion.source_name} (existing source) added to topic`
-            : `${suggestion.source_name} created and added to topic`,
+          description: `${suggestion.source_name} added to topic successfully`,
         });
         
         // Remove from suggestions after adding
