@@ -2103,7 +2103,9 @@ export type Database = {
         Returns: Json
       }
       detect_article_duplicates: {
-        Args: { p_article_id: string }
+        Args:
+          | { p_article_id: string }
+          | { p_article_id: string; p_topic_id?: string }
         Returns: {
           detection_method: string
           duplicate_id: string
