@@ -74,23 +74,18 @@ export function findKeywordMatches(
     const positions: number[] = [];
 
     for (const variation of keywordVariations) {
-      // Enhanced keyword matching - both exact and partial word matches
+      // Use only exact word boundary matching for accurate keyword detection
       const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      const partialRegex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       
       const exactMatches = Array.from(fullText.matchAll(exactRegex));
-      const partialMatches = Array.from(fullText.matchAll(partialRegex));
-      
-      // Prefer exact matches, but count partial matches with lower weight
-      const primaryMatches = exactMatches.length > 0 ? exactMatches : partialMatches;
-      const occurrences = exactMatches.length > 0 ? exactMatches.length : Math.ceil(partialMatches.length * 0.5);
+      const occurrences = exactMatches.length;
       
       if (occurrences > 0) {
         keywordOccurrences += occurrences;
-        keywordScore += occurrences * (exactMatches.length > 0 ? 3 : 1.5);
+        keywordScore += occurrences * 3; // Consistent scoring for exact matches only
         
         // Record positions and actual matched text
-        primaryMatches.forEach(match => {
+        exactMatches.forEach(match => {
           if (match.index !== undefined) {
             positions.push(match.index);
             allMatches.push(match[0]);
@@ -133,10 +128,9 @@ export function createHighlightingRegex(keywords: string[]): RegExp | null {
 
   if (allVariations.length === 0) return null;
 
-  // Create pattern that matches exact words first, then partial matches
+  // Create pattern that matches only exact word boundaries
   const exactPattern = allVariations.map(v => `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).join('|');
-  const partialPattern = allVariations.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   
-  // Prioritize exact matches, but also catch partial matches
-  return new RegExp(`(${exactPattern}|${partialPattern})`, 'gi');
+  // Use only exact word boundary matching for accurate highlighting
+  return new RegExp(`(${exactPattern})`, 'gi');
 }

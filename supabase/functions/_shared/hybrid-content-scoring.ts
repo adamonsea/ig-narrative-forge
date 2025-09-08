@@ -104,15 +104,11 @@ function calculateKeywordRelevance(
     let keywordOccurrences = 0;
 
     for (const variation of keywordVariations) {
-      // Enhanced keyword matching - both exact and partial word matches
+      // Use only exact word boundary matching for accurate keyword detection
       const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      const partialRegex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       
       const exactMatches = (fullText.match(exactRegex) || []).length;
-      const partialMatches = (fullText.match(partialRegex) || []).length;
-      
-      // Prefer exact matches, but count partial matches with lower weight
-      const occurrences = exactMatches > 0 ? exactMatches : Math.ceil(partialMatches * 0.5);
+      const occurrences = exactMatches;
       keywordOccurrences += occurrences;
 
       if (occurrences > 0) {
