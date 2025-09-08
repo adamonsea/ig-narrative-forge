@@ -9,6 +9,7 @@ import { DuplicateCleanup } from '@/components/DuplicateCleanup';
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
+import MultiTenantScraperTester from '@/components/MultiTenantScraperTester';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -41,10 +42,11 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
             <TabsTrigger value="health">Source Health</TabsTrigger>
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
+            <TabsTrigger value="testing">Testing</TabsTrigger>
             <TabsTrigger value="other">Other Features</TabsTrigger>
           </TabsList>
           
@@ -63,6 +65,10 @@ export default function AdminPanel() {
           
           <TabsContent value="errors" className="mt-6">
             <ErrorTicketDashboard />
+          </TabsContent>
+          
+          <TabsContent value="testing" className="mt-6">
+            <MultiTenantScraperTester />
           </TabsContent>
           
           <TabsContent value="other" className="mt-6">
