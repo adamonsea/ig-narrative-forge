@@ -135,8 +135,11 @@ serve(async (req) => {
       });
     }
 
-    // VOLUME-FIRST APPROACH: Score ALL articles but store them all
-    const allArticlesWithScores = scrapingResult.articles.map(article => {
+    // DYNAMIC FILTERING APPROACH: Apply topic-specific filtering before storage
+    const filteredArticlesWithScores = [];
+    const discardedArticles = [];
+
+    for (const article of scrapingResult.articles) {
       const relevanceScore = calculateTopicRelevance(
         article.body, 
         article.title, 
@@ -145,37 +148,86 @@ serve(async (req) => {
         otherRegionalTopics
       );
 
-      // Add comprehensive scoring metadata but DON'T filter
-      article.regional_relevance_score = relevanceScore.relevance_score;
-      article.import_metadata = {
-        ...article.import_metadata,
-        topic_relevance: relevanceScore,
-        topic_id: topicId,
-        topic_type: topicConfig.topic_type,
-        filtering_method: relevanceScore.method,
-        scrape_approach: 'volume_first'
-      };
-
-      console.log(`Article "${article.title.substring(0, 50)}..." relevance: ${relevanceScore.relevance_score}% - STORING ALL ARTICLES`);
+      // Apply dynamic negative keyword filtering
+      let shouldDiscard = false;
+      let discardReason = '';
       
-      // Add detailed keyword matching debug info
-      if (relevanceScore.method === 'keyword' && relevanceScore.details.keyword_matches) {
-        console.log(`  Keyword matches:`, relevanceScore.details.keyword_matches);
-        console.log(`  Topic keywords:`, topicConfig.keywords);
+      const titleLower = (article.title || '').toLowerCase();
+      const bodyLower = (article.body || '').toLowerCase();
+      const fullText = `${titleLower} ${bodyLower}`;
+
+      // Check negative keywords from topic configuration
+      if (topicData.negative_keywords && topicData.negative_keywords.length > 0) {
+        for (const negativeKeyword of topicData.negative_keywords) {
+          if (fullText.includes(negativeKeyword.toLowerCase())) {
+            shouldDiscard = true;
+            discardReason = `Contains negative keyword: ${negativeKeyword}`;
+            break;
+          }
+        }
       }
-      
-      return article;
-    });
 
-    // Store ALL articles with their scores
+      // Check competing regions from topic configuration
+      if (!shouldDiscard && topicData.competing_regions && topicData.competing_regions.length > 0) {
+        for (const competingRegion of topicData.competing_regions) {
+          if (fullText.includes(competingRegion.toLowerCase())) {
+            shouldDiscard = true;
+            discardReason = `Mentions competing region: ${competingRegion}`;
+            break;
+          }
+        }
+      }
+
+      // Check relevance threshold
+      const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceInfo.source_type || 'national');
+      if (!shouldDiscard && relevanceScore.relevance_score < threshold) {
+        shouldDiscard = true;
+        discardReason = `Below relevance threshold: ${relevanceScore.relevance_score}% < ${threshold}%`;
+      }
+
+      if (shouldDiscard) {
+        console.log(`❌ FILTERED OUT: "${article.title.substring(0, 50)}..." - ${discardReason}`);
+        discardedArticles.push({
+          title: article.title,
+          reason: discardReason,
+          relevance_score: relevanceScore.relevance_score
+        });
+      } else {
+        // Add comprehensive scoring metadata for articles that pass filtering
+        article.regional_relevance_score = relevanceScore.relevance_score;
+        article.import_metadata = {
+          ...article.import_metadata,
+          topic_relevance: relevanceScore,
+          topic_id: topicId,
+          topic_type: topicConfig.topic_type,
+          filtering_method: relevanceScore.method,
+          scrape_approach: 'dynamic_filtered',
+          passed_negative_keywords: true,
+          passed_competing_regions: true,
+          passed_relevance_threshold: true
+        };
+
+        console.log(`✅ PASSED FILTER: "${article.title.substring(0, 50)}..." relevance: ${relevanceScore.relevance_score}%`);
+        
+        // Add detailed keyword matching debug info
+        if (relevanceScore.method === 'keyword' && relevanceScore.details.keyword_matches) {
+          console.log(`  Keyword matches:`, relevanceScore.details.keyword_matches);
+          console.log(`  Topic keywords:`, topicConfig.keywords);
+        }
+        
+        filteredArticlesWithScores.push(article);
+      }
+    }
+
+    // Store only filtered articles
     const { stored, duplicates, discarded } = await dbOps.storeArticles(
-      allArticlesWithScores,
+      filteredArticlesWithScores,
       actualSourceId,
       topicConfig.region || 'general',
       topicId
     );
 
-    console.log(`📊 VOLUME-FIRST Storage - Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
+    console.log(`📊 DYNAMIC FILTERED Storage - Filtered: ${discardedArticles.length}, Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
 
     // Update source metrics
     await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
@@ -187,12 +239,16 @@ serve(async (req) => {
       source_id: actualSourceId,
       feed_url: feedUrl,
       articles_found: scrapingResult.articlesFound,
-      articles_with_scores: allArticlesWithScores.length,
+      articles_pre_filter: scrapingResult.articles.length,
+      articles_filtered_out: discardedArticles.length,
+      articles_passed_filter: filteredArticlesWithScores.length,
       articles_stored: stored,
       duplicates_detected: duplicates,
       articles_discarded: discarded,
       scoring_method: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'volume_first'
+      approach: 'dynamic_filtered',
+      negative_keywords_applied: topicData.negative_keywords?.length || 0,
+      competing_regions_applied: topicData.competing_regions?.length || 0
     }, 'topic-aware-scraper');
 
     return new Response(JSON.stringify({
@@ -200,12 +256,19 @@ serve(async (req) => {
       topicName: topicData.name,
       topicType: topicConfig.topic_type,
       articlesFound: scrapingResult.articlesFound,
-      articlesWithScores: allArticlesWithScores.length,
+      articlesPreFilter: scrapingResult.articles.length,
+      articlesFilteredOut: discardedArticles.length,
+      articlesPassedFilter: filteredArticlesWithScores.length,
       articlesStored: stored,
       duplicatesDetected: duplicates,
       articlesDiscarded: discarded,
       scoringMethod: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'volume_first'
+      approach: 'dynamic_filtered',
+      negativeKeywordsApplied: topicData.negative_keywords?.length || 0,
+      competingRegionsApplied: topicData.competing_regions?.length || 0,
+      filteringDetails: {
+        discardedArticles: discardedArticles
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
