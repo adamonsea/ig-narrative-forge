@@ -387,13 +387,58 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
       return <span className="whitespace-pre-wrap">{text}</span>;
     }
 
-    // Create a regex pattern that matches any of the keywords (case insensitive, whole words)
-    const pattern = new RegExp(`\\b(${allKeywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
+    // Generate keyword variations for better matching (same as scoring system)
+    const generateKeywordVariations = (keyword: string): string[] => {
+      const variations = [keyword];
+      
+      // Add plural/singular variations
+      if (keyword.endsWith('s') && keyword.length > 3) {
+        variations.push(keyword.slice(0, -1));
+      } else {
+        variations.push(keyword + 's');
+      }
+      
+      // Add common synonyms
+      const synonymMap: { [key: string]: string[] } = {
+        'ai': ['artificial intelligence', 'machine learning', 'ml'],
+        'agency': ['agencies', 'firm', 'company', 'studio'],
+        'marketing': ['advertising', 'promotion', 'branding'],
+        'creative': ['creativity', 'design', 'artistic'],
+        'film': ['movie', 'cinema', 'picture'],
+        'children': ['kids', 'child', 'youth']
+      };
+      
+      if (synonymMap[keyword.toLowerCase()]) {
+        variations.push(...synonymMap[keyword.toLowerCase()]);
+      }
+      
+      return [...new Set(variations)];
+    };
+
+    // Generate all variations for highlighting
+    const allVariations: string[] = [];
+    allKeywords.forEach(keyword => {
+      const variations = generateKeywordVariations(keyword.toLowerCase().trim());
+      allVariations.push(...variations);
+    });
+
+    // Create enhanced regex pattern (exact and partial matches like scoring system)
+    const exactPattern = allVariations.map(v => `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).join('|');
+    const partialPattern = allVariations.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const combinedPattern = new RegExp(`(${exactPattern}|${partialPattern})`, 'gi');
     
     // Split the text and highlight matches
-    const parts = text.split(pattern);
-    const matches = text.match(pattern) || [];
+    const parts = text.split(combinedPattern);
+    const matches = text.match(combinedPattern) || [];
     let matchIndex = 0;
+    
+    // Debug logging to show what was highlighted
+    console.log('Highlighting debug:', {
+      originalKeywords: allKeywords,
+      allVariations: allVariations.slice(0, 10), // Show first 10 variations
+      matchesFound: matches.length,
+      firstFewMatches: matches.slice(0, 5)
+    });
     
     return (
       <span className="whitespace-pre-wrap">
@@ -406,8 +451,8 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
               <span key={index}>
                 {part}
                 <mark 
-                  className="bg-yellow-300 text-black px-1 py-0.5 rounded font-bold shadow-sm"
-                  style={{ backgroundColor: '#fef08a', color: '#000' }}
+                  className="bg-warning/20 text-warning-foreground px-1 py-0.5 rounded font-medium border border-warning/30"
+                  title={`Matched keyword variation: ${keyword}`}
                 >
                   {keyword}
                 </mark>

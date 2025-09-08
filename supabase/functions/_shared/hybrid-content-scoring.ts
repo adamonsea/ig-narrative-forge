@@ -146,6 +146,14 @@ function calculateKeywordRelevance(
     normalizedScore = Math.min(normalizedScore + (matches.length - 1) * 5, 100);
   }
   
+  // Add debug logging to show what keywords were actually matched
+  console.log('Keyword matching debug:', {
+    keywords,
+    matches: matches.map(m => ({ keyword: m.keyword, count: m.count })),
+    score: normalizedScore,
+    title: title.substring(0, 100) + '...'
+  });
+  
   return {
     score: normalizedScore,
     matches
