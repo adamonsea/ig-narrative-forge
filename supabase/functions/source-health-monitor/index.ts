@@ -1,311 +1,261 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { EnhancedRetryStrategies } from '../_shared/enhanced-retry-strategies.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface HealthCheckResult {
+interface SourceHealthMetrics {
   sourceId: string;
   sourceName: string;
-  feedUrl: string;
-  isAccessible: boolean;
-  hasValidRSS: boolean;
-  responseTime: number;
-  errorMessage?: string;
-  suggestions: string[];
+  isHealthy: boolean;
+  successRate: number;
+  avgResponseTime: number;
+  lastError?: string;
+  recommendedAction: 'none' | 'monitor' | 'method_change' | 'deactivate' | 'investigate';
+  alternativeMethod?: string;
+  healthScore: number;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('❌ Missing Supabase environment variables');
-    return new Response(
-      JSON.stringify({ error: 'Server configuration error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
   try {
-    const { sourceIds, checkAll } = await req.json().catch(() => ({}));
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
 
-    console.log('🔍 Starting source health monitoring...');
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const retryStrategy = new EnhancedRetryStrategies();
 
-    // Get sources to check
-    let query = supabase
+    console.log('🏥 Starting source health monitoring...');
+
+    // Get all active sources for monitoring
+    const { data: sources, error: sourcesError } = await supabase
       .from('content_sources')
-      .select('id, source_name, feed_url, is_active, success_rate, last_scraped_at');
+      .select('*')
+      .eq('is_active', true)
+      .order('last_scraped_at', { ascending: true, nullsFirst: true });
 
-    if (!checkAll && sourceIds?.length > 0) {
-      query = query.in('id', sourceIds);
-    } else if (checkAll) {
-      query = query.eq('is_active', true);
-    } else {
-      // Check sources with poor success rates or recent failures
-      query = query
-        .eq('is_active', true)
-        .or('success_rate.lt.50,last_scraped_at.lt.now() - interval \'24 hours\'');
+    if (sourcesError) {
+      throw sourcesError;
     }
 
-    const { data: sources, error } = await query;
+    const healthMetrics: SourceHealthMetrics[] = [];
+    let sourcesProcessed = 0;
+    let sourcesDeactivated = 0;
+    let methodsChanged = 0;
 
-    if (error) {
-      throw new Error(`Failed to fetch sources: ${error.message}`);
-    }
-
-    console.log(`📊 Checking health of ${sources?.length || 0} sources...`);
-
-    const healthResults: HealthCheckResult[] = [];
-    const batchSize = 5; // Process 5 sources at a time
-
-    // Process sources in batches to avoid overwhelming the system
-    for (let i = 0; i < (sources?.length || 0); i += batchSize) {
-      const batch = sources!.slice(i, i + batchSize);
-      
-      const batchPromises = batch.map(async (source) => {
-        return await checkSourceHealth(source);
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-      
-      batchResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          healthResults.push(result.value);
-        } else {
-          console.error(`❌ Health check failed for source ${batch[index].id}:`, result.reason);
-          healthResults.push({
-            sourceId: batch[index].id,
-            sourceName: batch[index].source_name,
-            feedUrl: batch[index].feed_url,
-            isAccessible: false,
-            hasValidRSS: false,
-            responseTime: 0,
-            errorMessage: result.reason?.message || 'Unknown error',
-            suggestions: ['Check source configuration', 'Verify URL accessibility']
-          });
-        }
-      });
-
-      // Add delay between batches
-      if (i + batchSize < (sources?.length || 0)) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-
-    // Update source health metrics
-    const failingSources = healthResults.filter(r => !r.isAccessible || !r.hasValidRSS);
-    const healthySources = healthResults.filter(r => r.isAccessible && r.hasValidRSS);
-
-    console.log(`📈 Health check complete: ${healthySources.length} healthy, ${failingSources.length} failing`);
-
-    // Log failing sources for investigation
-    for (const failing of failingSources) {
-      await supabase
-        .from('system_logs')
-        .insert({
-          level: 'warn',
-          message: `Source health check failed: ${failing.sourceName}`,
-          context: {
-            source_id: failing.sourceId,
-            error: failing.errorMessage,
-            suggestions: failing.suggestions,
-            feed_url: failing.feedUrl
-          },
-          function_name: 'source-health-monitor'
-        });
-    }
-
-    // Auto-deactivate sources that have been failing for too long
-    const criticalFailures = failingSources.filter(r => 
-      r.errorMessage?.includes('NOT_FOUND') || 
-      r.errorMessage?.includes('INVALID_CONTENT') ||
-      r.errorMessage?.includes('certificate')
-    );
-
-    if (criticalFailures.length > 0) {
-      console.log(`⚠️ Found ${criticalFailures.length} sources with critical failures`);
-      
-      for (const critical of criticalFailures) {
-        // Check how long this source has been failing
-        const { data: recentLogs } = await supabase
-          .from('system_logs')
-          .select('created_at')
-          .eq('context->>source_id', critical.sourceId)
-          .eq('level', 'warn')
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
-          .order('created_at', { ascending: false });
-
-        if ((recentLogs?.length || 0) >= 3) {
-          console.log(`🚫 Deactivating source ${critical.sourceName} due to repeated failures`);
-          
+    for (const source of sources || []) {
+      try {
+        console.log(`🔍 Analyzing health for: ${source.source_name}`);
+        
+        const metrics = await analyzeSourceHealth(supabase, source, retryStrategy);
+        healthMetrics.push(metrics);
+        
+        // Take action based on health analysis
+        if (metrics.recommendedAction === 'deactivate') {
           await supabase
             .from('content_sources')
             .update({ 
               is_active: false,
+              last_error: `Auto-deactivated: ${metrics.lastError || 'Consistently failing'}`,
               updated_at: new Date().toISOString()
             })
-            .eq('id', critical.sourceId);
+            .eq('id', source.id);
+            
+          console.log(`🚫 Deactivated failing source: ${source.source_name}`);
+          sourcesDeactivated++;
+          
+        } else if (metrics.recommendedAction === 'method_change' && metrics.alternativeMethod) {
+          await supabase
+            .from('content_sources')
+            .update({ 
+              scraping_method: metrics.alternativeMethod,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', source.id);
+            
+          console.log(`🔄 Changed scraping method for ${source.source_name} to ${metrics.alternativeMethod}`);
+          methodsChanged++;
         }
+        
+        sourcesProcessed++;
+        
+      } catch (error) {
+        console.error(`❌ Error analyzing source ${source.source_name}:`, error);
+        
+        healthMetrics.push({
+          sourceId: source.id,
+          sourceName: source.source_name,
+          isHealthy: false,
+          successRate: 0,
+          avgResponseTime: 0,
+          lastError: error.message,
+          recommendedAction: 'investigate',
+          healthScore: 0
+        });
       }
     }
+
+    // Log summary to system logs
+    await supabase.from('system_logs').insert({
+      level: 'info',
+      message: `Source health monitoring completed`,
+      context: {
+        sources_processed: sourcesProcessed,
+        sources_deactivated: sourcesDeactivated,
+        methods_changed: methodsChanged,
+        healthy_sources: healthMetrics.filter(m => m.isHealthy).length,
+        unhealthy_sources: healthMetrics.filter(m => !m.isHealthy).length,
+        avg_health_score: healthMetrics.length > 0 
+          ? healthMetrics.reduce((sum, m) => sum + m.healthScore, 0) / healthMetrics.length 
+          : 0
+      },
+      function_name: 'source-health-monitor'
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        totalSources: sources?.length || 0,
-        healthySources: healthySources.length,
-        failingSources: failingSources.length,
-        criticalFailures: criticalFailures.length,
-        results: healthResults,
-        message: `Health check completed: ${healthySources.length}/${sources?.length} sources healthy`
+        summary: {
+          sources_processed: sourcesProcessed,
+          sources_deactivated: sourcesDeactivated,
+          methods_changed: methodsChanged,
+          healthy_sources: healthMetrics.filter(m => m.isHealthy).length,
+          unhealthy_sources: healthMetrics.filter(m => !m.isHealthy).length
+        },
+        health_metrics: healthMetrics
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('❌ Source health monitor error:', error);
-    
+    console.error('❌ Source health monitoring error:', error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message || 'Health monitoring failed',
-        message: 'Source health monitoring encountered an error'
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });
 
-async function checkSourceHealth(source: any): Promise<HealthCheckResult> {
-  const startTime = Date.now();
-  const suggestions: string[] = [];
+async function analyzeSourceHealth(
+  supabase: any, 
+  source: any, 
+  retryStrategy: EnhancedRetryStrategies
+): Promise<SourceHealthMetrics> {
   
-  try {
-    console.log(`🔍 Checking health of: ${source.source_name}`);
-    
-    // Test URL accessibility
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(source.feed_url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SourceHealthMonitor/1.0)',
-        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/html'
-      }
-    });
-
-    clearTimeout(timeoutId);
-    const responseTime = Date.now() - startTime;
-
-    if (!response.ok) {
-      const errorType = response.status === 404 ? 'URL not found (404)' :
-                       response.status === 403 ? 'Access forbidden (403)' :
-                       response.status >= 500 ? 'Server error' :
-                       `HTTP ${response.status}`;
-      
-      if (response.status === 404) {
-        suggestions.push('Check if the RSS feed URL has changed');
-        suggestions.push('Try common RSS paths: /feed/, /rss/, /rss.xml');
-      } else if (response.status === 403) {
-        suggestions.push('The source may be blocking automated requests');
-        suggestions.push('Contact the source about API access');
-      } else if (response.status >= 500) {
-        suggestions.push('Server issue at source - may be temporary');
-        suggestions.push('Try again later or contact the source');
-      }
-
-      return {
-        sourceId: source.id,
-        sourceName: source.source_name,
-        feedUrl: source.feed_url,
-        isAccessible: false,
-        hasValidRSS: false,
-        responseTime,
-        errorMessage: errorType,
-        suggestions
-      };
-    }
-
-    // Check if it's valid RSS/XML
-    const contentType = response.headers.get('content-type') || '';
-    const content = await response.text();
-    
-    const isValidRSS = (contentType.includes('xml') || contentType.includes('rss') || contentType.includes('atom')) &&
-                       (content.includes('<rss') || content.includes('<feed') || content.includes('<atom') || content.includes('<channel'));
-
-    if (!isValidRSS) {
-      suggestions.push('URL does not return valid RSS/Atom feed');
-      suggestions.push('Check if this is the correct feed URL');
-      suggestions.push('Look for RSS feed links on the website');
-    }
-
-    // Check for common issues
-    if (content.length < 500) {
-      suggestions.push('Feed content is very short - may be empty or error page');
-    }
-
-    if (content.includes('404') || content.includes('not found')) {
-      suggestions.push('Content appears to be an error page');
-    }
-
-    // Performance suggestions
-    if (responseTime > 10000) {
-      suggestions.push('Source response time is slow (>10s) - may cause timeouts');
-    }
-
-    const result: HealthCheckResult = {
-      sourceId: source.id,
-      sourceName: source.source_name,
-      feedUrl: source.feed_url,
-      isAccessible: true,
-      hasValidRSS: isValidRSS,
-      responseTime,
-      suggestions: suggestions.length > 0 ? suggestions : ['Source appears healthy']
-    };
-
-    console.log(`✅ Health check completed for ${source.source_name}: ${isValidRSS ? 'Healthy' : 'Issues found'}`);
-    return result;
-
-  } catch (error) {
-    const responseTime = Date.now() - startTime;
-    let errorMessage = error.message;
-    
-    // Provide specific suggestions based on error type
-    if (error.message.includes('certificate')) {
-      suggestions.push('SSL certificate issue - try HTTP instead of HTTPS');
-      errorMessage = 'SSL Certificate Error';
-    } else if (error.message.includes('timeout') || error.name === 'AbortError') {
-      suggestions.push('Request timed out - source may be slow or unresponsive');
-      errorMessage = 'Timeout Error';
-    } else if (error.message.includes('DNS') || error.message.includes('ENOTFOUND')) {
-      suggestions.push('Domain not found - check if URL is correct');
-      errorMessage = 'DNS Error';
-    } else {
-      suggestions.push('Network or connection error');
-      suggestions.push('Verify URL is accessible from external networks');
-    }
-
-    console.log(`❌ Health check failed for ${source.source_name}: ${errorMessage}`);
-
-    return {
-      sourceId: source.id,
-      sourceName: source.source_name,
-      feedUrl: source.feed_url,
-      isAccessible: false,
-      hasValidRSS: false,
-      responseTime,
-      errorMessage,
-      suggestions
-    };
+  // Quick accessibility check
+  const accessCheck = await retryStrategy.quickAccessibilityCheck(source.feed_url);
+  
+  // Calculate health score (0-100)
+  let healthScore = 0;
+  
+  if (accessCheck.accessible) {
+    healthScore += 30; // Accessibility bonus
   }
+  
+  if (source.success_rate !== null) {
+    healthScore += (source.success_rate * 0.5); // Success rate contributes 50 points max
+  }
+  
+  if (source.avg_response_time_ms && source.avg_response_time_ms < 10000) {
+    healthScore += 20; // Fast response bonus
+  }
+  
+  // Recent activity bonus
+  if (source.last_scraped_at) {
+    const daysSinceLastScrape = (Date.now() - new Date(source.last_scraped_at).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceLastScrape < 1) {
+      healthScore += 10;
+    }
+  }
+
+  // Determine recommended action
+  let recommendedAction: 'none' | 'monitor' | 'method_change' | 'deactivate' | 'investigate' = 'none';
+  let alternativeMethod: string | undefined;
+
+  if (!accessCheck.accessible) {
+    if (source.success_rate === 0 && (source.articles_scraped || 0) >= 3) {
+      recommendedAction = 'deactivate';
+    } else {
+      recommendedAction = 'investigate';
+    }
+  } else if (source.success_rate !== null && source.success_rate < 20 && (source.articles_scraped || 0) >= 5) {
+    // Look for better scraping method
+    const betterMethod = await findBetterScrapingMethod(supabase, source);
+    if (betterMethod) {
+      recommendedAction = 'method_change';
+      alternativeMethod = betterMethod;
+    } else if (source.success_rate === 0) {
+      recommendedAction = 'deactivate';
+    } else {
+      recommendedAction = 'monitor';
+    }
+  } else if (source.success_rate !== null && source.success_rate < 50) {
+    recommendedAction = 'monitor';
+  }
+
+  return {
+    sourceId: source.id,
+    sourceName: source.source_name,
+    isHealthy: healthScore >= 60,
+    successRate: source.success_rate || 0,
+    avgResponseTime: source.avg_response_time_ms || 0,
+    lastError: accessCheck.error || source.last_error,
+    recommendedAction,
+    alternativeMethod,
+    healthScore: Math.round(healthScore)
+  };
+}
+
+async function findBetterScrapingMethod(supabase: any, source: any): Promise<string | null> {
+  // Get performance data for similar sources (same domain pattern)
+  const domain = source.canonical_domain;
+  if (!domain) return null;
+
+  const { data: similarSources } = await supabase
+    .from('content_sources')
+    .select('scraping_method, success_rate, articles_scraped')
+    .ilike('canonical_domain', `%${domain}%`)
+    .neq('id', source.id)
+    .gte('articles_scraped', 3)
+    .gt('success_rate', source.success_rate || 0);
+
+  if (!similarSources || similarSources.length === 0) {
+    return null;
+  }
+
+  // Find the method with the best success rate
+  const methodPerformance = new Map<string, { total: number, count: number }>();
+  
+  for (const similar of similarSources) {
+    const method = similar.scraping_method || 'rss';
+    const current = methodPerformance.get(method) || { total: 0, count: 0 };
+    current.total += similar.success_rate;
+    current.count += 1;
+    methodPerformance.set(method, current);
+  }
+
+  let bestMethod: string | null = null;
+  let bestAverage = 0;
+
+  for (const [method, stats] of methodPerformance) {
+    const average = stats.total / stats.count;
+    if (average > bestAverage && stats.count >= 2 && method !== source.scraping_method) {
+      bestMethod = method;
+      bestAverage = average;
+    }
+  }
+
+  return bestMethod;
 }

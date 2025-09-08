@@ -1,12 +1,15 @@
 import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
+import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
 
 export class EnhancedScrapingStrategies {
   private extractor: UniversalContentExtractor;
+  private retryStrategy: EnhancedRetryStrategies;
 
   constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
     this.extractor = new UniversalContentExtractor(baseUrl);
+    this.retryStrategy = new EnhancedRetryStrategies();
   }
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
@@ -28,9 +31,9 @@ export class EnhancedScrapingStrategies {
     try {
       const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
       
-      // First try the provided/base URL
+      // First try the provided/base URL with enhanced retry
       try {
-        const rssContent = await this.extractor.fetchWithRetry(feedUrl);
+        const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(feedUrl);
         return await this.parseRSSContent(rssContent, feedUrl);
       } catch (primaryError) {
         console.log(`❌ Primary RSS URL failed: ${primaryError.message}`);
@@ -41,7 +44,7 @@ export class EnhancedScrapingStrategies {
         for (const discoveredFeedUrl of discoveredFeeds) {
           try {
             console.log(`🔍 Trying discovered RSS feed: ${discoveredFeedUrl}`);
-            const rssContent = await this.extractor.fetchWithRetry(discoveredFeedUrl);
+            const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(discoveredFeedUrl);
             const result = await this.parseRSSContent(rssContent, discoveredFeedUrl);
             if (result.success && result.articles.length > 0) {
               return { ...result, method: 'rss_discovery' };
@@ -88,7 +91,7 @@ export class EnhancedScrapingStrategies {
     console.log('🔄 Attempting enhanced HTML parsing...');
     
     try {
-      const html = await this.extractor.fetchWithRetry(this.baseUrl);
+      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
       
       // First, try to find RSS feeds in the HTML
       const feedLinks = this.extractFeedLinks(html, this.baseUrl);

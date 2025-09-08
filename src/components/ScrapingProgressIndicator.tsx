@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ScrapingStatus {
-  source_id: string;
-  source_name: string;
-  status: 'pending' | 'scraping' | 'completed' | 'failed';
-  articles_found: number;
+  sourceId: string;
+  sourceName: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  articlesFound: number;
   progress: number;
-  last_update: string;
-  error_message?: string;
+  lastUpdate: string;
+  error?: string;
 }
 
 interface ScrapingProgressIndicatorProps {
@@ -30,65 +30,84 @@ export const ScrapingProgressIndicator = ({
   const [totalProgress, setTotalProgress] = useState(0);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !topicId) return;
 
-    // Simulate real-time scraping updates
     const fetchScrapingStatus = async () => {
       try {
-        const { data: sources } = await supabase
+        // Get all active sources for this topic
+        const { data: sources, error } = await supabase
           .from('content_sources')
-          .select('id, source_name, last_scraped_at, articles_scraped, success_rate')
+          .select('id, source_name, last_scraped_at, success_rate, articles_scraped')
           .eq('topic_id', topicId)
           .eq('is_active', true);
 
-        if (sources) {
-          const statuses: ScrapingStatus[] = sources.map(source => {
-            const timeSinceLastScrape = source.last_scraped_at ? 
-              Date.now() - new Date(source.last_scraped_at).getTime() : 0;
-            
-            // Determine status based on recent activity
-            let status: ScrapingStatus['status'] = 'pending';
-            if (timeSinceLastScrape < 60000) { // Less than 1 minute
-              status = 'scraping';
-            } else if (source.articles_scraped > 0) {
-              status = 'completed';
-            } else if (source.success_rate < 50) {
-              status = 'failed';
-            }
+        if (error) throw error;
 
-            return {
-              source_id: source.id,
-              source_name: source.source_name,
-              status,
-              articles_found: source.articles_scraped || 0,
-              progress: Math.min(100, (source.success_rate || 0)),
-              last_update: source.last_scraped_at || new Date().toISOString(),
-              error_message: source.success_rate < 30 ? 'Low success rate' : undefined
-            };
-          });
-
-          setScrapingStatuses(statuses);
+        const statuses: ScrapingStatus[] = sources?.map(source => {
+          // Determine status based on recent activity and success rate
+          const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
+          const isRecent = lastScraped && (Date.now() - lastScraped.getTime()) < 60000; // Within last minute
           
-          // Calculate total progress
-          const completed = statuses.filter(s => s.status === 'completed').length;
-          const total = statuses.length;
-          const progress = total > 0 ? (completed / total) * 100 : 0;
-          setTotalProgress(progress);
+          let status: ScrapingStatus['status'] = 'pending';
+          let progress = 0;
+          let articlesFound = source.articles_scraped || 0;
 
-          if (progress === 100 && onComplete) {
-            setTimeout(onComplete, 2000); // Delay to show completion
+          if (isRecent) {
+            if (source.success_rate > 0) {
+              status = 'completed';
+              progress = 100;
+            } else {
+              status = 'failed';
+              progress = 100;
+            }
+          } else if (source.success_rate === 0 && source.articles_scraped > 0) {
+            status = 'failed';
+            progress = 100;
+          } else if (source.success_rate > 0) {
+            status = 'completed';
+            progress = 100;
+          } else {
+            status = 'pending';
+            progress = 0;
           }
+
+          return {
+            sourceId: source.id,
+            sourceName: source.source_name,
+            status,
+            articlesFound,
+            progress,
+            lastUpdate: source.last_scraped_at || new Date().toISOString(),
+            error: source.success_rate === 0 && source.articles_scraped > 0 ? 'Scraping failed' : undefined
+          };
+        }) || [];
+
+        setScrapingStatuses(statuses);
+
+        // Calculate overall progress
+        const completedSources = statuses.filter(s => s.status === 'completed' || s.status === 'failed').length;
+        const totalSources = statuses.length;
+        const overallProgress = totalSources > 0 ? (completedSources / totalSources) * 100 : 0;
+        setTotalProgress(overallProgress);
+
+        // Call onComplete if all sources are done
+        if (overallProgress === 100 && onComplete) {
+          onComplete();
         }
+
       } catch (error) {
-        console.error('Failed to fetch scraping status:', error);
+        console.error('Error fetching scraping status:', error);
       }
     };
 
+    // Initial fetch
+    fetchScrapingStatus();
+
+    // Set up polling every 3 seconds
     const interval = setInterval(fetchScrapingStatus, 3000);
-    fetchScrapingStatus(); // Initial fetch
 
     return () => clearInterval(interval);
-  }, [isVisible, topicId, onComplete]);
+  }, [topicId, isVisible, onComplete]);
 
   if (!isVisible || scrapingStatuses.length === 0) {
     return null;
@@ -96,81 +115,66 @@ export const ScrapingProgressIndicator = ({
 
   const getStatusIcon = (status: ScrapingStatus['status']) => {
     switch (status) {
-      case 'scraping':
-        return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
       case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'failed':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'processing':
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
   const getStatusBadge = (status: ScrapingStatus['status']) => {
-    const variants = {
-      pending: 'secondary',
-      scraping: 'default',
-      completed: 'default',
-      failed: 'destructive'
-    } as const;
-
-    const labels = {
-      pending: 'Pending',
-      scraping: 'Scraping...',
-      completed: 'Complete',
-      failed: 'Failed'
-    };
-
-    return (
-      <Badge variant={variants[status]} className="text-xs">
-        {labels[status]}
-      </Badge>
-    );
+    switch (status) {
+      case 'completed':
+        return <Badge variant="default" className="bg-green-500">Completed</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'processing':
+        return <Badge variant="secondary">Processing</Badge>;
+      default:
+        return <Badge variant="outline">Pending</Badge>;
+    }
   };
 
   return (
     <Card className="mb-6">
-      <CardContent className="p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-sm">Scraping Progress</h3>
-            <span className="text-sm text-muted-foreground">
-              {Math.round(totalProgress)}% Complete
-            </span>
-          </div>
-          
-          <Progress value={totalProgress} className="h-2" />
-          
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {scrapingStatuses.map((status) => (
-              <div 
-                key={status.source_id}
-                className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-              >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {getStatusIcon(status.status)}
-                  <span className="text-sm font-medium truncate">
-                    {status.source_name}
-                  </span>
-                  {status.articles_found > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      ({status.articles_found} articles)
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(status.status)}
-                  {status.error_message && (
-                    <div title={status.error_message}>
-                      <AlertCircle className="w-3 h-3 text-orange-500" />
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Scraping Progress
+        </CardTitle>
+        <Progress value={totalProgress} className="w-full" />
+        <p className="text-sm text-muted-foreground">
+          {Math.round(totalProgress)}% complete ({scrapingStatuses.filter(s => s.status === 'completed' || s.status === 'failed').length} of {scrapingStatuses.length} sources)
+        </p>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {scrapingStatuses.map((status) => (
+            <div key={status.sourceId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                {getStatusIcon(status.status)}
+                <div>
+                  <p className="font-medium">{status.sourceName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {status.articlesFound} articles found
+                  </p>
+                  {status.error && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500" />
+                      <p className="text-xs text-red-600">{status.error}</p>
                     </div>
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-2">
+                {getStatusBadge(status.status)}
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

@@ -66,7 +66,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // If selectedTopicId is provided, use UnifiedSourceManager
+  // Always use UnifiedSourceManager - this component is now a wrapper
   if (selectedTopicId) {
     return (
       <div className="space-y-6">
@@ -76,7 +76,6 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           onSourcesChange={onSourcesChange}
         />
         
-        {/* Keep the automation and discarded articles functionality */}
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -97,6 +96,18 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       </div>
     );
   }
+
+  // Legacy fallback - redirect to UnifiedSourceManager
+  return (
+    <div className="space-y-6">
+      <UnifiedSourceManager
+        mode="global"
+        onSourcesChange={onSourcesChange}
+        title="Legacy Source Manager"
+        description="Please use the topic-specific source management instead"
+      />
+    </div>
+  );
 
   // Legacy fallback for when no selectedTopicId is provided
   const [topics, setTopics] = useState<Topic[]>([]);
