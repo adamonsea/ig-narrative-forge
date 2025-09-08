@@ -1,6 +1,30 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { getScraperFunction, createScraperRequestBody } from '../../../src/lib/scraperUtils.ts';
+
+// Inline scraper utility functions (can't import from frontend)
+function getScraperFunction(topicType: 'regional' | 'keyword'): string {
+  return topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
+}
+
+function createScraperRequestBody(
+  topicType: 'regional' | 'keyword',
+  feedUrl: string,
+  options: { topicId?: string; sourceId?: string; region?: string; }
+) {
+  if (topicType === 'regional') {
+    return {
+      feedUrl,
+      sourceId: options.sourceId,
+      region: options.region || 'default'
+    };
+  } else {
+    return {
+      feedUrl,
+      topicId: options.topicId,
+      sourceId: options.sourceId
+    };
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
