@@ -41,11 +41,12 @@ serve(async (req) => {
           continue;
         }
 
-        // Check for existing articles with same normalized URL
+        // Check for existing articles with same normalized URL within the same topic
         const { data: existingArticles } = await supabase
           .from('articles')
           .select('id, title, processing_status')
           .eq('source_url', article.source_url)
+          .eq('topic_id', topicId)
           .not('processing_status', 'eq', 'discarded');
 
         if (existingArticles && existingArticles.length > 0) {
