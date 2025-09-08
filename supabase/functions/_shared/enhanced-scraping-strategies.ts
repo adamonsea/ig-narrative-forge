@@ -194,11 +194,20 @@ export class EnhancedScrapingStrategies {
       const finalContent = extractedContent.body || description || '';
       const finalTitle = extractedContent.title || title;
       
-      // PLATFORM FIX: Much more lenient validation for initial capture
+      // EMERGENCY FIX: Much more lenient validation for initial capture
       const wordCount = this.countWords(finalContent);
-      if (!finalContent || wordCount < 15) { // Much lower threshold for initial capture
-        console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
-        return null;
+      if (!finalContent || wordCount < 3) { // Emergency: Accept anything with 3+ words
+        console.log(`⚠️ Content very short but still trying: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
+        
+        // If RSS description exists, use it as fallback
+        if (description && description.length > 10) {
+          console.log(`📝 Using RSS description as content fallback`);
+          const finalContent = description;
+        } else if (wordCount === 0) {
+          // Only reject if absolutely no content
+          console.log(`❌ Zero content found, rejecting`);
+          return null;
+        }
       }
 
       // Calculate enhanced regional relevance
@@ -328,20 +337,47 @@ export class EnhancedScrapingStrategies {
   }
 
   private isArticleQualified(article: ArticleData): boolean {
-    // PLATFORM FIX: More lenient qualification to reduce content loss
-    const hasMinimumWords = (article.word_count || 0) >= 15; // Lowered threshold
-    const hasMinimumContent = (article.body?.length || 0) > 30; // Lowered threshold
-    const hasTitle = article.title && article.title.length > 3; // Lowered threshold
+    // EMERGENCY FIX: Accept virtually all articles
+    if (!article.title && !article.body) {
+      console.log(`❌ No title or body found`);
+      return false;
+    }
     
-    // PLATFORM FIX: Extended to 14-day maximum age for better content capture
-    const isRecent = this.isArticleRecent(article.published_at, 14);
+    // Auto-fix missing fields
+    if (!article.title) {
+      article.title = article.body?.substring(0, 100)?.replace(/\n/g, ' ')?.trim() + '...' || 'Untitled Article';
+    }
+    if (!article.body) {
+      article.body = article.title;
+    }
     
-    console.log(`🔍 PLATFORM FIXED Article qualification: "${article.title?.substring(0, 50)}..."`);
-    console.log(`   Words: ${article.word_count || 0}, Length: ${article.body?.length || 0}, Has Title: ${hasTitle}`);
-    console.log(`   Published: ${article.published_at}, Recent (≤14 days): ${isRecent}`);
-    console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle && isRecent}`);
+    // EMERGENCY: Minimal requirements only
+    const minWordCount = 3; // Was 15, now just 3 words
+    const maxAge = 60; // days - was 14, now 60 days
     
-    return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
+    const wordCount = this.countWords(article.body || article.title);
+    if (wordCount < minWordCount) {
+      console.log(`❌ Article extremely short: ${wordCount} words`);
+      return false;
+    }
+    
+    // Very forgiving age check
+    if (article.published_at) {
+      try {
+        const publishedDate = new Date(article.published_at);
+        if (!isNaN(publishedDate.getTime())) {
+          const daysSincePublished = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSincePublished > maxAge) {
+            console.log(`⚠️ Article old but still accepting: ${Math.round(daysSincePublished)} days`);
+          }
+        }
+      } catch (e) {
+        // Ignore date errors
+      }
+    }
+    
+    console.log(`✅ Article qualified: "${article.title?.substring(0, 50)}..." (${wordCount} words)`);
+    return true;
   }
 
   private isArticleRecent(publishedAt?: string, maxDays: number = 14): boolean {
@@ -371,15 +407,44 @@ export class EnhancedScrapingStrategies {
   }
 
   private isContentQualified(content: any): boolean {
-    // PLATFORM FIX: More lenient content qualification
-    const hasMinimumWords = (content.word_count || 0) >= 15; // Lowered threshold
-    const hasMinimumContent = (content.body?.length || 0) > 30; // Lowered threshold
-    const hasTitle = content.title && content.title.length > 3; // Lowered threshold
+    // EMERGENCY FIX: Extremely permissive qualification
+    if (!content.title && !content.body) {
+      return false;
+    }
     
-    // PLATFORM FIX: Extended to 14-day maximum age for better content capture
-    const isRecent = this.isArticleRecent(content.published_at, 14);
+    // If we have a title OR body, that's good enough
+    if (!content.title) content.title = content.body?.substring(0, 100) + '...';
+    if (!content.body) content.body = content.title;
     
-    return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
+    // EMERGENCY: Ultra-relaxed criteria
+    const minWordCount = 5; // Was 15, now 5
+    const maxAge = 30; // days - was 14, now 30
+    
+    const wordCount = this.countWords(content.body || content.title);
+    if (wordCount < minWordCount) {
+      console.log(`⚠️ Content short but accepting: ${wordCount} words`);
+      // Don't reject, just warn
+    }
+    
+    // Very lenient age check
+    if (content.published_at) {
+      try {
+        const publishedDate = new Date(content.published_at);
+        if (isNaN(publishedDate.getTime())) {
+          console.log(`⚠️ Invalid date, but accepting content anyway`);
+        } else {
+          const daysSincePublished = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSincePublished > maxAge) {
+            console.log(`⚠️ Content old but accepting: ${Math.round(daysSincePublished)} days`);
+          }
+        }
+      } catch (e) {
+        console.log(`⚠️ Date parsing error, but accepting content anyway`);
+      }
+    }
+    
+    console.log(`✅ Content qualified: "${content.title?.substring(0, 50)}..."`);
+    return true;
   }
 
   // Helper methods

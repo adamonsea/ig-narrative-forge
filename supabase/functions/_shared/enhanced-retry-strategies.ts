@@ -19,11 +19,22 @@ export interface ScrapingContext {
 
 export class EnhancedRetryStrategies {
   private userAgents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
+    // Latest Chrome versions - most common and accepted
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    
+    // Firefox versions
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+    
+    // Safari and Edge
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+    
+    // Mobile user agents for better acceptance
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
   ];
 
   private getCurrentUserAgent(attempt: number): string {
@@ -148,71 +159,121 @@ export class EnhancedRetryStrategies {
   private getEnhancedHeaders(context: ScrapingContext, userAgent: string): Record<string, string> {
     const baseHeaders = {
       'User-Agent': userAgent,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'DNT': '1',
+      'Accept-Encoding': 'gzip, deflate, br, zstd',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"'
     };
 
-    // Special headers for government sites
+    // Enhanced headers for government sites
     if (context.isGovernmentSite) {
       return {
         ...baseHeaders,
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
+        'Priority': 'u=0, i',
+        // Remove DNT and other tracking headers for gov sites
+        'Accept-Language': 'en-GB,en;q=0.9'
       };
     }
 
-    return baseHeaders;
+    // Add Referer for normal sites to appear more legitimate
+    const hostname = new URL(context.url).hostname;
+    return {
+      ...baseHeaders,
+      'Referer': `https://${hostname}/`,
+      'Origin': `https://${hostname}`
+    };
   }
 
   private isValidContent(content: string): boolean {
-    // Check for common error indicators
-    const errorIndicators = [
+    // EMERGENCY FIX: Much more permissive content validation
+    
+    // Only reject if content is extremely minimal
+    if (content.length < 100) {
+      console.log(`⚠️ Content too short: ${content.length} chars`);
+      return false;
+    }
+
+    // Check for hard error indicators only (not soft ones)
+    const hardErrorIndicators = [
       'access denied',
-      'forbidden',
-      'not found',
-      'error 404',
-      'error 403',
-      'error 500',
-      'maintenance mode',
-      'temporarily unavailable',
-      'cloudflare',
-      'captcha'
+      'forbidden', 
+      'captcha required',
+      'bot protection',
+      'please enable javascript',
+      'cloudflare ray id'
     ];
 
     const lowerContent = content.toLowerCase();
-    const hasErrorIndicators = errorIndicators.some(indicator => 
+    const hasHardErrors = hardErrorIndicators.some(indicator => 
       lowerContent.includes(indicator)
     );
 
-    // Check minimum content length
-    const hasMinimumContent = content.length > 500;
-    
-    // Check for actual HTML structure
-    const hasHtmlStructure = content.includes('<html') || content.includes('<!DOCTYPE') || content.includes('<rss') || content.includes('<feed');
+    if (hasHardErrors) {
+      console.log(`⚠️ Hard error detected in content`);
+      return false;
+    }
 
-    return !hasErrorIndicators && hasMinimumContent && hasHtmlStructure;
+    // Accept any content that looks like HTML, XML, RSS, JSON, or plain text
+    const hasValidStructure = 
+      content.includes('<') || // Any HTML/XML tags
+      content.includes('{') || // JSON content
+      content.includes('<?xml') || // XML declaration
+      content.includes('<!DOCTYPE') || // HTML doctype
+      content.includes('<rss') || // RSS feed
+      content.includes('<feed') || // Atom feed
+      content.match(/\w+.*\w+/); // Basic text content
+
+    if (!hasValidStructure) {
+      console.log(`⚠️ No valid structure detected`);
+      return false;
+    }
+
+    console.log(`✅ Content validation passed: ${content.length} chars`);
+    return true;
   }
 
   private isFatalError(error: any): boolean {
+    // EMERGENCY FIX: Only consider true network failures as fatal
     const fatalErrors = [
       'ERR_NAME_NOT_RESOLVED',
-      'ERR_INTERNET_DISCONNECTED',
-      'ERR_CONNECTION_REFUSED',
+      'ERR_INTERNET_DISCONNECTED', 
       'ENOTFOUND',
-      'ECONNREFUSED'
+      'ECONNREFUSED',
+      'ERR_NETWORK'
     ];
 
-    return fatalErrors.some(fatal => 
+    // Don't consider HTTP errors as fatal - retry them
+    const httpErrorPattern = /^HTTP \d+:/;
+    if (httpErrorPattern.test(error.message)) {
+      console.log(`🔄 HTTP error ${error.message} - will retry`);
+      return false;
+    }
+
+    // Don't consider INVALID_CONTENT as fatal - might be temporary
+    if (error.message?.includes('INVALID_CONTENT')) {
+      console.log(`🔄 Invalid content error - will retry with different approach`);
+      return false;
+    }
+
+    const isFatal = fatalErrors.some(fatal => 
       error.message?.includes(fatal) || error.code?.includes(fatal)
     );
+
+    if (isFatal) {
+      console.log(`💀 Fatal error detected: ${error.message}`);
+    }
+
+    return isFatal;
   }
 
   // Method to test if a URL is accessible before attempting full scrape

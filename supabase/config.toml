@@ -123,3 +123,6 @@ verify_jwt = false
 
 [functions.intelligent-scraper]
 verify_jwt = false
+
+[functions.test-scraper-fix]
+verify_jwt = false
