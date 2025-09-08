@@ -299,7 +299,8 @@ export class MultiTenantDatabaseOperations {
       const postcodes = topic.postcodes || []
       const organizations = topic.organizations || []
       
-      [...landmarks, ...postcodes, ...organizations].forEach(item => {
+      const allLocationItems = landmarks.concat(postcodes).concat(organizations)
+      allLocationItems.forEach(item => {
         if (title.includes(item.toLowerCase()) || body.includes(item.toLowerCase())) {
           score += 25
         }
