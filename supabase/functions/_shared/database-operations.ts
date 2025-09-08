@@ -76,20 +76,43 @@ export class DatabaseOperations {
         // Only do basic URL check here for immediate feedback
         console.log(`✨ Article will be processed with automatic duplicate detection: ${article.title.substring(0, 50)}...`);
 
-        // EMERGENCY: Highly permissive filters to allow more content through during recovery
-        const minWordCount = sourceInfo?.source_type === 'hyperlocal' ? 10 : 15; // Further reduced
-        const minQualityScore = 10; // Significantly reduced 
-        
-        // More permissive relevance thresholds during emergency recovery
-        let recoveryRelevanceThreshold = 5; // Much lower threshold
+        // ENHANCED: 150+ word requirement with source-specific thresholds
+        let minWordCount = 150; // Base requirement for complete articles
         if (sourceInfo?.source_type === 'hyperlocal') {
-          recoveryRelevanceThreshold = 0;  // Allow everything from hyperlocal sources
+          minWordCount = 150; // Hyperlocal: 150 words minimum
         } else if (sourceInfo?.source_type === 'regional') {
-          recoveryRelevanceThreshold = 3;
+          minWordCount = 150; // Regional: 150 words minimum
+        } else {
+          minWordCount = 200; // National: 200 words minimum
         }
         
-        if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < recoveryRelevanceThreshold) {
-          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}/${minWordCount}, quality: ${article.content_quality_score}/${minQualityScore}, relevance: ${article.regional_relevance_score}/${recoveryRelevanceThreshold})`);
+        const minQualityScore = 15; // Reasonable quality threshold
+        
+        // Balanced relevance thresholds
+        let relevanceThreshold = 10;
+        if (sourceInfo?.source_type === 'hyperlocal') {
+          relevanceThreshold = 5;  // Lower for hyperlocal sources
+        } else if (sourceInfo?.source_type === 'regional') {
+          relevanceThreshold = 8;
+        } else {
+          relevanceThreshold = 15; // Higher for national sources
+        }
+        
+        // Add date filtering for local news freshness
+        let tooOld = false;
+        if (article.published_at) {
+          try {
+            const pubDate = new Date(article.published_at);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            tooOld = pubDate < sevenDaysAgo;
+          } catch (error) {
+            console.log(`⚠️ Invalid date format: ${article.published_at}`);
+          }
+        }
+
+        if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < relevanceThreshold || tooOld) {
+          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}/${minWordCount}, quality: ${article.content_quality_score}/${minQualityScore}, relevance: ${article.regional_relevance_score}/${relevanceThreshold}, too old: ${tooOld})`);
           
           // Track URL as discarded
           await this.supabase

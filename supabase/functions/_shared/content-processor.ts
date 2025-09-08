@@ -184,8 +184,9 @@ export function extractContentFromHTML(html: string, url: string): ContentExtrac
     }
   }
 
-  // Strategy 3: Paragraph extraction as fallback
-  if (!content || content.length < 200) {
+  // Strategy 3: Paragraph extraction as fallback - FOCUS ON WORD COUNT
+  const wordCount = countWords(content);
+  if (!content || wordCount < 50) {
     console.log('🔄 Trying paragraph extraction fallback...');
     content = extractParagraphs(cleanHtml);
     extractionMethod = 'paragraph-fallback';
@@ -255,16 +256,34 @@ function extractBySelector(html: string, selector: string): string {
 
 function extractParagraphs(html: string): string {
   const paragraphs: string[] = [];
-  const pMatches = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
   
+  // Enhanced extraction for split content (ads, images between paragraphs)
+  const pMatches = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+  const divMatches = html.match(/<div[^>]*class[^>]*(?:content|article|text)[^>]*>([\s\S]*?)<\/div>/gi) || [];
+  
+  // Collect all text chunks - lower threshold for better aggregation
   for (const pMatch of pMatches) {
     const text = extractTextFromHTML(pMatch);
-    if (text.length > 30) { // Only substantial paragraphs
+    if (text.length > 15) { // Much lower threshold for local news
+      paragraphs.push(text);
+    }
+  }
+  
+  // Also collect from content divs to handle split articles
+  for (const divMatch of divMatches) {
+    const text = extractTextFromHTML(divMatch);
+    if (text.length > 20 && !isNavigationText(text)) {
       paragraphs.push(text);
     }
   }
   
   return paragraphs.join('\n\n');
+}
+
+function isNavigationText(text: string): boolean {
+  const navKeywords = ['menu', 'subscribe', 'follow', 'share', 'comment', 'advertisement'];
+  const textLower = text.toLowerCase();
+  return navKeywords.some(keyword => textLower.includes(keyword)) || text.split(' ').length < 5;
 }
 
 function extractTextFromHTML(html: string): string {
@@ -299,25 +318,29 @@ function countWords(text: string): number {
 function calculateContentQuality(content: string, title: string): number {
   let score = 0;
   
-  // Word count scoring
+  // Enhanced word count scoring for 150+ word requirement
   const wordCount = countWords(content);
-  if (wordCount > 500) score += 40;
-  else if (wordCount > 300) score += 30;
-  else if (wordCount > 150) score += 20;
-  else if (wordCount > 50) score += 10;
+  if (wordCount >= 500) score += 40;
+  else if (wordCount >= 300) score += 35;
+  else if (wordCount >= 200) score += 30;
+  else if (wordCount >= 150) score += 25; // Target threshold for local news
+  else if (wordCount >= 100) score += 20;
+  else if (wordCount >= 50) score += 15;
+  else if (wordCount >= 25) score += 10;
   
   // Content structure scoring
   if (content.includes('\n\n')) score += 10; // Has paragraphs
   if (title && title.length > 10) score += 10; // Has substantial title
   
-  // Content completeness
-  if (content.length > 1000) score += 20;
-  else if (content.length > 500) score += 15;
-  else if (content.length > 200) score += 10;
+  // Content completeness - more realistic for local news
+  if (content.length > 2000) score += 20;
+  else if (content.length > 1000) score += 15;
+  else if (content.length > 500) score += 10;
+  else if (content.length > 300) score += 5;
   
-  // Penalty for very short content
-  if (wordCount < 50) score -= 20;
-  if (content.length < 200) score -= 15;
+  // Reduced penalties - focus on word count over character count
+  if (wordCount < 25) score -= 10;
+  if (wordCount < 10) score -= 20;
   
   return Math.max(0, Math.min(100, score));
 }

@@ -43,8 +43,10 @@ export class BeautifulSoupParser {
     for (const strategy of strategies) {
       try {
         const result = strategy();
-        if (result.body && result.body.length > 100) {
-          console.log(`✅ Extraction successful with strategy: ${strategy.name}`);
+        // WORD-BASED VALIDATION: Focus on word count for 150+ word articles
+        const wordCount = result.body ? result.body.split(/\s+/).length : 0;
+        if (result.body && wordCount >= 25) { // Lower initial threshold, final validation later
+          console.log(`✅ Extraction successful with strategy: ${strategy.name} (${wordCount} words)`);
           return result;
         }
       } catch (error) {
@@ -69,7 +71,8 @@ export class BeautifulSoupParser {
     const article = this.find('article');
     if (article.length > 0) {
       const content = this.cleanText(article.text());
-      if (content.length > 100) {
+      const wordCount = content.split(/\s+/).length;
+      if (wordCount >= 25) { // Word-based threshold
         return this.buildResult(content, 'semantic_article');
       }
     }
@@ -77,7 +80,8 @@ export class BeautifulSoupParser {
     const main = this.find('main');
     if (main.length > 0) {
       const content = this.cleanText(main.text());
-      if (content.length > 100) {
+      const wordCount = content.split(/\s+/).length;
+      if (wordCount >= 25) { // Word-based threshold
         return this.buildResult(content, 'semantic_main');
       }
     }
@@ -101,7 +105,8 @@ export class BeautifulSoupParser {
       const elements = this.find(selector);
       if (elements.length > 0) {
         const content = this.cleanText(elements.first().text());
-        if (content.length > 100) {
+        const wordCount = content.split(/\s+/).length;
+        if (wordCount >= 25) { // Word-based threshold
           return this.buildResult(content, 'common_selectors');
         }
       }
@@ -122,13 +127,15 @@ export class BeautifulSoupParser {
       const text = this.cleanText(this.$(element).text());
       const density = text.length / (this.$(element).find('a').length + 1);
       
-      if (density > maxDensity && text.length > 50) {
+      const wordCount = text.split(/\s+/).length;
+      if (density > maxDensity && wordCount >= 15) {
         maxDensity = density;
         bestContent = text;
       }
     });
 
-    if (bestContent.length > 100) {
+    const wordCount = bestContent.split(/\s+/).length;
+    if (wordCount >= 25) {
       return this.buildResult(bestContent, 'text_density');
     }
 
@@ -150,7 +157,8 @@ export class BeautifulSoupParser {
       const linkCount = $el.find('a').length;
       const textLength = text.length;
       
-      if (textLength > 200 && (linkCount / textLength) < 0.02) {
+      const wordCount = text.split(/\s+/).length;
+      if (wordCount > 30 && (linkCount / textLength) < 0.02) {
         textBlocks.push(text);
       }
     });
@@ -171,8 +179,9 @@ export class BeautifulSoupParser {
     this.find('nav, header, footer, .nav, .menu, .sidebar').remove();
     
     const bodyText = this.cleanText(this.find('body').text());
+    const wordCount = bodyText.split(/\s+/).length;
     
-    if (bodyText.length > 100) {
+    if (wordCount >= 25) {
       return this.buildResult(bodyText, 'fallback');
     }
 

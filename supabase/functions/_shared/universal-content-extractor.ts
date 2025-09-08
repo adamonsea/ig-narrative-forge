@@ -303,9 +303,9 @@ export class UniversalContentExtractor {
 
         const html = await response.text();
         
-        // Validate that we got actual content, not an error page
-        if (html.length < 100 || html.includes('404') || html.includes('not found')) {
-          throw new Error('INVALID_CONTENT: Received minimal or error content');
+        // Validate that we got actual content, not an error page - CHECK FOR ERROR PAGES ONLY
+        if (html.includes('404') || html.includes('not found') || html.includes('page not found') || html.length < 50) {
+          throw new Error('INVALID_CONTENT: Received error page or minimal content');
         }
         
         console.log(`✅ Successfully fetched ${html.length} characters from ${this.domain}`);
@@ -531,16 +531,42 @@ export class UniversalContentExtractor {
 
   private extractParagraphs(html: string): string {
     const paragraphs: string[] = [];
+    
+    // Enhanced paragraph extraction for split content
     const pMatches = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
     
+    // Also collect text from divs that might contain article content split by ads/images
+    const divMatches = html.match(/<div[^>]*class[^>]*(?:content|article|text|body)[^>]*>([\s\S]*?)<\/div>/gi) || [];
+    
+    // Process paragraphs with lower threshold for better aggregation
     for (const pMatch of pMatches) {
       const text = this.extractTextFromHTML(pMatch);
-      if (text.length > 50) { // Only substantial paragraphs
+      if (text.length > 20) { // Lowered threshold for better content aggregation
+        paragraphs.push(text);
+      }
+    }
+    
+    // Process content divs to capture split content
+    for (const divMatch of divMatches) {
+      const text = this.extractTextFromHTML(divMatch);
+      if (text.length > 30 && !this.isNavigationContent(text)) {
         paragraphs.push(text);
       }
     }
     
     return paragraphs.join('\n\n');
+  }
+  
+  private isNavigationContent(text: string): boolean {
+    const navKeywords = ['menu', 'navigation', 'subscribe', 'follow us', 'share', 'comment', 'related articles'];
+    const textLower = text.toLowerCase();
+    return navKeywords.some(keyword => textLower.includes(keyword)) || text.length < 15;
+  }
+  
+  private isNavigationContent(text: string): boolean {
+    const navKeywords = ['menu', 'navigation', 'subscribe', 'follow us', 'share', 'comment', 'related articles'];
+    const textLower = text.toLowerCase();
+    return navKeywords.some(keyword => textLower.includes(keyword)) || text.length < 15;
   }
 
   private extractTextFromHTML(html: string): string {
@@ -593,9 +619,9 @@ export class UniversalContentExtractor {
     // Structure bonus
     if (content.includes('\n\n')) score += 10;
     
-    // Penalty for very short content
-    if (wordCount < 20) score -= 30;
-    if (charCount < 100) score -= 20;
+    // Reduced penalties - focus on word count over character count
+    if (wordCount < 10) score -= 15;
+    if (wordCount < 5) score -= 25;
     
     return Math.max(0, score);
   }
@@ -632,9 +658,9 @@ export class UniversalContentExtractor {
     else if (charCount > 500) score += 10;
     else if (charCount > 200) score += 5;
     
-    // Reduce harsh penalties
-    if (wordCount < 20) score -= 10;
-    if (charCount < 100) score -= 5;
+    // Minimal penalties to allow more content through
+    if (wordCount < 10) score -= 5;
+    if (wordCount < 5) score -= 15;
     
     const finalScore = Math.max(0, Math.min(100, score));
     console.log(`📊 Final quality score: ${finalScore}`);

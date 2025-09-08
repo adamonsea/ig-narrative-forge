@@ -191,8 +191,10 @@ export class EnhancedScrapingStrategies {
       const finalContent = extractedContent.body || description || '';
       const finalTitle = extractedContent.title || title;
       
-      if (!finalContent || this.countWords(finalContent) < 30) {
-        console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}...`);
+      // ENHANCED VALIDATION: 150+ words for complete articles, allow smaller for initial processing
+      const wordCount = this.countWords(finalContent);
+      if (!finalContent || wordCount < 25) { // Lower threshold for initial capture
+        console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
         return null;
       }
 
@@ -323,17 +325,17 @@ export class EnhancedScrapingStrategies {
   }
 
   private isArticleQualified(article: ArticleData): boolean {
-    // VOLUME-FIRST: Very lenient qualification - capture almost everything
-    const hasMinimumWords = (article.word_count || 0) >= 10; // Very low threshold
-    const hasMinimumContent = (article.body?.length || 0) > 20; // Very low threshold
+    // ENHANCED QUALIFICATION: 150+ words for complete articles, 7-day max age
+    const hasMinimumWords = (article.word_count || 0) >= 25; // Initial threshold, final validation in DB
+    const hasMinimumContent = (article.body?.length || 0) > 50; // Reasonable minimum
     const hasTitle = article.title && article.title.length > 5;
     
-    // NEW: Check if article is reasonably recent (within last 6 months)
+    // CRITICAL: 7-day maximum age for local news freshness
     const isRecent = this.isArticleRecent(article.published_at);
     
-    console.log(`🔍 VOLUME-FIRST Article qualification: "${article.title?.substring(0, 50)}..."`);
+    console.log(`🔍 ENHANCED Article qualification: "${article.title?.substring(0, 50)}..."`);
     console.log(`   Words: ${article.word_count || 0}, Length: ${article.body?.length || 0}, Has Title: ${hasTitle}`);
-    console.log(`   Published: ${article.published_at}, Recent: ${isRecent}`);
+    console.log(`   Published: ${article.published_at}, Recent (≤7 days): ${isRecent}`);
     console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle && isRecent}`);
     
     return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
@@ -348,13 +350,14 @@ export class EnhancedScrapingStrategies {
     try {
       const pubDate = new Date(publishedAt);
       const now = new Date();
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(now.getMonth() - 6);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(now.getDate() - 7); // CRITICAL: 7-day maximum for local news
 
-      const isRecent = pubDate >= sixMonthsAgo;
+      const isRecent = pubDate >= sevenDaysAgo;
       
       if (!isRecent) {
-        console.log(`📅 Article too old: ${publishedAt} (${Math.round((now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24))} days ago)`);
+        const daysAgo = Math.round((now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
+        console.log(`📅 Article too old: ${publishedAt} (${daysAgo} days ago, max 7 days for local news)`);
       }
       
       return isRecent;
@@ -365,12 +368,12 @@ export class EnhancedScrapingStrategies {
   }
 
   private isContentQualified(content: any): boolean {
-    // VOLUME-FIRST: Very lenient content qualification
-    const hasMinimumWords = (content.word_count || 0) >= 10;
-    const hasMinimumContent = (content.body?.length || 0) > 20;
+    // ENHANCED CONTENT QUALIFICATION: 150+ words, 7-day max age
+    const hasMinimumWords = (content.word_count || 0) >= 25; // Initial threshold
+    const hasMinimumContent = (content.body?.length || 0) > 50;
     const hasTitle = content.title && content.title.length > 5;
     
-    // NEW: Check if content is reasonably recent (within last 6 months)
+    // CRITICAL: 7-day maximum age for local news freshness
     const isRecent = this.isArticleRecent(content.published_at);
     
     return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;

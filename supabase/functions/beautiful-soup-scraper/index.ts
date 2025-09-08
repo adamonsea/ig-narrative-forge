@@ -245,7 +245,8 @@ async function tryRSSExtraction(rssUrl: string, sourceId?: string, topicId?: str
         // Use RSS description as fallback
       }
 
-      if (body && body.length > 50) {
+      const wordCount = body ? body.split(/\s+/).length : 0;
+      if (body && wordCount >= 15) { // Word-based validation
         articles.push({
           title,
           body,
@@ -297,7 +298,9 @@ async function extractArticleContent(url: string, sourceId?: string, topicId?: s
     const parser = new BeautifulSoupParser(html, url);
     const content = parser.extractMainContent();
 
-    if (!content.body || content.body.length < 100) {
+    // WORD-BASED VALIDATION: 150+ words for local news
+    const wordCount = content.body ? content.body.split(/\s+/).length : 0;
+    if (!content.body || wordCount < 25) { // Initial threshold, final validation in database-operations
       return null;
     }
 
