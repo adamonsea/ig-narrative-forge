@@ -1745,58 +1745,6 @@ export type Database = {
           },
         ]
       }
-      topic_sources: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          source_config: Json | null
-          source_id: string
-          topic_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          source_config?: Json | null
-          source_id: string
-          topic_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          source_config?: Json | null
-          source_id?: string
-          topic_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_topic_sources_source_id"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "content_sources"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_topic_sources_source_id"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "content_sources_basic"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_topic_sources_topic_id"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "topics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       topics: {
         Row: {
           audience_expertise:
