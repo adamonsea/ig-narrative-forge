@@ -24,7 +24,7 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { ArticlesList } from "./topic-pipeline/ArticlesList";
 import { QueueList } from "./topic-pipeline/QueueList";
 import { StoriesList } from "./topic-pipeline/StoriesList";
-import { EmergencyContentButton } from "@/components/EmergencyContentButton";
+
 
 interface Topic {
   id: string;
@@ -601,11 +601,7 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Pending Articles</h3>
                   <div className="flex items-center gap-2">
-                    <EmergencyContentButton 
-                      topicId={selectedTopicId}
-                      onSuccess={loadTopicContent}
-                    />
-                    <Button 
+                    <Button
                       onClick={handleGatherAll}
                       disabled={isGathering}
                       variant="outline"
