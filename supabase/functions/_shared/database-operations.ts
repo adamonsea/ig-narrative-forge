@@ -50,33 +50,46 @@ export class DatabaseOperations {
           const existing = existingArticle[0];
           console.log(`⚠️ Article already exists: ${article.title.substring(0, 50)}... (ID: ${existing.id}, status: ${existing.processing_status})`);
           
-          // Update URL history to reflect we've seen it again
-          await this.supabase
-            .from('scraped_urls_history')
-            .upsert({
-              url: article.source_url,
-              topic_id: topicId,
-              source_id: sourceId,
-              status: 'duplicate',
-              last_seen_at: new Date().toISOString()
-            }, {
-              onConflict: 'url'
-            });
-            
-          duplicates++;
-          continue;
+          // EMERGENCY: Only count as duplicate if article is not discarded - allow re-processing of discarded articles
+          if (existing.processing_status !== 'discarded') {
+            // Update URL history to reflect we've seen it again
+            await this.supabase
+              .from('scraped_urls_history')
+              .upsert({
+                url: article.source_url,
+                topic_id: topicId,
+                source_id: sourceId,
+                status: 'duplicate',
+                last_seen_at: new Date().toISOString()
+              }, {
+                onConflict: 'url'
+              });
+              
+            duplicates++;
+            continue;
+          } else {
+            console.log(`🔄 Re-processing previously discarded article: ${article.title.substring(0, 50)}...`);
+          }
         }
 
         // Simplified duplicate detection - let the database trigger handle detailed detection
         // Only do basic URL check here for immediate feedback
         console.log(`✨ Article will be processed with automatic duplicate detection: ${article.title.substring(0, 50)}...`);
 
-        // FIXED: More lenient quality filters to allow more articles through
-        const minWordCount = sourceInfo?.source_type === 'hyperlocal' ? 20 : 30; // Reduced from 50
-        const minQualityScore = 20; // Reduced from 30
+        // EMERGENCY: Highly permissive filters to allow more content through during recovery
+        const minWordCount = sourceInfo?.source_type === 'hyperlocal' ? 10 : 15; // Further reduced
+        const minQualityScore = 10; // Significantly reduced 
         
-        if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < relevanceThreshold) {
-          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}/${minWordCount}, quality: ${article.content_quality_score}/${minQualityScore}, relevance: ${article.regional_relevance_score}/${relevanceThreshold})`);
+        // More permissive relevance thresholds during emergency recovery
+        let recoveryRelevanceThreshold = 5; // Much lower threshold
+        if (sourceInfo?.source_type === 'hyperlocal') {
+          recoveryRelevanceThreshold = 0;  // Allow everything from hyperlocal sources
+        } else if (sourceInfo?.source_type === 'regional') {
+          recoveryRelevanceThreshold = 3;
+        }
+        
+        if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < recoveryRelevanceThreshold) {
+          console.log(`🗑️ Discarded article: ${article.title.substring(0, 50)}... (words: ${article.word_count}/${minWordCount}, quality: ${article.content_quality_score}/${minQualityScore}, relevance: ${article.regional_relevance_score}/${recoveryRelevanceThreshold})`);
           
           // Track URL as discarded
           await this.supabase

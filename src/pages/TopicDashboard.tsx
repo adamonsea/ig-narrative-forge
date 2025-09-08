@@ -14,6 +14,7 @@ import { TopicAwareContentPipeline } from "@/components/TopicAwareContentPipelin
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
+import { EmergencyRecoveryPanel } from "@/components/EmergencyRecoveryPanel";
 
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
@@ -466,10 +467,11 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
+            <TabsTrigger value="emergency" className="text-orange-600">Emergency</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -658,6 +660,14 @@ const TopicDashboard = () => {
                 </Card>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          <TabsContent value="emergency" className="space-y-6">
+            <Card className={`border-orange-200/30 bg-gradient-to-br from-orange-500/10 to-red-500/5 dark:from-orange-400/10 dark:to-red-400/5 backdrop-blur-sm border-2`}>
+              <CardContent className="p-6">
+                <EmergencyRecoveryPanel />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

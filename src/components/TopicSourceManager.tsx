@@ -159,12 +159,25 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
     if (!confirm('Remove this website source?')) return;
 
     try {
-      const { error } = await supabase
-        .from('content_sources')
-        .delete()
-        .eq('id', sourceId);
+      setLoading(true);
+      
+      // EMERGENCY FIX: Use topic_sources junction table for removal
+      const { error: junctionError } = await supabase
+        .from('topic_sources')
+        .update({ is_active: false })
+        .eq('topic_id', topicId)
+        .eq('source_id', sourceId);
 
-      if (error) throw error;
+      if (junctionError) {
+        console.warn('Junction table update failed:', junctionError);
+        // Fallback to direct deletion
+        const { error: deleteError } = await supabase
+          .from('content_sources')
+          .delete()
+          .eq('id', sourceId);
+
+        if (deleteError) throw deleteError;
+      }
 
       toast({
         title: 'Success',
@@ -177,9 +190,11 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
       console.error('Error removing source:', error);
       toast({
         title: 'Error',
-        description: 'Failed to remove source',
+        description: error.message || 'Failed to remove source',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
