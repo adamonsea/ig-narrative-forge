@@ -24,6 +24,7 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { ArticlesList } from "./topic-pipeline/ArticlesList";
 import { QueueList } from "./topic-pipeline/QueueList";
 import { StoriesList } from "./topic-pipeline/StoriesList";
+import { EmergencyContentButton } from "@/components/EmergencyContentButton";
 
 interface Topic {
   id: string;
@@ -222,6 +223,14 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     if (selectedTopicId) {
       loadCurrentTopic();
       loadTopicContent();
+      
+      // Force immediate refresh to catch any articles not showing due to real-time issues
+      const forceRefresh = setTimeout(() => {
+        loadTopicContent();
+        console.log('🔄 Force refresh completed for topic:', selectedTopicId);
+      }, 1000);
+      
+      return () => clearTimeout(forceRefresh);
     }
   }, [selectedTopicId]);
 
@@ -591,19 +600,25 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                 {/* Gather All Sources Button */}
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Pending Articles</h3>
-                  <Button 
-                    onClick={handleGatherAll}
-                    disabled={isGathering}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    {isGathering ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    {isGathering ? 'Gathering...' : 'Gather All Sources'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <EmergencyContentButton 
+                      topicId={selectedTopicId}
+                      onSuccess={loadTopicContent}
+                    />
+                    <Button 
+                      onClick={handleGatherAll}
+                      disabled={isGathering}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      {isGathering ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {isGathering ? 'Gathering...' : 'Gather All Sources'}
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* High Quality Articles */}
