@@ -225,19 +225,6 @@ export class EnhancedRetryStrategies {
     console.log(`✅ Content validation passed: ${content.length} chars`);
     return true;
   }
-      content.includes('<!DOCTYPE') || // HTML doctype
-      content.includes('<rss') || // RSS feed
-      content.includes('<feed') || // Atom feed
-      content.match(/\w+.*\w+/); // Basic text content
-
-    if (!hasValidStructure) {
-      console.log(`⚠️ No valid structure detected`);
-      return false;
-    }
-
-    console.log(`✅ Content validation passed: ${content.length} chars`);
-    return true;
-  }
 
   private isFatalError(error: any): boolean {
     // EMERGENCY FIX: Only consider true network failures as fatal
