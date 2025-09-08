@@ -114,3 +114,12 @@ verify_jwt = false
 
 [functions.ai-scraper-recovery]
 verify_jwt = false
+
+[functions.enhanced-source-validator]
+verify_jwt = false
+
+[functions.emergency-source-fix]
+verify_jwt = false
+
+[functions.intelligent-scraper]
+verify_jwt = false

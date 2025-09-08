@@ -132,7 +132,7 @@ export const SourceSuggestionTool = ({
         return;
       }
 
-      // Simplified server-side validation for new sources (unless skipped)
+      // ENHANCED VALIDATION: Pre-validate sources before adding
       if (!skipValidation) {
         try {
           const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
@@ -145,41 +145,48 @@ export const SourceSuggestionTool = ({
             }
           });
 
-          // If validation completely fails, add anyway with warning
-          if (validationError) {
-            console.warn('Source validation failed, adding anyway:', validationError.message);
+          // Strict validation - only add sources that pass validation
+          if (validationError || (validationResult && !validationResult.success)) {
+            const errorMsg = validationResult?.error || validationError?.message || 'Source validation failed';
             toast({
-              title: "Added with Validation Warning", 
-              description: `Source added but validation failed: ${validationError.message.substring(0, 80)}...`,
-              variant: "default"
+              title: "Source Validation Failed",
+              description: `Skipping ${suggestion.source_name}: ${errorMsg.substring(0, 100)}...`,
+              variant: "destructive"
             });
-          } else if (validationResult && !validationResult.success) {
-            // Show validation issues but continue adding
-            const errorMsg = validationResult?.error || 'Source validation issues detected';
-            const warnings = validationResult?.warnings || [];
-            
-            console.warn('Source validation issues:', { error: errorMsg, warnings });
+            setAddingSourceId(null);
+            return;
+          }
+
+          // Check validation score - only add high-quality sources
+          const validationScore = validationResult?.validationScore || 0;
+          if (validationScore < 60) {
             toast({
-              title: "Source Added with Issues",
-              description: `Added successfully but with ${warnings.length} validation warnings - may need monitoring`,
-              variant: "default"
+              title: "Source Quality Too Low",
+              description: `${suggestion.source_name} failed quality checks (score: ${validationScore}%)`,
+              variant: "destructive"
             });
-          } else if (validationResult?.warnings?.length > 0) {
-            // Minor warnings only
+            setAddingSourceId(null);
+            return;
+          }
+
+          // Show warnings for medium-quality sources
+          if (validationResult?.warnings?.length > 0) {
             toast({
-              title: "Source Added Successfully",
-              description: `Added with ${validationResult.warnings.length} minor warnings`,
+              title: "Source Added with Monitoring",
+              description: `${suggestion.source_name} added but will be monitored closely`,
               variant: "default"
             });
           }
         } catch (error) {
-          // Validation service failed completely, but still add the source
+          // Validation service failed - don't add source for safety
           console.error('Validation service failed:', error);
           toast({
-            title: "Added Without Validation",
-            description: "Source added successfully but validation service unavailable",
-            variant: "default"
+            title: "Validation Service Unavailable",
+            description: "Cannot add source without validation - please try again later",
+            variant: "destructive"
           });
+          setAddingSourceId(null);
+          return;
         }
       }
       

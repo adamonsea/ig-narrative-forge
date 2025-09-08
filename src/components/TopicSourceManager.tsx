@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Globe, AlertCircle, CheckCircle } from 'lucide-react';
+import { ScrapingProgressIndicator } from './ScrapingProgressIndicator';
 
 interface ContentSource {
   id: string;
@@ -28,6 +29,7 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
   const [sources, setSources] = useState<ContentSource[]>([]);
   const [newUrl, setNewUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
     loadSources();
@@ -103,9 +105,43 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
 
     try {
       const processedUrl = normalizeUrl(newUrl.trim());
-
       setLoading(true);
       const domain = extractDomainFromUrl(processedUrl);
+
+      // ONBOARDING PROTECTION: Validate source before adding
+      try {
+        const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-content-source', {
+          body: {
+            url: processedUrl,
+            sourceType: 'website',
+            topicType: 'regional',
+            region: region,
+            topicId: topicId
+          }
+        });
+
+        if (validationError || (validationResult && !validationResult.success)) {
+          toast({
+            title: 'Source Validation Failed',
+            description: validationResult?.error || validationError?.message || 'This source may not work properly',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (validationResult?.warnings?.length > 0) {
+          toast({
+            title: 'Validation Warnings',
+            description: `Added with ${validationResult.warnings.length} warnings - monitor performance`,
+          });
+        }
+      } catch (validationErr) {
+        console.warn('Source validation failed, adding anyway:', validationErr);
+        toast({
+          title: 'Added Without Validation',
+          description: 'Source added but validation service unavailable',
+        });
+      }
       
       const { error } = await supabase
         .from('content_sources')
@@ -125,11 +161,13 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
 
       if (error) throw error;
 
-      // Start background scraping using topic-aware scraper
-      supabase.functions.invoke('topic-aware-scraper', {
+      // Start background scraping using intelligent scraper for auto-method selection
+      supabase.functions.invoke('intelligent-scraper', {
         body: {
           feedUrl: processedUrl,
+          sourceId: null,
           topicId: topicId,
+          region: region
         },
       }).catch(err => {
         console.error('Background scraping failed:', err);
@@ -137,10 +175,11 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
 
       toast({
         title: 'Website Added',
-        description: 'Website added successfully. Articles will be scraped automatically.',
+        description: 'Website validated and added successfully. Articles will be scraped automatically.',
       });
 
       setNewUrl('');
+      setShowProgress(true); // Show real-time progress
       await loadSources();
       onSourcesChange();
     } catch (error) {
@@ -200,6 +239,13 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
 
   return (
     <div className="space-y-6">
+      {/* Real-time Progress Indicator */}
+      <ScrapingProgressIndicator 
+        topicId={topicId}
+        isVisible={showProgress}
+        onComplete={() => setShowProgress(false)}
+      />
+      
       {/* Add Website URL */}
       <Card>
         <CardHeader>

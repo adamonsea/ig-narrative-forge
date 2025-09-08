@@ -244,8 +244,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Universal scraper error:', error);
     
-    // ENHANCED: Beautiful Soup fallback for failed scraping with better error handling
-    console.log('🍲 Trying Beautiful Soup fallback...');
+    // ENHANCED: Multiple fallback system for failed scraping
+    console.log('🔄 Trying enhanced fallback system...');
     try {
       const { feedUrl, sourceId, region } = await req.json();
       
@@ -254,31 +254,56 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
       
-      // Call Beautiful Soup scraper directly
-      const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
-        body: { feedUrl, sourceId, region }
-      });
+      const fallbackMethods = ['beautiful-soup-scraper', 'ai-scraper-recovery'];
+      let fallbackSuccess = false;
+      
+      for (const method of fallbackMethods) {
+        try {
+          console.log(`🔄 Trying fallback method: ${method}`);
+          const fallbackResult = await supabase.functions.invoke(method, {
+            body: { feedUrl, sourceId, region, timeout: 30000 }
+          });
 
-      if (fallbackResult.data && !fallbackResult.error) {
-        console.log('✅ Beautiful Soup fallback successful');
-        
-        // Update source metrics to reflect fallback success
+          if (fallbackResult.data && !fallbackResult.error && fallbackResult.data.articlesStored > 0) {
+            console.log(`✅ Fallback successful with ${method}: ${fallbackResult.data.articlesStored} articles`);
+            
+            // Update source to use successful method
+            const dbOps = new DatabaseOperations(supabase);
+            const responseTime = Date.now() - startTime;
+            await dbOps.updateSourceMetrics(sourceId, true, method, responseTime);
+            
+            await dbOps.logSystemEvent('info', 
+              `Fallback scraping successful with ${method}: ${fallbackResult.data.articlesStored} articles`,
+              { sourceId, method, articles: fallbackResult.data.articlesStored },
+              'universal-scraper'
+            );
+            
+            fallbackSuccess = true;
+            return new Response(JSON.stringify({
+              ...fallbackResult.data,
+              method: method,
+              fallback_used: true,
+              response_time: responseTime
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (methodError) {
+          console.error(`❌ Fallback method ${method} failed:`, methodError);
+          continue;
+        }
+      }
+      
+      if (!fallbackSuccess) {
         const dbOps = new DatabaseOperations(supabase);
-        const responseTime = Date.now() - startTime;
-        await dbOps.updateSourceMetrics(sourceId, true, 'beautiful_soup_fallback', responseTime);
-        
-        return new Response(JSON.stringify({
-          ...fallbackResult.data,
-          method: 'beautiful_soup_fallback',
-          fallback_used: true
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else {
-        console.error('❌ Beautiful Soup fallback failed:', fallbackResult.error);
+        await dbOps.logSystemEvent('error', 
+          `All scraping methods failed including fallbacks`,
+          { sourceId, primaryError: error.message, fallbackMethods },
+          'universal-scraper'
+        );
       }
     } catch (fallbackError) {
-      console.error('❌ Beautiful Soup fallback exception:', fallbackError);
+      console.error('❌ Enhanced fallback system exception:', fallbackError);
     }
     
     // Log error event with more context
