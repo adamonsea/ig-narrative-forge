@@ -9,8 +9,6 @@ import { DuplicateCleanup } from '@/components/DuplicateCleanup';
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
-import { EmergencyRecoveryDashboard } from '@/components/EmergencyRecoveryDashboard';
-
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -42,18 +40,13 @@ export default function AdminPanel() {
           <p className="text-muted-foreground">Manage system-wide settings and monitor platform health</p>
         </div>
 
-        <Tabs defaultValue="recovery" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="recovery">Recovery</TabsTrigger>
+        <Tabs defaultValue="sources" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
             <TabsTrigger value="health">Source Health</TabsTrigger>
             <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
             <TabsTrigger value="other">Other Features</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="recovery" className="mt-6">
-            <EmergencyRecoveryDashboard />
-          </TabsContent>
           
           <TabsContent value="sources" className="mt-6">
             <UnifiedSourceManager 

@@ -194,35 +194,6 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
     }
   };
 
-  const handleFixSource = async (sourceId: string, newUrl: string) => {
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase
-        .from('content_sources')
-        .update({ feed_url: newUrl })
-        .eq('id', sourceId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Source Fixed',
-        description: 'Source URL updated successfully',
-      });
-
-      await loadSources();
-      onSourcesChange();
-    } catch (error) {
-      console.error('Error fixing source:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to fix source',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRemoveSource = async (sourceId: string) => {
     if (!confirm('Remove this website source?')) return;
@@ -325,34 +296,16 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
                       {source.last_scraped_at && (
                         <span>• Last: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
                       )}
-                      {/* Show fix button for known broken sources */}
-                      {source.canonical_domain === 'theargus.co.uk' && source.id === '10c6ff62-c84a-4ad1-b3d0-4b911ce86474' && (
-                        <Badge variant="destructive" className="text-xs">
-                          Needs Fix
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  {/* Fix button for known broken Argus source */}
-                  {source.canonical_domain === 'theargus.co.uk' && source.id === '10c6ff62-c84a-4ad1-b3d0-4b911ce86474' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleFixSource(source.id, 'https://www.theargus.co.uk/news/rss/')}
-                    >
-                      Fix RSS
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRemoveSource(source.id)}
-                  >
-                    Remove
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemoveSource(source.id)}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
             
