@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
+import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { EnhancedRetryStrategies } from '../_shared/enhanced-retry-strategies.ts';
 
 const corsHeaders = {
@@ -160,6 +161,7 @@ serve(async (req) => {
     // Initialize enhanced scraping system
     const scrapingStrategies = new EnhancedScrapingStrategies(region, sourceInfo, feedUrl);
     const dbOps = new DatabaseOperations(supabase);
+    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase);
 
     // Execute enhanced scraping
     console.log(`🔄 Starting enhanced scraping for ${sourceInfo.source_name}`);
@@ -168,11 +170,12 @@ serve(async (req) => {
     let storedCount = 0;
     let duplicateCount = 0;
     let discardedCount = 0;
+    let multiTenantStoredCount = 0;
 
     if (scrapingResult.success && scrapingResult.articles.length > 0) {
       console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
-      // Store articles with enhanced filtering and topic assignment
+      // Store articles in legacy system (existing functionality)
       const storageResult = await dbOps.storeArticles(
         scrapingResult.articles,
         sourceId,
@@ -186,7 +189,22 @@ serve(async (req) => {
       duplicateCount = storageResult.duplicates;
       discardedCount = storageResult.discarded;
 
-      console.log(`📊 Storage complete: ${storedCount} stored, ${duplicateCount} duplicates, ${discardedCount} discarded`);
+      // Store articles in multi-tenant system if topic is available
+      if (topicId && topicConfig) {
+        console.log(`🔄 Storing articles in multi-tenant system for topic: ${topicId}`);
+        const multiTenantResult = await multiTenantDbOps.storeArticles(
+          scrapingResult.articles,
+          topicId,
+          sourceId
+        );
+        
+        multiTenantStoredCount = multiTenantResult.articlesProcessed;
+        console.log(`📊 Multi-tenant storage: ${multiTenantStoredCount} articles processed`);
+      } else {
+        console.log(`⚠️ No topic available for multi-tenant storage`);
+      }
+
+      console.log(`📊 Storage complete: Legacy: ${storedCount} stored, ${duplicateCount} duplicates, ${discardedCount} discarded | Multi-tenant: ${multiTenantStoredCount} processed`);
     } else {
       console.log(`❌ Scraping failed or no articles found`);
     }
@@ -214,9 +232,11 @@ serve(async (req) => {
         stored: storedCount,
         duplicates: duplicateCount,
         discarded: discardedCount,
+        multiTenantStored: multiTenantStoredCount,
         responseTime,
         errors: scrapingResult.errors,
-        topicAssigned: topicId ? true : false
+        topicAssigned: topicId ? true : false,
+        dualStorageEnabled: topicId ? true : false
       },
       'universal-scraper'
     );
@@ -228,12 +248,14 @@ serve(async (req) => {
         articlesFound: scrapingResult.articlesFound,
         articlesScraped: scrapingResult.articlesScraped,
         articlesStored: storedCount,
+        multiTenantArticlesStored: multiTenantStoredCount,
         duplicatesSkipped: duplicateCount,
         filteredForRelevance: discardedCount,
         responseTime,
         errors: scrapingResult.errors,
+        dualStorageEnabled: topicId ? true : false,
         message: scrapingResult.success 
-          ? `Successfully scraped ${storedCount} articles using ${scrapingResult.method}`
+          ? `Successfully scraped ${storedCount} articles (${multiTenantStoredCount} multi-tenant) using ${scrapingResult.method}`
           : `Scraping failed: ${scrapingResult.errors.join(', ')}`
       }),
       { 
