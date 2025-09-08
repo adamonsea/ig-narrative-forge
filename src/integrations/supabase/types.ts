@@ -168,6 +168,7 @@ export type Database = {
           keywords: string[] | null
           language: string | null
           last_extraction_attempt: string | null
+          originality_confidence: number | null
           processing_status: string
           published_at: string | null
           reading_time_minutes: number | null
@@ -199,6 +200,7 @@ export type Database = {
           keywords?: string[] | null
           language?: string | null
           last_extraction_attempt?: string | null
+          originality_confidence?: number | null
           processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
@@ -230,6 +232,7 @@ export type Database = {
           keywords?: string[] | null
           language?: string | null
           last_extraction_attempt?: string | null
+          originality_confidence?: number | null
           processing_status?: string
           published_at?: string | null
           reading_time_minutes?: number | null
@@ -501,6 +504,67 @@ export type Database = {
             columns: ["related_story_id"]
             isOneToOne: false
             referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discarded_articles: {
+        Row: {
+          created_at: string
+          discarded_at: string
+          discarded_by: string | null
+          discarded_reason: string
+          id: string
+          normalized_url: string
+          source_id: string | null
+          title: string | null
+          topic_id: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          discarded_at?: string
+          discarded_by?: string | null
+          discarded_reason: string
+          id?: string
+          normalized_url: string
+          source_id?: string | null
+          title?: string | null
+          topic_id?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          discarded_at?: string
+          discarded_by?: string | null
+          discarded_reason?: string
+          id?: string
+          normalized_url?: string
+          source_id?: string | null
+          title?: string | null
+          topic_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discarded_articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discarded_articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discarded_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -2154,6 +2218,10 @@ export type Database = {
         Returns: string
       }
       normalize_url: {
+        Args: { input_url: string }
+        Returns: string
+      }
+      normalize_url_enhanced: {
         Args: { input_url: string }
         Returns: string
       }

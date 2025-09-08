@@ -142,7 +142,7 @@ export function extractContentFromHTML(html: string, url: string): ContentExtrac
     }
   }
 
-  // Extract publication date
+  // Phase 3: Enhanced publication date extraction with better parsing
   let published_at = '';
   for (const selector of DATE_SELECTORS) {
     if (selector.includes('datetime')) {
@@ -158,6 +158,32 @@ export function extractContentFromHTML(html: string, url: string): ContentExtrac
         break;
       }
     }
+  }
+
+  // Phase 3: Enhanced date parsing with fallback patterns
+  if (!published_at) {
+    // Look for common date patterns in text
+    const datePatterns = [
+      /Published[:\s]*([A-Za-z]+ \d{1,2},? \d{4})/i,
+      /(\d{1,2}\/\d{1,2}\/\d{4})/,
+      /(\d{4}-\d{2}-\d{2})/,
+      /([A-Za-z]+ \d{1,2},? \d{4})/,
+      /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}/i
+    ];
+    
+    for (const pattern of datePatterns) {
+      const match = cleanHtml.match(pattern);
+      if (match) {
+        published_at = match[1] || match[0];
+        console.log(`📅 Found date using pattern: ${published_at}`);
+        break;
+      }
+    }
+  }
+
+  // Phase 3: Normalize and validate the date
+  if (published_at) {
+    published_at = normalizeDate(published_at);
   }
 
   // Extract main content using progressive strategies
@@ -313,6 +339,42 @@ function cleanText(text: string): string {
 function countWords(text: string): number {
   if (!text) return 0;
   return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+}
+
+// Phase 3: Enhanced date normalization function
+function normalizeDate(dateStr: string): string {
+  try {
+    // Handle problematic date formats like "Sept. 3, 2025"
+    let cleaned = dateStr.trim();
+    
+    // Fix common abbreviations
+    const monthMap = {
+      'Jan.': 'January', 'Feb.': 'February', 'Mar.': 'March', 'Apr.': 'April',
+      'May.': 'May', 'Jun.': 'June', 'Jul.': 'July', 'Aug.': 'August',
+      'Sep.': 'September', 'Sept.': 'September', 'Oct.': 'October', 
+      'Nov.': 'November', 'Dec.': 'December'
+    };
+    
+    for (const [abbrev, full] of Object.entries(monthMap)) {
+      cleaned = cleaned.replace(new RegExp(abbrev, 'gi'), full);
+    }
+    
+    // Try to parse the cleaned date
+    const parsed = new Date(cleaned);
+    
+    // Check if the date is valid and not in the future
+    if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
+      return parsed.toISOString();
+    }
+    
+    // If parsing failed, return current date as fallback
+    console.warn(`⚠️ Could not parse date: "${dateStr}", using current date`);
+    return new Date().toISOString();
+    
+  } catch (error) {
+    console.error(`❌ Date parsing error for "${dateStr}": ${error.message}`);
+    return new Date().toISOString();
+  }
 }
 
 function calculateContentQuality(content: string, title: string): number {

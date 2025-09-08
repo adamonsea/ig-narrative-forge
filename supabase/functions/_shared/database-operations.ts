@@ -36,40 +36,51 @@ export class DatabaseOperations {
 
     for (const article of articles) {
       try {
-        // Normalize URL for better comparison
-        const normalizedUrl = this.normalizeUrl(article.source_url);
+        // Phase 4: Use enhanced URL normalization
+        const normalizedUrl = await this.enhancedNormalizeUrl(article.source_url);
         
-        // Check if article already exists with this URL and is not discarded
+        // Phase 2: CRITICAL FIX - Check discarded articles table first
+        if (topicId) {
+          const { data: discardedCheck } = await this.supabase
+            .from('discarded_articles')
+            .select('id, discarded_reason')
+            .eq('topic_id', topicId)
+            .eq('normalized_url', normalizedUrl)
+            .limit(1);
+
+          if (discardedCheck && discardedCheck.length > 0) {
+            console.log(`🚫 Article was previously discarded for this topic: ${article.title.substring(0, 50)}... (reason: ${discardedCheck[0].discarded_reason})`);
+            duplicates++;
+            continue;
+          }
+        }
+        
+        // Check if article already exists with this URL
         const { data: existingArticle } = await this.supabase
           .from('articles')
-          .select('id, title, processing_status')
-          .eq('source_url', article.source_url)
+          .select('id, title, processing_status, topic_id')
+          .or(`source_url.eq.${article.source_url},source_url.eq.${normalizedUrl}`)
           .limit(1);
 
         if (existingArticle && existingArticle.length > 0) {
           const existing = existingArticle[0];
           console.log(`⚠️ Article already exists: ${article.title.substring(0, 50)}... (ID: ${existing.id}, status: ${existing.processing_status})`);
           
-          // EMERGENCY: Only count as duplicate if article is not discarded - allow re-processing of discarded articles
-          if (existing.processing_status !== 'discarded') {
-            // Update URL history to reflect we've seen it again
-            await this.supabase
-              .from('scraped_urls_history')
-              .upsert({
-                url: article.source_url,
-                topic_id: topicId,
-                source_id: sourceId,
-                status: 'duplicate',
-                last_seen_at: new Date().toISOString()
-              }, {
-                onConflict: 'url'
-              });
-              
-            duplicates++;
-            continue;
-          } else {
-            console.log(`🔄 Re-processing previously discarded article: ${article.title.substring(0, 50)}...`);
-          }
+          // FIXED: Never allow re-processing of ANY existing article
+          await this.supabase
+            .from('scraped_urls_history')
+            .upsert({
+              url: article.source_url,
+              topic_id: topicId,
+              source_id: sourceId,
+              status: 'duplicate',
+              last_seen_at: new Date().toISOString()
+            }, {
+              onConflict: 'url'
+            });
+            
+          duplicates++;
+          continue;
         }
 
         // Simplified duplicate detection - let the database trigger handle detailed detection
@@ -131,6 +142,9 @@ export class DatabaseOperations {
           continue;
         }
 
+        // Phase 5: Calculate originality confidence score
+        const originalityScore = await this.calculateOriginalityConfidence(article, normalizedUrl, topicId);
+
         // Prepare article data for insertion
         const articleData = {
           title: article.title,
@@ -148,6 +162,7 @@ export class DatabaseOperations {
           region: region,
           source_id: sourceId,
           topic_id: topicId,
+          originality_confidence: originalityScore,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -275,14 +290,31 @@ export class DatabaseOperations {
 
   async markArticleAsManuallyDiscarded(articleId: string): Promise<void> {
     try {
-      // Get the article's source URL
+      // Get the article's complete information
       const { data: article } = await this.supabase
         .from('articles')
-        .select('source_url')
+        .select('source_url, title, topic_id, source_id')
         .eq('id', articleId)
         .single();
 
       if (article) {
+        const normalizedUrl = await this.enhancedNormalizeUrl(article.source_url);
+        
+        // Phase 1: Add to discarded articles table for permanent tracking
+        await this.supabase
+          .from('discarded_articles')
+          .upsert({
+            topic_id: article.topic_id,
+            source_id: article.source_id,
+            url: article.source_url,
+            normalized_url: normalizedUrl,
+            title: article.title,
+            discarded_reason: 'manually_discarded_by_user',
+            discarded_at: new Date().toISOString()
+          }, {
+            onConflict: 'topic_id,normalized_url'
+          });
+
         // Update URL history status to 'manually_discarded'
         await this.supabase
           .from('scraped_urls_history')
@@ -292,7 +324,19 @@ export class DatabaseOperations {
           })
           .eq('url', article.source_url);
 
-        console.log(`🚫 Marked article as manually discarded: ${article.source_url}`);
+        // Update article status to discarded
+        await this.supabase
+          .from('articles')
+          .update({
+            processing_status: 'discarded',
+            import_metadata: {
+              discarded_reason: 'manually_discarded_by_user',
+              discarded_at: new Date().toISOString()
+            }
+          })
+          .eq('id', articleId);
+
+        console.log(`🚫 Permanently discarded article: ${article.title} (${article.source_url})`);
       }
     } catch (error) {
       console.error(`❌ Error marking article as manually discarded: ${error.message}`);
@@ -328,6 +372,114 @@ export class DatabaseOperations {
     } catch {
       return url.toLowerCase();
     }
+  }
+
+  // Phase 4: Enhanced URL normalization using database function
+  private async enhancedNormalizeUrl(url: string): Promise<string> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('normalize_url_enhanced', { input_url: url });
+      
+      if (error) {
+        console.warn(`Warning: Failed to use enhanced URL normalization: ${error.message}`);
+        return this.normalizeUrl(url);
+      }
+      
+      return data || this.normalizeUrl(url);
+    } catch (error) {
+      console.warn(`Warning: Enhanced URL normalization error: ${error.message}`);
+      return this.normalizeUrl(url);
+    }
+  }
+
+  // Phase 5: Calculate originality confidence score
+  private async calculateOriginalityConfidence(article: ArticleData, normalizedUrl: string, topicId?: string): Promise<number> {
+    let confidence = 100; // Start with full confidence
+    
+    try {
+      // Check for similar URLs across all topics (not just current one)
+      const { data: similarUrls } = await this.supabase
+        .from('articles')
+        .select('id, source_url, title')
+        .neq('processing_status', 'discarded')
+        .limit(10);
+      
+      if (similarUrls) {
+        for (const existing of similarUrls) {
+          const existingNormalized = await this.enhancedNormalizeUrl(existing.source_url);
+          
+          // Exact URL match
+          if (existingNormalized === normalizedUrl) {
+            confidence = Math.min(confidence, 0); // Zero confidence for exact duplicates
+            break;
+          }
+          
+          // Domain and path similarity check
+          const similarity = this.calculateUrlSimilarity(normalizedUrl, existingNormalized);
+          if (similarity > 0.8) {
+            confidence = Math.min(confidence, Math.max(20, 100 - similarity * 100));
+          }
+          
+          // Title similarity check
+          if (article.title && existing.title) {
+            const titleSimilarity = this.calculateTitleSimilarity(article.title, existing.title);
+            if (titleSimilarity > 0.85) {
+              confidence = Math.min(confidence, Math.max(10, 100 - titleSimilarity * 100));
+            }
+          }
+        }
+      }
+      
+      // Check against discarded articles for this topic
+      if (topicId) {
+        const { data: discardedSimilar } = await this.supabase
+          .from('discarded_articles')
+          .select('normalized_url, title')
+          .eq('topic_id', topicId)
+          .limit(5);
+          
+        if (discardedSimilar) {
+          for (const discarded of discardedSimilar) {
+            if (discarded.normalized_url === normalizedUrl) {
+              confidence = 0; // Zero confidence if previously discarded
+              break;
+            }
+            
+            const similarity = this.calculateUrlSimilarity(normalizedUrl, discarded.normalized_url);
+            if (similarity > 0.9) {
+              confidence = Math.min(confidence, 5); // Very low confidence
+            }
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.warn(`Warning: Error calculating originality confidence: ${error.message}`);
+    }
+    
+    return Math.max(0, Math.min(100, confidence));
+  }
+
+  // Helper method for URL similarity calculation
+  private calculateUrlSimilarity(url1: string, url2: string): number {
+    if (url1 === url2) return 1.0;
+    
+    // Split into domain and path components
+    const parts1 = url1.split('/');
+    const parts2 = url2.split('/');
+    
+    // Domain similarity
+    const domain1 = parts1[0] || '';
+    const domain2 = parts2[0] || '';
+    const domainSimilarity = this.calculateSimilarity(domain1, domain2);
+    
+    // Path similarity
+    const path1 = parts1.slice(1).join('/');
+    const path2 = parts2.slice(1).join('/');
+    const pathSimilarity = this.calculateSimilarity(path1, path2);
+    
+    // Weighted average (domain more important)
+    return (domainSimilarity * 0.7) + (pathSimilarity * 0.3);
   }
 
   private calculateTitleSimilarity(title1: string, title2: string): number {
