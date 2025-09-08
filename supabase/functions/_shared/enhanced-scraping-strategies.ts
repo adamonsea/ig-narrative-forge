@@ -194,9 +194,9 @@ export class EnhancedScrapingStrategies {
       const finalContent = extractedContent.body || description || '';
       const finalTitle = extractedContent.title || title;
       
-      // ENHANCED VALIDATION: 150+ words for complete articles, allow smaller for initial processing
+      // PLATFORM FIX: Much more lenient validation for initial capture
       const wordCount = this.countWords(finalContent);
-      if (!finalContent || wordCount < 25) { // Lower threshold for initial capture
+      if (!finalContent || wordCount < 15) { // Much lower threshold for initial capture
         console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
         return null;
       }
@@ -328,23 +328,23 @@ export class EnhancedScrapingStrategies {
   }
 
   private isArticleQualified(article: ArticleData): boolean {
-    // ENHANCED QUALIFICATION: 150+ words for complete articles, 7-day max age
-    const hasMinimumWords = (article.word_count || 0) >= 25; // Initial threshold, final validation in DB
-    const hasMinimumContent = (article.body?.length || 0) > 50; // Reasonable minimum
-    const hasTitle = article.title && article.title.length > 5;
+    // PLATFORM FIX: More lenient qualification to reduce content loss
+    const hasMinimumWords = (article.word_count || 0) >= 15; // Lowered threshold
+    const hasMinimumContent = (article.body?.length || 0) > 30; // Lowered threshold
+    const hasTitle = article.title && article.title.length > 3; // Lowered threshold
     
-    // CRITICAL: 7-day maximum age for local news freshness
-    const isRecent = this.isArticleRecent(article.published_at);
+    // PLATFORM FIX: Extended to 14-day maximum age for better content capture
+    const isRecent = this.isArticleRecent(article.published_at, 14);
     
-    console.log(`🔍 ENHANCED Article qualification: "${article.title?.substring(0, 50)}..."`);
+    console.log(`🔍 PLATFORM FIXED Article qualification: "${article.title?.substring(0, 50)}..."`);
     console.log(`   Words: ${article.word_count || 0}, Length: ${article.body?.length || 0}, Has Title: ${hasTitle}`);
-    console.log(`   Published: ${article.published_at}, Recent (≤7 days): ${isRecent}`);
+    console.log(`   Published: ${article.published_at}, Recent (≤14 days): ${isRecent}`);
     console.log(`   Qualified: ${hasMinimumWords && hasMinimumContent && hasTitle && isRecent}`);
     
     return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
   }
 
-  private isArticleRecent(publishedAt?: string): boolean {
+  private isArticleRecent(publishedAt?: string, maxDays: number = 14): boolean {
     if (!publishedAt) {
       console.log('⚠️ No publication date found, treating as recent');
       return true; // If no date, assume it's recent
@@ -353,14 +353,14 @@ export class EnhancedScrapingStrategies {
     try {
       const pubDate = new Date(publishedAt);
       const now = new Date();
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(now.getDate() - 7); // CRITICAL: 7-day maximum for local news
+      const cutoffDate = new Date();
+      cutoffDate.setDate(now.getDate() - maxDays); // PLATFORM FIX: Configurable maximum days
 
-      const isRecent = pubDate >= sevenDaysAgo;
+      const isRecent = pubDate >= cutoffDate;
       
       if (!isRecent) {
         const daysAgo = Math.round((now.getTime() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
-        console.log(`📅 Article too old: ${publishedAt} (${daysAgo} days ago, max 7 days for local news)`);
+        console.log(`📅 Article too old: ${publishedAt} (${daysAgo} days ago, max ${maxDays} days)`);
       }
       
       return isRecent;
@@ -371,13 +371,13 @@ export class EnhancedScrapingStrategies {
   }
 
   private isContentQualified(content: any): boolean {
-    // ENHANCED CONTENT QUALIFICATION: 150+ words, 7-day max age
-    const hasMinimumWords = (content.word_count || 0) >= 25; // Initial threshold
-    const hasMinimumContent = (content.body?.length || 0) > 50;
-    const hasTitle = content.title && content.title.length > 5;
+    // PLATFORM FIX: More lenient content qualification
+    const hasMinimumWords = (content.word_count || 0) >= 15; // Lowered threshold
+    const hasMinimumContent = (content.body?.length || 0) > 30; // Lowered threshold
+    const hasTitle = content.title && content.title.length > 3; // Lowered threshold
     
-    // CRITICAL: 7-day maximum age for local news freshness
-    const isRecent = this.isArticleRecent(content.published_at);
+    // PLATFORM FIX: Extended to 14-day maximum age for better content capture
+    const isRecent = this.isArticleRecent(content.published_at, 14);
     
     return hasMinimumWords && hasMinimumContent && hasTitle && isRecent;
   }

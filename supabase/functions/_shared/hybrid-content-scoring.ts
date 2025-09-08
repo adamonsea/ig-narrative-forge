@@ -134,12 +134,17 @@ function calculateKeywordRelevance(
     }
   }
 
-  // Improved normalization: more generous scoring for multiple keyword matches
-  let normalizedScore = Math.min(Math.round(totalScore * 1.5), 100);
+  // PLATFORM FIX: Much more generous scoring to reduce false negatives
+  let normalizedScore = Math.min(Math.round(totalScore * 2.5), 100); // Increased multiplier
   
-  // Bonus for multiple different keywords matching
+  // Higher bonus for multiple different keywords matching
   if (matches.length > 1) {
-    normalizedScore = Math.min(normalizedScore + (matches.length - 1) * 5, 100);
+    normalizedScore = Math.min(normalizedScore + (matches.length - 1) * 10, 100);
+  }
+  
+  // Additional bonus for any keyword match to be more permissive
+  if (matches.length > 0) {
+    normalizedScore = Math.max(normalizedScore, 15); // Minimum score for any keyword match
   }
   
   // Add debug logging to show what keywords were actually matched
@@ -194,16 +199,17 @@ export function getRelevanceThreshold(
   topicType: 'regional' | 'keyword',
   sourceType: string = 'national'
 ): number {
+  // PLATFORM FIX: Much more permissive thresholds to reduce 85-95% discard rate
   if (topicType === 'regional') {
-    // Regional content thresholds - keep reasonable to avoid too restrictive filtering
-    if (sourceType === 'hyperlocal') return 20; // Local sources should be more lenient
-    if (sourceType === 'regional') return 25; // Regional sources moderate threshold
-    return 30; // National sources need higher relevance for regional topics
+    // Regional content thresholds - very permissive to let more content through
+    if (sourceType === 'hyperlocal') return 5; // Local sources extremely lenient
+    if (sourceType === 'regional') return 8; // Regional sources very permissive
+    return 10; // National sources still quite lenient
   } else {
-    // Keyword-based thresholds - more lenient since keyword matching can vary
-    if (sourceType === 'hyperlocal') return 20; // Local content can be relevant with lower scores
-    if (sourceType === 'regional') return 22; // Regional sources slight increase
-    return 25; // National sources need decent keyword relevance
+    // Keyword-based thresholds - very lenient since keyword matching can vary
+    if (sourceType === 'hyperlocal') return 5; // Local content can be relevant with lower scores
+    if (sourceType === 'regional') return 8; // Regional sources slight increase
+    return 10; // National sources need very low keyword relevance
   }
 }
 

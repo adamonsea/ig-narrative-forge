@@ -74,18 +74,26 @@ export function findKeywordMatches(
     const positions: number[] = [];
 
     for (const variation of keywordVariations) {
-      // Use only exact word boundary matching for accurate keyword detection
+      // PLATFORM FIX: More flexible keyword matching - exact boundaries + partial matches for better coverage
       const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      const partialRegex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       
       const exactMatches = Array.from(fullText.matchAll(exactRegex));
-      const occurrences = exactMatches.length;
+      const partialMatches = Array.from(fullText.matchAll(partialRegex));
+      
+      // Count both exact and partial matches, with preference for exact
+      let occurrences = exactMatches.length;
+      if (occurrences === 0 && partialMatches.length > 0) {
+        occurrences = Math.ceil(partialMatches.length * 0.7); // Weight partial matches at 70%
+      }
       
       if (occurrences > 0) {
         keywordOccurrences += occurrences;
-        keywordScore += occurrences * 3; // Consistent scoring for exact matches only
+        keywordScore += occurrences * (exactMatches.length > 0 ? 3 : 2); // Slight preference for exact matches
         
         // Record positions and actual matched text
-        exactMatches.forEach(match => {
+        const primaryMatches = exactMatches.length > 0 ? exactMatches : partialMatches;
+        primaryMatches.forEach(match => {
           if (match.index !== undefined) {
             positions.push(match.index);
             allMatches.push(match[0]);
@@ -128,9 +136,10 @@ export function createHighlightingRegex(keywords: string[]): RegExp | null {
 
   if (allVariations.length === 0) return null;
 
-  // Create pattern that matches only exact word boundaries
+  // PLATFORM FIX: More flexible highlighting pattern - exact boundaries + partial matches
   const exactPattern = allVariations.map(v => `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).join('|');
+  const partialPattern = allVariations.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   
-  // Use only exact word boundary matching for accurate highlighting
-  return new RegExp(`(${exactPattern})`, 'gi');
+  // Use both exact and partial matching for better highlighting coverage
+  return new RegExp(`(${exactPattern}|${partialPattern})`, 'gi');
 }
