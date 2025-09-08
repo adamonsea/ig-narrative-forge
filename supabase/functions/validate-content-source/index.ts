@@ -155,17 +155,37 @@ serve(async (req) => {
       }
     }
 
-    // Test scraping functionality (optional - only if we have topicId)
+    // Check for topic-scoped duplicates (only if we have topicId)
     if (topicId && result.isAccessible) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
         
-        if (!supabaseUrl || !supabaseServiceKey) {
-          result.warnings.push('Cannot test scraping: Supabase configuration missing');
-        } else {
+        if (supabaseUrl && supabaseServiceKey) {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
           
+          // Check if this URL already exists for this specific topic
+          const { data: existingTopicSource } = await supabase
+            .from('topic_sources')
+            .select(`
+              id,
+              content_sources!inner(feed_url, source_name)
+            `)
+            .eq('topic_id', topicId)
+            .eq('content_sources.feed_url', url)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (existingTopicSource) {
+            result.success = false;
+            result.error = 'This source is already active for this topic';
+            return new Response(JSON.stringify(result), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // Test scraping functionality
           // Determine which scraper to use
           const scraperFunction = topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
           
@@ -199,10 +219,12 @@ serve(async (req) => {
             
             console.log('📈 Scraper test result:', result.scraperTest);
           }
+        } else {
+          result.warnings.push('Cannot test scraping: Supabase configuration missing');
         }
       } catch (error) {
-        result.warnings.push(`Scraper test error: ${error.message}`);
-        console.error('❌ Scraper test failed:', error);
+        result.warnings.push(`Validation error: ${error.message}`);
+        console.error('❌ Validation failed:', error);
       }
     }
 

@@ -154,21 +154,80 @@ export const UnifiedSourceManager = ({
   const loadSources = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('content_sources').select('*');
 
-      // Apply filters based on mode
       if (mode === 'topic' && topicId) {
-        query = query.eq('topic_id', topicId);
-      } else if (mode === 'region' && region) {
-        query = query.eq('region', region).is('topic_id', null);
-      } else if (mode === 'global') {
-        query = query.is('topic_id', null);
+        // For topic mode, load sources via junction table
+        const { data, error } = await supabase
+          .from('topic_sources')
+          .select(`
+            id,
+            is_active,
+            source_config,
+            content_sources!inner(
+              id,
+              source_name,
+              feed_url,
+              canonical_domain,
+              credibility_score,
+              articles_scraped,
+              success_rate,
+              avg_response_time_ms,
+              last_scraped_at,
+              region,
+              content_type,
+              is_whitelisted,
+              is_blacklisted,
+              scrape_frequency_hours,
+              scraping_method,
+              topic_id
+            )
+          `)
+          .eq('topic_id', topicId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        // Transform data to match expected interface
+        const transformedSources = (data || []).map(item => ({
+          id: item.content_sources.id,
+          source_name: item.content_sources.source_name,
+          feed_url: item.content_sources.feed_url,
+          canonical_domain: item.content_sources.canonical_domain,
+          credibility_score: item.content_sources.credibility_score,
+          articles_scraped: item.content_sources.articles_scraped,
+          success_rate: item.content_sources.success_rate,
+          avg_response_time_ms: item.content_sources.avg_response_time_ms,
+          last_scraped_at: item.content_sources.last_scraped_at,
+          region: item.content_sources.region,
+          content_type: item.content_sources.content_type,
+          is_whitelisted: item.content_sources.is_whitelisted,
+          is_blacklisted: item.content_sources.is_blacklisted,
+          scrape_frequency_hours: item.content_sources.scrape_frequency_hours,
+          scraping_method: item.content_sources.scraping_method,
+          topic_id: item.content_sources.topic_id,
+          is_active: item.is_active,
+          success_count: 0,
+          failure_count: 0,
+          last_error: null,
+        }));
+        
+        setSources(transformedSources);
+      } else {
+        // For non-topic modes, use original approach
+        let query = supabase.from('content_sources').select('*');
+
+        if (mode === 'region' && region) {
+          query = query.eq('region', region).is('topic_id', null);
+        } else if (mode === 'global') {
+          query = query.is('topic_id', null);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setSources(data || []);
       }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setSources(data || []);
     } catch (error) {
       console.error('Error loading sources:', error);
       toast({
@@ -281,31 +340,104 @@ export const UnifiedSourceManager = ({
       const normalizedUrl = normalizeUrl(newSource.feed_url.trim());
       const domain = extractDomainFromUrl(normalizedUrl);
       
-      const sourceData = {
-        source_name: newSource.source_name.trim(),
-        feed_url: normalizedUrl,
-        canonical_domain: domain,
-        credibility_score: newSource.credibility_score,
-        scrape_frequency_hours: newSource.scrape_frequency_hours,
-        content_type: newSource.content_type,
-        is_active: true,
-        is_whitelisted: true,
-        is_blacklisted: false,
-        ...(mode === 'topic' && topicId && { topic_id: topicId }),
-        ...(mode === 'region' && region && { region: newSource.region }),
-        ...(mode === 'global' && { region: newSource.region }),
-      };
+      // For topic mode, check topic-scoped duplicates and use junction table
+      if (mode === 'topic' && topicId) {
+        // Check if this URL already exists for this specific topic
+        const { data: existingTopicSource } = await supabase
+          .from('topic_sources')
+          .select(`
+            id,
+            content_sources!inner(feed_url, source_name)
+          `)
+          .eq('topic_id', topicId)
+          .eq('content_sources.feed_url', normalizedUrl)
+          .eq('is_active', true)
+          .maybeSingle();
 
-      const { error } = await supabase
-        .from('content_sources')
-        .insert(sourceData);
+        if (existingTopicSource) {
+          toast({
+            title: 'Source Already Added',
+            description: 'This source is already active for this topic',
+            variant: 'destructive',
+          });
+          return;
+        }
 
-      if (error) throw error;
+        // Check if source exists globally (we can reuse it)
+        const { data: existingSource } = await supabase
+          .from('content_sources')
+          .select('id, source_name')
+          .eq('feed_url', normalizedUrl)
+          .maybeSingle();
 
-      toast({
-        title: 'Success',
-        description: 'Content source added successfully',
-      });
+        let sourceId = existingSource?.id;
+
+        // If source doesn't exist globally, create it
+        if (!sourceId) {
+          const { data: newGlobalSource, error: createError } = await supabase
+            .from('content_sources')
+            .insert({
+              source_name: newSource.source_name.trim(),
+              feed_url: normalizedUrl,
+              canonical_domain: domain,
+              credibility_score: newSource.credibility_score,
+              scrape_frequency_hours: newSource.scrape_frequency_hours,
+              content_type: newSource.content_type,
+              is_active: true,
+              is_whitelisted: true,
+              is_blacklisted: false,
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          sourceId = newGlobalSource.id;
+        }
+
+        // Add source to topic via junction table
+        const { error: junctionError } = await supabase
+          .from('topic_sources')
+          .insert({
+            topic_id: topicId,
+            source_id: sourceId,
+            is_active: true,
+          });
+
+        if (junctionError) throw junctionError;
+
+        toast({
+          title: 'Success',
+          description: existingSource 
+            ? 'Existing source added to this topic successfully'
+            : 'Content source created and added to topic successfully',
+        });
+      } else {
+        // For non-topic mode, use the original approach
+        const sourceData = {
+          source_name: newSource.source_name.trim(),
+          feed_url: normalizedUrl,
+          canonical_domain: domain,
+          credibility_score: newSource.credibility_score,
+          scrape_frequency_hours: newSource.scrape_frequency_hours,
+          content_type: newSource.content_type,
+          is_active: true,
+          is_whitelisted: true,
+          is_blacklisted: false,
+          ...(mode === 'region' && region && { region: newSource.region }),
+          ...(mode === 'global' && { region: newSource.region }),
+        };
+
+        const { error } = await supabase
+          .from('content_sources')
+          .insert(sourceData);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: 'Content source added successfully',
+        });
+      }
 
       // Trigger initial scraping for the new source
       try {
