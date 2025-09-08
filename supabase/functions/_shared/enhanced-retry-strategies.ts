@@ -195,39 +195,36 @@ export class EnhancedRetryStrategies {
   }
 
   private isValidContent(content: string): boolean {
-    // EMERGENCY FIX: Much more permissive content validation
+    // UNIVERSAL PLATFORM FIX: Much more permissive content validation
     
-    // Only reject if content is extremely minimal
-    if (content.length < 100) {
+    // Only reject if content is extremely minimal (less than 50 characters)
+    if (content.length < 50) {
       console.log(`⚠️ Content too short: ${content.length} chars`);
       return false;
     }
 
-    // Check for hard error indicators only (not soft ones)
-    const hardErrorIndicators = [
-      'access denied',
-      'forbidden', 
-      'captcha required',
-      'bot protection',
-      'please enable javascript',
-      'cloudflare ray id'
+    // Only check for critical blocking errors - be very conservative
+    const criticalErrors = [
+      'access is denied',
+      'captcha verification required', 
+      'please complete the security check',
+      'cloudflare security check'
     ];
 
     const lowerContent = content.toLowerCase();
-    const hasHardErrors = hardErrorIndicators.some(indicator => 
-      lowerContent.includes(indicator)
+    const hasCriticalError = criticalErrors.some(error => 
+      lowerContent.includes(error)
     );
 
-    if (hasHardErrors) {
-      console.log(`⚠️ Hard error detected in content`);
+    if (hasCriticalError) {
+      console.log(`⚠️ Critical blocking error detected`);
       return false;
     }
 
-    // Accept any content that looks like HTML, XML, RSS, JSON, or plain text
-    const hasValidStructure = 
-      content.includes('<') || // Any HTML/XML tags
-      content.includes('{') || // JSON content
-      content.includes('<?xml') || // XML declaration
+    // Accept virtually all content - news sites vary greatly in structure
+    console.log(`✅ Content validation passed: ${content.length} chars`);
+    return true;
+  }
       content.includes('<!DOCTYPE') || // HTML doctype
       content.includes('<rss') || // RSS feed
       content.includes('<feed') || // Atom feed

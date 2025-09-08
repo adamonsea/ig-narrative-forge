@@ -132,3 +132,9 @@ verify_jwt = false
 
 [functions.fix-topic-keywords]
 verify_jwt = false
+
+[functions.universal-platform-fix]
+verify_jwt = false
+
+[functions.schedule-recovery]
+verify_jwt = false

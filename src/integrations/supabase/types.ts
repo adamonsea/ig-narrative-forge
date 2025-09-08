@@ -2085,6 +2085,14 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      bulk_delete_discarded_articles: {
+        Args: { p_topic_id?: string }
+        Returns: Json
+      }
+      bulk_delete_pending_articles: {
+        Args: { p_topic_id?: string }
+        Returns: Json
+      }
       check_newsletter_signup_rate_limit: {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
@@ -2112,6 +2120,10 @@ export type Database = {
       }
       delete_story_cascade: {
         Args: { p_story_id: string }
+        Returns: Json
+      }
+      delete_topic_cascade: {
+        Args: { p_topic_id: string }
         Returns: Json
       }
       detect_article_duplicates: {
