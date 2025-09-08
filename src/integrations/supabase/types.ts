@@ -1476,6 +1476,63 @@ export type Database = {
           },
         ]
       }
+      shared_article_content: {
+        Row: {
+          author: string | null
+          body: string | null
+          canonical_url: string | null
+          content_checksum: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          language: string | null
+          last_seen_at: string
+          normalized_url: string
+          published_at: string | null
+          source_domain: string | null
+          title: string
+          updated_at: string
+          url: string
+          word_count: number | null
+        }
+        Insert: {
+          author?: string | null
+          body?: string | null
+          canonical_url?: string | null
+          content_checksum?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          language?: string | null
+          last_seen_at?: string
+          normalized_url: string
+          published_at?: string | null
+          source_domain?: string | null
+          title: string
+          updated_at?: string
+          url: string
+          word_count?: number | null
+        }
+        Update: {
+          author?: string | null
+          body?: string | null
+          canonical_url?: string | null
+          content_checksum?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          language?: string | null
+          last_seen_at?: string
+          normalized_url?: string
+          published_at?: string | null
+          source_domain?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+          word_count?: number | null
+        }
+        Relationships: []
+      }
       slides: {
         Row: {
           alt_text: string | null
@@ -1653,6 +1710,80 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      topic_articles: {
+        Row: {
+          content_quality_score: number | null
+          created_at: string
+          id: string
+          import_metadata: Json | null
+          keyword_matches: string[] | null
+          originality_confidence: number | null
+          processing_status: string
+          regional_relevance_score: number | null
+          shared_content_id: string
+          source_id: string | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_quality_score?: number | null
+          created_at?: string
+          id?: string
+          import_metadata?: Json | null
+          keyword_matches?: string[] | null
+          originality_confidence?: number | null
+          processing_status?: string
+          regional_relevance_score?: number | null
+          shared_content_id: string
+          source_id?: string | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_quality_score?: number | null
+          created_at?: string
+          id?: string
+          import_metadata?: Json | null
+          keyword_matches?: string[] | null
+          originality_confidence?: number | null
+          processing_status?: string
+          regional_relevance_score?: number | null
+          shared_content_id?: string
+          source_id?: string | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_articles_shared_content_id_fkey"
+            columns: ["shared_content_id"]
+            isOneToOne: false
+            referencedRelation: "shared_article_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_articles_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       topic_automation_settings: {
         Row: {
@@ -2171,6 +2302,30 @@ export type Database = {
           topic_type: string
         }[]
       }
+      get_topic_articles_multi_tenant: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
+        Returns: {
+          author: string
+          body: string
+          content_quality_score: number
+          created_at: string
+          id: string
+          image_url: string
+          processing_status: string
+          published_at: string
+          regional_relevance_score: number
+          shared_content_id: string
+          title: string
+          updated_at: string
+          url: string
+          word_count: number
+        }[]
+      }
       get_topic_sources: {
         Args: { p_topic_id: string }
         Returns: {
@@ -2236,6 +2391,10 @@ export type Database = {
           p_message: string
         }
         Returns: string
+      }
+      migrate_articles_to_multi_tenant: {
+        Args: { p_limit?: number }
+        Returns: Json
       }
       normalize_url: {
         Args: { input_url: string }

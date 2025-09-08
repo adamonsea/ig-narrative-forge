@@ -17,6 +17,7 @@ import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
+import { MultiTenantMigrationTester } from "@/components/MultiTenantMigrationTester";
 import { SentimentManager } from "@/components/SentimentManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";

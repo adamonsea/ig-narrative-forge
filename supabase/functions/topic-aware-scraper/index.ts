@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
+import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { calculateTopicRelevance, getRelevanceThreshold, TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 import { TopicRegionalConfig } from '../_shared/region-config.ts';
 
@@ -111,11 +112,12 @@ serve(async (req) => {
       feedUrl
     );
     const dbOps = new DatabaseOperations(supabase);
+    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase);
 
     const startTime = Date.now();
 
     // Perform scraping using unified strategy
-    console.log(`Starting scraping for topic: ${topicConfig.topic_type} - ${topicData.name}`);
+    console.log(`Starting PARALLEL scraping for topic: ${topicConfig.topic_type} - ${topicData.name}`);
     const scrapingResult = await scrapingStrategies.executeScrapingStrategy();
 
     if (!scrapingResult.success) {
@@ -219,21 +221,44 @@ serve(async (req) => {
       }
     }
 
-    // Store only filtered articles
-    const { stored, duplicates, discarded } = await dbOps.storeArticles(
+    // Store using BOTH old and new systems for parallel testing
+    // 1. Store using legacy system (existing behavior)
+    const legacyResult = await dbOps.storeArticles(
       filteredArticlesWithScores,
       actualSourceId,
       topicConfig.region || 'general',
       topicId
     );
 
-    console.log(`📊 DYNAMIC FILTERED Storage - Filtered: ${discardedArticles.length}, Stored: ${stored}, Duplicates: ${duplicates}, Discarded: ${discarded}`);
+    console.log(`📊 LEGACY Storage - Stored: ${legacyResult.stored}, Duplicates: ${legacyResult.duplicates}, Discarded: ${legacyResult.discarded}`);
+
+    // 2. Store using new multi-tenant system (parallel testing)
+    let multiTenantResult = null;
+    try {
+      multiTenantResult = await multiTenantDbOps.storeArticles(
+        filteredArticlesWithScores,
+        topicId,
+        actualSourceId
+      );
+      
+      console.log(`📊 MULTI-TENANT Storage - Processed: ${multiTenantResult.articlesProcessed}, New content: ${multiTenantResult.newContentCreated}, Topic articles: ${multiTenantResult.topicArticlesCreated}, Duplicates: ${multiTenantResult.duplicatesSkipped}`);
+    } catch (multiTenantError) {
+      console.error('Multi-tenant storage failed (expected during migration):', multiTenantError);
+      multiTenantResult = {
+        success: false,
+        error: multiTenantError.message,
+        articlesProcessed: 0,
+        newContentCreated: 0,
+        topicArticlesCreated: 0,
+        duplicatesSkipped: 0
+      };
+    }
 
     // Update source metrics
     await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
 
-    // Log the operation
-    await dbOps.logSystemEvent('info', `Topic-aware scraping completed for ${topicData.name}`, {
+    // Log the operation with both legacy and multi-tenant results
+    await dbOps.logSystemEvent('info', `PARALLEL Topic-aware scraping completed for ${topicData.name}`, {
       topic_id: topicId,
       topic_type: topicConfig.topic_type,
       source_id: actualSourceId,
@@ -242,14 +267,22 @@ serve(async (req) => {
       articles_pre_filter: scrapingResult.articles.length,
       articles_filtered_out: discardedArticles.length,
       articles_passed_filter: filteredArticlesWithScores.length,
-      articles_stored: stored,
-      duplicates_detected: duplicates,
-      articles_discarded: discarded,
+      // Legacy results
+      legacy_stored: legacyResult.stored,
+      legacy_duplicates: legacyResult.duplicates,
+      legacy_discarded: legacyResult.discarded,
+      // Multi-tenant results
+      mt_success: multiTenantResult?.success || false,
+      mt_processed: multiTenantResult?.articlesProcessed || 0,
+      mt_new_content: multiTenantResult?.newContentCreated || 0,
+      mt_topic_articles: multiTenantResult?.topicArticlesCreated || 0,
+      mt_duplicates: multiTenantResult?.duplicatesSkipped || 0,
+      // Configuration
       scoring_method: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'dynamic_filtered',
+      approach: 'parallel_migration_test',
       negative_keywords_applied: topicData.negative_keywords?.length || 0,
       competing_regions_applied: topicData.competing_regions?.length || 0
-    }, 'topic-aware-scraper');
+    }, 'topic-aware-scraper-parallel');
 
     return new Response(JSON.stringify({
       success: true,
@@ -259,11 +292,21 @@ serve(async (req) => {
       articlesPreFilter: scrapingResult.articles.length,
       articlesFilteredOut: discardedArticles.length,
       articlesPassedFilter: filteredArticlesWithScores.length,
-      articlesStored: stored,
-      duplicatesDetected: duplicates,
-      articlesDiscarded: discarded,
+      // Legacy results
+      legacyStored: legacyResult.stored,
+      legacyDuplicates: legacyResult.duplicates,
+      legacyDiscarded: legacyResult.discarded,
+      // Multi-tenant results
+      multiTenant: {
+        success: multiTenantResult?.success || false,
+        processed: multiTenantResult?.articlesProcessed || 0,
+        newContent: multiTenantResult?.newContentCreated || 0,
+        topicArticles: multiTenantResult?.topicArticlesCreated || 0,
+        duplicatesSkipped: multiTenantResult?.duplicatesSkipped || 0,
+        errors: multiTenantResult?.errors || []
+      },
       scoringMethod: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'dynamic_filtered',
+      approach: 'parallel_migration_test',
       negativeKeywordsApplied: topicData.negative_keywords?.length || 0,
       competingRegionsApplied: topicData.competing_regions?.length || 0,
       filteringDetails: {
