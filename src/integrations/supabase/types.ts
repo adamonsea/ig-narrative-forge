@@ -2140,6 +2140,10 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      emergency_manual_scrape: {
+        Args: { p_topic_id?: string }
+        Returns: Json
+      }
       find_duplicate_articles: {
         Args: { p_article_id: string; p_similarity_threshold?: number }
         Returns: {
