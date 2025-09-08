@@ -2085,6 +2085,10 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
+      auto_generate_missing_schedules: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       bulk_delete_discarded_articles: {
         Args: { p_topic_id?: string }
         Returns: Json
@@ -2292,6 +2296,15 @@ export type Database = {
       update_scheduler_setting: {
         Args: { p_setting_key: string; p_setting_value: Json }
         Returns: boolean
+      }
+      update_source_health_metrics: {
+        Args: {
+          p_error_message?: string
+          p_response_time_ms?: number
+          p_source_id: string
+          p_success: boolean
+        }
+        Returns: undefined
       }
       user_has_region_access: {
         Args: { check_region: string }
