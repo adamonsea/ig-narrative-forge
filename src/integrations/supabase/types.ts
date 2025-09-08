@@ -2316,6 +2316,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string
+          keyword_matches: string[]
           processing_status: string
           published_at: string
           regional_relevance_score: number
