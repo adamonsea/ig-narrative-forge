@@ -65,28 +65,61 @@ serve(async (req) => {
         
         // Check topic-specific filtering
         const relevanceScore = calculateRelevanceScore(article, topic)
-        const qualityScore = calculateQualityScore(article)
+        let qualityScore = calculateQualityScoreWithRelevance(article, topic)
         
-        // Skip if fails topic filtering
-        if (relevanceScore < 5 || qualityScore < 30) {
-          console.log(`Skipping article due to low scores: ${article.title}`)
+        // Try content enhancement for low word count articles
+        let enhancedArticle = article
+        if (calculateWordCount(article.body || '') < 100) {
+          console.log(`🔄 Attempting content enhancement for short article: ${article.title}`)
+          try {
+            const enhanced = await enhanceContent(article.source_url)
+          if (enhanced && enhanced.body && calculateWordCount(enhanced.body) > calculateWordCount(article.body || '')) {
+              enhancedArticle = { ...article, ...enhanced }
+              qualityScore = calculateQualityScoreWithRelevance(enhancedArticle, topic)
+              console.log(`✅ Content enhanced: ${calculateWordCount(article.body || '')} → ${calculateWordCount(enhanced.body)} words`)
+            }
+          } catch (error) {
+            console.log(`⚠️ Content enhancement failed: ${error.message}`)
+          }
+        }
+        
+        // Get source credibility for threshold adjustment
+        const { data: sourceData } = await supabase
+          .from('content_sources')
+          .select('credibility_score')
+          .eq('id', sourceId)
+          .single()
+        
+        const credibilityScore = sourceData?.credibility_score || 50
+        const qualityThreshold = credibilityScore >= 90 ? 15 : 30
+        const relevanceThreshold = topic.topic_type === 'regional' ? 3 : 5
+        
+        // Skip if fails topic filtering with debug info
+        if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
+          console.log(`🚫 Skipping article: "${enhancedArticle.title}"`)
+          console.log(`   - Relevance: ${relevanceScore}/${relevanceThreshold} (${topic.topic_type})`)
+          console.log(`   - Quality: ${qualityScore}/${qualityThreshold} (credibility: ${credibilityScore}%)`)
+          console.log(`   - Word count: ${calculateWordCount(enhancedArticle.body || '')}`)
           continue
         }
+        
+        console.log(`✅ Article passed filtering: "${enhancedArticle.title}"`)
+        console.log(`   - Relevance: ${relevanceScore}, Quality: ${qualityScore}, Words: ${calculateWordCount(enhancedArticle.body || '')}`)
 
-        // Insert or update shared content
+        // Insert or update shared content using enhanced article
         const { data: sharedContent, error: contentError } = await supabase
           .from('shared_article_content')
           .upsert({
-            url: article.source_url,
+            url: enhancedArticle.source_url,
             normalized_url: normalizedUrl,
-            title: article.title,
-            body: article.body || '',
-            author: article.author,
-            published_at: article.published_at,
-            image_url: article.image_url,
-            canonical_url: article.canonical_url,
-            word_count: calculateWordCount(article.body || ''),
-            language: article.language || 'en',
+            title: enhancedArticle.title,
+            body: enhancedArticle.body || '',
+            author: enhancedArticle.author,
+            published_at: enhancedArticle.published_at,
+            image_url: enhancedArticle.image_url,
+            canonical_url: enhancedArticle.canonical_url,
+            word_count: calculateWordCount(enhancedArticle.body || ''),
+            language: enhancedArticle.language || 'en',
             source_domain: sourceDomain,
             last_seen_at: new Date().toISOString()
           }, { 
@@ -125,7 +158,10 @@ serve(async (req) => {
               scrape_method: 'multi_tenant_scraper',
               scrape_timestamp: new Date().toISOString(),
               source_domain: sourceDomain,
-              keyword_matches: findKeywordMatches(article, topic)
+              keyword_matches: findKeywordMatches(enhancedArticle, topic),
+              content_enhanced: enhancedArticle !== article,
+              quality_breakdown: getQualityScoreBreakdown(enhancedArticle, credibilityScore),
+              credibility_score: credibilityScore
             },
             originality_confidence: 100
           }, { 
@@ -151,14 +187,14 @@ serve(async (req) => {
             .upsert({
               topic_id: topicId,
               source_id: sourceId,
-              title: article.title,
-              body: article.body,
-              author: article.author,
-              source_url: article.source_url,
-              image_url: article.image_url,
-              canonical_url: article.canonical_url,
-              published_at: article.published_at,
-              word_count: calculateWordCount(article.body || ''),
+              title: enhancedArticle.title,
+              body: enhancedArticle.body,
+              author: enhancedArticle.author,
+              source_url: enhancedArticle.source_url,
+              image_url: enhancedArticle.image_url,
+              canonical_url: enhancedArticle.canonical_url,
+              published_at: enhancedArticle.published_at,
+              word_count: calculateWordCount(enhancedArticle.body || ''),
               regional_relevance_score: relevanceScore,
               content_quality_score: qualityScore,
               processing_status: 'new',
@@ -303,25 +339,97 @@ function calculateQualityScore(article: any): number {
   const body = article.body || ''
   const wordCount = calculateWordCount(body)
   
-  // Word count scoring
+  // Smart word count scoring
   if (wordCount > 300) score += 20
-  else if (wordCount > 150) score += 10
-  else if (wordCount < 50) score -= 30
+  else if (wordCount > 150) score += 15
+  else if (wordCount > 100) score += 10
+  else if (wordCount > 50) score += 5
+  else if (wordCount < 30) score -= 10 // Reduced penalty from -30
   
-  // Title quality
-  if (title.length > 30 && title.length < 100) score += 10
-  if (title.includes('?') || title.includes('!')) score += 5
-  
-  // Content quality indicators
-  if (article.author) score += 10
-  if (article.published_at) score += 5
-  if (article.image_url) score += 5
+  // Content quality indicators (reduced importance)
+  if (article.author) score += 5 // Reduced from 10
+  if (article.published_at) score += 3 // Reduced from 5
+  // Removed image scoring as it's not important
   
   // Negative quality indicators
   if (title.toLowerCase().includes('error') || title.toLowerCase().includes('404')) score -= 50
-  if (body.length < title.length * 2) score -= 20
+  if (body.length > 0 && body.length < title.length * 2) score -= 15 // Reduced penalty
   
   return Math.min(100, Math.max(0, score))
+}
+
+function calculateQualityScoreWithRelevance(article: any, topic: any): number {
+  let score = calculateQualityScore(article)
+  
+  const title = (article.title || '').toLowerCase()
+  const body = (article.body || '').toLowerCase()
+  const keywords = topic.keywords || []
+  
+  // Keyword relevance boost for title
+  for (const keyword of keywords) {
+    if (title.includes(keyword.toLowerCase())) {
+      score += 15 // Big boost for keyword in title
+    }
+  }
+  
+  // Regional relevance boost
+  if (topic.topic_type === 'regional' && topic.region) {
+    const region = topic.region.toLowerCase()
+    if (title.includes(region)) score += 20 // Big boost for region in title
+    
+    // Check landmarks and postcodes
+    const landmarks = topic.landmarks || []
+    const postcodes = topic.postcodes || []
+    const organizations = topic.organizations || []
+    
+    const allLocationItems = landmarks.concat(postcodes).concat(organizations)
+    for (const item of allLocationItems) {
+      if (title.includes(item.toLowerCase())) {
+        score += 15
+      }
+    }
+  }
+  
+  return Math.min(100, Math.max(0, score))
+}
+
+function getQualityScoreBreakdown(article: any, credibilityScore: number = 50): any {
+  const title = article.title || ''
+  const body = article.body || ''
+  const wordCount = calculateWordCount(body)
+  
+  return {
+    base_score: 50,
+    word_count: wordCount,
+    word_count_bonus: wordCount > 300 ? 20 : wordCount > 150 ? 15 : wordCount > 100 ? 10 : wordCount > 50 ? 5 : 0,
+    word_count_penalty: wordCount < 30 ? -10 : 0,
+    author_bonus: article.author ? 5 : 0,
+    published_date_bonus: article.published_at ? 3 : 0,
+    error_penalty: (title.toLowerCase().includes('error') || title.toLowerCase().includes('404')) ? -50 : 0,
+    body_length_penalty: (body.length > 0 && body.length < title.length * 2) ? -15 : 0,
+    credibility_score: credibilityScore,
+    threshold_used: credibilityScore >= 90 ? 15 : 30
+  }
+}
+
+async function enhanceContent(url: string): Promise<any> {
+  try {
+    // Dynamic import of the UniversalContentExtractor
+    const { UniversalContentExtractor } = await import('../_shared/universal-content-extractor.ts')
+    
+    const extractor = new UniversalContentExtractor(url)
+    const html = await extractor.fetchWithRetry(url, 3)
+    const extracted = extractor.extractContentFromHTML(html, url)
+    
+    return {
+      title: extracted.title,
+      body: extracted.body,
+      author: extracted.author,
+      published_at: extracted.published_at
+    }
+  } catch (error) {
+    throw new Error(`Content enhancement failed: ${error.message}`)
+  }
 }
 
 function findKeywordMatches(article: any, topic: any): string[] {

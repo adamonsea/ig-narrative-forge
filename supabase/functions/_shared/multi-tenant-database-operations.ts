@@ -59,12 +59,29 @@ export class MultiTenantDatabaseOperations {
 
         // Apply topic-specific filtering
         const relevanceScore = this.calculateRelevanceScore(article, topic)
-        const qualityScore = this.calculateQualityScore(article)
+        const qualityScore = this.calculateQualityScoreWithRelevance(article, topic)
 
-        if (relevanceScore < 5 || qualityScore < 30) {
-          console.log(`Skipping low-quality article: ${article.title}`)
+        // Get source credibility for threshold adjustment
+        const { data: sourceData } = await this.supabase
+          .from('content_sources')
+          .select('credibility_score')
+          .eq('id', sourceId || '')
+          .single()
+        
+        const credibilityScore = sourceData?.credibility_score || 50
+        const qualityThreshold = credibilityScore >= 90 ? 15 : 30
+        const relevanceThreshold = topic.topic_type === 'regional' ? 3 : 5
+        
+        if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
+          console.log(`🚫 Skipping article: "${article.title}"`)
+          console.log(`   - Relevance: ${relevanceScore}/${relevanceThreshold} (${topic.topic_type})`)
+          console.log(`   - Quality: ${qualityScore}/${qualityThreshold} (credibility: ${credibilityScore}%)`)
+          console.log(`   - Word count: ${this.calculateWordCount(article.body || '')}`)
           continue
         }
+        
+        console.log(`✅ Article passed filtering: "${article.title}"`)
+        console.log(`   - Relevance: ${relevanceScore}, Quality: ${qualityScore}, Words: ${this.calculateWordCount(article.body || '')}`)
 
         // Process article in multi-tenant structure
         const processed = await this.processArticleMultiTenant(
@@ -320,22 +337,56 @@ export class MultiTenantDatabaseOperations {
     const body = article.body || ''
     const wordCount = article.word_count || this.calculateWordCount(body)
     
-    // Word count scoring
+    // Smart word count scoring
     if (wordCount > 300) score += 20
-    else if (wordCount > 150) score += 10
-    else if (wordCount < 50) score -= 30
+    else if (wordCount > 150) score += 15
+    else if (wordCount > 100) score += 10
+    else if (wordCount > 50) score += 5
+    else if (wordCount < 30) score -= 10 // Reduced penalty from -30
     
-    // Title quality
-    if (title.length > 30 && title.length < 100) score += 10
-    
-    // Content quality indicators
-    if (article.author) score += 10
-    if (article.published_at) score += 5
-    if (article.image_url) score += 5
+    // Content quality indicators (reduced importance)
+    if (article.author) score += 5 // Reduced from 10
+    if (article.published_at) score += 3 // Reduced from 5
+    // Removed image scoring as it's not important
     
     // Negative quality indicators
     if (title.toLowerCase().includes('error') || title.toLowerCase().includes('404')) score -= 50
-    if (body.length < title.length * 2 && body.length > 0) score -= 20
+    if (body.length > 0 && body.length < title.length * 2) score -= 15 // Reduced penalty
+    
+    return Math.min(100, Math.max(0, score))
+  }
+
+  private calculateQualityScoreWithRelevance(article: ArticleData, topic: any): number {
+    let score = this.calculateQualityScore(article)
+    
+    const title = (article.title || '').toLowerCase()
+    const body = (article.body || '').toLowerCase()
+    const keywords = topic.keywords || []
+    
+    // Keyword relevance boost for title
+    for (const keyword of keywords) {
+      if (title.includes(keyword.toLowerCase())) {
+        score += 15 // Big boost for keyword in title
+      }
+    }
+    
+    // Regional relevance boost
+    if (topic.topic_type === 'regional' && topic.region) {
+      const region = topic.region.toLowerCase()
+      if (title.includes(region)) score += 20 // Big boost for region in title
+      
+      // Check landmarks and postcodes
+      const landmarks = topic.landmarks || []
+      const postcodes = topic.postcodes || []
+      const organizations = topic.organizations || []
+      
+      const allLocationItems = landmarks.concat(postcodes).concat(organizations)
+      for (const item of allLocationItems) {
+        if (title.includes(item.toLowerCase())) {
+          score += 15
+        }
+      }
+    }
     
     return Math.min(100, Math.max(0, score))
   }
