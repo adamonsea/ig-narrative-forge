@@ -94,18 +94,26 @@ export const SourceSuggestionTool = ({
   const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
-    // Check if source exists for THIS specific topic (topic-scoped check)
-    const { data: existingSources } = await supabase
-      .from('content_sources')
-      .select('id, source_name, canonical_domain')
+    // Check if source already exists for this topic via junction table
+    const { data: existingJunction } = await supabase
+      .from('topic_sources')
+      .select(`
+        id,
+        content_sources!inner(
+          id,
+          source_name,
+          canonical_domain,
+          feed_url
+        )
+      `)
       .eq('topic_id', topicId)
-      .or(`source_name.eq.${suggestion.source_name},canonical_domain.eq.${domain}`);
+      .eq('is_active', true)
+      .or(`content_sources.feed_url.eq.${suggestion.url},content_sources.canonical_domain.eq.${domain}`);
 
-    if (existingSources && existingSources.length > 0) {
-      const matchingSource = existingSources[0];
+    if (existingJunction && existingJunction.length > 0) {
       return {
         exists: true,
-        id: matchingSource.id
+        id: existingJunction[0].content_sources.id
       };
     }
     
@@ -157,24 +165,16 @@ export const SourceSuggestionTool = ({
             return;
           }
 
-          // Check validation score - only add high-quality sources
-          const validationScore = validationResult?.validationScore || 0;
-          if (validationScore < 60) {
-            toast({
-              title: "Source Quality Too Low",
-              description: `${suggestion.source_name} failed quality checks (score: ${validationScore}%)`,
-              variant: "destructive"
-            });
-            setAddingSourceId(null);
-            return;
-          }
-
-          // Show warnings for medium-quality sources
+          // Show informative feedback based on validation results
           if (validationResult?.warnings?.length > 0) {
             toast({
-              title: "Source Added with Monitoring",
-              description: `${suggestion.source_name} added but will be monitored closely`,
-              variant: "default"
+              title: "Source Added with Warnings",
+              description: `${suggestion.source_name} added but may need monitoring (${validationResult.warnings.length} warnings)`,
+            });
+          } else {
+            toast({
+              title: "Source Validated Successfully",
+              description: `${suggestion.source_name} passed all validation checks`,
             });
           }
         } catch (error) {
@@ -193,37 +193,62 @@ export const SourceSuggestionTool = ({
       // Extract domain for canonical_domain
       const domain = new URL(suggestion.url).hostname.replace('www.', '');
       
-      const sourceData = {
-        source_name: suggestion.source_name,
-        feed_url: suggestion.url,
-        canonical_domain: domain,
-        content_type: 'news',
-        credibility_score: Math.round(suggestion.confidence_score * 0.8), // Convert to 0-80 range
-        is_active: true,
-        topic_id: topicId, // Ensure topicId is always passed, not null
-        source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
-        region: topicType === 'regional' ? region : null
-      };
-
-      const { error } = await supabase
+      // Check if source exists globally first (we can reuse it)
+      const { data: existingSource } = await supabase
         .from('content_sources')
-        .insert([sourceData]);
+        .select('id, source_name')
+        .eq('feed_url', suggestion.url)
+        .maybeSingle();
 
-      if (error) {
-        // Handle duplicate constraint errors
-        if (error.code === '23505') {
+      let sourceId = existingSource?.id;
+
+      // If source doesn't exist globally, create it
+      if (!sourceId) {
+        const { data: newSource, error: createError } = await supabase
+          .from('content_sources')
+          .insert({
+            source_name: suggestion.source_name,
+            feed_url: suggestion.url,
+            canonical_domain: domain,
+            content_type: 'news',
+            credibility_score: Math.round(suggestion.confidence_score * 0.8),
+            is_active: true,
+            source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
+            region: topicType === 'regional' ? region : null
+            // NO topic_id - sources are now global
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        sourceId = newSource.id;
+      }
+
+      // Add source to topic via junction table
+      const { error: junctionError } = await supabase
+        .from('topic_sources')
+        .insert({
+          topic_id: topicId,
+          source_id: sourceId,
+          is_active: true,
+        });
+
+      if (junctionError) {
+        if (junctionError.code === '23505') {
           toast({
-            title: "Source Already Exists",
-            description: "This source is already assigned to this topic",
+            title: "Source Already Added",
+            description: "This source is already active for this topic",
             variant: "destructive"
           });
         } else {
-          throw error;
+          throw junctionError;
         }
       } else {
         toast({
-          title: "Source Added",
-          description: `${suggestion.source_name} has been added to your sources`,
+          title: "Source Added Successfully",
+          description: existingSource 
+            ? `${suggestion.source_name} (existing source) added to topic`
+            : `${suggestion.source_name} created and added to topic`,
         });
         
         // Remove from suggestions after adding

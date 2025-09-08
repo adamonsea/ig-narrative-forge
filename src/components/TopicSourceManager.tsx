@@ -35,6 +35,17 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
     loadSources();
   }, [topicId]);
 
+  // Listen for source additions from suggestion tool
+  useEffect(() => {
+    const handleSourceAdded = () => {
+      loadSources();
+      onSourcesChange();
+    };
+    
+    window.addEventListener('sourceAdded', handleSourceAdded);
+    return () => window.removeEventListener('sourceAdded', handleSourceAdded);
+  }, [onSourcesChange]);
+
   const loadSources = async () => {
     try {
       const { data, error } = await supabase
