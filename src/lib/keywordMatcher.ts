@@ -19,18 +19,25 @@ export interface KeywordMatchResult {
 
 /**
  * Generate keyword variations for better matching
+ * EMERGENCY FIX: Filter out problematic short keywords and improve matching
  */
 export function generateKeywordVariations(keyword: string): string[] {
+  // EMERGENCY FIX: Skip keywords that are too short (3 chars or less)
+  if (keyword.length <= 3) {
+    console.log(`⚠️ Skipping short keyword: "${keyword}" (too short for reliable matching)`);
+    return []; // Return empty array for short keywords
+  }
+  
   const variations = [keyword];
   
-  // Add plural/singular variations
-  if (keyword.endsWith('s') && keyword.length > 3) {
+  // Add plural/singular variations only for longer keywords
+  if (keyword.endsWith('s') && keyword.length > 4) {
     variations.push(keyword.slice(0, -1)); // Remove 's'
-  } else {
+  } else if (keyword.length > 3) {
     variations.push(keyword + 's'); // Add 's'
   }
   
-  // Add common word variations
+  // Add common word variations (only for meaningful keywords)
   const synonymMap: { [key: string]: string[] } = {
     'film': ['movie', 'cinema', 'picture'],
     'movie': ['film', 'cinema', 'picture'],
@@ -39,7 +46,7 @@ export function generateKeywordVariations(keyword: string): string[] {
     'family': ['families', 'parent', 'child'],
     'animation': ['animated', 'cartoon', 'anime'],
     'documentary': ['doc', 'docu', 'factual'],
-    'ai': ['artificial intelligence', 'machine learning', 'ml'],
+    'ai': ['artificial intelligence', 'machine learning', 'ml', 'artificial-intelligence'],
     'agency': ['agencies', 'firm', 'company', 'studio'],
     'marketing': ['advertising', 'promotion', 'branding'],
     'creative': ['creativity', 'design', 'artistic']
@@ -69,31 +76,27 @@ export function findKeywordMatches(
     if (!normalizedKeyword) continue;
 
     const keywordVariations = generateKeywordVariations(normalizedKeyword);
+    
+    // EMERGENCY FIX: Skip if no valid variations (short keywords filtered out)
+    if (keywordVariations.length === 0) continue;
+    
     let keywordOccurrences = 0;
     let keywordScore = 0;
     const positions: number[] = [];
 
     for (const variation of keywordVariations) {
-      // PLATFORM FIX: More flexible keyword matching - exact boundaries + partial matches for better coverage
+      // EMERGENCY FIX: ONLY use exact word boundary matching - no more partial matching
       const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-      const partialRegex = new RegExp(variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       
       const exactMatches = Array.from(fullText.matchAll(exactRegex));
-      const partialMatches = Array.from(fullText.matchAll(partialRegex));
-      
-      // Count both exact and partial matches, with preference for exact
-      let occurrences = exactMatches.length;
-      if (occurrences === 0 && partialMatches.length > 0) {
-        occurrences = Math.ceil(partialMatches.length * 0.7); // Weight partial matches at 70%
-      }
+      const occurrences = exactMatches.length;
       
       if (occurrences > 0) {
         keywordOccurrences += occurrences;
-        keywordScore += occurrences * (exactMatches.length > 0 ? 3 : 2); // Slight preference for exact matches
+        keywordScore += occurrences * 3; // Only exact matches now
         
         // Record positions and actual matched text
-        const primaryMatches = exactMatches.length > 0 ? exactMatches : partialMatches;
-        primaryMatches.forEach(match => {
+        exactMatches.forEach(match => {
           if (match.index !== undefined) {
             positions.push(match.index);
             allMatches.push(match[0]);
@@ -123,6 +126,7 @@ export function findKeywordMatches(
 
 /**
  * Create a regex pattern for highlighting that matches the same keywords as scoring
+ * EMERGENCY FIX: Only use exact word boundary matching for highlighting
  */
 export function createHighlightingRegex(keywords: string[]): RegExp | null {
   if (!keywords || keywords.length === 0) return null;
@@ -136,10 +140,9 @@ export function createHighlightingRegex(keywords: string[]): RegExp | null {
 
   if (allVariations.length === 0) return null;
 
-  // PLATFORM FIX: More flexible highlighting pattern - exact boundaries + partial matches
+  // EMERGENCY FIX: Only use exact word boundary matching - no partial matching
   const exactPattern = allVariations.map(v => `\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).join('|');
-  const partialPattern = allVariations.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   
-  // Use both exact and partial matching for better highlighting coverage
-  return new RegExp(`(${exactPattern}|${partialPattern})`, 'gi');
+  // Use only exact matching for consistent highlighting
+  return new RegExp(`(${exactPattern})`, 'gi');
 }

@@ -162,31 +162,37 @@ async function determineOptimalStrategy(
   // Analyze URL patterns to predict best method
   const urlAnalysis = analyzeUrlPatterns(feedUrl);
   
-  // Priority-based method selection
+  // EMERGENCY FIX: Enhanced priority-based method selection with better fallbacks
   const strategies = [
     {
       method: 'rss_discovery',
       priority: 1,
       condition: urlAnalysis.likelyRSS || source.source_type === 'rss',
-      avgSuccessRate: getAverageSuccessRate(performanceData, 'rss_discovery') || 100
+      avgSuccessRate: getAverageSuccessRate(performanceData, 'rss_discovery') || 90
+    },
+    {
+      method: 'topic-aware-scraper', 
+      priority: 2,
+      condition: !!source.topic_id, // Use topic-aware scraper when we have topic context
+      avgSuccessRate: getAverageSuccessRate(performanceData, 'topic-aware-scraper') || 75
     },
     {
       method: 'enhanced_html',
-      priority: 2, 
+      priority: 3, 
       condition: urlAnalysis.modernSite || source.source_type === 'website',
-      avgSuccessRate: getAverageSuccessRate(performanceData, 'enhanced_html') || 75
-    },
-    {
-      method: 'topic-aware-scraper',
-      priority: 3,
-      condition: !!source.topic_id,
-      avgSuccessRate: getAverageSuccessRate(performanceData, 'topic-aware-scraper') || 60
+      avgSuccessRate: getAverageSuccessRate(performanceData, 'enhanced_html') || 65
     },
     {
       method: 'universal-scraper',
       priority: 4,
       condition: true, // Always available as fallback
-      avgSuccessRate: getAverageSuccessRate(performanceData, 'universal-scraper') || 50
+      avgSuccessRate: getAverageSuccessRate(performanceData, 'universal-scraper') || 55
+    },
+    {
+      method: 'beautiful-soup-scraper',
+      priority: 5,
+      condition: true, // Always available as emergency fallback
+      avgSuccessRate: getAverageSuccessRate(performanceData, 'beautiful-soup-scraper') || 45
     }
   ];
 
@@ -217,16 +223,17 @@ function analyzeUrlPatterns(url: string): { likelyRSS: boolean; modernSite: bool
 }
 
 function getFallbackMethods(primaryMethod: string): string[] {
+  // EMERGENCY FIX: Improved fallback chains with better coverage
   const fallbacks: Record<string, string[]> = {
-    'rss_discovery': ['enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
-    'enhanced_html': ['rss_discovery', 'universal-scraper', 'beautiful-soup-scraper'],
-    'topic-aware-scraper': ['enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
-    'universal-scraper': ['enhanced_html', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
-    'beautiful-soup-scraper': ['universal-scraper', 'ai-scraper-recovery'],
-    'ai-scraper-recovery': ['universal-scraper']
+    'rss_discovery': ['topic-aware-scraper', 'enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
+    'topic-aware-scraper': ['enhanced_html', 'universal-scraper', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
+    'enhanced_html': ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
+    'universal-scraper': ['topic-aware-scraper', 'beautiful-soup-scraper', 'enhanced_html', 'ai-scraper-recovery'],
+    'beautiful-soup-scraper': ['topic-aware-scraper', 'universal-scraper', 'enhanced_html', 'ai-scraper-recovery'],
+    'ai-scraper-recovery': ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper']
   };
   
-  return fallbacks[primaryMethod] || ['universal-scraper', 'beautiful-soup-scraper'];
+  return fallbacks[primaryMethod] || ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper'];
 }
 
 function getAverageSuccessRate(performanceData: any[], method: string): number | null {

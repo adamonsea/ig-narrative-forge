@@ -103,8 +103,11 @@ function calculateKeywordRelevance(
     let keywordScore = 0;
     let keywordOccurrences = 0;
 
+    // EMERGENCY FIX: Skip if no valid variations (short keywords filtered out)
+    if (keywordVariations.length === 0) continue;
+    
     for (const variation of keywordVariations) {
-      // Use only exact word boundary matching for accurate keyword detection
+      // EMERGENCY FIX: Use only exact word boundary matching for accurate keyword detection
       const exactRegex = new RegExp(`\\b${variation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
       
       const exactMatches = (fullText.match(exactRegex) || []).length;
@@ -165,28 +168,38 @@ function calculateKeywordRelevance(
  * Generate keyword variations for better matching
  */
 function generateKeywordVariations(keyword: string): string[] {
+  // EMERGENCY FIX: Filter out short keywords that cause false positives
+  if (keyword.length <= 3) {
+    console.log(`⚠️ Skipping short keyword in scoring: "${keyword}" (too short for reliable matching)`);
+    return []; // Return empty array for short keywords
+  }
+  
   const variations = [keyword];
   
-  // Add plural/singular variations
-  if (keyword.endsWith('s') && keyword.length > 3) {
+  // Add plural/singular variations only for longer keywords
+  if (keyword.endsWith('s') && keyword.length > 4) {
     variations.push(keyword.slice(0, -1)); // Remove 's'
-  } else {
+  } else if (keyword.length > 3) {
     variations.push(keyword + 's'); // Add 's'
   }
   
-  // Add common word variations for film/movie keywords
-  const filmSynonyms: { [key: string]: string[] } = {
+  // Add common word variations - enhanced for AI/agency topics
+  const synonymMap: { [key: string]: string[] } = {
     'film': ['movie', 'cinema', 'picture'],
     'movie': ['film', 'cinema', 'picture'],
     'children': ['kids', 'child', 'youth', 'young'],
     'kids': ['children', 'child', 'youth', 'young'],
     'family': ['families', 'parent', 'child'],
     'animation': ['animated', 'cartoon', 'anime'],
-    'documentary': ['doc', 'docu', 'factual']
+    'documentary': ['doc', 'docu', 'factual'],
+    'ai': ['artificial intelligence', 'machine learning', 'ml', 'artificial-intelligence'],
+    'agency': ['agencies', 'firm', 'company', 'studio'],
+    'marketing': ['advertising', 'promotion', 'branding'],
+    'creative': ['creativity', 'design', 'artistic']
   };
   
-  if (filmSynonyms[keyword]) {
-    variations.push(...filmSynonyms[keyword]);
+  if (synonymMap[keyword.toLowerCase()]) {
+    variations.push(...synonymMap[keyword.toLowerCase()]);
   }
   
   return [...new Set(variations)]; // Remove duplicates

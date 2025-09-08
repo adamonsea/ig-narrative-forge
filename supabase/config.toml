@@ -126,3 +126,9 @@ verify_jwt = false
 
 [functions.test-scraper-fix]
 verify_jwt = false
+
+[functions.emergency-rescore-articles]
+verify_jwt = false
+
+[functions.fix-topic-keywords]
+verify_jwt = false
