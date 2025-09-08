@@ -23,7 +23,7 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicDashboardStats {
@@ -467,10 +467,14 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
+            <TabsTrigger value="migration">
+              <Database className="w-4 h-4 mr-2" />
+              Migration
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -659,6 +663,26 @@ const TopicDashboard = () => {
                 </Card>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          <TabsContent value="migration" className="space-y-6">
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Multi-Tenant Migration
+                </CardTitle>
+                <CardDescription>
+                  Test and migrate this topic to the new multi-tenant architecture
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <MultiTenantMigrationTester 
+                  selectedTopicId={topic.id} 
+                  topicName={topic.name} 
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
         </Tabs>
