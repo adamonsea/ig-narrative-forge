@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +41,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
+  const [previewArticle, setPreviewArticle] = useState<any>(null);
   const { toast } = useToast();
 
   // Legacy system data
@@ -481,7 +484,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                     onSlideQuantityChange={handleSlideQuantityChange}
                     onToneOverrideChange={handleToneOverrideChange}
                     onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                    onPreview={() => {}}
+                     onPreview={setPreviewArticle}
                     onApprove={handleLegacyApprove}
                     onDelete={deleteArticle}
                     defaultTone="conversational"
@@ -515,7 +518,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                     onSlideQuantityChange={handleSlideQuantityChange}
                     onToneOverrideChange={handleToneOverrideChange}
                     onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                    onPreview={() => {}}
+                    onPreview={setPreviewArticle}
                     onApprove={handleMultiTenantApproveWrapper}
                     onDelete={handleMultiTenantDelete}
                     onBulkDelete={() => {}}
@@ -595,6 +598,52 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewArticle} onOpenChange={() => setPreviewArticle(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {previewArticle?.title}
+                <Badge variant="outline" className="text-xs">
+                  {previewArticle?.source_name || previewArticle?.source || 'Unknown Source'}
+                </Badge>
+                {previewArticle?.topic_id && (
+                  <Badge variant="secondary" className="text-xs">
+                    Multi-Tenant
+                  </Badge>
+                )}
+              </div>
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-4">
+              <span>Source: {previewArticle?.source_url}</span>
+              {previewArticle?.author && <span>Author: {previewArticle.author}</span>}
+              <span>Words: {previewArticle?.word_count || 0}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Article Content:</label>
+              <Textarea
+                value={previewArticle?.body || ''}
+                readOnly
+                className="min-h-[300px] mt-2"
+              />
+            </div>
+            {previewArticle?.source_url && (
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(previewArticle.source_url, '_blank')}
+                className="w-full"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View Original Article
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
