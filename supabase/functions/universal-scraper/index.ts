@@ -34,8 +34,10 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
   const startTime = Date.now();
 
+  // Parse request body once and make variables available for error handling
+  const { feedUrl, sourceId, region } = await req.json();
+
   try {
-    const { feedUrl, sourceId, region } = await req.json();
 
     if (!feedUrl || !sourceId || !region) {
       return new Response(
@@ -335,9 +337,7 @@ serve(async (req) => {
     // ENHANCED: Multiple fallback system for failed scraping
     console.log('🔄 Trying enhanced fallback system...');
     try {
-      const requestBody = await req.json();
-      const { feedUrl, sourceId, region } = requestBody;
-      
+      // Use already parsed request data instead of parsing again
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
