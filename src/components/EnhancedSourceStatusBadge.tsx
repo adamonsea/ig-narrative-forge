@@ -116,9 +116,10 @@ export function EnhancedSourceStatusBadge({
       return {
         status: 'reconnecting',
         label: 'Trying to reconnect',
-        variant: 'destructive' as const,
+        variant: 'outline' as const,
         icon: RefreshCw,
-        tooltip: 'Experiencing connection issues - attempting to reconnect'
+        className: 'bg-gray-50 text-gray-600 border-gray-300 dark:bg-gray-900/20 dark:text-gray-500',
+        tooltip: 'Unable to connect or gather articles'
       };
     }
 

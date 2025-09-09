@@ -782,6 +782,18 @@ export const UnifiedSourceManager = ({
     return <EnhancedSourceStatusBadge source={source} automationLastError={source.last_error} />;
   };
 
+  const hasConnectionIssues = (source: ContentSource) => {
+    if (!source.is_active || source.is_blacklisted) return false;
+    
+    const successRate = source.success_rate || 0;
+    const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
+    const daysSinceLastScrape = lastScraped ? 
+      Math.floor((Date.now() - lastScraped.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+    
+    // Connection issues if: has recent errors AND poor performance OR very stale
+    return (source.last_error && successRate < 30) || daysSinceLastScrape > 30;
+  };
+
   const getDisplayTitle = () => {
     if (title) return title;
     if (mode === 'topic' && currentTopic) return `${currentTopic.name} Sources`;
@@ -980,7 +992,7 @@ export const UnifiedSourceManager = ({
       {/* Sources List */}
       <div className="grid gap-4">
         {sources.map((source) => (
-          <Card key={source.id}>
+          <Card key={source.id} className={hasConnectionIssues(source) ? 'opacity-60 bg-muted/30' : ''}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
