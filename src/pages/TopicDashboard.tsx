@@ -17,14 +17,16 @@ import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
-import { MultiTenantMigrationTester } from "@/components/MultiTenantMigrationTester";
 import { SentimentManager } from "@/components/SentimentManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
+import { JunctionTableValidator } from "@/components/JunctionTableValidator";
+import { UniversalScrapingValidator } from "@/components/UniversalScrapingValidator";
+import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TopicDashboardStats {
@@ -672,16 +674,52 @@ const TopicDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Database className="w-5 h-5" />
-                    Multi-Tenant Migration
+                    Junction Table Validation
                   </CardTitle>
                   <CardDescription>
-                    Test and migrate this topic to the new multi-tenant architecture
+                    Validate junction table integrity and cross-topic source relationships
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <MultiTenantMigrationTester 
-                    selectedTopicId={topic.id} 
+                  <JunctionTableValidator 
+                    topicId={topic.id} 
                     topicName={topic.name} 
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    Universal Scraping Validation
+                  </CardTitle>
+                  <CardDescription>
+                    Test universal scraping pipeline with multi-tenant architecture
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <UniversalScrapingValidator 
+                    topicId={topic.id}
+                    topicName={topic.name}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5" />
+                    Architecture Migration Validation
+                  </CardTitle>
+                  <CardDescription>
+                    Compare legacy and junction architectures with performance metrics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <ArchitectureMigrationValidator 
+                    topicId={topic.id}
+                    topicName={topic.name}
                   />
                 </CardContent>
               </Card>

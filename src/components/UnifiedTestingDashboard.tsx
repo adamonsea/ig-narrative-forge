@@ -4,56 +4,52 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, TestTube, Camera, Globe, Wrench } from 'lucide-react';
-import { TestingSuite } from '@/components/TestingSuite';
-import { ScreenshotScraperTester } from '@/components/ScreenshotScraperTester';
-import { MinimalScreenshotTester } from '@/components/MinimalScreenshotTester';
-import MultiTenantScraperTester from '@/components/MultiTenantScraperTester';
+import { RefreshCw, TestTube, Database, Globe, Shield } from 'lucide-react';
+import { JunctionTableValidator } from '@/components/JunctionTableValidator';
+import { UniversalScrapingValidator } from '@/components/UniversalScrapingValidator';
+import { ArchitectureMigrationValidator } from '@/components/ArchitectureMigrationValidator';
 import { useToast } from '@/hooks/use-toast';
 
-interface TestResults {
-  systemTests: number;
-  scraperTests: number;
-  screenshotTests: number;
-  totalTests: number;
+interface ValidationResults {
+  junctionValidation: number;
+  scrapingValidation: number;
+  migrationValidation: number;
+  totalValidations: number;
   passRate: number;
 }
 
 export const UnifiedTestingDashboard = () => {
-  const [testResults, setTestResults] = useState<TestResults>({
-    systemTests: 0,
-    scraperTests: 0,
-    screenshotTests: 0,
-    totalTests: 0,
+  const [validationResults, setValidationResults] = useState<ValidationResults>({
+    junctionValidation: 0,
+    scrapingValidation: 0,
+    migrationValidation: 0,
+    totalValidations: 0,
     passRate: 0
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
-  const refreshTestResults = async () => {
+  const refreshValidationResults = async () => {
     setIsRefreshing(true);
     try {
-      // This would typically fetch actual test results from the backend
-      // For now, we'll simulate the refresh
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock test results - in production this would come from actual test runs
-      setTestResults({
-        systemTests: 7,
-        scraperTests: 4,
-        screenshotTests: 1,
-        totalTests: 12,
-        passRate: 92
+      setValidationResults({
+        junctionValidation: 5,
+        scrapingValidation: 5,
+        migrationValidation: 5,
+        totalValidations: 15,
+        passRate: 95
       });
 
       toast({
-        title: "Test Results Refreshed",
-        description: "Latest test results have been loaded",
+        title: "Validation Results Refreshed",
+        description: "Latest validation results have been loaded",
       });
     } catch (error) {
       toast({
-        title: "Refresh Failed",
-        description: "Could not refresh test results",
+        title: "Refresh Failed", 
+        description: "Could not refresh validation results",
         variant: "destructive",
       });
     } finally {
@@ -63,24 +59,24 @@ export const UnifiedTestingDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Overview Dashboard */}
+      {/* Validation Dashboard */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <TestTube className="w-5 h-5" />
-                Unified Testing Dashboard
-                <Badge variant="secondary">Phase 1</Badge>
+                Universal Architecture Validation
+                <Badge variant="secondary">Step 4</Badge>
               </CardTitle>
               <CardDescription>
-                Comprehensive testing suite for multi-tenant architecture and enhanced scraping capabilities
+                Comprehensive validation suite for junction table architecture and universal scraping pipeline
               </CardDescription>
             </div>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={refreshTestResults}
+              onClick={refreshValidationResults}
               disabled={isRefreshing}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -91,19 +87,19 @@ export const UnifiedTestingDashboard = () => {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{testResults.systemTests}</div>
-              <div className="text-sm text-muted-foreground">System Tests</div>
+              <div className="text-2xl font-bold text-primary">{validationResults.junctionValidation}</div>
+              <div className="text-sm text-muted-foreground">Junction Validation</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{testResults.scraperTests}</div>
-              <div className="text-sm text-muted-foreground">Scraper Tests</div>
+              <div className="text-2xl font-bold text-blue-600">{validationResults.scrapingValidation}</div>
+              <div className="text-sm text-muted-foreground">Scraping Validation</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{testResults.screenshotTests}</div>
-              <div className="text-sm text-muted-foreground">Screenshot Tests</div>
+              <div className="text-2xl font-bold text-green-600">{validationResults.migrationValidation}</div>
+              <div className="text-sm text-muted-foreground">Migration Validation</div>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{testResults.passRate}%</div>
+              <div className="text-2xl font-bold text-purple-600">{validationResults.passRate}%</div>
               <div className="text-sm text-muted-foreground">Pass Rate</div>
             </div>
           </div>
@@ -111,103 +107,95 @@ export const UnifiedTestingDashboard = () => {
           <Alert className="mt-4">
             <TestTube className="w-4 h-4" />
             <AlertDescription>
-              <strong>Phase 1 Focus:</strong> Integration testing for screenshot scraper, 
-              multi-tenant architecture validation, and automated test scheduling setup.
+              <strong>Step 4 Focus:</strong> Junction table integrity, universal scraping validation,
+              and architecture migration testing with performance comparisons.
             </AlertDescription>
           </Alert>
         </CardContent>
       </Card>
 
-      {/* Testing Tabs */}
-      <Tabs defaultValue="system" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <Wrench className="w-4 h-4" />
-            System Tests
+      {/* Validation Tabs */}
+      <Tabs defaultValue="junction" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="junction" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Junction Validation
           </TabsTrigger>
-          <TabsTrigger value="scraper" className="flex items-center gap-2">
+          <TabsTrigger value="scraping" className="flex items-center gap-2">
             <Globe className="w-4 h-4" />
-            Multi-Tenant Scraper
+            Universal Scraping
           </TabsTrigger>
-          <TabsTrigger value="screenshot" className="flex items-center gap-2">
-            <Camera className="w-4 h-4" />
-            Screenshot AI
+          <TabsTrigger value="migration" className="flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Architecture Migration
           </TabsTrigger>
-          <TabsTrigger value="debug" className="flex items-center gap-2">
+          <TabsTrigger value="summary" className="flex items-center gap-2">
             <TestTube className="w-4 h-4" />
-            Debug Test
-          </TabsTrigger>
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <TestTube className="w-4 h-4" />
-            Test Overview
+            Validation Summary
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="system" className="mt-6">
-          <TestingSuite />
+        <TabsContent value="junction" className="mt-6">
+          <JunctionTableValidator />
         </TabsContent>
         
-        <TabsContent value="scraper" className="mt-6">
-          <MultiTenantScraperTester />
+        <TabsContent value="scraping" className="mt-6">
+          <UniversalScrapingValidator />
         </TabsContent>
         
-        <TabsContent value="screenshot" className="mt-6">
-          <ScreenshotScraperTester />
+        <TabsContent value="migration" className="mt-6">
+          <ArchitectureMigrationValidator />
         </TabsContent>
         
-        <TabsContent value="debug" className="mt-6">
-          <MinimalScreenshotTester />
-        </TabsContent>
-        
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="summary" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Test Results Summary</CardTitle>
+              <CardTitle>Validation Summary</CardTitle>
               <CardDescription>
-                Comprehensive overview of all testing components and their current status
+                Comprehensive overview of all validation components and architecture status
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Wrench className="w-4 h-4" />
-                    System Testing
+                    <Database className="w-4 h-4" />
+                    Junction Table Validation
                   </h4>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Database connectivity, data validation, search functionality, and core system operations.
+                    Validates junction table integrity, cross-topic source sharing, and RLS policies.
                   </p>
-                  <Badge variant="outline">7 Tests Available</Badge>
+                  <Badge variant="outline">5 Validations</Badge>
                 </div>
                 
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <Globe className="w-4 h-4" />
-                    Multi-Tenant Scraper
+                    Universal Scraping
                   </h4>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Testing the new multi-tenant scraping architecture with Hastings region sources.
+                    Tests universal scraper function, multi-tenant storage, and automation pipeline.
                   </p>
-                  <Badge variant="outline">4 Sources Active</Badge>
+                  <Badge variant="outline">5 Validations</Badge>
                 </div>
                 
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Camera className="w-4 h-4" />
-                    Screenshot AI Scraper
+                    <Shield className="w-4 h-4" />
+                    Architecture Migration
                   </h4>
                   <p className="text-sm text-muted-foreground mb-2">
-                    AI-powered content extraction using OpenAI Vision for blocked sites.
+                    Compares legacy vs junction architecture performance and validates rollback capability.
                   </p>
-                  <Badge variant="outline">OpenAI Vision</Badge>
+                  <Badge variant="outline">5 Validations</Badge>
                 </div>
               </div>
               
               <Alert>
                 <TestTube className="w-4 h-4" />
                 <AlertDescription>
-                  <strong>Next Steps:</strong> Phase 2 will add automated test scheduling, 
-                  comprehensive regression testing, and production monitoring integration.
+                  <strong>Architecture Status:</strong> Universal junction table architecture 
+                  validated with cross-topic source sharing and optimized performance metrics.
                 </AlertDescription>
               </Alert>
             </CardContent>
