@@ -1130,7 +1130,7 @@ export const UnifiedSourceManager = ({
                       ) : (
                         <TrendingDown className="w-4 h-4 text-red-600" />
                       )}
-                      <span>Reliability: {source.success_rate && source.success_rate > 70 ? 'High' : source.success_rate && source.success_rate > 40 ? 'Medium' : 'Low'}</span>
+                      <span>Gathered: {source.articles_scraped || 0} articles</span>
                     </div>
                   </div>
                 </div>
