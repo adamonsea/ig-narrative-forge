@@ -271,17 +271,57 @@ serve(async (req) => {
         };
       });
 
-      const { data: insertedArticles, error: insertError } = await supabase
-        .from('articles')
-        .insert(articlesToInsert)
-        .select();
+      // Try to insert articles individually to handle duplicates gracefully
+      let insertedCount = 0;
+      let duplicateCount = 0;
+      let actualErrors = [];
+      let successfullyInserted = [];
 
-      if (insertError) {
-        await logProgress(supabase, 'database-insert', 'error', insertError.message);
+      for (const article of articlesToInsert) {
+        try {
+          const { data: insertResult, error: singleInsertError } = await supabase
+            .from('articles')
+            .insert([article])
+            .select();
+
+          if (singleInsertError) {
+            // Check if this is a duplicate prevention (expected behavior)
+            if (singleInsertError.message && singleInsertError.message.includes('DUPLICATE_ARTICLE_PREVENTED')) {
+              duplicateCount++;
+              console.log(`📊 [database-insert] ERROR: DUPLICATE_ARTICLE_PREVENTED: ${singleInsertError.message.split(': ')[1] || 'unknown'}`);
+            } else {
+              // This is an actual database error
+              actualErrors.push({
+                article: article.title,
+                error: singleInsertError.message
+              });
+            }
+          } else {
+            insertedCount++;
+            successfullyInserted.push(insertResult[0]);
+          }
+        } catch (error) {
+          actualErrors.push({
+            article: article.title,
+            error: error.message
+          });
+        }
+      }
+
+      // If there are actual database errors (not duplicates), return error
+      if (actualErrors.length > 0) {
+        await logProgress(supabase, 'database-insert', 'error', { 
+          actualErrors,
+          insertedCount,
+          duplicateCount 
+        });
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `Database insert failed: ${insertError.message}`,
+            error: `Database insert failed for ${actualErrors.length} articles`,
+            insertedCount,
+            duplicateCount,
+            errors: actualErrors,
             articles,
             cost,
             screenshotUrl: screenshotResult.screenshotUrl
@@ -291,12 +331,16 @@ serve(async (req) => {
       }
 
       await logProgress(supabase, 'database-insert', 'success', { 
-        insertedCount: insertedArticles?.length || 0 
+        insertedCount,
+        duplicateCount,
+        totalProcessed: articlesToInsert.length
       });
     }
 
     await logProgress(supabase, 'function-complete', 'success', {
       articlesExtracted: articles.length,
+      articlesInserted: insertedCount || 0,
+      duplicatesFound: duplicateCount || 0,
       cost: cost || 0
     });
 
@@ -305,8 +349,13 @@ serve(async (req) => {
         success: true, 
         articles,
         articlesFound: articles.length,
+        articlesInserted: insertedCount || 0,
+        duplicatesFound: duplicateCount || 0,
         cost,
-        screenshotUrl: screenshotResult.screenshotUrl
+        screenshotUrl: screenshotResult.screenshotUrl,
+        message: duplicateCount > 0 ? 
+          `Successfully extracted ${articles.length} articles. ${insertedCount || 0} new articles added, ${duplicateCount} duplicates prevented.` :
+          `Successfully extracted and stored ${articles.length} articles.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

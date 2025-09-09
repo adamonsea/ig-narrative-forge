@@ -47,9 +47,14 @@ export const ScreenshotScraperTester = () => {
       setResult(data);
 
       if (data.success) {
+        let message = `Extracted ${data.articlesFound} articles using OpenAI Vision`;
+        if (data.duplicatesFound > 0) {
+          message += ` (${data.articlesInserted} new, ${data.duplicatesFound} duplicates prevented)`;
+        }
+        
         toast({
           title: "Screenshot Scraping Successful",
-          description: `Extracted ${data.articlesFound} articles using OpenAI Vision`,
+          description: message,
         });
       } else {
         toast({
@@ -128,8 +133,17 @@ export const ScreenshotScraperTester = () => {
                 <Alert>
                   <Cpu className="w-4 h-4" />
                   <AlertDescription>
-                    Successfully extracted <strong>{result.articlesFound}</strong> articles
-                    using <strong>{result.method}</strong>
+                    {result.message || (
+                      <>
+                        Successfully extracted <strong>{result.articlesFound}</strong> articles
+                        {result.articlesInserted !== undefined && (
+                          <> • <strong>{result.articlesInserted}</strong> new articles added</>
+                        )}
+                        {result.duplicatesFound > 0 && (
+                          <> • <strong>{result.duplicatesFound}</strong> duplicates prevented</>
+                        )}
+                      </>
+                    )}
                   </AlertDescription>
                 </Alert>
 
