@@ -222,29 +222,52 @@ async function takeScreenshot(url: string): Promise<{
       throw new Error(`ScreenshotAPI failed: ${response.status} ${response.statusText}. Response: ${errorText}`);
     }
 
-    const screenshotBase64 = await response.text();
-    console.log(`📸 Screenshot response received. Length: ${screenshotBase64.length} characters`);
+    const responseText = await response.text();
+    console.log(`📸 Screenshot response received. Length: ${responseText.length} characters`);
     
-    // Validate the response is actually base64 image data
-    if (!screenshotBase64) {
+    // Validate the response is not empty
+    if (!responseText) {
       console.error('❌ Screenshot response is empty');
       throw new Error('Screenshot response is empty');
     }
     
-    if (screenshotBase64.length < 100) {
-      console.error(`❌ Screenshot response too short: ${screenshotBase64.length} characters`);
-      console.error(`❌ Response preview: ${screenshotBase64}`);
-      throw new Error(`Invalid screenshot response - data too short (${screenshotBase64.length} chars)`);
-    }
+    // Check if response is JSON with screenshot URL or direct base64
+    let screenshotBase64: string;
+    let screenshotUrl: string;
     
-    // Check if it looks like valid base64
-    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-    const isValidBase64 = base64Regex.test(screenshotBase64);
-    
-    if (!isValidBase64) {
-      console.error(`❌ Response doesn't look like valid base64`);
-      console.error(`❌ Response preview: ${screenshotBase64.substring(0, 200)}...`);
-      throw new Error('Screenshot response is not valid base64 data');
+    try {
+      const jsonResponse = JSON.parse(responseText);
+      if (jsonResponse.screenshot && typeof jsonResponse.screenshot === 'string') {
+        console.log('📸 Got screenshot URL from ScreenshotAPI:', jsonResponse.screenshot);
+        
+        // Fetch the actual image from the URL
+        const imageResponse = await fetch(jsonResponse.screenshot);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch screenshot from URL: ${imageResponse.status}`);
+        }
+        
+        // Convert to base64
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+        screenshotBase64 = base64Image;
+        screenshotUrl = `data:image/png;base64,${base64Image}`;
+        
+        console.log('✅ Successfully converted screenshot URL to base64');
+      } else {
+        throw new Error('Screenshot URL not found in JSON response');
+      }
+    } catch (parseError) {
+      // If it's not JSON, check if it's direct base64
+      if (responseText.startsWith('data:image/') || responseText.match(/^[A-Za-z0-9+/=]+$/)) {
+        screenshotBase64 = responseText.startsWith('data:image/') ? 
+          responseText.replace(/^data:image\/[^;]+;base64,/, '') : responseText;
+        screenshotUrl = responseText.startsWith('data:image/') ? responseText : `data:image/png;base64,${responseText}`;
+        console.log('✅ Direct base64 data detected');
+      } else {
+        console.log('❌ Response is neither JSON with URL nor valid base64');
+        console.log('❌ Response preview:', responseText.substring(0, 200) + '...');
+        throw new Error('Screenshot response format not recognized');
+      }
     }
     
     console.log(`✅ Screenshot captured successfully. Size: ${(screenshotBase64.length * 0.75 / 1024).toFixed(1)} KB`);
@@ -253,7 +276,7 @@ async function takeScreenshot(url: string): Promise<{
     return {
       success: true,
       screenshotBase64: screenshotBase64,
-      screenshotUrl: `data:image/png;base64,${screenshotBase64}`
+      screenshotUrl: screenshotUrl
     };
 
   } catch (error) {
