@@ -9,7 +9,7 @@ import { DuplicateCleanup } from '@/components/DuplicateCleanup';
 import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
-import MultiTenantScraperTester from '@/components/MultiTenantScraperTester';
+import { UnifiedTestingDashboard } from '@/components/UnifiedTestingDashboard';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -68,7 +68,7 @@ export default function AdminPanel() {
           </TabsContent>
           
           <TabsContent value="testing" className="mt-6">
-            <MultiTenantScraperTester />
+            <UnifiedTestingDashboard />
           </TabsContent>
           
           <TabsContent value="other" className="mt-6">
