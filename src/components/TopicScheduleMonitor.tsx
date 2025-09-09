@@ -224,15 +224,33 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
           <p className="text-muted-foreground">Manage automated content collection for "{topicName}"</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={fetchTopicData} 
-            variant="outline" 
-            size="sm"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+            <Button 
+              onClick={fetchTopicData} 
+              variant="outline" 
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              onClick={async () => {
+                try {
+                  const { data } = await supabase.functions.invoke('cleanup-stale-source-errors');
+                  toast({
+                    title: "Status Cleanup Complete",
+                    description: `Cleared stale errors for ${data?.errors_cleared || 0} sources`,
+                  });
+                  fetchTopicData(); // Refresh data
+                } catch (error) {
+                  console.error('Cleanup failed:', error);
+                }
+              }}
+              variant="outline"
+              size="sm"
+            >
+              Fix Status
+            </Button>
           <Button 
             onClick={handleRescanAllSources}
             disabled={loading || !data?.active_sources}

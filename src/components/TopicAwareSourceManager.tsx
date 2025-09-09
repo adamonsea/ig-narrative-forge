@@ -668,7 +668,13 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       return <Badge variant="secondary">Inactive</Badge>;
     }
     
-    if (rule?.last_error) {
+    // Prioritize actual performance over stale errors
+    // Check if source has recent activity and good success rate
+    const hasRecentActivity = source.last_scraped_at && 
+      new Date(source.last_scraped_at) > new Date(Date.now() - 24 * 60 * 60 * 1000); // Last 24 hours
+    
+    // Only show "Failed" if there are recent errors AND poor performance
+    if (rule?.last_error && successRate < 30 && !hasRecentActivity) {
       return <Badge variant="destructive">Failed</Badge>;
     }
     
