@@ -23,7 +23,7 @@ export function EmergencyRecoveryPanel() {
 
       toast({
         title: 'Method Assignment Fixed',
-        description: `Updated ${data.sources_fixed} sources to use correct scraping methods`,
+        description: `Updated ${data.sources_fixed} sources to use correct content gathering methods`,
       });
 
       setResults(data);

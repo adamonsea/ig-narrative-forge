@@ -368,7 +368,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           });
         }
       } catch (scrapeError) {
-        console.error('Scraping trigger failed:', scrapeError);
+        console.error('Gathering trigger failed:', scrapeError);
         // Don't show error to user as source was still added
       }
 
@@ -469,7 +469,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
       if (error) throw error;
 
-      // Show detailed scraping results and update automation rules
+      // Show detailed gathering results and update automation rules
       if (data && data.success) {
         const details = [
           `Found: ${data.articlesFound || 0}`,
@@ -488,7 +488,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         }
 
         toast({
-          title: `Scraping Complete - ${source.source_name}`,
+          title: `Content Gathering Complete - ${source.source_name}`,
           description: `${details} | Method: ${data.method || 'unknown'}`,
           variant: data.articlesStored > 0 ? "default" : "destructive"
         });
@@ -497,13 +497,13 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
         if (source.feed_url) {
           await updateSourceAutomationRule(source.feed_url, {
             failure_count: (sourceRules.find(r => r.source_url === source.feed_url)?.failure_count || 0) + 1,
-            last_error: data?.message || 'Scraping failed'
+            last_error: data?.message || 'Content gathering failed'
           });
         }
 
         toast({
-          title: "Scraping Issues",
-          description: data?.message || `Issues scraping "${source.source_name}"`,
+          title: "Content Gathering Issues",
+          description: data?.message || `Issues gathering content from "${source.source_name}"`,
           variant: "destructive"
         });
       }
@@ -514,10 +514,10 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       }, 2000);
 
     } catch (error) {
-      console.error('Error scraping source:', error);
+      console.error('Error gathering from source:', error);
       toast({
-        title: "Scraping Failed",
-        description: `Failed to scrape "${source.source_name}": ${error.message || 'Unknown error'}`,
+        title: "Content Gathering Failed",
+        description: `Failed to gather content from "${source.source_name}": ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -590,21 +590,21 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       ].join(' | ');
 
       toast({
-        title: `Bulk Scraping Complete`,
-        description: `${successCount}/${activeSources.length} sources scraped | ${summary}`,
+        title: `Bulk Content Gathering Complete`,
+        description: `${successCount}/${activeSources.length} sources processed | ${summary}`,
         variant: totalStored > 0 ? "default" : "destructive"
       });
 
-      // Refresh sources after scraping
+      // Refresh sources after gathering
       setTimeout(() => {
         loadSourcesForTopic(currentTopicId);
       }, 3000);
 
     } catch (error) {
-      console.error('Error bulk scraping:', error);
+      console.error('Error bulk content gathering:', error);
       toast({
-        title: "Bulk Scraping Failed",
-        description: "Some sources may have failed to scrape",
+        title: "Bulk Gathering Failed",
+        description: "Some sources may have failed to gather content",
         variant: "destructive"
       });
     } finally {

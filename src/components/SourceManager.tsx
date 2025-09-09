@@ -237,8 +237,8 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
     setLoading(true);
     try {
       toast({
-        title: 'Scraping Started',
-        description: `Scraping content from ${source.source_name}...`,
+        title: 'Gathering Started',
+        description: `Gathering content from ${source.source_name}...`,
       });
 
       const { data, error } = await supabase.functions.invoke('universal-scraper', {
@@ -285,23 +285,23 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
         }
         
         toast({
-          title: stored > 0 ? 'Scraping Complete' : 'Scraping Complete - No Articles Stored',
+          title: stored > 0 ? 'Gathering Complete' : 'Gathering Complete - No Articles Stored',
           description,
           variant: stored > 0 ? 'default' : 'destructive'
         });
         
         if (data.errors && data.errors.length > 0) {
-          console.warn('Scraping warnings:', data.errors);
+          console.warn('Gathering warnings:', data.errors);
         }
       } else {
-        throw new Error(data?.error || 'Scraping failed');
+        throw new Error(data?.error || 'Content gathering failed');
       }
 
       onSourcesChange();
     } catch (error) {
-      console.error('Scraping error:', error);
+      console.error('Gathering error:', error);
       toast({
-        title: 'Scraping Failed',
+        title: 'Gathering Failed',
         description: error.message || 'Failed to scrape content from source',
         variant: 'destructive',
       });
@@ -329,8 +329,8 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
 
     try {
       toast({
-        title: 'Bulk Scraping Started',
-        description: `Scraping ${activeSources.length} sources...`,
+        title: 'Bulk Gathering Started',
+        description: `Gathering from ${activeSources.length} sources...`,
       });
 
       for (const source of activeSources) {
@@ -361,16 +361,16 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
       }
 
       toast({
-        title: 'Bulk Scraping Complete',
+        title: 'Bulk Gathering Complete',
         description: `Found ${totalArticlesFound} articles, scraped ${totalArticlesScraped} relevant ones. ${failedSources} sources failed.`,
       });
 
       onSourcesChange();
     } catch (error) {
-      console.error('Bulk scraping error:', error);
+      console.error('Bulk content gathering error:', error);
       toast({
-        title: 'Bulk Scraping Failed',
-        description: error.message || 'Failed to complete bulk scraping',
+        title: 'Bulk Gathering Failed',
+        description: error.message || 'Failed to complete bulk content gathering',
         variant: 'destructive',
       });
     } finally {
@@ -412,7 +412,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
           <div>
             <h2 className="text-2xl font-bold">Content Sources</h2>
             <p className="text-muted-foreground">
-              Enhanced universal web scraping with AI-powered content extraction
+              Enhanced universal web content gathering with AI-powered extraction
             </p>
           </div>
           <div className="flex gap-2">
@@ -439,7 +439,7 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
           <CardHeader>
             <CardTitle>Add New Content Source</CardTitle>
             <CardDescription>
-              Add any website or RSS feed for universal content scraping
+              Add any website or RSS feed for universal content gathering
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -555,9 +555,9 @@ export const SourceManager = ({ sources, onSourcesChange }: SourceManagerProps) 
                     </div>
 
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Success Rate</p>
+                      <p className="text-sm text-muted-foreground">Performance</p>
                       <p className="text-sm font-medium">
-                        {source.success_rate ? `${source.success_rate.toFixed(1)}%` : 'N/A'}
+                        {source.success_rate ? (source.success_rate > 70 ? 'Good' : source.success_rate > 40 ? 'Fair' : 'Poor') : 'Unknown'}
                       </p>
                     </div>
                   </div>

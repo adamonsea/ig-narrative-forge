@@ -168,8 +168,8 @@ export const ScheduleMonitor = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Scraping Monitor</h2>
-          <p className="text-muted-foreground">Monitor automated scraping schedules and source attribution</p>
+          <h2 className="text-3xl font-bold">Content Monitor</h2>
+          <p className="text-muted-foreground">Monitor automated content gathering schedules and source attribution</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -261,7 +261,7 @@ export const ScheduleMonitor = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Next Scheduled Runs</CardTitle>
-                  <CardDescription>Upcoming automated scraping jobs</CardDescription>
+                  <CardDescription>Upcoming automated content gathering jobs</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -345,7 +345,7 @@ export const ScheduleMonitor = () => {
           <Card>
             <CardHeader>
               <CardTitle>Schedule Health Monitor</CardTitle>
-              <CardDescription>Monitor the health of automated scraping schedules</CardDescription>
+              <CardDescription>Monitor the health of automated content gathering schedules</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Schedule health monitoring will be displayed here</p>

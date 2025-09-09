@@ -236,12 +236,12 @@ export const AnalyticsDashboard = () => {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{source.articles_count} articles</span>
                       <span>•</span>
-                      <span>{source.success_rate}% success</span>
+                      <span>Performance: {source.success_rate > 70 ? 'Good' : source.success_rate > 40 ? 'Fair' : 'Poor'}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={getScoreBadgeVariant(source.success_rate)}>
-                      {source.success_rate}%
+                      {source.success_rate > 70 ? 'Good' : source.success_rate > 40 ? 'Fair' : 'Poor'}
                     </Badge>
                     <div className="text-xs text-muted-foreground">
                       {source.last_scraped === 'Never' ? 'Never' : 

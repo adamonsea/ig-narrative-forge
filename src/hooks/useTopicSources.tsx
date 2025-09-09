@@ -101,7 +101,7 @@ export const useTopicSources = () => {
 
       toast({
         title: 'Success',
-        description: 'Source linked to topic successfully',
+        description: 'Source linked to topic successfully - starting content gathering',
       });
       
       return true;
@@ -227,8 +227,8 @@ export const useTopicSources = () => {
       toast({
         title: 'Success',
         description: topicId 
-          ? 'Source created and linked to topic'
-          : 'Source created successfully',
+          ? 'Source created and linked to topic - content gathering started'
+          : 'Source created successfully - content gathering started',
       });
 
       return { success: true, sourceId: newSource.id };

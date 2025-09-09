@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Clock, Loader2, XCircle, Minus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertCircle, CheckCircle, Clock, Loader2, XCircle, Minus, RefreshCw } from "lucide-react";
 
 interface ContentSource {
   id: string;
@@ -57,7 +58,8 @@ export function EnhancedSourceStatusBadge({
         label: 'Healthy',
         variant: 'default' as const,
         icon: CheckCircle,
-        className: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-400'
+        className: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-400',
+        tooltip: 'Consistently delivering articles with high reliability'
       };
     }
     
@@ -68,7 +70,8 @@ export function EnhancedSourceStatusBadge({
         label: 'Active',
         variant: 'default' as const,
         icon: CheckCircle,
-        className: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400'
+        className: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400',
+        tooltip: 'Regularly finding relevant articles'
       };
     }
 
@@ -79,7 +82,8 @@ export function EnhancedSourceStatusBadge({
         label: 'No Content',
         variant: 'outline' as const,
         icon: AlertCircle,
-        className: 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400'
+        className: 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400',
+        tooltip: 'Source is responding but no relevant articles found recently'
       };
     }
 
@@ -90,7 +94,8 @@ export function EnhancedSourceStatusBadge({
         label: 'Idle',
         variant: 'outline' as const,
         icon: Clock,
-        className: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-900/20 dark:text-gray-400'
+        className: 'bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-900/20 dark:text-gray-400',
+        tooltip: 'No recent activity - may need attention'
       };
     }
 
@@ -101,38 +106,62 @@ export function EnhancedSourceStatusBadge({
         label: 'Poor',
         variant: 'outline' as const,
         icon: AlertCircle,
-        className: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400'
+        className: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400',
+        tooltip: 'Having difficulty finding relevant articles'
       };
     }
 
-    // Failed: Recent errors AND poor performance OR very stale
+    // Trying to reconnect: Recent errors AND poor performance OR very stale
     if ((automationLastError && successRate < 30) || daysSinceLastScrape > 30) {
       return {
-        status: 'failed',
-        label: 'Failed',
+        status: 'reconnecting',
+        label: 'Trying to reconnect',
         variant: 'destructive' as const,
-        icon: XCircle
+        icon: RefreshCw,
+        tooltip: 'Experiencing connection issues - attempting to reconnect'
       };
     }
 
-    // New: No data yet
+    // If source has articles, default to active status (no "New" status)
+    if (articlesScraped > 0) {
+      return {
+        status: 'active',
+        label: 'Active',
+        variant: 'default' as const,
+        icon: CheckCircle,
+        className: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400',
+        tooltip: 'Recently added and gathering articles'
+      };
+    }
+
+    // Default for sources without data - show as gathering
     return {
-      status: 'new',
-      label: 'New',
+      status: 'gathering',
+      label: 'Gathering',
       variant: 'outline' as const,
       icon: Loader2,
-      className: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400'
+      className: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400',
+      tooltip: 'Starting to gather articles from this source'
     };
   };
 
-  const { label, variant, icon: Icon, className } = getSourceStatus();
+  const { label, variant, icon: Icon, className, tooltip } = getSourceStatus();
   
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   
   return (
-    <Badge variant={variant} className={className}>
-      <Icon className={`${iconSize} mr-1`} />
-      {label}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant={variant} className={className}>
+            <Icon className={`${iconSize} mr-1`} />
+            {label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -78,7 +78,7 @@ export const ScrapingProgressIndicator = ({
             articlesFound,
             progress,
             lastUpdate: source.last_scraped_at || new Date().toISOString(),
-            error: source.success_rate === 0 && source.articles_scraped > 0 ? 'Scraping failed' : undefined
+            error: source.success_rate === 0 && source.articles_scraped > 0 ? 'Content gathering failed' : undefined
           };
         }) || [];
 
@@ -96,7 +96,7 @@ export const ScrapingProgressIndicator = ({
         }
 
       } catch (error) {
-        console.error('Error fetching scraping status:', error);
+        console.error('Error fetching content gathering status:', error);
       }
     };
 
@@ -144,7 +144,7 @@ export const ScrapingProgressIndicator = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
-          Scraping Progress
+          Content Gathering Progress
         </CardTitle>
         <Progress value={totalProgress} className="w-full" />
         <p className="text-sm text-muted-foreground">

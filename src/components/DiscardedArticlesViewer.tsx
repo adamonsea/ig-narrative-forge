@@ -159,7 +159,7 @@ export const DiscardedArticlesViewer = ({ topicId, isOpen, onClose }: DiscardedA
           <div>
             <CardTitle>Filtered Articles</CardTitle>
             <CardDescription>
-              Articles that were discarded during scraping - you can restore relevant ones
+              Articles that were discarded during content gathering - you can restore relevant ones
             </CardDescription>
           </div>
           <Button variant="outline" onClick={onClose}>Close</Button>

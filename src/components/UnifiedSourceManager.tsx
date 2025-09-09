@@ -426,7 +426,7 @@ export const UnifiedSourceManager = ({
             });
           }
         } catch (scrapeError) {
-          console.error('Initial scraping failed:', scrapeError);
+        console.error('Initial gathering failed:', scrapeError);
           // Don't show error to user as source was still added successfully
         }
       } else {
@@ -466,7 +466,7 @@ export const UnifiedSourceManager = ({
             }
           });
         } catch (scrapeError) {
-          console.error('Initial scraping failed:', scrapeError);
+          console.error('Initial gathering failed:', scrapeError);
         }
       }
 
@@ -1130,7 +1130,7 @@ export const UnifiedSourceManager = ({
                       ) : (
                         <TrendingDown className="w-4 h-4 text-red-600" />
                       )}
-                      <span>{source.success_rate || 0}% success</span>
+                      <span>Performance: {source.success_rate && source.success_rate > 70 ? 'Good' : source.success_rate && source.success_rate > 40 ? 'Fair' : 'Poor'}</span>
                     </div>
                   </div>
                 </div>
