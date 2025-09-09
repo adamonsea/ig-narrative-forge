@@ -109,17 +109,53 @@ serve(async (req) => {
     if (extractedArticles.length > 0) {
       console.log(`💾 Storing ${extractedArticles.length} articles in multi-tenant database`);
       
-      const storageResult = await multiTenantDb.storeArticles(
-        extractedArticles,
-        topicId,
-        sourceId
-      );
+      // Filter out articles that look like index page content
+      const validArticles = extractedArticles.filter(article => {
+        const title = article.title.toLowerCase();
+        const invalidTitlePatterns = [
+          /latest news/,
+          /headlines/,
+          /breaking news/,
+          /news index/,
+          /all news/,
+          /news home/,
+          /news archive/,
+          /\| news$/
+        ];
+        
+        // Skip articles that look like index page titles
+        const isInvalidTitle = invalidTitlePatterns.some(pattern => pattern.test(title));
+        if (isInvalidTitle) {
+          console.log(`🚫 Filtered out index page content: "${article.title}"`);
+          return false;
+        }
+        
+        // Skip articles with too little content (likely excerpts)
+        if (article.body && article.body.length < 200) {
+          console.log(`🚫 Filtered out short content: "${article.title}" (${article.body.length} chars)`);
+          return false;
+        }
+        
+        return true;
+      });
       
-      result.articlesStored = storageResult.topicArticlesCreated;
-      result.duplicatesSkipped = storageResult.duplicatesSkipped;
-      result.errors.push(...storageResult.errors.map(e => `Storage: ${e}`));
+      console.log(`✅ After filtering: ${validArticles.length}/${extractedArticles.length} articles are valid`);
       
-      console.log(`📊 Storage complete: ${result.articlesStored} stored, ${result.duplicatesSkipped} duplicates`);
+      if (validArticles.length > 0) {
+        const storageResult = await multiTenantDb.storeArticles(
+          validArticles,
+          topicId,
+          sourceId
+        );
+        
+        result.articlesStored = storageResult.topicArticlesCreated;
+        result.duplicatesSkipped = storageResult.duplicatesSkipped;
+        result.errors.push(...storageResult.errors.map(e => `Storage: ${e}`));
+        
+        console.log(`📊 Storage complete: ${result.articlesStored} stored, ${result.duplicatesSkipped} duplicates`);
+      } else {
+        result.errors.push('All extracted articles were filtered out as invalid content');
+      }
     }
 
     result.success = result.articlesExtracted > 0;
@@ -191,7 +227,7 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
     const soupResult = await supabase.functions.invoke('beautiful-soup-scraper', {
       body: { 
         feedUrl: url,
-        sourceId: 'content-extractor',
+        sourceId: sourceId || null, // Use actual sourceId or null, not string "content-extractor"
         maxArticles: 1,
         individualArticle: true
       }
@@ -210,7 +246,7 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
       const screenshotResult = await supabase.functions.invoke('screenshot-ai-scraper', {
         body: { 
           feedUrl: url,
-          sourceId: 'content-extractor',
+          sourceId: sourceId || null, // Use actual sourceId or null
           region: 'extraction'
         }
       });

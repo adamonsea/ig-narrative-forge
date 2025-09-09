@@ -540,6 +540,12 @@ export const UnifiedSourceManager = ({
           source.feed_url,
           { topicId, sourceId: source.id, region: currentTopic.region || source.region }
         );
+        
+        console.log(`🔧 Scraper routing decision for ${source.source_name}:`);
+        console.log(`   - Topic type: ${currentTopic.topic_type}`);
+        console.log(`   - URL: ${source.feed_url}`);
+        console.log(`   - Selected scraper: ${scraperFunction}`);
+        console.log(`   - Request body:`, requestBody);
       }
 
       const { data, error } = await supabase.functions.invoke(scraperFunction, {

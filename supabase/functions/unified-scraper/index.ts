@@ -59,6 +59,11 @@ serve(async (req) => {
 
     console.log(`🚀 Unified scraper started: ${indexUrl} for topic ${topicId}`);
 
+    // Log scraper selection details for debugging
+    const isIndex = indexUrl.includes('hastingsobserver') || indexUrl.includes('theargus') || indexUrl.includes('bbc.co.uk/news');
+    console.log(`🔍 Index page detection: ${isIndex ? 'YES' : 'NO'} for ${indexUrl}`);
+    console.log(`🔧 Scraper routing: unified-scraper selected (two-phase processing)`);
+
     const result: UnifiedScrapingResult = {
       success: false,
       method: 'two-phase-scraping',
@@ -85,7 +90,9 @@ serve(async (req) => {
     });
 
     if (discoveryResult.error || !discoveryResult.data?.success) {
-      result.errors.push(`URL discovery failed: ${discoveryResult.error?.message || 'Unknown error'}`);
+      const errorMsg = discoveryResult.error?.message || discoveryResult.data?.errors?.[0] || 'Unknown error';
+      result.errors.push(`URL discovery failed: ${errorMsg}`);
+      console.log(`❌ Phase 1 failed: ${errorMsg}`);
       
       // Fallback: try direct scraping of index URL as if it were an article
       console.log(`⚠️ URL discovery failed, trying direct extraction fallback`);

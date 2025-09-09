@@ -139,8 +139,7 @@ export class MultiTenantDatabaseOperations {
         source_domain: sourceDomain,
         last_seen_at: new Date().toISOString()
       }, { 
-        onConflict: 'url',
-        ignoreDuplicates: false 
+        onConflict: 'url' // This matches the actual unique constraint
       })
       .select()
       .single()
@@ -155,12 +154,12 @@ export class MultiTenantDatabaseOperations {
     const newContent = Math.abs(created - updated) < 1000
 
     // Insert topic-specific article record
-    const { data: topicArticle, error: topicError } = await this.supabase
+    const { error: topicError } = await this.supabase
       .from('topic_articles')
-      .insert({
+      .upsert({
         shared_content_id: sharedContent.id,
         topic_id: topic.id,
-        source_id: sourceId,
+        source_id: sourceId || null, // Ensure proper UUID or null
         regional_relevance_score: relevanceScore,
         content_quality_score: qualityScore,
         keyword_matches: this.findKeywordMatches(article, topic),
@@ -171,22 +170,26 @@ export class MultiTenantDatabaseOperations {
           source_domain: sourceDomain
         },
         originality_confidence: 100
+      }, {
+        onConflict: 'shared_content_id,topic_id' // This matches the actual unique constraint
       })
       .select()
 
     let skipped = false
+    let topicArticle = null
     if (topicError) {
-      if (topicError.message.includes('duplicate key')) {
+      if (topicError.message.includes('duplicate key') || topicError.message.includes('violates unique constraint')) {
         skipped = true
         console.log(`Topic article already exists: ${article.title}`)
       } else {
-        throw new Error(`Failed to create topic article: ${topicError.message}`)
+        console.error(`Failed to create topic article: ${topicError.message}`)
+        result.errors.push(`Topic article creation: ${topicError.message}`)
       }
     }
 
     return {
       newContent,
-      topicArticle: topicArticle && topicArticle.length > 0,
+      topicArticle: !!topicArticle,
       skipped,
       sharedContentId: sharedContent.id
     }
@@ -204,11 +207,14 @@ export class MultiTenantDatabaseOperations {
     sharedContentId?: string
   ) {
     try {
+      // Only insert if sourceId is a valid UUID or null
+      const validSourceId = sourceId && sourceId.length === 36 ? sourceId : null;
+      
       await this.supabase
         .from('articles')
-        .upsert({
+        .insert({
           topic_id: topic.id,
-          source_id: sourceId,
+          source_id: validSourceId,
           title: article.title,
           body: article.body || '',
           author: article.author,
@@ -226,9 +232,6 @@ export class MultiTenantDatabaseOperations {
             shared_content_id: sharedContentId,
             scrape_method: 'multi_tenant_compatible'
           }
-        }, { 
-          onConflict: 'source_url,topic_id',
-          ignoreDuplicates: true 
         })
     } catch (error) {
       // Legacy errors are expected during migration, don't fail the whole process
