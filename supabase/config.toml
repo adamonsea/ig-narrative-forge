@@ -138,3 +138,6 @@ verify_jwt = false
 
 [functions.schedule-recovery]
 verify_jwt = false
+
+[functions.screenshot-ai-scraper]
+verify_jwt = false

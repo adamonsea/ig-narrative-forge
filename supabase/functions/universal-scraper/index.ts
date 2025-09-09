@@ -343,7 +343,7 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
       
-      const fallbackMethods = ['beautiful-soup-scraper', 'ai-scraper-recovery'];
+      const fallbackMethods = ['beautiful-soup-scraper', 'screenshot-ai-scraper', 'ai-scraper-recovery'];
       let fallbackSuccess = false;
       
       for (const method of fallbackMethods) {
