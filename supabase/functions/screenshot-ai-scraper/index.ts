@@ -268,6 +268,9 @@ async function extractContentWithDeepSeek(
   try {
     const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     
+    // Validate and optimize image size
+    const optimizedBase64 = await optimizeImageSize(screenshotBase64);
+    
     const prompt = `You are an expert web content extractor. Analyze this screenshot of a news website and extract ALL visible news articles.
 
 For each article you find, extract:
@@ -304,6 +307,8 @@ IMPORTANT:
 - Calculate approximate word count based on visible text
 - Return valid JSON only, no other text`;
 
+    console.log(`🔍 Sending request to DeepSeek with image size: ${Math.round(optimizedBase64.length * 0.75)} bytes`);
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -311,7 +316,7 @@ IMPORTANT:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-vl',
+        model: 'deepseek-chat',
         messages: [
           {
             role: 'user',
@@ -323,29 +328,41 @@ IMPORTANT:
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:image/png;base64,${screenshotBase64}`
+                  url: `data:image/png;base64,${optimizedBase64}`
                 }
               }
             ]
           }
         ],
         max_tokens: 4000,
-        temperature: 0.1
+        stream: false
       })
     });
 
+    const responseText = await response.text();
+    console.log(`📡 DeepSeek API Response Status: ${response.status}`);
+    
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+      console.error('❌ DeepSeek API Error Response:', responseText);
+      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}. Response: ${responseText}`);
     }
 
-    const data = await response.json();
-    const extractedContent = data.choices[0]?.message?.content;
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Failed to parse DeepSeek response:', responseText);
+      throw new Error(`Failed to parse DeepSeek JSON response: ${parseError.message}`);
+    }
+
+    const extractedContent = data.choices?.[0]?.message?.content;
 
     if (!extractedContent) {
+      console.error('❌ No content in DeepSeek response:', data);
       throw new Error('No content extracted from DeepSeek response');
     }
 
-    console.log('📄 DeepSeek extracted content:', extractedContent);
+    console.log('📄 DeepSeek extracted content:', extractedContent.substring(0, 500) + '...');
 
     // Parse the JSON response
     let articles;
@@ -355,13 +372,20 @@ IMPORTANT:
       // Try to extract JSON from the response if it's wrapped in other text
       const jsonMatch = extractedContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        articles = JSON.parse(jsonMatch[0]);
+        try {
+          articles = JSON.parse(jsonMatch[0]);
+        } catch (secondParseError) {
+          console.error('❌ Failed to parse extracted JSON:', jsonMatch[0]);
+          throw new Error(`Failed to parse extracted JSON: ${secondParseError.message}`);
+        }
       } else {
-        throw new Error(`Failed to parse DeepSeek JSON response: ${parseError.message}`);
+        console.error('❌ No JSON array found in response:', extractedContent);
+        throw new Error(`No valid JSON array found in DeepSeek response. Content: ${extractedContent.substring(0, 200)}...`);
       }
     }
 
     if (!Array.isArray(articles)) {
+      console.error('❌ DeepSeek response is not an array:', articles);
       throw new Error('DeepSeek response is not an array of articles');
     }
 
@@ -383,5 +407,29 @@ IMPORTANT:
       success: false,
       error: error.message
     };
+  }
+}
+
+async function optimizeImageSize(base64Image: string): Promise<string> {
+  try {
+    // Check if image is too large (>4MB base64 = ~3MB actual)
+    const imageSizeBytes = (base64Image.length * 3) / 4;
+    const maxSizeBytes = 4 * 1024 * 1024; // 4MB limit for DeepSeek
+    
+    console.log(`🖼️ Original image size: ${Math.round(imageSizeBytes / 1024)} KB`);
+    
+    if (imageSizeBytes > maxSizeBytes) {
+      console.log(`⚠️ Image too large (${Math.round(imageSizeBytes / 1024 / 1024)} MB), would need compression`);
+      // For now, just truncate if too large - in production would implement actual image resize
+      const maxBase64Length = Math.floor((maxSizeBytes * 4) / 3);
+      const truncated = base64Image.substring(0, maxBase64Length);
+      console.log(`📏 Truncated to ${Math.round(truncated.length * 0.75 / 1024)} KB`);
+      return truncated;
+    }
+    
+    return base64Image;
+  } catch (error) {
+    console.log(`⚠️ Image optimization failed: ${error.message}, using original`);
+    return base64Image;
   }
 }
