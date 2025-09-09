@@ -47,7 +47,7 @@ export const UniversalScrapingValidator = ({ topicId, topicName }: UniversalScra
         'universal-topic-scraper', 
         { 
           body: { 
-            topic_id: topicId, 
+            topicId: topicId, 
             test_mode: true,
             max_articles_per_source: 1 
           } 
