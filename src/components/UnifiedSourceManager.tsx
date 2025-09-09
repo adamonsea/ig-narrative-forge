@@ -160,16 +160,37 @@ export const UnifiedSourceManager = ({
       setLoading(true);
 
       if (mode === 'topic' && topicId) {
-        // For topic mode, load sources directly by topic_id
-        const { data, error } = await supabase
-          .from('content_sources')
-          .select('*')
-          .eq('topic_id', topicId)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
+        // For topic mode, use the new junction table function
+        const { data, error } = await supabase.rpc('get_topic_sources', {
+          p_topic_id: topicId
+        });
 
         if (error) throw error;
-        setSources(data || []);
+        
+        // Transform the RPC result to match ContentSource interface
+        const transformedSources = (data || []).map((source: any) => ({
+          id: source.source_id,
+          source_name: source.source_name,
+          feed_url: source.feed_url,
+          canonical_domain: source.canonical_domain,
+          credibility_score: source.credibility_score,
+          is_active: source.is_active,
+          articles_scraped: source.articles_scraped,
+          last_scraped_at: source.last_scraped_at,
+          // Add additional fields that might be needed
+          region: null,
+          content_type: null,
+          is_whitelisted: null,
+          is_blacklisted: null,
+          scrape_frequency_hours: null,
+          topic_id: topicId, // For compatibility
+          scraping_method: null,
+          success_rate: null,
+          avg_response_time_ms: null,
+          source_config: source.source_config
+        }));
+        
+        setSources(transformedSources);
       } else {
         // For non-topic modes, use original approach
         let query = supabase.from('content_sources').select('*');
@@ -297,50 +318,117 @@ export const UnifiedSourceManager = ({
       const normalizedUrl = normalizeUrl(newSource.feed_url.trim());
       const domain = extractDomainFromUrl(normalizedUrl);
       
-      // For topic mode, check topic-scoped duplicates
       if (mode === 'topic' && topicId) {
-        // Check if this URL already exists for this specific topic
-        const { data: existingTopicSource } = await supabase
+        // First, check if source already exists globally
+        const { data: existingSource, error: checkError } = await supabase
           .from('content_sources')
           .select('id, source_name')
-          .eq('topic_id', topicId)
           .eq('feed_url', normalizedUrl)
           .maybeSingle();
 
-        if (existingTopicSource) {
-          toast({
-            title: 'Source Already Added',
-            description: 'This source is already active for this topic',
-            variant: 'destructive',
+        if (checkError && checkError.code !== 'PGRST116') throw checkError;
+
+        let sourceId: string;
+
+        if (existingSource) {
+          // Source exists, check if already linked to this topic
+          const { data: existingLink } = await supabase
+            .from('topic_sources')
+            .select('id')
+            .eq('topic_id', topicId)
+            .eq('source_id', existingSource.id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (existingLink) {
+            toast({
+              title: 'Source Already Added',
+              description: 'This source is already linked to this topic',
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          // Link existing source to topic
+          const { error: linkError } = await supabase.rpc('add_source_to_topic', {
+            p_topic_id: topicId,
+            p_source_id: existingSource.id,
+            p_source_config: {
+              added_via: 'unified_source_manager',
+              added_at: new Date().toISOString(),
+              original_name: newSource.source_name.trim()
+            }
           });
-          return;
+
+          if (linkError) throw linkError;
+          sourceId = existingSource.id;
+
+          toast({
+            title: 'Success',
+            description: `Existing source "${existingSource.source_name}" linked to topic`,
+          });
+        } else {
+          // Create new source
+          const sourceData = {
+            source_name: newSource.source_name.trim(),
+            feed_url: normalizedUrl,
+            canonical_domain: domain,
+            credibility_score: newSource.credibility_score,
+            scrape_frequency_hours: newSource.scrape_frequency_hours,
+            content_type: newSource.content_type,
+            is_active: true,
+            is_whitelisted: true,
+            is_blacklisted: false,
+            region: currentTopic?.region || region
+            // Note: No topic_id - we use junction table now
+          };
+
+          const { data: newSourceData, error: createError } = await supabase
+            .from('content_sources')
+            .insert(sourceData)
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          sourceId = newSourceData.id;
+
+          // Link new source to topic
+          const { error: linkError } = await supabase.rpc('add_source_to_topic', {
+            p_topic_id: topicId,
+            p_source_id: sourceId,
+            p_source_config: {
+              added_via: 'unified_source_manager',
+              added_at: new Date().toISOString(),
+              created_with_topic: true
+            }
+          });
+
+          if (linkError) throw linkError;
+
+          toast({
+            title: 'Success',
+            description: 'New content source created and linked to topic',
+          });
         }
 
-        // Create source directly with topic_id
-        const sourceData = {
-          source_name: newSource.source_name.trim(),
-          feed_url: normalizedUrl,
-          canonical_domain: domain,
-          credibility_score: newSource.credibility_score,
-          scrape_frequency_hours: newSource.scrape_frequency_hours,
-          content_type: newSource.content_type,
-          is_active: true,
-          is_whitelisted: true,
-          is_blacklisted: false,
-          topic_id: topicId,
-          region: currentTopic?.region || region
-        };
-
-        const { error } = await supabase
-          .from('content_sources')
-          .insert(sourceData);
-
-        if (error) throw error;
-
-        toast({
-          title: 'Success',
-          description: 'Content source added to topic successfully',
-        });
+        // Trigger initial scraping for the source
+        try {
+          if (currentTopic) {
+            const scraperFunction = getScraperFunction(currentTopic.topic_type, normalizedUrl);
+            const requestBody = createScraperRequestBody(
+              currentTopic.topic_type,
+              normalizedUrl,
+              { topicId, sourceId, region: currentTopic.region || region }
+            );
+            
+            await supabase.functions.invoke(scraperFunction, {
+              body: requestBody
+            });
+          }
+        } catch (scrapeError) {
+          console.error('Initial scraping failed:', scrapeError);
+          // Don't show error to user as source was still added successfully
+        }
       } else {
         // For non-topic mode, use the original approach
         const sourceData = {
@@ -367,23 +455,9 @@ export const UnifiedSourceManager = ({
           title: 'Success',
           description: 'Content source added successfully',
         });
-      }
 
-      // Trigger initial scraping for the new source
-      try {
-        if (currentTopic) {
-          const scraperFunction = getScraperFunction(currentTopic.topic_type, normalizedUrl);
-          const requestBody = createScraperRequestBody(
-            currentTopic.topic_type,
-            normalizedUrl,
-            { topicId, sourceId: undefined, region: currentTopic.region || region }
-          );
-          
-          await supabase.functions.invoke(scraperFunction, {
-            body: requestBody
-          });
-        } else {
-          // Default to universal scraper for non-topic sources
+        // Trigger initial scraping
+        try {
           await supabase.functions.invoke('universal-scraper', {
             body: {
               feedUrl: normalizedUrl,
@@ -391,10 +465,9 @@ export const UnifiedSourceManager = ({
               region: region || 'general'
             }
           });
+        } catch (scrapeError) {
+          console.error('Initial scraping failed:', scrapeError);
         }
-      } catch (scrapeError) {
-        console.error('Initial scraping failed:', scrapeError);
-        // Don't show error to user as source was still added successfully
       }
 
       setNewSource({
@@ -451,47 +524,72 @@ export const UnifiedSourceManager = ({
   };
 
   const handleDeleteSource = async (sourceId: string, sourceName: string) => {
-    if (!confirm(`Are you sure you want to delete "${sourceName}"? This action cannot be undone.`)) {
-      return;
+    if (mode === 'topic' && topicId) {
+      // For topic mode, remove source from topic (don't delete the source itself)
+      if (!confirm(`Are you sure you want to remove "${sourceName}" from this topic? The source will remain available for other topics.`)) {
+        return;
+      }
+    } else {
+      // For global/region mode, delete the entire source
+      if (!confirm(`Are you sure you want to delete "${sourceName}"? This action cannot be undone.`)) {
+        return;
+      }
     }
 
     try {
       setLoading(true);
       
-      // Check for existing articles
-      const { data: articleCount, error: countError } = await supabase
-        .from('articles')
-        .select('id', { count: 'exact', head: true })
-        .eq('source_id', sourceId);
+      if (mode === 'topic' && topicId) {
+        // Remove source from topic using junction table
+        const { error } = await supabase.rpc('remove_source_from_topic', {
+          p_topic_id: topicId,
+          p_source_id: sourceId
+        });
 
-      if (countError) throw countError;
+        if (error) throw error;
 
-      const hasArticles = (articleCount as any)?.count > 0;
-      
-      if (hasArticles) {
-        // Orphan articles by setting source_id to null
-        const { error: updateError } = await supabase
+        toast({
+          title: 'Success',
+          description: `Source "${sourceName}" removed from topic`,
+        });
+      } else {
+        // For global/region mode, delete entire source (original logic)
+        
+        // Check for existing articles
+        const { data: articleCount, error: countError } = await supabase
           .from('articles')
-          .update({ source_id: null })
+          .select('id', { count: 'exact', head: true })
           .eq('source_id', sourceId);
 
-        if (updateError) throw updateError;
+        if (countError) throw countError;
+
+        const hasArticles = (articleCount as any)?.count > 0;
+        
+        if (hasArticles) {
+          // Orphan articles by setting source_id to null
+          const { error: updateError } = await supabase
+            .from('articles')
+            .update({ source_id: null })
+            .eq('source_id', sourceId);
+
+          if (updateError) throw updateError;
+        }
+
+        // Delete the source (this will cascade delete topic_sources entries)
+        const { error } = await supabase
+          .from('content_sources')
+          .delete()
+          .eq('id', sourceId);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: hasArticles 
+            ? `Source "${sourceName}" deleted and ${(articleCount as any)?.count} articles orphaned`
+            : `Source "${sourceName}" deleted successfully`,
+        });
       }
-
-      // Delete the source
-      const { error } = await supabase
-        .from('content_sources')
-        .delete()
-        .eq('id', sourceId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: hasArticles 
-          ? `Source "${sourceName}" deleted and ${(articleCount as any)?.count} articles orphaned`
-          : `Source "${sourceName}" deleted successfully`,
-      });
 
       loadSources();
       onSourcesChange();
@@ -499,7 +597,7 @@ export const UnifiedSourceManager = ({
       console.error('Error deleting source:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete source',
+        description: error.message || 'Failed to remove/delete source',
         variant: 'destructive',
       });
     } finally {
