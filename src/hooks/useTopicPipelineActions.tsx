@@ -421,12 +421,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
   };
 
   const deleteArticle = async (articleId: string, articleTitle: string) => {
-    // Immediately remove from UI for smooth animation
-    if (optimisticallyRemoveArticle) {
-      optimisticallyRemoveArticle(articleId);
-    }
-    
-    // Immediate animation feedback - trigger discard animation
+    // Trigger discard animation without optimistic removal
     setAnimatingArticles(prev => new Set([...prev, articleId]));
     setDeletingArticles(prev => new Set([...prev, articleId]));
 
@@ -444,7 +439,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `"${articleTitle}" has been discarded and won't be re-imported`
       });
 
-      // Clean up animation state after delay
+      // Clean up animation state after animation completes (400ms)
       setTimeout(() => {
         setAnimatingArticles(prev => {
           const newSet = new Set(prev);
@@ -456,7 +451,9 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
           newSet.delete(articleId);
           return newSet;
         });
-      }, 300);
+        // Refresh the list to move remaining items up
+        onRefresh();
+      }, 450);
       
     } catch (error) {
       console.error('Error deleting article:', error);
@@ -504,7 +501,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `${articleIds.length} articles have been discarded and won't be re-imported`
       });
 
-      // Clean up animation state after delay
+      // Clean up animation state after animation completes (400ms)
       setTimeout(() => {
         articleIds.forEach(id => {
           setAnimatingArticles(prev => {
@@ -519,7 +516,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
           });
         });
         onRefresh();
-      }, 300);
+      }, 450);
       
     } catch (error) {
       console.error('Error deleting articles:', error);
