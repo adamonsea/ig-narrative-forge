@@ -393,12 +393,21 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
                 articles={multiTenantArticles}
                 processingArticle={processingArticle}
                 deletingArticles={deletingArticles}
+                slideQuantities={{}}
+                toneOverrides={{}}
+                writingStyleOverrides={{}}
+                onSlideQuantityChange={() => {}}
+                onToneOverrideChange={() => {}}
+                onWritingStyleOverrideChange={() => {}}
                 onPreview={(article: MultiTenantArticle) => setPreviewArticle(article)}
                 onApprove={handleMultiTenantApprove}
                 onDelete={handleMultiTenantDelete}
+                onBulkDelete={() => {}}
+                defaultTone="conversational"
+                defaultWritingStyle="journalistic"
                 topicKeywords={topic?.keywords}
                 topicLandmarks={topic?.landmarks}
-                onRefresh={handleRefresh}
+                onRefresh={() => {}}
               />
             </TabsContent>
           </Tabs>

@@ -1,17 +1,31 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw, CheckSquare, Square } from "lucide-react";
+import { SimilarArticleIndicator } from "@/components/SimilarArticleIndicator";
+import { SimpleBulkDeleteDialog } from "@/components/ui/simple-bulk-delete-dialog";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 
 interface MultiTenantArticlesListProps {
   articles: MultiTenantArticle[];
   processingArticle: string | null;
   deletingArticles: Set<string>;
+  slideQuantities: { [key: string]: 'short' | 'tabloid' | 'indepth' | 'extensive' };
+  toneOverrides: { [key: string]: 'formal' | 'conversational' | 'engaging' };
+  writingStyleOverrides: { [key: string]: 'journalistic' | 'educational' | 'listicle' | 'story_driven' };
+  onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
+  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging') => void;
+  onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onPreview: (article: MultiTenantArticle) => void;
-  onApprove: (articleId: string) => void;
+  onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
+  onBulkDelete: (articleIds: string[]) => void;
+  defaultTone: 'formal' | 'conversational' | 'engaging';
+  defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   topicKeywords?: string[];
   topicLandmarks?: string[];
   onRefresh?: () => void;
@@ -21,13 +35,50 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
   articles,
   processingArticle,
   deletingArticles,
+  slideQuantities,
+  toneOverrides,
+  writingStyleOverrides,
+  onSlideQuantityChange,
+  onToneOverrideChange,
+  onWritingStyleOverrideChange,
   onPreview,
   onApprove,
   onDelete,
+  onBulkDelete,
+  defaultTone,
+  defaultWritingStyle,
   topicKeywords = [],
   topicLandmarks = [],
   onRefresh
 }) => {
+  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedArticles.size === articles.length) {
+      setSelectedArticles(new Set());
+    } else {
+      setSelectedArticles(new Set(articles.map(a => a.id)));
+    }
+  };
+
+  const handleSelectArticle = (articleId: string) => {
+    const newSelected = new Set(selectedArticles);
+    if (newSelected.has(articleId)) {
+      newSelected.delete(articleId);
+    } else {
+      newSelected.add(articleId);
+    }
+    setSelectedArticles(newSelected);
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    const selectedIds = Array.from(selectedArticles);
+    onBulkDelete(selectedIds);
+    setSelectedArticles(new Set());
+    setShowBulkDeleteDialog(false);
+  };
   // Separate articles by relevance threshold
   const aboveThresholdArticles = articles.filter(article => 
     article.regional_relevance_score >= 25
@@ -55,26 +106,50 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
     return "text-red-600";
   };
 
+  const getSlideTypeInfo = (type: string) => {
+    const types = {
+      short: { slides: 4, desc: 'Quick read' },
+      tabloid: { slides: 6, desc: 'Standard' },
+      indepth: { slides: 8, desc: 'Detailed' },
+      extensive: { slides: 12, desc: 'Comprehensive' }
+    };
+    
+    return types[type as keyof typeof types];
+  };
+
   const renderArticleCard = (article: MultiTenantArticle) => {
+    const slideType = slideQuantities[article.id] || 'tabloid';
+    const slideInfo = getSlideTypeInfo(slideType);
+    const toneOverride = toneOverrides[article.id] || defaultTone;
+    const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
     const isProcessing = processingArticle === article.id;
     const isDeleting = deletingArticles.has(article.id);
+    const isSelected = selectedArticles.has(article.id);
     
     return (
       <Card 
         key={article.id} 
         className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
-          isProcessing ? 'opacity-50' : isDeleting ? 'animate-pulse' : 'animate-fade-in opacity-100 scale-100'
+          isProcessing ? 'opacity-50' : isDeleting ? 'animate-pulse' : 
+          isSelected ? 'border-primary bg-primary/5' : 'animate-fade-in opacity-100 scale-100'
         }`}
       >
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-3">
-              <CardTitle className="text-lg mb-3 leading-snug break-words hyphens-auto flex items-start gap-2">
-                {article.title}
-                <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
-                  Multi-Tenant
-                </Badge>
-              </CardTitle>
+              <div className="flex items-start gap-2 mb-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => handleSelectArticle(article.id)}
+                  className="mt-1"
+                />
+                <CardTitle className="text-lg leading-snug break-words hyphens-auto flex items-start gap-2 flex-1">
+                  {article.title}
+                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
+                    Multi-Tenant
+                  </Badge>
+                </CardTitle>
+              </div>
               
               {/* Keywords */}
               <div className="flex flex-wrap gap-1 mb-3 items-center">
@@ -173,8 +248,71 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                 </Button>
               </div>
               
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="text-xs">
+                  <Select
+                    value={slideType}
+                    onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
+                      onSlideQuantityChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-28 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">4 slides</SelectItem>
+                      <SelectItem value="tabloid">6 slides</SelectItem>
+                      <SelectItem value="indepth">8 slides</SelectItem>
+                      <SelectItem value="extensive">12 slides</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="text-xs">
+                  <Select
+                    value={toneOverride}
+                    onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                      onToneOverrideChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-32 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formal">Formal</SelectItem>
+                      <SelectItem value="conversational">Conversational</SelectItem>
+                      <SelectItem value="engaging">Engaging</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="text-xs">
+                  <Select
+                    value={writingStyleOverride}
+                    onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
+                      onWritingStyleOverrideChange(article.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-32 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="journalistic">Journalistic</SelectItem>
+                      <SelectItem value="educational">Educational</SelectItem>
+                      <SelectItem value="listicle">Listicle</SelectItem>
+                      <SelectItem value="story_driven">Story-driven</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <Button
-                onClick={() => onApprove(article.id)}
+                onClick={() => onApprove(
+                  article.id, 
+                  slideType, 
+                  toneOverride, 
+                  writingStyleOverride
+                )}
                 disabled={isProcessing || isDeleting}
                 className="bg-success text-success-foreground hover:bg-success/90 w-full"
                 size="sm"
@@ -209,6 +347,38 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
 
   return (
     <div className="space-y-6">
+      {/* Bulk Operations Toolbar */}
+      {articles.length > 0 && (
+        <div className="flex items-center justify-between bg-muted/50 p-4 rounded-lg">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selectedArticles.size === articles.length && articles.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <span className="text-sm font-medium">
+                Select All ({selectedArticles.size} of {articles.length})
+              </span>
+            </div>
+            
+            {selectedArticles.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBulkDeleteDialog(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected ({selectedArticles.size})
+              </Button>
+            )}
+          </div>
+          
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            Multi-Tenant System
+          </Badge>
+        </div>
+      )}
+
       {/* Above Threshold Articles */}
       {aboveThresholdArticles.length > 0 && (
         <div className="space-y-4">
@@ -242,6 +412,14 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
           </div>
         </div>
       )}
+
+      {/* Bulk Delete Dialog */}
+      <SimpleBulkDeleteDialog
+        isOpen={showBulkDeleteDialog}
+        onClose={() => setShowBulkDeleteDialog(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        selectedCount={selectedArticles.size}
+      />
     </div>
   );
 };

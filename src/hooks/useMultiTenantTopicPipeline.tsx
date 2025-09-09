@@ -27,9 +27,14 @@ export interface MultiTenantQueueItem {
   topic_article_id: string;
   shared_content_id: string;
   title: string;
+  article_title: string;
+  article_url: string;
   status: string;
   created_at: string;
-  slidetype: string;
+  attempts: number;
+  max_attempts: number;
+  error_message?: string;
+  slidetype?: string;
   tone?: string;
   writing_style?: string;
 }
@@ -42,33 +47,38 @@ export interface MultiTenantStory {
   status: string;
   created_at: string;
   updated_at: string;
+  url?: string;
+  author?: string;
+  word_count?: number;
+  cover_illustration_url?: string;
+  illustration_generated_at?: string;
+  slidetype?: string;
+  tone?: string;
+  writing_style?: string;
+  audience_expertise?: string;
   slides?: any[];
 }
 
 export interface MultiTenantStats {
   totalArticles: number;
   pendingArticles: number;
-  processedArticles: number;
-  queueItems: number;
+  processingQueue: number;
   readyStories: number;
-  draftStories: number;
 }
 
 export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
+  const { toast } = useToast();
   const [articles, setArticles] = useState<MultiTenantArticle[]>([]);
   const [queueItems, setQueueItems] = useState<MultiTenantQueueItem[]>([]);
   const [stories, setStories] = useState<MultiTenantStory[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<MultiTenantStats>({
     totalArticles: 0,
     pendingArticles: 0,
-    processedArticles: 0,
-    queueItems: 0,
-    readyStories: 0,
-    draftStories: 0
+    processingQueue: 0,
+    readyStories: 0
   });
-  const { toast } = useToast();
-  
+
   // Import multi-tenant actions
   const {
     processingArticle,
@@ -78,274 +88,248 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     deleteMultipleMultiTenantArticles,
     cancelMultiTenantQueueItem,
     approveMultiTenantStory,
-    rejectMultiTenantStory,
+    rejectMultiTenantStory
   } = useMultiTenantActions();
 
-  /**
-   * Load topic content using new multi-tenant structure
-   */
   const loadTopicContent = useCallback(async () => {
     if (!selectedTopicId) {
-      setArticles([]);
-      setQueueItems([]);
-      setStories([]);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    
     try {
-      console.log('Loading multi-tenant content for topic:', selectedTopicId);
-      
-      // Get articles using the new multi-tenant function
-      const { data: articlesData, error: articlesError } = await supabase.rpc(
-        'get_topic_articles_multi_tenant',
-        {
-          p_topic_id: selectedTopicId,
-          p_status: null,
-          p_limit: 200,
-          p_offset: 0
-        }
-      );
+      setLoading(true);
 
-      if (articlesError) {
-        console.error('Error loading articles:', articlesError);
-        toast({
-          title: "Error loading articles",
-          description: articlesError.message,
-          variant: "destructive"
-        });
-        return;
+      // Get multi-tenant articles using the new RPC function
+      const articlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
+        p_topic_id: selectedTopicId,
+        p_limit: 100
+      });
+
+      if (articlesResult.error) {
+        console.error('Error loading multi-tenant articles:', articlesResult.error);
+        setArticles([]);
+      } else {
+        const articlesData = articlesResult.data?.map((item: any) => ({
+          id: item.article_id,
+          shared_content_id: item.shared_content_id,
+          title: item.title,
+          body: item.body,
+          author: item.author,
+          url: item.url,
+          image_url: item.image_url,
+          published_at: item.published_at,
+          word_count: item.word_count || 0,
+          processing_status: item.processing_status,
+          regional_relevance_score: item.regional_relevance_score || 0,
+          content_quality_score: item.content_quality_score || 0,
+          keyword_matches: item.keyword_matches || [],
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        })) || [];
+        setArticles(articlesData);
       }
 
-      const processedArticles = (articlesData || []).map((article: any) => ({
-        id: article.id,
-        shared_content_id: article.shared_content_id,
-        title: article.title,
-        body: article.body,
-        author: article.author,
-        url: article.url,
-        image_url: article.image_url,
-        published_at: article.published_at,
-        word_count: article.word_count,
-        processing_status: article.processing_status,
-        regional_relevance_score: article.regional_relevance_score,
-        content_quality_score: article.content_quality_score,
-        keyword_matches: article.keyword_matches || [],
-        created_at: article.created_at,
-        updated_at: article.updated_at
-      }));
-
-      setArticles(processedArticles);
-
-      // For now, fall back to legacy structures for queue and stories
-      // TODO: Create multi-tenant versions of these
-      const { data: queueData, error: queueError } = await supabase
+      // Legacy queue items for compatibility
+      const queueResult = await supabase
         .from('content_generation_queue')
         .select(`
           id,
-          article_id,
+          topic_article_id,
+          shared_content_id,
           status,
+          created_at,
+          attempts,
+          max_attempts,
+          error_message,
           slidetype,
           tone,
           writing_style,
-          created_at,
-          articles!inner(
-            title,
-            topic_id
-          )
+          shared_article_content!inner(title, url)
         `)
-        .eq('articles.topic_id', selectedTopicId)
-        .in('status', ['pending', 'processing', 'failed'])
+        .eq('topic_article_id', selectedTopicId)
         .order('created_at', { ascending: false });
 
-      if (queueError) {
-        console.error('Error loading queue:', queueError);
+      if (queueResult.error) {
+        console.error('Error loading queue items:', queueResult.error);
+        setQueueItems([]);
       } else {
-        const processedQueue = (queueData || []).map((item: any) => ({
+        const queueItemsData = queueResult.data?.map((item: any) => ({
           id: item.id,
-          topic_article_id: item.article_id, // Legacy mapping
-          shared_content_id: null, // Will be populated when we migrate queue
-          title: item.articles?.title || 'Unknown',
+          topic_article_id: item.topic_article_id,
+          shared_content_id: item.shared_content_id,
+          title: item.shared_article_content?.title || 'Unknown Title',
+          article_title: item.shared_article_content?.title || 'Unknown Title',
+          article_url: item.shared_article_content?.url || '',
           status: item.status,
           created_at: item.created_at,
+          attempts: item.attempts || 0,
+          max_attempts: item.max_attempts || 3,
+          error_message: item.error_message,
           slidetype: item.slidetype,
           tone: item.tone,
           writing_style: item.writing_style
-        }));
-        setQueueItems(processedQueue);
+        })) || [];
+        setQueueItems(queueItemsData);
       }
 
-      // Load stories (also legacy for now)
-      const { data: storiesData, error: storiesError } = await supabase
+      // Legacy stories for compatibility
+      const storiesResult = await supabase
         .from('stories')
         .select(`
           id,
+          topic_article_id,
+          shared_content_id,
           title,
           status,
           created_at,
           updated_at,
-          article_id,
-          slides:slides(*)
+          cover_illustration_url,
+          illustration_generated_at,
+          slides(*)
         `)
-        .eq('articles.topic_id', selectedTopicId)
         .order('created_at', { ascending: false });
 
-      if (storiesError) {
-        console.error('Error loading stories:', storiesError);
+      if (storiesResult.error) {
+        console.error('Error loading stories:', storiesResult.error);
+        setStories([]);
       } else {
-        const processedStories = (storiesData || []).map((story: any) => ({
+        const storiesData = storiesResult.data?.map((story: any) => ({
           id: story.id,
-          topic_article_id: story.article_id, // Legacy mapping
-          shared_content_id: null, // Will be populated when we migrate stories
+          topic_article_id: story.topic_article_id,
+          shared_content_id: story.shared_content_id,
           title: story.title,
           status: story.status,
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: story.slides || []
-        }));
-        setStories(processedStories);
+          cover_illustration_url: story.cover_illustration_url,
+          illustration_generated_at: story.illustration_generated_at,
+          slides: story.slides || [],
+          // Additional properties for compatibility
+          url: '',
+          author: '',
+          word_count: 0,
+          slidetype: '',
+          tone: '',
+          writing_style: '',
+          audience_expertise: ''
+        })) || [];
+        setStories(storiesData);
       }
 
       // Calculate stats
-      const newStats: MultiTenantStats = {
-        totalArticles: processedArticles.length,
-        pendingArticles: processedArticles.filter(a => a.processing_status === 'new').length,
-        processedArticles: processedArticles.filter(a => a.processing_status === 'processed').length,
-        queueItems: queueData?.length || 0,
-        readyStories: storiesData?.filter((s: any) => s.status === 'ready').length || 0,
-        draftStories: storiesData?.filter((s: any) => s.status === 'draft').length || 0
+      const newStats = {
+        totalArticles: articlesResult.data?.length || 0,
+        pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
+        processingQueue: queueResult.data?.length || 0,
+        readyStories: (storiesResult.data || []).filter((s: any) => s.status === 'ready').length
       };
-
       setStats(newStats);
-      
-      console.log('Multi-tenant content loaded:', {
-        articles: processedArticles.length,
-        queue: queueData?.length || 0,
-        stories: storiesData?.length || 0,
-        stats: newStats
-      });
 
     } catch (error) {
-      console.error('Error in loadTopicContent:', error);
+      console.error('Error loading topic content:', error);
       toast({
-        title: "Error loading topic content",
-        description: "Please try again",
-        variant: "destructive"
+        title: "Error loading content",
+        description: "Failed to load multi-tenant topic content",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   }, [selectedTopicId, toast]);
 
-  /**
-   * Test migration by comparing old vs new structure
-   */
+  // Migration functions
   const testMigration = useCallback(async () => {
     if (!selectedTopicId) return null;
 
-    try {
-      // Get legacy articles
-      const { data: legacyArticles } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('topic_id', selectedTopicId);
+    const { data: legacyCount } = await supabase
+      .from('articles')
+      .select('id', { count: 'exact' })
+      .eq('topic_id', selectedTopicId);
 
-      // Get multi-tenant articles
-      const { data: multiTenantArticles } = await supabase.rpc(
-        'get_topic_articles_multi_tenant',
-        {
-          p_topic_id: selectedTopicId,
-          p_status: null,
-          p_limit: 1000,
-          p_offset: 0
-        }
-      );
+    const { data: multiTenantCount } = await supabase
+      .from('topic_articles')
+      .select('id', { count: 'exact' })
+      .eq('topic_id', selectedTopicId);
 
-      return {
-        legacy: legacyArticles?.length || 0,
-        multiTenant: multiTenantArticles?.length || 0,
-        match: (legacyArticles?.length || 0) === (multiTenantArticles?.length || 0)
-      };
-    } catch (error) {
-      console.error('Migration test error:', error);
-      return null;
-    }
+    return {
+      legacy: legacyCount?.length || 0,
+      multiTenant: multiTenantCount?.length || 0
+    };
   }, [selectedTopicId]);
 
-  /**
-   * Migrate existing articles for this topic
-   */
   const migrateTopicArticles = useCallback(async () => {
     if (!selectedTopicId) return;
 
     try {
       const { data, error } = await supabase.rpc('migrate_articles_to_multi_tenant', {
-        p_limit: 1000
+        topic_id: selectedTopicId
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      const result = data as any;
       toast({
         title: "Migration completed",
-        description: `Migrated ${result?.migrated_count || 0} articles to multi-tenant structure`
+        description: `Successfully migrated ${data || 0} articles to multi-tenant system`,
       });
 
-      // Reload content
       await loadTopicContent();
-    } catch (error: any) {
-      console.error('Migration error:', error);
+    } catch (error) {
+      console.error('Migration failed:', error);
       toast({
         title: "Migration failed",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to migrate articles to multi-tenant system",
+        variant: "destructive",
       });
     }
   }, [selectedTopicId, loadTopicContent, toast]);
 
-  /**
-   * Wrapper functions for multi-tenant actions
-   */
-  const handleMultiTenantApprove = useCallback(async (articleId: string) => {
-    const article = articles.find(a => a.id === articleId);
-    if (!article) return;
-
-    try {
-      await approveMultiTenantArticle(article, 'tabloid', 'conversational', 'journalistic');
-      // Refresh data to show updated status
-      setTimeout(() => {
-        loadTopicContent();
-      }, 1000);
-    } catch (error) {
-      console.error('Error approving multi-tenant article:', error);
-    }
-  }, [articles, approveMultiTenantArticle, loadTopicContent]);
+  // Action handlers with proper callbacks
+  const handleMultiTenantApprove = useCallback(async (
+    articleId: string,
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive',
+    tone: 'formal' | 'conversational' | 'engaging',
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven'
+  ) => {
+    await approveMultiTenantArticle(articleId, slideType, tone, writingStyle);
+    await loadTopicContent();
+  }, [approveMultiTenantArticle, loadTopicContent]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
-    try {
-      await deleteMultiTenantArticle(articleId, articleTitle);
-      // Refresh data to show updated status
-      setTimeout(() => {
-        loadTopicContent();
-      }, 1000);
-    } catch (error) {
-      console.error('Error deleting multi-tenant article:', error);
-    }
+    await deleteMultiTenantArticle(articleId, articleTitle);
+    await loadTopicContent();
   }, [deleteMultiTenantArticle, loadTopicContent]);
+
+  const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
+    await deleteMultipleMultiTenantArticles(articleIds);
+    await loadTopicContent();
+  }, [deleteMultipleMultiTenantArticles, loadTopicContent]);
+
+  const handleMultiTenantCancelQueue = useCallback(async (queueId: string) => {
+    await cancelMultiTenantQueueItem(queueId);
+    await loadTopicContent();
+  }, [cancelMultiTenantQueueItem, loadTopicContent]);
+
+  const handleMultiTenantApproveStory = useCallback(async (storyId: string) => {
+    await approveMultiTenantStory(storyId);
+    await loadTopicContent();
+  }, [approveMultiTenantStory, loadTopicContent]);
+
+  const handleMultiTenantRejectStory = useCallback(async (storyId: string) => {
+    await rejectMultiTenantStory(storyId);
+    await loadTopicContent();
+  }, [rejectMultiTenantStory, loadTopicContent]);
 
   // Load content when topic changes
   useEffect(() => {
-    loadTopicContent();
-  }, [loadTopicContent]);
+    if (selectedTopicId) {
+      loadTopicContent();
+    }
+  }, [selectedTopicId, loadTopicContent]);
 
-  // Set up real-time subscriptions for new tables
+  // Real-time subscriptions
   useEffect(() => {
     if (!selectedTopicId) return;
-
-    console.log('Setting up multi-tenant real-time subscriptions');
 
     const channel = supabase
       .channel('multi-tenant-topic-changes')
@@ -354,8 +338,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         {
           event: '*',
           schema: 'public',
-          table: 'topic_articles',
-          filter: `topic_id=eq.${selectedTopicId}`
+          table: 'topic_articles'
         },
         () => {
           console.log('Topic articles changed, reloading...');
@@ -382,11 +365,16 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   }, [selectedTopicId, loadTopicContent]);
 
   return {
+    // Data
     articles,
     queueItems,
     stories,
-    loading,
     stats,
+    
+    // Loading states
+    loading,
+    
+    // Functions
     loadTopicContent,
     testMigration,
     migrateTopicArticles,
@@ -394,14 +382,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     setQueueItems,
     setStories,
     setStats,
+    
     // Multi-tenant actions
-    processingArticle,
-    deletingArticles,
     handleMultiTenantApprove,
     handleMultiTenantDelete,
-    approveMultiTenantStory,
-    rejectMultiTenantStory,
-    cancelMultiTenantQueueItem,
-    deleteMultipleMultiTenantArticles
+    handleMultiTenantBulkDelete,
+    handleMultiTenantCancelQueue,
+    handleMultiTenantApproveStory,
+    handleMultiTenantRejectStory,
+    
+    // Multi-tenant action states from useMultiTenantActions
+    processingArticle,
+    deletingArticles
   };
 };
