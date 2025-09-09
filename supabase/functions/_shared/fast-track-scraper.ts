@@ -7,15 +7,71 @@ import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 
 export class FastTrackScraper {
   private extractor: UniversalContentExtractor;
   private retryStrategy: EnhancedRetryStrategies;
   private accessibilityCache = new Map<string, boolean>();
+  private region: string = '';
+  private sourceInfo: any = {};
+  private baseUrl: string = '';
 
-  constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
-    this.extractor = new UniversalContentExtractor(baseUrl);
+  constructor(private supabase: any) {
     this.retryStrategy = new EnhancedRetryStrategies();
+  }
+
+  async scrapeContent(feedUrl: string, sourceId: string, options: any = {}): Promise<ScrapingResult> {
+    console.log(`🚀 FastTrackScraper.scrapeContent called for ${feedUrl}`);
+    
+    try {
+      // Get source information from database
+      const { data: source, error: sourceError } = await this.supabase
+        .from('content_sources')
+        .select('*')
+        .eq('id', sourceId)
+        .single();
+
+      if (sourceError || !source) {
+        throw new Error(`Failed to get source info: ${sourceError?.message}`);
+      }
+
+      // Get topic information to determine region
+      let topicRegion = 'Global'; // default
+      if (source.topic_id) {
+        const { data: topic } = await this.supabase
+          .from('topics')
+          .select('region, name')
+          .eq('id', source.topic_id)
+          .single();
+        
+        if (topic && topic.region) {
+          topicRegion = topic.region;
+        }
+      }
+
+      // Set up instance variables for this scraping run
+      this.region = topicRegion;
+      this.sourceInfo = source;
+      this.baseUrl = feedUrl;
+      this.extractor = new UniversalContentExtractor(feedUrl);
+
+      console.log(`📍 Scraping with region: ${this.region}, source: ${source.source_name}`);
+
+      // Execute the existing scraping strategy
+      return await this.executeScrapingStrategy();
+      
+    } catch (error) {
+      console.error(`❌ FastTrackScraper.scrapeContent error:`, error);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [error.message],
+        method: 'fast_track_setup_error'
+      };
+    }
   }
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
