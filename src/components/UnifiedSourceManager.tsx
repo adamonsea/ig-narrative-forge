@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Plus, 
-  Edit, 
   Trash2, 
   Globe, 
   AlertTriangle, 
@@ -26,11 +25,7 @@ import {
   Eye,
   XCircle,
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  ExternalLink,
-  Check,
-  X
+  ExternalLink
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 
@@ -111,8 +106,6 @@ export const UnifiedSourceManager = ({
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [scrapingSource, setScrapingSource] = useState<string | null>(null);
   const [scrapingAll, setScrapingAll] = useState(false);
-  const [editingCredibilityId, setEditingCredibilityId] = useState<string | null>(null);
-  const [editingCredibilityValue, setEditingCredibilityValue] = useState<number>(0);
   
   const [newSource, setNewSource] = useState({
     source_name: '',
@@ -827,34 +820,8 @@ export const UnifiedSourceManager = ({
       return <Badge variant="destructive">Failed</Badge>;
     }
 
-    // New: No data yet
-    return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400">New</Badge>;
-  };
-
-  const getCredibilityColor = (score: number | null) => {
-    if (!score) return 'text-muted-foreground';
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const handleStartCredibilityEdit = (sourceId: string, currentScore: number) => {
-    setEditingCredibilityId(sourceId);
-    setEditingCredibilityValue(currentScore || 70);
-  };
-
-  const handleSaveCredibilityEdit = async () => {
-    if (!editingCredibilityId) return;
-    
-    const newScore = Math.max(1, Math.min(100, editingCredibilityValue));
-    await handleUpdateSource(editingCredibilityId, { credibility_score: newScore });
-    setEditingCredibilityId(null);
-    setEditingCredibilityValue(0);
-  };
-
-  const handleCancelCredibilityEdit = () => {
-    setEditingCredibilityId(null);
-    setEditingCredibilityValue(0);
+    // Gathering: Starting to collect articles
+    return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400">Gathering</Badge>;
   };
 
   const getDisplayTitle = () => {
@@ -1062,48 +1029,6 @@ export const UnifiedSourceManager = ({
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
                     {getSourceHealthBadge(source)}
-                    {editingCredibilityId === source.id ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          max="100"
-                          value={editingCredibilityValue}
-                          onChange={(e) => setEditingCredibilityValue(parseInt(e.target.value) || 0)}
-                          className="w-16 h-6 text-xs"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveCredibilityEdit();
-                            if (e.key === 'Escape') handleCancelCredibilityEdit();
-                          }}
-                          autoFocus
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={handleSaveCredibilityEdit}
-                        >
-                          <Check className="w-3 h-3 text-green-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={handleCancelCredibilityEdit}
-                        >
-                          <X className="w-3 h-3 text-red-600" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Badge 
-                        variant="outline" 
-                        className={`${getCredibilityColor(source.credibility_score)} cursor-pointer hover:bg-accent`}
-                        onClick={() => handleStartCredibilityEdit(source.id, source.credibility_score || 70)}
-                      >
-                        {source.credibility_score}% credible
-                        <Edit className="w-3 h-3 ml-1" />
-                      </Badge>
-                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
@@ -1123,14 +1048,6 @@ export const UnifiedSourceManager = ({
                           : 'Never scraped'
                         }
                       </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {(source.success_rate || 0) >= 70 ? (
-                        <TrendingUp className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 text-red-600" />
-                      )}
-                      <span>Gathered: {source.articles_scraped || 0} articles</span>
                     </div>
                   </div>
                 </div>

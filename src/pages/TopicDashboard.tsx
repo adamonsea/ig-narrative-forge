@@ -8,7 +8,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
+import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
 import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
@@ -496,7 +496,7 @@ const TopicDashboard = () => {
                 <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <SourceSuggestionTool
+                      <ImprovedSourceSuggestionTool
                         topicName={topic.name}
                         description={topic.description || ''}
                         keywords={topic.keywords.join(', ')}

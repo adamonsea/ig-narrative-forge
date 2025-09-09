@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
-import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
+import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
 import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 
 interface Topic {
@@ -470,7 +470,7 @@ export const TopicManager = () => {
               existingKeywords={newTopic.keywords ? newTopic.keywords.split(',').map(k => k.trim()) : []}
             />
 
-            <SourceSuggestionTool
+            <ImprovedSourceSuggestionTool
               topicName={newTopic.name}
               description={newTopic.description}
               keywords={newTopic.keywords}
