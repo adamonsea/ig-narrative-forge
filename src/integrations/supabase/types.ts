@@ -2478,12 +2478,14 @@ export type Database = {
         }[]
       }
       get_topic_articles_multi_tenant: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_status?: string
-          p_topic_id: string
-        }
+        Args:
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_status?: string
+              p_topic_id: string
+            }
+          | { p_limit?: number; p_offset?: number; p_topic_id: string }
         Returns: {
           author: string
           body: string
