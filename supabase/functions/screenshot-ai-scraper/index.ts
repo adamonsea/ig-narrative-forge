@@ -183,8 +183,11 @@ async function takeScreenshot(url: string): Promise<{
     // Get ScreenshotAPI token from environment
     const screenshotApiToken = Deno.env.get('SCREENSHOTAPI_TOKEN');
     if (!screenshotApiToken) {
+      console.error('❌ SCREENSHOTAPI_TOKEN not found in environment variables');
       throw new Error('SCREENSHOTAPI_TOKEN environment variable not set');
     }
+    
+    console.log(`✅ ScreenshotAPI token found (length: ${screenshotApiToken.length})`);
     
     // Use ScreenshotAPI.net to take screenshot
     const screenshotApiUrl = `https://shot.screenshotapi.net/screenshot`;
@@ -199,23 +202,53 @@ async function takeScreenshot(url: string): Promise<{
       delay: '2000' // Wait 2 seconds for content to load
     });
     
-    const response = await fetch(`${screenshotApiUrl}?${screenshotParams.toString()}`, {
+    const fullUrl = `${screenshotApiUrl}?${screenshotParams.toString()}`;
+    console.log(`📡 Making request to ScreenshotAPI: ${screenshotApiUrl} with params`);
+    console.log(`🔗 Target URL: ${url}`);
+    
+    const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
 
+    console.log(`📡 ScreenshotAPI Response Status: ${response.status} ${response.statusText}`);
+    console.log(`📡 Response Headers:`, Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`ScreenshotAPI failed: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ ScreenshotAPI Error Response: ${errorText}`);
+      throw new Error(`ScreenshotAPI failed: ${response.status} ${response.statusText}. Response: ${errorText}`);
     }
 
     const screenshotBase64 = await response.text();
+    console.log(`📸 Screenshot response received. Length: ${screenshotBase64.length} characters`);
     
     // Validate the response is actually base64 image data
-    if (!screenshotBase64 || screenshotBase64.length < 100) {
-      throw new Error('Invalid screenshot response - data too short');
+    if (!screenshotBase64) {
+      console.error('❌ Screenshot response is empty');
+      throw new Error('Screenshot response is empty');
     }
+    
+    if (screenshotBase64.length < 100) {
+      console.error(`❌ Screenshot response too short: ${screenshotBase64.length} characters`);
+      console.error(`❌ Response preview: ${screenshotBase64}`);
+      throw new Error(`Invalid screenshot response - data too short (${screenshotBase64.length} chars)`);
+    }
+    
+    // Check if it looks like valid base64
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    const isValidBase64 = base64Regex.test(screenshotBase64);
+    
+    if (!isValidBase64) {
+      console.error(`❌ Response doesn't look like valid base64`);
+      console.error(`❌ Response preview: ${screenshotBase64.substring(0, 200)}...`);
+      throw new Error('Screenshot response is not valid base64 data');
+    }
+    
+    console.log(`✅ Screenshot captured successfully. Size: ${(screenshotBase64.length * 0.75 / 1024).toFixed(1)} KB`);
+    console.log(`✅ Base64 preview: ${screenshotBase64.substring(0, 50)}...`);
     
     return {
       success: true,
@@ -224,7 +257,8 @@ async function takeScreenshot(url: string): Promise<{
     };
 
   } catch (error) {
-    console.error('Screenshot error:', error);
+    console.error('💥 Screenshot error:', error);
+    console.error('💥 Stack trace:', error.stack);
     
     // Fallback to traditional web scraping if screenshot fails
     try {
@@ -240,9 +274,13 @@ async function takeScreenshot(url: string): Promise<{
         }
       });
 
+      console.log(`📡 Fallback fetch status: ${response.status}`);
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      console.log('✅ Fallback URL is accessible, but screenshot service failed');
 
       return {
         success: false,
@@ -250,6 +288,7 @@ async function takeScreenshot(url: string): Promise<{
       };
       
     } catch (fallbackError) {
+      console.error('💥 Fallback also failed:', fallbackError);
       return {
         success: false,
         error: `Both screenshot and fallback failed. Screenshot: ${error.message}. Fallback: ${fallbackError.message}`
@@ -268,14 +307,29 @@ async function extractContentWithOpenAI(
   error?: string;
 }> {
   try {
+    console.log(`🤖 Starting OpenAI content extraction...`);
+    
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     
     if (!openaiApiKey) {
+      console.error('❌ OpenAI API key not found in environment');
       throw new Error('OpenAI API key not configured');
     }
     
+    console.log(`✅ OpenAI API key found (length: ${openaiApiKey.length})`);
+    console.log(`📸 Input screenshot size: ${screenshotBase64.length} characters`);
+    
+    // Validate screenshot data before processing
+    if (!screenshotBase64 || screenshotBase64.length < 100) {
+      console.error(`❌ Invalid screenshot data. Length: ${screenshotBase64?.length || 0}`);
+      throw new Error(`Invalid screenshot data for OpenAI processing. Length: ${screenshotBase64?.length || 0}`);
+    }
+    
+    console.log(`📸 Screenshot data preview: ${screenshotBase64.substring(0, 50)}...`);
+    
     // Validate and optimize image size
     const optimizedBase64 = await optimizeImageSize(screenshotBase64);
+    console.log(`🔧 Optimized image size: ${optimizedBase64.length} characters`);
     
     const prompt = `You are an expert web content extractor. Analyze this screenshot of a news website and extract ALL visible news articles.
 
@@ -313,7 +367,32 @@ IMPORTANT:
 - Calculate approximate word count based on visible text
 - Return valid JSON only, no other text`;
 
-    console.log(`🔍 Sending request to OpenAI with image size: ${Math.round(optimizedBase64.length * 0.75)} bytes`);
+    console.log(`🔍 Sending request to OpenAI with image size: ${Math.round(optimizedBase64.length * 0.75 / 1024)} KB`);
+    
+    const requestBody = {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: prompt
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/png;base64,${optimizedBase64}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 4000
+    };
+    
+    console.log(`📡 Making request to OpenAI API...`);
+    console.log(`🔧 Request structure: model=${requestBody.model}, messages count=${requestBody.messages.length}`);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -321,31 +400,14 @@ IMPORTANT:
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: prompt
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/png;base64,${optimizedBase64}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000
-      })
+      body: JSON.stringify(requestBody)
     });
 
+    console.log(`📡 OpenAI API Response Status: ${response.status} ${response.statusText}`);
+    console.log(`📡 Response Headers:`, Object.fromEntries(response.headers.entries()));
+    
     const responseText = await response.text();
-    console.log(`📡 OpenAI API Response Status: ${response.status}`);
+    console.log(`📡 Response size: ${responseText.length} characters`);
     
     if (!response.ok) {
       console.error('❌ OpenAI API Error Response:', responseText);
@@ -355,8 +417,13 @@ IMPORTANT:
     let data;
     try {
       data = JSON.parse(responseText);
+      console.log(`✅ Successfully parsed OpenAI response JSON`);
+      console.log(`📊 Response structure:`, {
+        choices: data.choices?.length || 0,
+        usage: data.usage || 'not provided'
+      });
     } catch (parseError) {
-      console.error('❌ Failed to parse OpenAI response:', responseText);
+      console.error('❌ Failed to parse OpenAI response:', responseText.substring(0, 500));
       throw new Error(`Failed to parse OpenAI JSON response: ${parseError.message}`);
     }
 
@@ -367,39 +434,46 @@ IMPORTANT:
       throw new Error('No content extracted from OpenAI response');
     }
 
-    console.log('📄 OpenAI extracted content:', extractedContent.substring(0, 500) + '...');
+    console.log('📄 OpenAI extracted content length:', extractedContent.length);
+    console.log('📄 Content preview:', extractedContent.substring(0, 300) + '...');
 
     // Parse the JSON response
     let articles;
     try {
       articles = JSON.parse(extractedContent);
+      console.log('✅ Successfully parsed extracted content as JSON');
     } catch (parseError) {
+      console.log('⚠️ Direct JSON parse failed, trying to extract JSON array...');
       // Try to extract JSON from the response if it's wrapped in other text
       const jsonMatch = extractedContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
+        console.log('🔍 Found JSON array in response, attempting to parse...');
         try {
           articles = JSON.parse(jsonMatch[0]);
+          console.log('✅ Successfully parsed extracted JSON array');
         } catch (secondParseError) {
-          console.error('❌ Failed to parse extracted JSON:', jsonMatch[0]);
+          console.error('❌ Failed to parse extracted JSON:', jsonMatch[0].substring(0, 200));
           throw new Error(`Failed to parse extracted JSON: ${secondParseError.message}`);
         }
       } else {
-        console.error('❌ No JSON array found in response:', extractedContent);
+        console.error('❌ No JSON array found in response:', extractedContent.substring(0, 500));
         throw new Error(`No valid JSON array found in OpenAI response. Content: ${extractedContent.substring(0, 200)}...`);
       }
     }
 
     if (!Array.isArray(articles)) {
-      console.error('❌ OpenAI response is not an array:', articles);
+      console.error('❌ OpenAI response is not an array:', typeof articles, articles);
       throw new Error('OpenAI response is not an array of articles');
     }
+
+    console.log(`🎯 Successfully extracted ${articles.length} articles`);
 
     // Estimate cost for GPT-4o-mini (input: $0.15/1M tokens, output: $0.6/1M tokens)
     const inputTokens = Math.ceil((prompt.length + optimizedBase64.length * 0.00085) / 4); // Vision tokens calculated differently
     const outputTokens = Math.ceil(extractedContent.length / 4);
     const estimatedCost = (inputTokens * 0.15 / 1000000) + (outputTokens * 0.6 / 1000000);
 
-    console.log(`✅ OpenAI extracted ${articles.length} articles (estimated cost: $${estimatedCost.toFixed(6)})`);
+    console.log(`💰 Estimated cost: $${estimatedCost.toFixed(6)} (${inputTokens} input + ${outputTokens} output tokens)`);
 
     return {
       success: true,
@@ -408,7 +482,8 @@ IMPORTANT:
     };
 
   } catch (error) {
-    console.error('OpenAI extraction error:', error);
+    console.error('💥 OpenAI extraction error:', error);
+    console.error('💥 Stack trace:', error.stack);
     return {
       success: false,
       error: error.message
@@ -418,14 +493,34 @@ IMPORTANT:
 
 async function optimizeImageSize(base64Image: string): Promise<string> {
   try {
+    console.log(`🖼️ Starting image optimization...`);
+    console.log(`📏 Input base64 length: ${base64Image.length} characters`);
+    
+    // Validate input
+    if (!base64Image || base64Image.length === 0) {
+      console.error('❌ Empty or null base64 image provided');
+      throw new Error('Empty or null base64 image provided');
+    }
+    
     // Check if image is too large (>20MB base64 = ~15MB actual for OpenAI)
     const imageSizeBytes = (base64Image.length * 3) / 4;
     const maxSizeBytes = 20 * 1024 * 1024; // 20MB limit for OpenAI Vision
     
-    console.log(`🖼️ Original image size: ${Math.round(imageSizeBytes / 1024)} KB`);
+    console.log(`🖼️ Calculated image size: ${Math.round(imageSizeBytes / 1024)} KB (${Math.round(imageSizeBytes / 1024 / 1024 * 100) / 100} MB)`);
+    console.log(`📊 OpenAI limit: ${Math.round(maxSizeBytes / 1024 / 1024)} MB`);
+    
+    // Validate base64 format
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(base64Image)) {
+      console.error('❌ Invalid base64 format detected');
+      console.error('❌ First 100 chars:', base64Image.substring(0, 100));
+      throw new Error('Invalid base64 format in image data');
+    }
+    
+    console.log('✅ Base64 format validation passed');
     
     if (imageSizeBytes > maxSizeBytes) {
-      console.log(`⚠️ Image too large (${Math.round(imageSizeBytes / 1024 / 1024)} MB), would need compression`);
+      console.log(`⚠️ Image too large (${Math.round(imageSizeBytes / 1024 / 1024)} MB), truncating to fit OpenAI limits`);
       // For now, just truncate if too large - in production would implement actual image resize
       const maxBase64Length = Math.floor((maxSizeBytes * 4) / 3);
       const truncated = base64Image.substring(0, maxBase64Length);
@@ -433,9 +528,12 @@ async function optimizeImageSize(base64Image: string): Promise<string> {
       return truncated;
     }
     
+    console.log('✅ Image size within limits, no optimization needed');
     return base64Image;
   } catch (error) {
-    console.log(`⚠️ Image optimization failed: ${error.message}, using original`);
+    console.error(`💥 Image optimization failed: ${error.message}`);
+    console.error('💥 Stack trace:', error.stack);
+    console.log(`⚠️ Using original image despite optimization failure`);
     return base64Image;
   }
 }
