@@ -79,7 +79,15 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
     stats: multiTenantStats,
     loadTopicContent: loadMultiTenantContent,
     testMigration,
-    migrateTopicArticles
+    migrateTopicArticles,
+    handleMultiTenantApprove: multiTenantApprove,
+    handleMultiTenantDelete: multiTenantDelete,
+    handleMultiTenantBulkDelete: multiTenantBulkDelete,
+    handleMultiTenantCancelQueue: multiTenantCancelQueue,
+    handleMultiTenantApproveStory: multiTenantApproveStory,
+    handleMultiTenantRejectStory: multiTenantRejectStory,
+    processingArticle: multiTenantProcessingArticle,
+    deletingArticles: multiTenantDeletingArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   // Legacy actions hook
@@ -152,22 +160,16 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
     approveArticle(articleId, slideType, tone, writingStyle);
   };
 
-  const handleMultiTenantApprove = async (articleId: string) => {
-    // TODO: Implement multi-tenant approval workflow
-    toast({
-      title: "Multi-Tenant Approval",
-      description: "Multi-tenant article approval workflow coming soon!",
-      variant: "default"
-    });
+  const handleMultiTenantApproveWrapper = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => {
+    await multiTenantApprove(articleId, slideType, tone, writingStyle);
   };
 
-  const handleMultiTenantDelete = async (articleId: string, articleTitle: string) => {
-    // TODO: Implement multi-tenant deletion
-    toast({
-      title: "Multi-Tenant Delete",
-      description: "Multi-tenant article deletion workflow coming soon!",
-      variant: "default"
-    });
+  const handleMultiTenantDeleteWrapper = async (articleId: string, articleTitle: string) => {
+    await multiTenantDelete(articleId, articleTitle);
+  };
+
+  const handleMultiTenantBulkDeleteWrapper = async (articleIds: string[]) => {
+    await multiTenantBulkDelete(articleIds);
   };
 
   const handleRefresh = () => {
@@ -180,6 +182,8 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
 
   const isLoading = viewMode === 'legacy' ? legacyLoading : multiTenantLoading;
   const currentStats = viewMode === 'legacy' ? legacyStats : multiTenantStats;
+  const currentProcessingArticle = viewMode === 'legacy' ? processingArticle : multiTenantProcessingArticle;
+  const currentDeletingArticles = viewMode === 'legacy' ? deletingArticles : multiTenantDeletingArticles;
 
   return (
     <div className="space-y-6">
@@ -391,23 +395,23 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
 
               <MultiTenantArticlesList
                 articles={multiTenantArticles}
-                processingArticle={processingArticle}
-                deletingArticles={deletingArticles}
-                slideQuantities={{}}
-                toneOverrides={{}}
-                writingStyleOverrides={{}}
-                onSlideQuantityChange={() => {}}
-                onToneOverrideChange={() => {}}
-                onWritingStyleOverrideChange={() => {}}
+                processingArticle={currentProcessingArticle}
+                deletingArticles={currentDeletingArticles}
+                slideQuantities={slideQuantities}
+                toneOverrides={toneOverrides}
+                writingStyleOverrides={writingStyleOverrides}
+                onSlideQuantityChange={handleSlideQuantityChange}
+                onToneOverrideChange={handleToneOverrideChange}
+                onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
                 onPreview={(article: MultiTenantArticle) => setPreviewArticle(article)}
-                onApprove={handleMultiTenantApprove}
-                onDelete={handleMultiTenantDelete}
-                onBulkDelete={() => {}}
-                defaultTone="conversational"
-                defaultWritingStyle="journalistic"
+                onApprove={handleMultiTenantApproveWrapper}
+                onDelete={handleMultiTenantDeleteWrapper}
+                onBulkDelete={handleMultiTenantBulkDeleteWrapper}
+                defaultTone={topic?.default_tone || 'conversational'}
+                defaultWritingStyle={topic?.default_writing_style || 'journalistic'}
                 topicKeywords={topic?.keywords}
                 topicLandmarks={topic?.landmarks}
-                onRefresh={() => {}}
+                onRefresh={handleRefresh}
               />
             </TabsContent>
           </Tabs>
