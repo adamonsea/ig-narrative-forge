@@ -142,9 +142,27 @@ serve(async (req) => {
 
     await logProgress(supabase, 'request-parsing', 'start');
     const requestBody = await req.json();
-    const { feedUrl, sourceId, region } = requestBody;
+    const { feedUrl, sourceId, region, individualArticle = false } = requestBody;
     
-    await logProgress(supabase, 'request-parsing', 'success', { feedUrl, sourceId, region });
+    await logProgress(supabase, 'request-parsing', 'success', { feedUrl, sourceId, region, individualArticle });
+
+    // Validate that this is an individual article URL, not an index page
+    if (!individualArticle && isIndexPage(feedUrl)) {
+      console.log('🚫 Index page detected - screenshot scraper should not be used for index pages');
+      await logProgress(supabase, 'validation', 'error', 'Index page rejected');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Screenshot scraper should only be used for individual article pages, not index/listing pages',
+        articlesExtracted: 0,
+        articlesInserted: 0,
+        duplicatesFound: 0,
+        cost: 0,
+        recommendation: 'Use discover-article-urls service for index pages'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!feedUrl) {
       await logProgress(supabase, 'validation', 'error', 'Missing feedUrl parameter');
@@ -389,7 +407,7 @@ serve(async (req) => {
   }
 });
 
-async function takeScreenshot(url: string, supabase?: any): Promise<{
+export async function takeScreenshot(url: string, supabase?: any): Promise<{
   success: boolean;
   screenshotBase64?: string;
   screenshotUrl?: string;
@@ -412,13 +430,16 @@ async function takeScreenshot(url: string, supabase?: any): Promise<{
     const screenshotParams = new URLSearchParams({
       token: screenshotApiToken,
       url: url,
-      width: '1280',      // Reduced from 1920
-      height: '800',      // Reduced from 1080
-      output: 'json',     // Request JSON response with URL
+      width: '1280',
+      height: '1024',      // Taller for articles
+      output: 'json',     
       file_type: 'png',
       wait_for_event: 'load',
-      delay: '1000',      // Reduced from 2000
-      fresh: 'true'       // Bypass cache for testing
+      full_page: 'true',   // Full page screenshot for complete content
+      delay: '2000',       // Wait for content to load
+      fresh: 'true',
+      block_ads: 'true',
+      block_cookie_banners: 'true'
     });
     
     const fullUrl = `${screenshotApiUrl}?${screenshotParams.toString()}`;
@@ -695,10 +716,17 @@ Extract only actual news articles, not navigation or ads. If no clear articles a
       throw new Error('OpenAI response is not an array of articles');
     }
     
-    // Calculate cost estimation
-    const inputTokens = Math.ceil((prompt.length + (screenshotBase64.length * 0.1)) / 4);
+    // Calculate cost estimation using correct OpenAI vision pricing
+    // GPT-4o-mini vision: $0.00015 per 1K tokens for input, $0.0006 per 1K tokens for output
+    const base64Length = screenshotBase64.length;
+    const estimatedImageBytes = (base64Length * 3) / 4; // Convert base64 to actual bytes
+    const visionTokens = Math.max(85, Math.ceil(estimatedImageBytes / 750)); // More accurate token estimation
+    const textTokens = Math.ceil(prompt.length / 4);
     const outputTokens = Math.ceil(extractedContent.length / 4);
-    const estimatedCost = (inputTokens * 0.00015) + (outputTokens * 0.0006); // gpt-4o-mini pricing
+    
+    const inputCost = ((visionTokens + textTokens) / 1000) * 0.00015;
+    const outputCost = (outputTokens / 1000) * 0.0006;
+    const estimatedCost = inputCost + outputCost;
     
     if (supabase) await logProgress(supabase, 'openai-response-parse', 'success', {
       articlesFound: articles.length,
@@ -726,5 +754,30 @@ Extract only actual news articles, not navigation or ads. If no clear articles a
       success: false,
       error: error.message
     };
+  }
+}
+
+function isIndexPage(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
+    
+    // Common index page patterns
+    const indexPatterns = [
+      /\/blog\/?$/,
+      /\/news\/?$/,
+      /\/articles?\/?$/,
+      /\/posts?\/?$/,
+      /\/category\//,
+      /\/tag\//,
+      /\/archive\//,
+      /\/page\/\d+/,
+      /\/$/, // Root paths
+      /\/index\.(html?|php)$/,
+    ];
+    
+    return indexPatterns.some(pattern => pattern.test(pathname));
+  } catch {
+    return false;
   }
 }

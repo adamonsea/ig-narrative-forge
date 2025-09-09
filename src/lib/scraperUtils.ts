@@ -7,12 +7,46 @@ export interface Topic {
 }
 
 /**
- * Determines which scraper function to use based on topic type
+ * Determines which scraper function to use based on topic type and URL
  * @param topicType - The type of topic ('regional' or 'keyword')
+ * @param feedUrl - The URL to be scraped (to detect if it's an index page)
  * @returns The appropriate scraper function name
  */
-export const getScraperFunction = (topicType: 'regional' | 'keyword'): string => {
+export const getScraperFunction = (topicType: 'regional' | 'keyword', feedUrl?: string): string => {
+  // Check if URL appears to be an index/listing page
+  if (feedUrl && isIndexPage(feedUrl)) {
+    return 'unified-scraper'; // Use new two-phase scraper for index pages
+  }
+  
   return topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
+};
+
+/**
+ * Checks if a URL appears to be an index/listing page rather than an individual article
+ */
+export const isIndexPage = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
+    
+    // Common index page patterns
+    const indexPatterns = [
+      /\/blog\/?$/,
+      /\/news\/?$/,
+      /\/articles?\/?$/,
+      /\/posts?\/?$/,
+      /\/category\//,
+      /\/tag\//,
+      /\/archive\//,
+      /\/page\/\d+/,
+      /\/$/, // Root paths
+      /\/index\.(html?|php)$/,
+    ];
+    
+    return indexPatterns.some(pattern => pattern.test(pathname));
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -31,6 +65,18 @@ export const createScraperRequestBody = (
     region?: string;
   }
 ) => {
+  // Check if this is an index page requiring two-phase scraping
+  if (isIndexPage(feedUrl)) {
+    return {
+      indexUrl: feedUrl,
+      topicId: options.topicId,
+      sourceId: options.sourceId,
+      maxArticles: 20,
+      fallbackToScreenshot: true
+    };
+  }
+  
+  // For individual article pages, use existing logic
   if (topicType === 'regional') {
     return {
       feedUrl,

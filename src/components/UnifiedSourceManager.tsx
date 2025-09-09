@@ -372,7 +372,7 @@ export const UnifiedSourceManager = ({
       // Trigger initial scraping for the new source
       try {
         if (currentTopic) {
-          const scraperFunction = getScraperFunction(currentTopic.topic_type);
+          const scraperFunction = getScraperFunction(currentTopic.topic_type, normalizedUrl);
           const requestBody = createScraperRequestBody(
             currentTopic.topic_type,
             normalizedUrl,
@@ -534,7 +534,7 @@ export const UnifiedSourceManager = ({
 
       // Use topic-aware scraper if this is a topic source
       if (currentTopic) {
-        scraperFunction = getScraperFunction(currentTopic.topic_type);
+        scraperFunction = getScraperFunction(currentTopic.topic_type, source.feed_url);
         requestBody = createScraperRequestBody(
           currentTopic.topic_type,
           source.feed_url,
@@ -626,7 +626,7 @@ export const UnifiedSourceManager = ({
           };
 
           if (currentTopic) {
-            scraperFunction = getScraperFunction(currentTopic.topic_type);
+            scraperFunction = getScraperFunction(currentTopic.topic_type, source.feed_url!);
             requestBody = createScraperRequestBody(
               currentTopic.topic_type,
               source.feed_url!,

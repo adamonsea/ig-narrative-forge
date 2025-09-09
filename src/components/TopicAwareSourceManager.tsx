@@ -356,7 +356,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       // Trigger scraping for the new source using appropriate scraper
       try {
         if (currentTopic) {
-          const scraperFunction = getScraperFunction(currentTopic.topic_type);
+          const scraperFunction = getScraperFunction(currentTopic.topic_type, normalizedUrl);
           const requestBody = createScraperRequestBody(
             currentTopic.topic_type,
             normalizedUrl,
@@ -456,7 +456,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     try {
       setScrapingSource(source.id);
       
-      const scraperFunction = getScraperFunction(currentTopic.topic_type);
+      const scraperFunction = getScraperFunction(currentTopic.topic_type, source.feed_url);
       const requestBody = createScraperRequestBody(
         currentTopic.topic_type,
         source.feed_url,
@@ -549,7 +549,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
       setScrapingAll(true);
       
       // Scrape all active sources in parallel using appropriate scraper
-      const scraperFunction = getScraperFunction(currentTopic.topic_type);
+      const scraperFunction = getScraperFunction(currentTopic.topic_type, activeSources[0]?.feed_url);
       const scrapePromises = activeSources.map(source => {
         const requestBody = createScraperRequestBody(
           currentTopic.topic_type,
