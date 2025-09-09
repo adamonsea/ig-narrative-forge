@@ -335,7 +335,9 @@ serve(async (req) => {
     // ENHANCED: Multiple fallback system for failed scraping
     console.log('🔄 Trying enhanced fallback system...');
     try {
-      const { feedUrl, sourceId, region } = await req.json();
+    try {
+      const requestBody = await req.json();
+      const { feedUrl, sourceId, region } = requestBody;
       
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -390,6 +392,9 @@ serve(async (req) => {
           'universal-scraper'
         );
       }
+    } catch (fallbackError) {
+      console.error('❌ Enhanced fallback system exception:', fallbackError);
+    }
     } catch (fallbackError) {
       console.error('❌ Enhanced fallback system exception:', fallbackError);
     }
