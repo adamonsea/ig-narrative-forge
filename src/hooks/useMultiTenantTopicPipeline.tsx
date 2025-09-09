@@ -295,16 +295,19 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     if (!article) return;
     
     await approveMultiTenantArticle(article, slideType, tone, writingStyle);
+    // Force immediate reload to show approval/queue addition
     await loadTopicContent();
   }, [approveMultiTenantArticle, loadTopicContent, articles]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
     await deleteMultiTenantArticle(articleId, articleTitle);
+    // Force immediate reload to show deletion
     await loadTopicContent();
   }, [deleteMultiTenantArticle, loadTopicContent]);
 
   const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
     await deleteMultipleMultiTenantArticles(articleIds);
+    // Force immediate reload to show bulk deletion
     await loadTopicContent();
   }, [deleteMultipleMultiTenantArticles, loadTopicContent]);
 
