@@ -23,6 +23,9 @@ interface Topic {
   name: string;
   topic_type: 'regional' | 'keyword';
   is_active: boolean;
+  keywords?: string[];
+  landmarks?: string[];
+  organizations?: string[];
 }
 
 interface UnifiedContentPipelineProps {
@@ -88,7 +91,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       try {
         const { data, error } = await supabase
           .from('topics')
-          .select('id, name, topic_type, is_active')
+          .select('id, name, topic_type, is_active, keywords, landmarks, organizations')
           .eq('is_active', true)
           .order('name');
 
@@ -284,88 +287,28 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     );
   }
 
+  // Function to highlight whole keywords in text
+  const highlightKeywords = (text: string, keywords: string[]) => {
+    if (!text || !keywords.length) return text;
+    
+    let highlightedText = text;
+    keywords.forEach(keyword => {
+      if (keyword && keyword.trim()) {
+        // Use word boundaries to match whole words only
+        const regex = new RegExp(`\\b(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
+        highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+      }
+    });
+    
+    return highlightedText;
+  };
+
+  const currentTopicKeywords = currentTopic ? 
+    [...(currentTopic.keywords || []), ...(currentTopic.landmarks || []), ...(currentTopic.organizations || [])] 
+    : [];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                {currentTopic?.name || 'Content Pipeline'}
-                <Badge variant="outline">{currentTopic?.topic_type}</Badge>
-              </CardTitle>
-              <CardDescription>
-                Unified view of all content across both legacy and multi-tenant systems
-              </CardDescription>
-            </div>
-            <Button 
-              onClick={refreshAll} 
-              disabled={isLoading}
-              variant="outline"
-              size="sm"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              Refresh All
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalArticles}</div>
-            <p className="text-xs text-muted-foreground">
-              {legacyArticles.length} Legacy + {multiTenantArticles.length} Multi-tenant
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Processing Queue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalQueue}</div>
-            <p className="text-xs text-muted-foreground">
-              {legacyQueue.length} Legacy + {multiTenantQueue.length} Multi-tenant
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Ready Stories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStories}</div>
-            <p className="text-xs text-muted-foreground">
-              {legacyStories.length} Legacy + {multiTenantStories.length} Multi-tenant
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">Legacy</Badge>
-              <Badge variant="default">Multi-tenant</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
@@ -625,10 +568,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Article Content:</label>
-              <Textarea
-                value={previewArticle?.body || ''}
-                readOnly
-                className="min-h-[300px] mt-2"
+              <div 
+                className="min-h-[300px] mt-2 p-3 border rounded-md bg-background text-sm leading-relaxed whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: highlightKeywords(previewArticle?.body || '', currentTopicKeywords)
+                }}
               />
             </div>
             {previewArticle?.source_url && (
