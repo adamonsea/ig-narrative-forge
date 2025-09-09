@@ -365,16 +365,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="stories" className="w-full">
+      <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="stories">
-            Stories ({totalStories})
-          </TabsTrigger>
           <TabsTrigger value="articles">
             Articles ({totalArticles})
           </TabsTrigger>
           <TabsTrigger value="queue">
             Processing ({totalQueue})
+          </TabsTrigger>
+          <TabsTrigger value="stories">
+            Stories ({totalStories})
           </TabsTrigger>
         </TabsList>
 
