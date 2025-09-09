@@ -330,10 +330,12 @@ export type Database = {
           id: string
           max_attempts: number
           result_data: Json | null
+          shared_content_id: string | null
           slidetype: string
           started_at: string | null
           status: string
           tone: Database["public"]["Enums"]["tone_type"] | null
+          topic_article_id: string | null
           writing_style: string | null
         }
         Insert: {
@@ -349,10 +351,12 @@ export type Database = {
           id?: string
           max_attempts?: number
           result_data?: Json | null
+          shared_content_id?: string | null
           slidetype?: string
           started_at?: string | null
           status?: string
           tone?: Database["public"]["Enums"]["tone_type"] | null
+          topic_article_id?: string | null
           writing_style?: string | null
         }
         Update: {
@@ -368,10 +372,12 @@ export type Database = {
           id?: string
           max_attempts?: number
           result_data?: Json | null
+          shared_content_id?: string | null
           slidetype?: string
           started_at?: string | null
           status?: string
           tone?: Database["public"]["Enums"]["tone_type"] | null
+          topic_article_id?: string | null
           writing_style?: string | null
         }
         Relationships: [
@@ -380,6 +386,20 @@ export type Database = {
             columns: ["article_id"]
             isOneToOne: false
             referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_generation_queue_shared_content_id_fkey"
+            columns: ["shared_content_id"]
+            isOneToOne: false
+            referencedRelation: "shared_article_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_generation_queue_topic_article_id_fkey"
+            columns: ["topic_article_id"]
+            isOneToOne: false
+            referencedRelation: "topic_articles"
             referencedColumns: ["id"]
           },
         ]
@@ -1632,8 +1652,10 @@ export type Database = {
           last_quality_check: string | null
           publication_name: string | null
           quality_score: number | null
+          shared_content_id: string | null
           status: string
           title: string
+          topic_article_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1648,8 +1670,10 @@ export type Database = {
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          shared_content_id?: string | null
           status?: string
           title: string
+          topic_article_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1664,8 +1688,10 @@ export type Database = {
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          shared_content_id?: string | null
           status?: string
           title?: string
+          topic_article_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1674,6 +1700,20 @@ export type Database = {
             columns: ["article_id"]
             isOneToOne: true
             referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stories_shared_content_id_fkey"
+            columns: ["shared_content_id"]
+            isOneToOne: false
+            referencedRelation: "shared_article_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stories_topic_article_id_fkey"
+            columns: ["topic_article_id"]
+            isOneToOne: false
+            referencedRelation: "topic_articles"
             referencedColumns: ["id"]
           },
         ]
@@ -2313,6 +2353,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_story_from_multi_tenant: {
+        Args: {
+          p_shared_content_id: string
+          p_status?: string
+          p_title: string
+          p_topic_article_id: string
+        }
+        Returns: string
+      }
       deduct_user_credits: {
         Args: {
           p_credits_amount: number
@@ -2352,6 +2401,30 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      get_article_content_unified: {
+        Args: {
+          p_article_id?: string
+          p_shared_content_id?: string
+          p_topic_article_id?: string
+        }
+        Returns: {
+          author: string
+          body: string
+          canonical_url: string
+          content_quality_score: number
+          created_at: string
+          id: string
+          image_url: string
+          processing_status: string
+          published_at: string
+          regional_relevance_score: number
+          source_type: string
+          source_url: string
+          title: string
+          updated_at: string
+          word_count: number
+        }[]
+      }
       get_content_sources_count: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2359,6 +2432,23 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_queue_items_unified: {
+        Args: { p_topic_id?: string }
+        Returns: {
+          ai_provider: string
+          article_id: string
+          created_at: string
+          id: string
+          shared_content_id: string
+          slidetype: string
+          source_type: string
+          status: string
+          title: string
+          tone: Database["public"]["Enums"]["tone_type"]
+          topic_article_id: string
+          writing_style: string
+        }[]
       }
       get_source_topics: {
         Args: { p_source_id: string }
@@ -2369,6 +2459,22 @@ export type Database = {
           topic_id: string
           topic_name: string
           topic_type: string
+        }[]
+      }
+      get_stories_unified: {
+        Args: { p_topic_id?: string }
+        Returns: {
+          article_id: string
+          created_at: string
+          id: string
+          is_published: boolean
+          shared_content_id: string
+          slides_count: number
+          source_type: string
+          status: string
+          title: string
+          topic_article_id: string
+          updated_at: string
         }[]
       }
       get_topic_articles_multi_tenant: {
@@ -2477,6 +2583,17 @@ export type Database = {
       populate_topic_sources_from_existing: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      queue_multi_tenant_article: {
+        Args: {
+          p_ai_provider?: string
+          p_shared_content_id: string
+          p_slidetype?: string
+          p_tone?: Database["public"]["Enums"]["tone_type"]
+          p_topic_article_id: string
+          p_writing_style?: string
+        }
+        Returns: string
       }
       record_newsletter_signup_attempt: {
         Args: { p_email: string; p_ip_hash?: string }
