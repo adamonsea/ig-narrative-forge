@@ -43,13 +43,12 @@ export const TopicArchiveManager = () => {
     if (!user) return
 
     try {
-      // Load active topics
+      // Load active topics with counts
       const { data: active, error: activeError } = await supabase
         .from('topics')
         .select(`
           id, name, topic_type, region, is_archived, archived_at, created_at,
-          articles:articles(count),
-          stories:stories(count)
+          articles(count)
         `)
         .eq('created_by', user.id)
         .eq('is_archived', false)
@@ -57,13 +56,12 @@ export const TopicArchiveManager = () => {
 
       if (activeError) throw activeError
 
-      // Load archived topics
+      // Load archived topics with counts
       const { data: archived, error: archivedError } = await supabase
         .from('topics')
         .select(`
           id, name, topic_type, region, is_archived, archived_at, created_at,
-          articles:articles(count),
-          stories:stories(count)
+          articles(count)
         `)
         .eq('created_by', user.id)
         .eq('is_archived', true)
@@ -71,8 +69,44 @@ export const TopicArchiveManager = () => {
 
       if (archivedError) throw archivedError
 
-      setActiveTopics(active || [])
-      setArchivedTopics(archived || [])
+      // Get story counts separately for each topic
+      const processTopics = async (topics: any[]) => {
+        return Promise.all(
+          topics.map(async (topic) => {
+            // First get article IDs for this topic
+            const { data: articleIds } = await supabase
+              .from('articles')
+              .select('id')
+              .eq('topic_id', topic.id)
+
+            const articleIdArray = articleIds?.map(a => a.id) || []
+            
+            // Then get story count for those articles
+            let storyCount = 0
+            if (articleIdArray.length > 0) {
+              const { count } = await supabase
+                .from('stories')
+                .select('id', { count: 'exact' })
+                .in('article_id', articleIdArray)
+              storyCount = count || 0
+            }
+
+            return {
+              ...topic,
+              article_count: topic.articles?.[0]?.count || 0,
+              story_count: storyCount
+            }
+          })
+        )
+      }
+
+      const [processedActive, processedArchived] = await Promise.all([
+        processTopics(active || []),
+        processTopics(archived || [])
+      ])
+
+      setActiveTopics(processedActive)
+      setArchivedTopics(processedArchived)
     } catch (error) {
       console.error('Error loading topics:', error)
       toast({
