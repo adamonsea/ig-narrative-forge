@@ -3,188 +3,120 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Archive, Trash2 } from 'lucide-react'
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
-interface CleanupResult {
+interface ArchiveResult {
   topic_id: string
+  topic_name: string
+  action: string
   success: boolean
-  data?: any
-  error?: string
 }
 
 export const CleanSlateMigration = () => {
+  const { user } = useAuth()
   const [isProcessing, setIsProcessing] = useState(false)
-  const [results, setResults] = useState<{
-    cleanup?: CleanupResult[]
-    deletion?: CleanupResult[]
-  }>({})
+  const [results, setResults] = useState<ArchiveResult[]>([])
 
-  // Mixed topics - clean content, keep topic configs
-  const mixedTopics = [
-    { id: 'ba443441-9f01-4116-8695-67ec08cba1df', name: 'Brighton' },
-    { id: '45daedca-f64d-45c9-a103-8564671d16ea', name: 'Hastings news' },
-    { id: 'c2d1b195-136a-4336-b64b-52c9c451e03d', name: 'Film for kids' },
-    { id: 'c5bba557-e190-41c2-ae1e-2b3fb7db3892', name: 'Meditech' },
-    { id: 'e6de0eaa-6884-41c5-9478-e369265e8a8f', name: 'Hastings and St Leonards' }
-  ]
-
-  // Empty topics - delete entirely
-  const emptyTopics = [
-    { id: '3df67661-8f8a-4bb0-9826-c02160a129e7', name: '2 star tv' },
-    { id: 'c9e2fca1-78ab-48ae-8097-3b96b04403f6', name: 'bead-based cell analysis' },
-    { id: '5f98ccd1-3d5c-4262-b9f5-fa0c75986d67', name: 'kubernetes' },
-    { id: '3a65a60d-4bb8-46ec-82d7-9d59cce89ea5', name: 'medical device' },
-    { id: '6828cc8c-48fa-4611-8c54-3ac0ab5d50b3', name: 'Patcham news' },
-    { id: '9cda9a16-fa38-4ef3-9d5a-a111af7625ee', name: 'The global branding agency of the future' },
-    { id: '3eb42c3b-46c5-4430-bf5d-109f5e119b13', name: 'up my street' },
-    { id: '4db8103b-969a-4a31-8504-6a82f795b811', name: 'US House and Senate Bills' }
-  ]
-
-  const executeCleanup = async () => {
+  const executeArchive = async () => {
+    if (!user) return
+    
     setIsProcessing(true)
     try {
-      // Step 1: Clean content from mixed topics
-      console.log('🧹 Cleaning content from mixed topics...')
-      const { data: cleanupData } = await supabase.functions.invoke('clean-slate-migration', {
-        body: {
-          action: 'cleanup_content',
-          topic_ids: mixedTopics.map(t => t.id)
-        }
+      console.log('📦 Archiving unused topics for current user...')
+      
+      const { data, error } = await supabase.rpc('bulk_cleanup_user_topics', {
+        p_user_id: user.id,
+        p_action: 'archive'
       })
 
-      // Step 2: Delete empty topics entirely
-      console.log('🗑️ Deleting empty topics...')
-      const { data: deletionData } = await supabase.functions.invoke('clean-slate-migration', {
-        body: {
-          action: 'delete_topics',
-          topic_ids: emptyTopics.map(t => t.id)
-        }
-      })
+      if (error) {
+        console.error('❌ Archive failed:', error)
+        return
+      }
 
-      setResults({
-        cleanup: cleanupData?.results || [],
-        deletion: deletionData?.results || []
-      })
-
-      console.log('✅ Clean slate migration completed')
+      setResults((data as any)?.results || [])
+      console.log('✅ Archive completed:', data)
     } catch (error) {
-      console.error('❌ Migration failed:', error)
+      console.error('❌ Archive failed:', error)
     } finally {
       setIsProcessing(false)
     }
   }
 
-  const renderResults = (results: CleanupResult[], type: 'cleanup' | 'deletion') => {
-    if (!results.length) return null
-
-    const topics = type === 'cleanup' ? mixedTopics : emptyTopics
-
-    return (
-      <div className="space-y-2">
-        {results.map((result, index) => {
-          const topic = topics.find(t => t.id === result.topic_id)
-          return (
-            <div key={result.topic_id} className="flex items-center justify-between p-2 border rounded">
-              <span className="font-medium">{topic?.name || 'Unknown Topic'}</span>
-              <div className="flex items-center gap-2">
-                <Badge variant={result.success ? "default" : "destructive"}>
-                  {result.success ? "Success" : "Failed"}
-                </Badge>
-                {result.success && result.data && (
-                  <span className="text-sm text-muted-foreground">
-                    {type === 'cleanup' 
-                      ? `Cleaned: ${result.data.deleted_counts?.legacy_articles + result.data.deleted_counts?.multi_tenant_articles || 0} articles`
-                      : `Deleted: ${result.data.topic_name}`
-                    }
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
-
   return (
     <Card className="w-full max-w-4xl">
       <CardHeader>
-        <CardTitle>🧹 Clean Slate Migration</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Archive className="h-5 w-5" />
+          Topic Archive & Cleanup
+        </CardTitle>
         <CardDescription>
-          Clean up legacy content and prepare a fresh testing environment for the multi-tenant pipeline
+          Archive your unused topics while preserving Eastbourne and AI for Agency. Other users' topics remain untouched.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-semibold mb-2">Mixed Topics (Clean Content)</h3>
+            <h3 className="font-semibold mb-2 text-green-600">✅ Preserved Topics</h3>
             <p className="text-sm text-muted-foreground mb-3">
-              Keep topic configurations, delete all articles/stories/content
+              Your working topics will remain active
             </p>
             <div className="space-y-1">
-              {mixedTopics.map(topic => (
-                <div key={topic.id} className="text-sm p-2 bg-muted rounded">
-                  {topic.name}
-                </div>
-              ))}
+              <div className="text-sm p-2 bg-green-50 border border-green-200 rounded">
+                Eastbourne (Regional)
+              </div>
+              <div className="text-sm p-2 bg-green-50 border border-green-200 rounded">
+                AI for Agency (Keyword)
+              </div>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-2">Empty Topics (Delete Entirely)</h3>
+            <h3 className="font-semibold mb-2 text-orange-600">📦 Will Be Archived</h3>
             <p className="text-sm text-muted-foreground mb-3">
-              Remove completely - no content, no value
+              Your other topics will be archived (can be restored later)
             </p>
-            <div className="space-y-1">
-              {emptyTopics.map(topic => (
-                <div key={topic.id} className="text-sm p-2 bg-muted rounded">
-                  {topic.name}
-                </div>
-              ))}
+            <div className="text-sm p-2 bg-orange-50 border border-orange-200 rounded">
+              All your other topics will be moved to archive where you can manage them individually
             </div>
           </div>
         </div>
 
         <Separator />
 
-        <div>
-          <h3 className="font-semibold mb-2">Preserved Topics</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            These working topics will remain untouched:
-          </p>
-          <div className="flex gap-2">
-            <Badge variant="outline">Eastbourne (598 articles, 119 stories)</Badge>
-            <Badge variant="outline">AI for Agency (392 articles, 77 stories)</Badge>
-          </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-800 mb-2">🔒 Safety Features</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Only affects topics you created</li>
+            <li>• Other users' topics remain completely untouched</li>
+            <li>• Archived topics can be restored from the Topic Manager</li>
+            <li>• Your working topics (Eastbourne & AI for Agency) are protected</li>
+          </ul>
         </div>
 
-        <Separator />
-
         <Button 
-          onClick={executeCleanup} 
-          disabled={isProcessing}
+          onClick={executeArchive} 
+          disabled={isProcessing || !user}
           className="w-full"
           size="lg"
         >
-          {isProcessing ? "🔄 Processing Migration..." : "🚀 Execute Clean Slate Migration"}
+          {isProcessing ? "📦 Archiving Topics..." : "🚀 Archive Unused Topics"}
         </Button>
 
-        {(results.cleanup || results.deletion) && (
-          <div className="space-y-4 mt-6">
-            {results.cleanup && (
-              <div>
-                <h4 className="font-semibold mb-2">Content Cleanup Results</h4>
-                {renderResults(results.cleanup, 'cleanup')}
+        {results.length > 0 && (
+          <div className="space-y-2 mt-6">
+            <h4 className="font-semibold">Archive Results</h4>
+            {results.map((result, index) => (
+              <div key={index} className="flex items-center justify-between p-2 border rounded">
+                <span className="font-medium">{result.topic_name}</span>
+                <Badge variant={result.success ? "default" : "destructive"}>
+                  {result.success ? "Archived" : "Failed"}
+                </Badge>
               </div>
-            )}
-            
-            {results.deletion && (
-              <div>
-                <h4 className="font-semibold mb-2">Topic Deletion Results</h4>
-                {renderResults(results.deletion, 'deletion')}
-              </div>
-            )}
+            ))}
           </div>
         )}
       </CardContent>

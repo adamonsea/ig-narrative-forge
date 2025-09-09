@@ -1994,6 +1994,8 @@ export type Database = {
       }
       topics: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           audience_expertise:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
@@ -2007,6 +2009,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          is_archived: boolean | null
           is_public: boolean | null
           keywords: string[] | null
           landmarks: string[] | null
@@ -2020,6 +2023,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
@@ -2033,6 +2038,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_archived?: boolean | null
           is_public?: boolean | null
           keywords?: string[] | null
           landmarks?: string[] | null
@@ -2046,6 +2052,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
@@ -2059,6 +2067,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_archived?: boolean | null
           is_public?: boolean | null
           keywords?: string[] | null
           landmarks?: string[] | null
@@ -2274,6 +2283,10 @@ export type Database = {
       }
       bulk_cleanup_topic_content: {
         Args: { p_topic_id: string }
+        Returns: Json
+      }
+      bulk_cleanup_user_topics: {
+        Args: { p_action?: string; p_user_id: string }
         Returns: Json
       }
       bulk_delete_discarded_articles: {

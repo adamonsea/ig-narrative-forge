@@ -11,6 +11,7 @@ import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
 import { UnifiedTestingDashboard } from '@/components/UnifiedTestingDashboard';
 import { CleanSlateMigration } from '@/components/CleanSlateMigration';
+import { TopicArchiveManager } from '@/components/TopicArchiveManager';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -43,13 +44,11 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
-            <TabsTrigger value="health">Source Health</TabsTrigger>
-            <TabsTrigger value="errors">Error Monitoring</TabsTrigger>
             <TabsTrigger value="testing">Testing</TabsTrigger>
+            <TabsTrigger value="archive">Topic Archive</TabsTrigger>
             <TabsTrigger value="migration">Clean Migration</TabsTrigger>
-            <TabsTrigger value="other">Other Features</TabsTrigger>
           </TabsList>
           
           <TabsContent value="sources" className="mt-6">
@@ -61,27 +60,16 @@ export default function AdminPanel() {
             />
           </TabsContent>
 
-          <TabsContent value="health" className="mt-6">
-            <SourceHealthDashboard />
-          </TabsContent>
-          
-          <TabsContent value="errors" className="mt-6">
-            <ErrorTicketDashboard />
-          </TabsContent>
-          
           <TabsContent value="testing" className="mt-6">
             <UnifiedTestingDashboard />
           </TabsContent>
           
-          <TabsContent value="migration" className="mt-6">
-            <CleanSlateMigration />
+          <TabsContent value="archive" className="mt-6">
+            <TopicArchiveManager />
           </TabsContent>
           
-          <TabsContent value="other" className="mt-6">
-            <div className="space-y-6">
-              <DuplicateCleanup />
-              <DuplicateDetection />
-            </div>
+          <TabsContent value="migration" className="mt-6">
+            <CleanSlateMigration />
           </TabsContent>
         </Tabs>
       </div>
