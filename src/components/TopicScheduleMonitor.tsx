@@ -371,7 +371,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                       <p className="text-sm text-muted-foreground">{source.feed_url}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                         <span>Articles: {source.articles_scraped}</span>
-                        <span>Performance: {source.success_rate && source.success_rate > 70 ? 'Good' : source.success_rate && source.success_rate > 40 ? 'Fair' : 'Poor'}</span>
+                        <span>Gathered: {source.articles_scraped}</span>
                         {source.last_scraped_at && (
                           <span>Last: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
                         )}

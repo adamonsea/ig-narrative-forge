@@ -236,7 +236,7 @@ export const AnalyticsDashboard = () => {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{source.articles_count} articles</span>
                       <span>•</span>
-                      <span>Performance: {source.success_rate > 70 ? 'Good' : source.success_rate > 40 ? 'Fair' : 'Poor'}</span>
+                      <span>{source.articles_count} articles gathered</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

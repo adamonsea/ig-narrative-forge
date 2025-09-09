@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicManager } from "@/components/TopicManager";
-import { ArticleReExtractor } from "@/components/ArticleReExtractor";
+
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut, Archive } from "lucide-react";
@@ -237,11 +237,6 @@ const Dashboard = () => {
         <div className="space-y-6">
           <TopicManager />
           
-          {/* Article Re-Extractor Tool */}
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold mb-4">Content Quality Tools</h2>
-            <ArticleReExtractor />
-          </div>
         </div>
       </div>
     </div>

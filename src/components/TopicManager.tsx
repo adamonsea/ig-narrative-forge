@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,52 @@ export const TopicManager = () => {
   });
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Auto-save functionality
+  const getStorageKey = () => `topic-form-draft-${user?.id}`;
+  
+  const saveFormData = useCallback(() => {
+    if (user && (newTopic.name || newTopic.description || newTopic.keywords)) {
+      localStorage.setItem(getStorageKey(), JSON.stringify(newTopic));
+    }
+  }, [newTopic, user]);
+
+  const loadFormData = useCallback(() => {
+    if (user) {
+      const saved = localStorage.getItem(getStorageKey());
+      if (saved) {
+        try {
+          const savedData = JSON.parse(saved);
+          setNewTopic(savedData);
+          toast({
+            title: "Form data restored",
+            description: "Your previous topic draft has been restored"
+          });
+        } catch (error) {
+          console.error('Error loading saved form data:', error);
+        }
+      }
+    }
+  }, [user, toast]);
+
+  const clearFormData = useCallback(() => {
+    if (user) {
+      localStorage.removeItem(getStorageKey());
+    }
+  }, [user]);
+
+  // Auto-save with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(saveFormData, 300);
+    return () => clearTimeout(timeoutId);
+  }, [saveFormData]);
+
+  // Load saved data when form is shown
+  useEffect(() => {
+    if (showCreateForm && user) {
+      loadFormData();
+    }
+  }, [showCreateForm, user, loadFormData]);
 
   useEffect(() => {
     if (user) {
@@ -140,7 +186,8 @@ export const TopicManager = () => {
         description: "Topic created successfully"
       });
 
-      // Reset form and reload
+      // Clear saved form data and reset form
+      clearFormData();
       setNewTopic({
         name: '',
         description: '',
