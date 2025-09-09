@@ -65,7 +65,7 @@ serve(async (req) => {
         }
 
         const { data: existingContent } = await supabase
-          .from('shared_article_content').select('id').eq('normalized_url', normalizedUrl).single();
+          .from('shared_article_content').select('id').eq('normalized_url', normalizedUrl).maybeSingle();
 
         let sharedContentId;
 
