@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { SourceSuggestionTool } from "@/components/SourceSuggestionTool";
 import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
-import { SimpleMultiTenantTestInterface } from "@/components/SimpleMultiTenantTestInterface";
+import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
@@ -484,7 +484,7 @@ const TopicDashboard = () => {
           <TabsContent value="content" className="space-y-6">
             <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
               <CardContent className="p-6">
-                <SimpleMultiTenantTestInterface selectedTopicId={topic.id} topic={topic} />
+                <UnifiedContentPipeline selectedTopicId={topic.id} />
               </CardContent>
             </Card>
             
