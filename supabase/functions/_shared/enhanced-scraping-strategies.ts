@@ -184,62 +184,85 @@ export class EnhancedScrapingStrategies {
     const articleUrl = this.resolveUrl(link, baseUrl);
     console.log(`📄 Fetching enhanced content from: ${articleUrl}`);
 
+    let finalContent = description || '';
+    let finalTitle = title;
+    let extractedContent: any = {
+      body: description || '',
+      title,
+      author,
+      published_at: pubDate,
+      word_count: this.countWords(description || ''),
+      content_quality_score: 70 // Default quality for RSS content
+    };
+
     try {
       // Use enhanced content extraction
       const extractor = new UniversalContentExtractor(articleUrl);
       const articleHtml = await extractor.fetchWithRetry(articleUrl);
-      const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
+      const extracted = extractor.extractContentFromHTML(articleHtml, articleUrl);
       
-      // Use extracted content, fallback to RSS description if needed
-      const finalContent = extractedContent.body || description || '';
-      const finalTitle = extractedContent.title || title;
+      // Use extracted content if successful
+      finalContent = extracted.body || description || '';
+      finalTitle = extracted.title || title;
+      extractedContent = extracted;
       
-      // EMERGENCY FIX: Much more lenient validation for initial capture
-      const wordCount = this.countWords(finalContent);
-      if (!finalContent || wordCount < 3) { // Emergency: Accept anything with 3+ words
-        console.log(`⚠️ Content very short but still trying: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
-        
-        // If RSS description exists, use it as fallback
-        if (description && description.length > 10) {
-          console.log(`📝 Using RSS description as content fallback`);
-          const finalContent = description;
-        } else if (wordCount === 0) {
-          // Only reject if absolutely no content
-          console.log(`❌ Zero content found, rejecting`);
-          return null;
-        }
-      }
-
-      // Calculate enhanced regional relevance
-      const regionalRelevance = this.calculateEnhancedRegionalRelevance(
-        finalContent,
-        finalTitle,
-        articleUrl
-      );
-
-      return {
-        title: finalTitle,
-        body: finalContent,
-        author: extractedContent.author || author,
-        published_at: extractedContent.published_at || pubDate || new Date().toISOString(),
-        source_url: articleUrl,
-        canonical_url: articleUrl,
-        word_count: extractedContent.word_count,
-        regional_relevance_score: regionalRelevance,
-        content_quality_score: extractedContent.content_quality_score,
-        processing_status: 'new' as const,
-        import_metadata: {
-          extraction_method: 'enhanced_rss',
-          rss_description: description,
-          source_domain: this.sourceInfo?.canonical_domain,
-          scrape_timestamp: new Date().toISOString(),
-          extractor_version: '2.0'
-        }
-      };
-
+      console.log(`✅ Enhanced extraction successful for: ${finalTitle.substring(0, 50)}...`);
+      
     } catch (error) {
+      // Graceful fallback to RSS content when extraction fails
       console.log(`❌ Failed to fetch enhanced content for: ${title.substring(0, 50)}... - ${error.message}`);
+      console.log(`📝 Using RSS content as fallback`);
+      
+      // Use RSS description as content when extraction fails
+      if (description && description.length > 10) {
+        finalContent = description;
+        extractedContent = {
+          body: description,
+          title,
+          author,
+          published_at: pubDate,
+          word_count: this.countWords(description),
+          content_quality_score: 60 // Slightly lower quality for RSS-only content
+        };
+      } else {
+        console.log(`❌ No RSS description available, skipping article`);
+        return null;
+      }
+    }
+    
+    // EMERGENCY FIX: Much more lenient validation for initial capture
+    const wordCount = this.countWords(finalContent);
+    if (!finalContent || wordCount < 3) { // Emergency: Accept anything with 3+ words
+      console.log(`❌ Content too short: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
       return null;
+    }
+    // Calculate enhanced regional relevance
+    const regionalRelevance = this.calculateEnhancedRegionalRelevance(
+      finalContent,
+      finalTitle,
+      articleUrl
+    );
+
+    return {
+      title: finalTitle,
+      body: finalContent,
+      author: extractedContent.author || author,
+      published_at: extractedContent.published_at || pubDate || new Date().toISOString(),
+      source_url: articleUrl,
+      canonical_url: articleUrl,
+      word_count: extractedContent.word_count || this.countWords(finalContent),
+      regional_relevance_score: regionalRelevance,
+      content_quality_score: extractedContent.content_quality_score || 60,
+      processing_status: 'new' as const,
+      import_metadata: {
+        extraction_method: finalContent === description ? 'rss_fallback' : 'enhanced_rss',
+        rss_description: description,
+        source_domain: this.sourceInfo?.canonical_domain,
+        scrape_timestamp: new Date().toISOString(),
+        extractor_version: '2.0'
+      }
+    };
+  }
     }
   }
 
