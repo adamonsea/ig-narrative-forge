@@ -16,6 +16,55 @@ interface UniversalScrapeRequest {
   maxSources?: number;
 }
 
+// Circuit breaker for failed URLs (simple in-memory cache)
+const recentFailures = new Map<string, { count: number; lastFailed: number }>();
+const FAILURE_THRESHOLD = 3;
+const FAILURE_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+
+// Quick URL pre-validation
+async function quickUrlCheck(url: string, timeoutMs: number = 3000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'eeZee Universal Scraper/1.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.log(`⚡ Quick check failed for ${url}: ${error.message}`);
+    return false;
+  }
+}
+
+// Check if URL should be skipped due to recent failures
+function shouldSkipUrl(url: string): boolean {
+  const failure = recentFailures.get(url);
+  if (!failure) return false;
+  
+  const now = Date.now();
+  if (now - failure.lastFailed > FAILURE_COOLDOWN) {
+    recentFailures.delete(url);
+    return false;
+  }
+  
+  return failure.count >= FAILURE_THRESHOLD;
+}
+
+// Record URL failure
+function recordFailure(url: string): void {
+  const failure = recentFailures.get(url) || { count: 0, lastFailed: 0 };
+  failure.count++;
+  failure.lastFailed = Date.now();
+  recentFailures.set(url, failure);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -35,7 +84,7 @@ serve(async (req) => {
       sourceIds, 
       forceRescrape = false, 
       testMode = false, 
-      maxSources = testMode ? 3 : undefined 
+      maxSources = testMode ? 1 : undefined  // Ultra-aggressive: only 1 source in test mode
     } = await req.json() as UniversalScrapeRequest;
 
     console.log('Universal Topic Scraper - Starting for topic:', topicId);
@@ -67,7 +116,7 @@ serve(async (req) => {
     // Apply maxSources limit for test mode or explicit limit
     if (maxSources && targetSources.length > maxSources) {
       targetSources = targetSources.slice(0, maxSources);
-      console.log(`🔬 Test mode: Limited to ${maxSources} sources for faster testing`);
+      console.log(`🔬 Test mode: Limited to ${maxSources} source(s) for ultra-fast testing`);
     }
 
     if (!targetSources || targetSources.length === 0) {
@@ -82,67 +131,127 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing ${targetSources.length} sources for topic: ${topic.name}${testMode ? ' (TEST MODE)' : ''}`);
+    console.log(`Processing ${targetSources.length} sources for topic: ${topic.name}${testMode ? ' (ULTRA-FAST TEST MODE)' : ''}`);
 
     const scraper = new FastTrackScraper(supabase);
     const dbOps = new MultiTenantDatabaseOperations(supabase);
     const results = [];
     let processedCount = 0;
+    const startTime = Date.now();
+    const maxExecutionTime = testMode ? 45000 : 180000; // 45s test mode, 3min normal
 
-    // Process each source with timeout and progress tracking
+    // Pre-filter sources using circuit breaker and quick validation
+    const validSources = [];
     for (const source of targetSources) {
+      let feedUrl = source.feed_url;
+      
+      // Skip if invalid URL
+      if (!feedUrl || typeof feedUrl !== 'string' || feedUrl.trim() === '') {
+        console.log(`⚠️ Skipping ${source.source_name}: Invalid URL`);
+        results.push({
+          sourceId: source.source_id,
+          sourceName: source.source_name,
+          success: false,
+          error: 'Invalid or missing feed URL',
+          articlesFound: 0,
+          articlesScraped: 0
+        });
+        continue;
+      }
+
+      // Normalize URL
+      feedUrl = feedUrl.trim();
+      if (!feedUrl.match(/^https?:\/\//)) {
+        feedUrl = `https://${feedUrl}`;
+      }
+
+      // Circuit breaker check
+      if (shouldSkipUrl(feedUrl)) {
+        console.log(`🚫 Skipping ${source.source_name}: Recent failures (circuit breaker)`);
+        results.push({
+          sourceId: source.source_id,
+          sourceName: source.source_name,
+          success: false,
+          error: 'Skipped due to recent failures',
+          articlesFound: 0,
+          articlesScraped: 0
+        });
+        continue;
+      }
+
+      // Quick pre-validation in test mode
+      if (testMode) {
+        console.log(`⚡ Quick validation check for ${source.source_name}...`);
+        const isAccessible = await quickUrlCheck(feedUrl, 2000); // 2s timeout
+        if (!isAccessible) {
+          console.log(`❌ Quick check failed for ${source.source_name}`);
+          recordFailure(feedUrl);
+          results.push({
+            sourceId: source.source_id,
+            sourceName: source.source_name,
+            success: false,
+            error: 'Failed quick accessibility check',
+            articlesFound: 0,
+            articlesScraped: 0
+          });
+          continue;
+        }
+        console.log(`✅ Quick check passed for ${source.source_name}`);
+      }
+
+      validSources.push({ ...source, normalizedUrl: feedUrl });
+    }
+
+    if (validSources.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No valid sources to scrape after pre-validation',
+          topicId,
+          results
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`📊 Pre-validation complete: ${validSources.length}/${targetSources.length} sources passed`);
+
+    // Process each valid source with aggressive timeouts
+    for (const source of validSources) {
+      // Early exit condition - check if we're approaching timeout
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime > maxExecutionTime * 0.8) { // Exit at 80% of max time
+        console.log(`⏰ Approaching timeout (${elapsedTime}ms), stopping with partial results`);
+        results.push({
+          sourceId: source.source_id,
+          sourceName: source.source_name,
+          success: false,
+          error: 'Stopped due to approaching function timeout',
+          articlesFound: 0,
+          articlesScraped: 0
+        });
+        break;
+      }
+
       processedCount++;
-      console.log(`📊 Progress: ${processedCount}/${targetSources.length} - Processing: ${source.source_name}`);
-      // Add per-source timeout wrapper
-      const sourceTimeout = testMode ? 15000 : 45000; // Shorter timeout in test mode
+      console.log(`📊 Progress: ${processedCount}/${validSources.length} - Processing: ${source.source_name}`);
+      
+      // Ultra-aggressive timeouts for test mode
+      const sourceTimeout = testMode ? 8000 : 30000; // 8s test, 30s normal
       const sourcePromise = (async () => {
         try {
-          console.log(`🔄 Scraping source: ${source.source_name} (${source.feed_url})`);
+          console.log(`🔄 Scraping source: ${source.source_name} (${source.normalizedUrl})`);
 
-          // Validate and normalize URL before scraping
-          let feedUrl = source.feed_url;
-          if (!feedUrl || typeof feedUrl !== 'string' || feedUrl.trim() === '') {
-            console.error(`❌ Invalid feed URL for source ${source.source_name}: ${feedUrl}`);
-            return {
-              sourceId: source.source_id,
-              sourceName: source.source_name,
-              success: false,
-              error: 'Invalid or missing feed URL',
-              articlesFound: 0,
-              articlesScraped: 0
-            };
-          }
-
-          // Normalize URL - add protocol if missing
-          feedUrl = feedUrl.trim();
-          if (!feedUrl.match(/^https?:\/\//)) {
-            feedUrl = `https://${feedUrl}`;
-            console.log(`🔧 Added protocol to URL: ${source.feed_url} -> ${feedUrl}`);
-          }
-
-          // Additional URL validation
-          try {
-            new URL(feedUrl);
-          } catch (urlError) {
-            console.error(`❌ Invalid URL format: ${feedUrl}`);
-            return {
-              sourceId: source.source_id,
-              sourceName: source.source_name,
-              success: false,
-              error: `Invalid URL format: ${feedUrl}`,
-              articlesFound: 0,
-              articlesScraped: 0
-            };
-          }
-
-          // Execute scraping with appropriate timeout
+          // Execute scraping with ultra-aggressive settings for test mode
           const scrapeResult = await scraper.scrapeContent(
-            feedUrl,
+            source.normalizedUrl,
             source.source_id,
             {
               forceRescrape,
               userAgent: 'eeZee Universal Topic Scraper/1.0',
-              timeout: testMode ? 20000 : 30000,
+              timeout: testMode ? 5000 : 20000, // 5s test, 20s normal
+              maxRetries: testMode ? 1 : 3, // Only 1 retry in test mode
+              retryDelay: testMode ? 500 : 2000, // 0.5s retry delay in test mode
             }
           );
 
@@ -154,15 +263,17 @@ serve(async (req) => {
               source.source_id
             );
 
-            // Update source metrics
-            await supabase
+            // Background update of source metrics (don't wait for it)
+            supabase
               .from('content_sources')
               .update({
                 articles_scraped: source.articles_scraped + scrapeResult.articlesScraped,
                 last_scraped_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
-              .eq('id', source.source_id);
+              .eq('id', source.source_id)
+              .then(() => console.log(`📈 Updated metrics for ${source.source_name}`))
+              .catch(err => console.log(`⚠️ Failed to update metrics: ${err.message}`));
 
             const result = {
               sourceId: source.source_id,
@@ -170,13 +281,15 @@ serve(async (req) => {
               success: true,
               articlesFound: scrapeResult.articlesFound,
               articlesScraped: scrapeResult.articlesScraped,
-              multiTenantStored: storeResult.topicArticlesCreated, // Fixed: use correct property name
-              method: scrapeResult.method
+              multiTenantStored: storeResult.topicArticlesCreated,
+              method: scrapeResult.method,
+              processingTime: Date.now() - startTime
             };
 
             console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
             return result;
           } else {
+            recordFailure(source.normalizedUrl);
             const result = {
               sourceId: source.source_id,
               sourceName: source.source_name,
@@ -191,6 +304,7 @@ serve(async (req) => {
           }
         } catch (sourceError) {
           console.error(`💥 Error scraping ${source.source_name}:`, sourceError);
+          recordFailure(source.normalizedUrl);
           
           return {
             sourceId: source.source_id,
@@ -213,6 +327,7 @@ serve(async (req) => {
         results.push(result);
       } catch (timeoutError) {
         console.error(`⏰ Timeout processing ${source.source_name}:`, timeoutError);
+        recordFailure(source.normalizedUrl);
         results.push({
           sourceId: source.source_id,
           sourceName: source.source_name,
@@ -224,35 +339,43 @@ serve(async (req) => {
       }
     }
 
-    console.log(`🏁 Completed processing ${processedCount} sources for topic: ${topic.name}`);
+    console.log(`🏁 Completed processing ${processedCount}/${validSources.length} sources for topic: ${topic.name} in ${Date.now() - startTime}ms`);
 
-    // Log system event
-    await supabase
+    // Background system event logging (don't wait for it)
+    supabase
       .from('system_logs')
       .insert({
         level: 'info',
-        message: 'Universal topic scraping completed',
+        message: testMode ? 'Ultra-fast universal topic scraping completed' : 'Universal topic scraping completed',
         context: {
           topicId,
           topicName: topic.name,
-          sourcesProcessed: targetSources.length,
+          sourcesProcessed: processedCount,
           totalArticles: results.reduce((sum, r) => sum + (r.articlesScraped || 0), 0),
-          successfulSources: results.filter(r => r.success).length
+          successfulSources: results.filter(r => r.success).length,
+          executionTimeMs: Date.now() - startTime,
+          testMode
         },
         function_name: 'universal-topic-scraper'
-      });
+      })
+      .then(() => console.log('📝 System log recorded'))
+      .catch(err => console.log(`⚠️ Failed to log: ${err.message}`));
 
     const totalArticles = results.reduce((sum, r) => sum + (r.articlesScraped || 0), 0);
     const successfulSources = results.filter(r => r.success).length;
+    const executionTime = Date.now() - startTime;
 
     return new Response(
       JSON.stringify({
         success: true,
         topicId,
         topicName: topic.name,
-        sourcesProcessed: targetSources.length,
+        sourcesProcessed: processedCount,
+        sourcesTotal: targetSources.length,
         successfulSources,
         totalArticles,
+        executionTimeMs: executionTime,
+        testMode,
         results,
         timestamp: new Date().toISOString()
       }),
