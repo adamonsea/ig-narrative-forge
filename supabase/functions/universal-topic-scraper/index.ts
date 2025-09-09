@@ -79,9 +79,31 @@ serve(async (req) => {
       try {
         console.log(`Scraping source: ${source.source_name} (${source.feed_url})`);
 
+        // Validate and normalize URL before scraping
+        let feedUrl = source.feed_url;
+        if (!feedUrl || typeof feedUrl !== 'string' || feedUrl.trim() === '') {
+          console.error(`Invalid feed URL for source ${source.source_name}: ${feedUrl}`);
+          results.push({
+            sourceId: source.source_id,
+            sourceName: source.source_name,
+            success: false,
+            error: 'Invalid or missing feed URL',
+            articlesFound: 0,
+            articlesScraped: 0
+          });
+          continue;
+        }
+
+        // Normalize URL - add protocol if missing
+        feedUrl = feedUrl.trim();
+        if (!feedUrl.match(/^https?:\/\//)) {
+          feedUrl = `https://${feedUrl}`;
+          console.log(`Added protocol to URL: ${source.feed_url} -> ${feedUrl}`);
+        }
+
         // Execute scraping
         const scrapeResult = await scraper.scrapeContent(
-          source.feed_url,
+          feedUrl,
           source.source_id,
           {
             forceRescrape,

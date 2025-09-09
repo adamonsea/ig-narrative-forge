@@ -143,39 +143,34 @@ export class UniversalContentExtractor {
    * Normalizes URLs by adding protocol if missing and validating format
    */
   private normalizeUrl(url: string): string {
-    if (!url || typeof url !== 'string') {
+    if (!url || typeof url !== 'string' || url.trim() === '') {
       throw new Error('Invalid URL: URL must be a non-empty string');
     }
 
     let normalizedUrl = url.trim();
     
-    // If URL already has protocol, validate and return
-    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
-      try {
-        new URL(normalizedUrl); // Validate URL format
-        return normalizedUrl;
-      } catch (error) {
-        throw new Error(`Invalid URL format: ${normalizedUrl}`);
-      }
+    // Add protocol if missing
+    if (!normalizedUrl.match(/^https?:\/\//)) {
+      normalizedUrl = `https://${normalizedUrl}`;
+      console.log(`🔧 URL normalized (added protocol): ${url} → ${normalizedUrl}`);
     }
-
-    // Add https:// as default protocol for modern web
-    normalizedUrl = 'https://' + normalizedUrl;
     
     try {
-      new URL(normalizedUrl); // Validate the constructed URL
-      console.log(`🔧 URL normalized: ${url} → ${normalizedUrl}`);
+      new URL(normalizedUrl); // Validate URL format
       return normalizedUrl;
     } catch (error) {
       // If https fails, try http as fallback for legacy sites
-      const httpUrl = 'http://' + url.trim();
-      try {
-        new URL(httpUrl);
-        console.log(`🔧 URL normalized (HTTP fallback): ${url} → ${httpUrl}`);
-        return httpUrl;
-      } catch (httpError) {
-        throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+      if (normalizedUrl.startsWith('https://')) {
+        const httpUrl = normalizedUrl.replace('https://', 'http://');
+        try {
+          new URL(httpUrl);
+          console.log(`🔧 URL normalized (HTTP fallback): ${url} → ${httpUrl}`);
+          return httpUrl;
+        } catch (httpError) {
+          throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+        }
       }
+      throw new Error(`Invalid URL format: ${normalizedUrl}`);
     }
   }
 
