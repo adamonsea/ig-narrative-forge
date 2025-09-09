@@ -285,6 +285,7 @@ export const ImprovedSourceSuggestionTool = ({
             is_active: true,
             source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
             region: topicType === 'regional' ? region : null
+            // Remove topic_id - we use junction table now
           })
           .select('id')
           .single();
@@ -293,14 +294,21 @@ export const ImprovedSourceSuggestionTool = ({
         sourceId = newSource.id;
       }
 
-      // Link source to topic (or reactivate if inactive)
+      // Link source to topic (or reactivate if inactive) - this is critical!
+      if (!topicId) {
+        throw new Error('Topic ID is required for linking sources');
+      }
+
       const { error: linkError } = await supabase.rpc('add_source_to_topic', {
         p_topic_id: topicId,
         p_source_id: sourceId,
         p_source_config: {}
       });
 
-      if (linkError) throw linkError;
+      if (linkError) {
+        console.error('Error linking source to topic:', linkError);
+        throw new Error(`Failed to link source: ${linkError.message}`);
+      }
 
       const qualityNote = credibilityScore >= 80 ? 'High Quality' : 
                         credibilityScore >= 70 ? 'Good Quality' : 'Standard';
@@ -320,7 +328,7 @@ export const ImprovedSourceSuggestionTool = ({
       console.error('Error adding source:', error);
       toast({
         title: "Error",
-        description: "Failed to add source",
+        description: `Failed to add source: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
