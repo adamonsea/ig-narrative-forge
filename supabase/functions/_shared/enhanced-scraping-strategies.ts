@@ -263,8 +263,6 @@ export class EnhancedScrapingStrategies {
       }
     };
   }
-    }
-  }
 
   private async parseHTMLForArticles(html: string, baseUrl: string): Promise<ScrapingResult> {
     console.log('📊 Parsing HTML for article links with enhanced detection...');
