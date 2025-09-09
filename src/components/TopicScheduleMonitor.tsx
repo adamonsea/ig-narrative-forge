@@ -212,6 +212,14 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
   useEffect(() => {
     fetchTopicData();
+    
+    // Listen for gather all sources event
+    const handleGatherAll = () => handleRescanAllSources();
+    window.addEventListener('gatherAllSources', handleGatherAll);
+    
+    return () => {
+      window.removeEventListener('gatherAllSources', handleGatherAll);
+    };
   }, [topicId]);
 
   const getHealthBadge = (status: string) => {

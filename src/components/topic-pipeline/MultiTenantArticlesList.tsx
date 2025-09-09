@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw, CheckSquare, Square } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw, CheckSquare, Square, RotateCcw } from "lucide-react";
 import { SimilarArticleIndicator } from "@/components/SimilarArticleIndicator";
 import { SimpleBulkDeleteDialog } from "@/components/ui/simple-bulk-delete-dialog";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -335,12 +335,21 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
           <p className="text-lg font-medium">No Multi-Tenant Articles</p>
           <p className="text-sm">Articles from the new scraping system will appear here</p>
         </div>
-        {onRefresh && (
-          <Button onClick={onRefresh} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+        <div className="flex gap-2 justify-center">
+          <Button 
+            onClick={() => window.dispatchEvent(new CustomEvent('gatherAllSources'))}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Gather All Sources
           </Button>
-        )}
+          {onRefresh && (
+            <Button onClick={onRefresh} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

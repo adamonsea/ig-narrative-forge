@@ -496,9 +496,21 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             <BulkDeleteDialog onSuccess={onRefresh} />
           </CardTitle>
           <CardDescription>
-            No articles found in the pipeline. Try running a scrape to import new content.
+            No articles found in the pipeline. Run a scrape to gather fresh content from all your sources.
           </CardDescription>
         </CardHeader>
+        <CardContent className="text-center py-6">
+          <Button 
+            onClick={() => window.dispatchEvent(new CustomEvent('gatherAllSources'))}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Gather All Sources
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            This will check all your active sources for new content
+          </p>
+        </CardContent>
       </Card>
     );
   }

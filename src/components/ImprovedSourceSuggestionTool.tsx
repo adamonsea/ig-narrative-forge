@@ -78,13 +78,34 @@ export const ImprovedSourceSuggestionTool = ({
 
       const suggestions = data?.suggestions || [];
       
-      // Sort by platform reliability and confidence
-      const sortedSuggestions = suggestions.sort((a: SourceSuggestion, b: SourceSuggestion) => {
+      // Filter out unreliable sources and sort by quality
+      const filteredSuggestions = suggestions.filter((suggestion: SourceSuggestion) => {
+        // Minimum confidence threshold
+        if (suggestion.confidence_score < 60) return false;
+        
+        // Block known problematic patterns
+        const url = suggestion.url.toLowerCase();
+        const problematicPatterns = [
+          'facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com',
+          'reddit.com', 'pinterest.com', 'linkedin.com',
+          'blogspot', 'tumblr', 'medium.com',
+          'youtube.com', 'vimeo.com'
+        ];
+        
+        if (problematicPatterns.some(pattern => url.includes(pattern))) return false;
+        
+        // Prefer high reliability platforms
+        if (suggestion.platform_reliability === 'low') return false;
+        
+        return true;
+      });
+
+      const sortedSuggestions = filteredSuggestions.sort((a: SourceSuggestion, b: SourceSuggestion) => {
         const reliabilityScore = (suggestion: SourceSuggestion) => {
           let score = suggestion.confidence_score;
-          if (suggestion.platform_reliability === 'high') score += 20;
-          if (suggestion.platform_reliability === 'medium') score += 10;
-          if (['WordPress', 'RSS', 'Substack'].includes(suggestion.type)) score += 15;
+          if (suggestion.platform_reliability === 'high') score += 25;
+          if (suggestion.platform_reliability === 'medium') score += 15;
+          if (['WordPress', 'RSS', 'Substack', 'News'].includes(suggestion.type)) score += 20;
           return score;
         };
         return reliabilityScore(b) - reliabilityScore(a);
