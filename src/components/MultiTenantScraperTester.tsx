@@ -13,40 +13,52 @@ const MultiTenantScraperTester = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Brighton topic for testing
+  // Hastings topic for Phase 2 testing
   const testTopic = {
-    id: 'ba443441-9f01-4116-8695-67ec08cba1df',
-    name: 'Brighton',
-    region: 'Brighton and Hove',
+    id: 'e6de0eaa-6884-41c5-9478-e369265e8a8f',
+    name: 'Hastings and St Leonards',
+    region: 'Hastings and St Leonards',
     type: 'regional'
   };
 
-  const testArticles = [
+  const hastingsSources = [
     {
-      title: "New Brighton Marina Development Gets Planning Approval",
-      body: "Brighton and Hove City Council has approved plans for a major redevelopment of Brighton Marina. The £500 million project will include new residential units, retail spaces, and improved waterfront facilities. Local residents have welcomed the investment in the area, which is expected to create hundreds of jobs and boost tourism. The development will feature sustainable design elements and improved public transport links to the city center.",
-      author: "Sarah Johnson",
-      published_at: new Date().toISOString(),
-      source_url: "https://test.brighton-news.co.uk/marina-development-approved",
-      image_url: "https://example.com/marina.jpg",
-      word_count: 85
+      id: '1dc924bc-2068-4d45-b7a0-6c29cf67ecfe',
+      name: 'BBC Sussex',
+      url: 'https://www.bbc.co.uk/news/england/sussex'
+    },
+    {
+      id: '33bda2c5-27fe-4fd2-ad0e-05df0d358299', 
+      name: 'Sussex Express',
+      url: 'https://www.sussexexpress.co.uk/'
+    },
+    {
+      id: 'b86ea1b2-23cb-42c5-ae8b-9988563c17a7',
+      name: 'The Argus', 
+      url: 'https://www.theargus.co.uk/'
+    },
+    {
+      id: 'e4c6f7f8-0e74-47f7-b356-0a8a66b83504',
+      name: 'Visit 1066 Country',
+      url: 'https://www.visit1066country.com/news'
     }
   ];
 
-  const runMultiTenantTest = async () => {
-    setTesting(true);
+  const [sourceResults, setSourceResults] = useState<Record<string, any>>({});
+  const [testingSource, setTestingSource] = useState<string | null>(null);
+
+  const testSource = async (source: any) => {
+    setTestingSource(source.id);
     setError(null);
-    setResults(null);
 
     try {
-      console.log('🧪 Starting multi-tenant scraper test for Brighton topic...');
+      console.log(`🧪 Testing source: ${source.name} - ${source.url}`);
       
-      const { data, error: functionError } = await supabase.functions.invoke('multi-tenant-scraper', {
+      const { data, error: functionError } = await supabase.functions.invoke('universal-scraper', {
         body: {
-          feedUrl: 'test-url',
-          topicId: testTopic.id,
-          sourceId: 'c2ad5092-398e-414a-b12f-9111ad401648', // BBC Sussex source
-          articles: testArticles
+          feedUrl: source.url,
+          sourceId: source.id,
+          region: testTopic.region
         }
       });
 
@@ -54,25 +66,65 @@ const MultiTenantScraperTester = () => {
         throw new Error(`Function error: ${functionError.message}`);
       }
 
-      console.log('✅ Multi-tenant scraper test completed:', data);
-      setResults(data);
+      console.log(`✅ Source test completed for ${source.name}:`, data);
+      setSourceResults(prev => ({
+        ...prev,
+        [source.id]: { ...data, source: source.name }
+      }));
+      
+      const success = data?.success && (data.articlesStored > 0 || data.multiTenantArticlesStored > 0);
       
       toast({
-        title: "Test Completed",
-        description: `Multi-tenant scraper processed ${data.articlesFound} articles, created ${data.newContentCreated} new content entries`,
+        title: success ? "Source Working!" : "Source Failed",
+        description: success 
+          ? `${source.name}: Found ${data.articlesFound || 0}, stored ${data.articlesStored || 0} legacy + ${data.multiTenantArticlesStored || 0} multi-tenant`
+          : `${source.name}: ${data?.message || 'No articles stored'}`,
+        variant: success ? "default" : "destructive"
       });
 
     } catch (err: any) {
-      console.error('❌ Test failed:', err);
-      setError(err.message);
+      console.error(`❌ Test failed for ${source.name}:`, err);
+      setSourceResults(prev => ({
+        ...prev,
+        [source.id]: { success: false, error: err.message, source: source.name }
+      }));
       toast({
-        title: "Test Failed",
-        description: err.message,
+        title: "Source Test Failed",
+        description: `${source.name}: ${err.message}`,
         variant: "destructive",
       });
     } finally {
-      setTesting(false);
+      setTestingSource(null);
     }
+  };
+
+  const testAllSources = async () => {
+    setTesting(true);
+    setSourceResults({});
+    setError(null);
+    
+    toast({
+      title: "Phase 2 Testing Started",
+      description: "Testing all Hastings sources for multi-tenant architecture..."
+    });
+
+    for (const source of hastingsSources) {
+      await testSource(source);
+      // Small delay between tests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    setTesting(false);
+    
+    const successCount = Object.values(sourceResults).filter((result: any) => 
+      result.success && (result.articlesStored > 0 || result.multiTenantArticlesStored > 0)
+    ).length;
+    
+    toast({
+      title: "Phase 2 Testing Complete",
+      description: `${successCount}/${hastingsSources.length} Hastings sources working successfully`,
+      variant: successCount > 0 ? "default" : "destructive"
+    });
   };
 
   return (
@@ -80,10 +132,10 @@ const MultiTenantScraperTester = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            🧪 Multi-Tenant Scraper Test
+            🧪 Phase 2: Hastings Multi-Tenant Testing
           </CardTitle>
           <CardDescription>
-            Test the new multi-tenant scraper architecture with the Brighton topic before rolling out system-wide.
+            Test each Hastings source to verify multi-tenant architecture and regional isolation.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -97,25 +149,74 @@ const MultiTenantScraperTester = () => {
               <span className="text-muted-foreground">{testTopic.region}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Type:</span>
-              <Badge variant="secondary">{testTopic.type}</Badge>
+              <span className="font-medium">Sources to Test:</span>
+              <Badge variant="secondary">{hastingsSources.length} sources</Badge>
             </div>
           </div>
 
           <Alert>
             <AlertDescription>
-              This will test the multi-tenant scraper with sample Brighton news data to verify:
+              This will test each Hastings source to verify:
               <ul className="mt-2 ml-4 list-disc space-y-1">
-                <li>Shared content storage in <code>shared_article_content</code></li>
-                <li>Topic-specific metadata in <code>topic_articles</code></li>
-                <li>Regional relevance scoring for Brighton content</li>
-                <li>Quality filtering and content enhancement</li>
+                <li>Dual storage: legacy <code>articles</code> + multi-tenant <code>topic_articles</code></li>
+                <li>Regional isolation: articles only appear in Hastings topic</li>
+                <li>Content extraction and quality scoring</li>
+                <li>Which sources are actually working for continued Phase 2 testing</li>
               </ul>
             </AlertDescription>
           </Alert>
 
+          <div className="grid gap-3">
+            {hastingsSources.map(source => (
+              <div key={source.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  {testingSource === source.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  ) : sourceResults[source.id]?.success ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : sourceResults[source.id] ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                  )}
+                  <div>
+                    <h4 className="font-medium">{source.name}</h4>
+                    <p className="text-sm text-muted-foreground">{source.url}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {sourceResults[source.id] && (
+                    <div className="text-sm text-right">
+                      {sourceResults[source.id].success ? (
+                        <>
+                          <div>Found: {sourceResults[source.id].articlesFound || 0}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Legacy: {sourceResults[source.id].articlesStored || 0} | 
+                            Multi: {sourceResults[source.id].multiTenantArticlesStored || 0}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-red-500">{sourceResults[source.id].error || 'Failed'}</div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => testSource(source)}
+                    disabled={testing || testingSource === source.id}
+                  >
+                    {testingSource === source.id ? 'Testing...' : 'Test'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <Button 
-            onClick={runMultiTenantTest} 
+            onClick={testAllSources} 
             disabled={testing}
             className="w-full"
             size="lg"
@@ -123,78 +224,75 @@ const MultiTenantScraperTester = () => {
             {testing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Running Multi-Tenant Test...
+                Testing All Sources...
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 mr-2" />
-                Test Multi-Tenant Scraper
+                Test All Hastings Sources
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {results && (
+      {Object.keys(sourceResults).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
-              Test Results
+              Phase 2 Test Results
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-3">
-                <div className="text-sm text-muted-foreground">Articles Found</div>
-                <div className="text-2xl font-bold">{results.articlesFound}</div>
+                <div className="text-sm text-muted-foreground">Sources Tested</div>
+                <div className="text-2xl font-bold">{Object.keys(sourceResults).length}</div>
               </div>
               <div className="border rounded-lg p-3">
-                <div className="text-sm text-muted-foreground">Articles Scraped</div>
-                <div className="text-2xl font-bold">{results.articlesScraped}</div>
+                <div className="text-sm text-muted-foreground">Working Sources</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {Object.values(sourceResults).filter((r: any) => 
+                    r.success && (r.articlesStored > 0 || r.multiTenantArticlesStored > 0)
+                  ).length}
+                </div>
               </div>
               <div className="border rounded-lg p-3">
-                <div className="text-sm text-muted-foreground">New Content Created</div>
-                <div className="text-2xl font-bold">{results.newContentCreated}</div>
+                <div className="text-sm text-muted-foreground">Total Articles Found</div>
+                <div className="text-2xl font-bold">
+                  {Object.values(sourceResults).reduce((sum: number, r: any) => 
+                    sum + (r.articlesFound || 0), 0
+                  )}
+                </div>
               </div>
               <div className="border rounded-lg p-3">
-                <div className="text-sm text-muted-foreground">Topic Articles Created</div>
-                <div className="text-2xl font-bold">{results.topicArticlesCreated}</div>
+                <div className="text-sm text-muted-foreground">Multi-Tenant Articles</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {Object.values(sourceResults).reduce((sum: number, r: any) => 
+                    sum + (r.multiTenantArticlesStored || 0), 0
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="border rounded-lg p-3">
-              <div className="text-sm text-muted-foreground mb-2">Method Used</div>
-              <Badge>{results.method}</Badge>
-            </div>
-
-            {results.errors && results.errors.length > 0 && (
-              <div className="border border-red-200 rounded-lg p-3">
-                <div className="text-sm text-red-600 mb-2">Errors</div>
-                <ul className="space-y-1">
-                  {results.errors.map((error: string, index: number) => (
-                    <li key={index} className="text-sm text-red-600">• {error}</li>
-                  ))}
-                </ul>
-              </div>
+            {Object.values(sourceResults).some((r: any) => r.success && (r.articlesStored > 0 || r.multiTenantArticlesStored > 0)) && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  ✅ Found working sources! Multi-tenant architecture is functioning for Hastings. Ready to continue Phase 2 testing with regional isolation verification.
+                </AlertDescription>
+              </Alert>
             )}
-
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                {results.success 
-                  ? "✅ Multi-tenant scraper test completed successfully! Ready for system-wide deployment."
-                  : "⚠️ Test completed with issues. Review errors before proceeding."
-                }
-              </AlertDescription>
-            </Alert>
+            
+            {Object.values(sourceResults).every((r: any) => !r.success || (r.articlesStored === 0 && r.multiTenantArticlesStored === 0)) && Object.keys(sourceResults).length === hastingsSources.length && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertDescription>
+                  ⚠️ No working sources found for Hastings. All sources are failing at network/content extraction level. Consider adding different Hastings sources or investigating source accessibility.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       )}
