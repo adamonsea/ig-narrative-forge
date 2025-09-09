@@ -63,6 +63,8 @@ serve(async (req) => {
           console.log(`⚠️ Skipping snippet/low-quality article: ${article.title}`);
           continue;
         }
+
+        const { data: existingContent } = await supabase
           .from('shared_article_content').select('id').eq('normalized_url', normalizedUrl).single();
 
         let sharedContentId;
