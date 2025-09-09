@@ -10,7 +10,7 @@ import { Loader2, Camera, Cpu, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export const ScreenshotScraperTester = () => {
-  const [testUrl, setTestUrl] = useState('https://www.bbc.co.uk/news');
+  const [testUrl, setTestUrl] = useState('https://www.theguardian.com/uk-news');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
