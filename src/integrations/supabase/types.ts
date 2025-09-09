@@ -2585,14 +2585,22 @@ export type Database = {
         Returns: number
       }
       queue_multi_tenant_article: {
-        Args: {
-          p_ai_provider?: string
-          p_shared_content_id: string
-          p_slidetype?: string
-          p_tone?: Database["public"]["Enums"]["tone_type"]
-          p_topic_article_id: string
-          p_writing_style?: string
-        }
+        Args:
+          | {
+              p_ai_provider?: string
+              p_shared_content_id: string
+              p_slidetype?: string
+              p_tone?: Database["public"]["Enums"]["tone_type"]
+              p_topic_article_id: string
+              p_writing_style?: string
+            }
+          | {
+              p_ai_provider?: string
+              p_shared_content_id: string
+              p_slidetype?: string
+              p_tone?: Database["public"]["Enums"]["tone_type"]
+              p_writing_style?: string
+            }
         Returns: string
       }
       record_newsletter_signup_attempt: {
