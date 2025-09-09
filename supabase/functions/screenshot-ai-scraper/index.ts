@@ -233,6 +233,12 @@ serve(async (req) => {
       cost 
     });
 
+    // Initialize variables at function level to avoid scope issues
+    let insertedCount = 0;
+    let duplicateCount = 0;
+    let actualErrors = [];
+    let successfullyInserted = [];
+
     // Store articles in database
     if (articles.length > 0) {
       await logProgress(supabase, 'database-insert', 'start', { count: articles.length });
@@ -272,11 +278,6 @@ serve(async (req) => {
       });
 
       // Try to insert articles individually to handle duplicates gracefully
-      let insertedCount = 0;
-      let duplicateCount = 0;
-      let actualErrors = [];
-      let successfullyInserted = [];
-
       for (const article of articlesToInsert) {
         try {
           const { data: insertResult, error: singleInsertError } = await supabase
