@@ -23,6 +23,7 @@ import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { JunctionTableValidator } from "@/components/JunctionTableValidator";
 import { UniversalScrapingValidator } from "@/components/UniversalScrapingValidator";
+import { ArticleReExtractor } from "@/components/ArticleReExtractor";
 import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -484,6 +485,22 @@ const TopicDashboard = () => {
             <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <HybridTopicPipeline selectedTopicId={topic.id} topic={topic} />
+              </CardContent>
+            </Card>
+            
+            {/* Article Re-Extractor Tool for this topic */}
+            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  Content Quality Tools
+                </CardTitle>
+                <CardDescription>
+                  Fix articles that were extracted as snippets instead of full content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ArticleReExtractor topicId={topic.id} topicName={topic.name} />
               </CardContent>
             </Card>
           </TabsContent>

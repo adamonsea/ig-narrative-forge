@@ -56,9 +56,13 @@ serve(async (req) => {
         const relevanceScore = calculateRelevanceScore(article, topic);
         const qualityScore = calculateQualityScore(article);
 
-        console.log(`Processing: "${article.title}" - Quality: ${qualityScore}, Relevance: ${relevanceScore}`);
+        console.log(`Processing: "${article.title}" - Quality: ${qualityScore}, Relevance: ${relevanceScore}, Words: ${wordCount}`);
 
-        const { data: existingContent } = await supabase
+        // Skip articles that are clearly snippets or too low quality
+        if (wordCount < 100 || isContentSnippet(article.body || '', article.title || '')) {
+          console.log(`⚠️ Skipping snippet/low-quality article: ${article.title}`);
+          continue;
+        }
           .from('shared_article_content').select('id').eq('normalized_url', normalizedUrl).single();
 
         let sharedContentId;
@@ -87,7 +91,7 @@ serve(async (req) => {
           shared_content_id: sharedContentId, topic_id: topicId, source_id: sourceId,
           regional_relevance_score: relevanceScore, content_quality_score: qualityScore,
           keyword_matches: findKeywordMatches(article, topic),
-          processing_status: qualityScore >= 50 && relevanceScore >= 5 ? 'processed' : 'new',
+          processing_status: qualityScore >= 60 && relevanceScore >= 5 && wordCount >= 150 ? 'processed' : 'new',
           import_metadata: { test_run: true, source_url: article.source_url, processed_at: new Date().toISOString() }
         });
 
@@ -146,18 +150,56 @@ function calculateRelevanceScore(article: any, topic: any): number {
 function calculateQualityScore(article: any): number {
   let score = 0;
   const wordCount = calculateWordCount(article.body || '');
-  if (wordCount >= 300) score += 40;
+  if (wordCount >= 500) score += 50;
+  else if (wordCount >= 300) score += 40;
+  else if (wordCount >= 200) score += 35;
   else if (wordCount >= 150) score += 30;
-  else if (wordCount >= 50) score += 20;
-  else if (wordCount >= 10) score += 10;
+  else if (wordCount >= 100) score += 25;
+  else if (wordCount >= 50) score += 15;
+  else if (wordCount >= 25) score += 10;
   
   if (article.author && article.author.length > 0) score += 15;
   if (article.published_at) score += 15;
-  if (article.title && article.title.length >= 10) score += 20;
-  else if (article.title && article.title.length >= 5) score += 10;
-  if (article.image_url) score += 10;
+  if (article.title && article.title.length >= 20) score += 15;
+  else if (article.title && article.title.length >= 10) score += 10;
+  if (article.image_url) score += 5;
+  
+  // Penalty for snippets
+  if (isContentSnippet(article.body || '', article.title || '')) {
+    score -= 30;
+  }
   
   return Math.min(100, score);
+}
+
+function isContentSnippet(content: string, title: string): boolean {
+  if (!content) return true;
+  
+  const wordCount = calculateWordCount(content);
+  
+  // Too short to be full article
+  if (wordCount < 100) return true;
+  
+  // Check for common snippet indicators
+  const snippetIndicators = [
+    'read more', 'continue reading', 'full story', 'view more',
+    'the post', 'appeared first', 'original article', 'source:',
+    'click here', 'see more', '...', 'read the full',
+    'subscribe', 'follow us', 'newsletter'
+  ];
+  
+  const contentLower = content.toLowerCase();
+  const hasSnippetIndicators = snippetIndicators.some(indicator => 
+    contentLower.includes(indicator)
+  );
+  
+  // Check if content ends abruptly (common in RSS snippets)
+  const endsAbruptly = content.trim().endsWith('...') || 
+                       content.trim().endsWith('…') ||
+                       !content.includes('.') || // No sentences
+                       content.split('.').length < 3; // Very few sentences
+  
+  return hasSnippetIndicators || endsAbruptly;
 }
 
 function findKeywordMatches(article: any, topic: any): string[] {

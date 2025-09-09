@@ -91,7 +91,7 @@ export class ScrapingStrategies {
       for (const itemMatch of itemMatches.slice(0, 10)) { // Limit to 10 articles
         try {
           const article = await this.parseRSSItem(itemMatch, baseUrl);
-          if (article && article.word_count >= 50) {
+          if (article && article.word_count >= 150 && !this.isContentSnippet(article.body, article.title)) {
             articles.push(article);
           }
         } catch (error) {
@@ -143,9 +143,10 @@ export class ScrapingStrategies {
       // Use full extracted content, fallback to RSS description
       const finalContent = extractedContent.body || description || '';
       const finalTitle = extractedContent.title || title;
+      const wordCount = this.countWords(finalContent);
       
-      if (!finalContent || finalContent.length < 100) {
-        console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}...`);
+      if (!finalContent || wordCount < 150 || this.isContentSnippet(finalContent, finalTitle)) {
+        console.log(`⚠️ Insufficient or snippet content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
         return null;
       }
 
@@ -204,7 +205,7 @@ export class ScrapingStrategies {
           const articleHtml = await fetchWithRetry(articleUrl);
           const extractedContent = extractContentFromHTML(articleHtml, articleUrl);
           
-          if (extractedContent.body && extractedContent.word_count >= 50) {
+          if (extractedContent.body && extractedContent.word_count >= 150 && !this.isContentSnippet(extractedContent.body, extractedContent.title)) {
             // Calculate regional relevance - for hyperlocal sources, give higher base scores
             let regionalRelevance = calculateRegionalRelevance(
               extractedContent.body,
@@ -334,5 +335,40 @@ export class ScrapingStrategies {
     } catch {
       return url.startsWith('http') ? url : `${baseUrl}${url}`;
     }
+  }
+
+  private countWords(text: string): number {
+    if (!text) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  private isContentSnippet(content: string, title: string): boolean {
+    if (!content) return true;
+    
+    const wordCount = this.countWords(content);
+    
+    // Too short to be full article
+    if (wordCount < 100) return true;
+    
+    // Check for common snippet indicators
+    const snippetIndicators = [
+      'read more', 'continue reading', 'full story', 'view more',
+      'the post', 'appeared first', 'original article', 'source:',
+      'click here', 'see more', '...', 'read the full',
+      'subscribe', 'follow us', 'newsletter'
+    ];
+    
+    const contentLower = content.toLowerCase();
+    const hasSnippetIndicators = snippetIndicators.some(indicator => 
+      contentLower.includes(indicator)
+    );
+    
+    // Check if content ends abruptly (common in RSS snippets)
+    const endsAbruptly = content.trim().endsWith('...') || 
+                         content.trim().endsWith('…') ||
+                         !content.includes('.') || // No sentences
+                         content.split('.').length < 3; // Very few sentences
+    
+    return hasSnippetIndicators || endsAbruptly;
   }
 }
