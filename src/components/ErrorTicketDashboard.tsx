@@ -45,7 +45,7 @@ export default function ErrorTicketDashboard() {
       const { data, error } = await supabase
         .from('error_tickets')
         .select('*')
-        .is('archived_at', activeTab === 'active' ? null : undefined)
+        .filter('archived_at', activeTab === 'active' ? 'is' : 'not.is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
