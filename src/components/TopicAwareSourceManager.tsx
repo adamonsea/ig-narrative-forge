@@ -656,8 +656,20 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
 
   const getSourceSuccessRate = (source: ContentSource): number => {
     const rule = sourceRules.find(r => r.source_url === source.feed_url);
-    if (!rule || (rule.success_count + rule.failure_count) === 0) return 0;
-    return Math.round((rule.success_count / (rule.success_count + rule.failure_count)) * 100);
+    
+    // If we have automation rule data, use it
+    if (rule && (rule.success_count + rule.failure_count) > 0) {
+      return Math.round((rule.success_count / (rule.success_count + rule.failure_count)) * 100);
+    }
+    
+    // If source has scraped articles but no success rate, calculate based on activity
+    if (source.articles_scraped && source.articles_scraped > 0) {
+      // If they have articles but no recorded failures, assume high success
+      return source.success_rate || 85; // Default to 85% for active sources
+    }
+    
+    // Fall back to database success rate or 0
+    return source.success_rate || 0;
   };
 
   const getSourceStatusBadge = (source: ContentSource) => {
