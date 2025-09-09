@@ -21,6 +21,7 @@ import { MultiTenantMigrationTester } from "@/components/MultiTenantMigrationTes
 import { SentimentManager } from "@/components/SentimentManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
+import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database } from "lucide-react";
@@ -666,23 +667,43 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="migration" className="space-y-6">
-            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Multi-Tenant Migration
-                </CardTitle>
-                <CardDescription>
-                  Test and migrate this topic to the new multi-tenant architecture
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <MultiTenantMigrationTester 
-                  selectedTopicId={topic.id} 
-                  topicName={topic.name} 
-                />
-              </CardContent>
-            </Card>
+            <div className="grid gap-6">
+              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="w-5 h-5" />
+                    Multi-Tenant Migration
+                  </CardTitle>
+                  <CardDescription>
+                    Test and migrate this topic to the new multi-tenant architecture
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <MultiTenantMigrationTester 
+                    selectedTopicId={topic.id} 
+                    topicName={topic.name} 
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Universal Topic Scraper
+                  </CardTitle>
+                  <CardDescription>
+                    Test the universal scraping pipeline using junction table architecture
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <UniversalTopicScraper 
+                    topicId={topic.id}
+                    topicName={topic.name}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
         </Tabs>
