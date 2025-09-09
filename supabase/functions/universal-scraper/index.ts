@@ -173,6 +173,70 @@ serve(async (req) => {
     let discardedCount = 0;
     let multiTenantStoredCount = 0;
 
+    // Check for "soft failures" - successful scraping but blocked content
+    const invalidContentErrors = scrapingResult.errors.filter(error => 
+      error.includes('INVALID_CONTENT')
+    ).length;
+    
+    const invalidContentPercentage = scrapingResult.articlesFound > 0 ? 
+      (invalidContentErrors / scrapingResult.articlesFound) * 100 : 0;
+    
+    // Trigger AI fallback if >80% of articles fail with INVALID_CONTENT (blocked source)
+    if (invalidContentPercentage > 80 && scrapingResult.articlesFound > 0) {
+      console.log(`🚨 Source appears blocked: ${invalidContentPercentage.toFixed(1)}% INVALID_CONTENT errors`);
+      console.log(`🤖 Triggering AI recovery fallback...`);
+      
+      try {
+        const aiRecoveryResult = await supabase.functions.invoke('ai-scraper-recovery', {
+          body: { 
+            feedUrl, 
+            sourceId, 
+            failureType: 'access_denied',
+            region 
+          }
+        });
+
+        if (aiRecoveryResult.data && !aiRecoveryResult.error && 
+            aiRecoveryResult.data.success && aiRecoveryResult.data.articlesStored > 0) {
+          console.log(`✅ AI recovery successful: ${aiRecoveryResult.data.articlesStored} articles recovered`);
+          
+          // Update metrics and log success
+          const responseTime = Date.now() - startTime;
+          await dbOps.updateSourceMetrics(sourceId, true, 'ai-scraper-recovery', responseTime);
+          
+          await dbOps.logSystemEvent('info', 
+            `AI fallback successful for blocked source: ${aiRecoveryResult.data.articlesStored} articles`,
+            { sourceId, region, topicId, method: 'ai-scraper-recovery', articlesRecovered: aiRecoveryResult.data.articlesStored },
+            'universal-scraper'
+          );
+          
+          return new Response(JSON.stringify({
+            success: true,
+            method: 'ai-scraper-recovery',
+            articlesFound: aiRecoveryResult.data.articlesStored,
+            articlesScraped: aiRecoveryResult.data.articlesStored,
+            articlesStored: aiRecoveryResult.data.articlesStored,
+            multiTenantArticlesStored: 0, // AI recovery uses legacy storage
+            duplicatesSkipped: 0,
+            filteredForRelevance: 0,
+            responseTime,
+            errors: [],
+            dualStorageEnabled: topicId ? true : false,
+            fallbackUsed: true,
+            blockedSourceRecovered: true,
+            message: `AI recovery successful: ${aiRecoveryResult.data.articlesStored} articles recovered from blocked source`
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } else {
+          console.log(`❌ AI recovery failed or returned no articles`);
+        }
+      } catch (aiError) {
+        console.error(`❌ AI recovery error:`, aiError);
+      }
+    }
+
     if (scrapingResult.success && scrapingResult.articles.length > 0) {
       console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
