@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -179,65 +178,55 @@ async function takeScreenshot(url: string): Promise<{
   try {
     console.log(`📸 Taking screenshot of: ${url}`);
     
-    // Launch Puppeteer with optimized settings for edge functions
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-background-timer-throttling',
-        '--disable-background-networking',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ]
+    // Get ScreenshotAPI token from environment
+    const screenshotApiToken = Deno.env.get('SCREENSHOTAPI_TOKEN');
+    if (!screenshotApiToken) {
+      throw new Error('SCREENSHOTAPI_TOKEN environment variable not set');
+    }
+    
+    // Use ScreenshotAPI.net to take screenshot
+    const screenshotApiUrl = `https://shot.screenshotapi.net/screenshot`;
+    const screenshotParams = new URLSearchParams({
+      token: screenshotApiToken,
+      url: url,
+      width: '1920',
+      height: '1080',
+      output: 'base64',
+      file_type: 'png',
+      wait_for_event: 'load',
+      delay: '2000' // Wait 2 seconds for content to load
+    });
+    
+    const response = await fetch(`${screenshotApiUrl}?${screenshotParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     });
 
-    const page = await browser.newPage();
+    if (!response.ok) {
+      throw new Error(`ScreenshotAPI failed: ${response.status} ${response.statusText}`);
+    }
+
+    const screenshotBase64 = await response.text();
     
-    // Set viewport and user agent
-    await page.setViewport({ 
-      width: 1920, 
-      height: 1080,
-      deviceScaleFactor: 1
-    });
-    
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // Set timeout and navigation options
-    await page.goto(url, { 
-      waitUntil: 'networkidle0', 
-      timeout: 30000 
-    });
-    
-    // Wait for content to load
-    await page.waitForTimeout(2000);
-    
-    // Take screenshot as base64
-    const screenshotBuffer = await page.screenshot({ 
-      type: 'png',
-      fullPage: false,
-      encoding: 'base64'
-    });
-    
-    await browser.close();
+    // Validate the response is actually base64 image data
+    if (!screenshotBase64 || screenshotBase64.length < 100) {
+      throw new Error('Invalid screenshot response - data too short');
+    }
     
     return {
       success: true,
-      screenshotBase64: screenshotBuffer as string,
-      screenshotUrl: `data:image/png;base64,${screenshotBuffer}`
+      screenshotBase64: screenshotBase64,
+      screenshotUrl: `data:image/png;base64,${screenshotBase64}`
     };
 
   } catch (error) {
-    console.error('Puppeteer screenshot error:', error);
+    console.error('Screenshot error:', error);
     
-    // Fallback to simple HTTP request if Puppeteer fails
+    // Fallback to traditional web scraping if screenshot fails
     try {
-      console.log('🔄 Puppeteer failed, attempting fallback method...');
+      console.log('🔄 Screenshot failed, attempting web scraping fallback...');
       
       const response = await fetch(url, {
         method: 'GET',
@@ -245,9 +234,7 @@ async function takeScreenshot(url: string): Promise<{
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache'
         }
       });
 
@@ -255,18 +242,15 @@ async function takeScreenshot(url: string): Promise<{
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // For fallback, we'll indicate this is HTML content not a screenshot
-      const htmlContent = await response.text();
-      
       return {
         success: false,
-        error: `Puppeteer unavailable in this environment. Browser-based screenshot required. HTML content available but DeepSeek needs actual screenshot. Error: ${error.message}`
+        error: `Screenshot service unavailable. Traditional scraping should be used instead. Error: ${error.message}`
       };
       
     } catch (fallbackError) {
       return {
         success: false,
-        error: `Both Puppeteer and fallback failed. Puppeteer: ${error.message}. Fallback: ${fallbackError.message}`
+        error: `Both screenshot and fallback failed. Screenshot: ${error.message}. Fallback: ${fallbackError.message}`
       };
     }
   }
