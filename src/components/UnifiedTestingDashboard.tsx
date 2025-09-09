@@ -6,8 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, TestTube, Database, Globe, Shield } from 'lucide-react';
 import { JunctionTableValidator } from '@/components/JunctionTableValidator';
-import { UniversalScrapingValidator } from '@/components/UniversalScrapingValidator';
 import { ArchitectureMigrationValidator } from '@/components/ArchitectureMigrationValidator';
+import { TopicScrapingTester } from '@/components/TopicScrapingTester';
 import { useToast } from '@/hooks/use-toast';
 
 interface ValidationResults {
@@ -140,7 +140,7 @@ export const UnifiedTestingDashboard = () => {
         </TabsContent>
         
         <TabsContent value="scraping" className="mt-6">
-          <UniversalScrapingValidator />
+          <TopicScrapingTester />
         </TabsContent>
         
         <TabsContent value="migration" className="mt-6">

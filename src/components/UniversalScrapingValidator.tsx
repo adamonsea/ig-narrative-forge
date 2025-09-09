@@ -38,6 +38,16 @@ export const UniversalScrapingValidator = ({ topicId, topicName }: UniversalScra
   };
 
   const runValidation = async () => {
+    const currentTopicId = topicId;
+    if (!currentTopicId) {
+      toast({
+        title: "No Topic Selected",
+        description: "Please provide a topic ID for validation",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setValidating(true);
     
     try {
@@ -47,7 +57,7 @@ export const UniversalScrapingValidator = ({ topicId, topicName }: UniversalScra
         'universal-topic-scraper', 
         { 
           body: { 
-            topicId: topicId, 
+            topicId: currentTopicId, 
             test_mode: true,
             max_articles_per_source: 1 
           } 
