@@ -15,6 +15,68 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Safe date parsing function to handle various date formats
+function safeParseDateString(dateStr: string): Date | null {
+  if (!dateStr || typeof dateStr !== 'string') {
+    return null;
+  }
+
+  // Clean the date string
+  const cleaned = dateStr.trim();
+  
+  try {
+    // Try direct parsing first
+    const directParse = new Date(cleaned);
+    if (!isNaN(directParse.getTime())) {
+      return directParse;
+    }
+
+    // Handle relative dates like "2 hours ago", "yesterday", etc.
+    const now = new Date();
+    const lowerStr = cleaned.toLowerCase();
+    
+    if (lowerStr.includes('hour') && lowerStr.includes('ago')) {
+      const hours = parseInt(lowerStr.match(/(\d+)\s*hour/)?.[1] || '0');
+      return new Date(now.getTime() - (hours * 60 * 60 * 1000));
+    }
+    
+    if (lowerStr.includes('minute') && lowerStr.includes('ago')) {
+      const minutes = parseInt(lowerStr.match(/(\d+)\s*minute/)?.[1] || '0');
+      return new Date(now.getTime() - (minutes * 60 * 1000));
+    }
+    
+    if (lowerStr === 'yesterday') {
+      return new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    }
+    
+    if (lowerStr === 'today') {
+      return new Date();
+    }
+
+    // Try parsing different formats
+    const formats = [
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})/,  // MM/DD/YYYY
+      /(\d{4})-(\d{2})-(\d{2})/,        // YYYY-MM-DD
+      /(\d{1,2})-(\d{1,2})-(\d{4})/     // DD-MM-YYYY
+    ];
+
+    for (const format of formats) {
+      const match = cleaned.match(format);
+      if (match) {
+        const parsed = new Date(cleaned);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Date parsing error:', error);
+    return null;
+  }
+}
+
 // Progressive logging function to track function execution
 async function logProgress(supabase: any, step: string, status: 'start' | 'success' | 'error', details?: any) {
   try {
@@ -175,23 +237,39 @@ serve(async (req) => {
     if (articles.length > 0) {
       await logProgress(supabase, 'database-insert', 'start', { count: articles.length });
       
-      const articlesToInsert = articles.map((article: any) => ({
-        title: article.title || 'Untitled',
-        body: article.body || '',
-        author: article.author || null,
-        published_at: article.date ? new Date(article.date).toISOString() : null,
-        source_url: article.url || feedUrl,
-        content_quality_score: 75,
-        regional_relevance_score: region ? 50 : 0,
-        processing_status: 'new',
-        import_metadata: {
-          extraction_method: 'screenshot_ai',
-          cost_usd: cost || 0,
-          screenshot_url: screenshotResult.screenshotUrl,
-          source_id: sourceId,
-          extracted_at: new Date().toISOString()
+      const articlesToInsert = articles.map((article: any) => {
+        // Safe date parsing with detailed logging
+        let parsedDate = null;
+        if (article.date) {
+          const safeDate = safeParseDateString(article.date);
+          parsedDate = safeDate ? safeDate.toISOString() : null;
+          
+          // Log date parsing for debugging
+          console.log(`📅 Date parsing: "${article.date}" -> ${parsedDate ? 'SUCCESS' : 'FAILED'}`);
         }
-      }));
+
+        return {
+          title: article.title || 'Untitled',
+          body: article.body || '',
+          author: article.author || null,
+          published_at: parsedDate,
+          source_url: article.url || feedUrl,
+          content_quality_score: 75,
+          regional_relevance_score: region ? 50 : 0,
+          processing_status: 'new',
+          import_metadata: {
+            extraction_method: 'screenshot_ai',
+            cost_usd: cost || 0,
+            screenshot_url: screenshotResult.screenshotUrl,
+            source_id: sourceId,
+            extracted_at: new Date().toISOString(),
+            date_parsing_info: {
+              original_date: article.date,
+              parsed_successfully: parsedDate !== null
+            }
+          }
+        };
+      });
 
       const { data: insertedArticles, error: insertError } = await supabase
         .from('articles')
