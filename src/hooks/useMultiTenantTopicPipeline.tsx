@@ -111,7 +111,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         console.error('Error loading multi-tenant articles:', articlesResult.error);
         setArticles([]);
       } else {
-        const articlesData = articlesResult.data?.map((item: any) => ({
+        const articlesData = articlesResult.data
+          ?.filter((item: any) => item.processing_status !== 'discarded') // Filter out discarded articles
+          ?.map((item: any) => ({
           id: item.id,
           shared_content_id: item.shared_content_id,
           title: item.title,

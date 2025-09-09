@@ -619,6 +619,25 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             </TabsList>
 
               <TabsContent value="pending" className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Pending Articles</h3>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleGatherAll}
+                      disabled={isGathering}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      {isGathering ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {isGathering ? 'Gathering...' : 'Gather All Sources'}
+                    </Button>
+                  </div>
+                </div>
+                
                 {/* Multi-tenant Articles */}
                 <UnifiedArticlesList
                   articles={multiTenantArticles}
@@ -647,82 +666,6 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
                   topicLandmarks={currentTopic?.landmarks || []}
                   onRefresh={refreshMultiTenantContent}
                 />
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Pending Articles</h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={handleGatherAll}
-                      disabled={isGathering}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      {isGathering ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                      {isGathering ? 'Gathering...' : 'Gather All Sources'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* High Quality Articles */}
-                <ArticlesList
-                  articles={articles.filter((a: any) => !a.is_low_score)}
-                  processingArticle={processingArticle}
-                  slideQuantities={slideQuantities}
-                  deletingArticles={deletingArticles}
-                  animatingArticles={animatingArticles}
-                  toneOverrides={toneOverrides}
-                  writingStyleOverrides={writingStyleOverrides}
-                  defaultTone={currentTopic?.default_tone || 'conversational'}
-                  defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-                  topicKeywords={currentTopic?.keywords || []}
-                  topicLandmarks={currentTopic?.landmarks || []}
-                  onRefresh={loadTopicContent}
-                  onSlideQuantityChange={handleSlideQuantityChange}
-                  onToneOverrideChange={handleToneOverrideChange}
-                  onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                  onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
-                  onPreview={(article) => setPreviewArticle(article)}
-                  onDelete={deleteArticle}
-                />
-                
-                {/* Low Quality Articles Section */}
-                {articles.filter((a: any) => a.is_low_score).length > 0 && (
-                  <div className="space-y-4">
-                    <div className="border-t pt-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Badge variant="destructive" className="text-xs">
-                          Low Relevance
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {articles.filter((a: any) => a.is_low_score).length} articles with low relevance scores
-                        </span>
-                      </div>
-                      <ArticlesList 
-                        articles={articles.filter((a: any) => a.is_low_score)}
-                        processingArticle={processingArticle}
-                        slideQuantities={slideQuantities}
-                        deletingArticles={deletingArticles}
-                        animatingArticles={animatingArticles}
-                        toneOverrides={toneOverrides}
-                        writingStyleOverrides={writingStyleOverrides}
-                        defaultTone={currentTopic?.default_tone || 'conversational'}
-                        defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-                        topicKeywords={currentTopic?.keywords || []}
-                        topicLandmarks={currentTopic?.landmarks || []}
-                        onRefresh={loadTopicContent}
-                        onSlideQuantityChange={handleSlideQuantityChange}
-                        onToneOverrideChange={handleToneOverrideChange}
-                        onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                        onApprove={(articleId, slideType, tone, writingStyle) => approveArticle(articleId, slideType, tone, writingStyle)}
-                        onPreview={(article) => setPreviewArticle(article)}
-                        onDelete={deleteArticle}
-                      />
-                    </div>
-                  </div>
-                )}
               </TabsContent>
 
               <TabsContent value="queue" className="space-y-6">

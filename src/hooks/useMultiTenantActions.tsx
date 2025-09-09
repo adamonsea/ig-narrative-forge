@@ -67,29 +67,34 @@ export const useMultiTenantActions = () => {
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
       // Create or find bridge article in legacy table for foreign key constraint
-      // First, try to find existing bridge article for this shared content
       let bridgeArticleId: string;
       
+      // First, try to find existing bridge article for this shared content
       const { data: existingBridge, error: bridgeCheckError } = await supabase
         .from('articles')
         .select('id')
         .eq('source_url', article.url)
-        .eq('processing_status', 'processed')
         .limit(1)
         .single();
 
       if (existingBridge && !bridgeCheckError) {
         bridgeArticleId = existingBridge.id;
         console.log('🔗 Using existing bridge article:', bridgeArticleId);
+        
+        // Update the existing article to processed status
+        await supabase
+          .from('articles')
+          .update({ processing_status: 'processed' })
+          .eq('id', bridgeArticleId);
       } else {
-        // Create bridge article for foreign key constraint
+        // Create bridge article with conflict handling
         const { data: bridgeData, error: bridgeError } = await supabase
           .from('articles')
-          .insert({
+          .upsert({
             title: article.title,
             body: article.body || 'Multi-tenant bridge article',
             source_url: article.url,
-            canonical_url: article.url, // Use URL as canonical URL since the field doesn't exist
+            canonical_url: article.url,
             author: article.author,
             published_at: article.published_at,
             processing_status: 'processed',
@@ -102,16 +107,36 @@ export const useMultiTenantActions = () => {
               shared_content_id: article.shared_content_id,
               created_for_queue: true
             }
+          }, {
+            onConflict: 'source_url',
+            ignoreDuplicates: false
           })
           .select('id')
           .single();
 
         if (bridgeError) {
-          throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
+          // If still a constraint error, try to find the existing article
+          if (bridgeError.code === '23505') {
+            const { data: fallbackBridge } = await supabase
+              .from('articles')
+              .select('id')
+              .eq('source_url', article.url)
+              .limit(1)
+              .single();
+            
+            if (fallbackBridge) {
+              bridgeArticleId = fallbackBridge.id;
+              console.log('🔗 Using fallback bridge article:', bridgeArticleId);
+            } else {
+              throw new Error(`Failed to resolve bridge article conflict: ${bridgeError.message}`);
+            }
+          } else {
+            throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
+          }
+        } else {
+          bridgeArticleId = bridgeData.id;
+          console.log('🔗 Created/updated bridge article:', bridgeArticleId);
         }
-        
-        bridgeArticleId = bridgeData.id;
-        console.log('🔗 Created bridge article:', bridgeArticleId);
       }
 
       // Insert into generation queue using bridge article
