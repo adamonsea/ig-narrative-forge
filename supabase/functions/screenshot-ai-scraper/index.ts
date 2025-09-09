@@ -24,9 +24,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return new Response(
@@ -35,9 +33,9 @@ serve(async (req) => {
     );
   }
 
-  if (!deepseekApiKey) {
+  if (!openaiApiKey) {
     return new Response(
-      JSON.stringify({ error: 'DeepSeek API key not configured' }),
+      JSON.stringify({ error: 'OpenAI API key not configured' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -72,10 +70,10 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📸 Screenshot taken successfully, extracting content with DeepSeek...`);
+    console.log(`📸 Screenshot taken successfully, extracting content with OpenAI...`);
 
-    // Extract content using DeepSeek Vision API
-    const extractionResult = await extractContentWithDeepSeek(
+    // Extract content using OpenAI Vision API
+    const extractionResult = await extractContentWithOpenAI(
       screenshotResult.screenshotBase64!,
       feedUrl
     );
@@ -87,7 +85,7 @@ serve(async (req) => {
           articles: [],
           articlesFound: 0,
           articlesScraped: 0,
-          errors: [`DeepSeek extraction failed: ${extractionResult.error}`],
+          errors: [`OpenAI extraction failed: ${extractionResult.error}`],
           method: 'screenshot-ai',
           cost: extractionResult.cost || 0
         }),
@@ -256,7 +254,7 @@ async function takeScreenshot(url: string): Promise<{
   }
 }
 
-async function extractContentWithDeepSeek(
+async function extractContentWithOpenAI(
   screenshotBase64: string,
   sourceUrl: string
 ): Promise<{
@@ -266,7 +264,11 @@ async function extractContentWithDeepSeek(
   error?: string;
 }> {
   try {
-    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
     
     // Validate and optimize image size
     const optimizedBase64 = await optimizeImageSize(screenshotBase64);
@@ -294,7 +296,7 @@ Return the results as a JSON array with this exact structure:
     "processing_status": "new",
     "import_metadata": {
       "extraction_method": "screenshot_ai",
-      "ai_provider": "deepseek",
+      "ai_provider": "openai",
       "screenshot_timestamp": "${new Date().toISOString()}"
     }
   }
@@ -307,16 +309,16 @@ IMPORTANT:
 - Calculate approximate word count based on visible text
 - Return valid JSON only, no other text`;
 
-    console.log(`🔍 Sending request to DeepSeek with image size: ${Math.round(optimizedBase64.length * 0.75)} bytes`);
+    console.log(`🔍 Sending request to OpenAI with image size: ${Math.round(optimizedBase64.length * 0.75)} bytes`);
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${deepseekApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'user',
@@ -334,35 +336,34 @@ IMPORTANT:
             ]
           }
         ],
-        max_tokens: 4000,
-        stream: false
+        max_tokens: 4000
       })
     });
 
     const responseText = await response.text();
-    console.log(`📡 DeepSeek API Response Status: ${response.status}`);
+    console.log(`📡 OpenAI API Response Status: ${response.status}`);
     
     if (!response.ok) {
-      console.error('❌ DeepSeek API Error Response:', responseText);
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}. Response: ${responseText}`);
+      console.error('❌ OpenAI API Error Response:', responseText);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}. Response: ${responseText}`);
     }
 
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('❌ Failed to parse DeepSeek response:', responseText);
-      throw new Error(`Failed to parse DeepSeek JSON response: ${parseError.message}`);
+      console.error('❌ Failed to parse OpenAI response:', responseText);
+      throw new Error(`Failed to parse OpenAI JSON response: ${parseError.message}`);
     }
 
     const extractedContent = data.choices?.[0]?.message?.content;
 
     if (!extractedContent) {
-      console.error('❌ No content in DeepSeek response:', data);
-      throw new Error('No content extracted from DeepSeek response');
+      console.error('❌ No content in OpenAI response:', data);
+      throw new Error('No content extracted from OpenAI response');
     }
 
-    console.log('📄 DeepSeek extracted content:', extractedContent.substring(0, 500) + '...');
+    console.log('📄 OpenAI extracted content:', extractedContent.substring(0, 500) + '...');
 
     // Parse the JSON response
     let articles;
@@ -380,20 +381,21 @@ IMPORTANT:
         }
       } else {
         console.error('❌ No JSON array found in response:', extractedContent);
-        throw new Error(`No valid JSON array found in DeepSeek response. Content: ${extractedContent.substring(0, 200)}...`);
+        throw new Error(`No valid JSON array found in OpenAI response. Content: ${extractedContent.substring(0, 200)}...`);
       }
     }
 
     if (!Array.isArray(articles)) {
-      console.error('❌ DeepSeek response is not an array:', articles);
-      throw new Error('DeepSeek response is not an array of articles');
+      console.error('❌ OpenAI response is not an array:', articles);
+      throw new Error('OpenAI response is not an array of articles');
     }
 
-    // Estimate cost (DeepSeek is very cheap, approximately $0.0014 per 1K tokens)
-    const estimatedTokens = prompt.length / 4 + 1000; // Rough estimate
-    const estimatedCost = (estimatedTokens / 1000) * 0.0014;
+    // Estimate cost for GPT-4o-mini (input: $0.15/1M tokens, output: $0.6/1M tokens)
+    const inputTokens = Math.ceil((prompt.length + optimizedBase64.length * 0.00085) / 4); // Vision tokens calculated differently
+    const outputTokens = Math.ceil(extractedContent.length / 4);
+    const estimatedCost = (inputTokens * 0.15 / 1000000) + (outputTokens * 0.6 / 1000000);
 
-    console.log(`✅ DeepSeek extracted ${articles.length} articles (estimated cost: $${estimatedCost.toFixed(4)})`);
+    console.log(`✅ OpenAI extracted ${articles.length} articles (estimated cost: $${estimatedCost.toFixed(6)})`);
 
     return {
       success: true,
@@ -402,7 +404,7 @@ IMPORTANT:
     };
 
   } catch (error) {
-    console.error('DeepSeek extraction error:', error);
+    console.error('OpenAI extraction error:', error);
     return {
       success: false,
       error: error.message
@@ -412,9 +414,9 @@ IMPORTANT:
 
 async function optimizeImageSize(base64Image: string): Promise<string> {
   try {
-    // Check if image is too large (>4MB base64 = ~3MB actual)
+    // Check if image is too large (>20MB base64 = ~15MB actual for OpenAI)
     const imageSizeBytes = (base64Image.length * 3) / 4;
-    const maxSizeBytes = 4 * 1024 * 1024; // 4MB limit for DeepSeek
+    const maxSizeBytes = 20 * 1024 * 1024; // 20MB limit for OpenAI Vision
     
     console.log(`🖼️ Original image size: ${Math.round(imageSizeBytes / 1024)} KB`);
     
