@@ -194,21 +194,34 @@ export const ImprovedSourceSuggestionTool = ({
     }
   };
 
-  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, id?: string}> => {
+  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, isLinked: boolean, isActive: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
+    // First, check if source exists in content_sources by URL or domain
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id, source_name, feed_url')
-      .eq('topic_id', topicId)
       .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
       .maybeSingle();
 
-    if (existingSource) {
-      return { exists: true, id: existingSource.id };
+    if (!existingSource) {
+      return { exists: false, isLinked: false, isActive: false };
     }
-    
-    return { exists: false };
+
+    // Check if this source is linked to the current topic
+    const { data: topicSourceLink } = await supabase
+      .from('topic_sources')
+      .select('is_active')
+      .eq('topic_id', topicId)
+      .eq('source_id', existingSource.id)
+      .maybeSingle();
+
+    return {
+      exists: true,
+      isLinked: !!topicSourceLink,
+      isActive: topicSourceLink?.is_active || false,
+      id: existingSource.id
+    };
   };
 
   const addSource = async (suggestion: SourceSuggestion) => {
@@ -218,10 +231,11 @@ export const ImprovedSourceSuggestionTool = ({
     try {
       const existingCheck = await checkExistingSource(suggestion);
       
-      if (existingCheck.exists) {
+      // If source is already linked and active, show error
+      if (existingCheck.isLinked && existingCheck.isActive) {
         toast({
           title: "Source Already Added",
-          description: "This source is already assigned to this topic",
+          description: "This source is already active for this topic",
           variant: "destructive"
         });
         setAddingSourceId(null);
@@ -254,46 +268,54 @@ export const ImprovedSourceSuggestionTool = ({
       
       credibilityScore = Math.min(95, credibilityScore); // Cap at 95
       
-      const domain = new URL(suggestion.url).hostname.replace('www.', '');
+      let sourceId = existingCheck.id;
       
-      const { data: newSource, error: createError } = await supabase
-        .from('content_sources')
-        .insert({
-          source_name: suggestion.source_name,
-          feed_url: suggestion.url,
-          canonical_domain: domain,
-          content_type: 'news',
-          credibility_score: credibilityScore,
-          is_active: true,
-          source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
-          region: topicType === 'regional' ? region : null,
-          topic_id: topicId
-        })
-        .select('id')
-        .single();
+      // If source doesn't exist, create it first
+      if (!existingCheck.exists) {
+        const domain = new URL(suggestion.url).hostname.replace('www.', '');
+        
+        const { data: newSource, error: createError } = await supabase
+          .from('content_sources')
+          .insert({
+            source_name: suggestion.source_name,
+            feed_url: suggestion.url,
+            canonical_domain: domain,
+            content_type: 'news',
+            credibility_score: credibilityScore,
+            is_active: true,
+            source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
+            region: topicType === 'regional' ? region : null
+          })
+          .select('id')
+          .single();
 
-      if (createError) {
-        if (createError.code === '23505') {
-          toast({
-            title: "Source Already Added",
-            description: "This source is already active for this topic",
-            variant: "destructive"
-          });
-        } else {
-          throw createError;
-        }
-      } else {
-        const qualityNote = credibilityScore >= 80 ? 'High Quality' : 
-                          credibilityScore >= 70 ? 'Good Quality' : 'Standard';
-        
-        toast({
-          title: "Enhanced Source Added",
-          description: `${suggestion.source_name} added with ${credibilityScore}% credibility (${qualityNote})`,
-        });
-        
-        setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
-        window.dispatchEvent(new CustomEvent('sourceAdded'));
+        if (createError) throw createError;
+        sourceId = newSource.id;
       }
+
+      // Link source to topic (or reactivate if inactive)
+      const { error: linkError } = await supabase.rpc('add_source_to_topic', {
+        p_topic_id: topicId,
+        p_source_id: sourceId,
+        p_source_config: {}
+      });
+
+      if (linkError) throw linkError;
+
+      const qualityNote = credibilityScore >= 80 ? 'High Quality' : 
+                        credibilityScore >= 70 ? 'Good Quality' : 'Standard';
+      
+      const actionMessage = existingCheck.isLinked && !existingCheck.isActive ? 
+        'reactivated' : 'added';
+      
+      toast({
+        title: "Enhanced Source Added",
+        description: `${suggestion.source_name} ${actionMessage} with ${credibilityScore}% credibility (${qualityNote})`,
+      });
+      
+      setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
+      window.dispatchEvent(new CustomEvent('sourceAdded'));
+
     } catch (error) {
       console.error('Error adding source:', error);
       toast({
