@@ -3,21 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  RefreshCw, 
-  Loader2,
-  Eye,
-  ExternalLink,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  AlertCircle
-} from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTopicPipeline } from "@/hooks/useTopicPipeline";
 import { useTopicPipelineActions } from "@/hooks/useTopicPipelineActions";
 import { useMultiTenantTopicPipeline } from "@/hooks/useMultiTenantTopicPipeline";
+import { ArticlesList } from "@/components/topic-pipeline/ArticlesList";
+import { MultiTenantArticlesList } from "@/components/topic-pipeline/MultiTenantArticlesList";
+import { StoriesList } from "@/components/topic-pipeline/StoriesList";
+import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
+import { QueueList } from "@/components/topic-pipeline/QueueList";
+import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
 
 interface Topic {
   id: string;
@@ -33,6 +30,15 @@ interface UnifiedContentPipelineProps {
 export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ selectedTopicId: propTopicId }) => {
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [slideQuantities, setSlideQuantities] = useState<Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>>({});
+  const [toneOverrides, setToneOverrides] = useState<Record<string, 'formal' | 'conversational' | 'engaging' | undefined>>({});
+  const [writingStyleOverrides, setWritingStyleOverrides] = useState<Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined>>({});
+  const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
+  const [processingApproval, setProcessingApproval] = useState<Set<string>>(new Set());
+  const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
+  const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
+  const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
+  const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Legacy system data
@@ -124,9 +130,26 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const totalQueue = legacyQueue.length + multiTenantQueue.length;
   const totalStories = legacyStories.length + multiTenantStories.length;
 
+  // Article management handlers
+  const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
+    setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
+  };
+
+  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | undefined) => {
+    setToneOverrides(prev => ({ ...prev, [articleId]: tone }));
+  };
+
+  const handleWritingStyleOverrideChange = (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined) => {
+    setWritingStyleOverrides(prev => ({ ...prev, [articleId]: style }));
+  };
+
   const handleLegacyApprove = async (articleId: string) => {
+    const slideQuantity = slideQuantities[articleId] || 'tabloid';
+    const tone = toneOverrides[articleId] || 'conversational';
+    const writingStyle = writingStyleOverrides[articleId] || 'journalistic';
+    
     try {
-      await approveArticle(articleId, 'tabloid', 'conversational', 'journalistic');
+      await approveArticle(articleId, slideQuantity, tone, writingStyle);
       toast({
         title: "Article Approved",
         description: "Legacy article sent to content generation",
@@ -142,8 +165,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const handleMultiTenantApproveWrapper = async (articleId: string) => {
+    const slideQuantity = slideQuantities[articleId] || 'tabloid';
+    const tone = toneOverrides[articleId] || 'conversational';
+    const writingStyle = writingStyleOverrides[articleId] || 'journalistic';
+    
     try {
-      await handleMultiTenantApprove(articleId, 'tabloid', 'conversational', 'journalistic');
+      await handleMultiTenantApprove(articleId, slideQuantity, tone, writingStyle);
       toast({
         title: "Article Approved",
         description: "Multi-tenant article sent to content generation",
@@ -154,6 +181,91 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         title: "Error",
         description: "Failed to approve article",
         variant: "destructive"
+      });
+    }
+  };
+
+  // Story management handlers
+  const handleToggleStoryExpanded = (storyId: string) => {
+    setExpandedStories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(storyId)) {
+        newSet.delete(storyId);
+      } else {
+        newSet.add(storyId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleStoryApprove = async (storyId: string) => {
+    setProcessingApproval(prev => new Set([...prev, storyId]));
+    try {
+      await approveStory(storyId);
+      toast({
+        title: "Story Approved",
+        description: "Story approved and published",
+      });
+    } catch (error) {
+      console.error('Error approving story:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve story",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingApproval(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleStoryReject = async (storyId: string) => {
+    setProcessingRejection(prev => new Set([...prev, storyId]));
+    try {
+      await rejectStory(storyId);
+      toast({
+        title: "Story Rejected",
+        description: "Story has been rejected",
+      });
+    } catch (error) {
+      console.error('Error rejecting story:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject story",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRejection(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleStoryDelete = async (storyId: string, title: string) => {
+    setDeletingStories(prev => new Set([...prev, storyId]));
+    try {
+      await deleteStory(storyId, title);
+      toast({
+        title: "Story Deleted",
+        description: "Story has been deleted",
+      });
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete story",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingStories(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
       });
     }
   };
@@ -268,319 +380,219 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* Stories Tab - Most Important */}
         <TabsContent value="stories" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Published Stories</CardTitle>
-              <CardDescription>All ready stories from both systems</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {totalStories === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No stories available yet</p>
-                  <p className="text-sm mt-2">Approve some articles to generate stories</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Legacy Stories */}
-                  {legacyStories.map((story) => (
-                    <div key={story.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium">{story.title}</h3>
-                            <Badge variant="secondary">Legacy</Badge>
-                            <Badge 
-                              variant={story.status === 'ready' ? 'default' : 'outline'}
-                            >
-                              {story.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {story.slides?.length || 0} slides • Created {new Date(story.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {story.status === 'draft' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => approveStory(story.id)}
-                                disabled={processingArticle === story.id}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => rejectStory(story.id)}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteStory(story.id, story.title)}
-                          disabled={false}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Multi-tenant Stories */}
-                  {multiTenantStories.map((story) => (
-                    <div key={story.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium">{story.title}</h3>
-                            <Badge variant="default">Multi-tenant</Badge>
-                            <Badge 
-                              variant={story.status === 'ready' ? 'default' : 'outline'}
-                            >
-                              {story.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {story.slides?.length || 0} slides • Created {new Date(story.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {story.status === 'draft' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleMultiTenantApproveStory(story.id)}
-                                disabled={mtProcessingArticle === story.id}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleMultiTenantRejectStory(story.id)}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {totalStories === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No stories available yet</p>
+                <p className="text-sm mt-2">Approve some articles to generate stories</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {/* Legacy Stories */}
+              {legacyStories.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      Legacy Stories
+                      <Badge variant="secondary">{legacyStories.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StoriesList
+                      stories={legacyStories}
+                      expandedStories={expandedStories}
+                      processingApproval={processingApproval}
+                      processingRejection={processingRejection}
+                      deletingStories={deletingStories}
+                      publishingStories={publishingStories}
+                      animatingStories={animatingStories}
+                      onToggleExpanded={handleToggleStoryExpanded}
+                      onApprove={handleStoryApprove}
+                      onReject={handleStoryReject}
+                      onDelete={handleStoryDelete}
+                      onEditSlide={() => {}}
+                      onViewStory={() => {}}
+                      onReturnToReview={() => {}}
+                      onRefresh={refreshLegacy}
+                      expandCarouselSection={() => {}}
+                    />
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+              
+              {/* Multi-tenant Stories */}
+              {multiTenantStories.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      Multi-tenant Stories
+                      <Badge variant="default">{multiTenantStories.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <MultiTenantStoriesList
+                      stories={multiTenantStories}
+                      expandedStories={expandedStories}
+                      processingApproval={processingApproval}
+                      processingRejection={processingRejection}
+                      deletingStories={deletingStories}
+                      publishingStories={publishingStories}
+                      animatingStories={animatingStories}
+                      onToggleExpanded={handleToggleStoryExpanded}
+                      onApprove={handleMultiTenantApproveStory}
+                      onReject={handleMultiTenantRejectStory}
+                      onDelete={() => {}}
+                      onEditSlide={() => {}}
+                      onViewStory={() => {}}
+                      onReturnToReview={() => {}}
+                      onRefresh={refreshMultiTenant}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         {/* Articles Tab */}
         <TabsContent value="articles" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Articles</CardTitle>
-              <CardDescription>Articles ready for approval from both systems</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Legacy Articles */}
-                {legacyArticles.map((article) => (
-                  <div key={article.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium line-clamp-1">{article.title}</h3>
-                          <Badge variant="secondary">Legacy</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Quality: {article.content_quality_score || 0} • 
-                          Relevance: {article.regional_relevance_score || 0} • 
-                          {article.word_count || 0} words
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Created {new Date(article.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleLegacyApprove(article.id)}
-                          disabled={processingArticle === article.id}
-                        >
-                          {processingArticle === article.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Source
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => deleteArticle(article.id, article.title)}
-                          disabled={false}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Multi-tenant Articles */}
-                {multiTenantArticles.map((article) => (
-                  <div key={article.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium line-clamp-1">{article.title}</h3>
-                          <Badge variant="default">Multi-tenant</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Quality: {article.content_quality_score || 0} • 
-                          Relevance: {article.regional_relevance_score || 0} • 
-                          {article.word_count || 0} words
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Created {new Date(article.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleMultiTenantApproveWrapper(article.id)}
-                          disabled={mtProcessingArticle === article.id}
-                        >
-                          {mtProcessingArticle === article.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Source
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleMultiTenantDelete(article.id, article.title)}
-                          disabled={false}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {totalArticles === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No articles pending approval</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Legacy Articles */}
+            {legacyArticles.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Legacy Articles
+                    <Badge variant="secondary">{legacyArticles.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Articles from the legacy system ready for approval</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ArticlesList
+                    articles={legacyArticles}
+                    processingArticle={processingArticle}
+                    deletingArticles={deletingArticles}
+                    animatingArticles={animatingArticles}
+                    slideQuantities={slideQuantities}
+                    toneOverrides={toneOverrides}
+                    writingStyleOverrides={writingStyleOverrides}
+                    onSlideQuantityChange={handleSlideQuantityChange}
+                    onToneOverrideChange={handleToneOverrideChange}
+                    onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                    onPreview={() => {}}
+                    onApprove={handleLegacyApprove}
+                    onDelete={deleteArticle}
+                    defaultTone="conversational"
+                    defaultWritingStyle="journalistic"
+                    topicKeywords={[]}
+                    topicLandmarks={[]}
+                    onRefresh={refreshLegacy}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Multi-tenant Articles */}
+            {multiTenantArticles.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Multi-tenant Articles
+                    <Badge variant="default">{multiTenantArticles.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Articles from the multi-tenant system ready for approval</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MultiTenantArticlesList
+                    articles={multiTenantArticles}
+                    processingArticle={mtProcessingArticle}
+                    deletingArticles={mtDeletingArticles}
+                    slideQuantities={slideQuantities}
+                    toneOverrides={toneOverrides}
+                    writingStyleOverrides={writingStyleOverrides}
+                    onSlideQuantityChange={handleSlideQuantityChange}
+                    onToneOverrideChange={handleToneOverrideChange}
+                    onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                    onPreview={() => {}}
+                    onApprove={handleMultiTenantApproveWrapper}
+                    onDelete={handleMultiTenantDelete}
+                    onBulkDelete={() => {}}
+                    defaultTone="conversational"
+                    defaultWritingStyle="journalistic"
+                    onRefresh={refreshMultiTenant}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {totalArticles === 0 && (
+              <Card>
+                <CardContent className="text-center py-8 text-muted-foreground">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No articles available for approval</p>
+                  <p className="text-sm mt-2">Check your sources and scraping settings</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
-        {/* Queue Tab */}
+        {/* Processing Queue Tab */}
         <TabsContent value="queue" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Processing Queue</CardTitle>
-              <CardDescription>Articles currently being processed into stories</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Legacy Queue */}
-                {legacyQueue.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{item.article.title}</h4>
-                          <Badge variant="secondary">Legacy</Badge>
-                          <Badge variant="outline">{item.status}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Attempt {item.attempts}/{item.max_attempts} • 
-                          Started {new Date(item.created_at).toLocaleDateString()}
-                        </p>
-                        {item.error_message && (
-                          <p className="text-sm text-destructive mt-1">{item.error_message}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Source
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Multi-tenant Queue */}
-                {multiTenantQueue.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{item.title}</h4>
-                          <Badge variant="default">Multi-tenant</Badge>
-                          <Badge variant="outline">{item.status}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Attempt {item.attempts}/{item.max_attempts} • 
-                          Started {new Date(item.created_at).toLocaleDateString()}
-                        </p>
-                        {item.error_message && (
-                          <p className="text-sm text-destructive mt-1">{item.error_message}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Source
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {totalQueue === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No items in processing queue</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Legacy Queue */}
+            {legacyQueue.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Legacy Processing Queue
+                    <Badge variant="secondary">{legacyQueue.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Legacy articles being processed into stories</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QueueList
+                    queueItems={legacyQueue}
+                    deletingQueueItems={new Set()}
+                    onCancel={() => {}}
+                    onRetry={() => {}}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Multi-tenant Queue */}
+            {multiTenantQueue.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Multi-tenant Processing Queue
+                    <Badge variant="default">{multiTenantQueue.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Multi-tenant articles being processed into stories</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MultiTenantQueueList
+                    queueItems={multiTenantQueue}
+                    deletingQueueItems={new Set()}
+                    onCancel={() => {}}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {totalQueue === 0 && (
+              <Card>
+                <CardContent className="text-center py-8 text-muted-foreground">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No items in processing queue</p>
+                  <p className="text-sm mt-2">Approve articles to add them to the queue</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
