@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DollarSign, Zap, Image, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { CleanSlateMigration } from '@/components/CleanSlateMigration';
 
 interface ApiUsage {
   id: string;
@@ -263,6 +264,11 @@ export const AdminPanel = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Clean Slate Migration */}
+      <div className="mt-8">
+        <CleanSlateMigration />
+      </div>
     </div>
   );
 };

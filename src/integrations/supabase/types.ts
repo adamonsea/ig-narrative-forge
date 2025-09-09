@@ -2272,6 +2272,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      bulk_cleanup_topic_content: {
+        Args: { p_topic_id: string }
+        Returns: Json
+      }
       bulk_delete_discarded_articles: {
         Args: { p_topic_id?: string }
         Returns: Json
