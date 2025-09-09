@@ -49,7 +49,7 @@ export const ScreenshotScraperTester = () => {
       if (data.success) {
         toast({
           title: "Screenshot Scraping Successful",
-          description: `Extracted ${data.articlesFound} articles using DeepSeek AI`,
+          description: `Extracted ${data.articlesFound} articles using OpenAI Vision`,
         });
       } else {
         toast({
@@ -81,7 +81,7 @@ export const ScreenshotScraperTester = () => {
         <CardTitle className="flex items-center gap-2">
           <Camera className="w-5 h-5" />
           Screenshot AI Scraper Tester
-          <Badge variant="secondary">DeepSeek V3</Badge>
+          <Badge variant="secondary">OpenAI Vision</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -181,7 +181,7 @@ export const ScreenshotScraperTester = () => {
         <Alert>
           <Camera className="w-4 h-4" />
           <AlertDescription className="text-sm">
-            <strong>How it works:</strong> Takes a screenshot of the website, then uses DeepSeek V3 vision AI 
+            <strong>How it works:</strong> Takes a screenshot of the website, then uses OpenAI Vision AI 
             to extract article content. Great for bypassing bot detection on news sites.
           </AlertDescription>
         </Alert>

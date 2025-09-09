@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, TestTube, Camera, Globe, Wrench } from 'lucide-react';
 import { TestingSuite } from '@/components/TestingSuite';
 import { ScreenshotScraperTester } from '@/components/ScreenshotScraperTester';
+import { MinimalScreenshotTester } from '@/components/MinimalScreenshotTester';
 import MultiTenantScraperTester from '@/components/MultiTenantScraperTester';
 import { useToast } from '@/hooks/use-toast';
 
@@ -119,7 +120,7 @@ export const UnifiedTestingDashboard = () => {
 
       {/* Testing Tabs */}
       <Tabs defaultValue="system" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Wrench className="w-4 h-4" />
             System Tests
@@ -131,6 +132,10 @@ export const UnifiedTestingDashboard = () => {
           <TabsTrigger value="screenshot" className="flex items-center gap-2">
             <Camera className="w-4 h-4" />
             Screenshot AI
+          </TabsTrigger>
+          <TabsTrigger value="debug" className="flex items-center gap-2">
+            <TestTube className="w-4 h-4" />
+            Debug Test
           </TabsTrigger>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TestTube className="w-4 h-4" />
@@ -148,6 +153,10 @@ export const UnifiedTestingDashboard = () => {
         
         <TabsContent value="screenshot" className="mt-6">
           <ScreenshotScraperTester />
+        </TabsContent>
+        
+        <TabsContent value="debug" className="mt-6">
+          <MinimalScreenshotTester />
         </TabsContent>
         
         <TabsContent value="overview" className="mt-6">
@@ -188,9 +197,9 @@ export const UnifiedTestingDashboard = () => {
                     Screenshot AI Scraper
                   </h4>
                   <p className="text-sm text-muted-foreground mb-2">
-                    AI-powered content extraction using DeepSeek V3 for blocked sites.
+                    AI-powered content extraction using OpenAI Vision for blocked sites.
                   </p>
-                  <Badge variant="outline">DeepSeek V3</Badge>
+                  <Badge variant="outline">OpenAI Vision</Badge>
                 </div>
               </div>
               
