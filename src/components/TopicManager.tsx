@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,11 +69,12 @@ export const TopicManager = () => {
 
   const loadTopics = async () => {
     try {
-      // Only load topics created by the current user (admin dashboard shows owned topics only)
+      // Only load active (non-archived) topics created by the current user
       const { data, error } = await supabase
         .from('topics')
         .select('*')
         .eq('created_by', user?.id)
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -188,6 +189,40 @@ export const TopicManager = () => {
       toast({
         title: "Error",
         description: "Failed to update topic",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleArchiveTopic = async (topicId: string, topicName: string) => {
+    if (!confirm(`Archive "${topicName}"? You can restore it later from the archive.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ 
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: user?.id
+        })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      // Remove from current topics list
+      setTopics(topics.filter(topic => topic.id !== topicId));
+
+      toast({
+        title: "Success",
+        description: `"${topicName}" has been archived`
+      });
+    } catch (error) {
+      console.error('Error archiving topic:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive topic",
         variant: "destructive"
       });
     }
@@ -531,6 +566,18 @@ export const TopicManager = () => {
                       </div>
                       
                       <div className="flex items-center gap-3 relative z-20">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleArchiveTopic(topic.id, topic.name);
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
                         <Switch
                           checked={topic.is_active}
                           onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}

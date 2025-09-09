@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EastbourneFeed from "./pages/EastbourneFeed";
 import AdminPanel from "./pages/AdminPanel";
+import Archive from "./pages/Archive";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/archive" element={<Archive />} />
               <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
           <Route path="/feed/topic/:slug" element={<TopicFeed />} />
           <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />

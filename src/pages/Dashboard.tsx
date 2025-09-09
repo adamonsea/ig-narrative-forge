@@ -6,7 +6,7 @@ import { TopicManager } from "@/components/TopicManager";
 import { ArticleReExtractor } from "@/components/ArticleReExtractor";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut } from "lucide-react";
+import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import {
@@ -57,8 +57,8 @@ const Dashboard = () => {
 
       // Use more efficient queries to avoid URL length limits
       const [topicsRes, articlesRes, sourcesRes] = await Promise.all([
-        // Count topics created by current user
-        supabase.from('topics').select('id', { count: 'exact' }).eq('created_by', user?.id),
+        // Count active (non-archived) topics created by current user
+        supabase.from('topics').select('id', { count: 'exact' }).eq('created_by', user?.id).eq('is_archived', false),
         
         // Count articles from user's topics
         topicIds.length > 0 
@@ -148,6 +148,12 @@ const Dashboard = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to="/archive">
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Link>
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem asChild>
                   <Link to="/admin">
