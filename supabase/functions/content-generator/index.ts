@@ -51,9 +51,17 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { articleId, slideType = 'tabloid', aiProvider = 'deepseek', tone = 'conversational', audienceExpertise = 'intermediate' } = await req.json();
+    const { 
+      articleId, 
+      topicArticleId, 
+      sharedContentId, 
+      slideType = 'tabloid', 
+      aiProvider = 'deepseek', 
+      tone = 'conversational', 
+      audienceExpertise = 'intermediate' 
+    } = await req.json();
     
-    console.log(`Processing article ID: ${articleId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
+    console.log(`Processing article - Legacy ID: ${articleId}, Multi-tenant ID: ${topicArticleId}, Shared ID: ${sharedContentId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
 
     // Get prompt templates for the current tone and expertise
     const { data: promptTemplates, error: promptError } = await supabase
@@ -89,26 +97,50 @@ serve(async (req) => {
 
     console.log(`🎯 Using enhanced prompting: Base: ${!!basePrompt}, Tone: ${tone}, Expertise: ${audienceExpertise}, SlideType: ${slideType}`);
 
-    // Get the article data
-    const { data: article, error: articleError } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('id', articleId)
-      .single();
+    // Get the article data using unified function
+    const { data: unifiedArticles, error: articleError } = await supabase.rpc(
+      'get_article_content_unified',
+      {
+        p_article_id: articleId || null,
+        p_topic_article_id: topicArticleId || null,
+        p_shared_content_id: sharedContentId || null
+      }
+    );
 
-    if (articleError || !article) {
-      throw new Error(`Article not found: ${articleId}`);
+    if (articleError || !unifiedArticles || unifiedArticles.length === 0) {
+      throw new Error(`Article not found - Legacy ID: ${articleId}, Multi-tenant ID: ${topicArticleId}, Shared ID: ${sharedContentId}`);
     }
 
-    console.log(`Found article: ${article.title}`);
+    const article = unifiedArticles[0];
+    console.log(`Found ${article.source_type} article: ${article.title}`);
 
-    // Get topic CTA configuration if article has a topic
+    // Get topic CTA configuration - handle both legacy and multi-tenant
     let ctaConfig = null;
-    if (article.topic_id) {
+    let topicId = null;
+    
+    if (article.source_type === 'legacy' && articleId) {
+      // Get topic_id from legacy article
+      const { data: legacyArticle } = await supabase
+        .from('articles')
+        .select('topic_id')
+        .eq('id', articleId)
+        .single();
+      topicId = legacyArticle?.topic_id;
+    } else if (article.source_type === 'multi_tenant' && topicArticleId) {
+      // Get topic_id from multi-tenant article
+      const { data: multiTenantArticle } = await supabase
+        .from('topic_articles')
+        .select('topic_id')
+        .eq('id', topicArticleId)
+        .single();
+      topicId = multiTenantArticle?.topic_id;
+    }
+
+    if (topicId) {
       const { data: ctaData } = await supabase
         .from('feed_cta_configs')
         .select('*')
-        .eq('topic_id', article.topic_id)
+        .eq('topic_id', topicId)
         .eq('is_active', true)
         .maybeSingle();
       
@@ -120,18 +152,20 @@ serve(async (req) => {
     const publicationName = extractPublicationName(article.source_url);
     console.log(`🔍 Extracting publication from URL: ${article.source_url}`);
 
-    // Log source attribution in separate table
-    try {
-      await supabase.from('source_attributions').insert({
-        article_id: articleId,
-        source_url: article.source_url,
-        detected_domain: new URL(article.source_url).hostname,
-        extracted_publication: publicationName,
-        validation_status: 'pending'
-      });
-      console.log(`📝 Logged source attribution for article ${articleId}`);
-    } catch (attributionError) {
-      console.error('Failed to log source attribution:', attributionError);
+    // Log source attribution in separate table (only for legacy articles for now)
+    if (article.source_type === 'legacy' && articleId) {
+      try {
+        await supabase.from('source_attributions').insert({
+          article_id: articleId,
+          source_url: article.source_url,
+          detected_domain: new URL(article.source_url).hostname,
+          extracted_publication: publicationName,
+          validation_status: 'pending'
+        });
+        console.log(`📝 Logged source attribution for article ${articleId}`);
+      } catch (attributionError) {
+        console.error('Failed to log source attribution:', attributionError);
+      }
     }
 
     // Start slide generation
@@ -204,13 +238,26 @@ serve(async (req) => {
       console.log('⚠️ Warning: Generated content may not fully deliver on headline promises');
     }
 
-    // Create or update the story
+    // Create or update the story - handle both legacy and multi-tenant
     let story;
-    const { data: existingStory, error: storyCheckError } = await supabase
-      .from('stories')
-      .select('id, status')
-      .eq('article_id', articleId)
-      .single();
+    let existingStory = null;
+
+    // Check for existing story based on article type
+    if (article.source_type === 'legacy' && articleId) {
+      const { data: legacyStory } = await supabase
+        .from('stories')
+        .select('id, status')
+        .eq('article_id', articleId)
+        .single();
+      existingStory = legacyStory;
+    } else if (article.source_type === 'multi_tenant' && topicArticleId) {
+      const { data: multiTenantStory } = await supabase
+        .from('stories')
+        .select('id, status')
+        .eq('topic_article_id', topicArticleId)
+        .single();
+      existingStory = multiTenantStory;
+    }
 
     if (existingStory) {
       console.log(`Using existing story: ${existingStory.id}`);
@@ -227,13 +274,22 @@ serve(async (req) => {
       }
     } else {
       console.log('Creating new story...');
+      const storyInsertData: any = {
+        title: article.title,
+        status: 'processing'
+      };
+
+      // Add appropriate ID based on article type
+      if (article.source_type === 'legacy') {
+        storyInsertData.article_id = articleId;
+      } else {
+        storyInsertData.topic_article_id = topicArticleId;
+        storyInsertData.shared_content_id = sharedContentId;
+      }
+
       const { data: newStory, error: storyError } = await supabase
         .from('stories')
-        .insert({
-          title: article.title,
-          article_id: articleId,
-          status: 'processing'
-        })
+        .insert(storyInsertData)
         .select()
         .single();
 
@@ -242,7 +298,7 @@ serve(async (req) => {
       }
       
       story = newStory;
-      console.log(`✅ Created story: ${story.id}`);
+      console.log(`✅ Created ${article.source_type} story: ${story.id}`);
     }
 
     // Delete existing slides and posts for this story to avoid duplicates
@@ -317,18 +373,33 @@ serve(async (req) => {
       throw new Error(`Failed to update story: ${storyUpdateError.message}`);
     }
 
-    // Update article processing status to processed
-    const { error: articleUpdateError } = await supabase
-      .from('articles')
-      .update({ 
-        processing_status: 'processed',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', articleId);
+    // Update article processing status to processed - handle both legacy and multi-tenant
+    if (article.source_type === 'legacy' && articleId) {
+      const { error: articleUpdateError } = await supabase
+        .from('articles')
+        .update({ 
+          processing_status: 'processed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', articleId);
 
-    if (articleUpdateError) {
-      console.error('Error updating article status:', articleUpdateError);
-      throw new Error(`Failed to update article status: ${articleUpdateError.message}`);
+      if (articleUpdateError) {
+        console.error('Error updating legacy article status:', articleUpdateError);
+        throw new Error(`Failed to update legacy article status: ${articleUpdateError.message}`);
+      }
+    } else if (article.source_type === 'multi_tenant' && topicArticleId) {
+      const { error: articleUpdateError } = await supabase
+        .from('topic_articles')
+        .update({ 
+          processing_status: 'processed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', topicArticleId);
+
+      if (articleUpdateError) {
+        console.error('Error updating multi-tenant article status:', articleUpdateError);
+        throw new Error(`Failed to update multi-tenant article status: ${articleUpdateError.message}`);
+      }
     }
 
     // Insert post copy for social media
@@ -347,22 +418,32 @@ serve(async (req) => {
       console.error('Error inserting post:', postError);
     }
 
-    // Mark queue job as completed
-    const { error: queueUpdateError } = await supabase
-      .from('content_generation_queue')
-      .update({ 
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        result_data: { 
-          story_id: story.id,
-          slides_count: slides.length,
-          ai_provider: actualProvider
-        }
-      })
-      .eq('article_id', articleId);
+    // Mark queue job as completed - handle both legacy and multi-tenant
+    let queueUpdateCondition: any = {};
+    if (article.source_type === 'legacy' && articleId) {
+      queueUpdateCondition = { article_id: articleId };
+    } else if (article.source_type === 'multi_tenant' && topicArticleId) {
+      queueUpdateCondition = { topic_article_id: topicArticleId };
+    }
 
-    if (queueUpdateError) {
-      console.error('Error updating queue status:', queueUpdateError);
+    if (Object.keys(queueUpdateCondition).length > 0) {
+      const { error: queueUpdateError } = await supabase
+        .from('content_generation_queue')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          result_data: { 
+            story_id: story.id,
+            slides_count: slides.length,
+            ai_provider: actualProvider,
+            source_type: article.source_type
+          }
+        })
+        .match(queueUpdateCondition);
+
+      if (queueUpdateError) {
+        console.error('Error updating queue status:', queueUpdateError);
+      }
     }
 
     // Log API usage
@@ -396,7 +477,10 @@ serve(async (req) => {
         story_id: story.id,
         slides_count: slides.length,
         ai_provider: actualProvider,
-        publication_name: finalPublicationName
+        publication_name: finalPublicationName,
+        source_type: article.source_type,
+        storyId: story.id, // For compatibility with queue processor
+        slideCount: slides.length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

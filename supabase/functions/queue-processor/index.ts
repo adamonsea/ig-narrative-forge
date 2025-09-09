@@ -9,12 +9,17 @@ const corsHeaders = {
 
 interface QueueJob {
   id: string;
-  article_id: string;
+  article_id: string | null;
+  topic_article_id: string | null;
+  shared_content_id: string | null;
   slidetype: string;
   status: string;
   attempts: number;
   max_attempts: number;
   created_at: string;
+  ai_provider?: string;
+  tone?: string;
+  writing_style?: string;
 }
 
 serve(async (req) => {
@@ -65,7 +70,10 @@ serve(async (req) => {
     
     // Process each job sequentially to avoid conflicts
     for (const job of pendingJobs) {
-      console.log(`🚀 Processing job ${job.id} for article ${job.article_id}`);
+      const jobType = job.article_id ? 'legacy' : 'multi-tenant';
+      const jobIdentifier = job.article_id || job.topic_article_id;
+      
+      console.log(`🚀 Processing ${jobType} job ${job.id} for article ${jobIdentifier}`);
       
       try {
         // Mark job as processing
@@ -83,15 +91,26 @@ serve(async (req) => {
           continue;
         }
 
-        // Call the content-generator function with AI provider selection
+        // Call the content-generator function with unified parameters
+        const generatorBody: any = {
+          slideType: job.slidetype,
+          aiProvider: job.ai_provider || 'deepseek',
+          tone: job.tone || 'conversational',
+          writingStyle: job.writing_style || 'journalistic',
+          costOptimized: true,
+          batchMode: true
+        };
+
+        // Add appropriate IDs based on job type
+        if (job.article_id) {
+          generatorBody.articleId = job.article_id;
+        } else {
+          generatorBody.topicArticleId = job.topic_article_id;
+          generatorBody.sharedContentId = job.shared_content_id;
+        }
+
         const { data: generationResult, error: generationError } = await supabase.functions.invoke('content-generator', {
-          body: {
-            articleId: job.article_id,
-            slideType: job.slidetype,
-            aiProvider: job.ai_provider || 'deepseek', // Pass AI provider from queue
-            costOptimized: true, // Enable cost optimizations
-            batchMode: true // Enable batch processing mode
-          }
+          body: generatorBody
         });
 
         if (generationError || !generationResult?.success) {
@@ -106,8 +125,9 @@ serve(async (req) => {
             completed_at: new Date().toISOString(),
             result_data: {
               success: true,
-              storyId: generationResult.storyId,
-              slideCount: generationResult.slideCount
+              storyId: generationResult.storyId || generationResult.story_id,
+              slideCount: generationResult.slideCount || generationResult.slides_count,
+              sourceType: generationResult.source_type
             }
           })
           .eq('id', job.id);
@@ -116,17 +136,18 @@ serve(async (req) => {
           console.error(`Failed to mark job ${job.id} as completed:`, completeError);
         }
 
-        console.log(`✅ Successfully processed job ${job.id} - created ${generationResult.slideCount} slides`);
+        console.log(`✅ Successfully processed ${jobType} job ${job.id} - created ${generationResult.slideCount || generationResult.slides_count} slides`);
         
         results.push({
           jobId: job.id,
-          articleId: job.article_id,
+          articleId: jobIdentifier,
           success: true,
-          slideCount: generationResult.slideCount
+          slideCount: generationResult.slideCount || generationResult.slides_count,
+          sourceType: jobType
         });
 
       } catch (jobError) {
-        console.error(`❌ Error processing job ${job.id}:`, jobError);
+        console.error(`❌ Error processing ${jobType} job ${job.id}:`, jobError);
         
         // Implement exponential backoff for retries
         const nextAttemptDelay = Math.pow(2, job.attempts) * 60000; // 1min, 2min, 4min, etc.
@@ -152,7 +173,7 @@ serve(async (req) => {
           }
         } else {
           // Return article to pipeline after max attempts instead of marking as failed
-          console.log(`♻️ Job ${job.id} failed after ${job.attempts} attempts - returning article to pipeline`);
+          console.log(`♻️ ${jobType} Job ${job.id} failed after ${job.attempts} attempts - returning article to pipeline`);
           
           // Delete the failed job from queue
           const { error: deleteError } = await supabase
@@ -160,27 +181,46 @@ serve(async (req) => {
             .delete()
             .eq('id', job.id);
             
-          // Reset article status back to 'new' so it appears in pipeline again
-          const { error: resetArticleError } = await supabase
-            .from('articles')
-            .update({
-              processing_status: 'new',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', job.article_id);
-            
-          if (!deleteError && !resetArticleError) {
-            console.log(`✅ Successfully returned article ${job.article_id} to pipeline after ${job.attempts} failed attempts`);
-          } else {
-            console.error(`❌ Failed to return article to pipeline:`, deleteError || resetArticleError);
+          // Reset appropriate article status back to 'new' so it appears in pipeline again
+          if (job.article_id) {
+            // Legacy article
+            const { error: resetArticleError } = await supabase
+              .from('articles')
+              .update({
+                processing_status: 'new',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', job.article_id);
+              
+            if (!deleteError && !resetArticleError) {
+              console.log(`✅ Successfully returned legacy article ${job.article_id} to pipeline after ${job.attempts} failed attempts`);
+            } else {
+              console.error(`❌ Failed to return legacy article to pipeline:`, deleteError || resetArticleError);
+            }
+          } else if (job.topic_article_id) {
+            // Multi-tenant article
+            const { error: resetArticleError } = await supabase
+              .from('topic_articles')
+              .update({
+                processing_status: 'new',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', job.topic_article_id);
+              
+            if (!deleteError && !resetArticleError) {
+              console.log(`✅ Successfully returned multi-tenant article ${job.topic_article_id} to pipeline after ${job.attempts} failed attempts`);
+            } else {
+              console.error(`❌ Failed to return multi-tenant article to pipeline:`, deleteError || resetArticleError);
+            }
           }
         }
 
         results.push({
           jobId: job.id,
-          articleId: job.article_id,
+          articleId: jobIdentifier,
           success: false,
-          error: jobError.message
+          error: jobError.message,
+          sourceType: jobType
         });
       }
 

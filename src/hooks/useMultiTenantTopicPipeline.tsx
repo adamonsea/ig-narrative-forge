@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 
 // Multi-tenant article interface
 export interface MultiTenantArticle {
@@ -67,6 +68,18 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     draftStories: 0
   });
   const { toast } = useToast();
+  
+  // Import multi-tenant actions
+  const {
+    processingArticle,
+    deletingArticles,
+    approveMultiTenantArticle,
+    deleteMultiTenantArticle,
+    deleteMultipleMultiTenantArticles,
+    cancelMultiTenantQueueItem,
+    approveMultiTenantStory,
+    rejectMultiTenantStory,
+  } = useMultiTenantActions();
 
   /**
    * Load topic content using new multi-tenant structure
@@ -293,6 +306,36 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, loadTopicContent, toast]);
 
+  /**
+   * Wrapper functions for multi-tenant actions
+   */
+  const handleMultiTenantApprove = useCallback(async (articleId: string) => {
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+
+    try {
+      await approveMultiTenantArticle(article, 'tabloid', 'conversational', 'journalistic');
+      // Refresh data to show updated status
+      setTimeout(() => {
+        loadTopicContent();
+      }, 1000);
+    } catch (error) {
+      console.error('Error approving multi-tenant article:', error);
+    }
+  }, [articles, approveMultiTenantArticle, loadTopicContent]);
+
+  const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
+    try {
+      await deleteMultiTenantArticle(articleId, articleTitle);
+      // Refresh data to show updated status
+      setTimeout(() => {
+        loadTopicContent();
+      }, 1000);
+    } catch (error) {
+      console.error('Error deleting multi-tenant article:', error);
+    }
+  }, [deleteMultiTenantArticle, loadTopicContent]);
+
   // Load content when topic changes
   useEffect(() => {
     loadTopicContent();
@@ -350,6 +393,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     setArticles,
     setQueueItems,
     setStories,
-    setStats
+    setStats,
+    // Multi-tenant actions
+    processingArticle,
+    deletingArticles,
+    handleMultiTenantApprove,
+    handleMultiTenantDelete,
+    approveMultiTenantStory,
+    rejectMultiTenantStory,
+    cancelMultiTenantQueueItem,
+    deleteMultipleMultiTenantArticles
   };
 };
