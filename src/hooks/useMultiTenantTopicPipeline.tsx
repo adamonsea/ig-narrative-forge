@@ -263,7 +263,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     try {
       const { data, error } = await supabase.rpc('migrate_articles_to_multi_tenant', {
-        topic_id: selectedTopicId
+        p_limit: 1000
       });
 
       if (error) throw error;
@@ -291,9 +291,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     tone: 'formal' | 'conversational' | 'engaging',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven'
   ) => {
-    await approveMultiTenantArticle(articleId, slideType, tone, writingStyle);
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+    
+    await approveMultiTenantArticle(article, slideType, tone, writingStyle);
     await loadTopicContent();
-  }, [approveMultiTenantArticle, loadTopicContent]);
+  }, [approveMultiTenantArticle, loadTopicContent, articles]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
     await deleteMultiTenantArticle(articleId, articleTitle);

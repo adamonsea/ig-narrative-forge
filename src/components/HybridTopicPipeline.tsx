@@ -359,7 +359,7 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-5 w-5 text-chart-3" />
                       <div>
-                        <div className="text-2xl font-bold text-chart-3">{multiTenantStats.queueItems}</div>
+                        <div className="text-2xl font-bold text-chart-3">{multiTenantStats.processingQueue}</div>
                         <p className="text-sm text-muted-foreground">Processing</p>
                       </div>
                     </div>
