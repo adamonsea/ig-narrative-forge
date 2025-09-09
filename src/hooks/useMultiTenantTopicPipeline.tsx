@@ -111,7 +111,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setArticles([]);
       } else {
         const articlesData = articlesResult.data?.map((item: any) => ({
-          id: item.article_id,
+          id: item.id,
           shared_content_id: item.shared_content_id,
           title: item.title,
           body: item.body,
