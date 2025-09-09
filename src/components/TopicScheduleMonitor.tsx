@@ -52,26 +52,47 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
   const fetchTopicData = async () => {
     setLoading(true);
     try {
-      // Get topic sources
-      const { data: sources, error: sourcesError } = await supabase
-        .from('content_sources')
-        .select('*')
-        .eq('topic_id', topicId);
+      // Get topic sources using the new junction table approach
+      const { data: sources, error: sourcesError } = await supabase.rpc('get_topic_sources', {
+        p_topic_id: topicId
+      });
 
       if (sourcesError) throw sourcesError;
 
-      // Get recent articles count (last 7 days)
+      // Transform RPC result to match expected format
+      const transformedSources = (sources || []).map((source: any) => ({
+        id: source.source_id,
+        source_name: source.source_name,
+        feed_url: source.feed_url,
+        is_active: source.is_active,
+        last_scraped_at: source.last_scraped_at,
+        articles_scraped: source.articles_scraped,
+        success_rate: source.credibility_score, // Use credibility as proxy for success rate
+        credibility_score: source.credibility_score
+      }));
+
+      // Get recent articles count (last 7 days) - check both legacy and multi-tenant systems
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       
-      const { count: articleCount } = await supabase
+      // Count legacy articles
+      const { count: legacyArticleCount } = await supabase
         .from('articles')
         .select('id', { count: 'exact' })
         .eq('topic_id', topicId)
         .gte('created_at', weekAgo.toISOString());
 
-      const activeSources = sources?.filter(s => s.is_active).length || 0;
-      const totalSources = sources?.length || 0;
+      // Count multi-tenant articles
+      const { count: multiTenantArticleCount } = await supabase
+        .from('topic_articles')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicId)
+        .gte('created_at', weekAgo.toISOString());
+
+      const totalArticleCount = (legacyArticleCount || 0) + (multiTenantArticleCount || 0);
+
+      const activeSources = transformedSources?.filter(s => s.is_active).length || 0;
+      const totalSources = transformedSources?.length || 0;
       
       // Determine health status
       let healthStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
@@ -82,8 +103,8 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
       }
 
       setData({
-        sources: sources || [],
-        recent_articles: articleCount || 0,
+        sources: transformedSources || [],
+        recent_articles: totalArticleCount,
         total_sources: totalSources,
         active_sources: activeSources,
         health_status: healthStatus

@@ -471,14 +471,10 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
-            <TabsTrigger value="migration">
-              <Database className="w-4 h-4 mr-2" />
-              Migration
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -487,29 +483,13 @@ const TopicDashboard = () => {
                 <UnifiedContentPipeline selectedTopicId={topic.id} />
               </CardContent>
             </Card>
-            
-            {/* Article Re-Extractor Tool for this topic */}
-            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5" />
-                  Content Quality Tools
-                </CardTitle>
-                <CardDescription>
-                  Fix articles that were extracted as snippets instead of full content
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <ArticleReExtractor topicId={topic.id} topicName={topic.name} />
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-6">
-            <Tabs defaultValue="suggestions" className="space-y-6">
+            <Tabs defaultValue="management" className="space-y-6">
               <TabsList className={`w-full bg-card/50 border border-border/30`}>
-                <TabsTrigger value="suggestions" className="flex-1">Suggestions</TabsTrigger>
                 <TabsTrigger value="management" className="flex-1">Source Management</TabsTrigger>
+                <TabsTrigger value="suggestions" className="flex-1">Suggestions</TabsTrigger>
               </TabsList>
 
               <TabsContent value="suggestions" className="space-y-6">
@@ -685,81 +665,6 @@ const TopicDashboard = () => {
             </Tabs>
           </TabsContent>
 
-          <TabsContent value="migration" className="space-y-6">
-            <div className="grid gap-6">
-              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="w-5 h-5" />
-                    Junction Table Validation
-                  </CardTitle>
-                  <CardDescription>
-                    Validate junction table integrity and cross-topic source relationships
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <JunctionTableValidator 
-                    topicId={topic.id} 
-                    topicName={topic.name} 
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    Universal Scraping Validation
-                  </CardTitle>
-                  <CardDescription>
-                    Test universal scraping pipeline with multi-tenant architecture
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <UniversalScrapingValidator 
-                    topicId={topic.id}
-                    topicName={topic.name}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <RefreshCw className="w-5 h-5" />
-                    Architecture Migration Validation
-                  </CardTitle>
-                  <CardDescription>
-                    Compare legacy and junction architectures with performance metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <ArchitectureMigrationValidator 
-                    topicId={topic.id}
-                    topicName={topic.name}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Universal Topic Scraper
-                  </CardTitle>
-                  <CardDescription>
-                    Test the universal scraping pipeline using junction table architecture
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <UniversalTopicScraper 
-                    topicId={topic.id}
-                    topicName={topic.name}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
 
         </Tabs>
       </div>

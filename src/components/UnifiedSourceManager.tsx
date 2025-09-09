@@ -779,26 +779,56 @@ export const UnifiedSourceManager = ({
   };
 
   const getSourceHealthBadge = (source: ContentSource) => {
-    const successRate = source.success_rate || 0;
-    const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
-    const daysSinceLastScrape = lastScraped ? Math.floor((Date.now() - lastScraped.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-
+    // Manual deactivation takes precedence
     if (source.is_blacklisted) {
       return <Badge variant="destructive">Blacklisted</Badge>;
     }
     if (!source.is_active) {
       return <Badge variant="secondary">Inactive</Badge>;
     }
-    if (successRate < 30 || daysSinceLastScrape > 7) {
+
+    // Use actual database success rates and activity
+    const successRate = source.success_rate || 0;
+    const articlesScraped = source.articles_scraped || 0;
+    const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
+    const daysSinceLastScrape = lastScraped ? 
+      Math.floor((Date.now() - lastScraped.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+    const hasRecentActivity = daysSinceLastScrape <= 7;
+    
+    // Enhanced status logic prioritizing actual performance
+    
+    // Healthy: High success rate AND recent activity
+    if (successRate >= 80 && hasRecentActivity && articlesScraped > 0) {
+      return <Badge variant="default" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-400">Healthy</Badge>;
+    }
+    
+    // Active: Moderate success rate with recent activity
+    if (successRate >= 50 && hasRecentActivity && articlesScraped > 0) {
+      return <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400">Active</Badge>;
+    }
+
+    // No Content: Successfully connects but finds no relevant articles
+    if (successRate >= 70 && articlesScraped === 0 && hasRecentActivity) {
+      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400">No Content</Badge>;
+    }
+
+    // Idle: No recent activity but not failed
+    if (daysSinceLastScrape > 7 && daysSinceLastScrape < 30 && !source.last_error) {
+      return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300 dark:bg-gray-900/20 dark:text-gray-400">Idle</Badge>;
+    }
+
+    // Poor: Low success rate but some activity
+    if (successRate > 0 && successRate < 50 && hasRecentActivity) {
+      return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400">Poor</Badge>;
+    }
+
+    // Failed: Recent errors AND poor performance OR very stale
+    if ((source.last_error && successRate < 30) || daysSinceLastScrape > 30) {
       return <Badge variant="destructive">Failed</Badge>;
     }
-    if (successRate < 70 || daysSinceLastScrape > 3) {
-      return <Badge variant="outline" className="text-orange-600">Warning</Badge>;
-    }
-    if (successRate >= 70) {
-      return <Badge variant="default">Healthy</Badge>;
-    }
-    return <Badge variant="outline">New</Badge>;
+
+    // New: No data yet
+    return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400">New</Badge>;
   };
 
   const getCredibilityColor = (score: number | null) => {
