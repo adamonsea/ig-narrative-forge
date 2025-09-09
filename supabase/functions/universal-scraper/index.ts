@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { EnhancedScrapingStrategies } from '../_shared/enhanced-scraping-strategies.ts';
+import { FastTrackScraper } from '../_shared/fast-track-scraper.ts';
 import { DatabaseOperations } from '../_shared/database-operations.ts';
 import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { EnhancedRetryStrategies } from '../_shared/enhanced-retry-strategies.ts';
@@ -158,14 +159,14 @@ serve(async (req) => {
     }
 
 
-    // Initialize enhanced scraping system
-    const scrapingStrategies = new EnhancedScrapingStrategies(region, sourceInfo, feedUrl);
+    // Initialize fast-track scraping system for better performance
+    const fastTrackScraper = new FastTrackScraper(region, sourceInfo, feedUrl);
     const dbOps = new DatabaseOperations(supabase);
     const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase);
 
-    // Execute enhanced scraping
-    console.log(`🔄 Starting enhanced scraping for ${sourceInfo.source_name}`);
-    const scrapingResult = await scrapingStrategies.executeScrapingStrategy();
+    // Execute fast-track scraping with timeout protection
+    console.log(`🔄 Starting fast-track scraping for ${sourceInfo.source_name}`);
+    const scrapingResult = await fastTrackScraper.executeScrapingStrategy();
 
     let storedCount = 0;
     let duplicateCount = 0;

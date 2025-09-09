@@ -79,9 +79,9 @@ export class EnhancedRetryStrategies {
   async fetchWithEnhancedRetry(
     url: string, 
     config: RetryConfig = {
-      maxRetries: 5,
-      baseDelay: 1000,
-      maxDelay: 30000,
+      maxRetries: 2,
+      baseDelay: 500,
+      maxDelay: 8000,
       exponentialBackoff: true
     }
   ): Promise<string> {
@@ -106,7 +106,7 @@ export class EnhancedRetryStrategies {
         }
 
         const controller = new AbortController();
-        const timeout = context.isGovernmentSite ? 45000 : 30000; // Longer timeout for gov sites
+        const timeout = context.isGovernmentSite ? 15000 : 10000; // Reduced timeout for edge functions
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         console.log(`🌐 Fetching ${url} (attempt ${attempt + 1}/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
@@ -236,9 +236,16 @@ export class EnhancedRetryStrategies {
       'ERR_NETWORK'
     ];
 
-    // Don't consider HTTP errors as fatal - retry them
-    const httpErrorPattern = /^HTTP \d+:/;
+    // Fail fast on repeated HTTP 503/504 errors
+    const httpErrorPattern = /^HTTP (503|504):/;
     if (httpErrorPattern.test(error.message)) {
+      console.log(`💀 Server error ${error.message} - failing fast`);
+      return true;
+    }
+
+    // Don't consider other HTTP errors as fatal - retry them
+    const otherHttpPattern = /^HTTP \d+:/;
+    if (otherHttpPattern.test(error.message)) {
       console.log(`🔄 HTTP error ${error.message} - will retry`);
       return false;
     }

@@ -136,8 +136,8 @@ export class EnhancedScrapingStrategies {
       
       console.log(`📄 Found ${itemMatches.length} RSS items`);
 
-      // Process RSS items with enhanced content extraction - INCREASED LIMIT
-      for (const itemMatch of itemMatches.slice(0, 250)) { // Process up to 250 articles
+      // Process RSS items with enhanced content extraction - OPTIMIZED FOR EDGE FUNCTIONS
+      for (const itemMatch of itemMatches.slice(0, 50)) { // Reduced to 50 articles for performance
         try {
           const article = await this.parseRSSItemEnhanced(itemMatch, feedUrl);
           if (article && this.isArticleQualified(article)) {
@@ -255,8 +255,8 @@ export class EnhancedScrapingStrategies {
       
       console.log(`📄 Found ${articleLinks.length} potential article links`);
 
-      // Process each article link with enhanced extraction - INCREASED LIMIT
-      for (const articleUrl of articleLinks.slice(0, 25)) { // Increased limit for more articles
+      // Process each article link with enhanced extraction - OPTIMIZED FOR EDGE FUNCTIONS
+      for (const articleUrl of articleLinks.slice(0, 10)) { // Reduced to 10 articles for performance
         try {
           const extractor = new UniversalContentExtractor(articleUrl);
           const articleHtml = await extractor.fetchWithRetry(articleUrl);
