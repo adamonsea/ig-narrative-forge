@@ -24,6 +24,9 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { ArticlesList } from "./topic-pipeline/ArticlesList";
 import { QueueList } from "./topic-pipeline/QueueList";
 import { StoriesList } from "./topic-pipeline/StoriesList";
+import { UnifiedArticlesList } from "./topic-pipeline/UnifiedArticlesList";
+import { useMultiTenantTopicPipeline } from "@/hooks/useMultiTenantTopicPipeline";
+import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 
 
 interface Topic {
@@ -123,6 +126,25 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
     cancelQueueItem,
     deleteArticle
   } = useTopicPipelineActions(loadTopicContent, optimisticallyRemoveArticle);
+
+  // Multi-tenant pipeline integration
+  const {
+    articles: multiTenantArticles,
+    queueItems: multiTenantQueueItems,
+    stories: multiTenantStories,
+    stats: multiTenantStats,
+    loading: multiTenantLoading,
+    loadTopicContent: refreshMultiTenantContent,
+    handleMultiTenantApprove: handleMultiTenantArticleApprove,
+    handleMultiTenantDelete: handleMultiTenantArticleDelete,
+    handleMultiTenantBulkDelete: handleMultiTenantBulkDelete,
+    handleMultiTenantCancelQueue: handleMultiTenantCancelQueueItem,
+    handleMultiTenantApproveStory: handleMultiTenantApproveStory,
+    handleMultiTenantRejectStory: handleMultiTenantRejectStory,
+    processingArticle: multiTenantProcessingArticle,
+    deletingArticles: multiTenantDeletingArticles,
+    animatingArticles: multiTenantAnimatingArticles
+  } = useMultiTenantTopicPipeline(selectedTopicId);
 
   // Initialize slide quantities with auto-selected values, but allow user to change them
   useEffect(() => {
@@ -597,7 +619,34 @@ export const TopicAwareContentPipeline: React.FC<TopicAwareContentPipelineProps>
             </TabsList>
 
               <TabsContent value="pending" className="space-y-4">
-                {/* Gather All Sources Button */}
+                {/* Multi-tenant Articles */}
+                <UnifiedArticlesList
+                  articles={multiTenantArticles}
+                  processingArticle={multiTenantProcessingArticle}
+                  deletingArticles={multiTenantDeletingArticles}
+                  animatingArticles={multiTenantAnimatingArticles}
+                  slideQuantities={slideQuantities}
+                  toneOverrides={toneOverrides}
+                  writingStyleOverrides={writingStyleOverrides}
+                  onSlideQuantityChange={handleSlideQuantityChange}
+                  onToneOverrideChange={handleToneOverrideChange}
+                  onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                  onPreview={(article) => setPreviewArticle({
+                    ...article,
+                    source_url: article.url,
+                    processing_status: article.processing_status || 'new',
+                    content_quality_score: article.content_quality_score || 0,
+                    regional_relevance_score: article.regional_relevance_score || 0
+                  } as any)}
+                  onApprove={handleMultiTenantArticleApprove}
+                  onDelete={handleMultiTenantArticleDelete}
+                  onBulkDelete={handleMultiTenantBulkDelete}
+                  defaultTone={currentTopic?.default_tone || 'conversational'}
+                  defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+                  topicKeywords={currentTopic?.keywords || []}
+                  topicLandmarks={currentTopic?.landmarks || []}
+                  onRefresh={refreshMultiTenantContent}
+                />
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Pending Articles</h3>
                   <div className="flex items-center gap-2">

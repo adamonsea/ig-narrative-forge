@@ -66,19 +66,66 @@ export const useMultiTenantActions = () => {
 
       if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
 
-      // Insert directly into generation queue (following legacy pattern)
-      // We use the topic_article_id as article_id for compatibility with existing constraints
+      // Create or find bridge article in legacy table for foreign key constraint
+      // First, try to find existing bridge article for this shared content
+      let bridgeArticleId: string;
+      
+      const { data: existingBridge, error: bridgeCheckError } = await supabase
+        .from('articles')
+        .select('id')
+        .eq('source_url', article.url)
+        .eq('processing_status', 'processed')
+        .limit(1)
+        .single();
+
+      if (existingBridge && !bridgeCheckError) {
+        bridgeArticleId = existingBridge.id;
+        console.log('🔗 Using existing bridge article:', bridgeArticleId);
+      } else {
+        // Create bridge article for foreign key constraint
+        const { data: bridgeData, error: bridgeError } = await supabase
+          .from('articles')
+          .insert({
+            title: article.title,
+            body: article.body || 'Multi-tenant bridge article',
+            source_url: article.url,
+            canonical_url: article.url, // Use URL as canonical URL since the field doesn't exist
+            author: article.author,
+            published_at: article.published_at,
+            processing_status: 'processed',
+            content_quality_score: article.content_quality_score,
+            regional_relevance_score: article.regional_relevance_score,
+            word_count: article.word_count,
+            import_metadata: {
+              multi_tenant_bridge: true,
+              topic_article_id: article.id,
+              shared_content_id: article.shared_content_id,
+              created_for_queue: true
+            }
+          })
+          .select('id')
+          .single();
+
+        if (bridgeError) {
+          throw new Error(`Failed to create bridge article: ${bridgeError.message}`);
+        }
+        
+        bridgeArticleId = bridgeData.id;
+        console.log('🔗 Created bridge article:', bridgeArticleId);
+      }
+
+      // Insert into generation queue using bridge article
       const { data: queueData, error: queueError } = await supabase
         .from('content_generation_queue')
         .insert({
-          article_id: article.id, // Use topic_article_id as article_id for constraint compatibility
+          article_id: bridgeArticleId, // Use bridge article for foreign key constraint
           topic_article_id: article.id,
           shared_content_id: article.shared_content_id,
           slidetype: slideType,
           ai_provider: 'deepseek',
           tone: tone,
           writing_style: writingStyle,
-          audience_expertise: 'intermediate', // Default value
+          audience_expertise: 'intermediate',
           status: 'pending'
         })
         .select('id')
