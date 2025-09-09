@@ -6,10 +6,12 @@ import { MultiTenantArticle } from "./useMultiTenantTopicPipeline";
 export const useMultiTenantActions = () => {
   const [processingArticle, setProcessingArticle] = useState<string | null>(null);
   const [deletingArticles, setDeletingArticles] = useState<Set<string>>(new Set());
+  // Animation states for immediate feedback (matching legacy system)
+  const [animatingArticles, setAnimatingArticles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   /**
-   * Approve a multi-tenant article for content generation
+   * Approve a multi-tenant article for content generation (following legacy pattern)
    */
   const approveMultiTenantArticle = async (
     article: MultiTenantArticle,
@@ -19,69 +21,140 @@ export const useMultiTenantActions = () => {
   ) => {
     if (processingArticle) return;
 
+    // Immediate animation feedback - trigger slide-out-right (matching legacy)
+    setAnimatingArticles(prev => new Set([...prev, article.id]));
     setProcessingArticle(article.id);
-    console.log('🎯 Approving multi-tenant article:', {
-      articleId: article.id,
-      sharedContentId: article.shared_content_id,
-      slideType,
-      tone,
-      writingStyle
-    });
 
     try {
-      // Use the new queue function for multi-tenant articles
-      const { data: queueId, error: queueError } = await supabase.rpc(
-        'queue_multi_tenant_article',
-        {
-          p_topic_article_id: article.id,
-          p_shared_content_id: article.shared_content_id,
-          p_slidetype: slideType,
-          p_tone: tone,
-          p_writing_style: writingStyle,
-          p_ai_provider: 'deepseek'
-        }
-      );
+      console.log('🎯 Approving multi-tenant article:', {
+        articleId: article.id,
+        sharedContentId: article.shared_content_id,
+        slideType,
+        tone,
+        writingStyle
+      });
 
-      if (queueError) {
-        console.error('Error queuing multi-tenant article:', queueError);
-        throw new Error(`Failed to queue article: ${queueError.message}`);
+      // Check for existing queue entries (following legacy pattern)
+      const { data: existingQueueEntries, error: checkError } = await supabase
+        .from('content_generation_queue')
+        .select('id, status')
+        .eq('shared_content_id', article.shared_content_id)
+        .order('created_at', { ascending: false });
+
+      if (checkError) {
+        throw new Error(`Failed to check queue: ${checkError.message}`);
       }
 
-      console.log('✅ Multi-tenant article queued successfully with ID:', queueId);
+      const activeEntry = existingQueueEntries?.find(entry => ['pending', 'processing'].includes(entry.status));
+      if (activeEntry) {
+        toast({
+          title: "Article Queued",
+          description: "This article is already being processed - check the queue for progress",
+          variant: "default"
+        });
+        return activeEntry.id;
+      }
+
+      // Update multi-tenant article status to processed (equivalent to legacy)
+      const { error: updateError } = await supabase
+        .from('topic_articles')
+        .update({ 
+          processing_status: 'processed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', article.id);
+
+      if (updateError) throw new Error(`Failed to update article status: ${updateError.message}`);
+
+      // Insert directly into generation queue (following legacy pattern)
+      // We use the topic_article_id as article_id for compatibility with existing constraints
+      const { data: queueData, error: queueError } = await supabase
+        .from('content_generation_queue')
+        .insert({
+          article_id: article.id, // Use topic_article_id as article_id for constraint compatibility
+          topic_article_id: article.id,
+          shared_content_id: article.shared_content_id,
+          slidetype: slideType,
+          ai_provider: 'deepseek',
+          tone: tone,
+          writing_style: writingStyle,
+          audience_expertise: 'intermediate', // Default value
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (queueError) {
+        // Check for duplicate key constraint violation
+        if (queueError.code === '23505') {
+          toast({
+            title: "Article Queued",
+            description: "This article is already being processed. Please wait for the current job to complete.",
+            variant: "default"
+          });
+          return null;
+        }
+        throw new Error(`Failed to queue job: ${queueError.message}`);
+      }
+
+      const typeLabels = {
+        short: 'Short Carousel (4 slides)',
+        tabloid: 'Tabloid Style (6 slides)', 
+        indepth: 'In-Depth Analysis (8 slides)',
+        extensive: 'Comprehensive Story (12 slides)'
+      };
 
       toast({
         title: "Article Approved",
-        description: `"${article.title}" has been queued for content generation.`,
+        description: `${typeLabels[slideType]} generation started using DeepSeek`
       });
 
-      return queueId;
+      console.log('✅ Multi-tenant article queued successfully with ID:', queueData.id);
+      return queueData.id;
+
     } catch (error: any) {
       console.error('Error approving multi-tenant article:', error);
+      
+      // Reverse animation on error
+      setAnimatingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(article.id);
+        return newSet;
+      });
+      
       toast({
-        title: "Error",
+        title: "Approval Failed",
         description: error.message || "Failed to approve article. Please try again.",
         variant: "destructive",
       });
       throw error;
     } finally {
       setProcessingArticle(null);
+      // Clean up animation state
+      setTimeout(() => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(article.id);
+          return newSet;
+        });
+      }, 300);
     }
   };
 
   /**
-   * Delete/discard a multi-tenant article
+   * Delete/discard a multi-tenant article (following legacy pattern)
    */
   const deleteMultiTenantArticle = async (articleId: string, articleTitle: string) => {
     if (deletingArticles.has(articleId)) return;
 
-    const newDeletingSet = new Set(deletingArticles);
-    newDeletingSet.add(articleId);
-    setDeletingArticles(newDeletingSet);
+    // Immediate animation feedback - trigger discard animation (matching legacy)
+    setAnimatingArticles(prev => new Set([...prev, articleId]));
+    setDeletingArticles(prev => new Set([...prev, articleId]));
 
     try {
       console.log('🗑️ Deleting multi-tenant article:', articleId);
 
-      // Update the multi-tenant article status to discarded instead of actually deleting
+      // Update the multi-tenant article status to discarded (equivalent to legacy)
       const { error: updateError } = await supabase
         .from('topic_articles')
         .update({
@@ -98,36 +171,60 @@ export const useMultiTenantActions = () => {
       console.log('✅ Multi-tenant article discarded successfully');
 
       toast({
-        title: "Article Discarded",
-        description: `"${articleTitle}" has been discarded.`,
+        title: "Article Deleted",
+        description: `"${articleTitle}" has been discarded and won't be re-imported`,
       });
+
+      // Clean up animation state after delay (matching legacy)
+      setTimeout(() => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(articleId);
+          return newSet;
+        });
+        setDeletingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(articleId);
+          return newSet;
+        });
+      }, 300);
 
     } catch (error: any) {
       console.error('Error deleting multi-tenant article:', error);
+      
+      // Reverse animation on error
+      setAnimatingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
+      });
+      setDeletingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleId);
+        return newSet;
+      });
+      
       toast({
-        title: "Error",
+        title: "Deletion Failed",
         description: error.message || "Failed to discard article. Please try again.",
         variant: "destructive",
       });
       throw error;
-    } finally {
-      const newDeletingSet = new Set(deletingArticles);
-      newDeletingSet.delete(articleId);
-      setDeletingArticles(newDeletingSet);
     }
   };
 
   /**
-   * Delete multiple multi-tenant articles
+   * Delete multiple multi-tenant articles (following legacy pattern)
    */
   const deleteMultipleMultiTenantArticles = async (articleIds: string[]) => {
     try {
       console.log('🗑️ Bulk deleting multi-tenant articles:', articleIds);
 
-      // Mark all articles as being deleted
-      const newDeletingSet = new Set(deletingArticles);
-      articleIds.forEach(id => newDeletingSet.add(id));
-      setDeletingArticles(newDeletingSet);
+      // Set all articles as being deleted with animation (matching legacy)
+      articleIds.forEach(id => {
+        setDeletingArticles(prev => new Set([...prev, id]));
+        setAnimatingArticles(prev => new Set([...prev, id]));
+      });
 
       // Update all articles to discarded status
       const { error: updateError } = await supabase
@@ -146,34 +243,72 @@ export const useMultiTenantActions = () => {
       console.log('✅ Multi-tenant articles bulk discarded successfully');
 
       toast({
-        title: "Articles Discarded",
-        description: `${articleIds.length} articles have been discarded.`,
+        title: "Articles Deleted",
+        description: `${articleIds.length} articles have been discarded and won't be re-imported`,
       });
+
+      // Clean up animation states after delay (matching legacy)
+      setTimeout(() => {
+        articleIds.forEach(id => {
+          setAnimatingArticles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+          setDeletingArticles(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+        });
+      }, 300);
 
     } catch (error: any) {
       console.error('Error bulk deleting multi-tenant articles:', error);
+      
+      // Reverse animations on error
+      articleIds.forEach(id => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        setDeletingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      });
+      
       toast({
-        title: "Error",
+        title: "Deletion Failed",
         description: error.message || "Failed to discard articles. Please try again.",
         variant: "destructive",
       });
       throw error;
-    } finally {
-      // Remove all articles from deleting set
-      const newDeletingSet = new Set(deletingArticles);
-      articleIds.forEach(id => newDeletingSet.delete(id));
-      setDeletingArticles(newDeletingSet);
     }
   };
 
   /**
-   * Cancel a multi-tenant queue item
+   * Cancel a multi-tenant queue item (following legacy pattern)
    */
   const cancelMultiTenantQueueItem = async (queueId: string) => {
     try {
       console.log('⏹️ Cancelling multi-tenant queue item:', queueId);
 
-      // Delete the queue item
+      // Get the queue item to find the topic_article_id
+      const { data: queueItem, error: fetchError } = await supabase
+        .from('content_generation_queue')
+        .select('topic_article_id')
+        .eq('id', queueId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching queue item:', fetchError);
+        throw new Error(`Failed to fetch queue item: ${fetchError.message}`);
+      }
+
+      // Delete the queue item (matching legacy)
       const { error: deleteError } = await supabase
         .from('content_generation_queue')
         .delete()
@@ -185,29 +320,31 @@ export const useMultiTenantActions = () => {
       }
 
       // Reset the topic article status back to 'new'
-      const { error: resetError } = await supabase
-        .from('topic_articles')
-        .update({
-          processing_status: 'new',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', queueId); // This might need adjustment based on queue item structure
+      if (queueItem?.topic_article_id) {
+        const { error: resetError } = await supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'new',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', queueItem.topic_article_id);
 
-      if (resetError) {
-        console.warn('Warning: Failed to reset article status:', resetError);
+        if (resetError) {
+          console.warn('Warning: Failed to reset article status:', resetError);
+        }
       }
 
       console.log('✅ Multi-tenant queue item cancelled successfully');
 
       toast({
-        title: "Queue Item Cancelled",
-        description: "The generation task has been cancelled.",
+        title: "Job Cancelled",
+        description: "Processing job has been cancelled",
       });
 
     } catch (error: any) {
       console.error('Error cancelling multi-tenant queue item:', error);
       toast({
-        title: "Error",
+        title: "Cancellation Failed",
         description: error.message || "Failed to cancel queue item. Please try again.",
         variant: "destructive",
       });
@@ -319,8 +456,12 @@ export const useMultiTenantActions = () => {
   };
 
   return {
+    // State variables (matching legacy system)
     processingArticle,
     deletingArticles,
+    animatingArticles, // New animation state
+    
+    // Action functions
     approveMultiTenantArticle,
     deleteMultiTenantArticle,
     deleteMultipleMultiTenantArticles,

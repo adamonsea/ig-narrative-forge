@@ -83,6 +83,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const {
     processingArticle,
     deletingArticles,
+    animatingArticles, // New animation state
     approveMultiTenantArticle,
     deleteMultiTenantArticle,
     deleteMultipleMultiTenantArticles,
@@ -130,7 +131,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setArticles(articlesData);
       }
 
-      // Legacy queue items for compatibility
+      // Declare variables for filtered data
+      let filteredQueueItems: any[] = [];
+      let filteredStories: any[] = [];
+
+      // Get queue items for articles from this topic
       const queueResult = await supabase
         .from('content_generation_queue')
         .select(`
@@ -147,14 +152,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           writing_style,
           shared_article_content!inner(title, url)
         `)
-        .eq('topic_article_id', selectedTopicId)
+        .not('topic_article_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (queueResult.error) {
         console.error('Error loading queue items:', queueResult.error);
         setQueueItems([]);
       } else {
-        const queueItemsData = queueResult.data?.map((item: any) => ({
+        // Filter queue items to only include those from articles in this topic
+        const topicArticleIds = new Set((articlesResult.data || []).map((a: any) => a.id));
+        filteredQueueItems = (queueResult.data || []).filter((item: any) => 
+          topicArticleIds.has(item.topic_article_id)
+        );
+        
+        const queueItemsData = filteredQueueItems.map((item: any) => ({
           id: item.id,
           topic_article_id: item.topic_article_id,
           shared_content_id: item.shared_content_id,
@@ -169,11 +180,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           slidetype: item.slidetype,
           tone: item.tone,
           writing_style: item.writing_style
-        })) || [];
+        }));
         setQueueItems(queueItemsData);
       }
 
-      // Legacy stories for compatibility
+      // Get stories for articles from this topic
       const storiesResult = await supabase
         .from('stories')
         .select(`
@@ -188,13 +199,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           illustration_generated_at,
           slides(*)
         `)
+        .not('topic_article_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (storiesResult.error) {
         console.error('Error loading stories:', storiesResult.error);
         setStories([]);
       } else {
-        const storiesData = storiesResult.data?.map((story: any) => ({
+        // Filter stories to only include those from articles in this topic
+        const topicArticleIds = new Set((articlesResult.data || []).map((a: any) => a.id));
+        filteredStories = (storiesResult.data || []).filter((story: any) => 
+          topicArticleIds.has(story.topic_article_id)
+        );
+        
+        const storiesData = filteredStories.map((story: any) => ({
           id: story.id,
           topic_article_id: story.topic_article_id,
           shared_content_id: story.shared_content_id,
@@ -213,7 +231,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           tone: '',
           writing_style: '',
           audience_expertise: ''
-        })) || [];
+        }));
         setStories(storiesData);
       }
 
@@ -221,8 +239,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       const newStats = {
         totalArticles: articlesResult.data?.length || 0,
         pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
-        processingQueue: queueResult.data?.length || 0,
-        readyStories: (storiesResult.data || []).filter((s: any) => s.status === 'ready').length
+        processingQueue: filteredQueueItems.length || 0,
+        readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
       };
       setStats(newStats);
 
@@ -399,6 +417,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     
     // Multi-tenant action states from useMultiTenantActions
     processingArticle,
-    deletingArticles
+    deletingArticles,
+    animatingArticles // New animation state
   };
 };
