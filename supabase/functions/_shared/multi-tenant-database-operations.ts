@@ -183,7 +183,7 @@ export class MultiTenantDatabaseOperations {
         console.log(`Topic article already exists: ${article.title}`)
       } else {
         console.error(`Failed to create topic article: ${topicError.message}`)
-        result.errors.push(`Topic article creation: ${topicError.message}`)
+        // Don't add to result.errors here as result is not in scope
       }
     }
 

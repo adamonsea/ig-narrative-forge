@@ -439,6 +439,7 @@ async function discoverRssFeeds(html: string, baseUrl: string): Promise<string[]
 
 async function parseRssFeeds(rssUrls: string[], maxUrls: number): Promise<DiscoveredUrl[]> {
   const articles: DiscoveredUrl[] = [];
+  let bestRssResult = { articles: [], contentQuality: 0, feedUrl: '' };
   
   for (const rssUrl of rssUrls) {
     try {
@@ -455,36 +456,89 @@ async function parseRssFeeds(rssUrls: string[], maxUrls: number): Promise<Discov
       if (!response.ok) continue;
       
       const xml = await response.text();
+      const feedArticles: DiscoveredUrl[] = [];
+      let totalContentLength = 0;
+      let itemsWithContent = 0;
       
       // Parse RSS items
       const itemPattern = /<item[^>]*>([\s\S]*?)<\/item>/gi;
       let match;
       
-      while ((match = itemPattern.exec(xml)) !== null && articles.length < maxUrls) {
+      while ((match = itemPattern.exec(xml)) !== null && feedArticles.length < maxUrls) {
         const itemContent = match[1];
         
-        // Extract required fields
+        // Extract required fields with better content detection
         const linkMatch = /<link[^>]*>(.*?)<\/link>/i.exec(itemContent) || 
                          /<link[^>]*><!\[CDATA\[(.*?)\]\]><\/link>/i.exec(itemContent);
         const titleMatch = /<title[^>]*>(.*?)<\/title>/i.exec(itemContent) || 
                           /<title[^>]*><!\[CDATA\[(.*?)\]\]><\/title>/i.exec(itemContent);
-        const descMatch = /<description[^>]*>(.*?)<\/description>/i.exec(itemContent) || 
-                         /<description[^>]*><!\[CDATA\[(.*?)\]\]><\/description>/i.exec(itemContent);
-        const dateMatch = /<pubDate[^>]*>(.*?)<\/pubDate>/i.exec(itemContent);
+        
+        // Try multiple content fields in order of preference
+        const contentMatch = /<content:encoded[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i.exec(itemContent) ||
+                            /<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/i.exec(itemContent) ||
+                            /<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i.exec(itemContent) ||
+                            /<description[^>]*>([\s\S]*?)<\/description>/i.exec(itemContent);
+        
+        const dateMatch = /<pubDate[^>]*>(.*?)<\/pubDate>/i.exec(itemContent) ||
+                         /<dc:date[^>]*>(.*?)<\/dc:date>/i.exec(itemContent) ||
+                         /<published[^>]*>(.*?)<\/published>/i.exec(itemContent);
         
         if (linkMatch && titleMatch) {
-          articles.push({
+          let content = '';
+          let contentLength = 0;
+          
+          if (contentMatch) {
+            // Clean content and measure length
+            content = contentMatch[1]
+              .replace(/<!\[CDATA\[|\]\]>/g, '')
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            contentLength = content.length;
+            totalContentLength += contentLength;
+            
+            // Check if this looks like full content vs snippet
+            if (contentLength > 500) {
+              itemsWithContent++;
+            }
+          }
+          
+          // Parse and validate date
+          const parsedDate = parseRssDate(dateMatch ? dateMatch[1].trim() : '');
+          
+          feedArticles.push({
             url: linkMatch[1].trim(),
             title: titleMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
-            excerpt: descMatch ? descMatch[1].replace(/<!\[CDATA\[|\]\]>|<[^>]*>/g, '').trim().substring(0, 200) : undefined,
-            publishedAt: dateMatch ? dateMatch[1].trim() : undefined
+            excerpt: content.length > 200 ? content.substring(0, 200) + '...' : content,
+            publishedAt: parsedDate
           });
         }
       }
       
-      if (articles.length > 0) {
-        console.log(`✅ RSS parsing successful: ${articles.length} articles from ${rssUrl}`);
-        break; // Use first successful RSS feed
+      // Calculate content quality score for this RSS feed
+      const avgContentLength = feedArticles.length > 0 ? totalContentLength / feedArticles.length : 0;
+      const fullContentRatio = feedArticles.length > 0 ? itemsWithContent / feedArticles.length : 0;
+      
+      // Quality scoring: prioritize feeds with full content
+      let qualityScore = 0;
+      if (avgContentLength > 500) qualityScore += 50; // Full articles
+      else if (avgContentLength > 200) qualityScore += 25; // Reasonable excerpts
+      else if (avgContentLength > 100) qualityScore += 10; // Short excerpts
+      
+      qualityScore += fullContentRatio * 30; // Bonus for high full content ratio
+      qualityScore += Math.min(20, feedArticles.length * 2); // Bonus for more articles
+      
+      console.log(`📊 RSS feed quality: ${rssUrl}`);
+      console.log(`   - Articles: ${feedArticles.length}, Avg content: ${avgContentLength.toFixed(0)} chars`);
+      console.log(`   - Full content ratio: ${(fullContentRatio * 100).toFixed(1)}%, Quality score: ${qualityScore.toFixed(1)}`);
+      
+      // Keep track of the best RSS feed
+      if (qualityScore > bestRssResult.contentQuality && feedArticles.length > 0) {
+        bestRssResult = {
+          articles: feedArticles,
+          contentQuality: qualityScore,
+          feedUrl: rssUrl
+        };
       }
       
     } catch (error) {
@@ -492,5 +546,58 @@ async function parseRssFeeds(rssUrls: string[], maxUrls: number): Promise<Discov
     }
   }
   
-  return articles;
+  // Return the best RSS feed if it meets quality threshold
+  if (bestRssResult.contentQuality >= 30) { // Minimum threshold for accepting RSS
+    console.log(`✅ RSS parsing successful: ${bestRssResult.articles.length} articles from ${bestRssResult.feedUrl}`);
+    console.log(`   🎯 Selected for quality score: ${bestRssResult.contentQuality.toFixed(1)}`);
+    return bestRssResult.articles;
+  } else if (bestRssResult.articles.length > 0) {
+    console.log(`⚠️ RSS content quality too low (${bestRssResult.contentQuality.toFixed(1)}), will fallback to HTML`);
+  }
+  
+  return [];
+}
+
+/**
+ * Parse RSS date with multiple format support and error handling
+ */
+function parseRssDate(dateString: string): string | undefined {
+  if (!dateString || dateString.trim() === '') {
+    return undefined;
+  }
+  
+  // Clean up the date string
+  let cleanDate = dateString.trim();
+  
+  // Handle common invalid dates
+  if (['Daily', 'Weekly', 'Monthly', 'N/A', 'TBD'].includes(cleanDate)) {
+    console.log(`⚠️ Invalid date found: "${cleanDate}", skipping`);
+    return undefined;
+  }
+  
+  try {
+    // Try parsing as standard date formats
+    const date = new Date(cleanDate);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.log(`⚠️ Could not parse date: "${cleanDate}"`);
+      return undefined;
+    }
+    
+    // Check if date is reasonable (not too far in future/past)
+    const now = new Date();
+    const yearsDiff = Math.abs(now.getFullYear() - date.getFullYear());
+    
+    if (yearsDiff > 10) {
+      console.log(`⚠️ Date seems unrealistic: "${cleanDate}" (${yearsDiff} years from now)`);
+      return undefined;
+    }
+    
+    return date.toISOString();
+    
+  } catch (error) {
+    console.log(`⚠️ Date parsing error for "${cleanDate}": ${error.message}`);
+    return undefined;
+  }
 }

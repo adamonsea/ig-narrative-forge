@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     for (const batch of batches) {
-      const batchPromises = batch.map(url => extractArticleContent(url, supabase, fallbackToScreenshot));
+      const batchPromises = batch.map(url => extractArticleContent(url, supabase, fallbackToScreenshot, sourceId));
       const batchResults = await Promise.allSettled(batchPromises);
       
       for (let i = 0; i < batchResults.length; i++) {
@@ -202,7 +202,7 @@ serve(async (req) => {
   }
 });
 
-async function extractArticleContent(url: string, supabase: any, fallbackToScreenshot: boolean) {
+async function extractArticleContent(url: string, supabase: any, fallbackToScreenshot: boolean, sourceId?: string) {
   const extractionResult = {
     success: false,
     article: null,
@@ -211,7 +211,20 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
   };
 
   try {
-    // Method 1: Try RSS/Direct HTML extraction first
+    // Method 1: Try RSS extraction first (if URL looks like RSS feed)
+    if (isRssFeedUrl(url)) {
+      console.log(`🔄 Trying RSS extraction for RSS URL: ${url}`);
+      const rssResult = await tryRssExtraction(url);
+      
+      if (rssResult.success && rssResult.article) {
+        extractionResult.success = true;
+        extractionResult.article = rssResult.article;
+        extractionResult.method = 'rss-direct';
+        return extractionResult;
+      }
+    }
+
+    // Method 2: Try direct HTML extraction
     console.log(`🔄 Trying HTML extraction for: ${url}`);
     const htmlResult = await tryHtmlExtraction(url);
     
@@ -222,12 +235,12 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
       return extractionResult;
     }
 
-    // Method 2: Try Beautiful Soup scraper
+    // Method 3: Try Beautiful Soup scraper
     console.log(`🔄 Trying Beautiful Soup for: ${url}`);
     const soupResult = await supabase.functions.invoke('beautiful-soup-scraper', {
       body: { 
         feedUrl: url,
-        sourceId: sourceId || null, // Use actual sourceId or null, not string "content-extractor"
+        sourceId: sourceId || 'content-extractor',
         maxArticles: 1,
         individualArticle: true
       }
@@ -240,13 +253,13 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
       return extractionResult;
     }
 
-    // Method 3: Screenshot AI fallback (if enabled)
+    // Method 4: Screenshot AI fallback (if enabled)
     if (fallbackToScreenshot) {
       console.log(`🔄 Trying screenshot AI for: ${url}`);
       const screenshotResult = await supabase.functions.invoke('screenshot-ai-scraper', {
         body: { 
           feedUrl: url,
-          sourceId: sourceId || null, // Use actual sourceId or null
+          sourceId: sourceId || 'content-extractor',
           region: 'extraction'
         }
       });
@@ -274,6 +287,136 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
   } catch (error) {
     extractionResult.error = error.message;
     return extractionResult;
+  }
+}
+
+/**
+ * Check if URL is likely an RSS feed
+ */
+function isRssFeedUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase();
+  return lowerUrl.includes('/rss') || 
+         lowerUrl.includes('/feed') || 
+         lowerUrl.includes('.rss') || 
+         lowerUrl.includes('.xml') ||
+         lowerUrl.includes('/atom');
+}
+
+/**
+ * Try extracting content directly from RSS feed URL
+ */
+async function tryRssExtraction(rssUrl: string) {
+  try {
+    const response = await fetch(rssUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)',
+        'Accept': 'application/rss+xml, application/xml, text/xml'
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const xml = await response.text();
+    
+    // Parse the first RSS item with full content check
+    const itemPattern = /<item[^>]*>([\s\S]*?)<\/item>/i;
+    const itemMatch = itemPattern.exec(xml);
+    
+    if (!itemMatch) {
+      throw new Error('No RSS items found');
+    }
+
+    const itemContent = itemMatch[1];
+    
+    // Extract fields with preference for full content
+    const linkMatch = /<link[^>]*>(.*?)<\/link>/i.exec(itemContent) || 
+                     /<link[^>]*><!\[CDATA\[(.*?)\]\]><\/link>/i.exec(itemContent);
+    const titleMatch = /<title[^>]*>(.*?)<\/title>/i.exec(itemContent) || 
+                      /<title[^>]*><!\[CDATA\[(.*?)\]\]><\/title>/i.exec(itemContent);
+    
+    // Try multiple content fields in order of preference
+    const contentMatch = /<content:encoded[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i.exec(itemContent) ||
+                        /<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/i.exec(itemContent) ||
+                        /<description[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i.exec(itemContent) ||
+                        /<description[^>]*>([\s\S]*?)<\/description>/i.exec(itemContent);
+    
+    const dateMatch = /<pubDate[^>]*>(.*?)<\/pubDate>/i.exec(itemContent) ||
+                     /<dc:date[^>]*>(.*?)<\/dc:date>/i.exec(itemContent);
+    const authorMatch = /<dc:creator[^>]*>(.*?)<\/dc:creator>/i.exec(itemContent) ||
+                       /<author[^>]*>(.*?)<\/author>/i.exec(itemContent);
+
+    if (!linkMatch || !titleMatch || !contentMatch) {
+      throw new Error('Missing required RSS fields');
+    }
+
+    // Clean and validate content
+    let body = contentMatch[1]
+      .replace(/<!\[CDATA\[|\]\]>/g, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Require substantial content for RSS extraction (>300 chars indicates full article)
+    if (body.length < 300) {
+      throw new Error(`RSS content too short (${body.length} chars), likely a snippet`);
+    }
+
+    const title = titleMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+    
+    console.log(`✅ RSS extraction successful: "${title}" (${body.length} chars)`);
+
+    return {
+      success: true,
+      article: {
+        title,
+        body,
+        author: authorMatch ? authorMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() : undefined,
+        published_at: parseRssDateSafe(dateMatch ? dateMatch[1].trim() : ''),
+        source_url: linkMatch[1].trim(),
+        word_count: body.split(/\s+/).length
+      }
+    };
+    
+  } catch (error) {
+    console.log(`RSS extraction failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Safe RSS date parsing that handles invalid dates
+ */
+function parseRssDateSafe(dateString: string): string | undefined {
+  if (!dateString || dateString.trim() === '') {
+    return undefined;
+  }
+  
+  // Handle common invalid dates
+  const cleanDate = dateString.trim();
+  if (['Daily', 'Weekly', 'Monthly', 'N/A', 'TBD'].includes(cleanDate)) {
+    return undefined;
+  }
+  
+  try {
+    const date = new Date(cleanDate);
+    if (isNaN(date.getTime())) {
+      return undefined;
+    }
+    
+    // Check if date is reasonable (not too far in future/past)
+    const now = new Date();
+    const yearsDiff = Math.abs(now.getFullYear() - date.getFullYear());
+    
+    if (yearsDiff > 10) {
+      return undefined;
+    }
+    
+    return date.toISOString();
+  } catch (error) {
+    return undefined;
   }
 }
 
