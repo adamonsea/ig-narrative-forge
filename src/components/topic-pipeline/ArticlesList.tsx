@@ -260,8 +260,7 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             : ''
         }`}
         style={{
-          animationFillMode: 'forwards',
-          visibility: (isProcessing || isDeleting) && isAnimatingAway ? 'hidden' : 'visible'
+          animationFillMode: 'forwards'
         }}
       >
         <CardHeader className="pb-3">

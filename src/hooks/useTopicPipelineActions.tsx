@@ -157,7 +157,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `${typeLabels[slideType]} generation started using DeepSeek`
       });
       
-      // Delay refresh to allow animation to complete
+      // Delay refresh to allow animation to complete (match slide-out-right duration)
       setTimeout(() => {
         setAnimatingArticles(prev => {
           const newSet = new Set(prev);
@@ -165,7 +165,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
           return newSet;
         });
         onRefresh();
-      }, 300);
+      }, 500);
 
     } catch (error) {
       console.error('Error approving article:', error);
@@ -439,7 +439,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `"${articleTitle}" has been discarded and won't be re-imported`
       });
 
-      // Clean up animation state after animation completes (400ms)
+      // Clean up animation state after animation completes (match discard duration)
       setTimeout(() => {
         setAnimatingArticles(prev => {
           const newSet = new Set(prev);
@@ -453,7 +453,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         });
         // Refresh the list to move remaining items up
         onRefresh();
-      }, 450);
+      }, 400);
       
     } catch (error) {
       console.error('Error deleting article:', error);
