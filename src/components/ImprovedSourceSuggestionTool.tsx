@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Search, Plus, Loader2, CheckCircle, XCircle, AlertTriangle, Zap } from 'lucide-react';
+import { Search, Plus, Loader2, CheckCircle, XCircle, AlertTriangle, Zap, History, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSuggestionMemory, SourceSuggestionMemory } from '@/hooks/useSuggestionMemory';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface SourceSuggestion {
   url: string;
@@ -43,7 +45,12 @@ export const ImprovedSourceSuggestionTool = ({
   const [loading, setLoading] = useState(false);
   const [addingSourceId, setAddingSourceId] = useState<string | null>(null);
   const [validationProgress, setValidationProgress] = useState<Record<string, number>>({});
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
+  
+  const memoryKey = `sources-${topicName}-${topicType}${region ? '-' + region : ''}`;
+  const suggestionMemory = useSuggestionMemory<SourceSuggestionMemory>(memoryKey);
+  const stats = suggestionMemory.getStats();
 
   const getSuggestions = async () => {
     if (!topicName.trim()) {
@@ -111,28 +118,48 @@ export const ImprovedSourceSuggestionTool = ({
         return reliabilityScore(b) - reliabilityScore(a);
       });
 
-      setSuggestions(sortedSuggestions);
+      const allSources = sortedSuggestions;
+      const newSources = suggestionMemory.filterNewSuggestions(allSources) as SourceSuggestion[];
       
-      if (sortedSuggestions.length > 0) {
+      setSuggestions(newSources);
+      
+      // Add to memory
+      const memoryItems = allSources.map((s: SourceSuggestion) => ({
+        url: s.url,
+        source_name: s.source_name,
+        type: s.type,
+        confidence_score: s.confidence_score,
+        rationale: s.rationale,
+        platform_reliability: s.platform_reliability,
+        technical_validation: s.technical_validation
+      }));
+      suggestionMemory.addSuggestions(memoryItems);
+      
+      if (newSources.length > 0) {
         toast({
-          title: "Enhanced Sources Found",
-          description: `Found ${sortedSuggestions.length} high-quality sources with technical validation`,
+          title: "✨ Quality Sources Discovered",
+          description: `Found ${newSources.length} reliable sources${allSources.length > newSources.length ? ` (${allSources.length - newSources.length} already seen)` : ''}`,
         });
 
         // Start technical validation for top suggestions
-        startTechnicalValidation(sortedSuggestions.slice(0, 5));
+        startTechnicalValidation(newSources.slice(0, 5));
+      } else if (allSources.length > 0) {
+        toast({
+          title: "All Sources Previously Seen",
+          description: `All ${allSources.length} suggested sources were shown before. Check history to review them.`,
+        });
       } else {
         toast({
-          title: "No Results",
-          description: "No reliable sources found. Try adjusting your topic details.",
+          title: "No Quality Sources Found",
+          description: "No reliable sources discovered. Try adjusting your topic details or keywords.",
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error('Error getting suggestions:', error);
       toast({
-        title: "Error",
-        description: "Failed to find sources",
+        title: "Connection Issue",
+        description: "Having trouble connecting to source discovery service. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -317,9 +344,15 @@ export const ImprovedSourceSuggestionTool = ({
         'reactivated' : 'added';
       
       toast({
-        title: "Enhanced Source Added",
+        title: "✅ Source Connected Successfully",
         description: `${suggestion.source_name} ${actionMessage} with ${credibilityScore}% credibility (${qualityNote})`,
       });
+      
+      // Mark as added in memory
+      const memoryItem = suggestionMemory.memory.find(item => item.url === suggestion.url);
+      if (memoryItem) {
+        suggestionMemory.markAsAdded(memoryItem.id);
+      }
       
       setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
       window.dispatchEvent(new CustomEvent('sourceAdded'));
@@ -369,26 +402,43 @@ export const ImprovedSourceSuggestionTool = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-medium">Enhanced Source Discovery</h3>
-          <p className="text-xs text-muted-foreground">AI-powered source finding with platform reliability scoring</p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span>AI-powered source finding with platform reliability scoring</span>
+            {stats.total > 0 && (
+              <span>{stats.added} connected • {stats.pending} pending • {stats.total} discovered</span>
+            )}
+          </div>
         </div>
-        <Button 
-          onClick={getSuggestions}
-          disabled={loading}
-          variant="outline"
-          size="sm"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Zap className="w-4 h-4 mr-2" />
-              Discover Sources
-            </>
+        <div className="flex gap-2">
+          {stats.total > 0 && (
+            <Button
+              onClick={() => setShowHistory(!showHistory)}
+              variant="ghost"
+              size="sm"
+            >
+              <History className="w-4 h-4 mr-2" />
+              History ({stats.total})
+            </Button>
           )}
-        </Button>
+          <Button 
+            onClick={getSuggestions}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4 mr-2" />
+                Discover Sources
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {suggestions.length > 0 && (

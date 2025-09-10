@@ -113,12 +113,26 @@ export class DatabaseOperations {
         let tooOld = false;
         if (article.published_at) {
           try {
-            const pubDate = new Date(article.published_at);
+            // Handle various date formats more robustly
+            let pubDate: Date;
+            if (article.published_at === 'Daily' || article.published_at === 'Weekly' || typeof article.published_at === 'string' && !article.published_at.includes('-') && !article.published_at.includes('/')) {
+              // Invalid date format, use current date
+              pubDate = new Date();
+            } else {
+              pubDate = new Date(article.published_at);
+              // Check if date is valid
+              if (isNaN(pubDate.getTime())) {
+                console.log(`⚠️ Invalid date format, using current date: ${article.published_at}`);
+                pubDate = new Date();
+              }
+            }
+            
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             tooOld = pubDate < sevenDaysAgo;
           } catch (error) {
-            console.log(`⚠️ Invalid date format: ${article.published_at}`);
+            console.log(`⚠️ Date parsing error, using current date: ${article.published_at}`);
+            tooOld = false; // Don't discard if we can't parse the date
           }
         }
 

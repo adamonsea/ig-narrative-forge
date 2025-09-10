@@ -28,7 +28,10 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
+import { StatusIndicator } from '@/components/StatusIndicator';
 import { EnhancedSourceStatusBadge } from '@/components/EnhancedSourceStatusBadge';
+import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
+import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 
 interface ContentSource {
   id: string;
@@ -699,8 +702,8 @@ export const UnifiedSourceManager = ({
       toast({
         title: 'Content Gathering Failed',
         description: error.message?.includes('Failed to fetch') 
-          ? `Unable to connect to ${source.source_name}. The source may be temporarily unavailable.`
-          : error.message || 'Failed to gather content from source',
+          ? `⚠️ Having trouble connecting to ${source.source_name}. The source may be temporarily unavailable.`
+          : error.message || '⚠️ Connection issue with this source. Please check the URL and try again.',
         variant: 'destructive',
       });
     } finally {
@@ -1015,14 +1018,11 @@ export const UnifiedSourceManager = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
-                    {getSourceHealthBadge ? (
-                      <EnhancedSourceStatusBadge 
-                        source={source} 
-                        isGathering={gatheringSource === source.id}
-                      />
-                    ) : (
-                      getSourceHealthBadge(source)
-                    )}
+                    <EnhancedSourceStatusBadge 
+                      source={source} 
+                      isGathering={gatheringSource === source.id}
+                    />
+                    <ProcessingStatusIndicator sourceId={source.id} />
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">

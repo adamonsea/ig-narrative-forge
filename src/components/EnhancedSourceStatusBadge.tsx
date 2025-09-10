@@ -107,7 +107,7 @@ export function EnhancedSourceStatusBadge({
     if (successRate < 50 && hasRecentActivity) {
       return {
         status: 'technical_issues',
-        label: 'Technical Issues',
+        label: 'Connection issues',
         variant: 'outline' as const,
         icon: AlertCircle,
         className: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400',

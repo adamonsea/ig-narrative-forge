@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Plus, Search, History, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useSuggestionMemory, KeywordSuggestionMemory } from '@/hooks/useSuggestionMemory';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface KeywordSuggestion {
   keyword: string;
@@ -33,6 +35,11 @@ export function KeywordSuggestionTool({
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingKeyword, setAddingKeyword] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  
+  const memoryKey = `keywords-${topicName}-${topicType}${region ? '-' + region : ''}`;
+  const suggestionMemory = useSuggestionMemory<KeywordSuggestionMemory>(memoryKey);
+  const stats = suggestionMemory.getStats();
 
   const getSuggestions = async () => {
     setLoading(true);
@@ -62,14 +69,32 @@ export function KeywordSuggestionTool({
       }
 
       if (data.success) {
-        setSuggestions(data.suggestions);
-        toast.success(`Found ${data.suggestions.length} relevant keywords`);
+        const allSuggestions = data.suggestions;
+        const newSuggestions = suggestionMemory.filterNewSuggestions(allSuggestions) as KeywordSuggestion[];
+        
+        setSuggestions(newSuggestions);
+        
+        // Add to memory
+        const memoryItems = allSuggestions.map((s: KeywordSuggestion) => ({
+          keyword: s.keyword,
+          confidence_score: s.confidence_score,
+          rationale: s.rationale
+        }));
+        suggestionMemory.addSuggestions(memoryItems);
+        
+        if (newSuggestions.length > 0) {
+          toast.success(`Found ${newSuggestions.length} new keywords${allSuggestions.length > newSuggestions.length ? ` (${allSuggestions.length - newSuggestions.length} already seen)` : ''}`);
+        } else if (allSuggestions.length > 0) {
+          toast.info(`All ${allSuggestions.length} suggested keywords were previously shown. Check history to see them again.`);
+        } else {
+          toast.info('No new keywords found for this topic');
+        }
       } else {
         throw new Error(data.error || 'Failed to find keywords');
       }
     } catch (error) {
       console.error('Error finding keywords:', error);
-      toast.error('Failed to find keywords. Please try again.');
+      toast.error('Having trouble connecting to keyword discovery service. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -89,7 +114,13 @@ export function KeywordSuggestionTool({
     try {
       // Trigger keyword addition notification  
       onKeywordAdd(keyword);
-      toast.success(`Added keyword: "${keyword}"`);
+      toast.success(`✅ Added keyword: "${keyword}"`);
+      
+      // Mark as added in memory
+      const memoryItem = suggestionMemory.memory.find(item => item.keyword === keyword);
+      if (memoryItem) {
+        suggestionMemory.markAsAdded(memoryItem.id);
+      }
       
       // Trigger parent refresh to show new keyword in list
       window.dispatchEvent(new CustomEvent('keywordAdded'));
@@ -107,25 +138,44 @@ export function KeywordSuggestionTool({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Find Keywords</h3>
-        <Button 
-          onClick={getSuggestions} 
-          disabled={loading}
-          variant="outline"
-          size="sm"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Finding...
-            </>
-          ) : (
-            <>
-              <Search className="mr-2 h-4 w-4" />
-              Find Keywords
-            </>
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">Find Keywords</h3>
+          {stats.total > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {stats.added} added, {stats.pending} pending, {stats.total} total discovered
+            </p>
           )}
-        </Button>
+        </div>
+        <div className="flex gap-2">
+          {stats.total > 0 && (
+            <Button
+              onClick={() => setShowHistory(!showHistory)}
+              variant="ghost"
+              size="sm"
+            >
+              <History className="mr-2 h-4 w-4" />
+              History ({stats.total})
+            </Button>
+          )}
+          <Button 
+            onClick={getSuggestions} 
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Discovering...
+              </>
+            ) : (
+              <>
+                <Search className="mr-2 h-4 w-4" />
+                Discover Keywords
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {suggestions.length > 0 && (
@@ -178,6 +228,62 @@ export function KeywordSuggestionTool({
             ))}
           </div>
         </div>
+      )}
+
+      {stats.total > 0 && (
+        <Collapsible open={showHistory} onOpenChange={setShowHistory}>
+          <CollapsibleContent className="space-y-2">
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Previously Discovered Keywords</span>
+              </div>
+              <div className="grid gap-2 max-h-60 overflow-y-auto">
+                {suggestionMemory.getPreviouslySeen().map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between p-2 rounded border text-xs ${
+                      item.added ? 'bg-green-50 border-green-200 dark:bg-green-950/20' :
+                      item.rejected ? 'bg-red-50 border-red-200 dark:bg-red-950/20' :
+                      'bg-background border-border'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{item.keyword}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.round(item.confidence_score * 100)}%
+                        </Badge>
+                        {item.added && <Badge variant="default" className="text-xs bg-green-100 text-green-800">Added</Badge>}
+                        {item.rejected && <Badge variant="destructive" className="text-xs">Rejected</Badge>}
+                      </div>
+                      <p className="text-muted-foreground truncate mt-1">{item.rationale}</p>
+                    </div>
+                    {!item.added && !item.rejected && (
+                      <Button
+                        onClick={() => {
+                          // Re-add to current suggestions if not already there
+                          if (!suggestions.some(s => s.keyword === item.keyword)) {
+                            setSuggestions(prev => [...prev, {
+                              keyword: item.keyword,
+                              confidence_score: item.confidence_score,
+                              rationale: item.rationale
+                            }]);
+                          }
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
