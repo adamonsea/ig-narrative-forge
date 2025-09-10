@@ -884,7 +884,6 @@ async function generateSlidesWithOpenAI(
       visualPrompt: slide.visualPrompt || slide.visual || slide.imagePrompt || `Visual representation for "${article.title}" - slide ${index + 1}`,
       altText: slide.altText || slide.alt || slide.description || `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`
     }));
-    }));
     
   } catch (error) {
     console.error('Error generating slides with OpenAI:', error);
