@@ -206,23 +206,23 @@ function generateKeywordVariations(keyword: string): string[] {
 }
 
 /**
- * Determine minimum relevance threshold based on topic type and source
+ * PHASE 1: Confidence-based thresholds - Trust source selection approach
  */
 export function getRelevanceThreshold(
   topicType: 'regional' | 'keyword',
   sourceType: string = 'national'
 ): number {
-  // PLATFORM FIX: Much more permissive thresholds to reduce 85-95% discard rate
+  // PHASE 1: Very low thresholds - trust that users add good sources
   if (topicType === 'regional') {
-    // Regional content thresholds - very permissive to let more content through
-    if (sourceType === 'hyperlocal') return 5; // Local sources extremely lenient
-    if (sourceType === 'regional') return 8; // Regional sources very permissive
-    return 10; // National sources still quite lenient
+    // Trust source selection - only filter out clearly irrelevant content
+    if (sourceType === 'hyperlocal') return 10; // Trust local sources completely
+    if (sourceType === 'regional') return 12;   // High trust for regional sources
+    return 15; // Even national sources get benefit of doubt
   } else {
-    // Keyword-based thresholds - very lenient since keyword matching can vary
-    if (sourceType === 'hyperlocal') return 5; // Local content can be relevant with lower scores
-    if (sourceType === 'regional') return 8; // Regional sources slight increase
-    return 10; // National sources need very low keyword relevance
+    // Keyword topics also more trusting
+    if (sourceType === 'hyperlocal') return 8;  
+    if (sourceType === 'regional') return 10;   
+    return 12; // Lower bar for keyword matching
   }
 }
 
