@@ -157,17 +157,34 @@ export const SourceSuggestionTool = ({
             return;
           }
 
+          // Check if the system discovered a better RSS feed
+          let feedUrl = suggestion.url;
+          if (validationResult?.suggestedUrl) {
+            feedUrl = validationResult.suggestedUrl;
+            toast({
+              title: "RSS Feed Auto-Discovered",
+              description: `Found working RSS feed for ${suggestion.source_name}: ${feedUrl}`,
+            });
+          }
+
           // Show informative feedback based on validation results
           if (validationResult?.warnings?.length > 0) {
+            const warningCount = validationResult.warnings.length;
+            const hasAutoFix = validationResult.suggestedUrl ? ' (auto-fixed RSS URL)' : '';
             toast({
-              title: "Source Added with Warnings",
-              description: `${suggestion.source_name} added but may need monitoring (${validationResult.warnings.length} warnings)`,
+              title: "Source Added with Notes",
+              description: `${suggestion.source_name} added successfully${hasAutoFix} (${warningCount} validation notes)`,
             });
           } else {
             toast({
               title: "Source Validated Successfully",
               description: `${suggestion.source_name} passed all validation checks`,
             });
+          }
+
+          // Update the URL if we discovered a better one
+          if (validationResult?.suggestedUrl) {
+            suggestion.url = validationResult.suggestedUrl;
           }
         } catch (error) {
           // Validation service failed - don't add source for safety
@@ -186,11 +203,12 @@ export const SourceSuggestionTool = ({
       const domain = new URL(suggestion.url).hostname.replace('www.', '');
       
       // Create source directly with topic_id
+      // Note: suggestion.url may have been updated to auto-discovered RSS feed during validation
       const { data: newSource, error: createError } = await supabase
         .from('content_sources')
         .insert({
           source_name: suggestion.source_name,
-          feed_url: suggestion.url,
+          feed_url: suggestion.url, // This might be the auto-discovered RSS URL
           canonical_domain: domain,
           content_type: 'news',
           credibility_score: Math.round(suggestion.confidence_score * 0.8),

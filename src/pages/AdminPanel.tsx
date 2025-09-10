@@ -12,6 +12,7 @@ import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
 import { UnifiedTestingDashboard } from '@/components/UnifiedTestingDashboard';
 import { CleanSlateMigration } from '@/components/CleanSlateMigration';
 import { TopicArchiveManager } from '@/components/TopicArchiveManager';
+import { SourceValidationTester } from '@/components/SourceValidationTester';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -61,7 +62,10 @@ export default function AdminPanel() {
           </TabsContent>
 
           <TabsContent value="testing" className="mt-6">
-            <UnifiedTestingDashboard />
+            <div className="space-y-8">
+              <SourceValidationTester />
+              <UnifiedTestingDashboard />
+            </div>
           </TabsContent>
           
           <TabsContent value="archive" className="mt-6">

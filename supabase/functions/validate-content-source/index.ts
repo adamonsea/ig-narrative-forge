@@ -23,6 +23,8 @@ interface ValidationResult {
   articleCount?: number;
   error?: string;
   warnings: string[];
+  suggestedUrl?: string; // Auto-discovered RSS feed URL
+  discoveredFeeds?: string[]; // All discovered RSS feeds
   scraperTest?: {
     success: boolean;
     articlesFound: number;
@@ -74,6 +76,154 @@ async function testAccessibility(url: string): Promise<{success: boolean, conten
   }
 }
 
+// RSS Discovery functions (borrowed from validate-and-fix-sources)
+async function discoverRSSFeeds(url: string): Promise<string[]> {
+  const alternatives: string[] = [];
+  
+  try {
+    // Extract base domain
+    const baseUrl = new URL(url).origin;
+    
+    // Common RSS feed patterns to try
+    const patterns = [
+      '/feed/',
+      '/rss/',
+      '/rss.xml',
+      '/feed.xml',
+      '/atom.xml',
+      '/news/feed/',
+      '/blog/feed/',
+      '/feeds/all.xml',
+      '/index.xml',
+      '/wp/feed/',
+      '/wordpress/feed/'
+    ];
+
+    // Add pattern-based alternatives
+    for (const pattern of patterns) {
+      const altUrl = baseUrl + pattern;
+      if (altUrl !== url) {
+        alternatives.push(altUrl);
+      }
+    }
+
+    // For specific domains, add targeted patterns
+    if (baseUrl.includes('sussexexpress.co.uk')) {
+      alternatives.push(baseUrl + '/news/local/hastings/rss');
+      alternatives.push(baseUrl + '/news/rss');
+    }
+    if (baseUrl.includes('theargus.co.uk')) {
+      alternatives.push(baseUrl + '/news/rss/');
+    }
+
+    // For government sites, try specific patterns
+    if (baseUrl.includes('.gov') || baseUrl.includes('council')) {
+      const govPatterns = [
+        '/news.rss',
+        '/news/rss',
+        '/feeds/news.xml',
+        '/api/rss',
+        '/press/feed'
+      ];
+      
+      for (const govPattern of govPatterns) {
+        alternatives.push(baseUrl + govPattern);
+      }
+    }
+
+    // Try to scrape the original URL for RSS links
+    try {
+      const homeResponse = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; FeedDiscovery/1.0)',
+        }
+      });
+      
+      if (homeResponse.ok) {
+        const html = await homeResponse.text();
+        const feedLinks = extractFeedLinksFromHTML(html, baseUrl);
+        alternatives.push(...feedLinks);
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not scrape page for feed links: ${error.message}`);
+    }
+
+  } catch (error) {
+    console.log(`⚠️ Error discovering RSS feeds: ${error.message}`);
+  }
+
+  // Remove duplicates and original URL
+  return [...new Set(alternatives)].filter(feedUrl => feedUrl !== url);
+}
+
+function extractFeedLinksFromHTML(html: string, baseUrl: string): string[] {
+  const feedLinks: string[] = [];
+  
+  // Look for RSS/Atom feed links in HTML
+  const linkMatches = html.match(/<link[^>]+type=["'](application\/(rss\+xml|atom\+xml)|text\/xml)["'][^>]*>/gi) || [];
+  
+  for (const linkMatch of linkMatches) {
+    const hrefMatch = /href=["']([^"']+)["']/i.exec(linkMatch);
+    if (hrefMatch) {
+      try {
+        const feedUrl = new URL(hrefMatch[1], baseUrl).href;
+        feedLinks.push(feedUrl);
+      } catch {
+        // Skip invalid URLs
+      }
+    }
+  }
+
+  // Also look for common RSS link text
+  const rssLinkMatches = html.match(/<a[^>]+href=["']([^"']*(?:rss|feed|atom)[^"']*)["'][^>]*>/gi) || [];
+  
+  for (const linkMatch of rssLinkMatches) {
+    const hrefMatch = /href=["']([^"']+)["']/i.exec(linkMatch);
+    if (hrefMatch) {
+      try {
+        const feedUrl = new URL(hrefMatch[1], baseUrl).href;
+        feedLinks.push(feedUrl);
+      } catch {
+        // Skip invalid URLs
+      }
+    }
+  }
+
+  return feedLinks;
+}
+
+async function testRSSFeed(url: string): Promise<{isValidRSS: boolean, articleCount: number, hasContent: boolean}> {
+  try {
+    const feedResponse = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
+        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
+      }
+    });
+
+    if (!feedResponse.ok) {
+      return { isValidRSS: false, articleCount: 0, hasContent: false };
+    }
+
+    const feedContent = await feedResponse.text();
+    const isRSS = feedContent.includes('<rss') || feedContent.includes('<feed');
+    const hasItems = feedContent.includes('<item>') || feedContent.includes('<entry>');
+    
+    // Count approximate articles
+    const itemMatches = feedContent.match(/<item>|<entry>/g);
+    const articleCount = itemMatches ? itemMatches.length : 0;
+
+    return { 
+      isValidRSS: isRSS, 
+      articleCount, 
+      hasContent: hasItems && articleCount > 0 
+    };
+  } catch (error) {
+    console.log(`⚠️ RSS test failed for ${url}: ${error.message}`);
+    return { isValidRSS: false, articleCount: 0, hasContent: false };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -117,41 +267,57 @@ serve(async (req) => {
 
     console.log('✅ Source is accessible:', { contentType: result.contentType });
 
-    // For RSS sources, validate feed format
+    // For RSS sources, validate feed format and discover alternatives if needed
     if (sourceType === 'RSS') {
-      try {
-        const feedResponse = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
-            'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
-          }
-        });
+      const rssTest = await testRSSFeed(url);
+      result.isValidRSS = rssTest.isValidRSS;
+      result.hasRecentContent = rssTest.hasContent;
+      result.articleCount = rssTest.articleCount;
 
-        if (feedResponse.ok) {
-          const feedContent = await feedResponse.text();
-          const isRSS = feedContent.includes('<rss') || feedContent.includes('<feed');
-          const hasItems = feedContent.includes('<item>') || feedContent.includes('<entry>');
+      // If the provided URL is not a valid RSS feed, try to discover RSS feeds
+      if (!rssTest.isValidRSS) {
+        console.log('🔍 URL is not RSS, attempting to discover feeds...');
+        
+        const discoveredFeeds = await discoverRSSFeeds(url);
+        result.discoveredFeeds = discoveredFeeds;
+        
+        if (discoveredFeeds.length > 0) {
+          // Test the discovered feeds to find the best one
+          let bestFeed = null;
+          let bestScore = 0;
           
-          result.isValidRSS = isRSS;
-          result.hasRecentContent = hasItems;
-
-          if (!isRSS) {
-            result.warnings.push('URL does not appear to contain valid RSS/Atom feed');
+          for (const feedUrl of discoveredFeeds.slice(0, 5)) { // Test up to 5 feeds
+            const feedTest = await testRSSFeed(feedUrl);
+            if (feedTest.isValidRSS && feedTest.hasContent) {
+              const score = feedTest.articleCount + (feedTest.hasContent ? 10 : 0);
+              if (score > bestScore) {
+                bestFeed = feedUrl;
+                bestScore = score;
+              }
+            }
           }
-          if (!hasItems) {
-            result.warnings.push('RSS feed appears to be empty or has no items');
+          
+          if (bestFeed) {
+            result.suggestedUrl = bestFeed;
+            const suggestedTest = await testRSSFeed(bestFeed);
+            result.isValidRSS = suggestedTest.isValidRSS;
+            result.hasRecentContent = suggestedTest.hasContent;
+            result.articleCount = suggestedTest.articleCount;
+            
+            result.warnings.push(`Original URL is not an RSS feed. Found working RSS feed: ${bestFeed}`);
+            console.log('✅ Found working RSS feed:', bestFeed);
+          } else {
+            result.warnings.push('URL does not appear to contain valid RSS/Atom feed, and no working RSS feeds were discovered');
           }
-
-          // Count approximate articles
-          const itemMatches = feedContent.match(/<item>|<entry>/g);
-          result.articleCount = itemMatches ? itemMatches.length : 0;
-
-          console.log('📊 RSS validation:', { isRSS, hasItems, articleCount: result.articleCount });
         } else {
-          result.warnings.push(`Could not fetch RSS content: HTTP ${feedResponse.status}`);
+          result.warnings.push('URL does not appear to contain valid RSS/Atom feed, and no alternative feeds could be discovered');
         }
-      } catch (error) {
-        result.warnings.push(`RSS validation failed: ${error.message}`);
+      } else {
+        console.log('📊 RSS validation:', { isValidRSS: rssTest.isValidRSS, hasContent: rssTest.hasContent, articleCount: rssTest.articleCount });
+        
+        if (!rssTest.hasContent) {
+          result.warnings.push('RSS feed appears to be empty or has no items');
+        }
       }
     }
 
@@ -189,9 +355,12 @@ serve(async (req) => {
           // Determine which scraper to use
           const scraperFunction = topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
           
+          // Use the suggested URL if we discovered a better RSS feed
+          const testUrl = result.suggestedUrl || url;
+          
           const scraperPayload = topicType === 'regional' 
-            ? { feedUrl: url, region: region || 'default' }
-            : { feedUrl: url, topicId };
+            ? { feedUrl: testUrl, region: region || 'default' }
+            : { feedUrl: testUrl, topicId };
 
           console.log('🚀 Testing scraper:', { scraperFunction, payload: scraperPayload });
 
