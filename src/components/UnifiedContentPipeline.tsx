@@ -61,6 +61,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     approveArticle,
     approveStory,
     rejectStory,
+    returnToReview,
     deleteArticle,
     deleteStory,
     processingArticle,
@@ -276,6 +277,22 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
+  const handleEditSlide = (slide: any) => {
+    // Simple placeholder for now - could open a dialog to edit slide content
+    toast({
+      title: "Edit Slide",
+      description: "Slide editing functionality will be implemented soon",
+    });
+  };
+
+  const handleReturnToReview = async (storyId: string) => {
+    try {
+      await returnToReview(storyId);
+    } catch (error) {
+      console.error('Error returning story to review:', error);
+    }
+  };
+
   if (!selectedTopicId) {
     return (
       <Card>
@@ -358,9 +375,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                       onApprove={handleStoryApprove}
                       onReject={handleStoryReject}
                       onDelete={handleStoryDelete}
-                      onEditSlide={() => {}}
+                      onEditSlide={handleEditSlide}
                       onViewStory={() => {}}
-                      onReturnToReview={() => {}}
+                      onReturnToReview={handleReturnToReview}
                       onRefresh={refreshLegacy}
                       expandCarouselSection={() => {}}
                     />
@@ -390,9 +407,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                       onApprove={handleMultiTenantApproveStory}
                       onReject={handleMultiTenantRejectStory}
                       onDelete={() => {}}
-                      onEditSlide={() => {}}
+                      onEditSlide={handleEditSlide}
                       onViewStory={() => {}}
-                      onReturnToReview={() => {}}
+                      onReturnToReview={handleReturnToReview}
                       onRefresh={refreshMultiTenant}
                     />
                   </CardContent>
