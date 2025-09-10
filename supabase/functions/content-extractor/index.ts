@@ -188,17 +188,38 @@ serve(async (req) => {
   }
 });
 
-// AI-enhanced content extraction using OpenAI
+// AI-enhanced content extraction using OpenAI with optimized prompting
 async function enhanceContentWithAI(url: string, apiKey: string): Promise<any> {
-  const prompt = `Extract the main article content from this URL: ${url}
+  // Import optimized prompt builder
+  const { OpenAIPromptBuilder } = await import('../_shared/prompt-optimization.ts');
   
-Please provide:
-1. Title of the article
-2. Main body content (full text, not summary)
-3. Author if available
-4. Publication date if available
-
-Focus on extracting the complete article text, excluding navigation, ads, and sidebar content.`;
+  const promptData = new OpenAIPromptBuilder()
+    .context(`Target URL: ${url}\nTask: Extract main article content from webpage`)
+    .instructions([
+      'Identify and extract the primary article content from the webpage',
+      'Extract article title, complete body text, author, and publication date',
+      'Focus on the main article content, excluding navigation and peripheral elements',
+      'Preserve the original structure and formatting where relevant',
+      'Ensure extracted content is complete and coherent'
+    ])
+    .constraints([
+      'Extract complete article text, not summaries or excerpts',
+      'Exclude advertisements, navigation menus, and sidebar content',
+      'Maintain original tone, style, and factual accuracy',
+      'Return only structured data in the specified format',
+      'Skip content that appears to be boilerplate or template text'
+    ])
+    .outputFormat(
+      {
+        title: { type: 'string', description: 'Main article headline' },
+        body: { type: 'string', description: 'Complete article content' },
+        author: { type: 'string|null', description: 'Article author if available' },
+        published_at: { type: 'string|null', description: 'Publication date in ISO format' },
+        word_count: { type: 'number', description: 'Total word count of extracted content' }
+      },
+      'Return structured JSON object with extracted article data'
+    )
+    .buildWithSystem('You are a specialized content extraction assistant. Your role is to identify and extract clean, complete article content from web pages while filtering out non-article elements.');
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -207,42 +228,63 @@ Focus on extracting the complete article text, excluding navigation, ads, and si
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4.1-2025-04-14', // Use newer model
       messages: [
         {
           role: 'system',
-          content: 'You are a content extraction assistant. Extract clean, readable article content from web pages.'
+          content: promptData.system
         },
         {
           role: 'user',
-          content: prompt
+          content: promptData.user
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.1
+      max_completion_tokens: 2000 // Use max_completion_tokens for newer models
+      // Note: temperature not supported in newer models
     })
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    const errorData = await response.text();
+    console.error('OpenAI API Error:', errorData);
+    throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
   }
 
   const result = await response.json();
   const content = result.choices[0]?.message?.content;
 
   if (!content) {
-    throw new Error('No content returned from AI');
+    throw new Error('No content returned from OpenAI');
   }
 
-  // Parse the AI response to extract structured data
-  const wordCount = content.split(/\s+/).length;
-  
-  return {
-    title: 'AI Extracted Content',
-    body: content,
-    author: null,
-    published_at: new Date().toISOString(),
-    word_count: wordCount,
-    content_quality_score: Math.min(wordCount * 1.5, 100)
-  };
+  try {
+    // Try to parse structured JSON response
+    const extractedData = JSON.parse(content);
+    
+    // Validate required fields and calculate metrics
+    const wordCount = extractedData.body ? extractedData.body.split(/\s+/).length : 0;
+    
+    return {
+      title: extractedData.title || 'AI Extracted Content',
+      body: extractedData.body || content,
+      author: extractedData.author || null,
+      published_at: extractedData.published_at || new Date().toISOString(),
+      word_count: extractedData.word_count || wordCount,
+      content_quality_score: Math.min(wordCount * 1.5, 100)
+    };
+  } catch (parseError) {
+    console.warn('Failed to parse structured response, using raw content:', parseError);
+    
+    // Fallback to raw content processing
+    const wordCount = content.split(/\s+/).length;
+    
+    return {
+      title: 'AI Extracted Content',
+      body: content,
+      author: null,
+      published_at: new Date().toISOString(),
+      word_count: wordCount,
+      content_quality_score: Math.min(wordCount * 1.5, 100)
+    };
+  }
 }

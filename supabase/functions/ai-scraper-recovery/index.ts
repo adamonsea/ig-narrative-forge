@@ -211,20 +211,30 @@ async function tryUrlRecovery(failedUrl: string, source: any, apiKey: string): P
   try {
     const domain = new URL(failedUrl).hostname;
     
-    const prompt = `The RSS/news feed URL "${failedUrl}" for "${source.source_name}" (${domain}) is not working.
-
-Please help find the correct RSS feed URL for this news source. Consider:
-1. Common RSS feed paths like /feed, /rss, /news/feed, /feed.xml, etc.
-2. The domain structure and typical patterns
-3. Alternative feed formats (Atom feeds)
-
-Respond ONLY with a JSON object containing:
-{
-  "suggestedUrls": ["url1", "url2", "url3"],
-  "reasoning": "brief explanation"
-}
-
-Focus on the most likely working URLs for ${domain}.`;
+    // Import optimized prompt builder
+    const { DeepSeekPromptBuilder } = await import('../_shared/prompt-optimization.ts');
+    
+    const prompt = new DeepSeekPromptBuilder()
+      .context(`The RSS/news feed URL "${failedUrl}" for "${source.source_name}" (${domain}) is not working and needs recovery.`)
+      .addCriticalPoint(`Focus on the most likely working URLs for ${domain}`)
+      .addCriticalPoint('Provide only valid, testable URL suggestions')
+      .addInstruction('Analyze common RSS feed URL patterns for this domain', [
+        'Standard RSS paths: /feed, /rss, /news/feed, /feed.xml, /atom.xml',
+        'News-specific paths: /news/rss, /articles/feed, /blog/feed',
+        'Domain-specific variations and subdomain possibilities',
+        'Alternative feed formats (Atom, RSS2.0) and extensions'
+      ])
+      .addInstruction('Generate prioritized URL suggestions', [
+        'Provide 3-5 most likely working alternatives',
+        'Order suggestions by probability of success',
+        'Consider the source name and typical news site structures',
+        'Include brief technical reasoning for each suggestion'
+      ])
+      .outputFormat('JSON object with suggestedUrls array and reasoning string', {
+        suggestedUrls: ['string (complete URLs)'],
+        reasoning: 'string (brief explanation of selection logic)'
+      })
+      .build();
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -316,31 +326,44 @@ async function tryAIContentExtraction(url: string, source: any, region?: string,
     const html = await response.text();
     console.log(`📄 Fetched ${html.length} characters for AI analysis`);
 
-    // Use AI to extract structured content
-    const prompt = `Extract news articles from this HTML content. Find all article titles, content, authors, and publication dates.
-
-HTML Content:
-${html.substring(0, 15000)}...
-
-Extract up to 10 recent news articles. For each article, provide:
-- title: Clear headline
-- content: Full article text (at least 100 words)
-- author: Author name if available
-- published_at: Publication date in ISO format
-- article_url: Direct link to the article
-
-Respond with a JSON array:
-[
-  {
-    "title": "Article Title",
-    "content": "Full article content...",
-    "author": "Author Name",
-    "published_at": "2024-01-01T00:00:00Z",
-    "article_url": "https://example.com/article"
-  }
-]
-
-Focus on complete, substantial articles with meaningful content.`;
+    // Use optimized DeepSeek prompt for content extraction
+    const { DeepSeekPromptBuilder } = await import('../_shared/prompt-optimization.ts');
+    
+    const prompt = new DeepSeekPromptBuilder()
+      .context(`Extract structured news article data from this HTML webpage content:\n\nHTML Content:\n${html.substring(0, 15000)}...`)
+      .addCriticalPoint('Focus on complete, substantial articles with meaningful content (minimum 100 words)')
+      .addCriticalPoint('Extract up to 10 recent news articles maximum')
+      .addInstruction('Identify and extract article elements from HTML', [
+        'Article headlines/titles (look for <h1>, <h2>, title tags)',
+        'Full article body content (exclude navigation, ads, sidebars)',
+        'Author bylines and publication information',
+        'Publication timestamps and dates',
+        'Direct article URLs and canonical links'
+      ])
+      .addInstruction('Structure the extracted content', [
+        'Ensure each article has substantial content (100+ words minimum)',
+        'Clean HTML tags and formatting artifacts',
+        'Preserve paragraph breaks and content structure',
+        'Format dates in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)'
+      ])
+      .addInstruction('Quality control and validation', [
+        'Skip promotional content, navigation, or advertisement text',
+        'Verify articles are news content, not category pages',
+        'Ensure article URLs are complete and valid',
+        'Prioritize recent articles over older archived content'
+      ])
+      .outputFormat('JSON array of article objects', {
+        type: 'array',
+        maxItems: 10,
+        items: {
+          title: 'string (clear headline)',
+          content: 'string (full article text, 100+ words)',
+          author: 'string|null (author name if available)',
+          published_at: 'string (ISO date format)',
+          article_url: 'string (direct article link)'
+        }
+      })
+      .build();
 
     const aiResponse = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',

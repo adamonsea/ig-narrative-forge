@@ -666,20 +666,42 @@ async function generateSlidesWithDeepSeek(
   ctaConfig: any, 
   systemPrompt?: string
 ): Promise<SlideContent[]> {
+  const { DeepSeekPromptBuilder } = await import('../_shared/prompt-optimization.ts');
   const expectedSlideCount = getExpectedSlideCount(slideType, article);
   
-  // Simplified, focused prompt for DeepSeek
-  const prompt = systemPrompt || `Transform this news article into ${expectedSlideCount} engaging carousel slides.
-
-ARTICLE: "${article.title}"
-${article.body}
-
-SOURCE: ${publicationName}
-
-Create exactly ${expectedSlideCount} slides. Make each slide conversational and engaging while staying accurate to the source material.
-
-Response format:
-[{"slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..."}]`;
+  // Use optimized DeepSeek prompt structure
+  const prompt = systemPrompt || new DeepSeekPromptBuilder()
+    .context(`Transform this news article into ${expectedSlideCount} engaging carousel slides.\n\nARTICLE: "${article.title}"\n${article.body}\n\nSOURCE: ${publicationName}`)
+    .addCriticalPoint(`Create exactly ${expectedSlideCount} slides - no more, no less`)
+    .addCriticalPoint('Each slide must be substantial and informative (50-150 characters)')
+    .addInstruction('Analyze the article structure and identify key information', [
+      'Main story elements, facts, and developments',
+      'Supporting details and important context',
+      'Notable quotes, statistics, or data points',
+      'Timeline or sequence of events if applicable'
+    ])
+    .addInstruction('Create engaging, conversational slide content', [
+      'Use accessible language that engages social media audiences',
+      'Make each slide informative yet digestible',
+      'Maintain accuracy to source material - no speculation',
+      'Include compelling hooks and transitions between slides'
+    ])
+    .addInstruction('Generate visual prompts and accessibility content', [
+      'Create specific, actionable visual descriptions',
+      'Ensure visual prompts match slide content theme',
+      'Write descriptive alt text for screen reader accessibility',
+      'Consider visual storytelling that complements the text'
+    ])
+    .outputFormat('Return as valid JSON array with exact structure', {
+      type: 'array',
+      items: {
+        slideNumber: 'number (1, 2, 3...)',
+        content: 'string (slide text content)',
+        visualPrompt: 'string (description for image generation)',
+        altText: 'string (accessibility description)'
+      }
+    })
+    .build();
 
   try {
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -696,30 +718,44 @@ Response format:
             content: prompt
           }
         ],
-        temperature: 1.4,
+        temperature: 1.2, // Slightly reduced for better consistency
         max_tokens: 4000
       })
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status}`);
+      const errorData = await response.text();
+      console.error('DeepSeek API Error:', errorData);
+      throw new Error(`DeepSeek API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
     const content = data.choices[0].message.content;
     
-    // Parse JSON response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    // Enhanced JSON parsing with better error handling
+    let jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
+      // Try alternative parsing methods
+      const lines = content.split('\n');
+      const jsonLines = lines.filter(line => line.trim().startsWith('[') || line.includes('"slideNumber"'));
+      if (jsonLines.length > 0) {
+        jsonMatch = [jsonLines.join('\n')];
+      }
+    }
+    
+    if (!jsonMatch) {
+      console.error('Failed to parse JSON from DeepSeek response:', content);
       throw new Error('Could not parse JSON from DeepSeek response');
     }
     
     const slides = JSON.parse(jsonMatch[0]);
+    
+    // Validate and normalize slide structure
     return slides.map((slide: any, index: number) => ({
-      slideNumber: index + 1,
-      content: slide.content || '',
-      visualPrompt: slide.visualPrompt || `Visual for slide ${index + 1}`,
-      altText: slide.altText || `Slide ${index + 1} content`
+      slideNumber: slide.slideNumber || (index + 1),
+      content: slide.content || slide.text || `Slide ${index + 1} content`,
+      visualPrompt: slide.visualPrompt || slide.visual || `Visual for ${article.title} - slide ${index + 1}`,
+      altText: slide.altText || slide.alt || `Slide ${index + 1}: ${slide.content?.substring(0, 50) || 'Content'}...`
     }));
     
   } catch (error) {
@@ -737,27 +773,43 @@ async function generateSlidesWithOpenAI(
   ctaConfig: any, 
   systemPrompt?: string
 ): Promise<SlideContent[]> {
+  const { OpenAIPromptBuilder } = await import('../_shared/prompt-optimization.ts');
   const expectedSlideCount = getExpectedSlideCount(slideType, article);
   
-  const prompt = systemPrompt || `You are an expert content creator specializing in transforming news articles into engaging social media carousels.
+  // Use optimized XML-structured prompt for OpenAI
+  const promptData = systemPrompt ? { system: 'You are an expert content creator specializing in social media carousel generation.', user: systemPrompt } :
+    new OpenAIPromptBuilder()
+      .context(`Article Title: ${article.title}\nArticle Content: ${article.body}\nPublication: ${publicationName}\nTarget Slide Count: ${expectedSlideCount}`)
+      .instructions([
+        `Create exactly ${expectedSlideCount} engaging carousel slides from the provided article`,
+        'Transform news content into social media-optimized format',
+        'Ensure each slide is substantial and informative (50-150 characters)',
+        'Maintain journalistic accuracy while making content accessible',
+        'Create compelling visual descriptions for each slide',
+        'Include proper accessibility alt text for all visual elements'
+      ])
+      .constraints([
+        'Stay strictly within the bounds of the source article content',
+        'Do not add speculation or information not present in the original',
+        'Each slide must be self-contained yet part of the larger narrative',
+        'Visual prompts must be specific and actionable for image generation',
+        'Alt text must be descriptive for screen reader accessibility'
+      ])
+      .outputFormat(
+        {
+          type: 'array',
+          items: {
+            slideNumber: { type: 'integer', description: 'Sequential slide number starting from 1' },
+            content: { type: 'string', description: 'Main text content for the slide' },
+            visualPrompt: { type: 'string', description: 'Detailed description for visual/image generation' },
+            altText: { type: 'string', description: 'Accessibility text describing the slide content' }
+          }
+        },
+        'Return a valid JSON array with the exact structure specified'
+      )
+      .buildWithSystem('You are an expert content creator specializing in transforming news articles into engaging, accessible social media carousels. Focus on clarity, accuracy, and visual storytelling.');
 
-Create exactly ${expectedSlideCount} slides from this article. Each slide should be substantial and informative.
-
-Article Title: ${article.title}
-Article Content: ${article.body}
-Publication: ${publicationName}
-
-Format your response as a JSON array with this structure:
-[
-  {
-    "slideNumber": 1,
-    "content": "Slide content here",
-    "visualPrompt": "Description for visual",
-    "altText": "Alt text for accessibility"
-  }
-]
-
-Make each slide engaging and informative while maintaining accuracy.`;
+  try {
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -767,37 +819,71 @@ Make each slide engaging and informative while maintaining accuracy.`;
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4.1-2025-04-14', // Use newer model for better performance
         messages: [
           {
+            role: 'system',
+            content: promptData.system
+          },
+          {
             role: 'user',
-            content: prompt
+            content: promptData.user
           }
         ],
-        temperature: 0.7,
-        max_tokens: 4000
+        max_completion_tokens: 4000, // Use max_completion_tokens for newer models
+        // Note: temperature not supported in newer models
       })
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorData = await response.text();
+      console.error('OpenAI API Error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
     const content = data.choices[0].message.content;
     
-    // Parse JSON response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
+    // Enhanced JSON parsing with multiple fallback methods
+    let slides = null;
+    
+    try {
+      // Try direct JSON parse first
+      if (content.trim().startsWith('[')) {
+        slides = JSON.parse(content);
+      } else {
+        // Try to extract JSON from response
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          slides = JSON.parse(jsonMatch[0]);
+        }
+      }
+    } catch (parseError) {
+      console.error('JSON parsing failed, attempting alternative extraction:', parseError);
+      // Alternative extraction method for malformed JSON
+      const lines = content.split('\n');
+      const slideLines = lines.filter(line => line.includes('"slideNumber"') || line.includes('"content"'));
+      if (slideLines.length > 0) {
+        try {
+          slides = JSON.parse('[' + slideLines.join(',') + ']');
+        } catch {
+          throw new Error('Could not parse JSON from OpenAI response after multiple attempts');
+        }
+      }
+    }
+    
+    if (!slides) {
+      console.error('Failed to extract slides from OpenAI response:', content);
       throw new Error('Could not parse JSON from OpenAI response');
     }
     
-    const slides = JSON.parse(jsonMatch[0]);
+    // Validate and normalize slide structure with enhanced error handling
     return slides.map((slide: any, index: number) => ({
-      slideNumber: index + 1,
-      content: slide.content || '',
-      visualPrompt: slide.visualPrompt || `Visual for slide ${index + 1}`,
-      altText: slide.altText || `Slide ${index + 1} content`
+      slideNumber: slide.slideNumber || (index + 1),
+      content: slide.content || slide.text || `Generated slide ${index + 1}`,
+      visualPrompt: slide.visualPrompt || slide.visual || slide.imagePrompt || `Visual representation for "${article.title}" - slide ${index + 1}`,
+      altText: slide.altText || slide.alt || slide.description || `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`
+    }));
     }));
     
   } catch (error) {
