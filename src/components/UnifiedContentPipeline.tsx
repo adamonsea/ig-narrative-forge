@@ -26,6 +26,7 @@ interface Topic {
   keywords?: string[];
   landmarks?: string[];
   organizations?: string[];
+  default_tone?: 'formal' | 'conversational' | 'engaging';
 }
 
 interface UnifiedContentPipelineProps {
@@ -92,7 +93,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       try {
         const { data, error } = await supabase
           .from('topics')
-          .select('id, name, topic_type, is_active, keywords, landmarks, organizations')
+          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone')
           .eq('is_active', true)
           .order('name');
 
@@ -356,12 +357,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               {/* Legacy Stories */}
               {legacyStories.length > 0 && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      Legacy Stories
-                      <Badge variant="secondary">{legacyStories.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
                   <CardContent>
                     <StoriesList
                       stories={legacyStories}
@@ -388,12 +383,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               {/* Multi-tenant Stories */}
               {multiTenantStories.length > 0 && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      Multi-tenant Stories
-                      <Badge variant="default">{multiTenantStories.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
                   <CardContent>
                     <MultiTenantStoriesList
                       stories={multiTenantStories}
@@ -425,13 +414,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             {/* Legacy Articles */}
             {legacyArticles.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Legacy Articles
-                    <Badge variant="secondary">{legacyArticles.length}</Badge>
-                  </CardTitle>
-                  <CardDescription>Articles from the legacy system ready for approval</CardDescription>
-                </CardHeader>
                 <CardContent>
                   <ArticlesList
                     articles={legacyArticles}
@@ -447,7 +429,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                      onPreview={setPreviewArticle}
                     onApprove={handleLegacyApprove}
                     onDelete={deleteArticle}
-                    defaultTone="conversational"
+                    defaultTone={currentTopic?.default_tone || 'conversational'}
                     defaultWritingStyle="journalistic"
                     topicKeywords={[]}
                     topicLandmarks={[]}
@@ -457,16 +439,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </Card>
             )}
             
-            {/* Multi-tenant Articles */}
             {multiTenantArticles.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Multi-tenant Articles
-                    <Badge variant="default">{multiTenantArticles.length}</Badge>
-                  </CardTitle>
-                  <CardDescription>Articles from the multi-tenant system ready for approval</CardDescription>
-                </CardHeader>
                 <CardContent>
                   <MultiTenantArticlesList
                     articles={multiTenantArticles}
@@ -482,7 +456,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                     onApprove={handleMultiTenantApproveWrapper}
                     onDelete={handleMultiTenantDelete}
                     onBulkDelete={() => {}}
-                    defaultTone="conversational"
+                    defaultTone={currentTopic?.default_tone || 'conversational'}
                     defaultWritingStyle="journalistic"
                     onRefresh={refreshMultiTenant}
                   />
@@ -508,13 +482,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             {/* Legacy Queue */}
             {legacyQueue.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Legacy Processing Queue
-                    <Badge variant="secondary">{legacyQueue.length}</Badge>
-                  </CardTitle>
-                  <CardDescription>Legacy articles being processed into stories</CardDescription>
-                </CardHeader>
                 <CardContent>
                   <QueueList
                     queueItems={legacyQueue}
@@ -529,13 +496,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             {/* Multi-tenant Queue */}
             {multiTenantQueue.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Multi-tenant Processing Queue
-                    <Badge variant="default">{multiTenantQueue.length}</Badge>
-                  </CardTitle>
-                  <CardDescription>Multi-tenant articles being processed into stories</CardDescription>
-                </CardHeader>
                 <CardContent>
                   <MultiTenantQueueList
                     queueItems={multiTenantQueue}
