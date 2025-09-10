@@ -157,6 +157,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `${typeLabels[slideType]} generation started using DeepSeek`
       });
       
+      // Don't refresh immediately - let animation complete first
       // Delay refresh to allow animation to complete (match slide-out-right duration)
       setTimeout(() => {
         setAnimatingArticles(prev => {
@@ -439,6 +440,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: `"${articleTitle}" has been discarded and won't be re-imported`
       });
 
+      // Don't refresh immediately - let animation complete first
       // Clean up animation state after animation completes (match discard duration)
       setTimeout(() => {
         setAnimatingArticles(prev => {
@@ -458,9 +460,6 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
     } catch (error) {
       console.error('Error deleting article:', error);
       
-      // Reverse optimistic update on error by refreshing
-      onRefresh();
-      
       // Reverse animation on error
       setAnimatingArticles(prev => {
         const newSet = new Set(prev);
@@ -478,6 +477,9 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         description: "Failed to delete article",
         variant: "destructive"
       });
+      
+      // Refresh on error to ensure clean state
+      onRefresh();
     }
   };
 

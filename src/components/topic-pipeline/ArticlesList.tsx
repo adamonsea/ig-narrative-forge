@@ -247,18 +247,27 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
     const currentSimilarArticles = similarArticles.get(article.id) || [];
     const isSimilarToDeleted = checkAgainstRecentDeletions(article);
     
+    // Use persistent DOM attributes to prevent animation interference from real-time updates
+    const cardKey = `article-${article.id}`;
+    
     return (
       <Card 
-        key={article.id} 
+        key={article.id}
+        data-article-id={article.id}
         className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
           isProcessing && isAnimatingAway
-            ? 'animate-slide-out-right'
+            ? 'animate-slide-out-right [&[data-animating="slide"]]:opacity-0 [&[data-animating="slide"]]:pointer-events-none'
             : isDeleting && isAnimatingAway
-            ? 'animate-discard'
+            ? 'animate-discard [&[data-animating="discard"]]:opacity-0 [&[data-animating="discard"]]:pointer-events-none'
             : isSimilarToDeleted
             ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-950/10'
             : ''
         }`}
+        data-animating={
+          isProcessing && isAnimatingAway ? 'slide' 
+          : isDeleting && isAnimatingAway ? 'discard' 
+          : ''
+        }
         style={{
           animationFillMode: 'forwards'
         }}
