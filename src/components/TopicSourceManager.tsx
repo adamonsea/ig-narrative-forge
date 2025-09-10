@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Globe, AlertCircle, CheckCircle } from 'lucide-react';
-import { ScrapingProgressIndicator } from './ScrapingProgressIndicator';
+import { GatheringProgressIndicator } from './GatheringProgressIndicator';
 
 interface ContentSource {
   id: string;
@@ -264,7 +264,7 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
   return (
     <div className="space-y-6">
       {/* Real-time Progress Indicator */}
-      <ScrapingProgressIndicator 
+      <GatheringProgressIndicator 
         topicId={topicId}
         isVisible={showProgress}
         onComplete={() => setShowProgress(false)}

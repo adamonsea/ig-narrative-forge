@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface ScrapingStatus {
+interface GatheringStatus {
   sourceId: string;
   sourceName: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -15,24 +15,24 @@ interface ScrapingStatus {
   error?: string;
 }
 
-interface ScrapingProgressIndicatorProps {
+interface GatheringProgressIndicatorProps {
   topicId: string;
   isVisible: boolean;
   onComplete?: () => void;
 }
 
-export const ScrapingProgressIndicator = ({ 
+export const GatheringProgressIndicator = ({ 
   topicId, 
   isVisible, 
   onComplete 
-}: ScrapingProgressIndicatorProps) => {
-  const [scrapingStatuses, setScrapingStatuses] = useState<ScrapingStatus[]>([]);
+}: GatheringProgressIndicatorProps) => {
+  const [gatheringStatuses, setGatheringStatuses] = useState<GatheringStatus[]>([]);
   const [totalProgress, setTotalProgress] = useState(0);
 
   useEffect(() => {
     if (!isVisible || !topicId) return;
 
-    const fetchScrapingStatus = async () => {
+    const fetchGatheringStatus = async () => {
       try {
         // Get all active sources for this topic
         const { data: sources, error } = await supabase
@@ -43,12 +43,12 @@ export const ScrapingProgressIndicator = ({
 
         if (error) throw error;
 
-        const statuses: ScrapingStatus[] = sources?.map(source => {
+        const statuses: GatheringStatus[] = sources?.map(source => {
           // Determine status based on recent activity and success rate
           const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
           const isRecent = lastScraped && (Date.now() - lastScraped.getTime()) < 60000; // Within last minute
           
-          let status: ScrapingStatus['status'] = 'pending';
+          let status: GatheringStatus['status'] = 'pending';
           let progress = 0;
           let articlesFound = source.articles_scraped || 0;
 
@@ -82,7 +82,7 @@ export const ScrapingProgressIndicator = ({
           };
         }) || [];
 
-        setScrapingStatuses(statuses);
+        setGatheringStatuses(statuses);
 
         // Calculate overall progress
         const completedSources = statuses.filter(s => s.status === 'completed' || s.status === 'failed').length;
@@ -101,19 +101,19 @@ export const ScrapingProgressIndicator = ({
     };
 
     // Initial fetch
-    fetchScrapingStatus();
+    fetchGatheringStatus();
 
     // Set up polling every 3 seconds
-    const interval = setInterval(fetchScrapingStatus, 3000);
+    const interval = setInterval(fetchGatheringStatus, 3000);
 
     return () => clearInterval(interval);
   }, [topicId, isVisible, onComplete]);
 
-  if (!isVisible || scrapingStatuses.length === 0) {
+  if (!isVisible || gatheringStatuses.length === 0) {
     return null;
   }
 
-  const getStatusIcon = (status: ScrapingStatus['status']) => {
+  const getStatusIcon = (status: GatheringStatus['status']) => {
     switch (status) {
       case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
@@ -126,7 +126,7 @@ export const ScrapingProgressIndicator = ({
     }
   };
 
-  const getStatusBadge = (status: ScrapingStatus['status']) => {
+  const getStatusBadge = (status: GatheringStatus['status']) => {
     switch (status) {
       case 'completed':
         return <Badge variant="default" className="bg-green-500">Completed</Badge>;
@@ -148,12 +148,12 @@ export const ScrapingProgressIndicator = ({
         </CardTitle>
         <Progress value={totalProgress} className="w-full" />
         <p className="text-sm text-muted-foreground">
-          {Math.round(totalProgress)}% complete ({scrapingStatuses.filter(s => s.status === 'completed' || s.status === 'failed').length} of {scrapingStatuses.length} sources)
+          {Math.round(totalProgress)}% complete ({gatheringStatuses.filter(s => s.status === 'completed' || s.status === 'failed').length} of {gatheringStatuses.length} sources)
         </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {scrapingStatuses.map((status) => (
+          {gatheringStatuses.map((status) => (
             <div key={status.sourceId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
                 {getStatusIcon(status.status)}

@@ -105,8 +105,8 @@ export const UnifiedSourceManager = ({
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [scrapingSource, setScrapingSource] = useState<string | null>(null);
-  const [scrapingAll, setScrapingAll] = useState(false);
+  const [gatheringSource, setGatheringSource] = useState<string | null>(null);
+  const [gatheringAll, setGatheringAll] = useState(false);
   
   const [newSource, setNewSource] = useState({
     source_name: '',
@@ -420,7 +420,7 @@ export const UnifiedSourceManager = ({
             });
           }
         } catch (scrapeError) {
-        console.error('Initial gathering failed:', scrapeError);
+        console.error('Initial content gathering failed:', scrapeError);
           // Don't show error to user as source was still added successfully
         }
       } else {
@@ -460,7 +460,7 @@ export const UnifiedSourceManager = ({
             }
           });
         } catch (scrapeError) {
-          console.error('Initial gathering failed:', scrapeError);
+          console.error('Initial content gathering failed:', scrapeError);
         }
       }
 
@@ -610,11 +610,11 @@ export const UnifiedSourceManager = ({
     }
 
     try {
-      setScrapingSource(source.id);
+      setGatheringSource(source.id);
       
       toast({
-        title: 'Scraping Started',
-        description: `Scraping content from ${source.source_name}...`,
+        title: 'Content Gathering Started',
+        description: `Now gathering articles from ${source.source_name}...`,
       });
 
       let scraperFunction = 'universal-scraper';
@@ -668,26 +668,43 @@ export const UnifiedSourceManager = ({
           description += `, filtered ${filtered} for low relevance`;
         }
         
-        toast({
-          title: stored > 0 ? 'Scraping Complete' : 'Scraping Complete - No Articles Stored',
-          description,
-          variant: stored > 0 ? 'default' : 'destructive'
-        });
+        // Improved toast messaging based on results
+        if (stored > 0) {
+          toast({
+            title: 'Content Gathering Complete',
+            description,
+            variant: 'default'
+          });
+        } else if (totalFound > 0) {
+          toast({
+            title: 'Gathering Complete - Articles Filtered',
+            description: `Found ${totalFound} articles but they weren't relevant enough for your feed. Consider adjusting your topic keywords or sources.`,
+            variant: 'default'
+          });
+        } else {
+          toast({
+            title: 'Gathering Complete - No Articles Found',
+            description: `No articles were discovered from ${source.source_name}. The source may need time to publish new content.`,
+            variant: 'default'
+          });
+        }
       } else {
-        throw new Error(data?.error || 'Scraping failed');
+        throw new Error(data?.error || 'Content gathering failed');
       }
 
       loadSources();
       onSourcesChange();
     } catch (error) {
-      console.error('Scraping error:', error);
+      console.error('Content gathering error:', error);
       toast({
-        title: 'Scraping Failed',
-        description: error.message || 'Failed to scrape content from source',
+        title: 'Content Gathering Failed',
+        description: error.message?.includes('Failed to fetch') 
+          ? `Unable to connect to ${source.source_name}. The source may be temporarily unavailable.`
+          : error.message || 'Failed to gather content from source',
         variant: 'destructive',
       });
     } finally {
-      setScrapingSource(null);
+      setGatheringSource(null);
     }
   };
 
@@ -697,21 +714,21 @@ export const UnifiedSourceManager = ({
     if (activeSources.length === 0) {
       toast({
         title: 'No Sources',
-        description: 'No active sources found to scrape',
+        description: 'No active sources found to gather from',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      setScrapingAll(true);
+      setGatheringAll(true);
       let totalArticlesFound = 0;
       let totalArticlesScraped = 0;
       let failedSources = 0;
 
       toast({
-        title: 'Bulk Scraping Started',
-        description: `Scraping ${activeSources.length} sources...`,
+        title: 'Bulk Content Gathering Started',
+        description: `Now gathering from ${activeSources.length} sources...`,
       });
 
       for (const source of activeSources) {
@@ -761,14 +778,14 @@ export const UnifiedSourceManager = ({
       loadSources();
       onSourcesChange();
     } catch (error) {
-      console.error('Bulk scraping error:', error);
+      console.error('Bulk content gathering error:', error);
       toast({
-        title: 'Bulk Scraping Failed',
-        description: error.message || 'Failed to complete bulk scraping',
+        title: 'Bulk Content Gathering Failed',
+        description: error.message || 'Failed to complete bulk content gathering',
         variant: 'destructive',
       });
     } finally {
-      setScrapingAll(false);
+      setGatheringAll(false);
     }
   };
 
@@ -819,15 +836,15 @@ export const UnifiedSourceManager = ({
         <div className="flex gap-2">
           <Button 
             onClick={handleScrapeAll}
-            disabled={scrapingAll || sources.filter(s => s.is_active).length === 0}
+            disabled={gatheringAll || sources.filter(s => s.is_active).length === 0}
             variant="outline"
           >
-            {scrapingAll ? (
+            {gatheringAll ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
               <Download className="w-4 h-4 mr-2" />
             )}
-            Scrape All Active
+            Gather All Active
           </Button>
           <Button onClick={() => setShowAddForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -998,7 +1015,14 @@ export const UnifiedSourceManager = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
-                    {getSourceHealthBadge(source)}
+                    {getSourceHealthBadge ? (
+                      <EnhancedSourceStatusBadge 
+                        source={source} 
+                        isGathering={gatheringSource === source.id}
+                      />
+                    ) : (
+                      getSourceHealthBadge(source)
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
@@ -1027,9 +1051,9 @@ export const UnifiedSourceManager = ({
                     variant="outline"
                     size="sm"
                     onClick={() => handleScrapeSource(source)}
-                    disabled={scrapingSource === source.id || !source.feed_url}
+                    disabled={gatheringSource === source.id || !source.feed_url}
                   >
-                    {scrapingSource === source.id ? (
+                    {gatheringSource === source.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Play className="w-4 h-4" />

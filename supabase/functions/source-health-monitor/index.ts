@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
             })
             .eq('id', source.id);
             
-          console.log(`🔄 Changed scraping method for ${source.source_name} to ${metrics.alternativeMethod}`);
+          console.log(`🔄 Changed gathering method for ${source.source_name} to ${metrics.alternativeMethod}`);
           methodsChanged++;
         }
         
@@ -157,59 +157,78 @@ async function analyzeSourceHealth(
   // Quick accessibility check
   const accessCheck = await retryStrategy.quickAccessibilityCheck(source.feed_url);
   
-  // Calculate health score (0-100)
+  // Calculate health score (0-100) with heavy emphasis on content relevance
   let healthScore = 0;
   
+  const articlesScraped = source.articles_scraped || 0;
+  const successRate = source.success_rate || 0;
+  
+  // Accessibility check (20 points max)
   if (accessCheck.accessible) {
-    healthScore += 30; // Accessibility bonus
+    healthScore += 20;
   }
   
-  if (source.success_rate !== null) {
-    healthScore += (source.success_rate * 0.5); // Success rate contributes 50 points max
+  // CRITICAL: Content storage success is the most important factor (50 points max)
+  if (articlesScraped >= 5 && successRate >= 80) {
+    healthScore += 50; // Productive source
+  } else if (articlesScraped >= 3 && successRate >= 50) {
+    healthScore += 35; // Active source
+  } else if (articlesScraped > 0 && successRate > 0) {
+    healthScore += 20; // Some success
+  } else if (successRate >= 70 && articlesScraped === 0) {
+    healthScore += 15; // Filtered but connected
   }
+  // No points for sources that never store articles
   
+  // Response time bonus (10 points max)
   if (source.avg_response_time_ms && source.avg_response_time_ms < 10000) {
-    healthScore += 20; // Fast response bonus
+    healthScore += 10;
   }
   
-  // Recent activity bonus
+  // Recent activity bonus (20 points max)
   if (source.last_scraped_at) {
     const daysSinceLastScrape = (Date.now() - new Date(source.last_scraped_at).getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceLastScrape < 1) {
+      healthScore += 20;
+    } else if (daysSinceLastScrape < 7) {
       healthScore += 10;
     }
   }
 
-  // Determine recommended action
+  // Determine recommended action based on actual content performance
   let recommendedAction: 'none' | 'monitor' | 'method_change' | 'deactivate' | 'investigate' = 'none';
   let alternativeMethod: string | undefined;
 
   if (!accessCheck.accessible) {
-    if (source.success_rate === 0 && (source.articles_scraped || 0) >= 3) {
+    if (articlesScraped >= 3 && successRate === 0) {
       recommendedAction = 'deactivate';
     } else {
       recommendedAction = 'investigate';
     }
-  } else if (source.success_rate !== null && source.success_rate < 20 && (source.articles_scraped || 0) >= 5) {
+  } else if (articlesScraped >= 5 && successRate < 20) {
     // Look for better scraping method
     const betterMethod = await findBetterScrapingMethod(supabase, source);
     if (betterMethod) {
       recommendedAction = 'method_change';
       alternativeMethod = betterMethod;
-    } else if (source.success_rate === 0) {
-      recommendedAction = 'deactivate';
     } else {
-      recommendedAction = 'monitor';
+      recommendedAction = 'deactivate';
     }
-  } else if (source.success_rate !== null && source.success_rate < 50) {
+  } else if (articlesScraped >= 3 && successRate < 50) {
+    recommendedAction = 'monitor';
+  } else if (articlesScraped === 0 && successRate >= 70) {
+    // High connection success but no stored articles - needs monitoring
     recommendedAction = 'monitor';
   }
+
+  // A source is only "healthy" if it actually contributes content regularly
+  const isHealthy = healthScore >= 70 && articlesScraped >= 3 && successRate >= 50;
 
   return {
     sourceId: source.id,
     sourceName: source.source_name,
-    isHealthy: healthScore >= 60,
-    successRate: source.success_rate || 0,
+    isHealthy,
+    successRate: successRate,
     avgResponseTime: source.avg_response_time_ms || 0,
     lastError: accessCheck.error || source.last_error,
     recommendedAction,
