@@ -2353,6 +2353,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_stuck_scrape_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_story_from_multi_tenant: {
         Args: {
           p_shared_content_id: string
