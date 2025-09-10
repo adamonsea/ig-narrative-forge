@@ -64,11 +64,13 @@ export function EnhancedSourceStatusBadge({
       Math.floor((Date.now() - lastScraped.getTime()) / (1000 * 60 * 60 * 24)) : 999;
     const hasRecentActivity = daysSinceLastScrape <= 7;
     
-    // CRITICAL: Prioritize actual content storage success
-    // A source that consistently stores 0 articles should NOT be "healthy"
+    // ENHANCED: Check for recent articles even if source metrics are stale
+    // This addresses the disconnect between source tracking and actual article flow
+    const hasRecentArticles = source.success_count && source.success_count > 0 && daysSinceLastScrape <= 3;
+    const recentlyActive = hasRecentActivity || hasRecentArticles;
     
     // Healthy: Must actually be storing relevant articles regularly
-    if (successRate >= 80 && hasRecentActivity && articlesScraped >= 5) {
+    if (successRate >= 80 && recentlyActive && articlesScraped >= 5) {
       return {
         status: 'productive',
         label: 'Productive',
@@ -79,8 +81,20 @@ export function EnhancedSourceStatusBadge({
       };
     }
     
+    // Recently Active: Source metrics are stale but articles are flowing
+    if (!hasRecentActivity && hasRecentArticles) {
+      return {
+        status: 'recently_active',
+        label: 'Recently Active',
+        variant: 'default' as const,
+        icon: CheckCircle,
+        className: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400',
+        tooltip: 'Articles flowing despite stale source metrics - tracking will update soon'
+      };
+    }
+    
     // Active but Filtered: Connecting successfully but not finding relevant content
-    if (successRate >= 70 && hasRecentActivity && articlesScraped < 3) {
+    if (successRate >= 70 && recentlyActive && articlesScraped < 3) {
       return {
         status: 'filtered',
         label: 'Active but Filtered',
@@ -92,7 +106,7 @@ export function EnhancedSourceStatusBadge({
     }
 
     // Active: Moderate success rate with some content stored
-    if (successRate >= 50 && hasRecentActivity && articlesScraped >= 3) {
+    if (successRate >= 50 && recentlyActive && articlesScraped >= 3) {
       return {
         status: 'active',
         label: 'Active',
@@ -104,7 +118,7 @@ export function EnhancedSourceStatusBadge({
     }
 
     // Quality Review: Lower success rate but still functional
-    if (successRate < 50 && hasRecentActivity) {
+    if (successRate < 50 && recentlyActive) {
       return {
         status: 'quality_review',
         label: 'Quality review',
@@ -116,7 +130,7 @@ export function EnhancedSourceStatusBadge({
     }
 
     // Idle: No recent activity
-    if (!hasRecentActivity && daysSinceLastScrape < 30) {
+    if (!recentlyActive && daysSinceLastScrape < 30) {
       return {
         status: 'idle',
         label: 'Idle',

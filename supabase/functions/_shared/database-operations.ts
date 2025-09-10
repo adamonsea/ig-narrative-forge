@@ -263,39 +263,50 @@ export class DatabaseOperations {
     sourceId: string,
     success: boolean,
     method: string,
-    responseTime: number
+    responseTime: number,
+    articlesStored: number = 0
   ): Promise<void> {
     try {
       // Get current metrics
       const { data: source } = await this.supabase
         .from('content_sources')
-        .select('articles_scraped, success_rate, avg_response_time_ms')
+        .select('success_count, failure_count, articles_scraped, success_rate, avg_response_time_ms')
         .eq('id', sourceId)
         .single();
 
       if (source) {
-        const totalScrapes = (source.articles_scraped || 0) + 1;
-        const currentSuccessRate = source.success_rate || 100;
-        const newSuccessRate = success 
-          ? ((currentSuccessRate * (totalScrapes - 1)) + 100) / totalScrapes
-          : ((currentSuccessRate * (totalScrapes - 1)) + 0) / totalScrapes;
+        const successCount = (source.success_count || 0) + (success ? 1 : 0);
+        const failureCount = (source.failure_count || 0) + (success ? 0 : 1);
+        const totalAttempts = successCount + failureCount;
+        const newSuccessRate = totalAttempts > 0 ? Math.round((successCount / totalAttempts) * 100) : 100;
 
         const currentAvgResponseTime = source.avg_response_time_ms || 0;
-        const newAvgResponseTime = ((currentAvgResponseTime * (totalScrapes - 1)) + responseTime) / totalScrapes;
+        const totalScrapes = (source.articles_scraped || 0) + Math.max(1, articlesStored);
+        const newAvgResponseTime = totalScrapes > 1 
+          ? Math.round(((currentAvgResponseTime * (totalScrapes - 1)) + responseTime) / totalScrapes)
+          : responseTime;
+
+        const updateData = {
+          success_count: successCount,
+          failure_count: failureCount,
+          success_rate: newSuccessRate,
+          avg_response_time_ms: Math.round(newAvgResponseTime),
+          last_scraped_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          scraping_method: method
+        };
+
+        // Only update articles_scraped if we actually stored articles
+        if (articlesStored > 0) {
+          updateData.articles_scraped = (source.articles_scraped || 0) + articlesStored;
+        }
 
         await this.supabase
           .from('content_sources')
-          .update({
-            articles_scraped: totalScrapes,
-            success_rate: Math.round(newSuccessRate * 100) / 100,
-            avg_response_time_ms: Math.round(newAvgResponseTime),
-            last_scraped_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            scraping_method: method
-          })
+          .update(updateData)
           .eq('id', sourceId);
 
-        console.log(`📈 Updated source metrics: ${totalScrapes} scrapes, ${Math.round(newSuccessRate)}% success rate`);
+        console.log(`📈 Updated source metrics: success ${successCount}/${totalScrapes}, ${newSuccessRate}% rate${articlesStored > 0 ? `, +${articlesStored} articles` : ''}`);
       }
     } catch (error) {
       console.error(`❌ Error updating source metrics: ${error.message}`);

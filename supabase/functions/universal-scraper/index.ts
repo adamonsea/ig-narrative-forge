@@ -276,13 +276,14 @@ serve(async (req) => {
       console.log(`❌ Scraping failed or no articles found`);
     }
 
-    // Update source metrics
+    // Update source metrics with actual articles stored count
     const responseTime = Date.now() - startTime;
     await dbOps.updateSourceMetrics(
       sourceId,
       scrapingResult.success,
       scrapingResult.method,
-      responseTime
+      responseTime,
+      storedCount // Pass actual stored count
     );
 
     // Log system event

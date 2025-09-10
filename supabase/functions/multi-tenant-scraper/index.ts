@@ -106,11 +106,23 @@ serve(async (req) => {
       }
     }
 
+    // Update source metrics properly
     if (sourceId) {
-      await supabase.from('content_sources').update({
-        articles_scraped: supabase.sql`articles_scraped + ${result.articlesScraped}`,
-        last_scraped_at: new Date().toISOString()
-      }).eq('id', sourceId);
+      const { error: updateError } = await supabase
+        .from('content_sources')
+        .update({
+          articles_scraped: supabase.sql`COALESCE(articles_scraped, 0) + ${result.articlesScraped}`,
+          last_scraped_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          success_count: supabase.sql`COALESCE(success_count, 0) + 1`
+        })
+        .eq('id', sourceId);
+        
+      if (updateError) {
+        console.error('Failed to update source metrics:', updateError);
+      } else {
+        console.log(`✅ Updated source metrics: +${result.articlesScraped} articles`);
+      }
     }
 
     console.log('✅ Multi-tenant test completed:', result);

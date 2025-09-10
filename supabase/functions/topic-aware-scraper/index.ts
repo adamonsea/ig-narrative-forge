@@ -254,8 +254,8 @@ serve(async (req) => {
       };
     }
 
-    // Update source metrics
-    await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime);
+    // Update source metrics with actual articles stored count  
+    await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime, legacyResult.stored);
 
     // Log the operation with both legacy and multi-tenant results
     await dbOps.logSystemEvent('info', `PARALLEL Topic-aware scraping completed for ${topicData.name}`, {
