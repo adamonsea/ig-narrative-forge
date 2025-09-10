@@ -32,6 +32,19 @@
     @apply text-xs sm:text-sm break-words;
   }
   
+  /* Animation classes for smooth card removal */
+  .animate-slide-out-right {
+    @apply animate-[slide-out-right_0.3s_ease-in-out_forwards];
+  }
+  
+  .animate-slide-out-left {
+    @apply animate-[slide-out-left_0.3s_ease-in-out_forwards];
+  }
+  
+  .animate-discard {
+    @apply animate-[discard_0.3s_ease-in-out_forwards];
+  }
+  
   /* Line clamp utilities */
   .line-clamp-1 {
     overflow: hidden;

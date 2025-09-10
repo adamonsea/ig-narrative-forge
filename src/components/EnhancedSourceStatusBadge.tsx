@@ -103,15 +103,15 @@ export function EnhancedSourceStatusBadge({
       };
     }
 
-    // Technical Issues: Low success rate indicating connection/parsing problems
+    // Quality Review: Lower success rate but still functional
     if (successRate < 50 && hasRecentActivity) {
       return {
-        status: 'technical_issues',
-        label: 'Connection issues',
+        status: 'quality_review',
+        label: 'Quality review',
         variant: 'outline' as const,
         icon: AlertCircle,
-        className: 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400',
-        tooltip: 'Having difficulty connecting to or parsing this source'
+        className: 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400',
+        tooltip: 'Source is working but content quality is being reviewed'
       };
     }
 
@@ -127,15 +127,15 @@ export function EnhancedSourceStatusBadge({
       };
     }
 
-    // Trying to reconnect: Very stale or consistent failures
+    // Needs attention: Very stale or consistent failures  
     if (daysSinceLastScrape >= 30 || (automationLastError && successRate < 20)) {
       return {
-        status: 'reconnecting',
-        label: 'Trying to reconnect',
+        status: 'needs_attention',
+        label: 'Needs attention',
         variant: 'outline' as const,
         icon: RefreshCw,
-        className: 'bg-gray-50 text-gray-600 border-gray-300 dark:bg-gray-900/20 dark:text-gray-500',
-        tooltip: 'Unable to connect or gather articles'
+        className: 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400',
+        tooltip: 'Source may need configuration review'
       };
     }
 

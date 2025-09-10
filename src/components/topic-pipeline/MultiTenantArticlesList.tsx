@@ -143,12 +143,9 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                   onCheckedChange={() => handleSelectArticle(article.id)}
                   className="mt-1"
                 />
-                <CardTitle className="text-lg leading-snug break-words hyphens-auto flex items-start gap-2 flex-1">
-                  {article.title}
-                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
-                    Multi-Tenant
-                  </Badge>
-                </CardTitle>
+                 <CardTitle className="text-lg leading-snug break-words hyphens-auto flex items-start gap-2 flex-1">
+                   {article.title}
+                 </CardTitle>
               </div>
               
               {/* Keywords */}
@@ -332,8 +329,8 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
       <div className="text-center py-12">
         <div className="text-muted-foreground mb-4">
           <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p className="text-lg font-medium">No Multi-Tenant Articles</p>
-          <p className="text-sm">Articles from the new scraping system will appear here</p>
+          <p className="text-lg font-medium">No Articles</p>
+          <p className="text-sm">Articles from active sources will appear here</p>
         </div>
         <div className="flex gap-2 justify-center">
           <Button 
@@ -382,8 +379,8 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
             )}
           </div>
           
-          <Badge variant="default" className="bg-blue-100 text-blue-800">
-            Multi-Tenant System
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Active Sources
           </Badge>
         </div>
       )}
@@ -396,7 +393,7 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
               High Quality Articles ({aboveThresholdArticles.length})
             </h3>
             <Badge variant="default" className="bg-green-100 text-green-800">
-              Multi-Tenant
+              Quality Content
             </Badge>
           </div>
           <div className="space-y-4">

@@ -178,8 +178,8 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       <div className="text-center py-12">
         <div className="text-muted-foreground mb-4">
           <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p className="text-lg font-medium">No Multi-Tenant Stories Ready</p>
-          <p className="text-sm">Generated multi-tenant stories will appear here for review and approval</p>
+          <p className="text-lg font-medium">No Stories Ready</p>
+          <p className="text-sm">Generated stories will appear here for review and approval</p>
         </div>
       </div>
     );
@@ -191,11 +191,11 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       {stories.length > storiesPerPage && (
         <div className="flex items-center justify-between text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg">
           <span>
-            Showing {startIndex + 1}-{Math.min(endIndex, stories.length)} of {stories.length} multi-tenant stories
+            Showing {startIndex + 1}-{Math.min(endIndex, stories.length)} of {stories.length} stories
           </span>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-              Multi-Tenant System
+            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+              Active System
             </Badge>
             <Button
               variant="outline"
@@ -248,9 +248,6 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                     <CardTitle className="text-base line-clamp-2">
                       {story.title}
                     </CardTitle>
-                    <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-300">
-                      Multi-Tenant
-                    </Badge>
                     <StyleTooltip 
                       styleChoices={{
                         slidetype: story.slidetype || '',
