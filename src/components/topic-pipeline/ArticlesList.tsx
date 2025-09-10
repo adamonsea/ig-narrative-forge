@@ -257,10 +257,11 @@ export const ArticlesList: React.FC<ArticlesListProps> = ({
             ? 'animate-discard'
             : isSimilarToDeleted
             ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-950/10'
-            : 'animate-fade-in opacity-100 scale-100'
+            : ''
         }`}
         style={{
-          animationFillMode: 'forwards'
+          animationFillMode: 'forwards',
+          visibility: (isProcessing || isDeleting) && isAnimatingAway ? 'hidden' : 'visible'
         }}
       >
         <CardHeader className="pb-3">

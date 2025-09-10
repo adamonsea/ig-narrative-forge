@@ -314,13 +314,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="articles">
-            Articles ({totalArticles})
+            Arrivals ({totalArticles})
           </TabsTrigger>
           <TabsTrigger value="queue">
             Processing ({totalQueue})
           </TabsTrigger>
           <TabsTrigger value="stories">
-            Stories ({totalStories})
+            Published ({totalStories})
           </TabsTrigger>
         </TabsList>
 

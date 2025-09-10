@@ -289,13 +289,13 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
               <Tabs defaultValue="articles" className="space-y-4">
                 <TabsList className="w-full">
                   <TabsTrigger value="articles" className="flex-1">
-                    Articles ({legacyArticles.length})
+                    Arrivals ({legacyArticles.length})
                   </TabsTrigger>
                   <TabsTrigger value="queue" className="flex-1">
                     Queue ({legacyQueueItems.length})
                   </TabsTrigger>
                   <TabsTrigger value="stories" className="flex-1">
-                    Stories ({legacyStories.length})
+                    Published ({legacyStories.length})
                   </TabsTrigger>
                 </TabsList>
 
