@@ -2482,27 +2482,35 @@ export type Database = {
         }[]
       }
       get_topic_articles_multi_tenant: {
-        Args:
-          | {
-              p_limit?: number
-              p_offset?: number
-              p_status?: string
-              p_topic_id: string
-            }
-          | { p_limit?: number; p_offset?: number; p_topic_id: string }
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
         Returns: {
           author: string
           body: string
+          canonical_url: string
+          content_checksum: string
           content_quality_score: number
           created_at: string
           id: string
           image_url: string
+          import_metadata: Json
           keyword_matches: string[]
+          language: string
+          last_seen_at: string
+          normalized_url: string
+          originality_confidence: number
           processing_status: string
           published_at: string
           regional_relevance_score: number
           shared_content_id: string
+          source_domain: string
+          source_id: string
           title: string
+          topic_id: string
           updated_at: string
           url: string
           word_count: number
