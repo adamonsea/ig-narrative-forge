@@ -27,6 +27,7 @@ interface Topic {
   landmarks?: string[];
   organizations?: string[];
   default_tone?: 'formal' | 'conversational' | 'engaging';
+  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
 }
 
 interface UnifiedContentPipelineProps {
