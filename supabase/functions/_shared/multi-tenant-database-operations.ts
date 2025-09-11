@@ -248,30 +248,12 @@ export class MultiTenantDatabaseOperations {
     limit: number = 50,
     offset: number = 0
   ) {
-    // Build the query to exclude discarded articles
-    let query = this.supabase
-      .from('topic_articles')
-      .select(`
-        *,
-        shared_content:shared_article_content(*)
-      `)
-      .eq('topic_id', topicId)
-      .neq('processing_status', 'discarded') // Exclude discarded articles
-      .order('created_at', { ascending: false })
-
-    if (status) {
-      query = query.eq('processing_status', status)
-    }
-
-    if (limit) {
-      query = query.limit(limit)
-    }
-
-    if (offset) {
-      query = query.range(offset, offset + limit - 1)
-    }
-
-    const { data, error } = await query
+    const { data, error } = await this.supabase.rpc('get_topic_articles_multi_tenant', {
+      p_topic_id: topicId,
+      p_status: status,
+      p_limit: limit,
+      p_offset: offset
+    })
 
     if (error) {
       throw new Error(`Failed to fetch topic articles: ${error.message}`)

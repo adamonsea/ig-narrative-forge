@@ -94,14 +94,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       try {
         const { data, error } = await supabase
           .from('topics')
-          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone')
+          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone, default_writing_style')
           .eq('is_active', true)
           .order('name');
 
         if (error) throw error;
         setTopics((data || []).map(topic => ({
           ...topic,
-          topic_type: topic.topic_type as 'regional' | 'keyword'
+          topic_type: topic.topic_type as 'regional' | 'keyword',
+          default_writing_style: topic.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven'
         })));
 
         if (data && data.length > 0 && !selectedTopicId && !propTopicId) {
@@ -154,8 +155,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const handleLegacyApprove = async (articleId: string) => {
     const slideQuantity = slideQuantities[articleId] || 'tabloid';
-    const tone = toneOverrides[articleId] || 'conversational';
-    const writingStyle = writingStyleOverrides[articleId] || 'journalistic';
+    const tone = toneOverrides[articleId] || currentTopic?.default_tone || 'conversational';
+    const writingStyle = writingStyleOverrides[articleId] || currentTopic?.default_writing_style || 'journalistic';
     
     try {
       await approveArticle(articleId, slideQuantity, tone, writingStyle);
@@ -175,8 +176,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const handleMultiTenantApproveWrapper = async (articleId: string) => {
     const slideQuantity = slideQuantities[articleId] || 'tabloid';
-    const tone = toneOverrides[articleId] || 'conversational';
-    const writingStyle = writingStyleOverrides[articleId] || 'journalistic';
+    const tone = toneOverrides[articleId] || currentTopic?.default_tone || 'conversational';
+    const writingStyle = writingStyleOverrides[articleId] || currentTopic?.default_writing_style || 'journalistic';
     
     try {
       await handleMultiTenantApprove(articleId, slideQuantity, tone, writingStyle);

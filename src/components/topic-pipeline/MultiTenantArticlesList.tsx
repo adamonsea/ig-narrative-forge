@@ -126,11 +126,15 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
     const isDeleting = deletingArticles.has(article.id);
     const isSelected = selectedArticles.has(article.id);
     
+    // Hide card during processing/deleting animation to prevent flicker
+    if (isProcessing || isDeleting) {
+      return null;
+    }
+    
     return (
       <Card 
         key={article.id} 
         className={`transition-all duration-300 hover:shadow-md transform-gpu overflow-hidden ${
-          isProcessing ? 'opacity-50' : isDeleting ? 'animate-pulse' : 
           isSelected ? 'border-primary bg-primary/5' : 'animate-fade-in opacity-100 scale-100'
         }`}
       >
