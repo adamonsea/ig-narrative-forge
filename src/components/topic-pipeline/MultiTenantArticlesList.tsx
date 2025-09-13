@@ -249,62 +249,39 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                 </Button>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="text-xs">
-                  <Select
-                    value={slideType}
-                    onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
-                      onSlideQuantityChange(article.id, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full sm:w-28 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="short">4 slides</SelectItem>
-                      <SelectItem value="tabloid">6 slides</SelectItem>
-                      <SelectItem value="indepth">8 slides</SelectItem>
-                      <SelectItem value="extensive">12 slides</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex gap-2 text-xs">
+                <Select
+                  value={slideType}
+                  onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
+                    onSlideQuantityChange(article.id, value)
+                  }
+                >
+                  <SelectTrigger className="w-24 h-7">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">4 slides</SelectItem>
+                    <SelectItem value="tabloid">6 slides</SelectItem>
+                    <SelectItem value="indepth">8 slides</SelectItem>
+                    <SelectItem value="extensive">12 slides</SelectItem>
+                  </SelectContent>
+                </Select>
                 
-                <div className="text-xs">
-                  <Select
-                    value={toneOverride}
-                    onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
-                      onToneOverrideChange(article.id, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full sm:w-32 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="conversational">Conversational</SelectItem>
-                      <SelectItem value="engaging">Engaging</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="text-xs">
-                  <Select
-                    value={writingStyleOverride}
-                    onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
-                      onWritingStyleOverrideChange(article.id, value)
-                    }
-                  >
-                    <SelectTrigger className="w-full sm:w-32 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="journalistic">Journalistic</SelectItem>
-                      <SelectItem value="educational">Educational</SelectItem>
-                      <SelectItem value="listicle">Listicle</SelectItem>
-                      <SelectItem value="story_driven">Story-driven</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select
+                  value={toneOverride}
+                  onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                    onToneOverrideChange(article.id, value)
+                  }
+                >
+                  <SelectTrigger className="w-28 h-7">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="formal">Formal</SelectItem>
+                    <SelectItem value="conversational">Conversational</SelectItem>
+                    <SelectItem value="engaging">Engaging</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button
@@ -319,7 +296,7 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                 size="sm"
               >
                 <PlayCircle className="w-4 h-4 mr-2" />
-                {isProcessing ? 'Processing...' : 'Approve'}
+                {isProcessing ? 'Processing...' : 'Simplify'}
               </Button>
             </div>
           </div>
