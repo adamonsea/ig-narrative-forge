@@ -8,14 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useTopicPipeline } from "@/hooks/useTopicPipeline";
-import { useTopicPipelineActions } from "@/hooks/useTopicPipelineActions";
 import { useMultiTenantTopicPipeline } from "@/hooks/useMultiTenantTopicPipeline";
-import { ArticlesList } from "@/components/topic-pipeline/ArticlesList";
 import { MultiTenantArticlesList } from "@/components/topic-pipeline/MultiTenantArticlesList";
-import { StoriesList } from "@/components/topic-pipeline/StoriesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
-import { QueueList } from "@/components/topic-pipeline/QueueList";
 import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
 
 interface Topic {
@@ -45,47 +40,24 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
-  const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
   const { toast } = useToast();
 
-  // Legacy system data
+  // Multi-tenant system data (now the only system)
   const {
-    articles: legacyArticles,
-    queueItems: legacyQueue,
-    stories: legacyStories,
-    loading: legacyLoading,
-    stats: legacyStats,
-    loadTopicContent: refreshLegacy
-  } = useTopicPipeline(selectedTopicId);
-
-  const {
-    approveArticle,
-    approveStory,
-    rejectStory,
-    returnToReview,
-    deleteArticle,
-    deleteStory,
-    processingArticle,
-    deletingArticles,
-    animatingArticles
-  } = useTopicPipelineActions(refreshLegacy, () => {});
-
-  // Multi-tenant system data
-  const {
-    articles: multiTenantArticles,
-    queueItems: multiTenantQueue,
-    stories: multiTenantStories,
-    loading: multiTenantLoading,
-    stats: multiTenantStats,
-    loadTopicContent: refreshMultiTenant,
+    articles,
+    queueItems,
+    stories,
+    loading,
+    stats,
+    loadTopicContent: refreshContent,
     handleMultiTenantApprove,
     handleMultiTenantDelete,
     handleMultiTenantApproveStory,
     handleMultiTenantRejectStory,
-    processingArticle: mtProcessingArticle,
-    deletingArticles: mtDeletingArticles,
-    animatingArticles: mtAnimatingArticles
+    processingArticle,
+    deletingArticles,
+    animatingArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   // Load topics
@@ -128,17 +100,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   }, [propTopicId]);
 
-  const refreshAll = useCallback(async () => {
-    await Promise.all([refreshLegacy(), refreshMultiTenant()]);
-  }, [refreshLegacy, refreshMultiTenant]);
-
   const currentTopic = topics.find(t => t.id === selectedTopicId);
-  const isLoading = legacyLoading || multiTenantLoading;
 
-  // Combined data for overview
-  const totalArticles = legacyArticles.length + multiTenantArticles.length;
-  const totalQueue = legacyQueue.length + multiTenantQueue.length;
-  const totalStories = legacyStories.length + multiTenantStories.length;
+  // Unified data counts
+  const totalArticles = articles.length;
+  const totalQueue = queueItems.length;
+  const totalStories = stories.length;
 
   // Article management handlers
   const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
@@ -153,28 +120,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setWritingStyleOverrides(prev => ({ ...prev, [articleId]: style }));
   };
 
-  const handleLegacyApprove = async (articleId: string) => {
-    const slideQuantity = slideQuantities[articleId] || 'tabloid';
-    const tone = toneOverrides[articleId] || currentTopic?.default_tone || 'conversational';
-    const writingStyle = writingStyleOverrides[articleId] || currentTopic?.default_writing_style || 'journalistic';
-    
-    try {
-      await approveArticle(articleId, slideQuantity, tone, writingStyle);
-      toast({
-        title: "Article Approved",
-        description: "Legacy article sent to content generation",
-      });
-    } catch (error) {
-      console.error('Error approving legacy article:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve article",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleMultiTenantApproveWrapper = async (articleId: string) => {
+  const handleApprove = async (articleId: string) => {
     const slideQuantity = slideQuantities[articleId] || 'tabloid';
     const tone = toneOverrides[articleId] || currentTopic?.default_tone || 'conversational';
     const writingStyle = writingStyleOverrides[articleId] || currentTopic?.default_writing_style || 'journalistic';
@@ -183,10 +129,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       await handleMultiTenantApprove(articleId, slideQuantity, tone, writingStyle);
       toast({
         title: "Article Approved",
-        description: "Multi-tenant article sent to content generation",
+        description: "Article sent to content generation",
       });
     } catch (error) {
-      console.error('Error approving multi-tenant article:', error);
+      console.error('Error approving article:', error);
       toast({
         title: "Error",
         description: "Failed to approve article",
@@ -211,7 +157,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const handleStoryApprove = async (storyId: string) => {
     setProcessingApproval(prev => new Set([...prev, storyId]));
     try {
-      await approveStory(storyId);
+      await handleMultiTenantApproveStory(storyId);
       toast({
         title: "Story Approved",
         description: "Story approved and published",
@@ -235,7 +181,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const handleStoryReject = async (storyId: string) => {
     setProcessingRejection(prev => new Set([...prev, storyId]));
     try {
-      await rejectStory(storyId);
+      await handleMultiTenantRejectStory(storyId);
       toast({
         title: "Story Rejected",
         description: "Story has been rejected",
@@ -256,30 +202,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  const handleStoryDelete = async (storyId: string, title: string) => {
-    setDeletingStories(prev => new Set([...prev, storyId]));
-    try {
-      await deleteStory(storyId, title);
-      toast({
-        title: "Story Deleted",
-        description: "Story has been deleted",
-      });
-    } catch (error) {
-      console.error('Error deleting story:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete story",
-        variant: "destructive"
-      });
-    } finally {
-      setDeletingStories(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(storyId);
-        return newSet;
-      });
-    }
-  };
-
   const handleEditSlide = (slide: any) => {
     // Simple placeholder for now - could open a dialog to edit slide content
     toast({
@@ -289,11 +211,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const handleReturnToReview = async (storyId: string) => {
-    try {
-      await returnToReview(storyId);
-    } catch (error) {
-      console.error('Error returning story to review:', error);
-    }
+    // This functionality needs to be implemented in multi-tenant system
+    toast({
+      title: "Return to Review",
+      description: "This feature will be implemented soon",
+    });
   };
 
   if (!selectedTopicId) {
@@ -329,7 +251,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   return (
     <div className="space-y-6">
-
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -344,6 +265,66 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           </TabsTrigger>
         </TabsList>
 
+        {/* Articles Tab */}
+        <TabsContent value="articles" className="space-y-4">
+          {totalArticles === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No articles available</p>
+                <p className="text-sm mt-2">Articles will appear here when scraped</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent>
+                <MultiTenantArticlesList
+                  articles={articles}
+                  processingArticle={processingArticle}
+                  deletingArticles={deletingArticles}
+                  slideQuantities={slideQuantities}
+                  toneOverrides={toneOverrides}
+                  writingStyleOverrides={writingStyleOverrides}
+                  onSlideQuantityChange={handleSlideQuantityChange}
+                  onToneOverrideChange={handleToneOverrideChange}
+                  onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
+                  onPreview={setPreviewArticle}
+                  onApprove={handleApprove}
+                  onDelete={handleMultiTenantDelete}
+                  onBulkDelete={() => {}}
+                  defaultTone={currentTopic?.default_tone || 'conversational'}
+                  defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
+                  topicKeywords={currentTopic?.keywords || []}
+                  topicLandmarks={currentTopic?.landmarks || []}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Processing Queue Tab */}
+        <TabsContent value="queue" className="space-y-4">
+          {totalQueue === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8 text-muted-foreground">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No items in processing queue</p>
+                <p className="text-sm mt-2">Queue items will appear here when articles are approved</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent>
+                <MultiTenantQueueList
+                  queueItems={queueItems}
+                  deletingQueueItems={new Set()}
+                  onCancel={() => {}}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         {/* Stories Tab - Most Important */}
         <TabsContent value="stories" className="space-y-4">
           {totalStories === 0 ? (
@@ -355,214 +336,68 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
-              {/* Legacy Stories */}
-              {legacyStories.length > 0 && (
-                <Card>
-                  <CardContent>
-                    <StoriesList
-                      stories={legacyStories}
-                      expandedStories={expandedStories}
-                      processingApproval={processingApproval}
-                      processingRejection={processingRejection}
-                      deletingStories={deletingStories}
-                      publishingStories={publishingStories}
-                      animatingStories={animatingStories}
-                      onToggleExpanded={handleToggleStoryExpanded}
-                      onApprove={handleStoryApprove}
-                      onReject={handleStoryReject}
-                      onDelete={handleStoryDelete}
-                      onEditSlide={handleEditSlide}
-                      onViewStory={() => {}}
-                      onReturnToReview={handleReturnToReview}
-                      onRefresh={refreshLegacy}
-                      expandCarouselSection={() => {}}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {/* Multi-tenant Stories */}
-              {multiTenantStories.length > 0 && (
-                <Card>
-                  <CardContent>
-                    <MultiTenantStoriesList
-                      stories={multiTenantStories}
-                      expandedStories={expandedStories}
-                      processingApproval={processingApproval}
-                      processingRejection={processingRejection}
-                      deletingStories={deletingStories}
-                      publishingStories={publishingStories}
-                      animatingStories={animatingStories}
-                      onToggleExpanded={handleToggleStoryExpanded}
-                      onApprove={handleMultiTenantApproveStory}
-                      onReject={handleMultiTenantRejectStory}
-                      onDelete={() => {}}
-                      onEditSlide={handleEditSlide}
-                      onViewStory={() => {}}
-                      onReturnToReview={handleReturnToReview}
-                      onRefresh={refreshMultiTenant}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <Card>
+              <CardContent>
+                <MultiTenantStoriesList
+                  stories={stories}
+                  expandedStories={expandedStories}
+                  processingApproval={processingApproval}
+                  processingRejection={processingRejection}
+                  deletingStories={deletingStories}
+                  publishingStories={publishingStories}
+                  animatingStories={animatingArticles}
+                  onToggleExpanded={handleToggleStoryExpanded}
+                  onApprove={handleStoryApprove}
+                  onReject={handleStoryReject}
+                  onDelete={() => {}}
+                  onEditSlide={handleEditSlide}
+                  onViewStory={() => {}}
+                  onReturnToReview={handleReturnToReview}
+                  onRefresh={refreshContent}
+                />
+              </CardContent>
+            </Card>
           )}
-        </TabsContent>
-
-        {/* Articles Tab */}
-        <TabsContent value="articles" className="space-y-4">
-          <div className="space-y-6">
-            {/* Legacy Articles */}
-            {legacyArticles.length > 0 && (
-              <Card>
-                <CardContent>
-                  <ArticlesList
-                    articles={legacyArticles}
-                    processingArticle={processingArticle}
-                    deletingArticles={deletingArticles}
-                    animatingArticles={animatingArticles}
-                    slideQuantities={slideQuantities}
-                    toneOverrides={toneOverrides}
-                    writingStyleOverrides={writingStyleOverrides}
-                    onSlideQuantityChange={handleSlideQuantityChange}
-                    onToneOverrideChange={handleToneOverrideChange}
-                    onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                     onPreview={setPreviewArticle}
-                    onApprove={handleLegacyApprove}
-                    onDelete={deleteArticle}
-                    defaultTone={currentTopic?.default_tone || 'conversational'}
-                    defaultWritingStyle="journalistic"
-                    topicKeywords={[]}
-                    topicLandmarks={[]}
-                    onRefresh={refreshLegacy}
-                  />
-                </CardContent>
-              </Card>
-            )}
-            
-            {multiTenantArticles.length > 0 && (
-              <Card>
-                <CardContent>
-                  <MultiTenantArticlesList
-                    articles={multiTenantArticles}
-                    processingArticle={mtProcessingArticle}
-                    deletingArticles={mtDeletingArticles}
-                    slideQuantities={slideQuantities}
-                    toneOverrides={toneOverrides}
-                    writingStyleOverrides={writingStyleOverrides}
-                    onSlideQuantityChange={handleSlideQuantityChange}
-                    onToneOverrideChange={handleToneOverrideChange}
-                    onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                    onPreview={setPreviewArticle}
-                    onApprove={handleMultiTenantApproveWrapper}
-                    onDelete={handleMultiTenantDelete}
-                    onBulkDelete={() => {}}
-                    defaultTone={currentTopic?.default_tone || 'conversational'}
-                    defaultWritingStyle="journalistic"
-                    onRefresh={refreshMultiTenant}
-                  />
-                </CardContent>
-              </Card>
-            )}
-            
-            {totalArticles === 0 && (
-              <Card>
-                <CardContent className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No articles available for approval</p>
-                  <p className="text-sm mt-2">Check your sources and scraping settings</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Processing Queue Tab */}
-        <TabsContent value="queue" className="space-y-4">
-          <div className="space-y-6">
-            {/* Legacy Queue */}
-            {legacyQueue.length > 0 && (
-              <Card>
-                <CardContent>
-                  <QueueList
-                    queueItems={legacyQueue}
-                    deletingQueueItems={new Set()}
-                    onCancel={() => {}}
-                    onRetry={() => {}}
-                  />
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Multi-tenant Queue */}
-            {multiTenantQueue.length > 0 && (
-              <Card>
-                <CardContent>
-                  <MultiTenantQueueList
-                    queueItems={multiTenantQueue}
-                    deletingQueueItems={new Set()}
-                    onCancel={() => {}}
-                  />
-                </CardContent>
-              </Card>
-            )}
-            
-            {totalQueue === 0 && (
-              <Card>
-                <CardContent className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No items in processing queue</p>
-                  <p className="text-sm mt-2">Approve articles to add them to the queue</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
         </TabsContent>
       </Tabs>
 
-      {/* Preview Dialog */}
-      <Dialog open={!!previewArticle} onOpenChange={() => setPreviewArticle(null)}>
+      {/* Article Preview Dialog */}
+      <Dialog open={previewArticle !== null} onOpenChange={(open) => !open && setPreviewArticle(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                {previewArticle?.title}
-                <Badge variant="outline" className="text-xs">
-                  {previewArticle?.source_name || previewArticle?.source || 'Unknown Source'}
-                </Badge>
-                {previewArticle?.topic_id && (
-                  <Badge variant="secondary" className="text-xs">
-                    Multi-Tenant
-                  </Badge>
+              {previewArticle?.title}
+              {previewArticle?.url && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={previewArticle.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {previewArticle?.word_count && (
+                  <Badge variant="secondary">{previewArticle.word_count} words</Badge>
+                )}
+                {previewArticle?.regional_relevance_score && (
+                  <Badge variant="secondary">Relevance: {previewArticle.regional_relevance_score}%</Badge>
+                )}
+                {previewArticle?.content_quality_score && (
+                  <Badge variant="secondary">Quality: {previewArticle.content_quality_score}%</Badge>
                 )}
               </div>
-            </DialogTitle>
-            <DialogDescription className="flex items-center gap-4">
-              <span>Source: {previewArticle?.source_url}</span>
-              {previewArticle?.author && <span>Author: {previewArticle.author}</span>}
-              <span>Words: {previewArticle?.word_count || 0}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Article Content:</label>
-              <div 
-                className="min-h-[300px] mt-2 p-3 border rounded-md bg-background text-sm leading-relaxed whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{
-                  __html: highlightKeywords(previewArticle?.body || '', currentTopicKeywords)
-                }}
-              />
-            </div>
-            {previewArticle?.source_url && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.open(previewArticle.source_url, '_blank')}
-                className="w-full"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View Original Article
-              </Button>
+            {previewArticle?.body && (
+              <div className="prose max-w-none">
+                <Textarea
+                  value={previewArticle.body}
+                  readOnly
+                  className="min-h-[300px] font-mono text-sm"
+                />
+              </div>
             )}
           </div>
         </DialogContent>
