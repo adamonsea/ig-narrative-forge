@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
+import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 
 interface MultiTenantArticlesListProps {
   articles: MultiTenantArticle[];
@@ -198,6 +199,15 @@ export default function MultiTenantArticlesList({
           <h3 className="font-medium text-sm leading-tight mb-2 line-clamp-2">
             {article.title}
           </h3>
+          
+          {/* Currentness Tag */}
+          <div className="mb-2">
+            <div 
+              className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${getCurrentnessColor(article.published_at, article.created_at)}`}
+            >
+              {getCurrentnessTag(article.published_at, article.created_at)}
+            </div>
+          </div>
           
           {/* Keywords */}
           <div className="flex flex-wrap gap-1 mb-3">

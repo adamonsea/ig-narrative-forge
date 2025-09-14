@@ -74,3 +74,53 @@ export const isNewInFeed = (dateString: string): boolean => {
 export const getNewFlagColor = (): string => {
   return 'bg-orange-500/20 text-orange-700 border-orange-200';
 };
+
+// Currentness tag functions for arrival articles
+export const getCurrentnessTag = (publishedAt?: string, createdAt?: string): string => {
+  // Use published_at if available, fallback to created_at
+  const dateToUse = publishedAt || createdAt;
+  
+  if (!dateToUse) {
+    return 'new in feed';
+  }
+  
+  const date = new Date(dateToUse);
+  const now = new Date();
+  
+  if (isToday(date)) {
+    return 'today';
+  }
+  
+  if (isYesterday(date)) {
+    return 'yesterday';
+  }
+  
+  const daysDiff = differenceInDays(now, date);
+  if (daysDiff <= 7) {
+    return `${daysDiff} days ago`;
+  }
+  
+  // Fallback for very old articles (shouldn't happen with our 1-week cleanup)
+  return 'older';
+};
+
+export const getCurrentnessColor = (publishedAt?: string, createdAt?: string): string => {
+  const dateToUse = publishedAt || createdAt;
+  
+  if (!dateToUse) {
+    return 'bg-purple-500/20 text-purple-700 border-purple-200';
+  }
+  
+  const date = new Date(dateToUse);
+  
+  if (isToday(date)) {
+    return 'bg-green-500/20 text-green-700 border-green-200';
+  }
+  
+  if (isYesterday(date)) {
+    return 'bg-blue-500/20 text-blue-700 border-blue-200';
+  }
+  
+  // For older articles
+  return 'bg-muted/50 text-muted-foreground border-muted';
+};
