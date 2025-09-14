@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useMultiTenantTopicPipeline } from "@/hooks/useMultiTenantTopicPipeline";
-import { MultiTenantArticlesList } from "@/components/topic-pipeline/MultiTenantArticlesList";
+import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
+import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
-import { CleanupButton } from "@/components/CleanupButton";
+
 
 interface Topic {
   id: string;
@@ -122,13 +122,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const handleApprove = async (
-    articleId: string, 
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', 
-    tone: 'formal' | 'conversational' | 'engaging', 
-    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven'
+    article: MultiTenantArticle, 
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', 
+    tone: 'formal' | 'conversational' | 'engaging' = 'conversational', 
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
     try {
-      await handleMultiTenantApprove(articleId, slideType, tone, writingStyle);
+      await handleMultiTenantApprove(article, slideType, tone, writingStyle);
       toast({
         title: "Article Approved",
         description: "Article sent to content generation",
@@ -143,7 +143,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  // Add bulk cleanup function using dedicated CleanupButton component
+  // Add bulk cleanup function using automated backend cleanup
 
   // Story management handlers
   const handleToggleStoryExpanded = (storyId: string) => {
@@ -272,10 +272,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <div className="text-sm text-muted-foreground">
               Showing new articles awaiting review
             </div>
-            <CleanupButton 
-              topicId={selectedTopicId} 
-              onCleanupComplete={refreshContent}
-            />
           </div>
           
           {totalArticles === 0 ? (
@@ -293,22 +289,22 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   articles={articles}
                   processingArticle={processingArticle}
                   deletingArticles={deletingArticles}
-                  slideQuantities={slideQuantities}
+                  animatingArticles={animatingArticles}
+                  slideQuantityOverrides={slideQuantities}
                   toneOverrides={toneOverrides}
                   writingStyleOverrides={writingStyleOverrides}
                   onSlideQuantityChange={handleSlideQuantityChange}
                   onToneOverrideChange={handleToneOverrideChange}
                   onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
                   onPreview={setPreviewArticle}
-                  onApprove={(articleId, slideType, tone, writingStyle) => 
-                    handleApprove(articleId, slideType, tone, writingStyle)
+                  onApprove={(article, slideType, tone, writingStyle) => 
+                    handleApprove(article, slideType, tone, writingStyle)
                   }
                   onDelete={handleMultiTenantDelete}
-                  onBulkDelete={() => {}} // Remove since we now have dedicated cleanup
+                  onBulkDelete={handleMultiTenantBulkDelete}
                   defaultTone={currentTopic?.default_tone || 'conversational'}
                   defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
-                  topicKeywords={currentTopic?.keywords || []}
-                  topicLandmarks={currentTopic?.landmarks || []}
+                  onRefresh={refreshContent}
                 />
               </CardContent>
             </Card>

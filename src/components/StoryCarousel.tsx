@@ -41,6 +41,8 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
+  const [touchOffset, setTouchOffset] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
   
   const currentSlide = story.slides[currentSlideIndex];
   const isFirstSlide = currentSlideIndex === 0;
@@ -102,17 +104,28 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(0);
     setTouchStart(e.targetTouches[0].clientX);
+    setTouchOffset(0);
+    setIsSwiping(false);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!touchStart) return;
+    const currentX = e.targetTouches[0].clientX;
+    const offset = currentX - touchStart;
+    
+    // Only allow horizontal movement in valid directions
+    if ((offset > 0 && !isFirstSlide) || (offset < 0 && !isLastSlide)) {
+      setTouchOffset(offset);
+      setIsSwiping(true);
+    }
+    setTouchEnd(currentX);
   };
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 30;
-    const isRightSwipe = distance < -30;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
 
     if (isLeftSwipe && !isLastSlide) {
       nextSlide();
@@ -120,6 +133,10 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     if (isRightSwipe && !isFirstSlide) {
       prevSlide();
     }
+    
+    // Reset touch state
+    setTouchOffset(0);
+    setIsSwiping(false);
   };
 
 
@@ -281,11 +298,17 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             )}
             
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
-              <div className={`mb-8 transition-all duration-300 ${
-                slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
-                slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
-                'animate-fade-in'
-              }`}>
+              <div 
+                className={`mb-8 transition-all duration-300 ${
+                  slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
+                  slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
+                  'animate-fade-in'
+                }`}
+                style={{
+                  transform: isSwiping ? `translateX(${touchOffset * 0.8}px)` : undefined,
+                  transition: isSwiping ? 'none' : undefined
+                }}
+              >
                 <div className={`text-center leading-relaxed ${
                     currentSlideIndex === 0 
                     ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
@@ -326,22 +349,36 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
           {/* Bottom section */}
           <div className="p-4">
-            {/* Progress dots */}
-            {story.slides.length > 1 && (
-              <div className="flex justify-center space-x-2 mb-4">
-                {story.slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentSlideIndex 
-                        ? 'bg-primary scale-125' 
-                        : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Progress dots and source link */}
+            <div className="flex flex-col items-center space-y-2 mb-4">
+              {story.slides.length > 1 && (
+                <div className="flex justify-center space-x-2">
+                  {story.slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentSlideIndex 
+                          ? 'bg-primary scale-125' 
+                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Source link */}
+              {story.article?.source_url && (
+                <a
+                  href={story.article.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
+                >
+                  Source: {new URL(story.article.source_url).hostname.replace('www.', '')}
+                </a>
+              )}
+            </div>
 
             {/* Action buttons */}
             <div className="flex justify-center gap-3">

@@ -305,14 +305,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Action handlers with proper callbacks
   const handleMultiTenantApprove = useCallback(async (
-    articleId: string,
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive',
-    tone: 'formal' | 'conversational' | 'engaging',
-    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven'
+    article: MultiTenantArticle,
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
+    tone: 'formal' | 'conversational' | 'engaging' = 'conversational',
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
-    const article = articles.find(a => a.id === articleId);
-    if (!article) return;
-    
     await approveMultiTenantArticle(article, slideType, tone, writingStyle);
     // Force immediate reload to show approval/queue addition
     await loadTopicContent();

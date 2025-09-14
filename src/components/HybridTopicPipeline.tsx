@@ -24,7 +24,7 @@ import { QueueList } from "./topic-pipeline/QueueList";
 
 // Multi-tenant hooks and components
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
-import { MultiTenantArticlesList } from "./topic-pipeline/MultiTenantArticlesList";
+import MultiTenantArticlesList from "./topic-pipeline/MultiTenantArticlesList";
 
 interface Topic {
   id: string;
@@ -160,8 +160,8 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
     approveArticle(articleId, slideType, tone, writingStyle);
   };
 
-  const handleMultiTenantApproveWrapper = async (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => {
-    await multiTenantApprove(articleId, slideType, tone, writingStyle);
+  const handleMultiTenantApproveWrapper = async (article: MultiTenantArticle, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', tone: 'formal' | 'conversational' | 'engaging' = 'conversational', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic') => {
+    await multiTenantApprove(article, slideType, tone, writingStyle);
   };
 
   const handleMultiTenantDeleteWrapper = async (articleId: string, articleTitle: string) => {
@@ -397,7 +397,8 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
                 articles={multiTenantArticles}
                 processingArticle={currentProcessingArticle}
                 deletingArticles={currentDeletingArticles}
-                slideQuantities={slideQuantities}
+                animatingArticles={new Set()}
+                slideQuantityOverrides={slideQuantities}
                 toneOverrides={toneOverrides}
                 writingStyleOverrides={writingStyleOverrides}
                 onSlideQuantityChange={handleSlideQuantityChange}
@@ -409,8 +410,6 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
                 onBulkDelete={handleMultiTenantBulkDeleteWrapper}
                 defaultTone={topic?.default_tone || 'conversational'}
                 defaultWritingStyle={topic?.default_writing_style || 'journalistic'}
-                topicKeywords={topic?.keywords}
-                topicLandmarks={topic?.landmarks}
                 onRefresh={handleRefresh}
               />
             </TabsContent>
