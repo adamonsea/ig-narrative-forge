@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline } from "@/hooks/useMultiTenantTopicPipeline";
 import { MultiTenantArticlesList } from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
-import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
+import { CleanupButton } from "@/components/CleanupButton";
 
 interface Topic {
   id: string;
@@ -53,6 +53,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     loadTopicContent: refreshContent,
     handleMultiTenantApprove,
     handleMultiTenantDelete,
+    handleMultiTenantBulkDelete,
     handleMultiTenantApproveStory,
     handleMultiTenantRejectStory,
     processingArticle,
@@ -120,13 +121,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setWritingStyleOverrides(prev => ({ ...prev, [articleId]: style }));
   };
 
-  const handleApprove = async (articleId: string) => {
-    const slideQuantity = slideQuantities[articleId] || 'tabloid';
-    const tone = toneOverrides[articleId] || currentTopic?.default_tone || 'conversational';
-    const writingStyle = writingStyleOverrides[articleId] || currentTopic?.default_writing_style || 'journalistic';
-    
+  const handleApprove = async (
+    articleId: string, 
+    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', 
+    tone: 'formal' | 'conversational' | 'engaging', 
+    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven'
+  ) => {
     try {
-      await handleMultiTenantApprove(articleId, slideQuantity, tone, writingStyle);
+      await handleMultiTenantApprove(articleId, slideType, tone, writingStyle);
       toast({
         title: "Article Approved",
         description: "Article sent to content generation",
@@ -140,6 +142,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       });
     }
   };
+
+  // Add bulk cleanup function using dedicated CleanupButton component
 
   // Story management handlers
   const handleToggleStoryExpanded = (storyId: string) => {
@@ -264,6 +268,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* Articles Tab */}
         <TabsContent value="articles" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              Showing new articles awaiting review
+            </div>
+            <CleanupButton 
+              topicId={selectedTopicId} 
+              onCleanupComplete={refreshContent}
+            />
+          </div>
+          
           {totalArticles === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
@@ -286,9 +300,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   onToneOverrideChange={handleToneOverrideChange}
                   onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
                   onPreview={setPreviewArticle}
-                  onApprove={handleApprove}
+                  onApprove={(articleId, slideType, tone, writingStyle) => 
+                    handleApprove(articleId, slideType, tone, writingStyle)
+                  }
                   onDelete={handleMultiTenantDelete}
-                  onBulkDelete={() => {}}
+                  onBulkDelete={() => {}} // Remove since we now have dedicated cleanup
                   defaultTone={currentTopic?.default_tone || 'conversational'}
                   defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                   topicKeywords={currentTopic?.keywords || []}

@@ -45,6 +45,10 @@
     @apply animate-[discard_0.3s_ease-in-out_forwards];
   }
   
+  .animate-fade-out {
+    @apply animate-[fade-out_0.3s_ease-in-out_forwards];
+  }
+  
   /* Line clamp utilities */
   .line-clamp-1 {
     overflow: hidden;

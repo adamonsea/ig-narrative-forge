@@ -94,7 +94,9 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
     return (
       <Card 
         key={article.id} 
-        className="transition-all duration-300 hover:shadow-md"
+        className={`transition-all duration-300 hover:shadow-md ${
+          isDeleting ? 'animate-fade-out opacity-0 transform scale-95' : ''
+        }`}
       >
         <CardHeader className="pb-3">
           <div className="flex justify-between items-start">
@@ -151,14 +153,14 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                 </Button>
               </div>
               
-              <div className="flex gap-1 text-xs">
+              <div className="grid grid-cols-3 gap-1 text-xs">
                 <Select
                   value={slideType}
                   onValueChange={(value: 'short' | 'tabloid' | 'indepth' | 'extensive') => 
                     onSlideQuantityChange(article.id, value)
                   }
                 >
-                  <SelectTrigger className="w-20 h-7">
+                  <SelectTrigger className="w-16 h-7">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -175,13 +177,30 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
                     onToneOverrideChange(article.id, value)
                   }
                 >
-                  <SelectTrigger className="w-24 h-7">
+                  <SelectTrigger className="w-20 h-7">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="formal">Formal</SelectItem>
                     <SelectItem value="conversational">Chat</SelectItem>
-                    <SelectItem value="engaging">Engaging</SelectItem>
+                    <SelectItem value="engaging">Fun</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={writingStyleOverride}
+                  onValueChange={(value: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => 
+                    onWritingStyleOverrideChange(article.id, value)
+                  }
+                >
+                  <SelectTrigger className="w-20 h-7">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="journalistic">News</SelectItem>
+                    <SelectItem value="educational">Guide</SelectItem>
+                    <SelectItem value="listicle">List</SelectItem>
+                    <SelectItem value="story_driven">Story</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -229,6 +248,14 @@ export const MultiTenantArticlesList: React.FC<MultiTenantArticlesListProps> = (
               Refresh
             </Button>
           )}
+          <Button 
+            onClick={() => onBulkDelete([])}
+            variant="outline"
+            className="text-orange-600 hover:text-orange-700"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Cleanup Published
+          </Button>
         </div>
       </div>
     );

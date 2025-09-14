@@ -111,8 +111,24 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         console.error('Error loading multi-tenant articles:', articlesResult.error);
         setArticles([]);
       } else {
+        // Get story IDs to filter out articles that are already published
+        const publishedStoryIds = new Set();
+        if (articlesResult.data) {
+          const { data: storiesData } = await supabase
+            .from('stories')
+            .select('topic_article_id, shared_content_id')
+            .eq('status', 'ready');
+          
+          storiesData?.forEach(story => {
+            if (story.topic_article_id) publishedStoryIds.add(story.topic_article_id);
+          });
+        }
+
         const articlesData = articlesResult.data
-          ?.filter((item: any) => item.processing_status !== 'discarded') // Filter out discarded articles
+          ?.filter((item: any) => 
+            item.processing_status === 'new' && // Only show "new" articles in Arrivals
+            !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
+          )
           ?.map((item: any) => ({
           id: item.id,
           shared_content_id: item.shared_content_id,
