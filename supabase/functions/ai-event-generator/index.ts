@@ -43,13 +43,29 @@ serve(async (req) => {
     const eventTypesText = eventTypes.join(', ');
     const regionText = region || topic.region || 'the local area';
     
-    const prompt = `You are an expert event curator for ${regionText}. Generate exactly 15 high-quality, interesting events happening in the next 7 days for the following categories: ${eventTypesText}.
+    // Get current date and calculate future dates
+    const now = new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const exampleDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 3 days from now
+    
+    const prompt = `You are an expert event curator for ${regionText}. 
 
-IMPORTANT REQUIREMENTS:
+TODAY'S DATE: ${today}
+
+Generate exactly 15 high-quality, interesting events happening between ${today} and ${nextWeek.toISOString().split('T')[0]} (next 7 days) for the following categories: ${eventTypesText}.
+
+CRITICAL DATE REQUIREMENTS:
+- ALL events MUST have dates between ${today} and ${nextWeek.toISOString().split('T')[0]}
+- NO events with dates before ${today}
+- Use YYYY-MM-DD format only
+- Spread events across the next 7 days
+
+CONTENT REQUIREMENTS:
 - Only include events that are genuinely interesting and worth attending
 - NO gym sessions, yoga classes, regular fitness classes, or routine activities
 - Focus on: concerts, art exhibitions, comedy shows, theater performances, special cultural events, festivals, unique workshops
-- Each event must include: title, description (max 100 words), date (YYYY-MM-DD format), location, and source URL if available
+- Each event must include: title, description (max 100 words), date, location, and source URL if available
 - Prefer real, specific venues and events
 - Make descriptions engaging but factual
 - If you can't find 15 quality events, generate fewer rather than including low-quality ones
@@ -59,7 +75,7 @@ Return ONLY a JSON array with this exact format:
   {
     "title": "Event Title",
     "description": "Brief engaging description of the event",
-    "start_date": "2025-01-20",
+    "start_date": "${exampleDate}",
     "location": "Venue Name, Address",
     "event_type": "music|comedy|shows|musicals|art_exhibitions|events",
     "source_url": "https://example.com/event-page",
@@ -67,7 +83,7 @@ Return ONLY a JSON array with this exact format:
   }
 ]
 
-Generate events for ${regionText} happening in the next week.`;
+Generate events for ${regionText} with dates strictly between ${today} and ${nextWeek.toISOString().split('T')[0]}.`;
 
     // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -123,6 +139,25 @@ Generate events for ${regionText} happening in the next week.`;
       throw new Error('AI response is not an array');
     }
 
+    // Validate and fix event dates
+    const today = new Date().toISOString().split('T')[0];
+    const validatedEvents = events.map((event, index) => {
+      let eventDate = event.start_date;
+      
+      // If no date or invalid date, set to future date
+      if (!eventDate || eventDate < today) {
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + (index % 7) + 1); // Spread across next 7 days
+        eventDate = futureDate.toISOString().split('T')[0];
+        console.log(`📅 Fixed event date for "${event.title}": ${event.start_date} -> ${eventDate}`);
+      }
+      
+      return {
+        ...event,
+        start_date: eventDate
+      };
+    });
+
     // Clear existing events for this topic
     const { error: deleteError } = await supabase
       .from('events')
@@ -131,14 +166,16 @@ Generate events for ${regionText} happening in the next week.`;
 
     if (deleteError) {
       console.error('❌ Error clearing existing events:', deleteError);
+    } else {
+      console.log('🗑️ Cleared existing events for topic:', topicId);
     }
 
     // Insert new events with ranking
-    const eventsToInsert = events.slice(0, 15).map((event, index) => ({
+    const eventsToInsert = validatedEvents.slice(0, 15).map((event, index) => ({
       topic_id: topicId,
       title: event.title || 'Untitled Event',
       description: event.description || '',
-      start_date: event.start_date || new Date().toISOString().split('T')[0],
+      start_date: event.start_date,
       end_date: event.end_date || null,
       location: event.location || '',
       source_url: event.source_url || null,
