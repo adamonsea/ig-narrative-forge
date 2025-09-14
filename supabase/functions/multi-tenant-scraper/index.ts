@@ -64,6 +64,14 @@ serve(async (req) => {
           continue;
         }
 
+        // Skip articles older than 1 week
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const articleDate = article.published_at ? new Date(article.published_at) : new Date();
+        if (articleDate < oneWeekAgo) {
+          console.log(`⏰ Skipping article older than 1 week: ${article.title} (${articleDate.toISOString()})`);
+          continue;
+        }
+
         const { data: existingContent } = await supabase
           .from('shared_article_content').select('id').eq('normalized_url', normalizedUrl).maybeSingle();
 

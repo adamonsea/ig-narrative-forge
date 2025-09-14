@@ -24,7 +24,22 @@ serve(async (req) => {
 
     console.log('🧹 Starting automated duplicate cleanup...');
 
-    // Clean up multi-tenant duplicates first (already published items from Arrivals)
+    // Clean up articles older than 1 week from Arrivals
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Clean old articles based on published_at OR created_at
+    const { error: oldArticlesError, count: oldArticlesCount } = await supabase
+      .from('topic_articles')
+      .update({ processing_status: 'discarded' })
+      .eq('processing_status', 'new')
+      .or(`created_at.lt.${oneWeekAgo},shared_article_content.published_at.lt.${oneWeekAgo}`)
+      .select('*, shared_article_content!inner(published_at)', { count: 'exact' });
+
+    if (oldArticlesError) {
+      console.error('❌ Error cleaning old articles:', oldArticlesError);
+    }
+
+    // Clean up multi-tenant duplicates (already published items from Arrivals)
     const { data: publishedStories } = await supabase
       .from('stories')
       .select('topic_article_id, shared_content_id, article_id')
@@ -65,10 +80,11 @@ serve(async (req) => {
 
     const result = {
       success: true,
+      old_articles_cleaned: oldArticlesCount || 0,
       cleaned_arrivals: cleanedArrivals,
       legacy_cleanup: legacyCleanupResult || { articles_processed: 0 },
       discarded_cleaned: discardedCount || 0,
-      message: `Automated cleanup: ${cleanedArrivals} arrivals, ${legacyCleanupResult?.articles_processed || 0} legacy duplicates, ${discardedCount || 0} old discarded records`
+      message: `Automated cleanup: ${oldArticlesCount || 0} old articles, ${cleanedArrivals} arrivals, ${legacyCleanupResult?.articles_processed || 0} legacy duplicates, ${discardedCount || 0} old discarded records`
     };
 
     console.log('✅ Automated cleanup completed:', result);
