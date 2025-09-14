@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { SentimentCard } from "@/components/SentimentCard";
-import { Hash, MapPin } from "lucide-react";
+import { Hash, MapPin, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -100,7 +101,18 @@ const TopicFeed = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Topic Header - Clean and minimal */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              asChild
+              className="absolute left-4 top-8"
+            >
+              <a href="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </a>
+            </Button>
             {topic.topic_type === 'regional' ? (
               <MapPin className="w-6 h-6 text-blue-500" />
             ) : (
@@ -110,6 +122,11 @@ const TopicFeed = () => {
               {topic.name}
             </h1>
           </div>
+          {topic.description && (
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              {topic.description}
+            </p>
+          )}
         </div>
 
         {/* Filters */}

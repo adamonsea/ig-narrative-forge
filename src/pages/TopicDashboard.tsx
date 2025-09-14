@@ -104,7 +104,9 @@ const TopicDashboard = () => {
       const hasAdminAccess = topicData.created_by === user?.id || isAdmin;
 
       if (!hasAdminAccess) {
-        throw new Error('Access denied - You can only manage topics you created');
+        // Redirect non-owners to the public feed view instead of throwing error
+        window.location.href = `/feed/topic/${slug}`;
+        return;
       }
 
       setTopic({
