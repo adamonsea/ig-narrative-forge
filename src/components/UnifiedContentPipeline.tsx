@@ -253,12 +253,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     <div className="space-y-6">
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="articles">
             Arrivals ({totalArticles})
-          </TabsTrigger>
-          <TabsTrigger value="queue">
-            Processing ({totalQueue})
           </TabsTrigger>
           <TabsTrigger value="stories">
             Published ({totalStories})
@@ -302,30 +299,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
 
-        {/* Processing Queue Tab */}
-        <TabsContent value="queue" className="space-y-4">
-          {totalQueue === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8 text-muted-foreground">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No items in processing queue</p>
-                <p className="text-sm mt-2">Queue items will appear here when articles are approved</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent>
-                <MultiTenantQueueList
-                  queueItems={queueItems}
-                  deletingQueueItems={new Set()}
-                  onCancel={() => {}}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Stories Tab - Most Important */}
+        {/* Stories Tab */}
         <TabsContent value="stories" className="space-y-4">
           {totalStories === 0 ? (
             <Card>

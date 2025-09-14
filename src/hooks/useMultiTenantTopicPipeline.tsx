@@ -186,33 +186,16 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      // Get stories for articles from this topic
-      const storiesResult = await supabase
-        .from('stories')
-        .select(`
-          id,
-          topic_article_id,
-          shared_content_id,
-          title,
-          status,
-          created_at,
-          updated_at,
-          cover_illustration_url,
-          illustration_generated_at,
-          slides(*)
-        `)
-        .not('topic_article_id', 'is', null)
-        .order('created_at', { ascending: false });
+      // Get unified stories (both legacy and multi-tenant) for this topic
+      const storiesResult = await supabase.rpc('get_stories_unified', {
+        p_topic_id: selectedTopicId
+      });
 
       if (storiesResult.error) {
-        console.error('Error loading stories:', storiesResult.error);
+        console.error('Error loading unified stories:', storiesResult.error);
         setStories([]);
       } else {
-        // Filter stories to only include those from articles in this topic
-        const topicArticleIds = new Set((articlesResult.data || []).map((a: any) => a.id));
-        filteredStories = (storiesResult.data || []).filter((story: any) => 
-          topicArticleIds.has(story.topic_article_id)
-        );
+        filteredStories = storiesResult.data || [];
         
         const storiesData = filteredStories.map((story: any) => ({
           id: story.id,
@@ -226,13 +209,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           illustration_generated_at: story.illustration_generated_at,
           slides: story.slides || [],
           // Additional properties for compatibility
-          url: '',
-          author: '',
-          word_count: 0,
-          slidetype: '',
-          tone: '',
-          writing_style: '',
-          audience_expertise: ''
+          url: story.source_url || '',
+          author: story.author || '',
+          word_count: story.word_count || 0,
+          slidetype: story.slidetype || '',
+          tone: story.tone || '',
+          writing_style: story.writing_style || '',
+          audience_expertise: story.audience_expertise || ''
         }));
         setStories(storiesData);
       }
