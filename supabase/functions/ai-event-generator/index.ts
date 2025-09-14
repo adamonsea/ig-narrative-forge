@@ -49,41 +49,47 @@ serve(async (req) => {
     const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const exampleDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 3 days from now
     
-    const prompt = `You are an expert event curator for ${regionText}. 
+    const prompt = `You are an expert event curator for ${regionText}. You excel at finding both POPULAR high-profile events AND hidden gems that locals would love to discover.
 
 TODAY'S DATE: ${today}
 
-Generate exactly 15 high-quality, interesting events happening between ${today} and ${nextWeek.toISOString().split('T')[0]} (next 7 days) for the following categories: ${eventTypesText}.
+Generate exactly 15 diverse, compelling events happening between ${today} and ${nextWeek.toISOString().split('T')[0]} (next 7 days) for: ${eventTypesText}.
 
-CRITICAL DATE REQUIREMENTS:
-- ALL events MUST have dates between ${today} and ${nextWeek.toISOString().split('T')[0]}
-- NO events with dates before ${today}
-- Use YYYY-MM-DD format only
-- Spread events across the next 7 days
+CRITICAL REQUIREMENTS:
+🗓️ DATES: ALL events MUST be ${today} to ${nextWeek.toISOString().split('T')[0]} (YYYY-MM-DD format only)
+🎯 QUALITY: Mix of popular events (70%) and hidden gems (30%) - no routine classes or generic activities
+💰 PRICING: Include realistic price information (Free, £5-15, £20-50, etc.)
+📍 LOCATIONS: Use specific, real venue names and areas within ${regionText}
 
-CONTENT REQUIREMENTS:
-- Only include events that are genuinely interesting and worth attending
-- NO gym sessions, yoga classes, regular fitness classes, or routine activities
-- Focus on: concerts, art exhibitions, comedy shows, theater performances, special cultural events, festivals, unique workshops
-- Each event must include: title, description (max 100 words), date, location, and source URL if available
-- Prefer real, specific venues and events
-- Make descriptions engaging but factual
-- If you can't find 15 quality events, generate fewer rather than including low-quality ones
+EVENT CURATION STRATEGY:
+POPULAR EVENTS (70%): Well-known venues, established festivals, major performances, trending artists
+HIDDEN GEMS (30%): Small galleries, indie performances, unique workshops, pop-up events, local discoveries
+
+CATEGORIES FOCUS:
+- music: Live concerts, festivals, acoustic nights, DJ sets, music venues
+- comedy: Stand-up shows, comedy clubs, improv nights, comedy festivals  
+- shows: Theater, cabaret, variety shows, dance performances
+- musicals: Musical theater, tribute shows, opera, musical revues
+- art_exhibitions: Gallery openings, art walks, sculpture displays, creative exhibitions
+- events: Markets, cultural festivals, community celebrations, special occasions
 
 Return ONLY a JSON array with this exact format:
 [
   {
     "title": "Event Title",
-    "description": "Brief engaging description of the event",
+    "description": "Engaging 50-word description highlighting what makes this event special",
     "start_date": "${exampleDate}",
-    "location": "Venue Name, Address",
+    "start_time": "19:30",
+    "location": "Specific Venue Name, Area/Street, ${regionText}",
     "event_type": "music|comedy|shows|musicals|art_exhibitions|events",
-    "source_url": "https://example.com/event-page",
-    "source_name": "Source Website Name"
+    "price": "Free|£8|£15-25|£35",
+    "category": "popular|hidden_gem",
+    "source_url": "https://venue-website.com/event-page", 
+    "source_name": "Venue Name or Event Platform"
   }
 ]
 
-Generate events for ${regionText} with dates strictly between ${today} and ${nextWeek.toISOString().split('T')[0]}.`;
+Create a perfect mix for ${regionText} - make locals excited about both the big events they know about AND the amazing hidden gems they'd never find otherwise!`;
 
     // Call OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -170,17 +176,21 @@ Generate events for ${regionText} with dates strictly between ${today} and ${nex
       console.log('🗑️ Cleared existing events for topic:', topicId);
     }
 
-    // Insert new events with ranking
+    // Insert new events with ranking and enhanced data
     const eventsToInsert = validatedEvents.slice(0, 15).map((event, index) => ({
       topic_id: topicId,
       title: event.title || 'Untitled Event',
       description: event.description || '',
       start_date: event.start_date,
       end_date: event.end_date || null,
+      start_time: event.start_time || null,
+      end_time: event.end_time || null,
       location: event.location || '',
       source_url: event.source_url || null,
       source_name: event.source_name || 'AI Generated',
       event_type: event.event_type || 'events',
+      category: event.category || 'popular',
+      price: event.price || null,
       rank_position: index + 1, // Rank 1-15, top 5 will be shown
     }));
 

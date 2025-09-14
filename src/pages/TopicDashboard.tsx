@@ -26,7 +26,7 @@ import { UniversalScrapingValidator } from "@/components/UniversalScrapingValida
 import { ArticleReExtractor } from "@/components/ArticleReExtractor";
 import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
 import { EventsManager } from "@/components/EventsManager";
-import ApiEventsManager from "@/components/ApiEventsManager";
+import AiEventsManager from "@/components/AiEventsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
@@ -665,7 +665,7 @@ const TopicDashboard = () => {
                     />
                     
                     <div className="border-t pt-8">
-                      <ApiEventsManager 
+                      <AiEventsManager 
                         topicId={topic.id} 
                         topicName={topic.name}
                         region={topic.region}

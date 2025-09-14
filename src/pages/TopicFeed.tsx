@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { SentimentCard } from "@/components/SentimentCard";
+import { EventsAccordion } from "@/components/EventsAccordion";
 import { Hash, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -175,6 +176,18 @@ const TopicFeed = () => {
                       analysisDate={sentimentCard.analysis_date}
                       cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
                       slides={sentimentCard.slides}
+                    />
+                  </div>
+                );
+              }
+
+              // Add events accordion every 10 stories
+              if ((index + 1) % 10 === 0 && topic?.id) {
+                items.push(
+                  <div key={`events-${index}`} className="w-full max-w-2xl">
+                    <EventsAccordion 
+                      topicId={topic.id} 
+                      isOwner={false}
                     />
                   </div>
                 );

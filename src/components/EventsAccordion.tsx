@@ -190,12 +190,20 @@ export const EventsAccordion: React.FC<EventsAccordionProps> = ({ topicId, isOwn
                         {event.description && (
                           <p className="text-sm text-muted-foreground mb-2">{event.description}</p>
                         )}
-                        {event.location && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                            <MapPin className="w-3 h-3" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
+                          {event.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              <span>{event.location}</span>
+                            </div>
+                          )}
+                          {event.price && (
+                            <div className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              <span className="font-medium">{event.price}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
                         {event.source_url && (
