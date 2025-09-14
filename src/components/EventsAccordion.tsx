@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Calendar, MapPin, ExternalLink, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, ExternalLink, Trash2, Clock, Tag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -14,10 +14,14 @@ interface Event {
   description?: string;
   start_date: string;
   end_date?: string;
+  start_time?: string;
+  end_time?: string;
   location?: string;
   source_url?: string;
   source_name?: string;
   event_type: string;
+  category?: string;
+  price?: string;
   rank_position: number;
 }
 

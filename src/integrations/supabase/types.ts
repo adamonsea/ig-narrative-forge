@@ -683,51 +683,66 @@ export type Database = {
       }
       events: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string | null
           description: string | null
           end_date: string | null
+          end_time: string | null
           event_type: string
           id: string
           location: string | null
+          price: string | null
           rank_position: number | null
+          source_api: string | null
           source_name: string | null
           source_url: string | null
           start_date: string
+          start_time: string | null
           status: string
           title: string
           topic_id: string
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           event_type: string
           id?: string
           location?: string | null
+          price?: string | null
           rank_position?: number | null
+          source_api?: string | null
           source_name?: string | null
           source_url?: string | null
           start_date: string
+          start_time?: string | null
           status?: string
           title: string
           topic_id: string
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           event_type?: string
           id?: string
           location?: string | null
+          price?: string | null
           rank_position?: number | null
+          source_api?: string | null
           source_name?: string | null
           source_url?: string | null
           start_date?: string
+          start_time?: string | null
           status?: string
           title?: string
           topic_id?: string
@@ -2623,15 +2638,19 @@ export type Database = {
       get_topic_events: {
         Args: { topic_id_param: string }
         Returns: {
+          category: string
           description: string
           end_date: string
+          end_time: string
           event_type: string
           id: string
           location: string
+          price: string
           rank_position: number
           source_name: string
           source_url: string
           start_date: string
+          start_time: string
           title: string
         }[]
       }

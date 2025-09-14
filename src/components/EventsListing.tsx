@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, ExternalLink, RefreshCw, AlertCircle, Trash2 } from "lucide-react";
+import { Calendar, MapPin, ExternalLink, RefreshCw, AlertCircle, Trash2, Clock, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, isToday, isTomorrow, isWithinInterval, addDays } from "date-fns";
@@ -13,10 +13,14 @@ interface Event {
   description: string;
   start_date: string;
   end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   location: string | null;
   source_url: string | null;
   source_name: string | null;
   event_type: string;
+  category: string | null;
+  price: string | null;
   rank_position: number;
 }
 
@@ -145,7 +149,7 @@ const EventsListing: React.FC<EventsListingProps> = ({ topicId }) => {
         <div>
           <h3 className="text-lg font-semibold">Upcoming Events</h3>
           <p className="text-sm text-muted-foreground">
-            AI-generated events for this topic (showing top 5)
+            Events collected from various API sources (showing next week)
           </p>
         </div>
         <Button 
@@ -190,24 +194,49 @@ const EventsListing: React.FC<EventsListingProps> = ({ topicId }) => {
                           </p>
                         )}
                         
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatEventDate(event.start_date, event.end_date)}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatEventDate(event.start_date, event.end_date)}
+                            </div>
+
+                            {event.start_time && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {event.start_time.slice(0, 5)}
+                                {event.end_time && ` - ${event.end_time.slice(0, 5)}`}
+                              </div>
+                            )}
+
+                            {event.price && (
+                              <div className="flex items-center gap-1 font-medium text-green-600">
+                                <Tag className="h-3 w-3" />
+                                {event.price}
+                              </div>
+                            )}
                           </div>
                           
-                          {event.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {event.location}
-                            </div>
-                          )}
-                          
-                          {event.source_name && (
-                            <div className="text-xs">
-                              Source: {event.source_name}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {event.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {event.location}
+                              </div>
+                            )}
+                            
+                            {event.category && (
+                              <Badge variant="outline" className="text-xs h-5">
+                                {event.category}
+                              </Badge>
+                            )}
+                            
+                            {event.source_name && (
+                              <div className="text-xs">
+                                Source: {event.source_name}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
