@@ -375,7 +375,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                   rel="noopener noreferrer"
                   className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
                 >
-                  Source: {new URL(story.article.source_url).hostname.replace('www.', '')}
+                  Source
                 </a>
               )}
             </div>
