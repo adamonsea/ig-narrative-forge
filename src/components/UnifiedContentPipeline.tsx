@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
+import EventsListing from "@/components/EventsListing";
 
 
 interface Topic {
@@ -257,12 +258,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     <div className="space-y-6">
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="articles">
             Arrivals ({totalArticles})
           </TabsTrigger>
           <TabsTrigger value="stories">
             Published ({totalStories})
+          </TabsTrigger>
+          <TabsTrigger value="events">
+            Events
           </TabsTrigger>
         </TabsList>
 
@@ -343,7 +347,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 />
               </CardContent>
             </Card>
-          )}
+           )}
+        </TabsContent>
+
+        {/* Events Tab */}
+        <TabsContent value="events" className="space-y-4">
+          <Card>
+            <CardContent>
+              <EventsListing topicId={selectedTopicId} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

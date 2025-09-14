@@ -25,6 +25,7 @@ import { JunctionTableValidator } from "@/components/JunctionTableValidator";
 import { UniversalScrapingValidator } from "@/components/UniversalScrapingValidator";
 import { ArticleReExtractor } from "@/components/ArticleReExtractor";
 import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
+import { EventsManager } from "@/components/EventsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
@@ -661,6 +662,10 @@ const TopicDashboard = () => {
                       topicId={topic.id}
                       topicName={topic.name}
                     />
+                    
+                    <div className="border-t pt-8">
+                      <EventsManager topicId={topic.id} />
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
