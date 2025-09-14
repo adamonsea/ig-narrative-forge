@@ -140,12 +140,12 @@ Generate events for ${regionText} with dates strictly between ${today} and ${nex
     }
 
     // Validate and fix event dates
-    const today = new Date().toISOString().split('T')[0];
+    const todayForValidation = new Date().toISOString().split('T')[0];
     const validatedEvents = events.map((event, index) => {
       let eventDate = event.start_date;
       
       // If no date or invalid date, set to future date
-      if (!eventDate || eventDate < today) {
+      if (!eventDate || eventDate < todayForValidation) {
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + (index % 7) + 1); // Spread across next 7 days
         eventDate = futureDate.toISOString().split('T')[0];
