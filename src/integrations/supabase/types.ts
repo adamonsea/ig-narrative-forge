@@ -681,6 +681,68 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          event_type: string
+          id: string
+          location: string | null
+          rank_position: number | null
+          source_name: string | null
+          source_url: string | null
+          start_date: string
+          status: string
+          title: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type: string
+          id?: string
+          location?: string | null
+          rank_position?: number | null
+          source_name?: string | null
+          source_url?: string | null
+          start_date: string
+          status?: string
+          title: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          rank_position?: number | null
+          source_name?: string | null
+          source_url?: string | null
+          start_date?: string
+          status?: string
+          title?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           config: Json | null
@@ -1866,6 +1928,41 @@ export type Database = {
           },
         ]
       }
+      topic_event_preferences: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          is_enabled: boolean
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          is_enabled?: boolean
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          is_enabled?: boolean
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_event_preferences_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_memberships: {
         Row: {
           created_at: string | null
@@ -2375,6 +2472,13 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_event_with_backfill: {
+        Args: { event_id_param: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       delete_story_cascade: {
         Args: { p_story_id: string }
         Returns: Json
@@ -2514,6 +2618,21 @@ export type Database = {
           updated_at: string
           url: string
           word_count: number
+        }[]
+      }
+      get_topic_events: {
+        Args: { topic_id_param: string }
+        Returns: {
+          description: string
+          end_date: string
+          event_type: string
+          id: string
+          location: string
+          rank_position: number
+          source_name: string
+          source_url: string
+          start_date: string
+          title: string
         }[]
       }
       get_topic_sources: {
