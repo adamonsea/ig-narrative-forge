@@ -26,7 +26,7 @@ import { UniversalScrapingValidator } from "@/components/UniversalScrapingValida
 import { ArticleReExtractor } from "@/components/ArticleReExtractor";
 import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
 import { EventsManager } from "@/components/EventsManager";
-import AiEventsManager from "@/components/AiEventsManager";
+import { EnhancedEventsManager } from "@/components/EnhancedEventsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";

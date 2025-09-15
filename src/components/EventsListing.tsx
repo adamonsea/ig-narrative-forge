@@ -37,11 +37,20 @@ const EventsListing: React.FC<EventsListingProps> = ({ topicId }) => {
   const loadEvents = async () => {
     try {
       setLoading(true);
+      console.log('🎪 EventsListing: Loading events for topicId:', topicId);
+      
       const { data, error } = await supabase.rpc('get_topic_events', {
         topic_id_param: topicId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ EventsListing: RPC error:', error);
+        throw error;
+      }
+      
+      console.log('✅ EventsListing: Raw events data:', data);
+      console.log('📊 EventsListing: Events count:', data?.length || 0);
+      
       setEvents(data || []);
     } catch (error) {
       console.error('Error loading events:', error);
