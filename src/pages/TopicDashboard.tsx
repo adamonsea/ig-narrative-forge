@@ -665,10 +665,9 @@ const TopicDashboard = () => {
                     />
                     
                     <div className="border-t pt-8">
-                      <AiEventsManager 
+                      <EnhancedEventsManager 
                         topicId={topic.id} 
                         topicName={topic.name}
-                        region={topic.region}
                       />
                     </div>
                   </CardContent>
