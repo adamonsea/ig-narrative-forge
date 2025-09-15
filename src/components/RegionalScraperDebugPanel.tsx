@@ -6,13 +6,39 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Info, Zap } from "lucide-react";
 
 const RegionalScraperDebugPanel = () => {
-  const [phase1Status] = useState({
-    scraperUtilsUpdated: true,
-    universalTopicScraperEnhanced: true,
-    uiComponentsStandardized: true,
-    testingComponentUpdated: true
-  });
+  const phase2Status = {
+    multiTenantDbUpdated: true,
+    legacyDbUpdated: true,
+    fastTrackScraperUpdated: true,
+    enhancedStrategiesUpdated: true,
+    allLenientFallbacksRemoved: true
+  };
 
+  const phase2Changes = [
+    {
+      component: "multi-tenant-database-operations.ts",
+      change: "Added strict 7-day pre-filtering before processing",
+      status: "completed",
+      impact: "Articles older than 7 days rejected immediately"
+    },
+    {
+      component: "database-operations.ts", 
+      change: "Removed lenient date parsing fallbacks",
+      status: "completed",
+      impact: "No more invalid dates accepted as 'current'"
+    },
+    {
+      component: "fast-track-scraper.ts",
+      change: "Added 7-day recency check in isFastQualified",
+      status: "completed", 
+      impact: "Fast extraction rejects old articles upfront"
+    },
+    {
+      component: "enhanced-scraping-strategies.ts",
+      change: "Strict date validation in article/content qualification",
+      status: "completed",
+      impact: "Emergency permissive mode replaced with proper filtering"
+    }
   const phase1Changes = [
     {
       component: "scraperUtils.ts",
@@ -83,11 +109,26 @@ const RegionalScraperDebugPanel = () => {
           <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="font-medium text-green-800">Ready for Phase 2</span>
+              <span className="font-medium text-green-800">Phase 2 Complete: 7-Day Strict Filtering</span>
             </div>
-            <p className="text-sm text-green-700">
-              All regional topics (including Eastbourne) now use the unified scraper path. 
-              Ready to implement 7-day recency filters and duplicate prevention in Phase 2.
+            <p className="text-sm text-green-700 mb-3">
+              All scraper functions now enforce strict 7-day recency. No more lenient date parsing fallbacks that allowed old articles through.
+            </p>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Phase 2 Changes</h4>
+              {phase2Changes.map((change, index) => (
+                <div key={index} className="flex items-start gap-2 text-xs">
+                  <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="font-medium">{change.component}:</span> {change.change}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-sm text-green-700 mt-3">
+              ✅ Ready for Phase 3: Prevent deleted items from reappearing
             </p>
           </div>
         </CardContent>

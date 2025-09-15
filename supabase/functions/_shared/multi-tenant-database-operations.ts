@@ -26,6 +26,7 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Store articles using multi-tenant structure while maintaining backward compatibility
+   * Phase 2: STRICT 7-day recency filtering
    */
   async storeArticles(
     articles: ArticleData[],
@@ -53,7 +54,41 @@ export class MultiTenantDatabaseOperations {
       return result
     }
 
-    for (const article of articles) {
+    // Phase 2: Pre-filter articles for 7-day recency BEFORE processing
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    console.log(`🗓️ Phase 2: Strict 7-day filter - articles must be newer than ${sevenDaysAgo.toISOString()}`)
+
+    const recentArticles = articles.filter(article => {
+      if (!article.published_at) {
+        console.log(`🚫 REJECTED (no date): "${article.title?.substring(0, 50)}..."`)
+        return false
+      }
+
+      try {
+        const pubDate = new Date(article.published_at)
+        
+        // Phase 2: STRICT date validation - no lenient fallbacks
+        if (isNaN(pubDate.getTime())) {
+          console.log(`🚫 REJECTED (invalid date): "${article.title?.substring(0, 50)}..." - date: "${article.published_at}"`)
+          return false
+        }
+
+        const isRecent = pubDate >= sevenDaysAgo
+        if (!isRecent) {
+          const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24))
+          console.log(`🚫 REJECTED (too old): "${article.title?.substring(0, 50)}..." - ${daysOld} days old`)
+        }
+        return isRecent
+      } catch (error) {
+        console.log(`🚫 REJECTED (date parse error): "${article.title?.substring(0, 50)}..." - "${article.published_at}"`)
+        return false
+      }
+    })
+
+    console.log(`📅 Phase 2 filtering: ${recentArticles.length}/${articles.length} articles passed 7-day recency check`)
+
+    for (const article of recentArticles) {
       try {
         result.articlesProcessed++
 

@@ -428,43 +428,49 @@ export class EnhancedScrapingStrategies {
   }
 
   private isContentQualified(content: any): boolean {
-    // EMERGENCY FIX: Extremely permissive qualification
+    // Phase 2: STRICT qualification - no more emergency permissive mode
     if (!content.title && !content.body) {
       return false;
     }
     
-    // If we have a title OR body, that's good enough
-    if (!content.title) content.title = content.body?.substring(0, 100) + '...';
-    if (!content.body) content.body = content.title;
-    
-    // EMERGENCY: Ultra-relaxed criteria
-    const minWordCount = 5; // Was 15, now 5
-    const maxAge = 30; // days - was 14, now 30
-    
-    const wordCount = this.countWords(content.body || content.title);
-    if (wordCount < minWordCount) {
-      console.log(`⚠️ Content short but accepting: ${wordCount} words`);
-      // Don't reject, just warn
-    }
-    
-    // Very lenient age check
+    // Phase 2: STRICT date validation - no lenient fallbacks
     if (content.published_at) {
       try {
         const publishedDate = new Date(content.published_at);
         if (isNaN(publishedDate.getTime())) {
-          console.log(`⚠️ Invalid date, but accepting content anyway`);
-        } else {
-          const daysSincePublished = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
-          if (daysSincePublished > maxAge) {
-            console.log(`⚠️ Content old but accepting: ${Math.round(daysSincePublished)} days`);
-          }
+          console.log(`🚫 Enhanced content REJECT (invalid date): "${content.title?.substring(0, 50)}..." - date: "${content.published_at}"`);
+          return false;
         }
-      } catch (e) {
-        console.log(`⚠️ Date parsing error, but accepting content anyway`);
+        
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (publishedDate < sevenDaysAgo) {
+          const daysOld = Math.floor((Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24));
+          console.log(`🚫 Enhanced content REJECT (too old): "${content.title?.substring(0, 50)}..." - ${daysOld} days old`);
+          return false;
+        }
+      } catch (error) {
+        console.log(`🚫 Enhanced content REJECT (date parse error): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
+        return false;
       }
+    } else {
+      console.log(`🚫 Enhanced content REJECT (no published date): "${content.title?.substring(0, 50)}..."`);
+      return false;
     }
     
-    console.log(`✅ Content qualified: "${content.title?.substring(0, 50)}..."`);
+    // Auto-fix missing fields  
+    if (!content.title) content.title = content.body?.substring(0, 100) + '...';
+    if (!content.body) content.body = content.title;
+    
+    // Phase 2: Reasonable quality requirements
+    const minWordCount = 30;
+    const wordCount = this.countWords(content.body || content.title);
+    if (wordCount < minWordCount) {
+      console.log(`🚫 Enhanced content REJECT (too short): "${content.title?.substring(0, 50)}..." - ${wordCount} words`);
+      return false;
+    }
+    
+    console.log(`✅ Enhanced content qualified: "${content.title?.substring(0, 50)}..."`);
     return true;
   }
 

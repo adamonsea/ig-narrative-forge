@@ -109,31 +109,36 @@ export class DatabaseOperations {
           relevanceThreshold = 15; // Higher for national sources
         }
         
-        // Add date filtering for local news freshness
+        // Phase 2: STRICT 7-day filtering in legacy database operations
         let tooOld = false;
         if (article.published_at) {
           try {
-            // Handle various date formats more robustly
-            let pubDate: Date;
-            if (article.published_at === 'Daily' || article.published_at === 'Weekly' || typeof article.published_at === 'string' && !article.published_at.includes('-') && !article.published_at.includes('/')) {
-              // Invalid date format, use current date
-              pubDate = new Date();
-            } else {
-              pubDate = new Date(article.published_at);
-              // Check if date is valid
-              if (isNaN(pubDate.getTime())) {
-                console.log(`⚠️ Invalid date format, using current date: ${article.published_at}`);
-                pubDate = new Date();
-              }
+            const pubDate = new Date(article.published_at);
+            
+            // Phase 2: STRICT date validation - no more lenient fallbacks
+            if (isNaN(pubDate.getTime())) {
+              console.log(`🚫 STRICT REJECT (invalid date): ${article.title.substring(0, 50)}... - date: "${article.published_at}"`);
+              discarded++;
+              continue;
             }
             
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             tooOld = pubDate < sevenDaysAgo;
+            
+            if (tooOld) {
+              const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
+              console.log(`🚫 STRICT REJECT (too old): ${article.title.substring(0, 50)}... - ${daysOld} days old`);
+            }
           } catch (error) {
-            console.log(`⚠️ Date parsing error, using current date: ${article.published_at}`);
-            tooOld = false; // Don't discard if we can't parse the date
+            console.log(`🚫 STRICT REJECT (date parse error): ${article.title.substring(0, 50)}... - "${article.published_at}"`);
+            discarded++;
+            continue;
           }
+        } else {
+          console.log(`🚫 STRICT REJECT (no published date): ${article.title.substring(0, 50)}...`);
+          discarded++;
+          continue;
         }
 
         if (article.word_count < minWordCount || article.content_quality_score < minQualityScore || article.regional_relevance_score < relevanceThreshold || tooOld) {

@@ -368,6 +368,31 @@ export class FastTrackScraper {
   }
 
   private isFastQualified(content: any): boolean {
+    // Phase 2: Add STRICT 7-day recency check
+    if (content.published_at) {
+      try {
+        const pubDate = new Date(content.published_at);
+        if (!isNaN(pubDate.getTime())) {
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          if (pubDate < sevenDaysAgo) {
+            const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
+            console.log(`🚫 Fast-track REJECT (too old): "${content.title?.substring(0, 50)}..." - ${daysOld} days old`);
+            return false;
+          }
+        } else {
+          console.log(`🚫 Fast-track REJECT (invalid date): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
+          return false;
+        }
+      } catch (error) {
+        console.log(`🚫 Fast-track REJECT (date parse error): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
+        return false;
+      }
+    } else {
+      console.log(`🚫 Fast-track REJECT (no date): "${content.title?.substring(0, 50)}..."`);
+      return false;
+    }
+
     // Enhanced qualification to avoid snippets
     if (!content.title && !content.body) {
       return false;
