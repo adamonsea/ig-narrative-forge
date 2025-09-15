@@ -42,6 +42,9 @@ const Index = () => {
             <h1 className="text-8xl font-light tracking-tight text-foreground">
               curatr
             </h1>
+            <div className="text-sm text-muted-foreground font-medium tracking-wider uppercase">
+              Beta
+            </div>
             <p className="text-lg text-muted-foreground">
               Turn any topic into a curated feed
             </p>

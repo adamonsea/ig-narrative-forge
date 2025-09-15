@@ -12,6 +12,8 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -25,6 +27,43 @@ const Auth = () => {
     };
     checkUser();
   }, [navigate]);
+
+  const handleWaitlistSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistEmail) return;
+    
+    setWaitlistLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('waitlist-signup', {
+        body: { email: waitlistEmail }
+      });
+
+      if (error) {
+        console.error('Waitlist signup error:', error);
+        toast({
+          title: "Waitlist signup failed",
+          description: error.message || "Failed to join waitlist",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome to the waitlist!",
+          description: "We'll notify you when curatr is ready for you.",
+        });
+        setWaitlistEmail('');
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Waitlist signup failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setWaitlistLoading(false);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,15 +132,18 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
           <CardTitle className="text-3xl font-bold">curatr</CardTitle>
+          <div className="text-xs text-muted-foreground font-medium tracking-wider uppercase">
+            Beta
+          </div>
           <CardDescription className="text-base">
-            Automated content curation for any topic
+            Currently invite-only. Join our waitlist below.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="waitlist">Join Waitlist</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin">
@@ -134,34 +176,25 @@ const Auth = () => {
               </form>
             </TabsContent>
             
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+            <TabsContent value="waitlist">
+              <form onSubmit={handleWaitlistSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="waitlist-email">Email</Label>
                   <Input
-                    id="signup-email"
+                    id="waitlist-email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
                     placeholder="Enter your email"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a password"
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Create Account'}
+                <Button type="submit" className="w-full" disabled={waitlistLoading}>
+                  {waitlistLoading ? 'Joining waitlist...' : 'Join Waitlist'}
                 </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Be the first to know when curatr opens up
+                </p>
               </form>
             </TabsContent>
           </Tabs>
