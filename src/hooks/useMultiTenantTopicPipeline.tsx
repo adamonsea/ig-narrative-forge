@@ -202,9 +202,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      // Get unified stories (both legacy and multi-tenant) for this topic
       const storiesResult = await supabase.rpc('get_stories_unified', {
-        p_topic_id: selectedTopicId
+        p_topic_id: selectedTopicId,
+        p_status: 'ready',
+        p_limit: 100
       });
 
       if (storiesResult.error) {
