@@ -14,6 +14,8 @@ interface UniversalScrapeRequest {
   forceRescrape?: boolean;
   testMode?: boolean;
   maxSources?: number;
+  // Phase 1: Support single source filtering
+  singleSourceMode?: boolean;
 }
 
 // Circuit breaker for failed URLs (simple in-memory cache)
@@ -84,7 +86,8 @@ serve(async (req) => {
       sourceIds, 
       forceRescrape = false, 
       testMode = false, 
-      maxSources = testMode ? 1 : undefined  // Ultra-aggressive: only 1 source in test mode
+      maxSources = testMode ? 1 : undefined,  // Ultra-aggressive: only 1 source in test mode
+      singleSourceMode = false
     } = await req.json() as UniversalScrapeRequest;
 
     console.log('Universal Topic Scraper - Starting for topic:', topicId);

@@ -54,11 +54,12 @@ const MultiTenantScraperTester = () => {
     try {
       console.log(`🧪 Testing source: ${source.name} - ${source.url}`);
       
-      const { data, error: functionError } = await supabase.functions.invoke('universal-scraper', {
+      // Phase 1 Standardization: Use universal-topic-scraper for all regional topics
+      const { data, error: functionError } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
-          feedUrl: source.url,
-          sourceId: source.id,
-          region: testTopic.region
+          topicId: testTopic.id,
+          sourceIds: [source.id],
+          testMode: true
         }
       });
 
@@ -67,18 +68,22 @@ const MultiTenantScraperTester = () => {
       }
 
       console.log(`✅ Source test completed for ${source.name}:`, data);
+      
+      // Extract result for this specific source
+      const sourceResult = data.results?.find((r: any) => r.sourceId === source.id) || data;
+      
       setSourceResults(prev => ({
         ...prev,
-        [source.id]: { ...data, source: source.name }
+        [source.id]: { ...sourceResult, source: source.name }
       }));
       
-      const success = data?.success && (data.articlesStored > 0 || data.multiTenantArticlesStored > 0);
+      const success = sourceResult?.success && sourceResult.articlesScraped > 0;
       
       toast({
         title: success ? "Source Working!" : "Source Failed",
         description: success 
-          ? `${source.name}: Found ${data.articlesFound || 0}, stored ${data.articlesStored || 0} legacy + ${data.multiTenantArticlesStored || 0} multi-tenant`
-          : `${source.name}: ${data?.message || 'No articles stored'}`,
+          ? `${source.name}: Found ${sourceResult.articlesFound || 0}, stored ${sourceResult.articlesScraped || 0}`
+          : `${source.name}: ${sourceResult?.error || 'No articles stored'}`,
         variant: success ? "default" : "destructive"
       });
 
@@ -117,7 +122,7 @@ const MultiTenantScraperTester = () => {
     setTesting(false);
     
     const successCount = Object.values(sourceResults).filter((result: any) => 
-      result.success && (result.articlesStored > 0 || result.multiTenantArticlesStored > 0)
+      result.success && result.articlesScraped > 0
     ).length;
     
     toast({

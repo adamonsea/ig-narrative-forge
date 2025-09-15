@@ -13,12 +13,17 @@ export interface Topic {
  * @returns The appropriate scraper function name
  */
 export const getScraperFunction = (topicType: 'regional' | 'keyword', feedUrl?: string): string => {
-  // Check if URL appears to be an index/listing page
+  // Phase 1 Standardization: ALL regional topics use universal-topic-scraper
+  if (topicType === 'regional') {
+    return 'universal-topic-scraper';
+  }
+  
+  // For keyword topics, check if URL appears to be an index/listing page
   if (feedUrl && isIndexPage(feedUrl)) {
     return 'unified-scraper'; // Use new two-phase scraper for index pages
   }
   
-  return topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
+  return 'topic-aware-scraper';
 };
 
 /**
@@ -52,7 +57,7 @@ export const isIndexPage = (url: string): boolean => {
 /**
  * Creates scraper request body based on topic type
  * @param topicType - The type of topic
- * @param feedUrl - The URL to scrape
+ * @param feedUrl - The URL to scrape (for legacy compatibility only)
  * @param options - Additional options (topicId, sourceId, region)
  * @returns Appropriate request body for the scraper
  */
@@ -65,7 +70,17 @@ export const createScraperRequestBody = (
     region?: string;
   }
 ) => {
-  // Check if this is an index page requiring two-phase scraping
+  // Phase 1 Standardization: ALL regional topics use universal-topic-scraper format
+  if (topicType === 'regional') {
+    return {
+      topicId: options.topicId,
+      sourceIds: options.sourceId ? [options.sourceId] : undefined,
+      forceRescrape: false,
+      testMode: false
+    };
+  }
+
+  // For keyword topics, check if this is an index page requiring two-phase scraping
   if (isIndexPage(feedUrl)) {
     return {
       indexUrl: feedUrl,
@@ -76,18 +91,10 @@ export const createScraperRequestBody = (
     };
   }
   
-  // For individual article pages, use existing logic
-  if (topicType === 'regional') {
-    return {
-      feedUrl,
-      sourceId: options.sourceId,
-      region: options.region || 'default'
-    };
-  } else {
-    return {
-      feedUrl,
-      topicId: options.topicId,
-      sourceId: options.sourceId
-    };
-  }
+  // Standard keyword topic scraping
+  return {
+    feedUrl,
+    topicId: options.topicId,
+    sourceId: options.sourceId
+  };
 };
