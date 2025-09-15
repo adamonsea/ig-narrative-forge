@@ -215,6 +215,7 @@ export const useMultiTenantActions = () => {
 
   /**
    * Delete/discard a multi-tenant article (following legacy pattern)
+   * Now with permanent auto-suppression via database trigger
    */
   const deleteMultiTenantArticle = async (articleId: string, articleTitle: string) => {
     if (deletingArticles.has(articleId)) return;
@@ -224,9 +225,10 @@ export const useMultiTenantActions = () => {
     setDeletingArticles(prev => new Set([...prev, articleId]));
 
     try {
-      console.log('🗑️ Deleting multi-tenant article:', articleId);
+      console.log('🗑️ Deleting multi-tenant article (with auto-suppression):', articleId);
 
-      // Update the multi-tenant article status to discarded (equivalent to legacy)
+      // Update the multi-tenant article status to discarded 
+      // Auto-suppression handled by database trigger
       const { error: updateError } = await supabase
         .from('topic_articles')
         .update({
@@ -240,11 +242,11 @@ export const useMultiTenantActions = () => {
         throw new Error(`Failed to discard article: ${updateError.message}`);
       }
 
-      console.log('✅ Multi-tenant article discarded successfully');
+      console.log('✅ Multi-tenant article permanently deleted with auto-suppression');
 
       toast({
-        title: "Article Deleted",
-        description: `"${articleTitle}" has been discarded and won't be re-imported`,
+        title: "Article Permanently Deleted",
+        description: `"${articleTitle}" will never reappear in future scrapes.`,
       });
 
       // Clean up animation state after delay (matching legacy)
@@ -315,8 +317,8 @@ export const useMultiTenantActions = () => {
       console.log('✅ Multi-tenant articles bulk discarded successfully');
 
       toast({
-        title: "Articles Deleted",
-        description: `${articleIds.length} articles have been discarded and won't be re-imported`,
+        title: "Articles Permanently Deleted",
+        description: `${articleIds.length} articles will never reappear in future scrapes.`,
       });
 
       // Clean up animation states after delay (matching legacy)

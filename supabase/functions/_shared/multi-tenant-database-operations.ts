@@ -169,6 +169,7 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Process article in new multi-tenant structure
+   * Phase 2 Enhancement: Prevent reactivation of discarded articles
    */
   private async processArticleMultiTenant(
     article: ArticleData,
@@ -211,7 +212,26 @@ export class MultiTenantDatabaseOperations {
     const updated = new Date(sharedContent.updated_at).getTime()
     const newContent = Math.abs(created - updated) < 1000
 
-    // Insert topic-specific article record
+    // Phase 2: Check if topic article already exists and is discarded
+    const { data: existingTopicArticle } = await this.supabase
+      .from('topic_articles')
+      .select('id, processing_status')
+      .eq('shared_content_id', sharedContent.id)
+      .eq('topic_id', topic.id)
+      .single()
+
+    // Phase 2: Skip upsert if article is discarded (permanent delete protection)
+    if (existingTopicArticle?.processing_status === 'discarded') {
+      console.log(`🛡️ Skipping upsert of discarded article: "${article.title}" (stays deleted)`)
+      return {
+        newContent,
+        topicArticle: false,
+        skipped: true,
+        sharedContentId: sharedContent.id
+      }
+    }
+
+    // Insert topic-specific article record (only if not discarded)
     const { error: topicError } = await this.supabase
       .from('topic_articles')
       .upsert({
@@ -221,7 +241,7 @@ export class MultiTenantDatabaseOperations {
         regional_relevance_score: relevanceScore,
         content_quality_score: qualityScore,
         keyword_matches: this.findKeywordMatches(article, topic),
-        processing_status: 'new',
+        processing_status: existingTopicArticle ? existingTopicArticle.processing_status : 'new', // Preserve existing status
         import_metadata: {
           scrape_method: 'multi_tenant',
           scrape_timestamp: new Date().toISOString(),

@@ -13,6 +13,7 @@ import { UnifiedTestingDashboard } from '@/components/UnifiedTestingDashboard';
 import { CleanSlateMigration } from '@/components/CleanSlateMigration';
 import { TopicArchiveManager } from '@/components/TopicArchiveManager';
 import { SourceValidationTester } from '@/components/SourceValidationTester';
+import { DiscardedArticlesBackfillButton } from '@/components/DiscardedArticlesBackfillButton';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -73,7 +74,10 @@ export default function AdminPanel() {
           </TabsContent>
           
           <TabsContent value="migration" className="mt-6">
-            <CleanSlateMigration />
+            <div className="space-y-6">
+              <DiscardedArticlesBackfillButton />
+              <CleanSlateMigration />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
