@@ -63,8 +63,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     animatingArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
-  // Multi-tenant actions for additional functionality
-  const { returnToReview } = useMultiTenantActions();
+  // Multi-tenant actions for additional functionality  
+  const multiTenantActions = useMultiTenantActions();
+  const { returnToReview } = multiTenantActions;
+
+  // Animation states for stories
+  const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
 
   // Load topics
   useEffect(() => {
