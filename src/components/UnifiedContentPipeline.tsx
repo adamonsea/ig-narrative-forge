@@ -9,6 +9,7 @@ import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } fr
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
+import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import EventsListing from "@/components/EventsListing";
@@ -61,6 +62,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     deletingArticles,
     animatingArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
+
+  // Multi-tenant actions for additional functionality
+  const { returnToReview } = useMultiTenantActions();
 
   // Load topics
   useEffect(() => {
@@ -216,11 +220,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const handleReturnToReview = async (storyId: string) => {
-    // This functionality needs to be implemented in multi-tenant system
-    toast({
-      title: "Return to Review",
-      description: "This feature will be implemented soon",
-    });
+    try {
+      await returnToReview(storyId);
+      // Refresh the content to show the updated story status
+      await refreshContent();
+    } catch (error) {
+      console.error('Error returning story to review:', error);
+    }
   };
 
   if (!selectedTopicId) {

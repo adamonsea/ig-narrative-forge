@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronDown, ChevronRight, CheckCircle, Eye, Trash2, ExternalLink, RotateCcw, Loader2, FileText, ChevronLeft, ChevronRightIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle, Eye, Trash2, ExternalLink, RotateCcw, Loader2, FileText, ChevronLeft, ChevronRightIcon, Edit3 } from "lucide-react";
 import { InlineCarouselImages } from "@/components/InlineCarouselImages";
 import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { MultiTenantStory } from "@/hooks/useMultiTenantTopicPipeline";
+import SlideEditor from "@/components/SlideEditor";
 
 interface MultiTenantStoriesListProps {
   stories: MultiTenantStory[];
@@ -49,6 +50,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   onRefresh
 }) => {
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
@@ -289,6 +291,17 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
+                    {story.slides && story.slides.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedSlideId(story.slides[0].id)}
+                        className="w-full sm:w-auto"
+                        title="Preview & Edit Slides"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </Button>
+                    )}
                     {story.url && (
                       <Button
                         size="sm"
@@ -415,6 +428,14 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                             {slide.word_count} words - {getWordCountBadge(slide.word_count, slide.slide_number)}
                           </Badge>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedSlideId(slide.id)}
+                          className="h-6 px-2"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </Button>
                       </div>
                       <p className="mb-2 leading-relaxed">{slide.content}</p>
                       {slide.visual_prompt && (
@@ -438,6 +459,15 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
           </Card>
         );
       })}
+
+      {/* Slide Editor Dialog */}
+      {selectedSlideId && (
+        <SlideEditor
+          slideId={selectedSlideId}
+          open={!!selectedSlideId}
+          onClose={() => setSelectedSlideId(null)}
+        />
+      )}
     </div>
   );
 };

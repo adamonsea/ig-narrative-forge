@@ -529,6 +529,73 @@ export const useMultiTenantActions = () => {
     }
   };
 
+  /**
+   * Return a published story back to review (draft status)
+   */
+  const returnToReview = async (storyId: string) => {
+    try {
+      console.log('🔄 Returning story to review:', storyId);
+
+      // Get the story to find associated article
+      const { data: story, error: storyError } = await supabase
+        .from('stories')
+        .select('topic_article_id, shared_content_id, title')
+        .eq('id', storyId)
+        .single();
+
+      if (storyError) {
+        console.error('Error fetching story:', storyError);
+        throw new Error(`Failed to fetch story: ${storyError.message}`);
+      }
+
+      // Update story status back to draft
+      const { error: storyUpdateError } = await supabase
+        .from('stories')
+        .update({
+          status: 'draft',
+          is_published: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (storyUpdateError) {
+        console.error('Error updating story status:', storyUpdateError);
+        throw new Error(`Failed to update story status: ${storyUpdateError.message}`);
+      }
+
+      // Reset associated multi-tenant article status to 'new' if it exists
+      if (story?.topic_article_id) {
+        const { error: resetError } = await supabase
+          .from('topic_articles')
+          .update({
+            processing_status: 'new',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', story.topic_article_id);
+
+        if (resetError) {
+          console.warn('Warning: Failed to reset multi-tenant article status:', resetError);
+        }
+      }
+
+      console.log('✅ Story returned to review successfully');
+
+      toast({
+        title: "Story Returned to Review",
+        description: `"${story?.title}" has been sent back to arrivals for review.`,
+      });
+
+    } catch (error: any) {
+      console.error('Error returning story to review:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to return story to review. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
     // State variables (matching legacy system)
     processingArticle,
@@ -542,5 +609,6 @@ export const useMultiTenantActions = () => {
     cancelMultiTenantQueueItem,
     approveMultiTenantStory,
     rejectMultiTenantStory,
+    returnToReview,
   };
 };
