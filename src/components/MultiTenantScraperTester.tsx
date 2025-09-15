@@ -109,8 +109,8 @@ const MultiTenantScraperTester = () => {
     setError(null);
     
     toast({
-      title: "Phase 2 Testing Started",
-      description: "Testing all Hastings sources for multi-tenant architecture..."
+      title: "Phase 4 Testing Started",
+      description: "Testing sources with standardized response format and neutral messaging..."
     });
 
     for (const source of hastingsSources) {

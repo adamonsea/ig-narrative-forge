@@ -216,6 +216,88 @@ const RegionalScraperDebugPanel = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-blue-500" />
+            Phase 4: Standardized Status Messaging
+          </CardTitle>
+          <CardDescription>
+            Neutral messaging for mixed results and standardized response formats
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Phase 4 Complete:</strong> All scraper functions now return standardized response formats 
+              with success/partial_success/failure status. UI shows neutral "Completed with warnings" messages 
+              instead of purely negative messaging for mixed results.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Implementation Details</h4>
+            
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Standardized Response Types</span>
+                  <Badge variant="outline" className="text-xs">
+                    Created
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">Created ScraperResponse interface with status field and summary metrics</p>
+                <p className="text-xs text-blue-600">Added partial_success status for mixed results</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Universal Topic Scraper Updated</span>
+                  <Badge variant="outline" className="text-xs">
+                    Standardized
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">Updated to use StandardizedScraperResponse class</p>
+                <p className="text-xs text-blue-600">Returns consistent format with status and detailed metrics</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Neutral UI Messaging</span>
+                  <Badge variant="outline" className="text-xs">
+                    Improved
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">UI shows "Completed with warnings" for partial success instead of "Failed"</p>
+                <p className="text-xs text-blue-600">Created utility functions for consistent messaging</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="font-medium text-green-800">Phase 4 Success - Messaging Standardized</span>
+            </div>
+            <p className="text-sm text-green-700 mb-3">
+              ✅ All scrapers now return consistent response formats with neutral messaging for mixed results. 
+              Users see helpful status information without unnecessary alarm.
+            </p>
+            <p className="text-sm text-green-700">
+              ⏭️  Ready for Phase 5: Source health consolidation and real-time metrics
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

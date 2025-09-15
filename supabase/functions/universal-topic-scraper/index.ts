@@ -151,7 +151,7 @@ serve(async (req) => {
       // Skip if invalid URL
       if (!feedUrl || typeof feedUrl !== 'string' || feedUrl.trim() === '') {
         console.log(`⚠️ Skipping ${source.source_name}: Invalid URL`);
-        results.push({
+        standardResponse.addSourceResult({
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
@@ -159,6 +159,7 @@ serve(async (req) => {
           articlesFound: 0,
           articlesScraped: 0
         });
+        standardResponse.addWarning(`${source.source_name}: Invalid or missing URL`);
         continue;
       }
 
@@ -171,7 +172,7 @@ serve(async (req) => {
       // Circuit breaker check
       if (shouldSkipUrl(feedUrl)) {
         console.log(`🚫 Skipping ${source.source_name}: Recent failures (circuit breaker)`);
-        results.push({
+        standardResponse.addSourceResult({
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
@@ -179,6 +180,7 @@ serve(async (req) => {
           articlesFound: 0,
           articlesScraped: 0
         });
+        standardResponse.addWarning(`${source.source_name}: Skipped due to circuit breaker`);
         continue;
       }
 
@@ -189,7 +191,7 @@ serve(async (req) => {
         if (!isAccessible) {
           console.log(`❌ Quick check failed for ${source.source_name}`);
           recordFailure(feedUrl);
-          results.push({
+          standardResponse.addSourceResult({
             sourceId: source.source_id,
             sourceName: source.source_name,
             success: false,
@@ -278,22 +280,20 @@ serve(async (req) => {
               .then(() => console.log(`📈 Updated metrics for ${source.source_name}`))
               .catch(err => console.log(`⚠️ Failed to update metrics: ${err.message}`));
 
-            const result = {
+            const result: ScraperSourceResult = {
               sourceId: source.source_id,
               sourceName: source.source_name,
               success: true,
               articlesFound: scrapeResult.articlesFound,
               articlesScraped: scrapeResult.articlesScraped,
-              multiTenantStored: storeResult.topicArticlesCreated,
-              method: scrapeResult.method,
-              processingTime: Date.now() - startTime
+              executionTimeMs: Date.now() - startTime
             };
 
             console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
             return result;
           } else {
             recordFailure(source.normalizedUrl);
-            const result = {
+            const result: ScraperSourceResult = {
               sourceId: source.source_id,
               sourceName: source.source_name,
               success: false,
@@ -316,7 +316,7 @@ serve(async (req) => {
             error: sourceError.message,
             articlesFound: 0,
             articlesScraped: 0
-          };
+          } as ScraperSourceResult;
         }
       })();
 
@@ -327,22 +327,28 @@ serve(async (req) => {
         );
         
         const result = await Promise.race([sourcePromise, timeoutPromise]);
-        results.push(result);
+        standardResponse.addSourceResult(result);
       } catch (timeoutError) {
         console.error(`⏰ Timeout processing ${source.source_name}:`, timeoutError);
         recordFailure(source.normalizedUrl);
-        results.push({
+        const timeoutResult: ScraperSourceResult = {
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
           error: `Processing timeout: ${timeoutError.message}`,
           articlesFound: 0,
           articlesScraped: 0
-        });
+        };
+        standardResponse.addSourceResult(timeoutResult);
+        standardResponse.addError(`${source.source_name}: Processing timeout`);
       }
     }
 
     console.log(`🏁 Completed processing ${processedCount}/${validSources.length} sources for topic: ${topic.name} in ${Date.now() - startTime}ms`);
+
+    // Finalize standardized response
+    standardResponse.setExecutionTime(startTime);
+    const finalResponse = standardResponse.finalize();
 
     // Background system event logging (don't wait for it)
     supabase
@@ -354,9 +360,10 @@ serve(async (req) => {
           topicId,
           topicName: topic.name,
           sourcesProcessed: processedCount,
-          totalArticles: results.reduce((sum, r) => sum + (r.articlesScraped || 0), 0),
-          successfulSources: results.filter(r => r.success).length,
-          executionTimeMs: Date.now() - startTime,
+          totalArticles: finalResponse.summary.totalArticlesStored,
+          successfulSources: finalResponse.summary.successfulSources,
+          executionTimeMs: finalResponse.summary.executionTimeMs,
+          status: finalResponse.status,
           testMode
         },
         function_name: 'universal-topic-scraper'
@@ -364,24 +371,8 @@ serve(async (req) => {
       .then(() => console.log('📝 System log recorded'))
       .catch(err => console.log(`⚠️ Failed to log: ${err.message}`));
 
-    const totalArticles = results.reduce((sum, r) => sum + (r.articlesScraped || 0), 0);
-    const successfulSources = results.filter(r => r.success).length;
-    const executionTime = Date.now() - startTime;
-
     return new Response(
-      JSON.stringify({
-        success: true,
-        topicId,
-        topicName: topic.name,
-        sourcesProcessed: processedCount,
-        sourcesTotal: targetSources.length,
-        successfulSources,
-        totalArticles,
-        executionTimeMs: executionTime,
-        testMode,
-        results,
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify(finalResponse),
       { 
         headers: { 
           ...corsHeaders, 
@@ -393,12 +384,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('Universal Topic Scraper Error:', error);
     
+    const errorResponse = new StandardizedScraperResponse();
+    errorResponse.addError(`Critical scraper error: ${error.message}`);
+    errorResponse.setExecutionTime(Date.now() - 1000); // Fallback timing
+    
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      }),
+      errorResponse.toJSON(),
       { 
         status: 500,
         headers: { 
