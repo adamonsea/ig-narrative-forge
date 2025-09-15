@@ -339,7 +339,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <MultiTenantStoriesList
-                  stories={stories}
+                  stories={stories.filter(story => story.status === 'ready')}
                   expandedStories={expandedStories}
                   processingApproval={processingApproval}
                   processingRejection={processingRejection}

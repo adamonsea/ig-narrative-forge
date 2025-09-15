@@ -222,9 +222,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           created_at: story.created_at,
           updated_at: story.updated_at,
           cover_illustration_url: story.cover_illustration_url,
+          cover_illustration_prompt: story.cover_illustration_prompt,
           illustration_generated_at: story.illustration_generated_at,
-          slides: story.slides || [],
-          // Additional properties for compatibility
+          slides: Array.isArray(story.slides) ? story.slides : [],
+          // Properties now properly populated from RPC
           url: story.source_url || '',
           author: story.author || '',
           word_count: story.word_count || 0,
