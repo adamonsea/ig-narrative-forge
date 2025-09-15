@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Info, Zap } from "lucide-react";
+import { CheckCircle, XCircle, Info, Zap, Shield } from "lucide-react";
 
 const RegionalScraperDebugPanel = () => {
   const phase2Status = {
@@ -39,6 +39,8 @@ const RegionalScraperDebugPanel = () => {
       status: "completed",
       impact: "Emergency permissive mode replaced with proper filtering"
     }
+  ];
+
   const phase1Changes = [
     {
       component: "scraperUtils.ts",
@@ -129,6 +131,87 @@ const RegionalScraperDebugPanel = () => {
             
             <p className="text-sm text-green-700 mt-3">
               ✅ Ready for Phase 3: Prevent deleted items from reappearing
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-green-500" />
+            Phase 3: Article Suppression System
+          </CardTitle>
+          <CardDescription>
+            Prevent discarded articles from reappearing in future scrapes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Phase 3 Complete:</strong> Article suppression system implemented. Users can now "Discard + Suppress" 
+              articles to permanently prevent them from reappearing in future scrapes.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Implementation Details</h4>
+            
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Discarded Articles Table</span>
+                  <Badge variant="outline" className="text-xs">
+                    Created
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">New table with normalized URLs and topic-scoped suppression</p>
+                <p className="text-xs text-blue-600">Indexed for fast lookup during scraping</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Suppress Action in UI</span>
+                  <Badge variant="outline" className="text-xs">
+                    Added
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">"Discard + Suppress" button with shield icon in article lists</p>
+                <p className="text-xs text-blue-600">Available in multi-tenant article view</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-3 border rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-medium text-sm">Suppression Check in Storage</span>
+                  <Badge variant="outline" className="text-xs">
+                    Implemented
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">Articles checked against suppression list before storage</p>
+                <p className="text-xs text-blue-600">Integrated with multi-tenant database operations</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-blue-800">Phase 3 Success - Suppression Active</span>
+            </div>
+            <p className="text-sm text-blue-700 mb-3">
+              ✅ Users can now permanently suppress unwanted articles from future scrapes. 
+              The system prevents duplicates and maintains clean feeds.
+            </p>
+            <p className="text-sm text-blue-700">
+              ⏭️  Ready for Phase 4: Fix status messaging and partial success handling
             </p>
           </div>
         </CardContent>

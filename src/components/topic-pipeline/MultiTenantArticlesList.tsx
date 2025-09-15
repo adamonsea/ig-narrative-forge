@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle } from "lucide-react";
+import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 
@@ -32,7 +32,9 @@ interface MultiTenantArticlesListProps {
   onPreview?: (article: MultiTenantArticle) => void;
   onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
+  onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;
+  topicId?: string;
   onRefresh?: () => void;
 }
 
@@ -53,7 +55,9 @@ export default function MultiTenantArticlesList({
   onPreview,
   onApprove,
   onDelete,
+  onDiscardAndSuppress,
   onBulkDelete,
+  topicId,
   onRefresh
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
@@ -192,6 +196,17 @@ export default function MultiTenantArticlesList({
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+            {onDiscardAndSuppress && topicId && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onDiscardAndSuppress(article.id, topicId, article.url, article.title)}
+                disabled={isDeleting}
+                title="Discard and permanently suppress from future scrapes"
+              >
+                <Shield className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 

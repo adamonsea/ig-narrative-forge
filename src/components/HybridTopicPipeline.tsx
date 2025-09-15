@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useArticleActions } from "@/hooks/useArticleActions";
 import { Textarea } from "@/components/ui/textarea";
 
 // Legacy hooks and components
@@ -57,6 +58,7 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
   const [viewMode, setViewMode] = useState<'legacy' | 'multi-tenant'>('legacy');
   const { toast } = useToast();
   const { user } = useAuth();
+  const { discardAndSuppress } = useArticleActions();
 
   // Legacy pipeline hook
   const {
@@ -166,6 +168,12 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
 
   const handleMultiTenantDeleteWrapper = async (articleId: string, articleTitle: string) => {
     await multiTenantDelete(articleId, articleTitle);
+  };
+
+  const handleMultiTenantSuppressWrapper = async (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => {
+    await discardAndSuppress(articleId, topicId, articleUrl, articleTitle);
+    // Refresh data after suppression
+    loadMultiTenantContent();
   };
 
   const handleMultiTenantBulkDeleteWrapper = async (articleIds: string[]) => {

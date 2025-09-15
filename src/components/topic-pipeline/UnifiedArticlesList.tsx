@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw, CheckSquare, Square } from "lucide-react";
+import { PlayCircle, Eye, ExternalLink, Trash2, Info, AlertTriangle, FileText, RefreshCw, CheckSquare, Square, Shield } from "lucide-react";
 import { SimilarArticleIndicator } from "@/components/SimilarArticleIndicator";
 import { SimpleBulkDeleteDialog } from "@/components/ui/simple-bulk-delete-dialog";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -24,11 +24,13 @@ interface UnifiedArticlesListProps {
   onPreview: (article: MultiTenantArticle) => void;
   onApprove: (articleId: string, slideType: 'short' | 'tabloid' | 'indepth' | 'extensive', tone: 'formal' | 'conversational' | 'engaging', writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
+  onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete: (articleIds: string[]) => void;
   defaultTone: 'formal' | 'conversational' | 'engaging';
   defaultWritingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   topicKeywords?: string[];
   topicLandmarks?: string[];
+  topicId?: string;
   onRefresh?: () => void;
 }
 
@@ -46,11 +48,13 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
   onPreview,
   onApprove,
   onDelete,
+  onDiscardAndSuppress,
   onBulkDelete,
   defaultTone,
   defaultWritingStyle,
   topicKeywords = [],
   topicLandmarks = [],
+  topicId,
   onRefresh
 }) => {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
@@ -269,6 +273,18 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
                   <Trash2 className="w-4 h-4 sm:mr-0" />
                   <span className="ml-2 sm:hidden">Delete</span>
                 </Button>
+                {onDiscardAndSuppress && topicId && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onDiscardAndSuppress(article.id, topicId, article.url, article.title)}
+                    disabled={deletingArticles.has(article.id)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Shield className="w-4 h-4 sm:mr-0" />
+                    <span className="ml-2 sm:hidden">Suppress</span>
+                  </Button>
+                )}
               </div>
               
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">

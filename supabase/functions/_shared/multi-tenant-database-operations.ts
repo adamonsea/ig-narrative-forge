@@ -88,7 +88,30 @@ export class MultiTenantDatabaseOperations {
 
     console.log(`📅 Phase 2 filtering: ${recentArticles.length}/${articles.length} articles passed 7-day recency check`)
 
+    // Phase 3: Filter out suppressed articles
+    const allowedArticles = []
     for (const article of recentArticles) {
+      const normalizedUrl = this.normalizeUrl(article.source_url)
+      
+      // Check suppression list
+      const { data: suppressedArticle } = await this.supabase
+        .from('discarded_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .eq('normalized_url', normalizedUrl)
+        .single()
+      
+      if (suppressedArticle) {
+        console.log(`🚫 SUPPRESSED: "${article.title?.substring(0, 50)}..." (previously discarded)`)
+        continue
+      }
+      
+      allowedArticles.push(article)
+    }
+
+    console.log(`🛡️ Phase 3 suppression: ${allowedArticles.length}/${recentArticles.length} articles passed suppression check`)
+
+    for (const article of allowedArticles) {
       try {
         result.articlesProcessed++
 
