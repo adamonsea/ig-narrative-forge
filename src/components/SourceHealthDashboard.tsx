@@ -59,7 +59,7 @@ export const SourceHealthDashboard = () => {
         
         toast({
           title: 'Health Check Complete',
-          description: `Analyzed ${data.summary.sources_processed} sources.`,
+          description: `Analyzed ${data.summary.sources_processed} sources using actual article counts.`,
         });
       }
       
@@ -81,10 +81,10 @@ export const SourceHealthDashboard = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="w-5 h-5" />
-            Source Health Dashboard
+            Consolidated Source Health
           </CardTitle>
           <CardDescription>
-            Monitor and manage the health of your content sources
+            Monitor source health using actual stored article counts
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

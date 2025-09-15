@@ -293,7 +293,7 @@ const RegionalScraperDebugPanel = () => {
               Users see helpful status information without unnecessary alarm.
             </p>
             <p className="text-sm text-green-700">
-              ⏭️  Ready for Phase 5: Source health consolidation and real-time metrics
+              ✅ Phase 5 Complete: Source health now uses actual article counts, duplicate admin locations removed
             </p>
           </div>
         </CardContent>

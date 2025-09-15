@@ -157,10 +157,21 @@ async function analyzeSourceHealth(
   // Quick accessibility check
   const accessCheck = await retryStrategy.quickAccessibilityCheck(source.feed_url);
   
-  // Calculate health score (0-100) with heavy emphasis on content relevance
-  let healthScore = 0;
+  // Get ACTUAL article counts from database instead of potentially stale cached values
+  const { count: actualArticleCount } = await supabase
+    .from('articles')
+    .select('*', { count: 'exact', head: true })
+    .eq('source_id', source.id);
+    
+  const { count: topicArticleCount } = await supabase
+    .from('topic_articles')
+    .select('*', { count: 'exact', head: true })
+    .eq('source_id', source.id);
   
-  const articlesScraped = source.articles_scraped || 0;
+  const totalArticlesStored = (actualArticleCount || 0) + (topicArticleCount || 0);
+  
+  // Calculate health score (0-100) with heavy emphasis on actual content storage
+  let healthScore = 0;
   const successRate = source.success_rate || 0;
   
   // Accessibility check (20 points max)
@@ -168,14 +179,14 @@ async function analyzeSourceHealth(
     healthScore += 20;
   }
   
-  // CRITICAL: Content storage success is the most important factor (50 points max)
-  if (articlesScraped >= 5 && successRate >= 80) {
+  // CRITICAL: Actual content storage is the most important factor (50 points max)
+  if (totalArticlesStored >= 5 && successRate >= 80) {
     healthScore += 50; // Productive source
-  } else if (articlesScraped >= 3 && successRate >= 50) {
+  } else if (totalArticlesStored >= 3 && successRate >= 50) {
     healthScore += 35; // Active source
-  } else if (articlesScraped > 0 && successRate > 0) {
+  } else if (totalArticlesStored > 0 && successRate > 0) {
     healthScore += 20; // Some success
-  } else if (successRate >= 70 && articlesScraped === 0) {
+  } else if (successRate >= 70 && totalArticlesStored === 0) {
     healthScore += 15; // Filtered but connected
   }
   // No points for sources that never store articles
@@ -200,12 +211,12 @@ async function analyzeSourceHealth(
   let alternativeMethod: string | undefined;
 
   if (!accessCheck.accessible) {
-    if (articlesScraped >= 3 && successRate === 0) {
+    if (totalArticlesStored >= 3 && successRate === 0) {
       recommendedAction = 'deactivate';
     } else {
       recommendedAction = 'investigate';
     }
-  } else if (articlesScraped >= 5 && successRate < 20) {
+  } else if (totalArticlesStored >= 5 && successRate < 20) {
     // Look for better scraping method
     const betterMethod = await findBetterScrapingMethod(supabase, source);
     if (betterMethod) {
@@ -214,15 +225,15 @@ async function analyzeSourceHealth(
     } else {
       recommendedAction = 'deactivate';
     }
-  } else if (articlesScraped >= 3 && successRate < 50) {
+  } else if (totalArticlesStored >= 3 && successRate < 50) {
     recommendedAction = 'monitor';
-  } else if (articlesScraped === 0 && successRate >= 70) {
+  } else if (totalArticlesStored === 0 && successRate >= 70) {
     // High connection success but no stored articles - needs monitoring
     recommendedAction = 'monitor';
   }
 
   // A source is only "healthy" if it actually contributes content regularly
-  const isHealthy = healthScore >= 70 && articlesScraped >= 3 && successRate >= 50;
+  const isHealthy = healthScore >= 70 && totalArticlesStored >= 3 && successRate >= 50;
 
   return {
     sourceId: source.id,
