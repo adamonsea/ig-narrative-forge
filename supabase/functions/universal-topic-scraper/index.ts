@@ -296,6 +296,53 @@ serve(async (req) => {
             console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
             return result;
           } else {
+            // Phase 1: Beautiful Soup fallback for whitelisted domains with zero articles
+            const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
+            const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
+              source.normalizedUrl.includes(domain)
+            );
+            
+            if (isWhitelisted && scrapeResult.articlesFound === 0) {
+              console.log(`🔄 FastTrack yielded 0 articles for whitelisted domain ${source.source_name}, trying Beautiful Soup fallback...`);
+              
+              try {
+                const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
+                  body: {
+                    feedUrl: source.normalizedUrl,
+                    sourceId: source.source_id,
+                    topicId: topicId,
+                    region: topic.region,
+                    maxArticles: 10
+                  }
+                });
+
+                if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
+                  console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
+                  
+                  // Store fallback articles
+                  const fallbackStoreResult = await dbOps.storeArticles(
+                    fallbackResult.data.articles,
+                    topicId,
+                    source.source_id
+                  );
+
+                  return {
+                    sourceId: source.source_id,
+                    sourceName: source.source_name,
+                    success: true,
+                    articlesFound: fallbackResult.data.articlesFound || fallbackResult.data.articles.length,
+                    articlesScraped: fallbackResult.data.articlesScraped || fallbackResult.data.articles.length,
+                    executionTimeMs: Date.now() - startTime,
+                    fallbackMethod: 'beautiful-soup-scraper'
+                  } as ScraperSourceResult;
+                } else {
+                  console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
+                }
+              } catch (fallbackError) {
+                console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError.message}`);
+              }
+            }
+
             recordFailure(source.normalizedUrl);
             const result: ScraperSourceResult = {
               sourceId: source.source_id,

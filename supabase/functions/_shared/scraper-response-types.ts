@@ -11,6 +11,8 @@ export interface ScraperSourceResult {
   articlesScraped: number;
   articlesSkipped?: number;
   executionTimeMs?: number;
+  // Phase 1: Add fallback method tracking
+  fallbackMethod?: string;
 }
 
 export interface ScraperResponse {

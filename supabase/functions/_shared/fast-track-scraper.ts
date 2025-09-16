@@ -367,30 +367,64 @@ export class FastTrackScraper {
     }
   }
 
+  // Phase 1: Whitelisted domains for relaxed qualification
+  private WHITELISTED_DOMAINS = [
+    'theargus.co.uk',
+    'sussexexpress.co.uk'
+  ];
+
+  private isWhitelistedDomain(url: string): boolean {
+    try {
+      const domain = new URL(url).hostname.toLowerCase();
+      return this.WHITELISTED_DOMAINS.some(whitelist => domain.includes(whitelist));
+    } catch {
+      return false;
+    }
+  }
+
   private isFastQualified(content: any): boolean {
-    // Phase 2: Add STRICT 7-day recency check
-    if (content.published_at) {
-      try {
-        const pubDate = new Date(content.published_at);
-        if (!isNaN(pubDate.getTime())) {
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          if (pubDate < sevenDaysAgo) {
-            const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
-            console.log(`🚫 Fast-track REJECT (too old): "${content.title?.substring(0, 50)}..." - ${daysOld} days old`);
-            return false;
-          }
+    const isWhitelisted = this.isWhitelistedDomain(this.baseUrl);
+    
+    // Phase 1: Handle missing dates for whitelisted domains
+    if (!content.published_at) {
+      if (isWhitelisted) {
+        console.log(`🟡 Whitelisted domain: Accepting article with missing date - "${content.title?.substring(0, 50)}..."`);
+        // Set published_at to now() for whitelisted domains
+        content.published_at = new Date().toISOString();
+      } else {
+        console.log(`🚫 Fast-track REJECT (no date): "${content.title?.substring(0, 50)}..."`);
+        return false;
+      }
+    }
+
+    // Phase 1: Validate date for all domains
+    try {
+      const pubDate = new Date(content.published_at);
+      if (!isNaN(pubDate.getTime())) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (pubDate < sevenDaysAgo) {
+          const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
+          console.log(`🚫 Fast-track REJECT (too old): "${content.title?.substring(0, 50)}..." - ${daysOld} days old`);
+          return false;
+        }
+      } else {
+        if (isWhitelisted) {
+          console.log(`🟡 Whitelisted domain: Fixing invalid date - "${content.title?.substring(0, 50)}..."`);
+          content.published_at = new Date().toISOString();
         } else {
           console.log(`🚫 Fast-track REJECT (invalid date): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
           return false;
         }
-      } catch (error) {
+      }
+    } catch (error) {
+      if (isWhitelisted) {
+        console.log(`🟡 Whitelisted domain: Fixing date parse error - "${content.title?.substring(0, 50)}..."`);
+        content.published_at = new Date().toISOString();
+      } else {
         console.log(`🚫 Fast-track REJECT (date parse error): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
         return false;
       }
-    } else {
-      console.log(`🚫 Fast-track REJECT (no date): "${content.title?.substring(0, 50)}..."`);
-      return false;
     }
 
     // Enhanced qualification to avoid snippets
@@ -401,7 +435,14 @@ export class FastTrackScraper {
     const wordCount = this.countWords(content.body || '');
     const isSnippet = this.isContentSnippet(content.body || '', content.title || '');
     
-    // Require at least 100 words and not a snippet
+    // Phase 1: Relaxed requirements for whitelisted domains
+    if (isWhitelisted) {
+      // Allow snippets and lower word count for trusted regional sources
+      console.log(`🟡 Whitelisted domain qualification: ${wordCount} words, snippet: ${isSnippet}`);
+      return wordCount >= 50; // Reduced from 100 words
+    }
+    
+    // Standard requirements for other domains
     return wordCount >= 100 && !isSnippet;
   }
 

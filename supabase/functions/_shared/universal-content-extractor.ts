@@ -72,6 +72,90 @@ const SITE_CONFIGS: Record<string, {
       'header',
       '.navigation'
     ]
+  },
+  // Phase 1: Enhanced configuration for The Argus
+  'theargus.co.uk': {
+    contentSelectors: [
+      '.article__body',
+      '.article-content', 
+      '.story-body',
+      '.field-name-body',
+      'article .content',
+      'main .content',
+      '.article-text',
+      '.content-body'
+    ],
+    titleSelectors: [
+      '.article__headline',
+      '.article-title',
+      'h1.headline', 
+      '.story-headline',
+      'h1',
+      '.main-headline'
+    ],
+    authorSelectors: [
+      '.article__author',
+      '.byline .author',
+      '.story-byline',
+      '[rel="author"]',
+      '.author-name',
+      '.byline'
+    ],
+    excludeSelectors: [
+      '.sidebar',
+      '.widget', 
+      '.related',
+      '.comments',
+      '.social',
+      '.advertisement',
+      '.ad-',
+      'nav',
+      'footer',
+      'header',
+      '.navigation'
+    ]
+  },
+  // Phase 1: Enhanced configuration for Sussex Express
+  'sussexexpress.co.uk': {
+    contentSelectors: [
+      '.article-body',
+      '.article__body',
+      '.story-content',
+      '.field-name-body',
+      'article .body',
+      'main .article-content',
+      '.content-body',
+      '.article-text'
+    ],
+    titleSelectors: [
+      '.article-headline',
+      '.story-headline',
+      'h1.title',
+      '.page-title',
+      'h1',
+      '.main-headline'
+    ],
+    authorSelectors: [
+      '.article-author',
+      '.story-author',
+      '.byline',
+      '[rel="author"]',
+      '.author',
+      '.author-name'
+    ],
+    excludeSelectors: [
+      '.sidebar',
+      '.widget',
+      '.related', 
+      '.comments',
+      '.social',
+      '.advertisement',
+      '.ad-',
+      'nav',
+      'footer',
+      'header',
+      '.navigation'
+    ]
   }
 };
 
@@ -332,6 +416,43 @@ export class UniversalContentExtractor {
     return octets.join('.');
   }
 
+  // Phase 1: New JSON-LD extraction method
+  private extractJSONLDData(doc: Document, property: string): string {
+    try {
+      const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of scripts) {
+        try {
+          const jsonData = JSON.parse(script.textContent || '');
+          
+          // Handle arrays of structured data
+          const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+          
+          for (const data of dataArray) {
+            if (data['@type'] === 'NewsArticle' || data['@type'] === 'Article') {
+              let value = data[property];
+              
+              // Handle author object
+              if (property === 'author' && typeof value === 'object') {
+                value = value.name || value['@name'] || '';
+              }
+              
+              if (value && typeof value === 'string') {
+                console.log(`📋 JSON-LD extracted ${property}: ${value.substring(0, 50)}...`);
+                return value;
+              }
+            }
+          }
+        } catch (parseError) {
+          // Continue to next script if JSON parsing fails
+          continue;
+        }
+      }
+    } catch (error) {
+      console.log(`⚠️ JSON-LD extraction failed for ${property}: ${error.message}`);
+    }
+    return '';
+  }
+
   // Enhanced method to try government RSS feed patterns
   async tryGovernmentRSSFeeds(baseUrl: string): Promise<string[]> {
     if (!this.isGovernmentSite) {
@@ -369,14 +490,18 @@ export class UniversalContentExtractor {
     // Clean HTML from noise before processing
     const cleanHtml = this.cleanHTML(html);
     
-    // Extract title using site-specific or fallback selectors
-    const title = this.extractTitle(cleanHtml);
+    // Create DOM parser for JSON-LD extraction
+    const doc = new DOMParser().parseFromString(cleanHtml, 'text/html');
     
-    // Extract author
-    const author = this.extractAuthor(cleanHtml);
+    // Phase 1: Try JSON-LD structured data first
+    let title = this.extractJSONLDData(doc, 'headline') || this.extractJSONLDData(doc, 'name');
+    let author = this.extractJSONLDData(doc, 'author');  
+    let published_at = this.extractJSONLDData(doc, 'datePublished');
     
-    // Extract publication date
-    const published_at = this.extractPublishedDate(cleanHtml);
+    // Phase 1: Fallback to existing extraction methods if JSON-LD fails
+    if (!title) title = this.extractTitle(cleanHtml);
+    if (!author) author = this.extractAuthor(cleanHtml);
+    if (!published_at) published_at = this.extractPublishedDate(cleanHtml);
     
     // Extract main content using enhanced strategies
     const content = this.extractMainContent(cleanHtml);

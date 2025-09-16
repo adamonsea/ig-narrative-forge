@@ -54,35 +54,68 @@ export class MultiTenantDatabaseOperations {
       return result
     }
 
+    // Phase 1: Whitelisted domains for date handling
+    const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
+    
+    const isWhitelistedSource = (sourceId: string): boolean => {
+      // Check if this source is from a whitelisted domain
+      if (!sourceId) return false;
+      // We'll get source domain info during processing
+      return true; // Will be checked per article
+    };
+
     // Phase 2: Pre-filter articles for 7-day recency BEFORE processing
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     console.log(`🗓️ Phase 2: Strict 7-day filter - articles must be newer than ${sevenDaysAgo.toISOString()}`)
 
     const recentArticles = articles.filter(article => {
+      // Phase 1: Check if article is from whitelisted domain
+      const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
+        article.source_url && article.source_url.includes(domain)
+      );
+
       if (!article.published_at) {
-        console.log(`🚫 REJECTED (no date): "${article.title?.substring(0, 50)}..."`)
-        return false
+        if (isWhitelisted) {
+          console.log(`🟡 Whitelisted domain: Substituting missing date for "${article.title?.substring(0, 50)}..."`);
+          article.published_at = new Date().toISOString();
+        } else {
+          console.log(`🚫 REJECTED (no date): "${article.title?.substring(0, 50)}..."`)
+          return false
+        }
       }
 
       try {
         const pubDate = new Date(article.published_at)
         
-        // Phase 2: STRICT date validation - no lenient fallbacks
+        // Phase 1: Handle invalid dates for whitelisted domains
         if (isNaN(pubDate.getTime())) {
-          console.log(`🚫 REJECTED (invalid date): "${article.title?.substring(0, 50)}..." - date: "${article.published_at}"`)
-          return false
+          if (isWhitelisted) {
+            console.log(`🟡 Whitelisted domain: Fixing invalid date for "${article.title?.substring(0, 50)}..."`);
+            article.published_at = new Date().toISOString();
+          } else {
+            console.log(`🚫 REJECTED (invalid date): "${article.title?.substring(0, 50)}..." - date: "${article.published_at}"`)
+            return false
+          }
         }
 
-        const isRecent = pubDate >= sevenDaysAgo
+        // Recalculate pubDate after potential fix
+        const finalPubDate = new Date(article.published_at);
+        const isRecent = finalPubDate >= sevenDaysAgo
         if (!isRecent) {
-          const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24))
+          const daysOld = Math.floor((Date.now() - finalPubDate.getTime()) / (1000 * 60 * 60 * 24))
           console.log(`🚫 REJECTED (too old): "${article.title?.substring(0, 50)}..." - ${daysOld} days old`)
         }
         return isRecent
       } catch (error) {
-        console.log(`🚫 REJECTED (date parse error): "${article.title?.substring(0, 50)}..." - "${article.published_at}"`)
-        return false
+        if (isWhitelisted) {
+          console.log(`🟡 Whitelisted domain: Fixing date parse error for "${article.title?.substring(0, 50)}..."`);
+          article.published_at = new Date().toISOString();
+          return true;
+        } else {
+          console.log(`🚫 REJECTED (date parse error): "${article.title?.substring(0, 50)}..." - "${article.published_at}"`)
+          return false
+        }
       }
     })
 
