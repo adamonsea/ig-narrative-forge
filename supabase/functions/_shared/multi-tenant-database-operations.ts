@@ -397,6 +397,7 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Calculate relevance score based on topic configuration
+   * Phase 3: Add relevance floor for Brighton-specific domains
    */
   private calculateRelevanceScore(article: ArticleData, topic: any): number {
     let score = 0
@@ -411,6 +412,12 @@ export class MultiTenantDatabaseOperations {
         return 0 // Disqualified
       }
     }
+    
+    // Phase 3: Brighton-specific domain detection
+    const url = article.source_url || ''
+    const isBrightonSpecificSource = url.includes('brightonjournal.co.uk') || 
+                                   url.includes('theargus.co.uk/news/local/brighton') ||
+                                   url.includes('theargus.co.uk') && (title.includes('brighton') || body.includes('brighton'))
     
     // Check positive keywords
     for (const keyword of keywords) {
@@ -436,6 +443,19 @@ export class MultiTenantDatabaseOperations {
           score += 25
         }
       })
+    }
+    
+    // Phase 3: Apply relevance floor for Brighton-specific sources when topic is Brighton
+    if (topic.topic_type === 'regional' && 
+        topic.region && 
+        topic.region.toLowerCase().includes('brighton') && 
+        isBrightonSpecificSource) {
+      const wordCount = this.calculateWordCount(article.body || '')
+      // If it's a short article from Brighton-specific source, give it minimum relevance floor
+      if (wordCount < 200 && score < 15) {
+        console.log(`🏗️ Applying Brighton relevance floor: ${score} → 15 for "${article.title?.substring(0, 50)}..."`)
+        score = 15
+      }
     }
     
     return Math.min(100, Math.max(0, score))

@@ -241,29 +241,45 @@ export class FastTrackScraper {
     let finalTitle = title;
     let wordCount = this.countWords(finalContent);
 
-  // Check if RSS content is complete or just a snippet
+  // Phase 1: Enhanced snippet detection and forced full-content for regional topics
   const isLikelySnippet = this.isContentSnippet(description || '', title);
-  const needsFullExtraction = wordCount < 150 || isLikelySnippet;
+  const hasEllipsis = (description || '').includes('[&#8230;') || (description || '').includes('…') || (description || '').includes('[...]');
+  const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+  
+  // Force full extraction for: truncated RSS, low word count, or regional topics with snippets
+  const needsFullExtraction = wordCount < 150 || isLikelySnippet || hasEllipsis || 
+                             (isRegionalTopic && wordCount < 200);
   
   if (needsFullExtraction) {
     try {
-      console.log(`📄 RSS content insufficient (${wordCount} words), getting full content for: ${articleUrl}`);
+      console.log(`📄 Phase 1: Forcing full extraction - ${wordCount} words, snippet: ${isLikelySnippet}, ellipsis: ${hasEllipsis}, regional: ${isRegionalTopic}`);
       const extractor = new UniversalContentExtractor(articleUrl);
       const articleHtml = await extractor.fetchWithRetry(articleUrl);
       const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
       
-      // Only use extracted content if it's significantly better
-      if (extractedContent.body && this.countWords(extractedContent.body) > wordCount * 2) {
-        finalContent = extractedContent.body;
-        finalTitle = extractedContent.title || title;
-        wordCount = extractedContent.word_count || this.countWords(finalContent);
-        console.log(`✅ Full extraction successful: ${wordCount} words`);
-      } else {
-        console.log(`⚠️ Full extraction didn't improve content, keeping RSS`);
+      // Use extracted content if available and better than RSS
+      if (extractedContent.body) {
+        const extractedWordCount = this.countWords(extractedContent.body);
+        
+        // Always use full content if RSS had ellipsis or was very short
+        if (hasEllipsis || wordCount < 100 || extractedWordCount > wordCount * 1.5) {
+          finalContent = extractedContent.body;
+          finalTitle = extractedContent.title || title;
+          wordCount = extractedContent.word_count || extractedWordCount;
+          console.log(`✅ Phase 1: Full extraction successful: ${wordCount} words (was ${this.countWords(description || '')})`);
+        } else {
+          console.log(`⚠️ Extracted content not significantly better, keeping RSS`);
+        }
       }
     } catch (error) {
-      console.log(`⚠️ Full extraction failed, using RSS content: ${error.message}`);
-      // Keep using RSS description
+      console.log(`⚠️ Full extraction failed, keeping RSS content: ${error.message}`);
+      
+      // Phase 1: If this is a regional topic and we couldn't extract, try fallback scrapers
+      if (isRegionalTopic && (hasEllipsis || wordCount < 100)) {
+        console.log(`🔄 Phase 1: Triggering fallback scraper for regional content`);
+        // Mark this for fallback processing (this will be caught by the calling function)
+        throw new Error(`FALLBACK_NEEDED: RSS truncated and full extraction failed for regional topic`);
+      }
     }
   }
 

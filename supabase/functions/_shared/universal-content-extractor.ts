@@ -115,6 +115,50 @@ const SITE_CONFIGS: Record<string, {
       '.navigation'
     ]
   },
+  // Phase 2: Enhanced configuration for Brighton Journal
+  'brightonjournal.co.uk': {
+    contentSelectors: [
+      '.entry-content',
+      '.post-content', 
+      '.article-content',
+      '.wp-block-post-content',
+      '.content',
+      'article .text',
+      'main .content',
+      '.page-content',
+      '.post-body'
+    ],
+    titleSelectors: [
+      '.entry-title',
+      '.post-title',
+      'h1.title',
+      '.page-title',
+      'h1',
+      '.article-title'
+    ],
+    authorSelectors: [
+      '.entry-author',
+      '.post-author',
+      '.byline',
+      '[rel="author"]',
+      '.author',
+      '.author-name'
+    ],
+    excludeSelectors: [
+      '.sidebar',
+      '.widget',
+      '.related',
+      '.comments',
+      '.social',
+      '.advertisement',
+      '.ad-',
+      'nav',
+      'footer',
+      'header',
+      '.navigation',
+      '.wp-sidebar'
+    ]
+  },
   // Phase 1: Enhanced configuration for Sussex Express
   'sussexexpress.co.uk': {
     contentSelectors: [
