@@ -69,20 +69,28 @@ Deno.serve(async (req) => {
           throw new Error(discoveryResult.error || 'URL discovery failed')
         }
 
-        // Check which URLs we've seen before for this topic
+
+        // Filter URLs for topic relevance (for regional topics)
+        const topicRelevantUrls = await filterUrlsByTopicRelevance(
+          discoveryResult.urls, 
+          topicSource.topics,
+          topicSource.content_sources.source_name
+        )
+        
+        // Check which topic-relevant URLs we've seen before
         const { data: seenUrls, error: seenError } = await supabase
           .from('scraped_urls_history')
           .select('url')
           .eq('topic_id', topicSource.topic_id)
           .eq('source_id', topicSource.source_id)
-          .in('url', discoveryResult.urls)
+          .in('url', topicRelevantUrls)
 
         if (seenError) {
           throw new Error(`Failed to check seen URLs: ${seenError.message}`)
         }
 
         const seenUrlSet = new Set(seenUrls?.map(u => u.url) || [])
-        const newUrls = discoveryResult.urls.filter(url => !seenUrlSet.has(url))
+        const newTopicRelevantUrls = topicRelevantUrls.filter(url => !seenUrlSet.has(url))
 
         const checkDuration = Date.now() - startTime
 
@@ -93,13 +101,17 @@ Deno.serve(async (req) => {
             topic_id: topicSource.topic_id,
             source_id: topicSource.source_id,
             check_date: new Date().toISOString().split('T')[0], // Today's date
-            new_urls_found: newUrls.length,
+            new_urls_found: newTopicRelevantUrls.length,
             total_urls_discovered: discoveryResult.urls.length,
-            urls_already_seen: discoveryResult.urls.length - newUrls.length,
+            topic_relevant_urls: topicRelevantUrls.length,
+            urls_already_seen: topicRelevantUrls.length - newTopicRelevantUrls.length,
             discovery_method: discoveryResult.method,
             check_duration_ms: checkDuration,
             success: true,
             error_message: null
+          }, { 
+            onConflict: 'topic_id,source_id,check_date',
+            ignoreDuplicates: false 
           })
 
         if (insertError) {
@@ -111,13 +123,14 @@ Deno.serve(async (req) => {
           topic_name: topicSource.topics.name,
           source_id: topicSource.source_id,
           source_name: topicSource.content_sources.source_name,
-          new_urls: newUrls.length,
+          new_urls: newTopicRelevantUrls.length,
           total_urls: discoveryResult.urls.length,
+          topic_relevant_urls: topicRelevantUrls.length,
           duration_ms: checkDuration,
           success: true
         })
 
-        console.log(`✅ ${topicSource.content_sources.source_name}: ${newUrls.length} new URLs (${discoveryResult.urls.length} total)`)
+        console.log(`✅ ${topicSource.content_sources.source_name}: ${newTopicRelevantUrls.length} new topic-relevant URLs (${discoveryResult.urls.length} total, ${topicRelevantUrls.length} relevant)`)
 
       } catch (error) {
         const checkDuration = Date.now() - startTime
@@ -131,11 +144,15 @@ Deno.serve(async (req) => {
             check_date: new Date().toISOString().split('T')[0],
             new_urls_found: 0,
             total_urls_discovered: 0,
+            topic_relevant_urls: 0,
             urls_already_seen: 0,
             discovery_method: null,
             check_duration_ms: checkDuration,
             success: false,
             error_message: error.message
+          }, { 
+            onConflict: 'topic_id,source_id,check_date',
+            ignoreDuplicates: false 
           })
 
         results.push({
@@ -268,6 +285,9 @@ function extractUrlsFromHtml(htmlContent: string, baseUrl: string): string[] {
   while ((match = linkRegex.exec(htmlContent)) !== null) {
     let url = match[1]
     
+    // Normalize URLs - strip tracking parameters
+    url = normalizeUrl(url)
+    
     // Convert relative URLs to absolute
     if (url.startsWith('/')) {
       url = `https://${domain}${url}`
@@ -288,4 +308,54 @@ function extractUrlsFromHtml(htmlContent: string, baseUrl: string): string[] {
   }
   
   return [...new Set(urls)] // Remove duplicates
+}
+
+function normalizeUrl(url: string): string {
+  try {
+    const urlObj = new URL(url)
+    // Remove common tracking parameters that cause scraper blocks
+    urlObj.searchParams.delete('ref')
+    urlObj.searchParams.delete('utm_source')
+    urlObj.searchParams.delete('utm_medium')
+    urlObj.searchParams.delete('utm_campaign')
+    urlObj.searchParams.delete('utm_content')
+    return urlObj.toString()
+  } catch {
+    return url
+  }
+}
+
+async function filterUrlsByTopicRelevance(urls: string[], topic: any, sourceName: string): Promise<string[]> {
+  // For regional topics, filter URLs that are likely relevant to the region
+  if (topic.topic_type === 'regional' && topic.region) {
+    const region = topic.region.toLowerCase()
+    const keywords = topic.keywords || []
+    
+    const relevantUrls = urls.filter(url => {
+      const urlLower = url.toLowerCase()
+      
+      // Check if URL contains region name or keywords
+      const hasRegion = urlLower.includes(region)
+      const hasKeyword = keywords.some((keyword: string) => 
+        urlLower.includes(keyword.toLowerCase())
+      )
+      
+      // Special handling for Eastbourne sources
+      if (region === 'eastbourne') {
+        return hasRegion || hasKeyword || 
+               urlLower.includes('/local-news/eastbourne') ||
+               urlLower.includes('/eastbourne-news/') ||
+               urlLower.includes('stone-cross') ||
+               urlLower.includes('polegate')
+      }
+      
+      return hasRegion || hasKeyword
+    })
+    
+    console.log(`🎯 Topic relevance filter: ${relevantUrls.length}/${urls.length} URLs relevant for ${region}`)
+    return relevantUrls
+  }
+  
+  // For keyword topics, return all URLs (filtering happens during scraping)
+  return urls
 }
