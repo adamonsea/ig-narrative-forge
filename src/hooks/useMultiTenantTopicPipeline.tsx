@@ -248,7 +248,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             .is('topic_article_id', null)
             .in('article_id', legacyArticleIds.length > 0 ? legacyArticleIds : ['00000000-0000-0000-0000-000000000000'])
             .order('created_at', { ascending: false })
-            .limit(50),
+            .limit(200),
           
           // Multi-tenant stories (topic_article_id is not null)
           supabase
@@ -266,7 +266,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             .not('topic_article_id', 'is', null)
             .in('topic_article_id', topicArticleIds.length > 0 ? topicArticleIds : ['00000000-0000-0000-0000-000000000000'])
             .order('created_at', { ascending: false })
-            .limit(50)
+            .limit(200)
         ]);
 
         console.log('📊 Fallback results:', {
