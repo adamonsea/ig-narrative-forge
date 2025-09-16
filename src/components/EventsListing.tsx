@@ -26,9 +26,10 @@ interface Event {
 
 interface EventsListingProps {
   topicId: string;
+  onEventsCountChange?: (count: number) => void;
 }
 
-const EventsListing: React.FC<EventsListingProps> = ({ topicId }) => {
+const EventsListing: React.FC<EventsListingProps> = ({ topicId, onEventsCountChange }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
@@ -51,7 +52,9 @@ const EventsListing: React.FC<EventsListingProps> = ({ topicId }) => {
       console.log('✅ EventsListing: Raw events data:', data);
       console.log('📊 EventsListing: Events count:', data?.length || 0);
       
-      setEvents(data || []);
+      const eventsData = data || [];
+      setEvents(eventsData);
+      onEventsCountChange?.(eventsData.length);
     } catch (error) {
       console.error('Error loading events:', error);
       toast({

@@ -43,6 +43,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
+  const [eventsCount, setEventsCount] = useState(0);
   const { toast } = useToast();
 
   // Multi-tenant system data (now the only system)
@@ -276,7 +277,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             Published ({totalStories})
           </TabsTrigger>
           <TabsTrigger value="events">
-            Events
+            Events ({eventsCount})
           </TabsTrigger>
         </TabsList>
 
@@ -364,7 +365,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         <TabsContent value="events" className="space-y-4">
           <Card>
             <CardContent>
-              <EventsListing topicId={selectedTopicId} />
+              <EventsListing topicId={selectedTopicId} onEventsCountChange={setEventsCount} />
             </CardContent>
           </Card>
         </TabsContent>

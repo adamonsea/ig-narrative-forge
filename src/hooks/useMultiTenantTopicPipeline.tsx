@@ -210,8 +210,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (storiesResult.error) {
         console.error('Error loading unified stories:', storiesResult.error);
-        // Fallback: fetch stories directly if RPC fails, scoped to this topic when possible
-        const allowedArticleIds = (articlesResult.data || []).map((a: any) => a.id);
+        // Fallback: fetch stories directly if RPC fails
+        // For legacy stories, we need to filter by article_id (not topic_article_id which is null for legacy)
+        const allowedLegacyArticleIds = (articlesResult.data || []).map((a: any) => a.id);
 
         let fallbackQuery = supabase
           .from('stories')
@@ -224,8 +225,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .order('created_at', { ascending: false })
           .limit(100);
 
-        if (allowedArticleIds.length > 0) {
-          fallbackQuery = fallbackQuery.in('topic_article_id', allowedArticleIds);
+        // For legacy stories, filter by article_id instead of topic_article_id
+        if (allowedLegacyArticleIds.length > 0) {
+          fallbackQuery = fallbackQuery.in('article_id', allowedLegacyArticleIds);
         }
 
         const fallbackResult = await fallbackQuery;
