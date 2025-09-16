@@ -13,7 +13,7 @@ import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
 import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
@@ -41,6 +41,7 @@ interface Topic {
 }
 
 export const TopicManager = () => {
+  const navigate = useNavigate();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -183,7 +184,7 @@ export const TopicManager = () => {
 
       toast({
         title: "Success",
-        description: "Topic created successfully"
+        description: "Topic created successfully! Redirecting to topic dashboard to add sources..."
       });
 
       // Clear saved form data and reset form
@@ -202,7 +203,9 @@ export const TopicManager = () => {
         default_tone: 'conversational'
       });
       setShowCreateForm(false);
-      loadTopics();
+      
+      // Redirect to topic dashboard for source management
+      navigate(`/dashboard/topic/${slug}`);
 
     } catch (error) {
       console.error('Error creating topic:', error);
@@ -470,13 +473,15 @@ export const TopicManager = () => {
               existingKeywords={newTopic.keywords ? newTopic.keywords.split(',').map(k => k.trim()) : []}
             />
 
-            <ImprovedSourceSuggestionTool
-              topicName={newTopic.name}
-              description={newTopic.description}
-              keywords={newTopic.keywords}
-              topicType={newTopic.topic_type}
-              region={newTopic.region}
-            />
+            <div className="p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/10">
+              <div className="flex items-center gap-2 mb-2">
+                <Settings className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Next Step: Source Management</span>
+              </div>
+              <p className="text-sm text-blue-600/80 dark:text-blue-300/80">
+                After creating your topic, you'll be redirected to the topic dashboard where you can add and manage content sources.
+              </p>
+            </div>
 
             {newTopic.topic_type === 'regional' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
