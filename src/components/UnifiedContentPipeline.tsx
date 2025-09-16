@@ -274,7 +274,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             Arrivals ({totalArticles})
           </TabsTrigger>
           <TabsTrigger value="stories">
-            Published ({totalStories})
+            Published ({stories.filter(s => s.status === 'ready').length})
           </TabsTrigger>
           <TabsTrigger value="events">
             Events ({eventsCount})

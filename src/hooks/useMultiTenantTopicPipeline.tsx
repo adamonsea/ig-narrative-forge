@@ -208,33 +208,82 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         p_limit: 100
       });
 
-      if (storiesResult.error) {
-        console.error('Error loading unified stories:', storiesResult.error);
-        // Fallback: fetch stories directly if RPC fails
-        // For legacy stories, we need to filter by article_id (not topic_article_id which is null for legacy)
-        const allowedLegacyArticleIds = (articlesResult.data || []).map((a: any) => a.id);
+      const rpcStoriesCount = storiesResult.data?.length || 0;
+      console.log('🔧 RPC stories query returned:', rpcStoriesCount, 'stories for topic:', selectedTopicId);
 
-        let fallbackQuery = supabase
-          .from('stories')
-          .select(`
-            *,
-            slides:slides(*)
-          `)
-          .eq('status', 'ready')
-          .eq('is_published', true)
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        // For legacy stories, filter by article_id instead of topic_article_id
-        if (allowedLegacyArticleIds.length > 0) {
-          fallbackQuery = fallbackQuery.in('article_id', allowedLegacyArticleIds);
+      if (storiesResult.error || rpcStoriesCount === 0) {
+        if (storiesResult.error) {
+          console.error('Error loading unified stories:', storiesResult.error);
         }
-
-        const fallbackResult = await fallbackQuery;
+        console.log('🔄 Using fallback stories query for topic:', selectedTopicId);
         
-        if (fallbackResult.data) {
-          console.log('Using fallback stories query, found:', fallbackResult.data.length);
-          filteredStories = fallbackResult.data;
+        // Get legacy article IDs for this specific topic (not topic_articles IDs)
+        const { data: legacyArticles } = await supabase
+          .from('articles')
+          .select('id')
+          .eq('topic_id', selectedTopicId);
+        
+        const legacyArticleIds = (legacyArticles || []).map(a => a.id);
+        
+        // Get multi-tenant topic_article IDs for this topic
+        const topicArticleIds = (articlesResult.data || []).map((a: any) => a.id);
+
+        console.log('📊 Fallback query targets:', {
+          legacyArticleIds: legacyArticleIds.length,
+          topicArticleIds: topicArticleIds.length
+        });
+
+        // Fetch both legacy and multi-tenant stories in parallel
+        const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
+          // Legacy stories (topic_article_id is null, filter by article_id)
+          supabase
+            .from('stories')
+            .select(`
+              *,
+              slides:slides(*),
+              article:articles!inner(title, source_url, region, topic_id)
+            `)
+            .eq('status', 'ready')
+            .eq('is_published', true)
+            .is('topic_article_id', null)
+            .in('article_id', legacyArticleIds.length > 0 ? legacyArticleIds : ['00000000-0000-0000-0000-000000000000'])
+            .order('created_at', { ascending: false })
+            .limit(50),
+          
+          // Multi-tenant stories (topic_article_id is not null)
+          supabase
+            .from('stories')
+            .select(`
+              *,
+              slides:slides(*),
+              topic_article:topic_articles!inner(
+                id,
+                shared_content:shared_article_content(title, url)
+              )
+            `)
+            .eq('status', 'ready')
+            .eq('is_published', true)
+            .not('topic_article_id', 'is', null)
+            .in('topic_article_id', topicArticleIds.length > 0 ? topicArticleIds : ['00000000-0000-0000-0000-000000000000'])
+            .order('created_at', { ascending: false })
+            .limit(50)
+        ]);
+
+        console.log('📊 Fallback results:', {
+          legacy: legacyStoriesResult.data?.length || 0,
+          multiTenant: multiTenantStoriesResult.data?.length || 0,
+          legacyError: legacyStoriesResult.error,
+          multiTenantError: multiTenantStoriesResult.error
+        });
+
+        // Combine both result sets
+        filteredStories = [
+          ...(legacyStoriesResult.data || []),
+          ...(multiTenantStoriesResult.data || [])
+        ];
+        
+        if (filteredStories.length > 0) {
+          console.log('✅ Using fallback stories query, found:', filteredStories.length);
 
           // Map and set stories from fallback to keep UI consistent
           const storiesData = filteredStories.map((story: any) => ({
@@ -250,7 +299,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             illustration_generated_at: story.illustration_generated_at,
             slides: Array.isArray(story.slides) ? story.slides : [],
             // Fallback may not include these unified fields; default gracefully
-            url: story.source_url || '',
+            url: story.article?.source_url || story.topic_article?.shared_content?.url || '',
             author: story.author || '',
             word_count: story.word_count || 0,
             slidetype: story.slidetype || '',
@@ -260,9 +309,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           }));
           setStories(storiesData);
         } else {
-          console.error('Fallback stories query also failed:', fallbackResult.error);
+          console.error('❌ No stories found in fallback queries');
           setStories([]);
-          return;
         }
       } else {
         filteredStories = storiesResult.data || [];
