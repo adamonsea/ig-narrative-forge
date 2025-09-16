@@ -202,60 +202,27 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      // Load stories using direct queries (skip broken RPC)
-      console.log('🔄 Loading stories with direct query for topic:', selectedTopicId);
+      // Load published stories directly with topic-based joins for stability
+      console.log('🔄 Loading published stories for topic:', selectedTopicId);
         
-        // Get legacy article IDs for this specific topic (not topic_articles IDs)
-        const { data: legacyArticles } = await supabase
-          .from('articles')
-          .select('id')
-          .eq('topic_id', selectedTopicId);
-        
-        const legacyArticleIds = (legacyArticles || []).map(a => a.id);
-        
-        // Get multi-tenant topic_article IDs for this topic
-        const topicArticleIds = (articlesResult.data || []).map((a: any) => a.id);
-
-        console.log('📊 Fallback query targets:', {
-          legacyArticleIds: legacyArticleIds.length,
-          topicArticleIds: topicArticleIds.length
-        });
-
-        // Fetch both legacy and multi-tenant stories in parallel
-        const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-          // Legacy stories (topic_article_id is null, filter by article_id)
-          supabase
-            .from('stories')
-            .select(`
-              *,
-              slides:slides(*),
-              article:articles!inner(title, source_url, region, topic_id)
-            `)
-            .eq('status', 'ready')
-            .eq('is_published', true)
-            .is('topic_article_id', null)
-            .in('article_id', legacyArticleIds.length > 0 ? legacyArticleIds : ['00000000-0000-0000-0000-000000000000'])
-            .order('created_at', { ascending: false })
-            .limit(200),
-          
-          // Multi-tenant stories (topic_article_id is not null)
-          supabase
-            .from('stories')
-            .select(`
-              *,
-              slides:slides(*),
-              topic_article:topic_articles!inner(
-                id,
-                shared_content:shared_article_content(title, url)
-              )
-            `)
-            .eq('status', 'ready')
-            .eq('is_published', true)
-            .not('topic_article_id', 'is', null)
-            .in('topic_article_id', topicArticleIds.length > 0 ? topicArticleIds : ['00000000-0000-0000-0000-000000000000'])
-            .order('created_at', { ascending: false })
-            .limit(200)
-        ]);
+        // Simplified query: Get all ready+published stories that belong to this topic
+        // Use a single query with proper joins to avoid moving-window issues
+        const storiesResult = await supabase
+          .from('stories')
+          .select(`
+            *,
+            slides:slides(*),
+            article:articles(title, source_url, region, topic_id),
+            topic_article:topic_articles(
+              id, topic_id,
+              shared_content:shared_article_content(title, url)
+            )
+          `)
+          .eq('status', 'ready')
+          .eq('is_published', true)
+          .or(`article.topic_id.eq.${selectedTopicId},topic_article.topic_id.eq.${selectedTopicId}`)
+          .order('created_at', { ascending: false })
+          .limit(200);
 
       console.log('📊 Fallback results:', {
         legacy: legacyStoriesResult.data?.length || 0,

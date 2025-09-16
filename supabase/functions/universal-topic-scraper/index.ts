@@ -296,14 +296,27 @@ serve(async (req) => {
             console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
             return result;
           } else {
-            // Phase 1: Beautiful Soup fallback for whitelisted domains with zero articles
+            // Smarter Beautiful Soup fallback for whitelisted domains
             const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
             const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
               source.normalizedUrl.includes(domain)
             );
             
-            if (isWhitelisted && scrapeResult.articlesScraped === 0) {
-              console.log(`🔄 FastTrack found ${scrapeResult.articlesFound} items but scraped 0 articles for whitelisted domain ${source.source_name}, trying Beautiful Soup fallback...`);
+            // Trigger fallback if:
+            // 1. Zero articles scraped, OR
+            // 2. Found many articles (≥10) but scraped very few (<3), OR
+            // 3. High rate of INVALID_CONTENT errors
+            const invalidContentErrors = scrapeResult.errors.filter(e => 
+              e.includes('INVALID_CONTENT') || e.includes('insufficient content')
+            ).length;
+            const shouldUseFallback = isWhitelisted && (
+              scrapeResult.articlesScraped === 0 ||
+              (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
+              (invalidContentErrors >= 5)
+            );
+            
+            if (shouldUseFallback) {
+              console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
               
               try {
                 const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
@@ -312,7 +325,7 @@ serve(async (req) => {
                     sourceId: source.source_id,
                     topicId: topicId,
                     region: topic.region,
-                    maxArticles: 10
+                    maxArticles: 15 // Capped at 15 for fallback
                   }
                 });
 
