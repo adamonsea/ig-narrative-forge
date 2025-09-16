@@ -7,26 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
-import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
-import { KeywordSuggestionTool } from "@/components/KeywordSuggestionTool";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
-
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
-import { SentimentManager } from "@/components/SentimentManager";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
-import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
-import { JunctionTableValidator } from "@/components/JunctionTableValidator";
-import { UniversalScrapingValidator } from "@/components/UniversalScrapingValidator";
-import { ArticleReExtractor } from "@/components/ArticleReExtractor";
-import { ArchitectureMigrationValidator } from "@/components/ArchitectureMigrationValidator";
-import { EventsManager } from "@/components/EventsManager";
-import { EnhancedEventsManager } from "@/components/EnhancedEventsManager";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
@@ -475,9 +463,8 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-2 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
-            <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
           </TabsList>
 
@@ -489,87 +476,25 @@ const TopicDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="sources" className="space-y-6">
-            <Tabs defaultValue="management" className="space-y-6">
+
+          <TabsContent value="management" className="space-y-8">
+            <Tabs defaultValue="sources" className="space-y-6">
               <TabsList className={`w-full bg-card/50 border border-border/30`}>
-                <TabsTrigger value="management" className="flex-1">Source Management</TabsTrigger>
-                <TabsTrigger value="suggestions" className="flex-1">Suggestions</TabsTrigger>
+                <TabsTrigger value="sources" className="flex-1">Sources & Automation</TabsTrigger>
+                <TabsTrigger value="settings" className="flex-1">Topic Settings</TabsTrigger>
+                <TabsTrigger value="subscribers" className="flex-1">Subscribers</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="suggestions" className="space-y-6">
+              <TabsContent value="sources" className="space-y-6">
                 <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
                   <CardContent className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <ImprovedSourceSuggestionTool
-                        topicName={topic.name}
-                        description={topic.description || ''}
-                        keywords={topic.keywords.join(', ')}
-                        topicType={topic.topic_type}
-                        region={topic.region}
-                        topicId={topic.id}
-                      />
-                      <KeywordSuggestionTool
-                        topicName={topic.name}
-                        description={topic.description || ''}
-                        keywords={topic.keywords}
-                        topicType={topic.topic_type}
-                        region={topic.region}
-                        onKeywordAdd={async (keyword) => {
-                          // Add keyword to database immediately
-                          try {
-                            const updatedKeywords = [...topic.keywords, keyword];
-                            const { error } = await supabase
-                              .from('topics')
-                              .update({ 
-                                keywords: updatedKeywords,
-                                updated_at: new Date().toISOString()
-                              })
-                              .eq('id', topic.id);
-
-                            if (error) throw error;
-
-                            // Update local state immediately
-                            setTopic(prev => ({
-                              ...prev!,
-                              keywords: updatedKeywords
-                            }));
-                            
-                            toast({
-                              title: "Keyword Added",
-                              description: `"${keyword}" has been added to ${topic.name}`,
-                            });
-                          } catch (error) {
-                            console.error('Error adding keyword:', error);
-                            toast({
-                              title: "Error",
-                              description: "Failed to add keyword",
-                              variant: "destructive"
-                            });
-                          }
-                        }}
-                        existingKeywords={topic.keywords}
-                      />
-                    </div>
+                    <TopicScheduleMonitor 
+                      topicId={topic.id}
+                      topicName={topic.name}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
-
-              <TabsContent value="management" className="space-y-6">
-                <TopicAwareSourceManager 
-                  selectedTopicId={topic.id} 
-                  onSourcesChange={() => loadTopicAndStats()} 
-                />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="management" className="space-y-8">
-            <Tabs defaultValue="settings" className="space-y-6">
-              <TabsList className={`w-full bg-card/50 border border-border/30`}>
-                <TabsTrigger value="settings" className="flex-1">Topic Settings</TabsTrigger>
-                <TabsTrigger value="subscribers" className="flex-1">Subscribers</TabsTrigger>
-                <TabsTrigger value="automation" className="flex-1">Automation</TabsTrigger>
-              </TabsList>
 
               <TabsContent value="settings" className="space-y-8">
                 <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
@@ -647,32 +572,6 @@ const TopicDashboard = () => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="automation" className="space-y-6">
-                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="w-5 h-5" />
-                      Automation & Scheduling
-                    </CardTitle>
-                    <CardDescription>
-                      Configure automated content processing and scheduling settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-8">
-                    <TopicScheduleMonitor 
-                      topicId={topic.id}
-                      topicName={topic.name}
-                    />
-                    
-                    <div className="border-t pt-8">
-                      <EnhancedEventsManager 
-                        topicId={topic.id} 
-                        topicName={topic.name}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
             </Tabs>
           </TabsContent>
 

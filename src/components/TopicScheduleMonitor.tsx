@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
+import { useTopicSources } from '@/hooks/useTopicSources';
 import { 
   Clock, 
   CheckCircle, 
@@ -12,10 +13,12 @@ import {
   AlertTriangle, 
   Activity,
   RefreshCw,
-  Calendar,
   TrendingUp,
   Zap,
-  Settings
+  Settings,
+  Plus,
+  Globe,
+  Trash2
 } from "lucide-react";
 
 interface TopicScheduleData {
@@ -47,19 +50,27 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
   const [data, setData] = useState<TopicScheduleData | null>(null);
   const [loading, setLoading] = useState(false);
   const [rescanning, setRescanning] = useState<string | null>(null);
+  const [newUrl, setNewUrl] = useState('');
+  const [addingSource, setAddingSource] = useState(false);
   const { toast } = useToast();
+  const { 
+    getTopicSources, 
+    addSourceToTopic, 
+    removeSourceFromTopic, 
+    getAvailableSources, 
+    createSourceAndLinkToTopic,
+    loading: sourcesLoading 
+  } = useTopicSources();
 
   const fetchTopicData = async () => {
     setLoading(true);
     try {
-      // Get topic sources using the new junction table approach
-      const { data: sources, error: sourcesError } = await supabase.rpc('get_topic_sources', {
-        p_topic_id: topicId
-      });
+      // Get topic sources using the modern hook approach
+      const sources = await getTopicSources(topicId);
 
-      if (sourcesError) throw sourcesError;
+      if (!sources) throw new Error('Failed to fetch sources');
 
-      // Transform RPC result to match expected format
+      // Transform sources to match expected format
       const transformedSources = (sources || []).map((source: any) => ({
         id: source.source_id,
         source_name: source.source_name,
@@ -117,6 +128,100 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const extractDomainFromUrl = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return 'unknown-domain';
+    }
+  };
+
+  const normalizeUrl = (url: string): string => {
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL: URL must be a non-empty string');
+    }
+
+    let normalizedUrl = url.trim();
+    
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+      try {
+        new URL(normalizedUrl);
+        return normalizedUrl;
+      } catch (error) {
+        throw new Error(`Invalid URL format: ${normalizedUrl}`);
+      }
+    }
+
+    normalizedUrl = 'https://' + normalizedUrl;
+    
+    try {
+      new URL(normalizedUrl);
+      return normalizedUrl;
+    } catch (error) {
+      const httpUrl = 'http://' + url.trim();
+      try {
+        new URL(httpUrl);
+        return httpUrl;
+      } catch (httpError) {
+        throw new Error(`Invalid URL format: cannot normalize "${url}"`);
+      }
+    }
+  };
+
+  const handleAddSource = async () => {
+    if (!newUrl.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid website URL',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setAddingSource(true);
+      const processedUrl = normalizeUrl(newUrl.trim());
+      const domain = extractDomainFromUrl(processedUrl);
+
+      const result = await createSourceAndLinkToTopic({
+        source_name: domain,
+        feed_url: processedUrl,
+        canonical_domain: domain,
+        credibility_score: 70,
+        content_type: 'news'
+      }, topicId);
+
+      if (result.success) {
+        setNewUrl('');
+        fetchTopicData(); // Refresh the data
+      }
+    } catch (error) {
+      console.error('Error adding source:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add source',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingSource(false);
+    }
+  };
+
+  const handleRemoveSource = async (sourceId: string, sourceName: string) => {
+    if (!confirm(`Remove "${sourceName}" from this topic? This will stop scraping content from this source.`)) {
+      return;
+    }
+
+    try {
+      const success = await removeSourceFromTopic(topicId, sourceId);
+      if (success) {
+        fetchTopicData(); // Refresh the data
+      }
+    } catch (error) {
+      console.error('Error removing source:', error);
     }
   };
 
@@ -188,16 +293,18 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
   const toggleSourceStatus = async (sourceId: string, currentStatus: boolean) => {
     try {
+      // Update via topic_sources junction table
       const { error } = await supabase
-        .from('content_sources')
+        .from('topic_sources')
         .update({ is_active: !currentStatus })
-        .eq('id', sourceId);
+        .eq('topic_id', topicId)
+        .eq('source_id', sourceId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Source ${!currentStatus ? 'activated' : 'deactivated'}`,
+        description: `Source ${!currentStatus ? 'enabled' : 'disabled'}`,
       });
 
       fetchTopicData();
@@ -249,8 +356,8 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold">Automation & Scraping</h3>
-          <p className="text-muted-foreground">Manage automated content collection for "{topicName}"</p>
+          <h3 className="text-2xl font-bold">Sources & Automation</h3>
+          <p className="text-muted-foreground">Manage content sources and automated scraping for "{topicName}"</p>
         </div>
         <div className="flex gap-2">
             <Button 
@@ -262,33 +369,49 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button 
-              onClick={async () => {
-                try {
-                  const { data } = await supabase.functions.invoke('cleanup-stale-source-errors');
-                  toast({
-                    title: "Status Cleanup Complete",
-                    description: `Cleared stale errors for ${data?.errors_cleared || 0} sources`,
-                  });
-                  fetchTopicData(); // Refresh data
-                } catch (error) {
-                  console.error('Cleanup failed:', error);
-                }
-              }}
-              variant="outline"
-              size="sm"
-            >
-              Fix Status
-            </Button>
           <Button 
             onClick={handleRescanAllSources}
             disabled={loading || !data?.active_sources}
           >
             <Zap className="w-4 h-4 mr-2" />
-            Re-scan All Sources
+            Scan All Sources
           </Button>
         </div>
       </div>
+
+      {/* Add New Source */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add Website Source
+          </CardTitle>
+          <CardDescription>
+            Add news websites to automatically scrape content from
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter website URL (e.g., localnews.com)"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddSource()}
+              disabled={addingSource}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleAddSource} 
+              disabled={addingSource || !newUrl.trim()}
+            >
+              {addingSource ? 'Adding...' : 'Add Source'}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Sources will be validated and content will be automatically scraped based on your topic keywords.
+          </p>
+        </CardContent>
+      </Card>
 
       {data && (
         <>
@@ -349,32 +472,34 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
           {/* Sources Management */}
           <Card>
             <CardHeader>
-              <CardTitle>Topic Sources</CardTitle>
+              <CardTitle>Active Sources ({data.sources.length})</CardTitle>
               <CardDescription>
-                Manage content sources specific to this topic
+                Website sources currently being monitored for content
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {data.sources.map((source) => (
-                  <div key={source.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium">{source.source_name}</h4>
-                        <Badge variant={source.is_active ? "default" : "secondary"}>
-                          {source.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                        <Badge variant="outline">
-                          Score: {source.credibility_score}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{source.feed_url}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>Articles: {source.articles_scraped}</span>
-                        <span>Gathered: {source.articles_scraped}</span>
-                        {source.last_scraped_at && (
-                          <span>Last: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
-                        )}
+                  <div key={source.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Globe className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium">{source.source_name}</h4>
+                          <Badge variant={source.is_active ? "default" : "secondary"}>
+                            {source.is_active ? "Enabled" : "Disabled"}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {source.credibility_score}% credible
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate max-w-md">{source.feed_url}</p>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                          <span>{source.articles_scraped || 0} articles</span>
+                          {source.last_scraped_at && (
+                            <span>Last scraped: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -382,6 +507,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                         size="sm"
                         variant="outline"
                         onClick={() => toggleSourceStatus(source.id, source.is_active)}
+                        title={source.is_active ? 'Stop scraping this source' : 'Start scraping this source'}
                       >
                         {source.is_active ? 'Disable' : 'Enable'}
                       </Button>
@@ -389,6 +515,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                         size="sm"
                         onClick={() => handleRescanSource(source.id, source.feed_url)}
                         disabled={rescanning === source.id || !source.is_active}
+                        title="Check for new content now"
                       >
                         {rescanning === source.id ? (
                           <>
@@ -398,9 +525,17 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                         ) : (
                           <>
                             <Zap className="w-4 h-4 mr-2" />
-                            Re-scan
+                            Scan Now
                           </>
                         )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRemoveSource(source.id, source.source_name)}
+                        title="Remove this source from topic"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -408,9 +543,9 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                 
                 {data.sources.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No sources configured for this topic yet.</p>
-                    <p className="text-sm">Add sources in the "Sources" tab to start collecting content.</p>
+                    <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No sources added yet.</p>
+                    <p className="text-sm">Add your first news source above to start collecting content.</p>
                   </div>
                 )}
               </div>
