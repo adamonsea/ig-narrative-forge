@@ -528,6 +528,76 @@ export type Database = {
           },
         ]
       }
+      daily_content_availability: {
+        Row: {
+          check_date: string
+          check_duration_ms: number | null
+          created_at: string | null
+          discovery_method: string | null
+          error_message: string | null
+          id: string
+          new_urls_found: number
+          source_id: string
+          success: boolean
+          topic_id: string
+          total_urls_discovered: number
+          updated_at: string | null
+          urls_already_seen: number
+        }
+        Insert: {
+          check_date?: string
+          check_duration_ms?: number | null
+          created_at?: string | null
+          discovery_method?: string | null
+          error_message?: string | null
+          id?: string
+          new_urls_found?: number
+          source_id: string
+          success?: boolean
+          topic_id: string
+          total_urls_discovered?: number
+          updated_at?: string | null
+          urls_already_seen?: number
+        }
+        Update: {
+          check_date?: string
+          check_duration_ms?: number | null
+          created_at?: string | null
+          discovery_method?: string | null
+          error_message?: string | null
+          id?: string
+          new_urls_found?: number
+          source_id?: string
+          success?: boolean
+          topic_id?: string
+          total_urls_discovered?: number
+          updated_at?: string | null
+          urls_already_seen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_content_availability_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_content_availability_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_content_availability_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discarded_articles: {
         Row: {
           created_at: string
@@ -2613,22 +2683,27 @@ export type Database = {
           | { p_topic_id?: string }
         Returns: {
           article_id: string
+          audience_expertise: string
           author: string
           cover_illustration_prompt: string
           cover_illustration_url: string
           created_at: string
           id: string
+          illustration_generated_at: string
           is_published: boolean
-          publication_name: string
-          quality_score: number
           shared_content_id: string
           slides: Json
+          slides_count: number
+          slidetype: string
+          source_type: string
           source_url: string
           status: string
           title: string
+          tone: string
           topic_article_id: string
           updated_at: string
           word_count: number
+          writing_style: string
         }[]
       }
       get_topic_articles_multi_tenant: {
