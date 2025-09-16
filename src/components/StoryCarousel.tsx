@@ -26,6 +26,7 @@ interface Story {
     region: string;
     published_at?: string;
   };
+  is_teaser?: boolean; // Flag for stories generated from snippets
 }
 
 interface StoryCarouselProps {
@@ -224,6 +225,11 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               <Badge variant="secondary" className="text-sm font-medium">
                 {topicName}
               </Badge>
+              {story.is_teaser && (
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  Teaser
+                </Badge>
+              )}
               {(() => {
                 // Use story updated_at for feed freshness (when it was published to feed)
                 const storyPublishDate = story.updated_at;

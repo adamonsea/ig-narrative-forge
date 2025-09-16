@@ -85,7 +85,7 @@ export default function MultiTenantArticlesList({
 
   const getSlideTypeInfo = (type: string) => {
     const types = {
-      short: { slides: 4, desc: 'Quick' },
+      short: { slides: 3, desc: 'Quick' },
       tabloid: { slides: 6, desc: 'Standard' },
       indepth: { slides: 8, desc: 'Detailed' },
       extensive: { slides: 12, desc: 'Full' }
@@ -122,7 +122,9 @@ export default function MultiTenantArticlesList({
   };
 
   const renderArticleCard = (article: MultiTenantArticle) => {
-    const slideType = slideQuantityOverrides[article.id] || defaultSlideQuantity;
+    // Default snippets to 'short' (3 slides) instead of 'tabloid' (6 slides)
+    const defaultType = article.is_snippet ? 'short' : defaultSlideQuantity;
+    const slideType = slideQuantityOverrides[article.id] || defaultType;
     const slideInfo = getSlideTypeInfo(slideType);
     const toneOverride = toneOverrides[article.id] || defaultTone;
     const writingStyleOverride = writingStyleOverrides[article.id] || defaultWritingStyle;
@@ -163,6 +165,11 @@ export default function MultiTenantArticlesList({
             </div>
             <span className="text-xs text-muted-foreground">
               {article.word_count} words
+              {article.is_snippet && (
+                <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  Snippet
+                </Badge>
+              )}
             </span>
             {article.author && (
               <span className="text-xs text-muted-foreground">
@@ -248,7 +255,7 @@ export default function MultiTenantArticlesList({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="short">4</SelectItem>
+                  <SelectItem value="short">3</SelectItem>
                   <SelectItem value="tabloid">6</SelectItem>
                   <SelectItem value="indepth">8</SelectItem>
                   <SelectItem value="extensive">12</SelectItem>

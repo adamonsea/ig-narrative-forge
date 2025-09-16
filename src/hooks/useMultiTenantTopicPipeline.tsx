@@ -20,6 +20,7 @@ export interface MultiTenantArticle {
   keyword_matches?: string[];
   created_at: string;
   updated_at: string;
+  is_snippet: boolean; // Flag for articles under 150 words
 }
 
 export interface MultiTenantQueueItem {
@@ -57,6 +58,7 @@ export interface MultiTenantStory {
   writing_style?: string;
   audience_expertise?: string;
   slides?: any[];
+  is_teaser?: boolean; // Flag for stories generated from snippets
 }
 
 export interface MultiTenantStats {
@@ -134,23 +136,29 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             item.processing_status === 'new' && // Only show "new" articles in Arrivals
             !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
           )
-          ?.map((item: any) => ({
-          id: item.id,
-          shared_content_id: item.shared_content_id,
-          title: item.title,
-          body: item.body,
-          author: item.author,
-          url: item.url,
-          image_url: item.image_url,
-          published_at: item.published_at,
-          word_count: item.word_count || 0,
-          processing_status: item.processing_status,
-          regional_relevance_score: item.regional_relevance_score || 0,
-          content_quality_score: item.content_quality_score || 0,
-          keyword_matches: item.keyword_matches || [],
-          created_at: item.created_at,
-          updated_at: item.updated_at
-        })) || [];
+          ?.map((item: any) => {
+            const wordCount = item.word_count || 0;
+            const isSnippet = wordCount > 0 && wordCount < 150; // Flag snippets under 150 words
+            
+            return {
+              id: item.id,
+              shared_content_id: item.shared_content_id,
+              title: item.title,
+              body: item.body,
+              author: item.author,
+              url: item.url,
+              image_url: item.image_url,
+              published_at: item.published_at,
+              word_count: wordCount,
+              processing_status: item.processing_status,
+              regional_relevance_score: item.regional_relevance_score || 0,
+              content_quality_score: item.content_quality_score || 0,
+              keyword_matches: item.keyword_matches || [],
+              created_at: item.created_at,
+              updated_at: item.updated_at,
+              is_snippet: isSnippet
+            };
+          }) || [];
         setArticles(articlesData);
       }
 
@@ -274,6 +282,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               return total + (slide.word_count || 0);
             }, 0);
             
+            // Check if this is a teaser (generated from snippet)
+            const isTeaser = story.slidetype === 'short' && calculatedWordCount < 200;
+            
             return {
               id: story.id,
               topic_article_id: story.topic_article_id,
@@ -293,7 +304,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               slidetype: story.slidetype || '',
               tone: story.tone || '',
               writing_style: story.writing_style || '',
-              audience_expertise: story.audience_expertise || ''
+              audience_expertise: story.audience_expertise || '',
+              is_teaser: isTeaser
             };
           });
           setStories(storiesData);
@@ -372,7 +384,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     tone: 'formal' | 'conversational' | 'engaging' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
-    await approveMultiTenantArticle(article, slideType, tone, writingStyle);
+    // Auto-detect snippets and default to 'short' (3 slides) for better experience
+    const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
+    
+    await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle);
     // Force immediate reload to show approval/queue addition
     await loadTopicContent();
   }, [approveMultiTenantArticle, loadTopicContent, articles]);

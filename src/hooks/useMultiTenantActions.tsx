@@ -139,6 +139,7 @@ export const useMultiTenantActions = () => {
         }
       }
 
+      // Add snippet metadata to content generation queue
       // Insert into generation queue using bridge article
       const { data: queueData, error: queueError } = await supabase
         .from('content_generation_queue')
@@ -151,7 +152,8 @@ export const useMultiTenantActions = () => {
           tone: tone,
           writing_style: writingStyle,
           audience_expertise: 'intermediate',
-          status: 'pending'
+          status: 'pending',
+          result_data: article.is_snippet ? { is_snippet: true, original_word_count: article.word_count } : null
         })
         .select('id')
         .single();
@@ -170,7 +172,7 @@ export const useMultiTenantActions = () => {
       }
 
       const typeLabels = {
-        short: 'Short Carousel (4 slides)',
+        short: 'Quick Teaser (3 slides)',
         tabloid: 'Tabloid Style (6 slides)', 
         indepth: 'In-Depth Analysis (8 slides)',
         extensive: 'Comprehensive Story (12 slides)'
