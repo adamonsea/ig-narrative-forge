@@ -224,32 +224,19 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .order('created_at', { ascending: false })
           .limit(200);
 
-      console.log('📊 Fallback results:', {
-        legacy: legacyStoriesResult.data?.length || 0,
-        multiTenant: multiTenantStoriesResult.data?.length || 0,
-        legacyError: legacyStoriesResult.error,
-        multiTenantError: multiTenantStoriesResult.error
-      });
-
-      // Combine both result sets
-      filteredStories = [
-        ...(legacyStoriesResult.data || []),
-        ...(multiTenantStoriesResult.data || [])
-      ];
-      
-      // Sort by created_at descending to show newest first
-      filteredStories.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      if (filteredStories.length > 0) {
-        console.log('✅ Using fallback stories query, found:', filteredStories.length, 'total stories');
-        console.log('📈 Story breakdown:', {
-          fromLegacy: legacyStoriesResult.data?.length || 0,
-          fromMultiTenant: multiTenantStoriesResult.data?.length || 0,
-          combined: filteredStories.length,
-          showing: Math.min(filteredStories.length, 200)
+        console.log('📊 Stories query result:', {
+          found: storiesResult.data?.length || 0,
+          error: storiesResult.error
         });
 
-          // Map and set stories from fallback to keep UI consistent
+        if (storiesResult.error) {
+          console.error('❌ Stories query failed:', storiesResult.error);
+          filteredStories = [];
+        } else {
+          filteredStories = storiesResult.data || [];
+          console.log('✅ Stories loaded successfully:', filteredStories.length, 'total stories');
+
+          // Map and set stories to keep UI consistent
           const storiesData = filteredStories.map((story: any) => ({
             id: story.id,
             topic_article_id: story.topic_article_id,
@@ -262,7 +249,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             cover_illustration_prompt: story.cover_illustration_prompt,
             illustration_generated_at: story.illustration_generated_at,
             slides: Array.isArray(story.slides) ? story.slides : [],
-            // Fallback may not include these unified fields; default gracefully
+            // Handle both legacy and multi-tenant sources
             url: story.article?.source_url || story.topic_article?.shared_content?.url || '',
             author: story.author || '',
             word_count: story.word_count || 0,
@@ -272,9 +259,6 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             audience_expertise: story.audience_expertise || ''
           }));
           setStories(storiesData);
-        } else {
-          console.error('❌ No stories found in fallback queries');
-          setStories([]);
         }
       // Calculate stats
       const newStats = {
