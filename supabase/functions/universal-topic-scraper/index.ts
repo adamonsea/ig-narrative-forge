@@ -296,6 +296,27 @@ serve(async (req) => {
             console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
             return result;
           } else {
+            // Check if this is a successful scrape with no new articles vs a failed scrape
+            const hasAccessibilityErrors = scrapeResult.errors.some(e => 
+              e.includes('Failed to fetch') || 
+              e.includes('Network error') || 
+              e.includes('timeout') ||
+              e.includes('HTTP error')
+            );
+            
+            // If the feed was accessible but just empty, mark as success with 0 articles
+            if (!hasAccessibilityErrors && scrapeResult.articlesFound === 0) {
+              console.log(`✅ ${source.source_name}: Feed accessible but no new articles found`);
+              return {
+                sourceId: source.source_id,
+                sourceName: source.source_name,
+                success: true,
+                articlesFound: 0,
+                articlesScraped: 0,
+                executionTimeMs: Date.now() - startTime
+              } as ScraperSourceResult;
+            }
+
             // Smarter Beautiful Soup fallback for whitelisted domains
             const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
             const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
@@ -303,14 +324,14 @@ serve(async (req) => {
             );
             
             // Trigger fallback if:
-            // 1. Zero articles scraped, OR
+            // 1. Zero articles scraped AND has accessibility/content errors, OR
             // 2. Found many articles (≥10) but scraped very few (<3), OR
             // 3. High rate of INVALID_CONTENT errors
             const invalidContentErrors = scrapeResult.errors.filter(e => 
               e.includes('INVALID_CONTENT') || e.includes('insufficient content')
             ).length;
             const shouldUseFallback = isWhitelisted && (
-              scrapeResult.articlesScraped === 0 ||
+              (scrapeResult.articlesScraped === 0 && hasAccessibilityErrors) ||
               (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
               (invalidContentErrors >= 5)
             );
@@ -348,6 +369,18 @@ serve(async (req) => {
                     executionTimeMs: Date.now() - startTime,
                     fallbackMethod: 'beautiful-soup-scraper'
                   } as ScraperSourceResult;
+                } else if (fallbackResult.data?.success && fallbackResult.data?.articles?.length === 0) {
+                  // Beautiful Soup also found no articles but was successful - this means the source is genuinely empty
+                  console.log(`✅ Beautiful Soup confirms ${source.source_name} has no new articles`);
+                  return {
+                    sourceId: source.source_id,
+                    sourceName: source.source_name,
+                    success: true,
+                    articlesFound: 0,
+                    articlesScraped: 0,
+                    executionTimeMs: Date.now() - startTime,
+                    fallbackMethod: 'beautiful-soup-scraper'
+                  } as ScraperSourceResult;
                 } else {
                   console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
                 }
@@ -356,12 +389,13 @@ serve(async (req) => {
               }
             }
 
+            // Only mark as failed if there were actual technical errors
             recordFailure(source.normalizedUrl);
             const result: ScraperSourceResult = {
               sourceId: source.source_id,
               sourceName: source.source_name,
               success: false,
-              error: scrapeResult.errors.join(', ') || 'No articles found',
+              error: scrapeResult.errors.join(', ') || 'Technical error occurred',
               articlesFound: 0,
               articlesScraped: 0
             };
