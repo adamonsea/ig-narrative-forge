@@ -2556,6 +2556,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_orphaned_legacy_sources: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_orphaned_sources: {
         Args: Record<PropertyKey, never>
         Returns: Json

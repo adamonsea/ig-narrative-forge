@@ -29,21 +29,33 @@ export const SourceCleanup = () => {
   const [lastResult, setLastResult] = useState<CleanupResult | null>(null);
   const { toast } = useToast();
 
-  const runCleanup = async (operation: 'cleanup_orphaned' | 'fix_sussex_express' | 'full_cleanup') => {
+  const runCleanup = async (operation: 'cleanup_orphaned' | 'fix_sussex_express' | 'full_cleanup' | 'cleanup_legacy_orphaned') => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('source-cleanup', {
-        body: { operation }
-      });
+      let data, error;
+      
+      if (operation === 'cleanup_legacy_orphaned') {
+        // Call the new cleanup function directly
+        const result = await supabase.rpc('cleanup_orphaned_legacy_sources');
+        data = result.data;
+        error = result.error;
+      } else {
+        // Use existing source-cleanup function
+        const result = await supabase.functions.invoke('source-cleanup', {
+          body: { operation }
+        });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
       
-      setLastResult(data);
+      setLastResult({ ...data, operation });
       
       if (data.success) {
         toast({
           title: "Cleanup Successful",
-          description: data.summary || "Source cleanup completed successfully",
+          description: data.message || data.summary || "Source cleanup completed successfully",
         });
       } else {
         throw new Error(data.error || 'Unknown error during cleanup');
@@ -113,12 +125,13 @@ export const SourceCleanup = () => {
           </Button>
           
           <Button
-            onClick={() => runCleanup('full_cleanup')}
+            onClick={() => runCleanup('cleanup_legacy_orphaned')}
             disabled={isLoading}
+            variant="destructive"
             className="flex items-center gap-2"
           >
             <AlertTriangle className="h-4 w-4" />
-            Full Cleanup
+            Remove Legacy Orphaned Sources
           </Button>
         </div>
 

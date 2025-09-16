@@ -110,7 +110,8 @@ export const UnifiedSourceManager = ({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [gatheringSource, setGatheringSource] = useState<string | null>(null);
-  const [gatheringAll, setGatheringAll] = useState(false);
+    const [gatheringAll, setGatheringAll] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
   
   // Daily content availability for topic mode
   const { 
@@ -119,6 +120,37 @@ export const UnifiedSourceManager = ({
     refreshAvailability, 
     runContentMonitor 
   } = useDailyContentAvailability(mode === 'topic' && topicId ? topicId : '');
+
+  const runCleanup = async (operation: 'cleanup_legacy_orphaned') => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('cleanup_orphaned_legacy_sources');
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; message?: string; error?: string };
+      
+      if (result.success) {
+        toast({
+          title: "Cleanup Successful",
+          description: result.message || "Legacy source cleanup completed successfully",
+        });
+        // Reload sources to reflect changes
+        loadSources();
+      } else {
+        throw new Error(result.error || 'Unknown error during cleanup');
+      }
+    } catch (error: any) {
+      console.error('Legacy cleanup failed:', error);
+      toast({
+        title: "Cleanup Failed",
+        description: error.message || "Failed to run legacy source cleanup",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const [newSource, setNewSource] = useState({
     source_name: '',
@@ -202,19 +234,32 @@ export const UnifiedSourceManager = ({
         
         setSources(transformedSources);
       } else {
-        // For non-topic modes, use original approach
-        let query = supabase.from('content_sources').select('*');
+        // For global mode, show only sources that are actively linked to topics via topic_sources
+        if (mode === 'global') {
+          const { data, error } = await supabase
+            .from('content_sources')
+            .select(`
+              *,
+              topic_sources!inner(topic_id, is_active, source_config)
+            `)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          setSources(data || []);
+        } else {
+          // For region mode, use original approach (legacy sources not linked to topics)
+          let query = supabase.from('content_sources').select('*');
 
-        if (mode === 'region' && region) {
-          query = query.eq('region', region).is('topic_id', null);
-        } else if (mode === 'global') {
-          query = query.is('topic_id', null);
+          if (mode === 'region' && region) {
+            query = query.eq('region', region).is('topic_id', null);
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: false });
+
+          if (error) throw error;
+          setSources(data || []);
         }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setSources(data || []);
       }
     } catch (error) {
       console.error('Error loading sources:', error);
@@ -906,8 +951,25 @@ export const UnifiedSourceManager = ({
         <div>
           <h2 className="text-2xl font-bold">{getDisplayTitle()}</h2>
           <p className="text-muted-foreground">{getDisplayDescription()}</p>
+          {mode === 'global' && (
+            <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+              Only showing sources actively linked to topics. Use "Clean Legacy Sources" to remove orphaned sources.
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
+          {mode === 'global' && (
+            <Button
+              onClick={() => runCleanup('cleanup_legacy_orphaned')}
+              disabled={isLoading}
+              variant="destructive"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
+            </Button>
+          )}
           {mode === 'topic' && topicId && (
             <Button 
               onClick={handleCheckNewContent}
@@ -935,7 +997,7 @@ export const UnifiedSourceManager = ({
             Gather All Sources
           </Button>
           <Button onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 w-4 mr-2" />
             Add Source
           </Button>
         </div>
