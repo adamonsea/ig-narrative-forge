@@ -77,14 +77,14 @@ const MultiTenantScraperTester = () => {
         [source.id]: { ...sourceResult, source: source.name }
       }));
       
-      const success = sourceResult?.success && sourceResult.articlesScraped > 0;
+      const hasNewContent = sourceResult?.success && sourceResult.articlesScraped > 0;
       
       toast({
-        title: success ? "Source Working!" : "Source Failed",
-        description: success 
+        title: hasNewContent ? "Source Working!" : sourceResult?.success ? "No New Content" : "Source Failed",
+        description: sourceResult?.success 
           ? `${source.name}: Found ${sourceResult.articlesFound || 0}, stored ${sourceResult.articlesScraped || 0}`
           : `${source.name}: ${sourceResult?.error || 'No articles stored'}`,
-        variant: success ? "default" : "destructive"
+        variant: hasNewContent ? "success" : sourceResult?.success ? "muted" : "destructive"
       });
 
     } catch (err: any) {
@@ -121,14 +121,14 @@ const MultiTenantScraperTester = () => {
     
     setTesting(false);
     
-    const successCount = Object.values(sourceResults).filter((result: any) => 
+    const sourcesWithContent = Object.values(sourceResults).filter((result: any) => 
       result.success && result.articlesScraped > 0
     ).length;
     
     toast({
-      title: "Phase 2 Testing Complete",
-      description: `${successCount}/${hastingsSources.length} Hastings sources working successfully`,
-      variant: successCount > 0 ? "default" : "destructive"
+      title: sourcesWithContent > 0 ? "Testing Complete - Content Found" : "Testing Complete - No New Content",
+      description: `${sourcesWithContent}/${hastingsSources.length} Hastings sources working successfully`,
+      variant: sourcesWithContent > 0 ? "success" : sourcesWithContent === 0 ? "muted" : "destructive"
     });
   };
 

@@ -487,10 +487,11 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           });
         }
 
+        const hasNewContent = data.articlesStored > 0;
         toast({
-          title: `Content Gathering Complete - ${source.source_name}`,
+          title: hasNewContent ? `New Content - ${source.source_name}` : `No New Content - ${source.source_name}`,
           description: `${details} | Method: ${data.method || 'unknown'}`,
-          variant: data.articlesStored > 0 ? "default" : "destructive"
+          variant: hasNewContent ? "success" : "muted"
         });
       } else {
         // Update failure count

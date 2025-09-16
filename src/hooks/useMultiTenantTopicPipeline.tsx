@@ -205,36 +205,63 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Load published stories directly with topic-based joins for stability
       console.log('🔄 Loading published stories for topic:', selectedTopicId);
         
-        // Simplified query: Get all ready+published stories that belong to this topic
-        // Use a single query with proper joins to avoid moving-window issues
-        const storiesResult = await supabase
-          .from('stories')
-          .select(`
-            *,
-            slides:slides(*),
-            article:articles(title, source_url, region, topic_id),
-            topic_article:topic_articles(
-              id, topic_id,
-              shared_content:shared_article_content(title, url)
-            )
-          `)
-          .eq('status', 'ready')
-          .eq('is_published', true)
-          .or(`article.topic_id.eq.${selectedTopicId},topic_article.topic_id.eq.${selectedTopicId}`)
-          .order('created_at', { ascending: false })
-          .limit(200);
+        // Fix: Split into two separate queries to avoid PostgREST .or() issues
+        const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
+          // Query 1: Legacy stories via articles table
+          supabase
+            .from('stories')
+            .select(`
+              *,
+              slides:slides(*),
+              article:articles!inner(title, source_url, region, topic_id)
+            `)
+            .eq('status', 'ready')
+            .eq('is_published', true)
+            .eq('article.topic_id', selectedTopicId)
+            .order('created_at', { ascending: false })
+            .limit(100),
+          
+          // Query 2: Multi-tenant stories via topic_articles table
+          supabase
+            .from('stories')
+            .select(`
+              *,
+              slides:slides(*),
+              topic_article:topic_articles!inner(
+                id, topic_id,
+                shared_content:shared_article_content(title, url)
+              )
+            `)
+            .eq('status', 'ready')
+            .eq('is_published', true)
+            .eq('topic_article.topic_id', selectedTopicId)
+            .order('created_at', { ascending: false })
+            .limit(100)
+        ]);
 
-        console.log('📊 Stories query result:', {
-          found: storiesResult.data?.length || 0,
-          error: storiesResult.error
+        console.log('📊 Stories query results:', {
+          legacy: legacyStoriesResult.data?.length || 0,
+          multiTenant: multiTenantStoriesResult.data?.length || 0,
+          legacyError: legacyStoriesResult.error,
+          multiTenantError: multiTenantStoriesResult.error
         });
 
-        if (storiesResult.error) {
-          console.error('❌ Stories query failed:', storiesResult.error);
-          filteredStories = [];
-        } else {
-          filteredStories = storiesResult.data || [];
-          console.log('✅ Stories loaded successfully:', filteredStories.length, 'total stories');
+        // Merge and deduplicate results
+        const allStories = [
+          ...(legacyStoriesResult.data || []),
+          ...(multiTenantStoriesResult.data || [])
+        ];
+        
+        // Remove duplicates by story ID
+        const uniqueStories = allStories.filter((story, index, arr) => 
+          arr.findIndex(s => s.id === story.id) === index
+        );
+        
+        filteredStories = uniqueStories.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        console.log('✅ Stories loaded successfully:', filteredStories.length, 'total unique stories');
 
           // Map and set stories to keep UI consistent
           const storiesData = filteredStories.map((story: any) => ({
@@ -259,15 +286,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             audience_expertise: story.audience_expertise || ''
           }));
           setStories(storiesData);
-        }
-      // Calculate stats
-      const newStats = {
-        totalArticles: articlesResult.data?.length || 0,
-        pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
-        processingQueue: queueResult.data?.length || 0,
-        readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
-      };
-      setStats(newStats);
+        
+        // Calculate stats
+        const newStats = {
+          totalArticles: articlesResult.data?.length || 0,
+          pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
+          processingQueue: queueResult.data?.length || 0,
+          readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
+        };
+        setStats(newStats);
 
     } catch (error) {
       console.error('Error loading topic content:', error);

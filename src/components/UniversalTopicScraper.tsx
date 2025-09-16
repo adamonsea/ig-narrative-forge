@@ -67,9 +67,13 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
       setResults(data);
       setProgress(100);
 
+      const hasNewContent = data.totalArticles > 0;
       toast({
-        title: "Universal Scraping Complete",
-        description: `Found ${data.totalArticles} articles from ${data.successfulSources}/${data.sourcesProcessed} sources`,
+        title: hasNewContent ? "Content Found" : "No New Content",
+        description: hasNewContent 
+          ? `Found ${data.totalArticles} articles from ${data.successfulSources}/${data.sourcesProcessed} sources`
+          : `Checked ${data.sourcesProcessed} sources - no new articles found`,
+        variant: hasNewContent ? "success" : "muted",
       });
 
     } catch (error) {
