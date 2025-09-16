@@ -269,21 +269,30 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             .limit(200)
         ]);
 
-        console.log('📊 Fallback results:', {
-          legacy: legacyStoriesResult.data?.length || 0,
-          multiTenant: multiTenantStoriesResult.data?.length || 0,
-          legacyError: legacyStoriesResult.error,
-          multiTenantError: multiTenantStoriesResult.error
-        });
+      console.log('📊 Fallback results:', {
+        legacy: legacyStoriesResult.data?.length || 0,
+        multiTenant: multiTenantStoriesResult.data?.length || 0,
+        legacyError: legacyStoriesResult.error,
+        multiTenantError: multiTenantStoriesResult.error
+      });
 
-        // Combine both result sets
-        filteredStories = [
-          ...(legacyStoriesResult.data || []),
-          ...(multiTenantStoriesResult.data || [])
-        ];
-        
-        if (filteredStories.length > 0) {
-          console.log('✅ Using fallback stories query, found:', filteredStories.length);
+      // Combine both result sets
+      filteredStories = [
+        ...(legacyStoriesResult.data || []),
+        ...(multiTenantStoriesResult.data || [])
+      ];
+      
+      // Sort by created_at descending to show newest first
+      filteredStories.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      if (filteredStories.length > 0) {
+        console.log('✅ Using fallback stories query, found:', filteredStories.length, 'total stories');
+        console.log('📈 Story breakdown:', {
+          fromLegacy: legacyStoriesResult.data?.length || 0,
+          fromMultiTenant: multiTenantStoriesResult.data?.length || 0,
+          combined: filteredStories.length,
+          showing: Math.min(filteredStories.length, 200)
+        });
 
           // Map and set stories from fallback to keep UI consistent
           const storiesData = filteredStories.map((story: any) => ({

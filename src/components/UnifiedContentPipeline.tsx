@@ -66,7 +66,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   // Multi-tenant actions for additional functionality  
   const multiTenantActions = useMultiTenantActions();
-  const { returnToReview } = multiTenantActions;
 
   // Animation states for stories
   const [animatingStories, setAnimatingStories] = useState<Set<string>>(new Set());
@@ -226,9 +225,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   const handleReturnToReview = async (storyId: string) => {
     try {
-      await returnToReview(storyId);
-      // Refresh the content to show the updated story status
-      await refreshContent();
+      await handleMultiTenantRejectStory(storyId);
     } catch (error) {
       console.error('Error returning story to review:', error);
     }

@@ -467,11 +467,14 @@ export const useMultiTenantActions = () => {
   };
 
   /**
-   * Reject/delete a multi-tenant story
+   * Reject/delete a multi-tenant story with animation
    */
   const rejectMultiTenantStory = async (storyId: string) => {
+    // Add immediate animation feedback
+    setAnimatingArticles(prev => new Set([...prev, storyId]));
+    
     try {
-      console.log('❌ Rejecting multi-tenant story:', storyId);
+      console.log('🔄 Returning story to review:', storyId);
 
       // Get the story to find associated article
       const { data: story, error: storyError } = await supabase
@@ -511,82 +514,32 @@ export const useMultiTenantActions = () => {
         }
       }
 
-      console.log('✅ Multi-tenant story rejected and deleted successfully');
-
-      toast({
-        title: "Story Rejected",
-        description: "The story has been rejected and removed.",
-      });
-
-    } catch (error: any) {
-      console.error('Error rejecting multi-tenant story:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject story. Please try again.",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  /**
-   * Return a published story back to review (draft status)
-   */
-  const returnToReview = async (storyId: string) => {
-    try {
-      console.log('🔄 Returning story to review:', storyId);
-
-      // Get the story to find associated article
-      const { data: story, error: storyError } = await supabase
-        .from('stories')
-        .select('topic_article_id, shared_content_id, title')
-        .eq('id', storyId)
-        .single();
-
-      if (storyError) {
-        console.error('Error fetching story:', storyError);
-        throw new Error(`Failed to fetch story: ${storyError.message}`);
-      }
-
-      // Update story status back to draft
-      const { error: storyUpdateError } = await supabase
-        .from('stories')
-        .update({
-          status: 'draft',
-          is_published: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', storyId);
-
-      if (storyUpdateError) {
-        console.error('Error updating story status:', storyUpdateError);
-        throw new Error(`Failed to update story status: ${storyUpdateError.message}`);
-      }
-
-      // Reset associated multi-tenant article status to 'new' if it exists
-      if (story?.topic_article_id) {
-        const { error: resetError } = await supabase
-          .from('topic_articles')
-          .update({
-            processing_status: 'new',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', story.topic_article_id);
-
-        if (resetError) {
-          console.warn('Warning: Failed to reset multi-tenant article status:', resetError);
-        }
-      }
-
       console.log('✅ Story returned to review successfully');
 
       toast({
         title: "Story Returned to Review",
-        description: `"${story?.title}" has been sent back to arrivals for review.`,
+        description: "The story has been moved back to arrivals for review.",
       });
+
+      // Clean up animation state after delay
+      setTimeout(() => {
+        setAnimatingArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(storyId);
+          return newSet;
+        });
+      }, 300);
 
     } catch (error: any) {
       console.error('Error returning story to review:', error);
+      
+      // Reverse animation on error
+      setAnimatingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(storyId);
+        return newSet;
+      });
+      
       toast({
         title: "Error",
         description: error.message || "Failed to return story to review. Please try again.",
@@ -609,6 +562,5 @@ export const useMultiTenantActions = () => {
     cancelMultiTenantQueueItem,
     approveMultiTenantStory,
     rejectMultiTenantStory,
-    returnToReview,
   };
 };
