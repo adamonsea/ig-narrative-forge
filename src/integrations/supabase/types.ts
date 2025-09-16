@@ -540,6 +540,7 @@ export type Database = {
           source_id: string
           success: boolean
           topic_id: string
+          topic_relevant_urls: number | null
           total_urls_discovered: number
           updated_at: string | null
           urls_already_seen: number
@@ -555,6 +556,7 @@ export type Database = {
           source_id: string
           success?: boolean
           topic_id: string
+          topic_relevant_urls?: number | null
           total_urls_discovered?: number
           updated_at?: string | null
           urls_already_seen?: number
@@ -570,6 +572,7 @@ export type Database = {
           source_id?: string
           success?: boolean
           topic_id?: string
+          topic_relevant_urls?: number | null
           total_urls_discovered?: number
           updated_at?: string | null
           urls_already_seen?: number
