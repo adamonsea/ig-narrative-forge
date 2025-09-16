@@ -202,20 +202,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      const storiesResult = await supabase.rpc('get_stories_unified', {
-        p_topic_id: selectedTopicId,
-        p_status: 'ready',
-        p_limit: 100
-      });
-
-      const rpcStoriesCount = storiesResult.data?.length || 0;
-      console.log('🔧 RPC stories query returned:', rpcStoriesCount, 'stories for topic:', selectedTopicId);
-
-      if (storiesResult.error || rpcStoriesCount === 0) {
-        if (storiesResult.error) {
-          console.error('Error loading unified stories:', storiesResult.error);
-        }
-        console.log('🔄 Using fallback stories query for topic:', selectedTopicId);
+      // Load stories using direct queries (skip broken RPC)
+      console.log('🔄 Loading stories with direct query for topic:', selectedTopicId);
         
         // Get legacy article IDs for this specific topic (not topic_articles IDs)
         const { data: legacyArticles } = await supabase
@@ -321,38 +309,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           console.error('❌ No stories found in fallback queries');
           setStories([]);
         }
-      } else {
-        filteredStories = storiesResult.data || [];
-        
-        const storiesData = filteredStories.map((story: any) => ({
-          id: story.id,
-          topic_article_id: story.topic_article_id,
-          shared_content_id: story.shared_content_id,
-          title: story.title,
-          status: story.status,
-          created_at: story.created_at,
-          updated_at: story.updated_at,
-          cover_illustration_url: story.cover_illustration_url,
-          cover_illustration_prompt: story.cover_illustration_prompt,
-          illustration_generated_at: story.illustration_generated_at,
-          slides: Array.isArray(story.slides) ? story.slides : [],
-          // Properties now properly populated from RPC
-          url: story.source_url || '',
-          author: story.author || '',
-          word_count: story.word_count || 0,
-          slidetype: story.slidetype || '',
-          tone: story.tone || '',
-          writing_style: story.writing_style || '',
-          audience_expertise: story.audience_expertise || ''
-        }));
-        setStories(storiesData);
-      }
-
       // Calculate stats
       const newStats = {
         totalArticles: articlesResult.data?.length || 0,
         pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
-        processingQueue: filteredQueueItems.length || 0,
+        processingQueue: queueResult.data?.length || 0,
         readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
       };
       setStats(newStats);

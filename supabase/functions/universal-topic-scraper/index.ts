@@ -302,8 +302,8 @@ serve(async (req) => {
               source.normalizedUrl.includes(domain)
             );
             
-            if (isWhitelisted && scrapeResult.articlesFound === 0) {
-              console.log(`🔄 FastTrack yielded 0 articles for whitelisted domain ${source.source_name}, trying Beautiful Soup fallback...`);
+            if (isWhitelisted && scrapeResult.articlesScraped === 0) {
+              console.log(`🔄 FastTrack found ${scrapeResult.articlesFound} items but scraped 0 articles for whitelisted domain ${source.source_name}, trying Beautiful Soup fallback...`);
               
               try {
                 const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {

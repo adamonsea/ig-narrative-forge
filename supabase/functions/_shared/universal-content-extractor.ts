@@ -806,10 +806,39 @@ export class UniversalContentExtractor {
     const links: string[] = [];
     const linkMatches = html.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/gi) || [];
     
+    // Domain-specific path filtering
+    const getDomainExcludePatterns = (url: string): RegExp[] => {
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        if (hostname.includes('theargus.co.uk')) {
+          return [
+            /\/advertising\//i,
+            /\/newsletters\//i,
+            /\/subscription/i,
+            /\/privacy/i,
+            /\/terms/i
+          ];
+        }
+      } catch {
+        // Continue with default patterns
+      }
+      return [];
+    };
+    
+    const excludePatterns = getDomainExcludePatterns(baseUrl);
+    
     for (const linkMatch of linkMatches) {
       const hrefMatch = /href=["']([^"']+)["']/i.exec(linkMatch);
       if (hrefMatch) {
         const url = this.resolveUrl(hrefMatch[1], baseUrl);
+        
+        // Apply domain-specific filtering
+        if (excludePatterns.length > 0) {
+          const shouldExclude = excludePatterns.some(pattern => pattern.test(url));
+          if (shouldExclude) {
+            continue; // Skip this URL
+          }
+        }
         
         // Enhanced article URL detection
         if (this.isLikelyArticleUrl(url) && this.isInternalLink(url, baseUrl)) {
