@@ -384,7 +384,7 @@ const TopicDashboard = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
-            {/* Pipeline Stats */}
+            {/* Essential Metrics - Available Stories */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4">
@@ -392,7 +392,7 @@ const TopicDashboard = () => {
                     <BarChart3 className="h-5 w-5 text-chart-2" />
                     <div>
                       <div className="text-2xl font-bold text-chart-2">{stats.pending_articles}</div>
-                      <p className="text-sm text-muted-foreground">Pending Articles</p>
+                      <p className="text-sm text-muted-foreground">Available Articles</p>
                     </div>
                   </div>
                 </CardContent>
@@ -413,17 +413,17 @@ const TopicDashboard = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <RefreshCw className="h-5 w-5 text-chart-1" />
+                    <CheckCircle className="h-5 w-5 text-chart-1" />
                     <div>
                       <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
-                      <p className="text-sm text-muted-foreground">Ready Stories</p>
+                      <p className="text-sm text-muted-foreground">Available Stories</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Overview Stats */}
+            {/* Additional Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -443,7 +443,7 @@ const TopicDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.articles}</div>
-                  <p className="text-xs text-muted-foreground">Imported articles</p>
+                  <p className="text-xs text-muted-foreground">Total articles</p>
                 </CardContent>
               </Card>
 

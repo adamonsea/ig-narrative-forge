@@ -507,7 +507,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                         size="sm"
                         variant="outline"
                         onClick={() => toggleSourceStatus(source.id, source.is_active)}
-                        title={source.is_active ? 'Stop scraping this source' : 'Start scraping this source'}
+                        title={source.is_active ? 'Stop gathering from this source' : 'Start gathering from this source'}
                       >
                         {source.is_active ? 'Disable' : 'Enable'}
                       </Button>
@@ -520,12 +520,12 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                         {rescanning === source.id ? (
                           <>
                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Scanning...
+                            Gathering...
                           </>
                         ) : (
                           <>
                             <Zap className="w-4 h-4 mr-2" />
-                            Scan Now
+                            Gather Content
                           </>
                         )}
                       </Button>

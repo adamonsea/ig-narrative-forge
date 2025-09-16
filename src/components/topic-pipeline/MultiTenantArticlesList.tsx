@@ -322,12 +322,12 @@ export default function MultiTenantArticlesList({
           No Articles Available
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          No new articles have been discovered yet. Click "Gather All Sources" to search for fresh content.
+          No new articles have been discovered yet. Click "Gather Content" to search for fresh content.
         </p>
         <div className="flex gap-3">
           <Button onClick={onRefresh} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" />
-            Gather All Sources
+            Gather Content
           </Button>
           <Button onClick={onRefresh} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" />

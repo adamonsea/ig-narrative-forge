@@ -919,7 +919,7 @@ export const UnifiedSourceManager = ({
               ) : (
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
-              Check New Content
+              Gather Content
             </Button>
           )}
           <Button 
@@ -932,7 +932,7 @@ export const UnifiedSourceManager = ({
             ) : (
               <Download className="w-4 h-4 mr-2" />
             )}
-            Gather All Active
+            Gather All Sources
           </Button>
           <Button onClick={() => setShowAddForm(true)}>
             <Plus className="w-4 h-4 mr-2" />

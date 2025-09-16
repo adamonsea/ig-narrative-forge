@@ -101,7 +101,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     try {
       setLoading(true);
 
-      // Get multi-tenant articles using the new RPC function
+        // Get multi-tenant articles using the new RPC function
       const articlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
         p_topic_id: selectedTopicId,
         p_limit: 100
@@ -109,6 +109,11 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (articlesResult.error) {
         console.error('Error loading multi-tenant articles:', articlesResult.error);
+        toast({
+          title: "Error loading articles",
+          description: "Failed to load articles. Please try refreshing.",
+          variant: "destructive",
+        });
         setArticles([]);
       } else {
         // Get story IDs to filter out articles that are already published
@@ -207,7 +212,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         
         // Fix: Split into two separate queries to avoid PostgREST .or() issues
         const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-          // Query 1: Legacy stories via articles table
+          // Query 1: Legacy stories via articles table - REMOVED LIMIT
           supabase
             .from('stories')
             .select(`
@@ -218,10 +223,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             .eq('status', 'ready')
             .eq('is_published', true)
             .eq('article.topic_id', selectedTopicId)
-            .order('created_at', { ascending: false })
-            .limit(100),
+            .order('created_at', { ascending: false }),
           
-          // Query 2: Multi-tenant stories via topic_articles table
+          // Query 2: Multi-tenant stories via topic_articles table - REMOVED LIMIT
           supabase
             .from('stories')
             .select(`
@@ -236,7 +240,6 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             .eq('is_published', true)
             .eq('topic_article.topic_id', selectedTopicId)
             .order('created_at', { ascending: false })
-            .limit(100)
         ]);
 
         console.log('📊 Stories query results:', {
@@ -264,27 +267,35 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         console.log('✅ Stories loaded successfully:', filteredStories.length, 'total unique stories');
 
           // Map and set stories to keep UI consistent
-          const storiesData = filteredStories.map((story: any) => ({
-            id: story.id,
-            topic_article_id: story.topic_article_id,
-            shared_content_id: story.shared_content_id,
-            title: story.title,
-            status: story.status,
-            created_at: story.created_at,
-            updated_at: story.updated_at,
-            cover_illustration_url: story.cover_illustration_url,
-            cover_illustration_prompt: story.cover_illustration_prompt,
-            illustration_generated_at: story.illustration_generated_at,
-            slides: Array.isArray(story.slides) ? story.slides : [],
-            // Handle both legacy and multi-tenant sources
-            url: story.article?.source_url || story.topic_article?.shared_content?.url || '',
-            author: story.author || '',
-            word_count: story.word_count || 0,
-            slidetype: story.slidetype || '',
-            tone: story.tone || '',
-            writing_style: story.writing_style || '',
-            audience_expertise: story.audience_expertise || ''
-          }));
+          const storiesData = filteredStories.map((story: any) => {
+            // Calculate word count from slides if not set or is 0
+            const slides = Array.isArray(story.slides) ? story.slides : [];
+            const calculatedWordCount = slides.reduce((total: number, slide: any) => {
+              return total + (slide.word_count || 0);
+            }, 0);
+            
+            return {
+              id: story.id,
+              topic_article_id: story.topic_article_id,
+              shared_content_id: story.shared_content_id,
+              title: story.title,
+              status: story.status,
+              created_at: story.created_at,
+              updated_at: story.updated_at,
+              cover_illustration_url: story.cover_illustration_url,
+              cover_illustration_prompt: story.cover_illustration_prompt,
+              illustration_generated_at: story.illustration_generated_at,
+              slides: slides,
+              // Handle both legacy and multi-tenant sources
+              url: story.article?.source_url || story.topic_article?.shared_content?.url || '',
+              author: story.author || '',
+              word_count: calculatedWordCount > 0 ? calculatedWordCount : (story.word_count || 0),
+              slidetype: story.slidetype || '',
+              tone: story.tone || '',
+              writing_style: story.writing_style || '',
+              audience_expertise: story.audience_expertise || ''
+            };
+          });
           setStories(storiesData);
         
         // Calculate stats
