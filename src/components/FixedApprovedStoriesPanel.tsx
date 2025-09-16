@@ -6,8 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
-import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { 
   CheckCircle2, 
   Clock, 
@@ -90,7 +88,6 @@ export const FixedApprovedStoriesPanel = () => {
   const [editContent, setEditContent] = useState('');
 
   const { toast } = useToast();
-  const { generateCarouselImages, retryCarouselGeneration, isGenerating } = useCarouselGeneration();
 
   useEffect(() => {
     loadApprovedStories();
@@ -219,59 +216,6 @@ export const FixedApprovedStoriesPanel = () => {
     }
   };
 
-  const handleGenerateCarousel = async (story: Story) => {
-    console.log('🚀 Generating carousel for story:', story.id, story.title);
-    
-    // Update local state immediately for UI feedback
-    setCarouselStatuses(prev => ({
-      ...prev,
-      [story.id]: { status: 'generating' }
-    }));
-
-    try {
-      const success = await generateCarouselImages(story, 'News');
-      console.log('✅ Carousel generation result:', success);
-      if (success) {
-        // Refresh carousel statuses
-        console.log('🔄 Refreshing carousel statuses...');
-        await loadCarouselStatuses([story.id]);
-      }
-    } catch (error) {
-      console.error('❌ Error in handleGenerateCarousel:', error);
-      // Reset status on error
-      setCarouselStatuses(prev => ({
-        ...prev,
-        [story.id]: { status: 'none' }
-      }));
-      toast({
-        title: "Error",
-        description: "Failed to generate carousel images",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRetryGeneration = async (storyId: string, story: Story) => {
-    console.log('🔄 Retrying generation for story:', storyId);
-    
-    setCarouselStatuses(prev => ({
-      ...prev,
-      [storyId]: { status: 'generating' }
-    }));
-
-    try {
-      const success = await retryCarouselGeneration(storyId, story);
-      if (success) {
-        await loadCarouselStatuses([storyId]);
-      }
-    } catch (error) {
-      console.error('❌ Error in retry generation:', error);
-      setCarouselStatuses(prev => ({
-        ...prev,
-        [storyId]: { status: 'failed' }
-      }));
-    }
-  };
 
   const handleReturnToReview = async (storyId: string) => {
     try {
@@ -364,101 +308,7 @@ export const FixedApprovedStoriesPanel = () => {
     );
   };
 
-  const renderCarouselActions = (story: Story) => {
-    const status = carouselStatuses[story.id];
-    const generating = isGenerating(story.id);
-
-    console.log(`🎬 Rendering carousel actions for story ${story.id}:`, {
-      status: status?.status,
-      generating,
-      hasExport: !!status?.export,
-      fullStatus: status
-    });
-
-    if (generating) {
-      return (
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="animate-pulse bg-blue-100 text-blue-800">
-            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-            Generating Images...
-          </Badge>
-          <Button size="sm" variant="outline" disabled>
-            <Clock className="h-4 w-4 mr-2" />
-            Please Wait
-          </Button>
-        </div>
-      );
-    }
-
-    switch (status?.status) {
-      case 'completed':
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="default" className="bg-green-100 text-green-800">
-              <Package className="h-3 w-3 mr-1" />
-              Images Ready
-            </Badge>
-            <Button
-              onClick={() => toggleStoryExpanded(story.id)}
-              size="sm"
-              variant="outline"
-              className="text-blue-600 border-blue-200 hover:bg-blue-50"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View Images
-            </Button>
-          </div>
-        );
-
-      case 'failed':
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="destructive" className="bg-red-100 text-red-800">
-              <XCircle className="h-3 w-3 mr-1" />
-              Generation Failed
-            </Badge>
-            <Button
-              onClick={() => handleRetryGeneration(story.id, story)}
-              size="sm"
-              variant="outline"
-              className="text-orange-600 border-orange-200 hover:bg-orange-50"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Retry Generation
-            </Button>
-          </div>
-        );
-
-      case 'generating':
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="animate-pulse bg-blue-100 text-blue-800">
-              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-              Processing...
-            </Badge>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-              <ImageIcon className="h-3 w-3 mr-1" />
-              Auto-Generated Images
-            </Badge>
-            <Button
-              onClick={() => handleGenerateCarousel(story)}
-              size="sm"
-              variant="outline"
-              className="text-orange-600 border-orange-200 hover:bg-orange-50"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Retry Generation
-            </Button>
-          </div>
-        );
-    }
-  };
+  // Carousel generation functionality removed
 
   if (loadingApproved) {
     return (
@@ -554,7 +404,7 @@ export const FixedApprovedStoriesPanel = () => {
                       
                       {/* Carousel Actions */}
                       <div className="mb-3">
-                        {renderCarouselActions(story)}
+                        {/* Carousel generation functionality removed */}
                       </div>
 
                       {/* Action buttons */}

@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
-import { InlineCarouselImages } from '@/components/InlineCarouselImages';
 import { useCredits } from '@/hooks/useCredits';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
@@ -86,7 +84,6 @@ export const ApprovedStoriesPanel = () => {
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
-  const { generateCarouselImages, retryCarouselGeneration, isGenerating } = useCarouselGeneration();
   const { credits } = useCredits();
 
   useEffect(() => {
@@ -229,32 +226,6 @@ export const ApprovedStoriesPanel = () => {
     }
   };
 
-  const handleGenerateCarousel = async (story: Story) => {
-    console.log('🚀 Generating carousel for story:', story.id, story.title);
-    try {
-      const success = await generateCarouselImages(story, 'News');
-      console.log('✅ Carousel generation result:', success);
-      if (success) {
-        // Refresh carousel statuses
-        console.log('🔄 Refreshing carousel statuses...');
-        await loadCarouselStatuses([story.id]);
-      }
-    } catch (error) {
-      console.error('❌ Error in handleGenerateCarousel:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate carousel images",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRetryGeneration = async (story: Story) => {
-    const success = await retryCarouselGeneration(story.id, story);
-    if (success) {
-      await loadCarouselStatuses([story.id]);
-    }
-  };
 
   const handleReturnToReview = async (storyId: string) => {
     try {
@@ -357,79 +328,6 @@ export const ApprovedStoriesPanel = () => {
     return <Badge variant="outline" className="text-xs">Long</Badge>;
   };
 
-  const renderCarouselActions = (story: Story) => {
-    const status = carouselStatuses[story.id];
-    const generating = isGenerating(story.id);
-
-    console.log(`🎬 Rendering carousel actions for story ${story.id}:`, {
-      status: status?.status,
-      generating,
-      fullStatus: status
-    });
-
-    if (generating) {
-      return (
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse mr-1" />
-          Generating...
-        </Badge>
-      );
-    }
-
-    switch (status?.status) {
-      case 'completed':
-        return (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => toggleStoryExpanded(story.id)}
-              className="flex items-center gap-1"
-            >
-              <Eye className="w-3 h-3" />
-              View Images
-            </Button>
-          </div>
-        );
-      case 'failed':
-        return (
-          <div className="flex gap-2">
-            <Badge variant="destructive" className="text-xs">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              Failed
-            </Badge>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleRetryGeneration(story)}
-              className="flex items-center gap-1"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Retry
-            </Button>
-          </div>
-        );
-      case 'generating':
-        return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse mr-1" />
-            Processing...
-          </Badge>
-        );
-      default:
-        return (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={() => handleGenerateCarousel(story)}
-            className="flex items-center gap-1"
-          >
-            <FileText className="w-3 h-3" />
-            Generate Images
-          </Button>
-        );
-    }
-  };
 
   return (
     <Card>
@@ -490,7 +388,7 @@ export const ApprovedStoriesPanel = () => {
                           hasExistingImage={!!story.cover_illustration_url}
                         />
                         
-                        {renderCarouselActions(story)}
+                        {/* Carousel generation functionality removed */}
                         <Button
                           variant="ghost"
                           size="sm"

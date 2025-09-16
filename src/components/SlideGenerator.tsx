@@ -6,7 +6,6 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { Sparkles, Image as ImageIcon, Clock, CheckCircle, AlertCircle, Eye, Download } from 'lucide-react';
 
 interface Article {
@@ -55,7 +54,6 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoadingStories, setIsLoadingStories] = useState(false);
   const { toast } = useToast();
-  const { generateCarouselImages } = useCarouselGeneration();
 
   const loadStories = async () => {
     setIsLoadingStories(true);
@@ -145,17 +143,7 @@ export const SlideGenerator = ({ articles, onRefresh }: SlideGeneratorProps) => 
           }
         };
 
-        try {
-          await generateCarouselImages(completeStory, 'Story');
-        } catch (error) {
-          console.error('Failed to generate carousel images:', error);
-          // Don't fail the whole process if carousel generation fails
-          toast({
-            title: "Carousel Generation Failed",
-            description: "Slides created successfully but images could not be generated",
-            variant: "destructive",
-          });
-        }
+        // Carousel generation functionality removed
       }
       
       setGenerationProgress(100);

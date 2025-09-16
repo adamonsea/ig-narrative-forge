@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArticlePipelinePanel } from '@/components/ArticlePipelinePanel';
 import { ApprovedStoriesPanel } from '@/components/ApprovedStoriesPanel';
-import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { 
   CheckCircle2, 
   X, 
@@ -74,7 +73,6 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
   const [editContent, setEditContent] = useState('');
 
   const { toast } = useToast();
-  const { generateCarouselImages } = useCarouselGeneration();
 
   useEffect(() => {
     loadStories();
@@ -142,23 +140,8 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
 
       toast({
         title: "Story Approved",
-        description: "Story approved and carousel generation started automatically",
+        description: "Story has been approved successfully",
       });
-
-      // Automatically trigger carousel generation
-      console.log('🎨 Auto-generating carousel for approved story:', storyId);
-      try {
-        await generateCarouselImages(story, 'News');
-        console.log('✅ Auto-carousel generation completed for story:', storyId);
-      } catch (carouselError) {
-        console.error('❌ Auto-carousel generation failed:', carouselError);
-        // Don't fail the approval if carousel generation fails
-        toast({
-          title: "Carousel Generation Issue",
-          description: "Story approved but carousel generation failed. You can retry from the Approved Queue.",
-          variant: "destructive",
-        });
-      }
 
       loadStories();
       onRefresh?.();

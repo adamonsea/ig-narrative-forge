@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronRight, CheckCircle, Eye, Edit3, Trash2, ExternalLink, RotateCcw, Loader2, ImageIcon, ChevronLeft, ChevronRightIcon } from "lucide-react";
-import { InlineCarouselImages } from "@/components/InlineCarouselImages";
 import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";

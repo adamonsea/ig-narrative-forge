@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronRight, CheckCircle, Eye, Trash2, ExternalLink, RotateCcw, Loader2, FileText, ChevronLeft, ChevronRightIcon, Edit3 } from "lucide-react";
-import { InlineCarouselImages } from "@/components/InlineCarouselImages";
+
 import { StyleTooltip } from "@/components/ui/style-tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
@@ -438,21 +438,10 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                         </Button>
                       </div>
                       <p className="mb-2 leading-relaxed">{slide.content}</p>
-                      {slide.visual_prompt && (
-                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border-l-2 border-muted-foreground">
-                          <strong>Visual:</strong> {slide.visual_prompt}
-                        </div>
-                      )}
                     </div>
                   ))}
 
-                  {/* Carousel Images */}
-                  <div id={`carousel-images-${story.id}`}>
-                    <InlineCarouselImages 
-                      storyId={story.id} 
-                      storyTitle={story.title}
-                    />
-                  </div>
+                  {/* Carousel Images Section Removed */}
                 </div>
               </CardContent>
             )}

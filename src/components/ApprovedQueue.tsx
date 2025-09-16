@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { InlineCarouselImages } from '@/components/InlineCarouselImages';
-import { useCarouselGeneration } from '@/hooks/useCarouselGeneration';
 import { 
   CheckCircle2, 
   Clock, 
@@ -93,12 +91,10 @@ export const ApprovedQueue = () => {
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
   const [generatingVisual, setGeneratingVisual] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
-  const [generatingCarousel, setGeneratingCarousel] = useState<string | null>(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedCarouselExport, setSelectedCarouselExport] = useState<CarouselExport | null>(null);
   const [selectedStoryTitle, setSelectedStoryTitle] = useState('');
   const { toast } = useToast();
-  const { generateCarouselImages: generateCarousel } = useCarouselGeneration();
 
   useEffect(() => {
     loadApprovedStories();
@@ -207,45 +203,6 @@ export const ApprovedQueue = () => {
     }
   };
 
-  const generateCarouselImages = async (storyId: string) => {
-    setGeneratingCarousel(storyId);
-    try {
-      // Get story data for generation
-      const { data: story, error: storyError } = await supabase
-        .from('stories')
-        .select(`
-          *,
-          slides(*)
-        `)
-        .eq('id', storyId)
-        .single();
-
-      if (storyError || !story) {
-        throw new Error(`Failed to fetch story: ${storyError?.message}`);
-      }
-
-      const success = await generateCarousel(story, 'News');
-      
-      if (success) {
-        toast({
-          title: "Carousel Generated",
-          description: "Instagram images ready for download",
-        });
-
-        // Reload to show carousel export
-        await loadApprovedStories();
-      }
-    } catch (error: any) {
-      console.error('Error generating carousel:', error);
-      toast({
-        title: "Carousel Generation Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setGeneratingCarousel(null);
-    }
-  };
 
   const handleReturnToReview = async (storyId: string) => {
     try {
