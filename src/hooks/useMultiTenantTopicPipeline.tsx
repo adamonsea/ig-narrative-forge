@@ -210,8 +210,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (storiesResult.error) {
         console.error('Error loading unified stories:', storiesResult.error);
-        // Fallback: fetch stories directly if RPC fails
-        const fallbackResult = await supabase
+        // Fallback: fetch stories directly if RPC fails, scoped to this topic when possible
+        const allowedArticleIds = (articlesResult.data || []).map((a: any) => a.id);
+
+        let fallbackQuery = supabase
           .from('stories')
           .select(`
             *,
@@ -221,10 +223,40 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .eq('is_published', true)
           .order('created_at', { ascending: false })
           .limit(100);
+
+        if (allowedArticleIds.length > 0) {
+          fallbackQuery = fallbackQuery.in('topic_article_id', allowedArticleIds);
+        }
+
+        const fallbackResult = await fallbackQuery;
         
         if (fallbackResult.data) {
           console.log('Using fallback stories query, found:', fallbackResult.data.length);
           filteredStories = fallbackResult.data;
+
+          // Map and set stories from fallback to keep UI consistent
+          const storiesData = filteredStories.map((story: any) => ({
+            id: story.id,
+            topic_article_id: story.topic_article_id,
+            shared_content_id: story.shared_content_id,
+            title: story.title,
+            status: story.status,
+            created_at: story.created_at,
+            updated_at: story.updated_at,
+            cover_illustration_url: story.cover_illustration_url,
+            cover_illustration_prompt: story.cover_illustration_prompt,
+            illustration_generated_at: story.illustration_generated_at,
+            slides: Array.isArray(story.slides) ? story.slides : [],
+            // Fallback may not include these unified fields; default gracefully
+            url: story.source_url || '',
+            author: story.author || '',
+            word_count: story.word_count || 0,
+            slidetype: story.slidetype || '',
+            tone: story.tone || '',
+            writing_style: story.writing_style || '',
+            audience_expertise: story.audience_expertise || ''
+          }));
+          setStories(storiesData);
         } else {
           console.error('Fallback stories query also failed:', fallbackResult.error);
           setStories([]);
