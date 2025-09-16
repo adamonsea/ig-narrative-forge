@@ -44,18 +44,20 @@ export const DiscardedArticlesViewer = ({ topicId, isOpen, onClose }: DiscardedA
     try {
       setLoading(true);
       
-      // Get discarded articles with source info
+      // Get discarded articles from multi-tenant system
       const { data: articlesData, error: articlesError } = await supabase
-        .from('articles')
+        .from('topic_articles')
         .select(`
           id,
-          title,
           regional_relevance_score,
           content_quality_score,
           import_metadata,
-          source_url,
           created_at,
-          content_sources(source_name)
+          shared_content:shared_article_content!inner(
+            title,
+            url
+          ),
+          content_sources!left(source_name)
         `)
         .eq('topic_id', topicId)
         .eq('processing_status', 'discarded')
@@ -66,13 +68,13 @@ export const DiscardedArticlesViewer = ({ topicId, isOpen, onClose }: DiscardedA
 
       const processedArticles = (articlesData || []).map(article => ({
         id: article.id,
-        title: article.title,
+        title: article.shared_content?.title || 'Unknown Title',
         regional_relevance_score: article.regional_relevance_score || 0,
         content_quality_score: article.content_quality_score || 0,
         rejection_reason: (article.import_metadata as any)?.rejection_reason || 'unknown',
-        source_url: article.source_url,
+        source_url: article.shared_content?.url || '',
         created_at: article.created_at,
-        source_name: article.content_sources?.source_name
+        source_name: article.content_sources?.source_name || 'Unknown Source'
       }));
 
       setArticles(processedArticles);
@@ -105,15 +107,18 @@ export const DiscardedArticlesViewer = ({ topicId, isOpen, onClose }: DiscardedA
   const handleRestoreArticle = async (articleId: string, articleTitle: string) => {
     try {
       const { error } = await supabase
-        .from('articles')
-        .update({ processing_status: 'new' })
+        .from('topic_articles')
+        .update({ 
+          processing_status: 'new',
+          updated_at: new Date().toISOString()
+        })
         .eq('id', articleId);
 
       if (error) throw error;
 
       toast({
         title: "Article Restored",
-        description: `"${articleTitle}" has been restored to the pipeline`
+        description: `"${articleTitle}" has been restored to the pipeline and will appear in Arrivals`
       });
 
       // Refresh the list
