@@ -32,6 +32,7 @@ import { StatusIndicator } from '@/components/StatusIndicator';
 import { EnhancedSourceStatusBadge } from '@/components/EnhancedSourceStatusBadge';
 import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
+import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
   id: string;
@@ -111,6 +112,14 @@ export const UnifiedSourceManager = ({
   const [gatheringSource, setGatheringSource] = useState<string | null>(null);
   const [gatheringAll, setGatheringAll] = useState(false);
   
+  // Daily content availability for topic mode
+  const { 
+    availability, 
+    loading: availabilityLoading, 
+    refreshAvailability, 
+    runContentMonitor 
+  } = useDailyContentAvailability(mode === 'topic' && topicId ? topicId : '');
+  
   const [newSource, setNewSource] = useState({
     source_name: '',
     feed_url: '',
@@ -124,6 +133,10 @@ export const UnifiedSourceManager = ({
     loadSources();
     if (mode === 'topic' && topicId) {
       loadTopicInfo(topicId);
+      // Auto-run content availability check on first load
+      setTimeout(() => {
+        runContentMonitor();
+      }, 1000);
     }
   }, [mode, topicId, region]);
 
@@ -814,6 +827,64 @@ export const UnifiedSourceManager = ({
     return (source.last_error && successRate < 30) || daysSinceLastScrape > 30;
   };
 
+  const handleCheckNewContent = async () => {
+    if (mode !== 'topic' || !topicId) return;
+    
+    try {
+      const success = await runContentMonitor();
+      if (success) {
+        toast({
+          title: 'Content Check Complete',
+          description: 'New content availability has been updated',
+        });
+      } else {
+        toast({
+          title: 'Content Check Failed',
+          description: 'Could not check for new content',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to check for new content',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getNewContentBadge = (sourceId: string) => {
+    const sourceAvailability = availability[sourceId];
+    
+    if (!sourceAvailability) {
+      return (
+        <Badge variant="secondary" className="text-xs">
+          New: ?
+        </Badge>
+      );
+    }
+    
+    const newCount = sourceAvailability.new_urls_found || 0;
+    const hasError = !sourceAvailability.success;
+    
+    if (hasError) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          Check failed
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge 
+        variant={newCount > 0 ? "default" : "secondary"} 
+        className="text-xs"
+      >
+        New: {newCount}
+      </Badge>
+    );
+  };
+
   const getDisplayTitle = () => {
     if (title) return title;
     if (mode === 'topic' && currentTopic) return `${currentTopic.name} Sources`;
@@ -837,6 +908,20 @@ export const UnifiedSourceManager = ({
           <p className="text-muted-foreground">{getDisplayDescription()}</p>
         </div>
         <div className="flex gap-2">
+          {mode === 'topic' && topicId && (
+            <Button 
+              onClick={handleCheckNewContent}
+              disabled={availabilityLoading}
+              variant="outline"
+            >
+              {availabilityLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Check New Content
+            </Button>
+          )}
           <Button 
             onClick={handleScrapeAll}
             disabled={gatheringAll || sources.filter(s => s.is_active).length === 0}
@@ -1022,6 +1107,7 @@ export const UnifiedSourceManager = ({
                       source={source} 
                       isGathering={gatheringSource === source.id}
                     />
+                    {mode === 'topic' && getNewContentBadge(source.id)}
                     <ProcessingStatusIndicator sourceId={source.id} />
                   </div>
                   
