@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { FastTrackScraper } from '../_shared/fast-track-scraper.ts';
+import { StandardizedScraperResponse, ScraperSourceResult } from '../_shared/scraper-response-types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,6 +92,9 @@ serve(async (req) => {
     } = await req.json() as UniversalScrapeRequest;
 
     console.log('Universal Topic Scraper - Starting for topic:', topicId);
+
+    // Initialize standardized response handler
+    const standardResponse = new StandardizedScraperResponse();
 
     // Get topic details
     const { data: topic, error: topicError } = await supabase

@@ -210,7 +210,26 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       if (storiesResult.error) {
         console.error('Error loading unified stories:', storiesResult.error);
-        setStories([]);
+        // Fallback: fetch stories directly if RPC fails
+        const fallbackResult = await supabase
+          .from('stories')
+          .select(`
+            *,
+            slides:slides(*)
+          `)
+          .eq('status', 'ready')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        
+        if (fallbackResult.data) {
+          console.log('Using fallback stories query, found:', fallbackResult.data.length);
+          filteredStories = fallbackResult.data;
+        } else {
+          console.error('Fallback stories query also failed:', fallbackResult.error);
+          setStories([]);
+          return;
+        }
       } else {
         filteredStories = storiesResult.data || [];
         
