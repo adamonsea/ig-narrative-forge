@@ -2553,6 +2553,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_orphaned_sources: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_stuck_scrape_jobs: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2611,6 +2615,10 @@ export type Database = {
           duplicate_id: string
           similarity_score: number
         }[]
+      }
+      fix_sussex_express_sources: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_article_content_unified: {
         Args: {

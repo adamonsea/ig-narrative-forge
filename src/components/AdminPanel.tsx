@@ -6,6 +6,7 @@ import { DollarSign, Zap, Image, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CleanSlateMigration } from '@/components/CleanSlateMigration';
+import { SourceCleanup } from '@/components/SourceCleanup';
 
 interface ApiUsage {
   id: string;
@@ -264,6 +265,11 @@ export const AdminPanel = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Source Management & Cleanup */}
+      <div className="mt-8">
+        <SourceCleanup />
+      </div>
 
       {/* Clean Slate Migration */}
       <div className="mt-8">
