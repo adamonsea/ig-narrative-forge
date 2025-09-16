@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Globe, AlertCircle, CheckCircle } from 'lucide-react';
 import { GatheringProgressIndicator } from './GatheringProgressIndicator';
+import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
   id: string;
@@ -30,6 +31,7 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
   const [newUrl, setNewUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const { availability } = useDailyContentAvailability(topicId);
 
   useEffect(() => {
     loadSources();
@@ -316,6 +318,11 @@ export const TopicSourceManager = ({ topicId, topicName, region, onSourcesChange
                         {source.is_active ? "Active" : "Inactive"}
                       </Badge>
                       <span>{source.articles_scraped || 0} articles</span>
+                      {availability[source.id]?.new_urls_found > 0 && (
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                          +{availability[source.id].new_urls_found} new
+                        </Badge>
+                      )}
                       {source.last_scraped_at && (
                         <span>• Last: {new Date(source.last_scraped_at).toLocaleDateString()}</span>
                       )}
