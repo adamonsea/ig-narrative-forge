@@ -300,32 +300,20 @@ export default function MultiTenantArticlesList({
               </Select>
             </div>
 
-            {article.processing_status === 'processed' ? (
-              <Button
-                onClick={() => onPromote?.(article.id)}
-                disabled={isProcessing || isDeleting}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-                size="sm"
-              >
-                <ArrowRight className="w-4 h-4 mr-1" />
-                Promote to Published
-              </Button>
-            ) : (
-              <Button
-                onClick={() => onApprove(
-                  article, 
-                  slideType, 
-                  toneOverride, 
-                  writingStyleOverride
-                )}
-                disabled={isProcessing || isDeleting}
-                className="bg-green-600 text-white hover:bg-green-700"
-                size="sm"
-              >
-                <PlayCircle className="w-4 h-4 mr-1" />
-                Simplify
-              </Button>
-            )}
+            <Button
+              onClick={() => onApprove(
+                article, 
+                slideType, 
+                toneOverride, 
+                writingStyleOverride
+              )}
+              disabled={isProcessing || isDeleting}
+              className="bg-green-600 text-white hover:bg-green-700"
+              size="sm"
+            >
+              <PlayCircle className="w-4 h-4 mr-1" />
+              Simplify
+            </Button>
           </div>
         </div>
       </Card>

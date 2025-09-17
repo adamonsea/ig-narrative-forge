@@ -133,7 +133,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
         const articlesData = articlesResult.data
           ?.filter((item: any) => 
-            ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
+            item.processing_status === 'new' && // Only show new articles awaiting processing
             !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
           )
           ?.map((item: any) => {
