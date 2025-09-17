@@ -243,13 +243,25 @@ serve(async (req) => {
       extractionContentType = 'image';
       rawContent = await extractFromImage(fileBuffer, file.name);
     } else if (file.type === 'application/pdf') {
-      extractionContentType = 'pdf';
-      rawContent = await extractFromPDF(fileBuffer);
+      // Return a proper error response for unsupported PDFs instead of throwing
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'PDF extraction not yet supported - please convert to text or image format'
+      }), {
+        status: 200, // Return 200 with error in body
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     } else if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
       extractionContentType = 'text';
       rawContent = await extractFromText(fileBuffer);
     } else {
-      throw new Error(`Unsupported file type: ${file.type}`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Unsupported file type: ${file.type}. Please use images (PNG, JPG), text files, or convert to supported format.`
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Process all content through DeepSeek for consistency with existing pipeline
