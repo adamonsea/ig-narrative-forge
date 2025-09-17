@@ -123,8 +123,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         if (articlesResult.data) {
           const { data: storiesData } = await supabase
             .from('stories')
-            .select('topic_article_id, shared_content_id')
-            .eq('status', 'ready');
+            .select('topic_article_id')
+            .eq('is_published', true);
           
           storiesData?.forEach(story => {
             if (story.topic_article_id) publishedStoryIds.add(story.topic_article_id);
@@ -313,7 +313,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         // Calculate stats
         const newStats = {
           totalArticles: articlesResult.data?.length || 0,
-          pendingArticles: (articlesResult.data || []).filter((a: any) => ['new', 'processed'].includes(a.processing_status)).length,
+          pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
           processingQueue: queueResult.data?.length || 0,
           readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
         };
