@@ -88,6 +88,7 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
     handleMultiTenantCancelQueue: multiTenantCancelQueue,
     handleMultiTenantApproveStory: multiTenantApproveStory,
     handleMultiTenantRejectStory: multiTenantRejectStory,
+    promoteTopicArticle: multiTenantPromoteArticle,
     processingArticle: multiTenantProcessingArticle,
     deletingArticles: multiTenantDeletingArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
@@ -416,6 +417,7 @@ export const HybridTopicPipeline: React.FC<HybridTopicPipelineProps> = ({
                 onApprove={handleMultiTenantApproveWrapper}
                 onDelete={handleMultiTenantDeleteWrapper}
                 onBulkDelete={handleMultiTenantBulkDeleteWrapper}
+                onPromote={multiTenantPromoteArticle}
                 defaultTone={topic?.default_tone || 'conversational'}
                 defaultWritingStyle={topic?.default_writing_style || 'journalistic'}
                 onRefresh={handleRefresh}

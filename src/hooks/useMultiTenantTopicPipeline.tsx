@@ -133,7 +133,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
         const articlesData = articlesResult.data
           ?.filter((item: any) => 
-            item.processing_status === 'new' && // Only show "new" articles in Arrivals
+            ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
             !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
           )
           ?.map((item: any) => {
@@ -313,7 +313,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         // Calculate stats
         const newStats = {
           totalArticles: articlesResult.data?.length || 0,
-          pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
+          pendingArticles: (articlesResult.data || []).filter((a: any) => ['new', 'processed'].includes(a.processing_status)).length,
           processingQueue: queueResult.data?.length || 0,
           readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
         };
@@ -419,6 +419,58 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     await loadTopicContent();
   }, [rejectMultiTenantStory, loadTopicContent]);
 
+  const markArticleAsDiscarded = useCallback(async (articleId: string) => {
+    if (!selectedTopicId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('topic_articles')
+        .update({ processing_status: 'discarded' })
+        .eq('id', articleId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Article discarded",
+        description: "Article has been marked as discarded",
+      });
+      await loadTopicContent();
+    } catch (error) {
+      console.error('Error marking article as discarded:', error);
+      toast({
+        title: "Error",
+        description: "Failed to discard article",
+        variant: "destructive",
+      });
+    }
+  }, [selectedTopicId, loadTopicContent, toast]);
+
+  const promoteTopicArticle = useCallback(async (topicArticleId: string) => {
+    if (!selectedTopicId) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('promote-topic-article', {
+        body: { topicArticleId }
+      });
+      
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      
+      toast({
+        title: "Article promoted",
+        description: `Article "${data.title}" promoted to published queue`,
+      });
+      await loadTopicContent();
+    } catch (error) {
+      console.error('Error promoting article:', error);
+      toast({
+        title: "Promotion failed",
+        description: "Failed to promote article to published queue",
+        variant: "destructive",
+      });
+    }
+  }, [selectedTopicId, loadTopicContent, toast]);
+
   // Load content when topic changes
   useEffect(() => {
     if (selectedTopicId) {
@@ -489,6 +541,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     handleMultiTenantCancelQueue,
     handleMultiTenantApproveStory,
     handleMultiTenantRejectStory,
+    markArticleAsDiscarded,
+    promoteTopicArticle,
     
     // Multi-tenant action states from useMultiTenantActions
     processingArticle,

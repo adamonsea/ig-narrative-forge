@@ -59,6 +59,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     handleMultiTenantBulkDelete,
     handleMultiTenantApproveStory,
     handleMultiTenantRejectStory,
+    markArticleAsDiscarded,
+    promoteTopicArticle,
     processingArticle,
     deletingArticles,
     animatingArticles
@@ -314,6 +316,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   }
                   onDelete={handleMultiTenantDelete}
                   onBulkDelete={handleMultiTenantBulkDelete}
+                  onPromote={promoteTopicArticle}
                   defaultTone={currentTopic?.default_tone || 'conversational'}
                   defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                   onRefresh={refreshContent}
