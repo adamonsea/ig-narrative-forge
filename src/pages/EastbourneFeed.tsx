@@ -36,8 +36,18 @@ export default function EastbourneFeed() {
   const loadStories = async () => {
     try {
       setLoadingStories(true);
-      
-      let { data, error } = await supabase
+
+      // 1) Try to resolve the Eastbourne topic (by slug or region)
+      const { data: topicData } = await supabase
+        .from("topics")
+        .select("id, name, slug, region, is_public, is_active")
+        .or("slug.eq.eastbourne,region.ilike.%eastbourne%")
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+
+      // 2) Legacy stories linked via articles (region on articles)
+      const { data: legacyData, error: legacyError } = await supabase
         .from("stories")
         .select(`
           id,
@@ -47,6 +57,7 @@ export default function EastbourneFeed() {
           created_at,
           updated_at,
           status,
+          is_published,
           slides (
             id,
             slide_number,
@@ -59,39 +70,98 @@ export default function EastbourneFeed() {
           )
         `)
         .eq("status", "ready")
-        .eq("is_published", true) // Only show published stories in live feed
+        .eq("is_published", true)
         .ilike("articles.region", "%eastbourne%");
 
-      if (error) {
-        console.error("Error loading stories:", error);
-        return;
+      if (legacyError) {
+        console.error("Error loading legacy stories:", legacyError);
       }
 
-      // Transform and sort the data
-      const transformedStories = (data || []).map(story => ({
+      const legacyTransformed = (legacyData || []).map((story: any) => ({
         id: story.id,
         title: story.title,
         author: story.author,
         publication_name: story.publication_name,
         created_at: story.created_at,
         updated_at: story.updated_at,
-        slides: story.slides.sort((a, b) => a.slide_number - b.slide_number),
+        slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
         article: {
-          source_url: story.articles.source_url,
-          region: story.articles.region,
-          published_at: story.articles.published_at
-        }
+          source_url: story.articles?.source_url,
+          region: story.articles?.region,
+          published_at: story.articles?.published_at,
+        },
       }));
 
-      // Apply sorting
-      let sortedStories = [...transformedStories];
-      if (sortBy === "newest") {
-        sortedStories.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      } else {
-        sortedStories.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      // 3) Multi-tenant stories linked via topic_articles (region lives on topic)
+      let multiTenantTransformed: any[] = [];
+      if (topicData?.id) {
+        const { data: mtData, error: mtError } = await supabase
+          .from("stories")
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            status,
+            is_published,
+            slides (
+              id,
+              slide_number,
+              content
+            ),
+            topic_articles!inner (
+              id,
+              topic_id,
+              shared_article_content:shared_article_content!inner (
+                url,
+                title,
+                author,
+                published_at,
+                source_domain
+              )
+            )
+          `)
+          .eq("status", "ready")
+          .eq("is_published", true)
+          .eq("topic_articles.topic_id", topicData.id);
+
+        if (mtError) {
+          console.error("Error loading multi-tenant stories:", mtError);
+        }
+
+        multiTenantTransformed = (mtData || []).map((story: any) => {
+          const sac = story.topic_articles?.shared_article_content;
+          return {
+            id: story.id,
+            title: story.title,
+            author: story.author,
+            publication_name: story.publication_name,
+            created_at: story.created_at,
+            updated_at: story.updated_at,
+            slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
+            article: {
+              source_url: sac?.url,
+              region: topicData?.region || "eastbourne",
+              published_at: sac?.published_at,
+            },
+          };
+        });
       }
 
-      setStories(sortedStories);
+      // 4) Merge, de-dupe by story id, then sort
+      const mergedMap = new Map<string, any>();
+      [...legacyTransformed, ...multiTenantTransformed].forEach((s) => mergedMap.set(s.id, s));
+      let merged = Array.from(mergedMap.values());
+
+      if (sortBy === "newest") {
+        merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      } else {
+        merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      }
+
+      setStories(merged);
     } catch (error) {
       console.error("Error loading slides:", error);
     } finally {
