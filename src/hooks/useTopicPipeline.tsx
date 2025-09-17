@@ -243,16 +243,21 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .eq('topic_id', selectedTopicId)
         .in('processing_status', ['new', 'processed']) // Include processed articles that might have been recovered
         .not('processing_status', 'eq', 'duplicate_pending') // Exclude duplicate pending articles
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Only recent articles
         .order('regional_relevance_score', { ascending: false }) // Order by relevance first
         .order('created_at', { ascending: false }) // Then by creation date
         .limit(100); // Increased limit to show more recovered articles
 
-      if (excludedIds.length > 0) {
-        articlesQuery = articlesQuery.not('id', 'in', `(${excludedIds.join(',')})`);
-      }
-
-      const { data: articlesData, error: articlesError } = await articlesQuery;
+      // Apply date filter, but exempt manually uploaded articles
+      const { data: allArticlesData } = await articlesQuery;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      const articlesData = (allArticlesData || []).filter(article => {
+        // Allow manual uploads to bypass date restriction
+        const metadata = article.import_metadata as any;
+        const isManualUpload = metadata?.manual_upload === true;
+        const isRecent = new Date(article.created_at) >= sevenDaysAgo;
+        return isManualUpload || isRecent;
+      });
 
       // Get all draft stories for this topic to include their articles in pending
       const { data: draftStories } = await supabase
@@ -276,8 +281,6 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         ...(articlesData || []),
         ...(returnedArticles || [])
       ];
-      
-      if (articlesError) throw new Error(`Failed to load articles: ${articlesError.message}`);
 
       // Additional filtering to remove duplicates based on title similarity and add relevance flagging
       const filteredArticles = allPendingArticles.filter(article => {
