@@ -534,8 +534,8 @@ export class UniversalContentExtractor {
     // Clean HTML from noise before processing
     const cleanHtml = this.cleanHTML(html);
     
-    // Create DOM parser for JSON-LD extraction
-    const doc = new DOMParser().parseFromString(cleanHtml, 'text/html');
+    // Skip DOM parsing in server environment - use regex-based extraction instead
+    let doc = null; // DOMParser not available in edge functions
     
     // Phase 1: Try JSON-LD structured data first
     let title = this.extractJSONLDData(doc, 'headline') || this.extractJSONLDData(doc, 'name');

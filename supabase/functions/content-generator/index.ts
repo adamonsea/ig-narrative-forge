@@ -120,7 +120,7 @@ serve(async (req) => {
 
     // Get topic CTA configuration - handle both legacy and multi-tenant
     let ctaConfig = null;
-    let topicId = null;
+    let actualTopicId = null;
     
     if (article.source_type === 'legacy' && articleId) {
       // Get topic_id from legacy article
@@ -129,7 +129,7 @@ serve(async (req) => {
         .select('topic_id')
         .eq('id', articleId)
         .single();
-      topicId = legacyArticle?.topic_id;
+      actualTopicId = legacyArticle?.topic_id;
     } else if (article.source_type === 'multi_tenant' && topicArticleId) {
       // Get topic_id from multi-tenant article
       const { data: multiTenantArticle } = await supabase
@@ -137,14 +137,14 @@ serve(async (req) => {
         .select('topic_id')
         .eq('id', topicArticleId)
         .single();
-      topicId = multiTenantArticle?.topic_id;
+      actualTopicId = multiTenantArticle?.topic_id;
     }
 
-    if (topicId) {
+    if (actualTopicId) {
       const { data: ctaData } = await supabase
         .from('feed_cta_configs')
         .select('*')
-        .eq('topic_id', topicId)
+        .eq('topic_id', actualTopicId)
         .eq('is_active', true)
         .maybeSingle();
       
