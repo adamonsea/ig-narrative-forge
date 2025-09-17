@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,8 @@ interface ProcessingFile {
   fileType: string;
   fileSize: number;
   storageUrl?: string;
+  storageBucket?: string;
+  storagePath?: string;
   status: 'uploading' | 'pending' | 'extracting' | 'rewriting' | 'saving' | 'completed' | 'failed';
   progress: number;
   extractedContent?: string;
@@ -45,6 +47,7 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
   const STORAGE_KEY = `manual-content-staging-${topicId}`;
   const [processingFiles, setProcessingFiles] = useState<ProcessingFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const isProcessingRef = useRef(false);
   const { toast } = useToast();
 
   // Load queue from localStorage on mount
@@ -79,13 +82,14 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
   }, [processingFiles]);
 
   // Process files one at a time with persistent storage
-  const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
-    const currentQueue = queueOverride || processingFiles;
-    const nextFile = currentQueue.find(f => f.status === 'pending');
-    
-    if (!nextFile || isProcessing) return;
-    
-    setIsProcessing(true);
+const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
+  const currentQueue = queueOverride || processingFiles;
+  const nextFile = currentQueue.find(f => f.status === 'pending');
+  
+  if (!nextFile || isProcessingRef.current) return;
+  
+  isProcessingRef.current = true;
+  setIsProcessing(true);
 
     try {
       // Update status to extracting
@@ -100,18 +104,23 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
       updateStatus('extracting', 30);
       console.log('📁 Processing file from storage:', nextFile.fileName);
 
-      // Call content extraction function with storage URL
-      const { data: extractResult, error: extractError } = await supabase.functions.invoke(
-        'extract-content-from-upload',
-        {
-          body: {
-            fileUrl: nextFile.storageUrl,
-            fileName: nextFile.fileName,
-            fileType: nextFile.fileType,
-            topicId: topicId
-          }
-        }
-      );
+// Call content extraction function with storage URL + idempotency info
+const { data: extractResult, error: extractError } = await supabase.functions.invoke(
+  'extract-content-from-upload',
+  {
+    body: {
+      fileUrl: nextFile.storageUrl,
+      fileName: nextFile.fileName,
+      fileType: nextFile.fileType,
+      topicId: topicId,
+      storageBucket: nextFile.storageBucket,
+      storagePath: nextFile.storagePath,
+      idempotencyKey: nextFile.storageBucket && nextFile.storagePath
+        ? `manual-upload://${nextFile.storageBucket}/${nextFile.storagePath}`
+        : undefined
+    }
+  }
+);
 
       if (extractError) throw new Error(`Extraction failed: ${extractError.message}`);
       if (!extractResult?.success) throw new Error(extractResult?.error || 'Extraction failed');
@@ -127,15 +136,14 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
         articleId: extractResult.articleId
       });
 
-      // Clean up storage file after successful processing
-      try {
-        const storageKey = nextFile.storageUrl?.split('/').pop();
-        if (storageKey) {
-          await supabase.storage.from('temp-uploads').remove([storageKey]);
-        }
-      } catch (cleanupError) {
-        console.warn('Failed to cleanup storage file:', cleanupError);
-      }
+// Clean up storage file after successful processing
+try {
+  if (nextFile.storageBucket && nextFile.storagePath) {
+    await supabase.storage.from(nextFile.storageBucket).remove([nextFile.storagePath]);
+  }
+} catch (cleanupError) {
+  console.warn('Failed to cleanup storage file:', cleanupError);
+}
 
       toast({
         title: "File Processed",

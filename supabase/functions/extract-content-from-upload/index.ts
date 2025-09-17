@@ -180,6 +180,9 @@ serve(async (req) => {
     let file: File;
     let topicId: string;
     let fileBuffer: ArrayBuffer;
+    let storageBucket: string | undefined;
+    let storagePath: string | undefined;
+    let idempotencyKey: string | undefined;
 
     // Handle both multipart form data and JSON with storage URLs
     if (contentType && contentType.includes('multipart/form-data')) {
@@ -197,13 +200,16 @@ serve(async (req) => {
     } else {
       // JSON with storage file URL
       const body = await req.json();
-      const { fileUrl, fileName, fileType, topicId: bodyTopicId } = body;
+      const { fileUrl, fileName, fileType, topicId: bodyTopicId, storageBucket: bodyBucket, storagePath: bodyPath, idempotencyKey: bodyIdem } = body;
       
       if (!fileUrl || !fileName || !fileType) {
         throw new Error('File URL, name, and type are required');
       }
       
       topicId = bodyTopicId;
+      storageBucket = bodyBucket;
+      storagePath = bodyPath;
+      idempotencyKey = bodyIdem;
       
       // Download file from storage
       console.log('📁 Downloading file from storage:', fileName);
@@ -260,28 +266,31 @@ serve(async (req) => {
     console.log('💾 Saving content to database with service role');
     
     const wordCount = extractedContent.split(/\s+/).length;
-    const sourceUrl = `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const stableKey = idempotencyKey
+      || (typeof storageBucket === 'string' && typeof storagePath === 'string'
+          ? `manual-upload://${storageBucket}/${storagePath}`
+          : `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
     const title = `Manual Upload: ${file.name.replace(/\.[^/.]+$/, "")}`;
 
-    // Check for existing shared content to prevent duplicates
+    // Check for existing shared content to prevent duplicates (idempotent by stableKey)
     const { data: existingContent } = await supabase
       .from('shared_article_content')
       .select('id')
-      .eq('url', sourceUrl)
+      .eq('url', stableKey)
       .maybeSingle();
 
     let sharedContentId: string;
 
     if (existingContent) {
       sharedContentId = existingContent.id;
-      console.log('📋 Using existing shared content');
+      console.log('📋 Using existing shared content (idempotent hit)');
     } else {
       // Create new shared content
       const { data: sharedContent, error: sharedError } = await supabase
         .from('shared_article_content')
         .insert({
-          url: sourceUrl,
-          normalized_url: sourceUrl,
+          url: stableKey,
+          normalized_url: stableKey,
           title: title,
           body: extractedContent,
           author: 'Manual Upload',
