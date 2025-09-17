@@ -169,6 +169,108 @@ serve(async (req) => {
   }
 
   try {
+    const contentType = req.headers.get('content-type');
+    let file: File;
+    let topicId: string;
+    let fileBuffer: ArrayBuffer;
+
+    // Handle both multipart form data and JSON with storage URLs
+    if (contentType && contentType.includes('multipart/form-data')) {
+      // Original direct file upload
+      const formData = await req.formData();
+      file = formData.get('file') as File;
+      topicId = formData.get('topicId') as string;
+      
+      if (!file) {
+        throw new Error('No file provided');
+      }
+      
+      fileBuffer = await file.arrayBuffer();
+      console.log('📁 Processing direct file upload:', file.name, file.type, `${Math.round(file.size / 1024)}KB`);
+    } else {
+      // JSON with storage file URL
+      const body = await req.json();
+      const { fileUrl, fileName, fileType, topicId: bodyTopicId } = body;
+      
+      if (!fileUrl || !fileName || !fileType) {
+        throw new Error('File URL, name, and type are required');
+      }
+      
+      topicId = bodyTopicId;
+      
+      // Download file from storage
+      console.log('📁 Downloading file from storage:', fileName);
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+      
+      fileBuffer = await response.arrayBuffer();
+      
+      // Create file-like object for compatibility
+      file = new File([fileBuffer], fileName, { type: fileType });
+      console.log('📁 Processing storage file:', fileName, fileType, `${Math.round(fileBuffer.byteLength / 1024)}KB`);
+    }
+
+    if (!topicId) {
+      throw new Error('Topic ID is required');
+    }
+
+    // Validate file size (20MB limit)
+    if (fileBuffer.byteLength > 20 * 1024 * 1024) {
+      throw new Error('File size exceeds 20MB limit');
+    }
+    
+    let extractedContent: string;
+    let extractionContentType: string;
+
+    // Extract content based on file type
+    let rawContent: string;
+    if (file.type.startsWith('image/')) {
+      extractionContentType = 'image';
+      rawContent = await extractFromImage(fileBuffer, file.name);
+    } else if (file.type === 'application/pdf') {
+      extractionContentType = 'pdf';
+      rawContent = await extractFromPDF(fileBuffer);
+    } else if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
+      extractionContentType = 'text';
+      rawContent = await extractFromText(fileBuffer);
+    } else {
+      throw new Error(`Unsupported file type: ${file.type}`);
+    }
+
+    // Process all content through DeepSeek for consistency with existing pipeline
+    extractedContent = await processContentWithDeepSeek(rawContent, extractionContentType);
+
+    // Validate extracted content
+    if (!extractedContent || extractedContent.length < 50) {
+      throw new Error('Insufficient content extracted from file');
+    }
+
+    console.log('✅ Content extraction successful:', extractedContent.substring(0, 100) + '...');
+
+    return new Response(JSON.stringify({
+      success: true,
+      extractedContent,
+      contentType: extractionContentType,
+      originalFileName: file.name,
+      wordCount: extractedContent.split(/\s+/).length
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error: any) {
+    console.error('❌ Content extraction error:', error);
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message || 'Content extraction failed'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
     console.log('📁 Processing file upload for content extraction');
 
     if (req.method !== 'POST') {

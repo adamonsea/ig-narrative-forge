@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,20 +15,25 @@ import {
   Clock, 
   AlertTriangle,
   Trash2,
-  RotateCcw
+  RotateCcw,
+  CloudUpload
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessingFile {
   id: string;
-  file: File;
-  status: 'pending' | 'extracting' | 'rewriting' | 'completed' | 'failed';
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  storageUrl?: string;
+  status: 'uploading' | 'pending' | 'extracting' | 'rewriting' | 'saving' | 'completed' | 'failed';
   progress: number;
   extractedContent?: string;
   rewrittenContent?: string;
   error?: string;
   articleId?: string;
+  uploadedAt?: string;
 }
 
 interface ManualContentStagingProps {
@@ -37,124 +42,187 @@ interface ManualContentStagingProps {
 }
 
 export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualContentStagingProps) => {
+  const STORAGE_KEY = `manual-content-staging-${topicId}`;
   const [processingFiles, setProcessingFiles] = useState<ProcessingFile[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Critical: Process files one at a time to avoid overwhelming system
-  const processNextFile = useCallback(async () => {
-    const nextFile = processingFiles.find(f => f.status === 'pending');
-    if (!nextFile) return;
+  // Load queue from localStorage on mount
+  useEffect(() => {
+    const savedQueue = localStorage.getItem(STORAGE_KEY);
+    if (savedQueue) {
+      try {
+        const parsed = JSON.parse(savedQueue);
+        setProcessingFiles(parsed);
+        
+        // Auto-resume processing if there are pending files
+        const hasPendingFiles = parsed.some((f: ProcessingFile) => 
+          ['pending', 'extracting', 'rewriting', 'saving'].includes(f.status)
+        );
+        if (hasPendingFiles) {
+          console.log('🔄 Auto-resuming processing from saved queue');
+          setTimeout(() => processNextFile(parsed), 1000);
+        }
+      } catch (error) {
+        console.error('Failed to load saved queue:', error);
+      }
+    }
+  }, [topicId]);
+
+  // Save queue to localStorage whenever it changes
+  useEffect(() => {
+    if (processingFiles.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(processingFiles));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [processingFiles]);
+
+  // Process files one at a time with persistent storage
+  const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
+    const currentQueue = queueOverride || processingFiles;
+    const nextFile = currentQueue.find(f => f.status === 'pending');
+    
+    if (!nextFile || isProcessing) return;
+    
+    setIsProcessing(true);
 
     try {
       // Update status to extracting
-      setProcessingFiles(prev => prev.map(f => 
-        f.id === nextFile.id 
-          ? { ...f, status: 'extracting', progress: 20 }
-          : f
-      ));
+      const updateStatus = (status: ProcessingFile['status'], progress: number, extra?: Partial<ProcessingFile>) => {
+        setProcessingFiles(prev => prev.map(f => 
+          f.id === nextFile.id 
+            ? { ...f, status, progress, ...extra }
+            : f
+        ));
+      };
 
-      console.log('📁 Processing file:', nextFile.file.name, nextFile.file.type);
+      updateStatus('extracting', 30);
+      console.log('📁 Processing file from storage:', nextFile.fileName);
 
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', nextFile.file);
-      formData.append('topicId', topicId);
-
-      // Call content extraction function
+      // Call content extraction function with storage URL
       const { data: extractResult, error: extractError } = await supabase.functions.invoke(
         'extract-content-from-upload',
         {
-          body: formData
+          body: {
+            fileUrl: nextFile.storageUrl,
+            fileName: nextFile.fileName,
+            fileType: nextFile.fileType,
+            topicId: topicId
+          }
         }
       );
 
       if (extractError) throw new Error(`Extraction failed: ${extractError.message}`);
       if (!extractResult?.success) throw new Error(extractResult?.error || 'Extraction failed');
 
-      // Update with extracted content
-      setProcessingFiles(prev => prev.map(f => 
-        f.id === nextFile.id 
-          ? { 
-              ...f, 
-              status: 'rewriting', 
-              progress: 50,
-              extractedContent: extractResult.extractedContent 
-            }
-          : f
-      ));
+      updateStatus('rewriting', 60, { extractedContent: extractResult.extractedContent });
 
-      // Instead of complex rewriting, create article directly in database and use existing pipeline
+      // Create article in database
+      updateStatus('saving', 80);
       console.log('📝 Creating article from extracted content');
       
-      // Create article in shared_article_content and topic_articles tables
       const wordCount = extractResult.extractedContent.split(/\s+/).length;
       const sourceUrl = `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const title = nextFile.file.name ? 
-        `Manual Upload: ${nextFile.file.name.replace(/\.[^/.]+$/, "")}` : 
-        'Manual Content Upload';
+      const title = `Manual Upload: ${nextFile.fileName.replace(/\.[^/.]+$/, "")}`;
 
-      // First create shared content
-      const { data: sharedContent, error: sharedError } = await supabase
+      // Check for duplicate content to prevent duplicates on retry
+      const { data: existingContent } = await supabase
         .from('shared_article_content')
-        .insert({
-          url: sourceUrl,
-          normalized_url: sourceUrl,
-          title: title,
-          body: extractResult.extractedContent,
-          author: 'Manual Upload',
-          word_count: wordCount,
-          language: 'en',
-          source_domain: 'manual-upload.local'
-        })
-        .select()
+        .select('id')
+        .eq('url', sourceUrl)
         .single();
 
-      if (sharedError) throw new Error(`Failed to create shared content: ${sharedError.message}`);
+      let sharedContentId: string;
 
-      // Then create topic article
-      const { data: topicArticle, error: topicError } = await supabase
+      if (existingContent) {
+        sharedContentId = existingContent.id;
+        console.log('📋 Using existing shared content');
+      } else {
+        // Create new shared content
+        const { data: sharedContent, error: sharedError } = await supabase
+          .from('shared_article_content')
+          .insert({
+            url: sourceUrl,
+            normalized_url: sourceUrl,
+            title: title,
+            body: extractResult.extractedContent,
+            author: 'Manual Upload',
+            word_count: wordCount,
+            language: 'en',
+            source_domain: 'manual-upload.local'
+          })
+          .select()
+          .single();
+
+        if (sharedError) throw new Error(`Failed to create shared content: ${sharedError.message}`);
+        sharedContentId = sharedContent.id;
+      }
+
+      // Check for existing topic article
+      const { data: existingTopicArticle } = await supabase
         .from('topic_articles')
-        .insert({
-          shared_content_id: sharedContent.id,
-          topic_id: topicId,
-          regional_relevance_score: 75, // Higher score for manual uploads
-          content_quality_score: 80,    // Higher quality for manual uploads
-          processing_status: 'new',
-          import_metadata: {
-            manual_upload: true,
-            original_filename: nextFile.file.name,
-            upload_date: new Date().toISOString(),
-            extracted_via: extractResult.contentType
-          }
-        })
-        .select()
+        .select('id')
+        .eq('shared_content_id', sharedContentId)
+        .eq('topic_id', topicId)
         .single();
 
-      if (topicError) throw new Error(`Failed to create topic article: ${topicError.message}`);
+      let topicArticleId: string;
 
-      // Mark as completed - it will appear in the arrivals queue
-      setProcessingFiles(prev => prev.map(f => 
-        f.id === nextFile.id 
-          ? { 
-              ...f, 
-              status: 'completed', 
-              progress: 100,
-              rewrittenContent: title,
-              articleId: topicArticle.id
+      if (existingTopicArticle) {
+        topicArticleId = existingTopicArticle.id;
+        console.log('📋 Using existing topic article');
+      } else {
+        // Create new topic article
+        const { data: topicArticle, error: topicError } = await supabase
+          .from('topic_articles')
+          .insert({
+            shared_content_id: sharedContentId,
+            topic_id: topicId,
+            regional_relevance_score: 75,
+            content_quality_score: 80,
+            processing_status: 'new',
+            import_metadata: {
+              manual_upload: true,
+              original_filename: nextFile.fileName,
+              upload_date: new Date().toISOString(),
+              extracted_via: extractResult.contentType,
+              storage_url: nextFile.storageUrl
             }
-          : f
-      ));
+          })
+          .select()
+          .single();
+
+        if (topicError) throw new Error(`Failed to create topic article: ${topicError.message}`);
+        topicArticleId = topicArticle.id;
+      }
+
+      // Mark as completed
+      updateStatus('completed', 100, { 
+        rewrittenContent: title,
+        articleId: topicArticleId
+      });
+
+      // Clean up storage file after successful processing
+      try {
+        const storageKey = nextFile.storageUrl?.split('/').pop();
+        if (storageKey) {
+          await supabase.storage.from('temp-uploads').remove([storageKey]);
+        }
+      } catch (cleanupError) {
+        console.warn('Failed to cleanup storage file:', cleanupError);
+      }
 
       toast({
         title: "File Processed",
-        description: `"${nextFile.file.name}" has been processed and added to the arrivals queue.`
+        description: `"${nextFile.fileName}" has been processed and added to the arrivals queue.`
       });
 
-      // Trigger refresh of main queue
       onContentProcessed();
 
       // Process next file after brief delay
       setTimeout(() => {
+        setIsProcessing(false);
         processNextFile();
       }, 1000);
 
@@ -174,19 +242,19 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
 
       toast({
         title: "Processing Failed",
-        description: `Failed to process "${nextFile.file.name}": ${error.message}`,
+        description: `Failed to process "${nextFile.fileName}": ${error.message}`,
         variant: "destructive"
       });
 
-      // Continue with next file even if one fails
       setTimeout(() => {
+        setIsProcessing(false);
         processNextFile();
       }, 500);
     }
-  }, [processingFiles, topicId, onContentProcessed, toast]);
+  }, [processingFiles, topicId, onContentProcessed, toast, isProcessing]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Critical: Validate file types and sizes
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    // Validate file types and sizes
     const validFiles = acceptedFiles.filter(file => {
       const isValidType = file.type.startsWith('image/') || 
                          file.type === 'application/pdf' || 
@@ -215,22 +283,89 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
       return true;
     });
 
+    if (validFiles.length === 0) return;
+
+    // Create files with uploading status
     const newFiles: ProcessingFile[] = validFiles.map(file => ({
       id: `${file.name}-${Date.now()}-${Math.random()}`,
-      file,
-      status: 'pending',
-      progress: 0
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      status: 'uploading',
+      progress: 0,
+      uploadedAt: new Date().toISOString()
     }));
 
     setProcessingFiles(prev => [...prev, ...newFiles]);
-    
+
+    // Upload files to storage immediately
+    for (const fileData of newFiles) {
+      const originalFile = validFiles.find(f => f.name === fileData.fileName);
+      if (!originalFile) continue;
+
+      try {
+        // Update status to show upload progress
+        setProcessingFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { ...f, progress: 10 }
+            : f
+        ));
+
+        // Create unique storage path
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 9);
+        const storageKey = `${timestamp}-${random}-${fileData.fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('temp-uploads')
+          .upload(storageKey, originalFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get signed URL for processing
+        const { data: urlData } = await supabase.storage
+          .from('temp-uploads')
+          .createSignedUrl(storageKey, 3600); // 1 hour expiry
+
+        if (!urlData?.signedUrl) throw new Error('Failed to create signed URL');
+
+        // Update file with storage URL and set to pending
+        setProcessingFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { 
+                ...f, 
+                status: 'pending' as const, 
+                progress: 15,
+                storageUrl: urlData.signedUrl
+              }
+            : f
+        ));
+
+        console.log('✅ File uploaded to storage:', fileData.fileName);
+
+      } catch (error: any) {
+        console.error('Upload failed:', error);
+        setProcessingFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { 
+                ...f, 
+                status: 'failed' as const, 
+                progress: 0,
+                error: `Upload failed: ${error.message}`
+              }
+            : f
+        ));
+      }
+    }
+
     toast({
       title: "Files Added",
-      description: `${validFiles.length} file${validFiles.length !== 1 ? 's' : ''} added to processing queue.`
+      description: `${validFiles.length} file${validFiles.length !== 1 ? 's' : ''} uploaded and queued for processing.`
     });
 
-    // Start processing
-    setTimeout(processNextFile, 100);
+    // Start processing after all uploads complete
+    setTimeout(() => processNextFile(), 2000);
   }, [processNextFile, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -250,23 +385,29 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
   const retryFile = (fileId: string) => {
     setProcessingFiles(prev => prev.map(f => 
       f.id === fileId 
-        ? { ...f, status: 'pending', progress: 0, error: undefined }
+        ? { ...f, status: 'pending', progress: 15, error: undefined }
         : f
     ));
-    setTimeout(processNextFile, 100);
+    setTimeout(() => processNextFile(), 100);
   };
 
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <FileImage className="w-4 h-4" />;
-    if (file.type === 'application/pdf') return <File className="w-4 h-4" />;
+  const clearCompleted = () => {
+    setProcessingFiles(prev => prev.filter(f => f.status !== 'completed'));
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) return <FileImage className="w-4 h-4" />;
+    if (fileType === 'application/pdf') return <File className="w-4 h-4" />;
     return <FileText className="w-4 h-4" />;
   };
 
   const getStatusIcon = (status: ProcessingFile['status']) => {
     switch (status) {
+      case 'uploading': return <CloudUpload className="w-4 h-4 text-blue-500 animate-pulse" />;
       case 'pending': return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'extracting': 
-      case 'rewriting': return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'extracting': return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'rewriting': return <Clock className="w-4 h-4 text-purple-500 animate-spin" />;
+      case 'saving': return <Clock className="w-4 h-4 text-green-500 animate-spin" />;
       case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'failed': return <XCircle className="w-4 h-4 text-red-500" />;
     }
@@ -274,17 +415,21 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
 
   const getStatusText = (status: ProcessingFile['status']) => {
     switch (status) {
-      case 'pending': return 'Waiting...';
+      case 'uploading': return 'Uploading to storage...';
+      case 'pending': return 'Waiting in queue...';
       case 'extracting': return 'Extracting content...';
-      case 'rewriting': return 'AI rewriting...';
+      case 'rewriting': return 'AI rewriting & cleaning...';
+      case 'saving': return 'Saving to database...';
       case 'completed': return 'Ready in arrivals queue';
       case 'failed': return 'Processing failed';
     }
   };
 
   const hasActiveFiles = processingFiles.some(f => 
-    ['pending', 'extracting', 'rewriting'].includes(f.status)
+    !['completed', 'failed'].includes(f.status)
   );
+
+  const completedFiles = processingFiles.filter(f => f.status === 'completed').length;
 
   return (
     <Card className="mb-6 border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
@@ -333,12 +478,19 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
         {processingFiles.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm">Processing Queue ({processingFiles.length})</h4>
+              <h4 className="font-medium text-sm">
+                Processing Queue ({processingFiles.length})
+                {completedFiles > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {completedFiles} completed
+                  </Badge>
+                )}
+              </h4>
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setProcessingFiles([])}
-                disabled={hasActiveFiles}
+                onClick={clearCompleted}
+                disabled={hasActiveFiles || completedFiles === 0}
               >
                 Clear Completed
               </Button>
@@ -348,12 +500,15 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
               {processingFiles.map((file) => (
                 <Card key={file.id} className="p-3">
                   <div className="flex items-center gap-3">
-                    {getFileIcon(file.file)}
+                    {getFileIcon(file.fileType)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-sm font-medium truncate">
-                          {file.file.name}
+                          {file.fileName}
                         </p>
+                        <span className="text-xs text-muted-foreground">
+                          ({Math.round(file.fileSize / 1024)}KB)
+                        </span>
                         {getStatusIcon(file.status)}
                       </div>
                       <div className="flex items-center gap-2">
@@ -372,7 +527,7 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
                       )}
                     </div>
                     <div className="flex gap-1">
-                      {file.status === 'failed' && (
+                      {file.status === 'failed' && file.storageUrl && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -381,7 +536,7 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
                           <RotateCcw className="w-4 h-4" />
                         </Button>
                       )}
-                      {!['extracting', 'rewriting'].includes(file.status) && (
+                      {!['extracting', 'rewriting', 'saving'].includes(file.status) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -398,13 +553,13 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
           </div>
         )}
 
-        {/* Critical: Clear instructions */}
+        {/* Improved instructions */}
         <Alert>
           <AlertTriangle className="w-4 h-4" />
           <AlertDescription className="text-xs">
-            <strong>How it works:</strong> Files are processed one at a time through AI rewriting 
-            (same as RSS feeds). Completed articles appear in the arrivals queue below for review.
-            Each file becomes a separate article.
+            <strong>How it works:</strong> Files are uploaded to secure storage, then processed 
+            one at a time through AI extraction and rewriting. Your queue persists across page 
+            reloads. Completed articles appear in the arrivals queue below for review.
           </AlertDescription>
         </Alert>
       </CardContent>
