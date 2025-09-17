@@ -357,7 +357,11 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
                 size="sm"
               >
                 <PlayCircle className="w-4 h-4 mr-2" />
-                {isProcessing ? 'Processing...' : 'Simplify'}
+                {isProcessing ? 'Processing...' : (
+                  article.processing_status === 'processed' 
+                    ? 'Approve'
+                    : 'Simplify'
+                )}
               </Button>
             </div>
           </div>

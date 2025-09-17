@@ -21,6 +21,7 @@ export interface MultiTenantArticle {
   created_at: string;
   updated_at: string;
   is_snippet: boolean; // Flag for articles under 150 words
+  import_metadata?: any; // For checking manual uploads
 }
 
 export interface MultiTenantQueueItem {
@@ -133,7 +134,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
         const articlesData = articlesResult.data
           ?.filter((item: any) => 
-            item.processing_status === 'new' && // Only show new articles awaiting processing
+            ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
             !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
           )
           ?.map((item: any) => {
@@ -313,7 +314,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         // Calculate stats
         const newStats = {
           totalArticles: articlesResult.data?.length || 0,
-          pendingArticles: (articlesResult.data || []).filter((a: any) => a.processing_status === 'new').length,
+          pendingArticles: (articlesResult.data || []).filter((a: any) => ['new', 'processed'].includes(a.processing_status)).length,
           processingQueue: queueResult.data?.length || 0,
           readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
         };
