@@ -7,10 +7,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Initialize Supabase client with service role key for database operations
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 interface ExtractionResult {
   success: boolean;
   extractedContent?: string;
   contentType?: string;
+  articleId?: string;
+  sharedContentId?: string;
   error?: string;
 }
 
@@ -249,12 +256,102 @@ serve(async (req) => {
 
     console.log('✅ Content extraction successful:', extractedContent.substring(0, 100) + '...');
 
+    // Now handle database operations with service role permissions
+    console.log('💾 Saving content to database with service role');
+    
+    const wordCount = extractedContent.split(/\s+/).length;
+    const sourceUrl = `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const title = `Manual Upload: ${file.name.replace(/\.[^/.]+$/, "")}`;
+
+    // Check for existing shared content to prevent duplicates
+    const { data: existingContent } = await supabase
+      .from('shared_article_content')
+      .select('id')
+      .eq('url', sourceUrl)
+      .maybeSingle();
+
+    let sharedContentId: string;
+
+    if (existingContent) {
+      sharedContentId = existingContent.id;
+      console.log('📋 Using existing shared content');
+    } else {
+      // Create new shared content
+      const { data: sharedContent, error: sharedError } = await supabase
+        .from('shared_article_content')
+        .insert({
+          url: sourceUrl,
+          normalized_url: sourceUrl,
+          title: title,
+          body: extractedContent,
+          author: 'Manual Upload',
+          word_count: wordCount,
+          language: 'en',
+          source_domain: 'manual-upload.local'
+        })
+        .select()
+        .single();
+
+      if (sharedError) {
+        console.error('❌ Failed to create shared content:', sharedError);
+        throw new Error(`Failed to create shared content: ${sharedError.message}`);
+      }
+      sharedContentId = sharedContent.id;
+      console.log('✅ Created shared content:', sharedContentId);
+    }
+
+    // Check for existing topic article
+    const { data: existingTopicArticle } = await supabase
+      .from('topic_articles')
+      .select('id')
+      .eq('shared_content_id', sharedContentId)
+      .eq('topic_id', topicId)
+      .maybeSingle();
+
+    let topicArticleId: string;
+
+    if (existingTopicArticle) {
+      topicArticleId = existingTopicArticle.id;
+      console.log('📋 Using existing topic article');
+    } else {
+      // Create new topic article
+      const { data: topicArticle, error: topicError } = await supabase
+        .from('topic_articles')
+        .insert({
+          shared_content_id: sharedContentId,
+          topic_id: topicId,
+          regional_relevance_score: 75,
+          content_quality_score: 80,
+          processing_status: 'new',
+          import_metadata: {
+            manual_upload: true,
+            original_filename: file.name,
+            upload_date: new Date().toISOString(),
+            extracted_via: extractionContentType
+          }
+        })
+        .select()
+        .single();
+
+      if (topicError) {
+        console.error('❌ Failed to create topic article:', topicError);
+        throw new Error(`Failed to create topic article: ${topicError.message}`);
+      }
+      topicArticleId = topicArticle.id;
+      console.log('✅ Created topic article:', topicArticleId);
+    }
+
+    console.log('🎉 Successfully processed and saved content to database');
+
     return new Response(JSON.stringify({
       success: true,
       extractedContent,
       contentType: extractionContentType,
       originalFileName: file.name,
-      wordCount: extractedContent.split(/\s+/).length
+      wordCount,
+      articleId: topicArticleId,
+      sharedContentId: sharedContentId,
+      title
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -116,91 +116,15 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
       if (extractError) throw new Error(`Extraction failed: ${extractError.message}`);
       if (!extractResult?.success) throw new Error(extractResult?.error || 'Extraction failed');
 
-      updateStatus('rewriting', 60, { extractedContent: extractResult.extractedContent });
+      if (!extractResult?.articleId) throw new Error('No article ID returned from processing');
 
-      // Create article in database
-      updateStatus('saving', 80);
-      console.log('📝 Creating article from extracted content');
-      
-      const wordCount = extractResult.extractedContent.split(/\s+/).length;
-      const sourceUrl = `manual-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const title = `Manual Upload: ${nextFile.fileName.replace(/\.[^/.]+$/, "")}`;
-
-      // Check for duplicate content to prevent duplicates on retry
-      const { data: existingContent } = await supabase
-        .from('shared_article_content')
-        .select('id')
-        .eq('url', sourceUrl)
-        .single();
-
-      let sharedContentId: string;
-
-      if (existingContent) {
-        sharedContentId = existingContent.id;
-        console.log('📋 Using existing shared content');
-      } else {
-        // Create new shared content
-        const { data: sharedContent, error: sharedError } = await supabase
-          .from('shared_article_content')
-          .insert({
-            url: sourceUrl,
-            normalized_url: sourceUrl,
-            title: title,
-            body: extractResult.extractedContent,
-            author: 'Manual Upload',
-            word_count: wordCount,
-            language: 'en',
-            source_domain: 'manual-upload.local'
-          })
-          .select()
-          .single();
-
-        if (sharedError) throw new Error(`Failed to create shared content: ${sharedError.message}`);
-        sharedContentId = sharedContent.id;
-      }
-
-      // Check for existing topic article
-      const { data: existingTopicArticle } = await supabase
-        .from('topic_articles')
-        .select('id')
-        .eq('shared_content_id', sharedContentId)
-        .eq('topic_id', topicId)
-        .single();
-
-      let topicArticleId: string;
-
-      if (existingTopicArticle) {
-        topicArticleId = existingTopicArticle.id;
-        console.log('📋 Using existing topic article');
-      } else {
-        // Create new topic article
-        const { data: topicArticle, error: topicError } = await supabase
-          .from('topic_articles')
-          .insert({
-            shared_content_id: sharedContentId,
-            topic_id: topicId,
-            regional_relevance_score: 75,
-            content_quality_score: 80,
-            processing_status: 'new',
-            import_metadata: {
-              manual_upload: true,
-              original_filename: nextFile.fileName,
-              upload_date: new Date().toISOString(),
-              extracted_via: extractResult.contentType,
-              storage_url: nextFile.storageUrl
-            }
-          })
-          .select()
-          .single();
-
-        if (topicError) throw new Error(`Failed to create topic article: ${topicError.message}`);
-        topicArticleId = topicArticle.id;
-      }
+      updateStatus('saving', 90);
+      console.log('✅ Article created successfully:', extractResult.articleId);
 
       // Mark as completed
       updateStatus('completed', 100, { 
-        rewrittenContent: title,
-        articleId: topicArticleId
+        rewrittenContent: extractResult.title || `Processed: ${nextFile.fileName}`,
+        articleId: extractResult.articleId
       });
 
       // Clean up storage file after successful processing
