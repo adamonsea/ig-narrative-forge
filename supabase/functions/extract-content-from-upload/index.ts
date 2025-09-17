@@ -264,13 +264,20 @@ serve(async (req) => {
       });
     }
 
-    // Process all content through DeepSeek for consistency with existing pipeline
-    extractedContent = await processContentWithDeepSeek(rawContent, extractionContentType);
+    // Process content. For text uploads, fall back to raw content if DeepSeek key is missing
+    const deepseekKey = Deno.env.get('DEEPSEEK_API_KEY');
+    if (extractionContentType === 'text' && !deepseekKey) {
+      console.log('📝 DeepSeek key missing; using raw text content without rewriting');
+      extractedContent = rawContent;
+    } else {
+      extractedContent = await processContentWithDeepSeek(rawContent, extractionContentType);
+    }
 
     // Validate extracted content
     if (!extractedContent || extractedContent.length < 50) {
       throw new Error('Insufficient content extracted from file');
     }
+
 
     console.log('✅ Content extraction successful:', extractedContent.substring(0, 100) + '...');
 
