@@ -14,7 +14,7 @@ interface ExtractionResult {
   error?: string;
 }
 
-// Simple OCR-like text extraction from images using OpenAI Vision API
+// Extract text from images using OpenAI Vision API (OCR only)
 async function extractFromImage(fileBuffer: ArrayBuffer, fileName: string): Promise<string> {
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openAIApiKey) {
@@ -42,7 +42,7 @@ async function extractFromImage(fileBuffer: ArrayBuffer, fileName: string): Prom
           content: [
             {
               type: 'text',
-              text: `Extract all readable text from this image. Return only the text content, maintaining structure when possible. If this appears to be a screenshot of an article or webpage, focus on the main content and ignore navigation elements, ads, or sidebar content.
+              text: `Extract all readable text from this image. Return only the raw text content, maintaining structure when possible. If this appears to be a screenshot of an article or webpage, focus on the main content and ignore navigation elements, ads, or sidebar content.
 
 If no meaningful text is found, return "NO_TEXT_FOUND".`
             },
@@ -75,6 +75,65 @@ If no meaningful text is found, return "NO_TEXT_FOUND".`
   }
 
   return extractedText;
+}
+
+// Process and rewrite content using DeepSeek API for consistency
+async function processContentWithDeepSeek(rawContent: string, contentType: string): Promise<string> {
+  const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
+  if (!deepseekApiKey) {
+    throw new Error('DeepSeek API key not configured');
+  }
+
+  console.log('🤖 Processing content with DeepSeek API');
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepseekApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional content editor. Clean up and structure the provided ${contentType} content for publication. Maintain the original meaning and key information while improving readability and flow.
+
+Guidelines:
+- Fix any OCR errors or formatting issues
+- Structure content with clear paragraphs
+- Maintain factual accuracy and original meaning
+- Remove irrelevant navigation text or UI elements
+- Ensure proper grammar and punctuation
+- Keep the content concise but complete
+
+Return only the cleaned, structured content without any additional commentary.`
+        },
+        {
+          role: 'user',
+          content: rawContent
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.3,
+      stream: false
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('DeepSeek API error:', errorData);
+    throw new Error(`DeepSeek API failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const processedContent = data.choices[0]?.message?.content?.trim();
+
+  if (!processedContent) {
+    throw new Error('No content returned from DeepSeek');
+  }
+
+  return processedContent;
 }
 
 // Extract text from PDF using simple text extraction
@@ -147,18 +206,22 @@ serve(async (req) => {
     let contentType: string;
 
     // Extract content based on file type
+    let rawContent: string;
     if (file.type.startsWith('image/')) {
       contentType = 'image';
-      extractedContent = await extractFromImage(fileBuffer, file.name);
+      rawContent = await extractFromImage(fileBuffer, file.name);
     } else if (file.type === 'application/pdf') {
       contentType = 'pdf';
-      extractedContent = await extractFromPDF(fileBuffer);
+      rawContent = await extractFromPDF(fileBuffer);
     } else if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
       contentType = 'text';
-      extractedContent = await extractFromText(fileBuffer);
+      rawContent = await extractFromText(fileBuffer);
     } else {
       throw new Error(`Unsupported file type: ${file.type}`);
     }
+
+    // Process all content through DeepSeek for consistency with existing pipeline
+    extractedContent = await processContentWithDeepSeek(rawContent, contentType);
 
     // Validate extracted content
     if (!extractedContent || extractedContent.length < 50) {
