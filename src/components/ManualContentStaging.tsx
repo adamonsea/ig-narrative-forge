@@ -153,6 +153,7 @@ try {
       onContentProcessed();
 
       // Process next file after brief delay
+      isProcessingRef.current = false;
       setTimeout(() => {
         setIsProcessing(false);
         processNextFile();
@@ -178,6 +179,7 @@ try {
         variant: "destructive"
       });
 
+      isProcessingRef.current = false;
       setTimeout(() => {
         setIsProcessing(false);
         processNextFile();
@@ -262,14 +264,16 @@ try {
 
         if (!urlData?.signedUrl) throw new Error('Failed to create signed URL');
 
-        // Update file with storage URL and set to pending
+        // Update file with storage URL, bucket/path and set to pending
         setProcessingFiles(prev => prev.map(f => 
           f.id === fileData.id 
             ? { 
                 ...f, 
                 status: 'pending' as const, 
                 progress: 15,
-                storageUrl: urlData.signedUrl
+                storageUrl: urlData.signedUrl,
+                storageBucket: 'temp-uploads',
+                storagePath: storageKey
               }
             : f
         ));
