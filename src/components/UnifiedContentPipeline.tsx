@@ -13,6 +13,7 @@ import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import EventsListing from "@/components/EventsListing";
+import { QueueManager } from "./QueueManager";
 
 
 interface Topic {
@@ -140,6 +141,17 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   ) => {
     try {
       await handleMultiTenantApprove(article, slideType, tone, writingStyle);
+      
+      // Auto-trigger queue processing after approval
+      setTimeout(async () => {
+        try {
+          await supabase.functions.invoke('queue-processor');
+          console.log('Auto-triggered queue processing after article approval');
+        } catch (error) {
+          console.warn('Failed to auto-trigger queue processing:', error);
+        }
+      }, 1000);
+      
       toast({
         title: "Article Approved",
         description: "Article sent to content generation",
@@ -266,6 +278,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   return (
     <div className="space-y-6">
+      <QueueManager />
+      
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-3">

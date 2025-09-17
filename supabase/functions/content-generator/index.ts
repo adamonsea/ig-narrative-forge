@@ -50,6 +50,21 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  let requestData;
+  try {
+    requestData = await req.json();
+    console.log('Received request data:', requestData);
+  } catch (parseError) {
+    console.error('Failed to parse request JSON:', parseError);
+    return new Response(JSON.stringify({ 
+      error: 'Invalid JSON in request body',
+      details: parseError.message 
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const { 
       articleId, 
@@ -63,7 +78,7 @@ serve(async (req) => {
       topicId,
       manualUpload = false,
       originalFileName
-    } = await req.json();
+    } = requestData;
     
     console.log(`Processing article - Legacy ID: ${articleId}, Multi-tenant ID: ${topicArticleId}, Shared ID: ${sharedContentId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
 
@@ -492,19 +507,27 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.log(`❌ Error during slide generation: ${error.message}`);
-    console.log('Error details:', {
+    console.error('❌ ERROR in content-generator function:', error);
+    console.error('Error details:', {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
+      requestData: requestData || 'Failed to parse request'
     });
     
-    console.log(`❌ ERROR in content-generator function: ${error.message}`);
+    // Also log environment variables status for debugging
+    console.error('Environment variables status:', {
+      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      hasSupabaseKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      hasOpenAIKey: !!Deno.env.get('OPENAI_API_KEY'),
+      hasDeepSeekKey: !!Deno.env.get('DEEPSEEK_API_KEY'),
+    });
     
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: error.stack 
+        error: error.message || 'Unknown error occurred',
+        details: error.stack || 'No stack trace available',
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500,
