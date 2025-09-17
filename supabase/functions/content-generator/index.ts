@@ -58,7 +58,11 @@ serve(async (req) => {
       slideType = 'tabloid', 
       aiProvider = 'deepseek', 
       tone = 'conversational', 
-      audienceExpertise = 'intermediate' 
+      audienceExpertise = 'intermediate',
+      extractedContent,
+      topicId,
+      manualUpload = false,
+      originalFileName
     } = await req.json();
     
     console.log(`Processing article - Legacy ID: ${articleId}, Multi-tenant ID: ${topicArticleId}, Shared ID: ${sharedContentId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);

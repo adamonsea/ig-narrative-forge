@@ -8,6 +8,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
+import { ManualContentStaging } from "@/components/ManualContentStaging";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
@@ -469,6 +470,11 @@ const TopicDashboard = () => {
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
+            {/* Manual Content Staging Area - Critical: Above main pipeline */}
+            <ManualContentStaging 
+              topicId={topic.id} 
+              onContentProcessed={loadTopicAndStats}
+            />
             <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <UnifiedContentPipeline selectedTopicId={topic.id} />
