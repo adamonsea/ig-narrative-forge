@@ -14,6 +14,7 @@ import { CleanSlateMigration } from '@/components/CleanSlateMigration';
 import { TopicArchiveManager } from '@/components/TopicArchiveManager';
 import { SourceValidationTester } from '@/components/SourceValidationTester';
 import { DiscardedArticlesBackfillButton } from '@/components/DiscardedArticlesBackfillButton';
+import { QueueManager } from '@/components/QueueManager';
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -46,8 +47,9 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
+            <TabsTrigger value="queue">Queue Manager</TabsTrigger>
             <TabsTrigger value="testing">Testing</TabsTrigger>
             <TabsTrigger value="archive">Topic Archive</TabsTrigger>
             <TabsTrigger value="migration">Clean Migration</TabsTrigger>
@@ -60,6 +62,10 @@ export default function AdminPanel() {
               title="Global Source Management"
               description="Manage all content sources across the platform with enhanced validation and health monitoring"
             />
+          </TabsContent>
+
+          <TabsContent value="queue" className="mt-6">
+            <QueueManager />
           </TabsContent>
 
           <TabsContent value="testing" className="mt-6">
