@@ -266,131 +266,112 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      console.log('🔄 Loading published stories for topic:', selectedTopicId);
+      console.log('🔄 Loading stories via server-side filters for topic:', selectedTopicId);
       
-      // ID-first strategy: Get article IDs for this topic, then get stories
-      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
-        // Get legacy article IDs for this topic
-        supabase
-          .from('articles')
-          .select('id')
-          .eq('topic_id', selectedTopicId),
-        // Get multi-tenant article IDs for this topic  
-        supabase
-          .from('topic_articles')
-          .select('id')
-          .eq('topic_id', selectedTopicId)
-      ]);
-
-      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
-      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
-
-      console.log('📊 Pipeline: Found article IDs', { 
-        legacy: legacyArticleIds.length, 
-        multiTenant: mtTopicArticleIds.length 
-      });
-
-      // Now get stories using these article IDs - fetch draft/ready/published for pipeline review
+      const statuses = ['draft', 'ready', 'published'];
+      
+      // Fetch stories without large IN() lists by filtering via server-side joins
       const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-        // Query 1: Legacy stories using article IDs
-        legacyArticleIds.length > 0 ? supabase
+        // Legacy stories joined to articles filtered by topic_id
+        supabase
           .from('stories')
           .select(`
             *,
-            slides!inner(*),
-            article:articles!inner(title, source_url, region, topic_id)
-          `)
-          .in('status', ['draft', 'ready', 'published'])
-          .in('article_id', legacyArticleIds)
-          .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
-        
-        // Query 2: Multi-tenant stories using topic_article IDs
-        mtTopicArticleIds.length > 0 ? supabase
-          .from('stories')
-          .select(`
-            *,
-            slides!inner(*),
-            topic_article:topic_articles!inner(
-              id, topic_id,
-              shared_content:shared_article_content(title, url)
+            slides(*),
+            article:articles!inner(
+              id, topic_id, title, source_url, author, published_at
             )
           `)
-          .in('status', ['draft', 'ready', 'published'])
-          .in('topic_article_id', mtTopicArticleIds)
-          .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
+          .in('status', statuses)
+          .eq('articles.topic_id', selectedTopicId)
+          .order('created_at', { ascending: false }),
+        
+        // Multi-tenant stories joined to topic_articles filtered by topic_id
+        supabase
+          .from('stories')
+          .select(`
+            *,
+            slides(*),
+            topic_article:topic_articles!inner(
+              id, topic_id,
+              shared_content:shared_article_content(title, url, author, published_at)
+            )
+          `)
+          .in('status', statuses)
+          .eq('topic_articles.topic_id', selectedTopicId)
+          .order('created_at', { ascending: false })
       ]);
 
-        console.log('📊 Stories query results:', {
-          legacy: legacyStoriesResult.data?.length || 0,
-          multiTenant: multiTenantStoriesResult.data?.length || 0,
-          legacyError: legacyStoriesResult.error,
-          multiTenantError: multiTenantStoriesResult.error
-        });
+      console.log('📊 Stories query results (server-side filtered):', {
+        legacy: legacyStoriesResult.data?.length || 0,
+        multiTenant: multiTenantStoriesResult.data?.length || 0,
+        legacyError: legacyStoriesResult.error,
+        multiTenantError: multiTenantStoriesResult.error
+      });
 
-        // Merge and deduplicate results
-        const allStories = [
-          ...(legacyStoriesResult.data || []),
-          ...(multiTenantStoriesResult.data || [])
-        ];
-        
-        // Remove duplicates by story ID
-        const uniqueStories = allStories.filter((story, index, arr) => 
-          arr.findIndex(s => s.id === story.id) === index
-        );
-        
-        filteredStories = uniqueStories.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        
-        console.log('✅ Stories loaded successfully:', filteredStories.length, 'total unique stories');
+      // Merge and deduplicate results
+      const allStories = [
+        ...(legacyStoriesResult.data || []),
+        ...(multiTenantStoriesResult.data || [])
+      ];
+      
+      const uniqueStories = allStories.filter((story, index, arr) => 
+        arr.findIndex(s => s.id === story.id) === index
+      );
+      
+      const sortedStories = uniqueStories.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
-          // Map and set stories to keep UI consistent
-          const storiesData = filteredStories.map((story: any) => {
-            const isLegacy = !!story.article_id;
-            const articleData = isLegacy 
-              ? story.article 
-              : story.topic_article?.shared_content;
-            
-            return {
-              id: story.id,
-              article_id: story.article_id || null,
-              topic_article_id: story.topic_article_id || null,
-              headline: story.headline || story.title || 'Untitled',
-              summary: story.summary,
-              status: story.status,
-              is_published: story.is_published || story.status === 'published',
-              created_at: story.created_at,
-              updated_at: story.updated_at,
-              slides: story.slides || [],
-              article_title: articleData?.title || story.title || 'Untitled',
-              story_type: isLegacy ? 'legacy' as const : 'multi_tenant' as const,
-              title: story.headline || story.title,
-              url: articleData?.source_url || articleData?.url || '',
-              author: story.author || articleData?.author || '',
-              word_count: story.word_count || 0,
-              cover_illustration_url: story.cover_illustration_url,
-              illustration_generated_at: story.illustration_generated_at,
-              slidetype: story.slidetype || '',
-              tone: story.tone || '',
-              writing_style: story.writing_style || '',
-              audience_expertise: story.audience_expertise || '',
-              is_teaser: story.is_teaser || false
-            };
-          });
-          setStories(storiesData);
-        
-        // Calculate stats using the processed data
-        const allTopicArticles = articlesResult.data || [];
-        
-        setStats({
-          articles: allTopicArticles.length,
-          queueItems: filteredQueueItems.length,
-          stories: filteredStories.length,
-          totalArticles: allTopicArticles.length,
-          pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length,
-          processingQueue: filteredQueueItems.length,
-          readyStories: filteredStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
-        });
+      console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
+
+      // Map to MultiTenantStory shape
+      const storiesData = sortedStories.map((story: any) => {
+        const isLegacy = !!story.article_id;
+        const articleData = isLegacy 
+          ? story.article 
+          : story.topic_article?.shared_content;
+        return {
+          id: story.id,
+          article_id: story.article_id || null,
+          topic_article_id: story.topic_article_id || null,
+          headline: story.headline || story.title || articleData?.title || 'Untitled',
+          summary: story.summary,
+          status: story.status,
+          is_published: Boolean(story.is_published) || story.status === 'published',
+          created_at: story.created_at,
+          updated_at: story.updated_at,
+          slides: Array.isArray(story.slides) ? story.slides : [],
+          article_title: articleData?.title || 'Untitled',
+          story_type: isLegacy ? ('legacy' as const) : ('multi_tenant' as const),
+          title: story.headline || story.title || articleData?.title,
+          url: isLegacy ? (story.article?.source_url || '') : (story.topic_article?.shared_content?.url || ''),
+          author: isLegacy ? (story.article?.author || '') : (story.topic_article?.shared_content?.author || ''),
+          word_count: story.word_count || 0,
+          cover_illustration_url: story.cover_illustration_url,
+          illustration_generated_at: story.illustration_generated_at,
+          slidetype: story.slidetype || '',
+          tone: story.tone || '',
+          writing_style: story.writing_style || '',
+          audience_expertise: story.audience_expertise || '',
+          is_teaser: story.is_teaser || false
+        };
+      });
+
+      setStories(storiesData);
+      
+      // Calculate stats using the processed data
+      const allTopicArticles = articlesResult.data || [];
+      
+      setStats({
+        articles: allTopicArticles.length,
+        queueItems: filteredQueueItems.length,
+        stories: sortedStories.length,
+        totalArticles: allTopicArticles.length,
+        pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length,
+        processingQueue: filteredQueueItems.length,
+        readyStories: sortedStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
+      });
 
     } catch (error) {
       console.error('Error loading topic content:', error);
@@ -581,6 +562,30 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         },
         () => {
           console.log('Shared content changed, reloading...');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        () => {
+          console.log('Stories changed, reloading...');
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content_generation_queue'
+        },
+        () => {
+          console.log('Queue changed, reloading...');
           loadTopicContent();
         }
       )
