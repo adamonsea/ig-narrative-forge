@@ -107,8 +107,8 @@ export const ApprovedQueue = () => {
         .from('stories')
         .select(`
           *,
-          slides!inner(*),
-          articles!inner(*),
+          slides(*),
+          articles(*),
           posts(*),
           visuals:slides(
             visuals(*)
@@ -121,13 +121,16 @@ export const ApprovedQueue = () => {
       if (error) throw error;
 
       // Flatten visuals from nested structure and fix carousel_exports type
-      const storiesWithVisuals = data.map(story => ({
-        ...story,
-        visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || [],
-        carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
-      }));
+      // Filter client-side to ensure stories have both slides and articles
+      const storiesWithVisuals = data
+        ?.filter(story => story.slides?.length > 0 && story.articles)
+        ?.map(story => ({
+          ...story,
+          visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || [],
+          carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
+        })) || [];
 
-      setStories(storiesWithVisuals || []);
+      setStories(storiesWithVisuals);
     } catch (error: any) {
       console.error('Error loading approved stories:', error);
       toast({
