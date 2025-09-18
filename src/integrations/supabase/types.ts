@@ -2638,7 +2638,6 @@ export type Database = {
           body: string
           canonical_url: string
           content_quality_score: number
-          created_at: string
           id: string
           image_url: string
           processing_status: string
@@ -2647,7 +2646,6 @@ export type Database = {
           source_type: string
           source_url: string
           title: string
-          updated_at: string
           word_count: number
         }[]
       }

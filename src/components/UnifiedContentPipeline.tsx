@@ -145,8 +145,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       // Auto-trigger queue processing after approval
       setTimeout(async () => {
         try {
-          await supabase.functions.invoke('queue-processor');
-          console.log('Auto-triggered queue processing after article approval');
+          console.log('🚀 Triggering queue processor...');
+          const { data, error } = await supabase.functions.invoke('queue-processor');
+          if (error) throw error;
+          console.log('✅ Queue processor result:', data);
+          toast({
+            title: "Processing Started",
+            description: `Started processing ${data?.processed || 0} articles`,
+          });
         } catch (error) {
           console.warn('Failed to auto-trigger queue processing:', error);
         }
