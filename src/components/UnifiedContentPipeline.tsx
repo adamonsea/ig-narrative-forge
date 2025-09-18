@@ -13,7 +13,7 @@ import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import EventsListing from "@/components/EventsListing";
-import { QueueManager } from "./QueueManager";
+
 
 
 interface Topic {
@@ -119,7 +119,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const totalArticles = articles.length;
   const totalQueue = queueItems.length;
   const totalStories = stories.length;
-
+  const processingCount = queueItems.filter(q => q.status === 'processing' || q.status === 'pending').length;
   // Article management handlers
   const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
@@ -278,16 +278,20 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   return (
     <div className="space-y-6">
-      <QueueManager />
-      
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="articles">
             Arrivals ({totalArticles})
           </TabsTrigger>
-          <TabsTrigger value="stories">
-            Published ({stories.filter(s => s.status === 'ready').length})
+          <TabsTrigger value="stories" className="flex items-center gap-2">
+            <span>Published ({stories.filter(s => s.status === 'ready').length})</span>
+            {processingCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
+                <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
+                <span className="text-xs">{processingCount}</span>
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="events">
             Events ({eventsCount})
