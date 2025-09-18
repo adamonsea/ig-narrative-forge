@@ -1792,6 +1792,7 @@ export type Database = {
       stories: {
         Row: {
           article_id: string
+          audience_expertise: string | null
           author: string | null
           cover_illustration_prompt: string | null
           cover_illustration_url: string | null
@@ -1810,6 +1811,7 @@ export type Database = {
         }
         Insert: {
           article_id: string
+          audience_expertise?: string | null
           author?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
@@ -1828,6 +1830,7 @@ export type Database = {
         }
         Update: {
           article_id?: string
+          audience_expertise?: string | null
           author?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
