@@ -7,13 +7,15 @@ const corsHeaders = {
 }
 
 interface GenerationRequest {
-  article_id?: string;
-  topic_article_id?: string;
-  shared_content_id?: string;
-  slidetype?: string;
+  articleId?: string;
+  topicArticleId?: string;
+  sharedContentId?: string;
+  slideType?: string;
   tone?: string;
-  writing_style?: string;
-  audience_expertise?: string;
+  writingStyle?: string;
+  aiProvider?: string;
+  costOptimized?: boolean;
+  batchMode?: boolean;
 }
 
 serve(async (req) => {
@@ -32,15 +34,15 @@ serve(async (req) => {
     console.log('📝 Generation request:', request);
 
     let articleContent: any = null;
-    let articleId = request.article_id;
+    let articleId = request.articleId;
 
     // Get article content - support both legacy and multi-tenant systems
-    if (request.shared_content_id) {
+    if (request.sharedContentId) {
       // Multi-tenant system
       const { data: sharedContent, error: sharedError } = await supabase
         .from('shared_article_content')
         .select('*')
-        .eq('id', request.shared_content_id)
+        .eq('id', request.sharedContentId)
         .single();
 
       if (sharedError || !sharedContent) {
@@ -50,7 +52,7 @@ serve(async (req) => {
       const { data: topicArticle, error: topicError } = await supabase
         .from('topic_articles')
         .select('*')
-        .eq('id', request.topic_article_id)
+        .eq('id', request.topicArticleId)
         .single();
 
       if (topicError || !topicArticle) {
@@ -60,15 +62,15 @@ serve(async (req) => {
       articleContent = {
         ...sharedContent,
         ...topicArticle,
-        id: request.topic_article_id
+        id: request.topicArticleId
       };
-      articleId = request.topic_article_id;
-    } else if (request.article_id) {
+      articleId = request.topicArticleId;
+    } else if (request.articleId) {
       // Legacy system
       const { data: article, error: articleError } = await supabase
         .from('articles')
         .select('*')
-        .eq('id', request.article_id)
+        .eq('id', request.articleId)
         .single();
 
       if (articleError || !article) {
@@ -94,10 +96,10 @@ serve(async (req) => {
       }
     };
 
-    // Create slides based on slidetype
+    // Create slides based on slideType
     let slides = [];
-    const slideCount = request.slidetype === 'short' ? 3 : 
-                     request.slidetype === 'extensive' ? 8 : 5;
+    const slideCount = request.slideType === 'short' ? 3 : 
+                     request.slideType === 'extensive' ? 8 : 5;
 
     for (let i = 0; i < slideCount; i++) {
       slides.push({
@@ -114,9 +116,9 @@ serve(async (req) => {
     const { data: storyData, error: storyError } = await supabase
       .from('stories')
       .insert({
-        article_id: request.article_id,
-        topic_article_id: request.topic_article_id,
-        shared_content_id: request.shared_content_id,
+        article_id: request.articleId,
+        topic_article_id: request.topicArticleId,
+        shared_content_id: request.sharedContentId,
         status: 'ready',
         content: story,
         slides_data: slides
@@ -147,18 +149,18 @@ serve(async (req) => {
     }
 
     // Update article status
-    if (request.article_id) {
+    if (request.articleId) {
       await supabase
         .from('articles')
         .update({ processing_status: 'processed' })
-        .eq('id', request.article_id);
+        .eq('id', request.articleId);
     }
 
-    if (request.topic_article_id) {
+    if (request.topicArticleId) {
       await supabase
         .from('topic_articles')
         .update({ processing_status: 'processed' })
-        .eq('id', request.topic_article_id);
+        .eq('id', request.topicArticleId);
     }
 
     console.log('🎉 Content generation completed successfully');
