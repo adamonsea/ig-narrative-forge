@@ -253,17 +253,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         multiTenant: mtTopicArticleIds.length 
       });
 
-      // Now get stories using these article IDs
+      // Now get stories using these article IDs - fetch draft/ready/published for pipeline review
       const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
         // Query 1: Legacy stories using article IDs
         legacyArticleIds.length > 0 ? supabase
           .from('stories')
           .select(`
             *,
-            slides:slides(*),
+            slides!inner(*),
             article:articles!inner(title, source_url, region, topic_id)
           `)
-          .eq('status', 'published')
+          .in('status', ['draft', 'ready', 'published'])
           .in('article_id', legacyArticleIds)
           .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
         
@@ -272,13 +272,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .from('stories')
           .select(`
             *,
-            slides:slides(*),
+            slides!inner(*),
             topic_article:topic_articles!inner(
               id, topic_id,
               shared_content:shared_article_content(title, url)
             )
           `)
-          .eq('status', 'published')
+          .in('status', ['draft', 'ready', 'published'])
           .in('topic_article_id', mtTopicArticleIds)
           .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
       ]);
@@ -349,7 +349,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           totalArticles: allTopicArticles.length,
           pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length, // Only truly new articles
           processingQueue: filteredQueueItems.length, // Queue items filtered to this topic
-          readyStories: filteredStories.filter((s: any) => s.status === 'ready').length
+          readyStories: filteredStories.filter((s: any) => s.status === 'draft' || s.status === 'ready').length
         };
         setStats(newStats);
 

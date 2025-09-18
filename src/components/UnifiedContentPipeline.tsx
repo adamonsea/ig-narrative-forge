@@ -309,7 +309,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             Arrivals ({totalArticles})
           </TabsTrigger>
           <TabsTrigger value="stories" className="flex items-center gap-2">
-            <span>Published ({stories.filter(s => s.status === 'ready').length})</span>
+            <span>Stories Review ({stories.filter(s => s.status === 'draft' || s.status === 'ready').length})</span>
             {processingCount > 0 && (
               <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
                 <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
@@ -376,7 +376,74 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* Stories Tab */}
         <TabsContent value="stories" className="space-y-4">
-          <ApprovedStoriesPanel selectedTopicId={selectedTopicId} />
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-muted-foreground">
+              Stories awaiting review and approval
+            </div>
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke('queue-processor');
+                  if (error) throw error;
+                  toast({
+                    title: "Processor Complete",
+                    description: `Processed ${data?.processed || 0} items`,
+                  });
+                  setTimeout(() => refreshContent(), 2000);
+                } catch (error) {
+                  console.error('Queue processor error:', error);
+                  toast({
+                    title: "Processor Error", 
+                    description: "Failed to run content processor",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Run Processor
+            </Button>
+          </div>
+          
+          {stories.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No stories for review</p>
+                <p className="text-sm mt-2">Generated stories will appear here for approval</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent>
+                <MultiTenantStoriesList
+                  stories={stories}
+                  expandedStories={expandedStories}
+                  processingApproval={processingApproval}
+                  processingRejection={processingRejection}
+                  deletingStories={deletingStories}
+                  publishingStories={publishingStories}
+                  animatingStories={animatingStories}
+                  onToggleExpanded={handleToggleStoryExpanded}
+                  onApprove={handleStoryApprove}
+                  onReject={handleStoryReject}
+                  onDelete={(storyId, title) => {
+                    // Use the multi-tenant reject action (which deletes the story)
+                    multiTenantActions.rejectMultiTenantStory(storyId);
+                  }}
+                  onReturnToReview={handleReturnToReview}
+                  onEditSlide={handleEditSlide}
+                  onViewStory={(story) => {
+                    // Simple story view - could enhance later
+                    window.open(`/story/${story.id}`, '_blank');
+                  }}
+                  onRefresh={refreshContent}
+                />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Events Tab */}
