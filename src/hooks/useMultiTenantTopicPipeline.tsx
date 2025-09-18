@@ -229,38 +229,59 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         setQueueItems(queueItemsData);
       }
 
-      // Load published stories directly with topic-based joins for stability
       console.log('🔄 Loading published stories for topic:', selectedTopicId);
+      
+      // ID-first strategy: Get article IDs for this topic, then get stories
+      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
+        // Get legacy article IDs for this topic
+        supabase
+          .from('articles')
+          .select('id')
+          .eq('topic_id', selectedTopicId),
+        // Get multi-tenant article IDs for this topic  
+        supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', selectedTopicId)
+      ]);
+
+      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
+      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
+
+      console.log('📊 Pipeline: Found article IDs', { 
+        legacy: legacyArticleIds.length, 
+        multiTenant: mtTopicArticleIds.length 
+      });
+
+      // Now get stories using these article IDs
+      const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
+        // Query 1: Legacy stories using article IDs
+        legacyArticleIds.length > 0 ? supabase
+          .from('stories')
+          .select(`
+            *,
+            slides:slides(*),
+            article:articles!inner(title, source_url, region, topic_id)
+          `)
+          .eq('status', 'published')
+          .in('article_id', legacyArticleIds)
+          .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null }),
         
-        // Fix: Split into two separate queries to avoid PostgREST .or() issues
-        const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-          // Query 1: Legacy stories via articles table - REMOVED LIMIT
-          supabase
-            .from('stories')
-            .select(`
-              *,
-              slides:slides(*),
-              article:articles!inner(title, source_url, region, topic_id)
-            `)
-            .eq('status', 'published')
-            .eq('article.topic_id', selectedTopicId)
-            .order('created_at', { ascending: false }),
-          
-          // Query 2: Multi-tenant stories via topic_articles table - REMOVED LIMIT
-          supabase
-            .from('stories')
-            .select(`
-              *,
-              slides:slides(*),
-              topic_article:topic_articles!inner(
-                id, topic_id,
-                shared_content:shared_article_content(title, url)
-              )
-            `)
-            .eq('status', 'published')
-            .eq('topic_article.topic_id', selectedTopicId)
-            .order('created_at', { ascending: false })
-        ]);
+        // Query 2: Multi-tenant stories using topic_article IDs
+        mtTopicArticleIds.length > 0 ? supabase
+          .from('stories')
+          .select(`
+            *,
+            slides:slides(*),
+            topic_article:topic_articles!inner(
+              id, topic_id,
+              shared_content:shared_article_content(title, url)
+            )
+          `)
+          .eq('status', 'published')
+          .in('topic_article_id', mtTopicArticleIds)
+          .order('created_at', { ascending: false }) : Promise.resolve({ data: [], error: null })
+      ]);
 
         console.log('📊 Stories query results:', {
           legacy: legacyStoriesResult.data?.length || 0,

@@ -13,8 +13,7 @@ import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import EventsListing from "@/components/EventsListing";
-
-
+import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 
 interface Topic {
   id: string;
@@ -128,6 +127,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     q.attempts >= q.max_attempts && 
     q.error_message
   ).length;
+
   // Article management handlers
   const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
@@ -191,8 +191,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       });
     }
   };
-
-  // Add bulk cleanup function using automated backend cleanup
 
   // Story management handlers
   const handleToggleStoryExpanded = (storyId: string) => {
@@ -378,37 +376,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* Stories Tab */}
         <TabsContent value="stories" className="space-y-4">
-          {totalStories === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No stories available yet</p>
-                <p className="text-sm mt-2">Approve some articles to generate stories</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent>
-                <MultiTenantStoriesList
-                  stories={stories.filter(story => story.status === 'ready')}
-                  expandedStories={expandedStories}
-                  processingApproval={processingApproval}
-                  processingRejection={processingRejection}
-                  deletingStories={deletingStories}
-                  publishingStories={publishingStories}
-                  animatingStories={animatingArticles}
-                  onToggleExpanded={handleToggleStoryExpanded}
-                  onApprove={handleStoryApprove}
-                  onReject={handleStoryReject}
-                  onDelete={() => {}}
-                  onEditSlide={handleEditSlide}
-                  onViewStory={() => {}}
-                  onReturnToReview={handleReturnToReview}
-                  onRefresh={refreshContent}
-                />
-              </CardContent>
-            </Card>
-           )}
+          <ApprovedStoriesPanel selectedTopicId={selectedTopicId} />
         </TabsContent>
 
         {/* Events Tab */}

@@ -37,6 +37,8 @@ export default function EastbourneFeed() {
     try {
       setLoadingStories(true);
 
+      console.log('🔍 Eastbourne: Loading stories with ID-first strategy');
+
       // 1) Try to resolve the Eastbourne topic (by slug or region)
       const { data: topicData } = await supabase
         .from("topics")
@@ -46,37 +48,102 @@ export default function EastbourneFeed() {
         .limit(1)
         .single();
 
-      // 2) Legacy stories linked via articles (region on articles)
-      const { data: legacyData, error: legacyError } = await supabase
-        .from("stories")
-        .select(`
-          id,
-          title,
-          author,
-          publication_name,
-          created_at,
-          updated_at,
-          status,
-          is_published,
-          slides (
-            id,
-            slide_number,
-            content
-          ),
-          articles (
-            source_url,
-            region,
-            published_at
-          )
-        `)
-        .eq("status", "published")
-        .ilike("articles.region", "%eastbourne%");
+      console.log('📊 Eastbourne: Found topic', topicData);
 
-      if (legacyError) {
-        console.error("Error loading legacy stories:", legacyError);
+      // ID-first strategy: Get article IDs first, then stories
+      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
+        // Get legacy article IDs for Eastbourne (by region)
+        supabase
+          .from('articles')
+          .select('id')
+          .ilike('region', '%eastbourne%'),
+        // Get multi-tenant article IDs for Eastbourne topic
+        topicData?.id ? supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicData.id) : Promise.resolve({ data: [] })
+      ]);
+
+      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
+      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
+
+      console.log('📊 Eastbourne: Found article IDs', { 
+        legacy: legacyArticleIds.length, 
+        multiTenant: mtTopicArticleIds.length 
+      });
+
+      // Now get stories using these article IDs, requiring slides
+      let legacyData: any[] = [];
+      let mtData: any[] = [];
+
+      if (legacyArticleIds.length > 0) {
+        const { data, error } = await supabase
+          .from("stories")
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            slides!inner (
+              id,
+              slide_number,
+              content
+            ),
+            articles!inner (
+              source_url,
+              region,
+              published_at
+            )
+          `)
+          .eq("status", "published")
+          .in('article_id', legacyArticleIds);
+
+        if (!error) {
+          legacyData = data || [];
+        }
+        console.log('📈 Eastbourne: Legacy stories with slides:', legacyData.length);
       }
 
-      const legacyTransformed = (legacyData || []).map((story: any) => ({
+      if (mtTopicArticleIds.length > 0) {
+        const { data, error } = await supabase
+          .from("stories")
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            slides!inner (
+              id,
+              slide_number,
+              content
+            ),
+            topic_articles!inner (
+              id,
+              topic_id,
+              shared_article_content:shared_article_content (
+                url,
+                title,
+                author,
+                published_at,
+                source_domain
+              )
+            )
+          `)
+          .eq("status", "published")
+          .in('topic_article_id', mtTopicArticleIds);
+
+        if (!error) {
+          mtData = data || [];
+        }
+        console.log('📈 Eastbourne: Multi-tenant stories with slides:', mtData.length);
+      }
+
+      // Transform data
+      const legacyTransformed = legacyData.map((story: any) => ({
         id: story.id,
         title: story.title,
         author: story.author,
@@ -91,70 +158,32 @@ export default function EastbourneFeed() {
         },
       }));
 
-      // 3) Multi-tenant stories linked via topic_articles (region lives on topic)
-      let multiTenantTransformed: any[] = [];
-      if (topicData?.id) {
-        const { data: mtData, error: mtError } = await supabase
-          .from("stories")
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            created_at,
-            updated_at,
-            status,
-            is_published,
-            slides (
-              id,
-              slide_number,
-              content
-            ),
-            topic_articles (
-              id,
-              topic_id,
-              shared_article_content:shared_article_content (
-                url,
-                title,
-                author,
-                published_at,
-                source_domain
-              )
-            )
-          `)
-          .eq("status", "published")
-          .eq("topic_articles.topic_id", topicData.id);
+      const multiTenantTransformed = mtData.map((story: any) => {
+        const sac = story.topic_articles?.shared_article_content;
+        return {
+          id: story.id,
+          title: story.title,
+          author: story.author,
+          publication_name: story.publication_name,
+          created_at: story.created_at,
+          updated_at: story.updated_at,
+          slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
+          article: {
+            source_url: sac?.url,
+            region: topicData?.region || "eastbourne",
+            published_at: sac?.published_at,
+          },
+        };
+      });
 
-        if (mtError) {
-          console.error("Error loading multi-tenant stories:", mtError);
-        }
-
-        multiTenantTransformed = (mtData || []).map((story: any) => {
-          const sac = story.topic_articles?.shared_article_content;
-          return {
-            id: story.id,
-            title: story.title,
-            author: story.author,
-            publication_name: story.publication_name,
-            created_at: story.created_at,
-            updated_at: story.updated_at,
-            slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
-            article: {
-              source_url: sac?.url,
-              region: topicData?.region || "eastbourne",
-              published_at: sac?.published_at,
-            },
-          };
-        });
-      }
-
-      // 4) Filter out stories without articles (due to RLS)
-      const validLegacy = legacyTransformed.filter(story => story.article?.source_url);
-      const validMultiTenant = multiTenantTransformed.filter(story => story.article?.source_url);
+      console.log('📊 Eastbourne: Transformed stories', {
+        legacy: legacyTransformed.length,
+        multiTenant: multiTenantTransformed.length
+      });
 
       // 5) Merge, de-dupe by story id, then sort
       const mergedMap = new Map<string, any>();
-      [...validLegacy, ...validMultiTenant].forEach((s) => mergedMap.set(s.id, s));
+      [...legacyTransformed, ...multiTenantTransformed].forEach((s) => mergedMap.set(s.id, s));
       let merged = Array.from(mergedMap.values());
 
       // 6) Fallback if no stories found

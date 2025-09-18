@@ -75,7 +75,11 @@ interface CarouselStatus {
   export?: CarouselExport;
 }
 
-export const ApprovedStoriesPanel = () => {
+interface ApprovedStoriesPanelProps {
+  selectedTopicId?: string | null;
+}
+
+export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelProps) => {
   const [approvedStories, setApprovedStories] = useState<Story[]>([]);
   const [loadingApproved, setLoadingApproved] = useState(true);
   const [expandedStories, setExpandedStories] = useState<Set<string>>(new Set());
@@ -88,45 +92,119 @@ export const ApprovedStoriesPanel = () => {
 
   useEffect(() => {
     loadApprovedStories();
-  }, []);
+  }, [selectedTopicId]);
 
   const loadApprovedStories = async () => {
     setLoadingApproved(true);
     try {
-      console.log('🔍 Loading approved stories...');
-      const { data: stories, error } = await supabase
-        .from('stories')
-        .select(`
-          *,
-          slides:slides(*),
-          article:articles(
-            id,
-            title,
-            author,
-            source_url,
-            region,
-            published_at,
-            word_count
-          )
-        `)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false });
+      console.log('🔍 Loading approved stories for topic:', selectedTopicId);
+      
+      if (!selectedTopicId) {
+        console.log('❌ No topic selected, showing empty stories');
+        setApprovedStories([]);
+        return;
+      }
 
-      if (error) throw error;
+      // ID-first strategy: Get article IDs for this topic, then get stories
+      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
+        // Get legacy article IDs for this topic
+        supabase
+          .from('articles')
+          .select('id')
+          .eq('topic_id', selectedTopicId),
+        // Get multi-tenant article IDs for this topic  
+        supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', selectedTopicId)
+      ]);
+
+      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
+      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
+
+      console.log('📊 ApprovedStories: Found article IDs', { 
+        legacy: legacyArticleIds.length, 
+        multiTenant: mtTopicArticleIds.length 
+      });
+
+      // Now get stories using these article IDs, requiring slides
+      let allStories: any[] = [];
+
+      if (legacyArticleIds.length > 0) {
+        const { data, error } = await supabase
+          .from('stories')
+          .select(`
+            *,
+            slides!inner:slides(*),
+            article:articles(
+              id,
+              title,
+              author,
+              source_url,
+              region,
+              published_at,
+              word_count
+            )
+          `)
+          .eq('status', 'published')
+          .in('article_id', legacyArticleIds)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          allStories.push(...data);
+        }
+      }
+
+      if (mtTopicArticleIds.length > 0) {
+        const { data, error } = await supabase
+          .from('stories')
+          .select(`
+            *,
+            slides!inner(*),
+            topic_articles!inner(
+              id,
+              shared_content:shared_article_content(
+                url,
+                title,
+                author,
+                published_at
+              )
+            )
+          `)
+          .eq('status', 'published')
+          .in('topic_article_id', mtTopicArticleIds)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          // Transform multi-tenant stories to match legacy format
+          const transformed = data.map((story: any) => ({
+            ...story,
+            article: {
+              id: story.topic_article_id,
+              title: story.topic_articles?.shared_content?.title || story.title,
+              author: story.topic_articles?.shared_content?.author || story.author,  
+              source_url: story.topic_articles?.shared_content?.url || '',
+              region: 'Multi-tenant',
+              published_at: story.topic_articles?.shared_content?.published_at,
+              word_count: null
+            }
+          }));
+          allStories.push(...transformed);
+        }
+      }
+
+      // Remove duplicates and sort
+      const uniqueStories = allStories.filter((story, index, arr) => 
+        arr.findIndex(s => s.id === story.id) === index
+      ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
-      console.log('📊 Raw stories data:', stories);
-      
-      const storiesWithSlides = (stories || []).filter(story => 
-        story.slides && story.slides.length > 0
-      );
-      
-      console.log('✅ Stories with slides:', storiesWithSlides.length, storiesWithSlides);
-      setApprovedStories(storiesWithSlides);
+      console.log('✅ Topic-scoped stories with slides:', uniqueStories.length);
+      setApprovedStories(uniqueStories);
 
       // Load carousel statuses for all approved stories
-      if (storiesWithSlides.length > 0) {
-        console.log('🎠 Loading carousel statuses for stories:', storiesWithSlides.map(s => s.id));
-        await loadCarouselStatuses(storiesWithSlides.map(s => s.id));
+      if (uniqueStories.length > 0) {
+        console.log('🎠 Loading carousel statuses for stories:', uniqueStories.map(s => s.id));
+        await loadCarouselStatuses(uniqueStories.map(s => s.id));
       } else {
         console.log('❌ No stories with slides found');
       }

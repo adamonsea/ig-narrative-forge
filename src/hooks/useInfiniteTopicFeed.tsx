@@ -92,91 +92,38 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
       const from = pageNum * STORIES_PER_PAGE;
       const to = from + STORIES_PER_PAGE - 1;
-
-      // Run both legacy (articles-based) and multi-tenant (topic_articles-based) queries in parallel
-      // We keep simple per-source pagination and merge client-side
       const ascending = sortBy === 'oldest';
-      const legacyQuery = supabase
-        .from('stories')
-        .select(`
-          id,
-          title,
-          author,
-          publication_name,
-          created_at,
-          updated_at,
-          cover_illustration_url,
-          cover_illustration_prompt,
-          slides (
-            id,
-            slide_number,
-            content,
-            word_count,
-            visuals (
-              image_url,
-              alt_text
-            )
-          ),
-          articles (
-            source_url,
-            published_at,
-            region,
-            topic_id
-          )
-        `)
-        .eq('status', 'published')
-        .eq('articles.topic_id', topicData.id)
-        .order('created_at', { ascending })
-        .range(from, to);
 
-      const multiTenantQuery = supabase
-        .from('stories')
-        .select(`
-          id,
-          title,
-          author,
-          publication_name,
-          created_at,
-          updated_at,
-          cover_illustration_url,
-          cover_illustration_prompt,
-          slides (
-            id,
-            slide_number,
-            content,
-            word_count,
-            visuals (
-              image_url,
-              alt_text
-            )
-          ),
-          topic_articles (
-            id,
-            topic_id,
-            shared_article_content:shared_article_content (
-              url,
-              title,
-              author,
-              published_at,
-              source_domain
-            )
-          )
-        `)
-        .eq('status', 'published')
-        .eq('topic_articles.topic_id', topicData.id)
-        .order('created_at', { ascending })
-        .range(from, to);
+      console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
-      const [legacyRes, mtRes] = await Promise.all([legacyQuery, multiTenantQuery]);
+      // ID-first strategy: First get article IDs for this topic, then get stories
+      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
+        // Get legacy article IDs for this topic
+        supabase
+          .from('articles')
+          .select('id')
+          .eq('topic_id', topicData.id),
+        // Get multi-tenant article IDs for this topic  
+        supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicData.id)
+      ]);
 
-      let legacyData = legacyRes.data || [];
-      const legacyError = legacyRes.error;
-      const mtData = mtRes.data || [];
-      const mtError = mtRes.error;
+      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
+      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
 
-      // If no legacy stories found by topic_id and this is a regional topic with a region, try region-based fallback
-      if ((!legacyData || legacyData.length === 0) && topicData?.topic_type === 'regional' && topicData?.region) {
-        const { data: legacyRegionData, error: legacyRegionError } = await supabase
+      console.log('📊 Feed: Found article IDs', { 
+        legacy: legacyArticleIds.length, 
+        multiTenant: mtTopicArticleIds.length 
+      });
+
+      // Now get stories using these article IDs
+      let legacyData: any[] = [];
+      let mtData: any[] = [];
+
+      if (legacyArticleIds.length > 0) {
+        const { data, error } = await supabase
           .from('stories')
           .select(`
             id,
@@ -187,7 +134,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
             updated_at,
             cover_illustration_url,
             cover_illustration_prompt,
-            slides (
+            slides!inner (
               id,
               slide_number,
               content,
@@ -197,7 +144,94 @@ export const useInfiniteTopicFeed = (slug: string) => {
                 alt_text
               )
             ),
-            articles (
+            articles!inner (
+              source_url,
+              published_at,
+              region,
+              topic_id
+            )
+          `)
+          .eq('status', 'published')
+          .in('article_id', legacyArticleIds)
+          .order('created_at', { ascending })
+          .range(from, to);
+        
+        if (!error) {
+          legacyData = data || [];
+        }
+        console.log('📈 Feed: Legacy stories with slides:', legacyData.length);
+      }
+
+      if (mtTopicArticleIds.length > 0) {
+        const { data, error } = await supabase
+          .from('stories')
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            cover_illustration_url,
+            cover_illustration_prompt,
+            slides!inner (
+              id,
+              slide_number,
+              content,
+              word_count,
+              visuals (
+                image_url,
+                alt_text
+              )
+            ),
+            topic_articles!inner (
+              id,
+              topic_id,
+              shared_article_content:shared_article_content (
+                url,
+                title,
+                author,
+                published_at,
+                source_domain
+              )
+            )
+          `)
+          .eq('status', 'published')
+          .in('topic_article_id', mtTopicArticleIds)
+          .order('created_at', { ascending })
+          .range(from, to);
+        
+        if (!error) {
+          mtData = data || [];
+        }
+        console.log('📈 Feed: Multi-tenant stories with slides:', mtData.length);
+      }
+
+      // Regional fallback for topics with no direct article matches
+      if (legacyData.length === 0 && mtData.length === 0 && topicData?.topic_type === 'regional' && topicData?.region) {
+        console.log('🔄 Feed: Trying regional fallback for', topicData.region);
+        const { data: fallbackData, error } = await supabase
+          .from('stories')
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            cover_illustration_url,
+            cover_illustration_prompt,
+            slides!inner (
+              id,
+              slide_number,
+              content,
+              word_count,
+              visuals (
+                image_url,
+                alt_text
+              )
+            ),
+            articles!inner (
               source_url,
               published_at,
               region,
@@ -208,17 +242,16 @@ export const useInfiniteTopicFeed = (slug: string) => {
           .ilike('articles.region', `%${topicData.region}%`)
           .order('created_at', { ascending })
           .range(from, to);
-        if (!legacyRegionError && legacyRegionData) legacyData = legacyRegionData;
+        
+        if (!error && fallbackData) {
+          legacyData = fallbackData;
+          console.log('📈 Feed: Regional fallback stories:', legacyData.length);
+        }
       }
-
-      if (legacyError) console.error('Legacy stories query error:', legacyError);
-      if (mtError) console.error('Multi-tenant stories query error:', mtError);
 
       console.info('📊 Stories query results:', {
         legacy: legacyData?.length || 0,
-        multiTenant: mtData?.length || 0,
-        legacyError: legacyError || null,
-        multiTenantError: mtError || null
+        multiTenant: mtData?.length || 0
       });
 
       const legacyTransformed = (legacyData || []).map((story: any) => ({
