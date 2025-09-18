@@ -119,7 +119,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const totalArticles = articles.length;
   const totalQueue = queueItems.length;
   const totalStories = stories.length;
-  const processingCount = queueItems.filter(q => q.status === 'processing' || q.status === 'pending').length;
+  const processingCount = queueItems.filter(q => 
+    (q.status === 'processing' || q.status === 'pending') && 
+    q.attempts < q.max_attempts
+  ).length;
+  const stuckCount = queueItems.filter(q => 
+    q.status === 'pending' && 
+    q.attempts >= q.max_attempts && 
+    q.error_message
+  ).length;
   // Article management handlers
   const handleSlideQuantityChange = (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => {
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
@@ -296,6 +304,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
                 <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
                 <span className="text-xs">{processingCount}</span>
+              </span>
+            )}
+            {stuckCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-destructive animate-fade-in">
+                <span aria-hidden className="h-2 w-2 rounded-full bg-destructive" />
+                <span className="text-xs" title={`${stuckCount} items need attention`}>{stuckCount}</span>
               </span>
             )}
           </TabsTrigger>
