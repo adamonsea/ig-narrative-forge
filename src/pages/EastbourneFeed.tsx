@@ -63,7 +63,7 @@ export default function EastbourneFeed() {
             slide_number,
             content
           ),
-          articles!inner (
+          articles (
             source_url,
             region,
             published_at
@@ -110,10 +110,10 @@ export default function EastbourneFeed() {
               slide_number,
               content
             ),
-            topic_articles!inner (
+            topic_articles (
               id,
               topic_id,
-              shared_article_content:shared_article_content!inner (
+              shared_article_content:shared_article_content (
                 url,
                 title,
                 author,
@@ -148,10 +148,45 @@ export default function EastbourneFeed() {
         });
       }
 
-      // 4) Merge, de-dupe by story id, then sort
+      // 4) Filter out stories without articles (due to RLS)
+      const validLegacy = legacyTransformed.filter(story => story.article?.source_url);
+      const validMultiTenant = multiTenantTransformed.filter(story => story.article?.source_url);
+
+      // 5) Merge, de-dupe by story id, then sort
       const mergedMap = new Map<string, any>();
-      [...legacyTransformed, ...multiTenantTransformed].forEach((s) => mergedMap.set(s.id, s));
+      [...validLegacy, ...validMultiTenant].forEach((s) => mergedMap.set(s.id, s));
       let merged = Array.from(mergedMap.values());
+
+      // 6) Fallback if no stories found
+      if (merged.length === 0) {
+        console.log('No stories found, trying fallback query...');
+        const { data: fallbackStories } = await supabase
+          .from('stories')
+          .select(`
+            id,
+            title,
+            author,
+            publication_name,
+            created_at,
+            updated_at,
+            slides (*)
+          `)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false })
+          .limit(10);
+          
+        if (fallbackStories?.length) {
+          merged = fallbackStories.map(story => ({
+            ...story,
+            slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
+            article: {
+              source_url: '#',
+              region: 'Unknown',
+              published_at: story.created_at
+            }
+          }));
+        }
+      }
 
       if (sortBy === "newest") {
         merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

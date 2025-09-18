@@ -117,7 +117,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
               alt_text
             )
           ),
-          articles!inner (
+          articles (
             source_url,
             published_at,
             region,
@@ -150,10 +150,10 @@ export const useInfiniteTopicFeed = (slug: string) => {
               alt_text
             )
           ),
-          topic_articles!inner (
+          topic_articles (
             id,
             topic_id,
-            shared_article_content:shared_article_content!inner (
+            shared_article_content:shared_article_content (
               url,
               title,
               author,
@@ -197,7 +197,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
                 alt_text
               )
             ),
-            articles!inner (
+            articles (
               source_url,
               published_at,
               region,

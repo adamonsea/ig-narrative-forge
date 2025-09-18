@@ -99,7 +99,7 @@ export const ApprovedStoriesPanel = () => {
         .select(`
           *,
           slides:slides(*),
-          article:articles!stories_article_id_fkey(
+          article:articles(
             id,
             title,
             author,
