@@ -119,14 +119,16 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         });
         setArticles([]);
       } else {
+        // Log RPC result size for debugging
+        console.info('🧪 MT pipeline: RPC articles returned', (articlesResult.data || []).length, 'for topic', selectedTopicId);
+
         // Get story IDs to filter out articles that are already published
         const publishedStoryIds = new Set();
         if (articlesResult.data) {
-        const { data: storiesData } = await supabase
-          .from('stories')
-          .select('topic_article_id')
-          .eq('status', 'published');
-          
+          const { data: storiesData } = await supabase
+            .from('stories')
+            .select('topic_article_id')
+            .eq('status', 'published');
           storiesData?.forEach(story => {
             if (story.topic_article_id) publishedStoryIds.add(story.topic_article_id);
           });
@@ -138,21 +140,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .select('topic_article_id')
           .in('status', ['pending', 'processing'])
           .not('topic_article_id', 'is', null);
-          
+        
         const queuedTopicArticleIds = new Set(
           (queueItemsForFiltering || []).map((item: any) => item.topic_article_id)
         );
 
         const articlesData = articlesResult.data
           ?.filter((item: any) => 
-            item.processing_status === 'new' && // Only show truly new articles in Arrivals
-            !publishedStoryIds.has(item.id) && // Filter out articles that already have published stories
-            !queuedTopicArticleIds.has(item.id) // Filter out articles that are currently being processed
+            item.processing_status === 'new' &&
+            !publishedStoryIds.has(item.id) &&
+            !queuedTopicArticleIds.has(item.id)
           )
           ?.map((item: any) => {
             const wordCount = item.word_count || 0;
-            const isSnippet = wordCount > 0 && wordCount < 150; // Flag snippets under 150 words
-            
+            const isSnippet = wordCount > 0 && wordCount < 150;
             return {
               id: item.id,
               shared_content_id: item.shared_content_id,
@@ -172,9 +173,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               is_snippet: isSnippet
             };
           }) || [];
+        console.info('🧪 MT pipeline: filtered new articles', articlesData.length, { queued: queuedTopicArticleIds.size, publishedStories: publishedStoryIds.size });
         setArticles(articlesData);
       }
-
       // Declare variables for filtered data
       let filteredQueueItems: any[] = [];
       let filteredStories: any[] = [];
