@@ -588,28 +588,63 @@ Return in JSON format:
       };
     }
 
-    // Store the story with generated slides
-    const { data: story, error: storyError } = await supabase
-      .from('stories')
-      .insert({
-        article_id: articleId,
-        title: article.title,
-        status: 'draft'
-      })
-      .select('id')
-      .single();
+    // Store or update the story idempotently
+    let storyId: string | null = null;
 
-    if (storyError) {
-      throw new Error(`Failed to create story: ${storyError.message}`);
+    // Try to find existing story for this article
+    const { data: existingStory, error: existingStoryError } = await supabase
+      .from('stories')
+      .select('id,status')
+      .eq('article_id', articleId)
+      .maybeSingle();
+
+    if (existingStoryError) {
+      console.warn('⚠️ Error checking existing story, proceeding to create new:', existingStoryError);
     }
 
-    console.log(`📖 Created story with ID: ${story.id}`);
+    if (existingStory?.id) {
+      storyId = existingStory.id;
+      // Optionally update title/status metadata
+      const { error: updateStoryError } = await supabase
+        .from('stories')
+        .update({ title: article.title, updated_at: new Date().toISOString() })
+        .eq('id', storyId);
+      if (updateStoryError) {
+        console.warn('⚠️ Failed to update existing story metadata:', updateStoryError);
+      } else {
+        console.log(`📝 Updated existing story ${storyId}`);
+      }
+    } else {
+      const { data: newStory, error: storyError } = await supabase
+        .from('stories')
+        .insert({
+          article_id: articleId,
+          title: article.title,
+          status: 'draft'
+        })
+        .select('id')
+        .single();
 
-    // Store slides
+      if (storyError || !newStory) {
+        throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
+      }
+      storyId = newStory.id;
+      console.log(`📖 Created story with ID: ${storyId}`);
+    }
+
+    // Replace slides atomically (delete then insert)
+    const { error: deleteSlidesError } = await supabase
+      .from('slides')
+      .delete()
+      .eq('story_id', storyId);
+    if (deleteSlidesError) {
+      console.warn('⚠️ Could not delete existing slides (may be none):', deleteSlidesError);
+    }
+
     const { error: slidesError } = await supabase
       .from('slides')
       .insert(slides.map(slide => ({
-        story_id: story.id,
+        story_id: storyId,
         slide_number: slide.slideNumber,
         content: slide.content,
         visual_prompt: slide.visualPrompt,
@@ -622,11 +657,20 @@ Return in JSON format:
       console.log('💾 Stored slides successfully');
     }
 
-    // Store post copy
+    // Upsert post copy for Instagram by replacing any prior row
+    const { error: deletePostCopyError } = await supabase
+      .from('story_social_content')
+      .delete()
+      .eq('story_id', storyId)
+      .eq('platform', 'instagram');
+    if (deletePostCopyError) {
+      console.warn('⚠️ Could not delete existing social content (may be none):', deletePostCopyError);
+    }
+
     const { error: postCopyError } = await supabase
       .from('story_social_content')
       .insert({
-        story_id: story.id,
+        story_id: storyId,
         platform: 'instagram',
         content_type: 'carousel_post',
         caption: postCopy.caption,
@@ -649,7 +693,7 @@ Return in JSON format:
     try {
       const { error: carouselError } = await supabase.functions.invoke('story-illustrator', {
         body: { 
-          storyId: story.id,
+          storyId,
           forceRegenerate: true,
           skipExistingImages: false
         }
@@ -667,7 +711,7 @@ Return in JSON format:
     return new Response(
       JSON.stringify({ 
         success: true, 
-        story_id: story.id,
+        story_id: storyId,
         slides_count: slides.length,
         ai_provider: actualProvider,
         publication_name: publicationName,

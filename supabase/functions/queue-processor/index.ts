@@ -39,6 +39,20 @@ serve(async (req) => {
     
     console.log('🔄 Starting queue processing...');
 
+    // Recover stale processing jobs older than 10 minutes
+    const staleCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { error: resetStaleError } = await supabase
+      .from('content_generation_queue')
+      .update({ status: 'pending', started_at: null, error_message: null })
+      .eq('status', 'processing')
+      .lt('started_at', staleCutoff)
+      .lt('attempts', 3);
+    if (resetStaleError) {
+      console.warn('⚠️ Failed to reset stale jobs:', resetStaleError);
+    } else {
+      console.log('🧹 Stale processing jobs older than 10m reset to pending');
+    }
+
     // Get pending jobs from the queue (limit to 5 at a time for better efficiency)
     const { data: pendingJobs, error: queueError } = await supabase
       .from('content_generation_queue')
@@ -94,6 +108,37 @@ serve(async (req) => {
         // Call the enhanced-content-generator function (only supports legacy articles for now)
         if (!job.article_id) {
           throw new Error('Enhanced content generator currently only supports legacy articles');
+        }
+
+        // Skip if a ready story already exists for this article
+        const { data: existingStory, error: existingStoryError } = await supabase
+          .from('stories')
+          .select('id,status')
+          .eq('article_id', job.article_id)
+          .maybeSingle();
+        if (existingStoryError) {
+          console.warn('⚠️ Error checking existing story before generation:', existingStoryError);
+        }
+        if (existingStory && (existingStory.status === 'ready' || existingStory.status === 'published')) {
+          const { error: skipError } = await supabase
+            .from('content_generation_queue')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString(),
+              result_data: {
+                success: true,
+                skipped: true,
+                reason: 'story_already_ready',
+                storyId: existingStory.id
+              }
+            })
+            .eq('id', job.id);
+          if (skipError) {
+            console.error('❌ Failed to mark job as completed_skipped:', skipError);
+          } else {
+            console.log(`⏩ Skipped generation for article ${job.article_id} - story already ready (${existingStory.id})`);
+          }
+          continue;
         }
 
         const generatorBody = {
