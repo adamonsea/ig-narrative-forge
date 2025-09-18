@@ -132,10 +132,22 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           });
         }
 
+        // Get pending/processing queue items to hide approved articles
+        const { data: queueItemsForFiltering } = await supabase
+          .from('content_generation_queue')
+          .select('topic_article_id')
+          .in('status', ['pending', 'processing'])
+          .not('topic_article_id', 'is', null);
+          
+        const queuedTopicArticleIds = new Set(
+          (queueItemsForFiltering || []).map((item: any) => item.topic_article_id)
+        );
+
         const articlesData = articlesResult.data
           ?.filter((item: any) => 
-            ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
-            !publishedStoryIds.has(item.id) // Filter out articles that already have published stories
+            item.processing_status === 'new' && // Only show truly new articles in Arrivals
+            !publishedStoryIds.has(item.id) && // Filter out articles that already have published stories
+            !queuedTopicArticleIds.has(item.id) // Filter out articles that are currently being processed
           )
           ?.map((item: any) => {
             const wordCount = item.word_count || 0;
@@ -311,12 +323,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           });
           setStories(storiesData);
         
-        // Calculate stats
+        // Calculate stats accurately
+        const allTopicArticles = articlesResult.data || [];
         const newStats = {
-          totalArticles: articlesResult.data?.length || 0,
-          pendingArticles: (articlesResult.data || []).filter((a: any) => ['new', 'processed'].includes(a.processing_status)).length,
-          processingQueue: queueResult.data?.length || 0,
-          readyStories: filteredStories.filter((s: any) => s.status === 'ready').length || 0
+          totalArticles: allTopicArticles.length,
+          pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length, // Only truly new articles
+          processingQueue: filteredQueueItems.length, // Queue items filtered to this topic
+          readyStories: filteredStories.filter((s: any) => s.status === 'ready').length
         };
         setStats(newStats);
 
@@ -388,10 +401,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience
     const finalSlideType = article.is_snippet && slideType === 'tabloid' ? 'short' : slideType;
     
+    // Optimistically hide the article from Arrivals immediately
+    setArticles(prev => prev.filter(a => a.id !== article.id));
+    
     await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle);
-    // Force immediate reload to show approval/queue addition
+    // Reload to update all sections and show the queue item
     await loadTopicContent();
-  }, [approveMultiTenantArticle, loadTopicContent, articles]);
+  }, [approveMultiTenantArticle, loadTopicContent]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
     await deleteMultiTenantArticle(articleId, articleTitle);

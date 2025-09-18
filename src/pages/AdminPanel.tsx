@@ -15,6 +15,8 @@ import { TopicArchiveManager } from '@/components/TopicArchiveManager';
 import { SourceValidationTester } from '@/components/SourceValidationTester';
 import { DiscardedArticlesBackfillButton } from '@/components/DiscardedArticlesBackfillButton';
 import { QueueManager } from '@/components/QueueManager';
+import { supabase } from '@/integrations/supabase/client';
+
 export default function AdminPanel() {
   const { user, loading } = useAuth();
 
@@ -66,6 +68,29 @@ export default function AdminPanel() {
 
           <TabsContent value="queue" className="mt-6">
             <QueueManager />
+            <div className="mt-6">
+              <div className="bg-card rounded-lg border p-6">
+                <h3 className="text-lg font-semibold mb-4">Multi-Tenant Story Linkage</h3>
+                <p className="text-muted-foreground mb-4">
+                  Repair existing stories that lack proper multi-tenant linkage (topic_article_id and shared_content_id).
+                </p>
+                <button 
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('backfill-story-linkage');
+                      if (error) throw error;
+                      alert(`Backfill complete! Updated ${data.updated} stories out of ${data.processed} processed.`);
+                    } catch (error) {
+                      console.error('Backfill failed:', error);
+                      alert('Backfill failed: ' + error.message);
+                    }
+                  }}
+                >
+                  Run Story Linkage Backfill
+                </button>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="testing" className="mt-6">

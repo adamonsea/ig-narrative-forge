@@ -105,21 +105,43 @@ serve(async (req) => {
           continue;
         }
 
-        // Call the enhanced-content-generator function (only supports legacy articles for now)
-        if (!job.article_id) {
-          throw new Error('Enhanced content generator currently only supports legacy articles');
+        // Skip if a ready or published story already exists for this article
+        let existingStory: any = null;
+        let skipReason = '';
+        
+        // Check both legacy and multi-tenant stories
+        if (job.article_id) {
+          const { data: legacyStory, error: legacyError } = await supabase
+            .from('stories')
+            .select('id,status')
+            .eq('article_id', job.article_id)
+            .in('status', ['ready', 'published', 'draft'])
+            .maybeSingle();
+          if (legacyError) {
+            console.warn('⚠️ Error checking existing legacy story:', legacyError);
+          } else if (legacyStory && ['ready', 'published'].includes(legacyStory.status)) {
+            existingStory = legacyStory;
+            skipReason = `legacy story already ${legacyStory.status}`;
+          }
         }
-
-        // Skip if a ready story already exists for this article
-        const { data: existingStory, error: existingStoryError } = await supabase
-          .from('stories')
-          .select('id,status')
-          .eq('article_id', job.article_id)
-          .maybeSingle();
-        if (existingStoryError) {
-          console.warn('⚠️ Error checking existing story before generation:', existingStoryError);
+        
+        if (!existingStory && job.topic_article_id) {
+          const { data: multiTenantStory, error: mtError } = await supabase
+            .from('stories')
+            .select('id,status')
+            .eq('topic_article_id', job.topic_article_id)
+            .in('status', ['ready', 'published', 'draft'])
+            .maybeSingle();
+          if (mtError) {
+            console.warn('⚠️ Error checking existing multi-tenant story:', mtError);
+          } else if (multiTenantStory && ['ready', 'published'].includes(multiTenantStory.status)) {
+            existingStory = multiTenantStory;
+            skipReason = `multi-tenant story already ${multiTenantStory.status}`;
+          }
         }
-        if (existingStory && (existingStory.status === 'ready' || existingStory.status === 'published')) {
+        
+        // Skip if ready or published story exists
+        if (existingStory && ['ready', 'published'].includes(existingStory.status)) {
           const { error: skipError } = await supabase
             .from('content_generation_queue')
             .update({
@@ -128,7 +150,7 @@ serve(async (req) => {
               result_data: {
                 success: true,
                 skipped: true,
-                reason: 'story_already_ready',
+                reason: skipReason,
                 storyId: existingStory.id
               }
             })
@@ -136,18 +158,36 @@ serve(async (req) => {
           if (skipError) {
             console.error('❌ Failed to mark job as completed_skipped:', skipError);
           } else {
-            console.log(`⏩ Skipped generation for article ${job.article_id} - story already ready (${existingStory.id})`);
+            console.log(`⏩ Skipped ${jobType} job ${job.id} - ${skipReason} (${existingStory.id})`);
           }
           continue;
         }
 
-        const generatorBody = {
-          articleId: job.article_id,
+        // Prepare generator body with multi-tenant support
+        const generatorBody: any = {
           slideType: job.slidetype,
           aiProvider: job.ai_provider || 'deepseek',
           tone: job.tone || 'conversational',
           audienceExpertise: job.writing_style === 'journalistic' ? 'intermediate' : 'beginner'
         };
+        
+        // Include all relevant IDs for multi-tenant support
+        if (job.article_id) {
+          generatorBody.articleId = job.article_id;
+        }
+        if (job.topic_article_id) {
+          generatorBody.topicArticleId = job.topic_article_id;
+        }
+        if (job.shared_content_id) {
+          generatorBody.sharedContentId = job.shared_content_id;
+        }
+        
+        console.log(`🚀 Calling enhanced-content-generator for ${jobType} job with IDs:`, {
+          articleId: generatorBody.articleId,
+          topicArticleId: generatorBody.topicArticleId,
+          sharedContentId: generatorBody.sharedContentId,
+          slideType: generatorBody.slideType
+        });
 
         const { data: generationResult, error: generationError } = await supabase.functions.invoke('enhanced-content-generator', {
           body: generatorBody
@@ -176,14 +216,20 @@ serve(async (req) => {
           console.error(`Failed to mark job ${job.id} as completed:`, completeError);
         }
 
-        console.log(`✅ Successfully processed ${jobType} job ${job.id} - created ${generationResult.slideCount || generationResult.slides_count} slides`);
+        const slideCount = generationResult.slideCount || generationResult.slides_count;
+        const contentSource = generationResult.content_source || 'unknown';
+        const isSnippet = generationResult.is_snippet || false;
+        
+        console.log(`✅ Successfully processed ${jobType} job ${job.id} - created ${slideCount} slides from ${contentSource} source${isSnippet ? ' (snippet)' : ''}`);
         
         results.push({
           jobId: job.id,
           articleId: jobIdentifier,
           success: true,
-          slideCount: generationResult.slideCount || generationResult.slides_count,
-          sourceType: jobType
+          slideCount: slideCount,
+          sourceType: jobType,
+          contentSource: contentSource,
+          isSnippet: isSnippet
         });
 
       } catch (jobError) {

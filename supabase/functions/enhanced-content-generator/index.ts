@@ -471,26 +471,82 @@ Return in JSON format:
   try {
     const { 
       articleId, 
+      topicArticleId,
+      sharedContentId,
       slideType = 'tabloid', 
       aiProvider = 'deepseek',
       tone = 'conversational',
       audienceExpertise = 'intermediate'
     } = await req.json();
     
-    console.log(`Processing article ID: ${articleId} with AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
+    // Log multi-tenant context
+    const isMultiTenant = !!(topicArticleId || sharedContentId);
+    console.log(`Processing ${isMultiTenant ? 'multi-tenant' : 'legacy'} article. ArticleId: ${articleId}, TopicArticleId: ${topicArticleId}, SharedContentId: ${sharedContentId}`);
+    console.log(`AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
 
-    // Get the article data
-    const { data: article, error: articleError } = await supabase
-      .from('articles')
-      .select('*')
-      .eq('id', articleId)
-      .single();
+    // Get article data - prioritize shared content for multi-tenant
+    let article: Article;
+    let actualContentSource = 'legacy';
+    
+    if (isMultiTenant && sharedContentId) {
+      console.log('🔄 Fetching content from shared_article_content (multi-tenant)');
+      
+      // Get shared content and topic article data
+      const [sharedContentResult, topicArticleResult] = await Promise.all([
+        supabase
+          .from('shared_article_content')
+          .select('*')
+          .eq('id', sharedContentId)
+          .single(),
+        topicArticleId ? supabase
+          .from('topic_articles')
+          .select('*')
+          .eq('id', topicArticleId)
+          .single() : { data: null, error: null }
+      ]);
 
-    if (articleError || !article) {
-      throw new Error(`Article not found: ${articleId}`);
+      if (sharedContentResult.error || !sharedContentResult.data) {
+        throw new Error(`Shared content not found: ${sharedContentId}`);
+      }
+
+      const sharedContent = sharedContentResult.data;
+      const topicArticle = topicArticleResult.data;
+      
+      // Map shared content to Article interface
+      article = {
+        id: articleId || `bridge-${topicArticleId}`,
+        title: sharedContent.title,
+        body: sharedContent.body || '',
+        author: sharedContent.author,
+        published_at: sharedContent.published_at,
+        source_url: sharedContent.url,
+        image_url: sharedContent.image_url,
+        canonical_url: sharedContent.canonical_url,
+        word_count: sharedContent.word_count || 0,
+        regional_relevance_score: topicArticle?.regional_relevance_score || 0,
+        content_quality_score: topicArticle?.content_quality_score || 0,
+        processing_status: topicArticle?.processing_status || 'new',
+        import_metadata: topicArticle?.import_metadata || {},
+        topic_id: topicArticle?.topic_id
+      };
+      actualContentSource = 'shared';
+      console.log(`✅ Using shared content: ${article.title} (${article.word_count} words)`);
+    } else {
+      console.log('🔄 Fetching content from articles table (legacy)');
+      const { data: legacyArticle, error: articleError } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('id', articleId)
+        .single();
+
+      if (articleError || !legacyArticle) {
+        throw new Error(`Legacy article not found: ${articleId}`);
+      }
+
+      article = legacyArticle;
+      actualContentSource = 'legacy';
+      console.log(`✅ Using legacy article: ${article.title} (${article.word_count} words)`);
     }
-
-    console.log(`Found article: ${article.title}`);
 
     // Get topic details for audience expertise and default tone if available
     let topicExpertise = audienceExpertise;
@@ -528,6 +584,15 @@ Return in JSON format:
       }
     }
 
+    // Snippet handling logic
+    const isSnippet = article.word_count > 0 && article.word_count < 150;
+    let finalSlideType = slideType;
+    
+    if (isSnippet) {
+      console.log(`🔍 Snippet detected (${article.word_count} words), forcing slideType to 'short'`);
+      finalSlideType = 'short';
+    }
+
     // Generate slides with the selected AI provider
     let slides: SlideContent[];
     let actualProvider = aiProvider;
@@ -535,29 +600,35 @@ Return in JSON format:
     try {
       if (aiProvider === 'deepseek' && deepseekApiKey) {
         console.log('🤖 Using DeepSeek for slide generation...');
-        slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, slideType, publicationName);
+        slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
       } else if (aiProvider === 'openai' && openaiApiKey) {
         console.log('🤖 Using OpenAI for slide generation...');
-        slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, slideType, publicationName);
+        slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
       } else {
         // Fallback logic
         console.log('🔄 Primary provider not available, trying fallback...');
         if (openaiApiKey) {
           console.log('📝 Falling back to OpenAI...');
-          slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, slideType, publicationName);
+          slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
           actualProvider = 'openai';
         } else if (deepseekApiKey) {
           console.log('📝 Falling back to DeepSeek...');
-          slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, slideType, publicationName);
+          slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
           actualProvider = 'deepseek';
         } else {
           throw new Error('No AI provider available - both OpenAI and DeepSeek API keys missing');
         }
       }
 
-      console.log(`✅ Generated ${slides.length} slides successfully`);
+      console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
     } catch (error) {
       console.error('❌ Error during slide generation:', error);
+      
+      // For very short content, provide specific error handling
+      if (isSnippet && article.body && article.body.length < 50) {
+        throw new Error(`Content too short for generation: ${article.body.length} characters. Please expand the content or try manual editing.`);
+      }
+      
       throw error;
     }
 
@@ -588,40 +659,103 @@ Return in JSON format:
       };
     }
 
-    // Store or update the story idempotently
+    // Store or update the story idempotently with multi-tenant support
     let storyId: string | null = null;
 
-    // Try to find existing story for this article
-    const { data: existingStory, error: existingStoryError } = await supabase
-      .from('stories')
-      .select('id,status')
-      .eq('article_id', articleId)
-      .maybeSingle();
-
-    if (existingStoryError) {
-      console.warn('⚠️ Error checking existing story, proceeding to create new:', existingStoryError);
+    // Try to find existing story for this article (check both article_id and topic_article_id)
+    let existingStory: any = null;
+    
+    if (isMultiTenant && topicArticleId) {
+      // Multi-tenant: check by topic_article_id first
+      const { data: multiTenantStory, error: mtError } = await supabase
+        .from('stories')
+        .select('id,status,article_id')
+        .eq('topic_article_id', topicArticleId)
+        .maybeSingle();
+      
+      if (mtError) {
+        console.warn('⚠️ Error checking existing multi-tenant story:', mtError);
+      } else if (multiTenantStory) {
+        existingStory = multiTenantStory;
+        console.log(`🔍 Found existing multi-tenant story ${multiTenantStory.id}`);
+      }
+    }
+    
+    // If no multi-tenant story found and we have articleId, check legacy
+    if (!existingStory && articleId) {
+      const { data: legacyStory, error: legacyError } = await supabase
+        .from('stories')
+        .select('id,status,topic_article_id')
+        .eq('article_id', articleId)
+        .maybeSingle();
+      
+      if (legacyError) {
+        console.warn('⚠️ Error checking existing legacy story:', legacyError);
+      } else if (legacyStory) {
+        existingStory = legacyStory;
+        console.log(`🔍 Found existing legacy story ${legacyStory.id}`);
+      }
     }
 
     if (existingStory?.id) {
       storyId = existingStory.id;
-      // Optionally update title/status metadata
+      
+      // Update story with multi-tenant linkage if needed
+      const updateData: any = { 
+        title: article.title, 
+        updated_at: new Date().toISOString(),
+        slidetype: finalSlideType
+      };
+      
+      // Set multi-tenant fields if this is a multi-tenant context
+      if (isMultiTenant) {
+        if (topicArticleId && !existingStory.topic_article_id) {
+          updateData.topic_article_id = topicArticleId;
+          console.log(`🔗 Linking existing story to topic_article_id: ${topicArticleId}`);
+        }
+        if (sharedContentId) {
+          updateData.shared_content_id = sharedContentId;
+          console.log(`🔗 Linking existing story to shared_content_id: ${sharedContentId}`);
+        }
+      }
+      
       const { error: updateStoryError } = await supabase
         .from('stories')
-        .update({ title: article.title, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', storyId);
+        
       if (updateStoryError) {
         console.warn('⚠️ Failed to update existing story metadata:', updateStoryError);
       } else {
-        console.log(`📝 Updated existing story ${storyId}`);
+        console.log(`📝 Updated existing story ${storyId} with multi-tenant linkage`);
       }
     } else {
+      // Create new story with full multi-tenant support
+      const insertData: any = {
+        title: article.title,
+        status: 'draft',
+        slidetype: finalSlideType,
+        tone: effectiveTone,
+        audience_expertise: topicExpertise
+      };
+      
+      // Set appropriate IDs based on context
+      if (articleId) {
+        insertData.article_id = articleId;
+      }
+      if (isMultiTenant) {
+        if (topicArticleId) {
+          insertData.topic_article_id = topicArticleId;
+        }
+        if (sharedContentId) {
+          insertData.shared_content_id = sharedContentId;
+        }
+        console.log(`📖 Creating new multi-tenant story with topic_article_id: ${topicArticleId}, shared_content_id: ${sharedContentId}`);
+      }
+
       const { data: newStory, error: storyError } = await supabase
         .from('stories')
-        .insert({
-          article_id: articleId,
-          title: article.title,
-          status: 'draft'
-        })
+        .insert(insertData)
         .select('id')
         .single();
 
@@ -629,7 +763,7 @@ Return in JSON format:
         throw new Error(`Failed to create story: ${storyError?.message || 'unknown error'}`);
       }
       storyId = newStory.id;
-      console.log(`📖 Created story with ID: ${storyId}`);
+      console.log(`📖 Created ${isMultiTenant ? 'multi-tenant' : 'legacy'} story with ID: ${storyId}`);
     }
 
     // Replace slides atomically (delete then insert)
@@ -718,7 +852,13 @@ Return in JSON format:
         tone_used: effectiveTone,
         expertise_level: topicExpertise,
         enhanced_prompting: true,
-        post_copy: postCopy
+        post_copy: postCopy,
+        content_source: actualContentSource,
+        is_snippet: isSnippet,
+        final_slide_type: finalSlideType,
+        multi_tenant: isMultiTenant,
+        topic_article_id: topicArticleId,
+        shared_content_id: sharedContentId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
