@@ -122,10 +122,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         // Get story IDs to filter out articles that are already published
         const publishedStoryIds = new Set();
         if (articlesResult.data) {
-          const { data: storiesData } = await supabase
-            .from('stories')
-            .select('topic_article_id')
-            .eq('is_published', true);
+        const { data: storiesData } = await supabase
+          .from('stories')
+          .select('topic_article_id')
+          .eq('status', 'published');
           
           storiesData?.forEach(story => {
             if (story.topic_article_id) publishedStoryIds.add(story.topic_article_id);
