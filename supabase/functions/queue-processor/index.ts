@@ -91,25 +91,20 @@ serve(async (req) => {
           continue;
         }
 
-        // Call the content-generator function with unified parameters
-        const generatorBody: any = {
+        // Call the enhanced-content-generator function (only supports legacy articles for now)
+        if (!job.article_id) {
+          throw new Error('Enhanced content generator currently only supports legacy articles');
+        }
+
+        const generatorBody = {
+          articleId: job.article_id,
           slideType: job.slidetype,
           aiProvider: job.ai_provider || 'deepseek',
           tone: job.tone || 'conversational',
-          writingStyle: job.writing_style || 'journalistic',
-          costOptimized: true,
-          batchMode: true
+          audienceExpertise: job.writing_style === 'journalistic' ? 'intermediate' : 'beginner'
         };
 
-        // Add appropriate IDs based on job type
-        if (job.article_id) {
-          generatorBody.articleId = job.article_id;
-        } else {
-          generatorBody.topicArticleId = job.topic_article_id;
-          generatorBody.sharedContentId = job.shared_content_id;
-        }
-
-        const { data: generationResult, error: generationError } = await supabase.functions.invoke('content-generator', {
+        const { data: generationResult, error: generationError } = await supabase.functions.invoke('enhanced-content-generator', {
           body: generatorBody
         });
 
