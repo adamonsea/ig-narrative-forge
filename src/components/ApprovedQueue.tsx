@@ -108,7 +108,6 @@ export const ApprovedQueue = () => {
         .select(`
           *,
           slides(*),
-          articles(*),
           posts(*),
           visuals:slides(
             visuals(*)
@@ -116,19 +115,17 @@ export const ApprovedQueue = () => {
           carousel_exports(*)
         `)
         .eq('status', 'published')
+        .eq('is_published', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       // Flatten visuals from nested structure and fix carousel_exports type
-      // Filter client-side to ensure stories have both slides and articles
-      const storiesWithVisuals = data
-        ?.filter(story => story.slides?.length > 0 && story.articles)
-        ?.map(story => ({
-          ...story,
-          visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || [],
-          carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
-        })) || [];
+      const storiesWithVisuals = data?.map(story => ({
+        ...story,
+        visuals: story.visuals?.flatMap((slide: any) => slide.visuals || []) || [],
+        carousel_exports: story.carousel_exports ? [story.carousel_exports] : []
+      })) || [];
 
       setStories(storiesWithVisuals);
     } catch (error: any) {
