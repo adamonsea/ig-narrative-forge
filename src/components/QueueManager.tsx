@@ -52,22 +52,29 @@ export function QueueManager() {
   const processQueue = async () => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase.functions.invoke('queue-processor');
+      console.log('🚀 Starting queue processing...');
+      const { data, error } = await supabase.functions.invoke('queue-processor');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Queue processor error:', error);
+        throw error;
+      }
 
+      console.log('✅ Queue processing response:', data);
+      
+      const processed = data?.processed || 0;
       toast({
         title: "Success",
-        description: "Queue processing started successfully",
+        description: `Queue processing completed successfully. Processed ${processed} jobs.`,
       });
 
-      // Reload stats after a brief delay
+      // Reload stats after processing
       setTimeout(loadStats, 2000);
     } catch (error) {
       console.error('Failed to process queue:', error);
       toast({
         title: "Error",
-        description: "Failed to start queue processing",
+        description: `Failed to start queue processing: ${error.message}`,
         variant: "destructive",
       });
     } finally {
