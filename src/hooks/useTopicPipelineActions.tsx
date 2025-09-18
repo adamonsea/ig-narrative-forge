@@ -48,7 +48,7 @@ export const useTopicPipelineActions = (onRefresh: () => void, optimisticallyRem
         .from('stories')
         .select('id, status, title')
         .eq('article_id', articleId)
-        .eq('status', 'ready')
+        .eq('status', 'published')  // Look for published stories, not ready ones
         .maybeSingle();
 
       if (storyCheckError) {

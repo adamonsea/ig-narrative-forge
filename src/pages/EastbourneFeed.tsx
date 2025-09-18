@@ -69,8 +69,7 @@ export default function EastbourneFeed() {
             published_at
           )
         `)
-        .eq("status", "ready")
-        .eq("is_published", true)
+        .eq("status", "published")
         .ilike("articles.region", "%eastbourne%");
 
       if (legacyError) {
@@ -123,8 +122,7 @@ export default function EastbourneFeed() {
               )
             )
           `)
-          .eq("status", "ready")
-          .eq("is_published", true)
+          .eq("status", "published")
           .eq("topic_articles.topic_id", topicData.id);
 
         if (mtError) {

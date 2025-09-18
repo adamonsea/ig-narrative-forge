@@ -155,7 +155,7 @@ const TopicDashboard = () => {
         .from('stories')
         .select('id', { count: 'exact' })
         .in('article_id', articleIds)
-        .eq('status', 'ready') : { count: 0 };
+        .eq('status', 'published') : { count: 0 };
 
       setStats({
         articles: articlesRes.count || 0,

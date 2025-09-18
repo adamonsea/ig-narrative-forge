@@ -115,7 +115,7 @@ export const ApprovedQueue = () => {
           ),
           carousel_exports(*)
         `)
-        .eq('status', 'ready')
+        .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

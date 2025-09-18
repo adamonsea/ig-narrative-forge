@@ -435,11 +435,11 @@ export const useMultiTenantActions = () => {
     try {
       console.log('✅ Approving multi-tenant story:', storyId);
 
-      // Update story status to ready
+      // Update story status to published
       const { error: updateError } = await supabase
         .from('stories')
         .update({
-          status: 'ready',
+          status: 'published',
           is_published: true,
           updated_at: new Date().toISOString()
         })

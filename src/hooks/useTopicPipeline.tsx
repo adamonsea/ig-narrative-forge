@@ -226,7 +226,7 @@ export const useTopicPipeline = (selectedTopicId: string) => {
         .from('stories')
         .select('article_id, articles!inner(title)')
         .eq('articles.topic_id', selectedTopicId)
-        .eq('status', 'ready'); // Only exclude ready stories, allow draft ones to appear in pending
+        .eq('status', 'published'); // Only exclude published stories, allow draft ones to appear in pending
 
       // Don't exclude processed articles - they should appear when returned to review
       const excludedIds = [
@@ -375,16 +375,16 @@ export const useTopicPipeline = (selectedTopicId: string) => {
           )
         `)
         .eq('articles.topic_id', selectedTopicId)
-        .eq('status', 'ready') // Only fetch ready stories to prevent duplicates when returning to review
+        .eq('status', 'published') // Fetch published stories
         .order('updated_at', { ascending: false });
 
       if (storiesError) throw storiesError;
 
-      // Get actual count of ready stories for accurate stats (without limit)
+      // Get actual count of published stories for accurate stats (without limit)
       const { count: readyStoriesCount, error: countError } = await supabase
         .from('stories')
         .select('id, articles!inner(topic_id)', { count: 'exact', head: true })
-        .eq('status', 'ready')
+        .eq('status', 'published')
         .eq('articles.topic_id', selectedTopicId);
 
       // Get style choices for each story by fetching from content_generation_queue

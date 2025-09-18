@@ -140,7 +140,7 @@ export const FixedApprovedStoriesPanel = () => {
             word_count
           )
         `)
-        .eq('status', 'ready')
+        .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

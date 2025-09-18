@@ -87,8 +87,7 @@ const StoryPage = () => {
             )
           `)
           .eq('id', storyId)
-          .eq('status', 'ready')
-          .eq('is_published', true)
+          .eq('status', 'published')
           .ilike('articles.region', '%eastbourne%')
           .single();
 
@@ -172,8 +171,7 @@ const StoryPage = () => {
             )
           `)
           .eq('id', storyId)
-          .eq('status', 'ready')
-          .eq('is_published', true)
+          .eq('status', 'published')
           .eq('articles.topic_id', topicData.id)
           .single();
 

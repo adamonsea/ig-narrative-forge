@@ -241,8 +241,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               slides:slides(*),
               article:articles!inner(title, source_url, region, topic_id)
             `)
-            .eq('status', 'ready')
-            .eq('is_published', true)
+            .eq('status', 'published')
             .eq('article.topic_id', selectedTopicId)
             .order('created_at', { ascending: false }),
           
@@ -257,8 +256,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
                 shared_content:shared_article_content(title, url)
               )
             `)
-            .eq('status', 'ready')
-            .eq('is_published', true)
+            .eq('status', 'published')
             .eq('topic_article.topic_id', selectedTopicId)
             .order('created_at', { ascending: false })
         ]);

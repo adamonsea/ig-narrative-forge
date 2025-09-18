@@ -124,8 +124,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
             topic_id
           )
         `)
-        .eq('status', 'ready')
-        .eq('is_published', true)
+        .eq('status', 'published')
         .eq('articles.topic_id', topicData.id)
         .order('created_at', { ascending })
         .range(from, to);
@@ -163,8 +162,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
             )
           )
         `)
-        .eq('status', 'ready')
-        .eq('is_published', true)
+        .eq('status', 'published')
         .eq('topic_articles.topic_id', topicData.id)
         .order('created_at', { ascending })
         .range(from, to);
@@ -206,8 +204,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
               topic_id
             )
           `)
-          .eq('status', 'ready')
-          .eq('is_published', true)
+          .eq('status', 'published')
           .ilike('articles.region', `%${topicData.region}%`)
           .order('created_at', { ascending })
           .range(from, to);
