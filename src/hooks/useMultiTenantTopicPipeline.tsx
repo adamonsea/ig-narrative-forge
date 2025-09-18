@@ -178,19 +178,29 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             return {
               id: item.id,
               shared_content_id: item.shared_content_id,
+              topic_id: selectedTopicId,
+              source_id: item.source_id,
+              regional_relevance_score: item.regional_relevance_score || 0,
+              content_quality_score: item.content_quality_score || 0,
+              import_metadata: item.import_metadata || {},
+              originality_confidence: item.originality_confidence || 100,
+              created_at: item.created_at,
+              updated_at: item.updated_at,
+              processing_status: item.processing_status,
+              keyword_matches: item.keyword_matches || [],
+              url: item.url,
+              normalized_url: item.normalized_url || item.url,
               title: item.title,
               body: item.body,
               author: item.author,
-              url: item.url,
               image_url: item.image_url,
+              canonical_url: item.canonical_url,
+              content_checksum: item.content_checksum,
               published_at: item.published_at,
               word_count: wordCount,
-              processing_status: item.processing_status,
-              regional_relevance_score: item.regional_relevance_score || 0,
-              content_quality_score: item.content_quality_score || 0,
-              keyword_matches: item.keyword_matches || [],
-              created_at: item.created_at,
-              updated_at: item.updated_at,
+              language: item.language || 'en',
+              source_domain: item.source_domain,
+              last_seen_at: item.last_seen_at || item.updated_at,
               is_snippet: isSnippet
             };
           }) || [];
@@ -233,19 +243,25 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         
         const queueItemsData = filteredQueueItems.map((item: any) => ({
           id: item.id,
+          article_id: null,
           topic_article_id: item.topic_article_id,
           shared_content_id: item.shared_content_id,
-          title: item.shared_article_content?.title || 'Unknown Title',
-          article_title: item.shared_article_content?.title || 'Unknown Title',
-          article_url: item.shared_article_content?.url || '',
           status: item.status,
           created_at: item.created_at,
+          started_at: item.started_at,
+          completed_at: item.completed_at,
           attempts: item.attempts || 0,
           max_attempts: item.max_attempts || 3,
           error_message: item.error_message,
-          slidetype: item.slidetype,
-          tone: item.tone,
-          writing_style: item.writing_style
+          result_data: item.result_data || {},
+          slidetype: item.slidetype || 'tabloid',
+          tone: item.tone || 'conversational',
+          audience_expertise: item.audience_expertise || 'intermediate',
+          ai_provider: item.ai_provider || 'deepseek',
+          writing_style: item.writing_style || 'journalistic',
+          title: item.shared_article_content?.title || 'Unknown Title',
+          article_title: item.shared_article_content?.title || 'Unknown Title',
+          article_url: item.shared_article_content?.url || ''
         }));
         setQueueItems(queueItemsData);
       }
@@ -330,20 +346,30 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
           // Map and set stories to keep UI consistent
           const storiesData = filteredStories.map((story: any) => {
+            const isLegacy = !!story.article_id;
+            const articleData = isLegacy 
+              ? story.article 
+              : story.topic_article?.shared_content;
+            
             return {
               id: story.id,
-              topic_article_id: story.topic_article_id,
-              shared_content_id: story.shared_content_id,
-              title: story.title,
+              article_id: story.article_id || null,
+              topic_article_id: story.topic_article_id || null,
+              headline: story.headline || story.title || 'Untitled',
+              summary: story.summary,
               status: story.status,
+              is_published: story.is_published || story.status === 'published',
               created_at: story.created_at,
               updated_at: story.updated_at,
-              url: story.url || '',
-              author: story.author || '',
+              slides: story.slides || [],
+              article_title: articleData?.title || story.title || 'Untitled',
+              story_type: isLegacy ? 'legacy' as const : 'multi_tenant' as const,
+              title: story.headline || story.title,
+              url: articleData?.source_url || articleData?.url || '',
+              author: story.author || articleData?.author || '',
               word_count: story.word_count || 0,
               cover_illustration_url: story.cover_illustration_url,
               illustration_generated_at: story.illustration_generated_at,
-              slides: story.slides || [],
               slidetype: story.slidetype || '',
               tone: story.tone || '',
               writing_style: story.writing_style || '',
@@ -353,14 +379,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           });
           setStories(storiesData);
         
+        // Calculate stats using the processed data
+        const allTopicArticles = articlesResult.data || [];
+        
         setStats({
-          articles: allArticles.length,
-          queueItems: processedQueueItems.length,
-          stories: allStories.length,
-          totalArticles: allArticles.length,
-          pendingArticles: allArticles.filter((a: any) => a.processing_status === 'new').length,
-          processingQueue: processedQueueItems.length,
-          readyStories: allStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
+          articles: allTopicArticles.length,
+          queueItems: filteredQueueItems.length,
+          stories: filteredStories.length,
+          totalArticles: allTopicArticles.length,
+          pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length,
+          processingQueue: filteredQueueItems.length,
+          readyStories: filteredStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
         });
 
     } catch (error) {
