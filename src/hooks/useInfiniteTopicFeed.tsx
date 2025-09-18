@@ -91,253 +91,133 @@ export const useInfiniteTopicFeed = (slug: string) => {
       else setLoadingMore(true);
 
       const from = pageNum * STORIES_PER_PAGE;
-      const to = from + STORIES_PER_PAGE - 1;
-      const ascending = sortBy === 'oldest';
-
+      
       console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
-      // ID-first strategy: First get article IDs for this topic, then get stories
-      const [legacyArticlesRes, mtArticlesRes] = await Promise.all([
-        // Get legacy article IDs for this topic
-        supabase
-          .from('articles')
-          .select('id')
-          .eq('topic_id', topicData.id),
-        // Get multi-tenant article IDs for this topic  
-        supabase
-          .from('topic_articles')
-          .select('id')
-          .eq('topic_id', topicData.id)
-      ]);
+      // Use server-side RPC to fetch stories with proper filtering and pagination
+      const { data: storiesData, error } = await supabase
+        .rpc('get_topic_stories', {
+          p_topic_id: topicData.id,
+          p_limit: STORIES_PER_PAGE,
+          p_offset: from,
+          p_sort_order: sortBy === 'oldest' ? 'oldest' : 'newest'
+        });
 
-      const legacyArticleIds = (legacyArticlesRes.data || []).map(a => a.id);
-      const mtTopicArticleIds = (mtArticlesRes.data || []).map(a => a.id);
-
-      console.log('📊 Feed: Found article IDs', { 
-        legacy: legacyArticleIds.length, 
-        multiTenant: mtTopicArticleIds.length 
-      });
-
-      // Now get stories using these article IDs
-      let legacyData: any[] = [];
-      let mtData: any[] = [];
-
-      if (legacyArticleIds.length > 0) {
-        const { data, error } = await supabase
-          .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            created_at,
-            updated_at,
-            cover_illustration_url,
-            cover_illustration_prompt,
-            slides!inner (
-              id,
-              slide_number,
-              content,
-              word_count,
-              visuals (
-                image_url,
-                alt_text
-              )
-            ),
-            articles!inner (
-              source_url,
-              published_at,
-              region,
-              topic_id
-            )
-          `)
-          .eq('status', 'published')
-          .in('article_id', legacyArticleIds)
-          .order('created_at', { ascending })
-          .range(from, to);
+      if (error) {
+        console.error('❌ Error fetching stories via RPC:', error);
         
-        if (!error) {
-          legacyData = data || [];
-        }
-        console.log('📈 Feed: Legacy stories with slides:', legacyData.length);
-      }
-
-      if (mtTopicArticleIds.length > 0) {
-        const { data, error } = await supabase
-          .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            created_at,
-            updated_at,
-            cover_illustration_url,
-            cover_illustration_prompt,
-            slides!inner (
+        // Regional fallback for topics with no direct article matches
+        if (topicData?.topic_type === 'regional' && topicData?.region) {
+          console.log('🔄 Feed: Trying regional fallback for', topicData.region);
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('stories')
+            .select(`
               id,
-              slide_number,
-              content,
-              word_count,
-              visuals (
-                image_url,
-                alt_text
-              )
-            ),
-            topic_articles!inner (
-              id,
-              topic_id,
-              shared_article_content:shared_article_content (
-                url,
-                title,
-                author,
+              title,
+              author,
+              publication_name,
+              created_at,
+              updated_at,
+              cover_illustration_url,
+              cover_illustration_prompt,
+              slides!inner (
+                id,
+                slide_number,
+                content,
+                word_count,
+                visuals (
+                  image_url,
+                  alt_text
+                )
+              ),
+              articles!inner (
+                source_url,
                 published_at,
-                source_domain
+                region,
+                topic_id
               )
-            )
-          `)
-          .eq('status', 'published')
-          .in('topic_article_id', mtTopicArticleIds)
-          .order('created_at', { ascending })
-          .range(from, to);
-        
-        if (!error) {
-          mtData = data || [];
+            `)
+            .eq('status', 'published')
+            .ilike('articles.region', `%${topicData.region}%`)
+            .order('created_at', { ascending: sortBy === 'oldest' })
+            .range(from, from + STORIES_PER_PAGE - 1);
+          
+          if (!fallbackError && fallbackData) {
+            const regionalTransformed = fallbackData.map((story: any) => ({
+              id: story.id,
+              title: story.title,
+              author: story.author || 'Unknown',
+              publication_name: story.publication_name || 'Unknown Publication',
+              created_at: story.created_at,
+              updated_at: story.updated_at,
+              cover_illustration_url: story.cover_illustration_url,
+              cover_illustration_prompt: story.cover_illustration_prompt,
+              slides: (story.slides || [])
+                .sort((a: any, b: any) => a.slide_number - b.slide_number)
+                .map((slide: any) => ({
+                  id: slide.id,
+                  slide_number: slide.slide_number,
+                  content: slide.content,
+                  word_count: slide.word_count,
+                  visual: slide.visuals && slide.visuals[0] ? {
+                    image_url: slide.visuals[0].image_url,
+                    alt_text: slide.visuals[0].alt_text || ''
+                  } : undefined
+                })),
+              article: {
+                source_url: story.articles?.source_url,
+                published_at: story.articles?.published_at,
+                region: story.articles?.region || topicData.region || 'Unknown'
+              }
+            }));
+
+            if (append) {
+              setStories(prev => [...prev, ...regionalTransformed]);
+            } else {
+              setStories(regionalTransformed);
+            }
+            setHasMore(fallbackData.length === STORIES_PER_PAGE);
+          }
         }
-        console.log('📈 Feed: Multi-tenant stories with slides:', mtData.length);
+        return;
       }
 
-      // Regional fallback for topics with no direct article matches
-      if (legacyData.length === 0 && mtData.length === 0 && topicData?.topic_type === 'regional' && topicData?.region) {
-        console.log('🔄 Feed: Trying regional fallback for', topicData.region);
-        const { data: fallbackData, error } = await supabase
-          .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            created_at,
-            updated_at,
-            cover_illustration_url,
-            cover_illustration_prompt,
-            slides!inner (
-              id,
-              slide_number,
-              content,
-              word_count,
-              visuals (
-                image_url,
-                alt_text
-              )
-            ),
-            articles!inner (
-              source_url,
-              published_at,
-              region,
-              topic_id
-            )
-          `)
-          .eq('status', 'published')
-          .ilike('articles.region', `%${topicData.region}%`)
-          .order('created_at', { ascending })
-          .range(from, to);
-        
-        if (!error && fallbackData) {
-          legacyData = fallbackData;
-          console.log('📈 Feed: Regional fallback stories:', legacyData.length);
+      if (!storiesData || storiesData.length === 0) {
+        console.log('📄 No stories found for topic');
+        if (!append) {
+          setStories([]);
         }
+        setHasMore(false);
+        return;
       }
 
-      console.info('📊 Stories query results:', {
-        legacy: legacyData?.length || 0,
-        multiTenant: mtData?.length || 0
-      });
+      console.log('📚 Found stories via RPC:', storiesData.length);
 
-      const legacyTransformed = (legacyData || []).map((story: any) => ({
+      // Transform RPC response to expected format
+      const transformedStories = storiesData.map((story: any) => ({
         id: story.id,
-        title: story.title,
-        author: story.author || 'Unknown',
-        publication_name: story.publication_name || 'Unknown Publication',
+        title: story.headline,
+        author: story.article_author || 'Unknown',
+        publication_name: 'eeZee News',
         created_at: story.created_at,
         updated_at: story.updated_at,
-        cover_illustration_url: story.cover_illustration_url,
-        cover_illustration_prompt: story.cover_illustration_prompt,
-        slides: (story.slides || [])
-          .sort((a: any, b: any) => a.slide_number - b.slide_number)
-          .map((slide: any) => ({
-            id: slide.id,
-            slide_number: slide.slide_number,
-            content: slide.content,
-            word_count: slide.word_count,
-            visual: slide.visuals && slide.visuals[0] ? {
-              image_url: slide.visuals[0].image_url,
-              alt_text: slide.visuals[0].alt_text || ''
-            } : undefined
-          })),
+        cover_illustration_url: null,
+        cover_illustration_prompt: null,
+        slides: Array.isArray(story.slides) ? story.slides.sort((a: any, b: any) => a.position - b.position) : [],
         article: {
-          source_url: story.articles?.source_url,
-          published_at: story.articles?.published_at,
-          region: story.articles?.region || topicData.region || 'Unknown'
+          source_url: story.article_id ? 'legacy' : 'multi-tenant',
+          published_at: story.article_published_at,
+          region: 'Unknown'
         }
       }));
 
-      const multiTenantTransformed = (mtData || []).map((story: any) => {
-        const sac = story.topic_articles?.shared_article_content;
-        return {
-          id: story.id,
-          title: story.title,
-          author: story.author || sac?.author || 'Unknown',
-          publication_name: story.publication_name || sac?.source_domain || 'Unknown Publication',
-          created_at: story.created_at,
-          updated_at: story.updated_at,
-          cover_illustration_url: story.cover_illustration_url,
-          cover_illustration_prompt: story.cover_illustration_prompt,
-          slides: (story.slides || [])
-            .sort((a: any, b: any) => a.slide_number - b.slide_number)
-            .map((slide: any) => ({
-              id: slide.id,
-              slide_number: slide.slide_number,
-              content: slide.content,
-              word_count: slide.word_count,
-              visual: slide.visuals && slide.visuals[0] ? {
-                image_url: slide.visuals[0].image_url,
-                alt_text: slide.visuals[0].alt_text || ''
-              } : undefined
-            })),
-          article: {
-            source_url: sac?.url,
-            published_at: sac?.published_at,
-            region: topicData?.region || 'Unknown'
-          }
-        };
-      });
-
-      // Merge and de-dupe by story id
-      const mergedMap = new Map<string, any>();
-      [...legacyTransformed, ...multiTenantTransformed].forEach((s) => mergedMap.set(s.id, s));
-      let merged = Array.from(mergedMap.values());
-
-      // Sort
-      merged.sort((a, b) => (
-        ascending
-          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ));
-
-      // Append or replace
       if (append) {
-        setStories(prev => {
-          const dedup = new Map<string, any>();
-          [...prev, ...merged].forEach((s) => dedup.set(s.id, s));
-          return Array.from(dedup.values());
-        });
+        setStories(prev => [...prev, ...transformedStories]);
       } else {
-        setStories(merged);
+        setStories(transformedStories);
       }
-
-      // Heuristic for more pages: if either source returned a full page
-      setHasMore((legacyData?.length === STORIES_PER_PAGE) || (mtData?.length === STORIES_PER_PAGE));
+      
+      setHasMore(storiesData.length === STORIES_PER_PAGE);
       
     } catch (error) {
       console.error('Error loading stories:', error);

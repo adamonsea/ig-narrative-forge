@@ -2789,6 +2789,30 @@ export type Database = {
           source_name: string
         }[]
       }
+      get_topic_stories: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_sort_order?: string
+          p_topic_id: string
+        }
+        Returns: {
+          article_author: string
+          article_id: string
+          article_published_at: string
+          article_title: string
+          created_at: string
+          headline: string
+          id: string
+          is_published: boolean
+          slides: Json
+          status: string
+          story_type: string
+          summary: string
+          topic_article_id: string
+          updated_at: string
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown

@@ -3,52 +3,72 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 
-// Multi-tenant article interface
 export interface MultiTenantArticle {
   id: string;
-  shared_content_id: string;
+  shared_content_id: string | null;
+  topic_id: string;
+  source_id: string | null;
+  regional_relevance_score: number;
+  content_quality_score: number;
+  import_metadata: any;
+  originality_confidence: number;
+  created_at: string;
+  updated_at: string;
+  processing_status: string;
+  keyword_matches: string[];
+  url: string;
+  normalized_url: string;
   title: string;
   body?: string;
   author?: string;
-  url: string;
   image_url?: string;
+  canonical_url?: string;
+  content_checksum?: string;
   published_at?: string;
   word_count: number;
-  processing_status: string;
-  regional_relevance_score: number;
-  content_quality_score: number;
-  keyword_matches?: string[];
-  created_at: string;
-  updated_at: string;
-  is_snippet: boolean; // Flag for articles under 150 words
-  import_metadata?: any; // For checking manual uploads
+  language: string;
+  source_domain?: string;
+  last_seen_at: string;
+  is_snippet?: boolean;
 }
 
 export interface MultiTenantQueueItem {
   id: string;
-  topic_article_id: string;
-  shared_content_id: string;
-  title: string;
-  article_title: string;
-  article_url: string;
+  article_id?: string | null;
+  topic_article_id?: string | null;
+  shared_content_id?: string | null;
   status: string;
   created_at: string;
+  started_at?: string;
+  completed_at?: string;
   attempts: number;
   max_attempts: number;
   error_message?: string;
-  slidetype?: string;
-  tone?: string;
-  writing_style?: string;
+  result_data: any;
+  slidetype: string;
+  tone: string;
+  audience_expertise: string;
+  ai_provider: string;
+  writing_style: string;
+  title?: string;
+  article_title?: string;
+  article_url?: string;
 }
 
 export interface MultiTenantStory {
   id: string;
-  topic_article_id: string;
-  shared_content_id: string;
-  title: string;
+  article_id?: string | null;
+  topic_article_id?: string | null;
+  headline: string;
+  summary?: string;
   status: string;
+  is_published: boolean;
   created_at: string;
   updated_at: string;
+  slides: any[];
+  article_title: string;
+  story_type: 'legacy' | 'multi_tenant';
+  title?: string;
   url?: string;
   author?: string;
   word_count?: number;
@@ -58,15 +78,17 @@ export interface MultiTenantStory {
   tone?: string;
   writing_style?: string;
   audience_expertise?: string;
-  slides?: any[];
-  is_teaser?: boolean; // Flag for stories generated from snippets
+  is_teaser?: boolean;
 }
 
 export interface MultiTenantStats {
-  totalArticles: number;
-  pendingArticles: number;
-  processingQueue: number;
-  readyStories: number;
+  articles: number;
+  queueItems: number;
+  stories: number;
+  totalArticles?: number;
+  pendingArticles?: number;
+  processingQueue?: number;
+  readyStories?: number;
 }
 
 export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
@@ -76,10 +98,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const [stories, setStories] = useState<MultiTenantStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<MultiTenantStats>({
-    totalArticles: 0,
-    pendingArticles: 0,
-    processingQueue: 0,
-    readyStories: 0
+    articles: 0,
+    queueItems: 0,
+    stories: 0
   });
 
   // Import multi-tenant actions
@@ -309,15 +330,6 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
           // Map and set stories to keep UI consistent
           const storiesData = filteredStories.map((story: any) => {
-            // Calculate word count from slides if not set or is 0
-            const slides = Array.isArray(story.slides) ? story.slides : [];
-            const calculatedWordCount = slides.reduce((total: number, slide: any) => {
-              return total + (slide.word_count || 0);
-            }, 0);
-            
-            // Check if this is a teaser (generated from snippet)
-            const isTeaser = story.slidetype === 'short' && calculatedWordCount < 200;
-            
             return {
               id: story.id,
               topic_article_id: story.topic_article_id,
@@ -326,32 +338,30 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
               status: story.status,
               created_at: story.created_at,
               updated_at: story.updated_at,
-              cover_illustration_url: story.cover_illustration_url,
-              cover_illustration_prompt: story.cover_illustration_prompt,
-              illustration_generated_at: story.illustration_generated_at,
-              slides: slides,
-              // Handle both legacy and multi-tenant sources
-              url: story.article?.source_url || story.topic_article?.shared_content?.url || '',
+              url: story.url || '',
               author: story.author || '',
-              word_count: calculatedWordCount > 0 ? calculatedWordCount : (story.word_count || 0),
+              word_count: story.word_count || 0,
+              cover_illustration_url: story.cover_illustration_url,
+              illustration_generated_at: story.illustration_generated_at,
+              slides: story.slides || [],
               slidetype: story.slidetype || '',
               tone: story.tone || '',
               writing_style: story.writing_style || '',
               audience_expertise: story.audience_expertise || '',
-              is_teaser: isTeaser
+              is_teaser: story.is_teaser || false
             };
           });
           setStories(storiesData);
         
-        // Calculate stats accurately
-        const allTopicArticles = articlesResult.data || [];
-        const newStats = {
-          totalArticles: allTopicArticles.length,
-          pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length, // Only truly new articles
-          processingQueue: filteredQueueItems.length, // Queue items filtered to this topic
-          readyStories: filteredStories.filter((s: any) => s.status === 'draft' || s.status === 'ready').length
-        };
-        setStats(newStats);
+        setStats({
+          articles: allArticles.length,
+          queueItems: processedQueueItems.length,
+          stories: allStories.length,
+          totalArticles: allArticles.length,
+          pendingArticles: allArticles.filter((a: any) => a.processing_status === 'new').length,
+          processingQueue: processedQueueItems.length,
+          readyStories: allStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
+        });
 
     } catch (error) {
       console.error('Error loading topic content:', error);
