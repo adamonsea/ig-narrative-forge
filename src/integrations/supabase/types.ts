@@ -1804,10 +1804,13 @@ export type Database = {
           publication_name: string | null
           quality_score: number | null
           shared_content_id: string | null
+          slide_type: string | null
           status: string
           title: string
+          tone: string | null
           topic_article_id: string | null
           updated_at: string
+          writing_style: string | null
         }
         Insert: {
           article_id: string
@@ -1823,10 +1826,13 @@ export type Database = {
           publication_name?: string | null
           quality_score?: number | null
           shared_content_id?: string | null
+          slide_type?: string | null
           status?: string
           title: string
+          tone?: string | null
           topic_article_id?: string | null
           updated_at?: string
+          writing_style?: string | null
         }
         Update: {
           article_id?: string
@@ -1842,10 +1848,13 @@ export type Database = {
           publication_name?: string | null
           quality_score?: number | null
           shared_content_id?: string | null
+          slide_type?: string | null
           status?: string
           title?: string
+          tone?: string | null
           topic_article_id?: string | null
           updated_at?: string
+          writing_style?: string | null
         }
         Relationships: [
           {
