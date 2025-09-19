@@ -204,23 +204,56 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
       console.log('📚 Found stories via RPC:', storiesData.length);
 
-      // Transform RPC response to expected format
-      const transformedStories = storiesData.map((story: any) => ({
-        id: story.id,
-        title: story.title || story.article_title,
-        author: story.article_author || 'Unknown',
-        publication_name: 'eeZee News',
-        created_at: story.created_at,
-        updated_at: story.updated_at,
-        cover_illustration_url: null,
-        cover_illustration_prompt: null,
-        slides: [], // Slides will be loaded separately if needed
-        article: {
-          source_url: story.article_source_url || '#',
-          published_at: story.article_published_at,
-          region: topicData.region || 'Unknown'
+      // Load slides for each story to complete the feed data
+      const storyIds = storiesData.map((story: any) => story.id);
+      
+      let slidesData: any[] = [];
+      if (storyIds.length > 0) {
+        const { data: slides, error: slidesError } = await supabase
+          .from('slides')
+          .select('*')
+          .in('story_id', storyIds)
+          .order('slide_number', { ascending: true });
+        
+        if (slidesError) {
+          console.warn('⚠️ Failed to load slides:', slidesError);
+        } else {
+          slidesData = slides || [];
         }
-      }));
+      }
+
+      // Transform RPC response with slides data
+      const transformedStories = storiesData.map((story: any) => {
+        const storySlides = slidesData
+          .filter((slide: any) => slide.story_id === story.id)
+          .map((slide: any) => ({
+            id: slide.id,
+            slide_number: slide.slide_number,
+            content: slide.content,
+            word_count: slide.word_count || 0,
+            visual: slide.visuals && slide.visuals[0] ? {
+              image_url: slide.visuals[0].image_url,
+              alt_text: slide.visuals[0].alt_text || ''
+            } : undefined
+          }));
+          
+        return {
+          id: story.id,
+          title: story.title || story.article_title,
+          author: story.article_author || 'Unknown',
+          publication_name: 'eeZee News',
+          created_at: story.created_at,
+          updated_at: story.updated_at,
+          cover_illustration_url: null,
+          cover_illustration_prompt: null,
+          slides: storySlides,
+          article: {
+            source_url: story.article_source_url || '#',
+            published_at: story.article_published_at,
+            region: topicData.region || 'Unknown'
+          }
+        };
+      });
 
       if (append) {
         setStories(prev => [...prev, ...transformedStories]);
