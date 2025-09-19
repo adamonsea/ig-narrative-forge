@@ -17,7 +17,8 @@ interface Slide {
 
 interface PublishedStory {
   id: string;
-  headline: string;
+  title?: string; // Make optional to match MultiTenantStory
+  headline?: string; // Keep headline for compatibility  
   summary?: string;
   author?: string;
   status: string;
@@ -25,7 +26,7 @@ interface PublishedStory {
   created_at: string;
   updated_at: string;
   slides: Slide[];
-  article_id?: string; // Make optional to match MultiTenantStory
+  article_id?: string;
   topic_article_id?: string;
   story_type?: 'legacy' | 'multi_tenant';
 }
@@ -109,7 +110,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-base font-medium leading-tight mb-2">
-                  {story.headline}
+                  {story.title || story.headline}
                 </CardTitle>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant={getStatusColor(story)} className="text-xs">
@@ -182,7 +183,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onArchive(story.id, story.headline)}
+                onClick={() => onArchive(story.id, story.title || story.headline || 'Untitled')}
                 className="h-8"
               >
                 <Archive className="mr-1 h-3 w-3" />
@@ -202,7 +203,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onDelete(story.id, story.headline)}
+                onClick={() => onDelete(story.id, story.title || story.headline || 'Untitled')}
                 className="h-8 text-destructive hover:text-destructive"
               >
                 <Trash2 className="mr-1 h-3 w-3" />
