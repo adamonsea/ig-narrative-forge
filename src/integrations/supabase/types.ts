@@ -2814,7 +2814,6 @@ export type Database = {
           article_published_at: string
           article_source_url: string
           article_title: string
-          audience_expertise: string
           created_at: string
           id: string
           is_published: boolean
@@ -2822,7 +2821,6 @@ export type Database = {
           slide_count: number
           status: string
           title: string
-          tone: string
           topic_article_id: string
           updated_at: string
         }[]
