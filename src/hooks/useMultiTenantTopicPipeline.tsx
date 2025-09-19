@@ -30,6 +30,7 @@ export interface MultiTenantArticle {
   source_domain?: string;
   last_seen_at: string;
   is_snippet?: boolean;
+  article_type?: 'legacy' | 'multi_tenant';
 }
 
 export interface MultiTenantQueueItem {
@@ -125,88 +126,159 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     try {
       setLoading(true);
 
-        // Get multi-tenant articles using the new RPC function
-      const articlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
-        p_topic_id: selectedTopicId,
-        p_limit: 100
-      });
+      // Get both legacy and multi-tenant articles for this topic
+      const [legacyArticlesResult, multiTenantArticlesResult] = await Promise.all([
+        // Legacy articles
+        supabase
+          .from('articles')
+          .select('*')
+          .eq('topic_id', selectedTopicId)
+          .eq('processing_status', 'new')
+          .order('created_at', { ascending: false })
+          .limit(50),
+        
+        // Multi-tenant articles using the RPC function
+        supabase.rpc('get_topic_articles_multi_tenant', {
+          p_topic_id: selectedTopicId,
+          p_status: 'new',
+          p_limit: 50
+        })
+      ]);
 
-      if (articlesResult.error) {
-        console.error('Error loading multi-tenant articles:', articlesResult.error);
+      if (legacyArticlesResult.error || multiTenantArticlesResult.error) {
+        console.error('Error loading articles:', {
+          legacy: legacyArticlesResult.error,
+          multiTenant: multiTenantArticlesResult.error
+        });
         toast({
           title: "Error loading articles",
           description: "Failed to load articles. Please try refreshing.",
           variant: "destructive",
         });
-        setArticles([]);
-      } else {
-        // Log RPC result size for debugging
-        console.info('🧪 MT pipeline: RPC articles returned', (articlesResult.data || []).length, 'for topic', selectedTopicId);
-
-        // Get story IDs to filter out articles that are already published
-        const publishedStoryIds = new Set();
-        if (articlesResult.data) {
-          const { data: storiesData } = await supabase
-            .from('stories')
-            .select('topic_article_id')
-            .eq('status', 'published');
-          storiesData?.forEach(story => {
-            if (story.topic_article_id) publishedStoryIds.add(story.topic_article_id);
-          });
-        }
-
-        // Get pending/processing queue items to hide approved articles
-        const { data: queueItemsForFiltering } = await supabase
-          .from('content_generation_queue')
-          .select('topic_article_id')
-          .in('status', ['pending', 'processing'])
-          .not('topic_article_id', 'is', null);
-        
-        const queuedTopicArticleIds = new Set(
-          (queueItemsForFiltering || []).map((item: any) => item.topic_article_id)
-        );
-
-        const articlesData = articlesResult.data
-          ?.filter((item: any) => 
-            item.processing_status === 'new' &&
-            !publishedStoryIds.has(item.id) &&
-            !queuedTopicArticleIds.has(item.id)
-          )
-          ?.map((item: any) => {
-            const wordCount = item.word_count || 0;
-            const isSnippet = wordCount > 0 && wordCount < 150;
-            return {
-              id: item.id,
-              shared_content_id: item.shared_content_id,
-              topic_id: selectedTopicId,
-              source_id: item.source_id,
-              regional_relevance_score: item.regional_relevance_score || 0,
-              content_quality_score: item.content_quality_score || 0,
-              import_metadata: item.import_metadata || {},
-              originality_confidence: item.originality_confidence || 100,
-              created_at: item.created_at,
-              updated_at: item.updated_at,
-              processing_status: item.processing_status,
-              keyword_matches: item.keyword_matches || [],
-              url: item.url,
-              normalized_url: item.normalized_url || item.url,
-              title: item.title,
-              body: item.body,
-              author: item.author,
-              image_url: item.image_url,
-              canonical_url: item.canonical_url,
-              content_checksum: item.content_checksum,
-              published_at: item.published_at,
-              word_count: wordCount,
-              language: item.language || 'en',
-              source_domain: item.source_domain,
-              last_seen_at: item.last_seen_at || item.updated_at,
-              is_snippet: isSnippet
-            };
-          }) || [];
-        console.info('🧪 MT pipeline: filtered new articles', articlesData.length, { queued: queuedTopicArticleIds.size, publishedStories: publishedStoryIds.size });
-        setArticles(articlesData);
       }
+
+      // Get story IDs to filter out articles that are already published
+      const { data: publishedStoriesData } = await supabase
+        .from('stories')
+        .select('article_id, topic_article_id')
+        .eq('status', 'published');
+      
+      const publishedLegacyIds = new Set();
+      const publishedMultiTenantIds = new Set();
+      publishedStoriesData?.forEach(story => {
+        if (story.article_id) publishedLegacyIds.add(story.article_id);
+        if (story.topic_article_id) publishedMultiTenantIds.add(story.topic_article_id);
+      });
+
+      // Get pending/processing queue items to hide approved articles
+      const { data: queueItemsForFiltering } = await supabase
+        .from('content_generation_queue')
+        .select('article_id, topic_article_id')
+        .in('status', ['pending', 'processing']);
+      
+      const queuedLegacyIds = new Set();
+      const queuedMultiTenantIds = new Set();
+      queueItemsForFiltering?.forEach(item => {
+        if (item.article_id) queuedLegacyIds.add(item.article_id);
+        if (item.topic_article_id) queuedMultiTenantIds.add(item.topic_article_id);
+      });
+
+      // Process legacy articles
+      const legacyArticles = (legacyArticlesResult.data || [])
+        .filter((article: any) => 
+          !publishedLegacyIds.has(article.id) &&
+          !queuedLegacyIds.has(article.id)
+        )
+        .map((article: any) => {
+          const wordCount = article.word_count || 0;
+          const isSnippet = wordCount > 0 && wordCount < 150;
+          return {
+            id: article.id,
+            shared_content_id: null, // Legacy articles don't have shared content
+            topic_id: selectedTopicId,
+            source_id: article.source_id,
+            regional_relevance_score: article.regional_relevance_score || 0,
+            content_quality_score: article.content_quality_score || 0,
+            import_metadata: article.import_metadata || {},
+            originality_confidence: article.originality_confidence || 100,
+            created_at: article.created_at,
+            updated_at: article.updated_at,
+            processing_status: article.processing_status,
+            keyword_matches: article.keywords || [],
+            url: article.source_url,
+            normalized_url: article.canonical_url || article.source_url,
+            title: article.title,
+            body: article.body,
+            author: article.author,
+            image_url: article.image_url,
+            canonical_url: article.canonical_url,
+            content_checksum: article.content_checksum,
+            published_at: article.published_at,
+            word_count: wordCount,
+            language: article.language || 'en',
+            source_domain: article.source_url ? new URL(article.source_url).hostname : '',
+            last_seen_at: article.updated_at,
+            is_snippet: isSnippet,
+            article_type: 'legacy' as const
+          };
+        });
+
+      // Process multi-tenant articles
+      const multiTenantArticles = (multiTenantArticlesResult.data || [])
+        .filter((item: any) => 
+          !publishedMultiTenantIds.has(item.id) &&
+          !queuedMultiTenantIds.has(item.id)
+        )
+        .map((item: any) => {
+          const wordCount = item.word_count || 0;
+          const isSnippet = wordCount > 0 && wordCount < 150;
+          return {
+            id: item.id,
+            shared_content_id: item.shared_content_id,
+            topic_id: selectedTopicId,
+            source_id: item.source_id,
+            regional_relevance_score: item.regional_relevance_score || 0,
+            content_quality_score: item.content_quality_score || 0,
+            import_metadata: item.import_metadata || {},
+            originality_confidence: item.originality_confidence || 100,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            processing_status: item.processing_status,
+            keyword_matches: item.keyword_matches || [],
+            url: item.url,
+            normalized_url: item.normalized_url || item.url,
+            title: item.title,
+            body: item.body,
+            author: item.author,
+            image_url: item.image_url,
+            canonical_url: item.canonical_url,
+            content_checksum: item.content_checksum,
+            published_at: item.published_at,
+            word_count: wordCount,
+            language: item.language || 'en',
+            source_domain: item.source_domain,
+            last_seen_at: item.last_seen_at || item.updated_at,
+            is_snippet: isSnippet,
+            article_type: 'multi_tenant' as const
+          };
+        });
+
+      // Merge and sort all articles by creation date
+      const allArticles = [...legacyArticles, ...multiTenantArticles].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.info('🧪 Pipeline: loaded articles', {
+        legacy: legacyArticles.length,
+        multiTenant: multiTenantArticles.length,
+        total: allArticles.length,
+        publishedLegacy: publishedLegacyIds.size,
+        publishedMultiTenant: publishedMultiTenantIds.size,
+        queuedLegacy: queuedLegacyIds.size,
+        queuedMultiTenant: queuedMultiTenantIds.size
+      });
+
+      setArticles(allArticles);
       // Declare variables for filtered data
       let filteredQueueItems: any[] = [];
       let filteredStories: any[] = [];
@@ -235,11 +307,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         console.error('Error loading queue items:', queueResult.error);
         setQueueItems([]);
       } else {
-        // Filter queue items to only include those from articles in this topic
-        const topicArticleIds = new Set((articlesResult.data || []).map((a: any) => a.id));
-        filteredQueueItems = (queueResult.data || []).filter((item: any) => 
-          topicArticleIds.has(item.topic_article_id)
-        );
+      // Filter queue items to only include those from articles in this topic  
+      const allTopicArticleIds = new Set([
+        ...(legacyArticlesResult.data || []).map((a: any) => a.id),
+        ...(multiTenantArticlesResult.data || []).map((a: any) => a.id)
+      ]);
+      filteredQueueItems = (queueResult.data || []).filter((item: any) => 
+        (item.article_id && allTopicArticleIds.has(item.article_id)) ||
+        (item.topic_article_id && allTopicArticleIds.has(item.topic_article_id))
+      );
         
         const queueItemsData = filteredQueueItems.map((item: any) => ({
           id: item.id,
@@ -361,16 +437,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       setStories(storiesData);
       
       // Calculate stats using the processed data
-      const allTopicArticles = articlesResult.data || [];
-      
       setStats({
-        articles: allTopicArticles.length,
+        articles: allArticles.length,
         queueItems: filteredQueueItems.length,
-        stories: sortedStories.length,
-        totalArticles: allTopicArticles.length,
-        pendingArticles: allTopicArticles.filter((a: any) => a.processing_status === 'new').length,
+        stories: storiesData.length,
+        totalArticles: allArticles.length,
+        pendingArticles: allArticles.filter((a: any) => a.processing_status === 'new').length,
         processingQueue: filteredQueueItems.length,
-        readyStories: sortedStories.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
+        readyStories: storiesData.filter((s: any) => ['draft', 'ready'].includes(s.status)).length
       });
 
     } catch (error) {
@@ -444,16 +518,50 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     // Optimistically hide the article from Arrivals immediately
     setArticles(prev => prev.filter(a => a.id !== article.id));
     
-    await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle);
+    if (article.article_type === 'legacy') {
+      // Handle legacy article approval
+      const { error } = await supabase.rpc('approve_article_for_generation', {
+        article_uuid: article.id
+      });
+      if (error) throw error;
+    } else {
+      // Handle multi-tenant article approval
+      await approveMultiTenantArticle(article, finalSlideType, tone, writingStyle);
+    }
+    
     // Reload to update all sections and show the queue item
     await loadTopicContent();
-  }, [approveMultiTenantArticle, loadTopicContent]);
+  }, [approveMultiTenantArticle, loadTopicContent, supabase]);
 
   const handleMultiTenantDelete = useCallback(async (articleId: string, articleTitle: string) => {
-    await deleteMultiTenantArticle(articleId, articleTitle);
+    // Find the article to determine its type
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+
+    if (article.article_type === 'legacy') {
+      // Handle legacy article deletion
+      const { error } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .eq('id', articleId);
+      
+      if (error) {
+        console.error('Error deleting legacy article:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete article",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else {
+      // Handle multi-tenant article deletion
+      await deleteMultiTenantArticle(articleId, articleTitle);
+    }
+    
     // Force immediate reload to show deletion
     await loadTopicContent();
-  }, [deleteMultiTenantArticle, loadTopicContent]);
+  }, [articles, deleteMultiTenantArticle, loadTopicContent, toast, supabase]);
 
   const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
     await deleteMultipleMultiTenantArticles(articleIds);

@@ -196,7 +196,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
       // Transform RPC response to expected format
       const transformedStories = storiesData.map((story: any) => ({
         id: story.id,
-        title: story.headline,
+        title: story.title,
         author: story.article_author || 'Unknown',
         publication_name: 'eeZee News',
         created_at: story.created_at,

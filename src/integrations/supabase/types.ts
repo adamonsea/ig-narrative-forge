@@ -2808,6 +2808,12 @@ export type Database = {
               p_sort_order?: string
               p_topic_id: string
             }
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_sort_order?: string
+              p_topic_id: string
+            }
         Returns: {
           article_author: string
           article_id: string
@@ -2816,9 +2822,9 @@ export type Database = {
           author: string
           created_at: string
           id: string
-          published_at: string
           slides: Json
           title: string
+          topic_article_id: string
           updated_at: string
         }[]
       }

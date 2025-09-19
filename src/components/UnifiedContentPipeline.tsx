@@ -141,57 +141,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setWritingStyleOverrides(prev => ({ ...prev, [articleId]: style }));
   };
 
-  const handleApprove = async (
-    article: MultiTenantArticle, 
-    slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid', 
-    tone: 'formal' | 'conversational' | 'engaging' = 'conversational', 
-    writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
-  ) => {
-    try {
-      await handleMultiTenantApprove(article, slideType, tone, writingStyle);
-      
-      // Auto-trigger queue processing after approval
-      setTimeout(async () => {
-        try {
-          console.log('🚀 Triggering queue processor...');
-          const { data, error } = await supabase.functions.invoke('queue-processor', {
-            body: {}
-          });
-          if (error) throw error;
-          console.log('✅ Queue processor result:', data);
-          toast({
-            title: "Processing Started",
-            description: `Started processing ${data?.processed || 0} articles`,
-          });
-          
-          // Refresh content after a delay to see processed items
-          setTimeout(() => {
-            refreshContent();
-          }, 2000);
-        } catch (error) {
-          console.warn('Failed to auto-trigger queue processing:', error);
-          toast({
-            title: "Processing Error",
-            description: "Failed to start content processing",
-            variant: "destructive"
-          });
-        }
-      }, 1000);
-      
-      toast({
-        title: "Article Approved",
-        description: "Article sent to content generation",
-      });
-    } catch (error) {
-      console.error('Error approving article:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve article",
-        variant: "destructive"
-      });
-    }
-  };
-
   // Story management handlers
   const handleToggleStoryExpanded = (storyId: string) => {
     setExpandedStories(prev => {
@@ -360,7 +309,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
                   onPreview={setPreviewArticle}
                   onApprove={(article, slideType, tone, writingStyle) => 
-                    handleApprove(article, slideType, tone, writingStyle)
+                    handleMultiTenantApprove(article, slideType, tone, writingStyle)
                   }
                   onDelete={handleMultiTenantDelete}
                   onBulkDelete={handleMultiTenantBulkDelete}
