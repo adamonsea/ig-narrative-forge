@@ -188,10 +188,19 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
       ctaContent = content.substring(splitIndex).trim().replace(/^Comment, like, share\.\s*/i, 'Like, share. ');
     }
     
-    // Always add source attribution with original article date on final slide
-    const sourceDomain = story.article?.source_url ? 
-      new URL(story.article.source_url).hostname.replace('www.', '') : 
-      'source';
+    // Safe URL parsing with try/catch for source attribution
+    let sourceDomain = 'source';
+    let validSourceUrl = null;
+    
+    try {
+      if (story.article?.source_url && story.article.source_url !== '#') {
+        const url = new URL(story.article.source_url);
+        sourceDomain = url.hostname.replace('www.', '');
+        validSourceUrl = story.article.source_url;
+      }
+    } catch (error) {
+      console.warn('Invalid source URL:', story.article?.source_url);
+    }
     
     // Format original article date if available
     const originalDateText = story.article?.published_at ? 
@@ -208,7 +217,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     return {
       mainContent,
       ctaContent: finalCtaContent,
-      sourceUrl: story.article?.source_url
+      sourceUrl: validSourceUrl
     };
   };
 

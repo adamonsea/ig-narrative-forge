@@ -244,8 +244,8 @@ export const useInfiniteTopicFeed = (slug: string) => {
           publication_name: 'eeZee News',
           created_at: story.created_at,
           updated_at: story.updated_at,
-          cover_illustration_url: null,
-          cover_illustration_prompt: null,
+          cover_illustration_url: story.cover_illustration_url,
+          cover_illustration_prompt: story.cover_illustration_prompt,
           slides: storySlides,
           article: {
             source_url: story.article_source_url || '#',

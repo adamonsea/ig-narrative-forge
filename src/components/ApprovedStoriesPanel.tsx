@@ -23,7 +23,8 @@ import {
   BookOpen,
   Trash2,
   ImageIcon,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 
 interface Slide {
@@ -521,6 +522,18 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         
                         
                         <div className="flex gap-2 pt-2 border-t">
+                          {/* Source Link Button */}
+                          {story.article?.source_url && story.article.source_url !== '#' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(story.article!.source_url, '_blank')}
+                              className="flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Open Source
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
