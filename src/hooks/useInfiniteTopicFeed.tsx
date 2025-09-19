@@ -97,7 +97,8 @@ export const useInfiniteTopicFeed = (slug: string) => {
       // Use server-side RPC to fetch stories with proper filtering and pagination
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories', {
-          p_topic_id: topicData.id,
+          p_topic_slug: slug,
+          p_sort_by: sortBy,
           p_limit: STORIES_PER_PAGE,
           p_offset: from
         });
@@ -202,13 +203,13 @@ export const useInfiniteTopicFeed = (slug: string) => {
         updated_at: story.updated_at,
         cover_illustration_url: null,
         cover_illustration_prompt: null,
-        slides: Array.isArray(story.slides) && story.slides.length > 0 
-          ? story.slides.sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0)) 
+        slides: story.slides && Array.isArray(story.slides) && story.slides.length > 0 
+          ? story.slides.sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0))
           : [],
         article: {
-          source_url: story.article_id ? 'legacy' : 'multi-tenant',
+          source_url: story.article_source_url || 'unknown',
           published_at: story.article_published_at,
-          region: 'Unknown'
+          region: story.article_region || topicData.region || 'Unknown'
         }
       }));
 
