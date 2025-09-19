@@ -45,16 +45,33 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [touchOffset, setTouchOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   
-  const currentSlide = story.slides[currentSlideIndex];
-  const isFirstSlide = currentSlideIndex === 0;
-  const isLastSlide = currentSlideIndex === story.slides.length - 1;
+  // Defensive checks for slides data
+  const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
+  const safeSlideIndex = Math.max(0, Math.min(currentSlideIndex, validSlides.length - 1));
+  const currentSlide = validSlides[safeSlideIndex];
+  const isFirstSlide = safeSlideIndex === 0;
+  const isLastSlide = safeSlideIndex === validSlides.length - 1;
+
+  // Early return if no valid slides
+  if (!currentSlide || validSlides.length === 0) {
+    console.error('StoryCarousel: No valid slides found for story', story.id);
+    return (
+      <div className="flex justify-center px-4">
+        <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg">
+          <div className="p-6 text-center text-muted-foreground">
+            <p>Story content is not available</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
 
   const nextSlide = () => {
-    if (!isLastSlide) {
+    if (!isLastSlide && validSlides.length > 0) {
       setSlideDirection('next');
       setTimeout(() => {
-        setCurrentSlideIndex(currentSlideIndex + 1);
+        setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
         setSlideDirection(null);
       }, 150);
     }
@@ -71,7 +88,9 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   };
 
   const goToSlide = (index: number) => {
-    setCurrentSlideIndex(index);
+    if (validSlides.length > 0) {
+      setCurrentSlideIndex(Math.max(0, Math.min(index, validSlides.length - 1)));
+    }
   };
 
   const toggleLove = () => {
@@ -193,7 +212,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     };
   };
 
-  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
+  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide?.content || 'Content not available');
 
   // Dynamic text sizing based on content length
   const getTextSize = (content: string, isTitle: boolean) => {
@@ -263,7 +282,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               })()}
             </div>
             <span className="text-sm text-muted-foreground">
-              {currentSlideIndex + 1} of {story.slides.length}
+              {safeSlideIndex + 1} of {validSlides.length}
             </span>
           </div>
 
@@ -282,7 +301,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           {/* Slide Content */}
           <div className="relative flex-1 flex items-center justify-center">
             {/* Invisible navigation areas */}
-            {story.slides.length > 1 && (
+            {validSlides.length > 1 && (
               <>
                 {/* Left area - previous slide */}
                 {!isFirstSlide && (
@@ -316,12 +335,12 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                 }}
               >
                 <div className={`text-center leading-relaxed ${
-                    currentSlideIndex === 0 
-                    ? `${getTextSize(currentSlide.content, true)} font-bold uppercase text-balance` 
-                    : `${getTextSize(isLastSlide ? mainContent : currentSlide.content, false)} font-light text-balance`
+                    safeSlideIndex === 0 
+                    ? `${getTextSize(currentSlide?.content || '', true)} font-bold uppercase text-balance` 
+                    : `${getTextSize(isLastSlide ? mainContent : (currentSlide?.content || ''), false)} font-light text-balance`
                 }`}>
                   {/* Main story content */}
-                  {isLastSlide ? mainContent : currentSlide.content}
+                  {isLastSlide ? mainContent : (currentSlide?.content || 'Content not available')}
                       
                   {/* CTA content with special styling on last slide */}
                   {isLastSlide && ctaContent && (
@@ -357,14 +376,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           <div className="p-4">
             {/* Progress dots and source link */}
             <div className="flex flex-col items-center space-y-2 mb-4">
-              {story.slides.length > 1 && (
+              {validSlides.length > 1 && (
                 <div className="flex justify-center space-x-2">
-                  {story.slides.map((_, index) => (
+                  {validSlides.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => goToSlide(index)}
                       className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentSlideIndex 
+                        index === safeSlideIndex 
                           ? 'bg-primary scale-125' 
                           : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
                       }`}

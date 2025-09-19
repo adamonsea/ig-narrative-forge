@@ -202,7 +202,9 @@ export const useInfiniteTopicFeed = (slug: string) => {
         updated_at: story.updated_at,
         cover_illustration_url: null,
         cover_illustration_prompt: null,
-        slides: Array.isArray(story.slides) ? story.slides.sort((a: any, b: any) => a.position - b.position) : [],
+        slides: Array.isArray(story.slides) && story.slides.length > 0 
+          ? story.slides.sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0)) 
+          : [],
         article: {
           source_url: story.article_id ? 'legacy' : 'multi-tenant',
           published_at: story.article_published_at,
