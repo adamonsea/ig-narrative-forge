@@ -8,11 +8,11 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Slide {
   id: string;
-  type: string;
+  slide_number: number;
   content: string;
-  position: number;
-  image_url?: string;
-  visual_description?: string;
+  word_count?: number;
+  alt_text?: string;
+  visual_prompt?: string;
 }
 
 interface PublishedStory {
@@ -150,7 +150,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                       title={slide.content}
                     >
                       <div className="text-[10px] font-medium text-muted-foreground">
-                        {index + 1}
+                        {slide.slide_number || index + 1}
                       </div>
                       <div className="text-[9px] leading-tight line-clamp-2">
                         {slide.content.substring(0, 40)}...
