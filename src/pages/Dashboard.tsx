@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicManager } from "@/components/TopicManager";
-import { QueueProcessor } from "@/components/QueueProcessor";
+
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -240,7 +240,7 @@ const Dashboard = () => {
             <div className="flex-1">
               <TopicManager />
             </div>
-            <QueueProcessor />
+            
           </div>
         </div>
       </div>
