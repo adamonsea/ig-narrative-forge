@@ -99,8 +99,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
         .rpc('get_topic_stories', {
           p_topic_id: topicData.id,
           p_limit: STORIES_PER_PAGE,
-          p_offset: from,
-          p_sort_order: sortBy === 'oldest' ? 'oldest' : 'newest'
+          p_offset: from
         });
 
       if (error) {

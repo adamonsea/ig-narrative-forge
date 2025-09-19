@@ -345,24 +345,36 @@ export const UnifiedArticlesList: React.FC<UnifiedArticlesListProps> = ({
                 </div>
               </div>
 
-              <Button
-                onClick={() => onApprove(
-                  article.id, 
-                  slideType, 
-                  toneOverride, 
-                  writingStyleOverride
-                )}
-                disabled={isProcessing || isDeleting}
-                className="bg-success text-success-foreground hover:bg-success/90 w-full"
-                size="sm"
-              >
-                <PlayCircle className="w-4 h-4 mr-2" />
-                {isProcessing ? 'Processing...' : (
-                  article.processing_status === 'processed' 
-                    ? 'Approve'
-                    : 'Simplify'
-                )}
-              </Button>
+                <Button
+                  onClick={() => onApprove(
+                    article.id, 
+                    slideType, 
+                    toneOverride, 
+                    writingStyleOverride
+                  )}
+                  disabled={isProcessing || isDeleting}
+                  className={`w-full ${
+                    isProcessing 
+                      ? 'bg-blue-500 text-white animate-pulse' 
+                      : 'bg-success text-success-foreground hover:bg-success/90'
+                  }`}
+                  size="sm"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-4 h-4 mr-2" />
+                      {article.processing_status === 'processed' 
+                        ? 'Approve'
+                        : 'Simplify'
+                      }
+                    </>
+                  )}
+                </Button>
             </div>
           </div>
         </CardHeader>
