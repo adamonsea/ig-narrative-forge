@@ -12,6 +12,7 @@ import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMult
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
+import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
 import EventsListing from "@/components/EventsListing";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 
@@ -257,8 +258,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <TabsTrigger value="articles">
             Arrivals ({totalArticles})
           </TabsTrigger>
-          <TabsTrigger value="stories" className="flex items-center gap-2">
-            <span>Stories Review ({stories.filter(s => s.status === 'draft' || s.status === 'ready').length})</span>
+          <TabsTrigger value="published" className="flex items-center gap-2">
+            <span>Published ({stories.filter(s => s.is_published && s.status === 'published').length})</span>
             {processingCount > 0 && (
               <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
                 <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
@@ -323,69 +324,108 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
 
-        {/* Stories Tab */}
-        <TabsContent value="stories" className="space-y-4">
+        {/* Published Tab */}
+        <TabsContent value="published" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <div className="text-sm text-muted-foreground">
-              Stories awaiting review and approval
+              Stories that are published and visible in the feed
             </div>
             <Button
               variant="outline" 
               size="sm"
-              onClick={async () => {
-                try {
-                  const { data, error } = await supabase.functions.invoke('queue-processor');
-                  if (error) throw error;
-                  toast({
-                    title: "Processor Complete",
-                    description: `Processed ${data?.processed || 0} items`,
-                  });
-                  setTimeout(() => refreshContent(), 2000);
-                } catch (error) {
-                  console.error('Queue processor error:', error);
-                  toast({
-                    title: "Processor Error", 
-                    description: "Failed to run content processor",
-                    variant: "destructive"
-                  });
-                }
-              }}
+              onClick={refreshContent}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Run Processor
+              Refresh
             </Button>
           </div>
           
-          {stories.length === 0 ? (
+          {stories.filter(s => s.is_published && s.status === 'published').length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No stories for review</p>
-                <p className="text-sm mt-2">Generated stories will appear here for approval</p>
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No published stories</p>
+                <p className="text-sm mt-2">Approved stories will appear here when published to the feed</p>
               </CardContent>
             </Card>
           ) : (
             <Card>
               <CardContent>
-                <MultiTenantStoriesList
-                  stories={stories}
-                  expandedStories={expandedStories}
-                  processingApproval={processingApproval}
-                  processingRejection={processingRejection}
-                  deletingStories={deletingStories}
-                  publishingStories={publishingStories}
-                  animatingStories={animatingStories}
-                  onToggleExpanded={handleToggleStoryExpanded}
-                  onApprove={handleStoryApprove}
-                  onReject={handleStoryReject}
-                  onDelete={(storyId, title) => {
-                    // Use the multi-tenant reject action (which deletes the story)
-                    multiTenantActions.rejectMultiTenantStory(storyId);
+                <PublishedStoriesList
+                  stories={stories.filter(s => s.is_published && s.status === 'published')}
+                  onArchive={async (storyId, title) => {
+                    try {
+                      const { error } = await supabase
+                        .from('stories')
+                        .update({ is_published: false, status: 'archived' })
+                        .eq('id', storyId);
+                      
+                      if (error) throw error;
+                      
+                      toast({
+                        title: "Story Archived",
+                        description: "Story has been removed from the feed",
+                      });
+                      refreshContent();
+                    } catch (error) {
+                      console.error('Error archiving story:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to archive story",
+                        variant: "destructive"
+                      });
+                    }
                   }}
-                  onReturnToReview={handleReturnToReview}
-                  onEditSlide={handleEditSlide}
+                  onReturnToReview={async (storyId) => {
+                    try {
+                      const { error } = await supabase
+                        .from('stories')
+                        .update({ is_published: false, status: 'draft' })
+                        .eq('id', storyId);
+                      
+                      if (error) throw error;
+                      
+                      toast({
+                        title: "Story Returned",
+                        description: "Story has been returned to arrivals for review",
+                      });
+                      refreshContent();
+                    } catch (error) {
+                      console.error('Error returning story:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to return story to review",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  onDelete={async (storyId, title) => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('delete-story-cascade', {
+                        body: { story_id: storyId }
+                      });
+                      
+                      if (error) throw error;
+                      
+                      if (data?.success) {
+                        toast({
+                          title: "Story Deleted",
+                          description: "Story and all associated content has been permanently deleted",
+                        });
+                        refreshContent();
+                      } else {
+                        throw new Error(data?.error || 'Unknown error');
+                      }
+                    } catch (error) {
+                      console.error('Error deleting story:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to delete story",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
                   onViewStory={(story) => {
-                    // Simple story view - could enhance later
                     window.open(`/story/${story.id}`, '_blank');
                   }}
                   onRefresh={refreshContent}

@@ -2703,27 +2703,22 @@ export type Database = {
           | { p_topic_id?: string }
         Returns: {
           article_id: string
-          audience_expertise: string
           author: string
           cover_illustration_prompt: string
           cover_illustration_url: string
           created_at: string
           id: string
-          illustration_generated_at: string
           is_published: boolean
+          publication_name: string
+          quality_score: number
           shared_content_id: string
           slides: Json
-          slides_count: number
-          slidetype: string
-          source_type: string
           source_url: string
           status: string
           title: string
-          tone: string
           topic_article_id: string
           updated_at: string
           word_count: number
-          writing_style: string
         }[]
       }
       get_topic_articles_multi_tenant: {
@@ -2808,22 +2803,19 @@ export type Database = {
               p_sort_order?: string
               p_topic_id: string
             }
-          | {
-              p_limit?: number
-              p_offset?: number
-              p_sort_order?: string
-              p_topic_id: string
-            }
         Returns: {
           article_author: string
           article_id: string
           article_published_at: string
           article_title: string
-          author: string
           created_at: string
+          headline: string
           id: string
+          is_published: boolean
           slides: Json
-          title: string
+          status: string
+          story_type: string
+          summary: string
           topic_article_id: string
           updated_at: string
         }[]
