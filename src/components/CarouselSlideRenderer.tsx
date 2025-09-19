@@ -66,8 +66,15 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
     }
     
     // Always add source attribution with original article date on final slide
-    const sourceDomain = story.article.source_url ? 
-      new URL(story.article.source_url).hostname.replace('www.', '') : 
+    const sourceDomain = story.article.source_url && story.article.source_url !== '#' ? 
+      (() => {
+        try {
+          return new URL(story.article.source_url).hostname.replace('www.', '');
+        } catch (error) {
+          console.warn('Invalid URL in story.article.source_url:', story.article.source_url);
+          return 'source';
+        }
+      })() : 
       'source';
     
     // Format original article date if available
@@ -156,7 +163,7 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
                           )
                           .replace(
                             /Read the full story at ([^\s\n]+)/gi,
-                            sourceUrl ? 
+                            sourceUrl && sourceUrl !== '#' ? 
                               `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
                               'Read the full story at <span class="text-primary font-extrabold">$1</span>'
                           )

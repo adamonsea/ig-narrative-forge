@@ -94,11 +94,22 @@ export const useInfiniteTopicFeed = (slug: string) => {
       
       console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
+      // Get topic ID first to use with RPC
+      const { data: topicForRpc } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('slug', slug)
+        .single();
+
+      if (!topicForRpc) {
+        throw new Error('Topic not found for RPC call');
+      }
+
       // Use server-side RPC to fetch stories with proper filtering and pagination
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories', {
-          p_topic_slug: slug,
-          p_sort_by: sortBy,
+          p_topic_id: topicForRpc.id,
+          p_status: 'published',
           p_limit: STORIES_PER_PAGE,
           p_offset: from
         });
@@ -196,20 +207,18 @@ export const useInfiniteTopicFeed = (slug: string) => {
       // Transform RPC response to expected format
       const transformedStories = storiesData.map((story: any) => ({
         id: story.id,
-        title: story.title,
+        title: story.title || story.article_title,
         author: story.article_author || 'Unknown',
         publication_name: 'eeZee News',
         created_at: story.created_at,
         updated_at: story.updated_at,
         cover_illustration_url: null,
         cover_illustration_prompt: null,
-        slides: story.slides && Array.isArray(story.slides) && story.slides.length > 0 
-          ? story.slides.sort((a: any, b: any) => (a.slide_number || 0) - (b.slide_number || 0))
-          : [],
+        slides: [], // Slides will be loaded separately if needed
         article: {
-          source_url: story.article_source_url || 'unknown',
+          source_url: story.article_source_url || '#',
           published_at: story.article_published_at,
-          region: story.article_region || topicData.region || 'Unknown'
+          region: topicData.region || 'Unknown'
         }
       }));
 
