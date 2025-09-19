@@ -219,6 +219,42 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
+  
+  // Handler functions for Published stories
+  const handleArchiveStory = async (storyId: string, title: string) => {
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'archived',
+          is_published: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', storyId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Story "${title}" archived successfully`,
+      });
+      refreshContent();
+    } catch (error) {
+      console.error('Error archiving story:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive story",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewStory = (story: any) => {
+    if (story.id) {
+      window.open(`/story/${story.id}`, '_blank');
+    }
+  };
+
   if (!selectedTopicId) {
     return (
       <Card>
@@ -351,7 +387,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           ) : (
             <Card>
               <CardContent>
-                <ApprovedStoriesPanel selectedTopicId={selectedTopicId} />
+                <PublishedStoriesList 
+                  stories={stories.filter(s => s.is_published && s.status === 'published')}
+                  onArchive={handleArchiveStory}
+                  onReturnToReview={handleMultiTenantRejectStory}
+                  onDelete={handleMultiTenantRejectStory}
+                  onViewStory={handleViewStory}
+                  onRefresh={refreshContent}
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           )}
