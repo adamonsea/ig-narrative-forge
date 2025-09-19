@@ -703,8 +703,7 @@ Return in JSON format:
       // Update story with multi-tenant linkage if needed
       const updateData: any = { 
         title: article.title, 
-        updated_at: new Date().toISOString(),
-        slidetype: finalSlideType
+        updated_at: new Date().toISOString()
       };
       
       // Set multi-tenant fields if this is a multi-tenant context
@@ -734,7 +733,6 @@ Return in JSON format:
       const insertData: any = {
         title: article.title,
         status: 'draft',
-        slidetype: finalSlideType,
         tone: effectiveTone,
         audience_expertise: topicExpertise
       };
