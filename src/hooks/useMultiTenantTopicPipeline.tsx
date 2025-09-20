@@ -268,15 +268,30 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.info('🧪 Pipeline: loaded articles', {
+      console.log('🧪 Pipeline Debug - Articles Loaded:', {
         legacy: legacyArticles.length,
         multiTenant: multiTenantArticles.length,
         total: allArticles.length,
         publishedLegacy: publishedLegacyIds.size,
         publishedMultiTenant: publishedMultiTenantIds.size,
         queuedLegacy: queuedLegacyIds.size,
-        queuedMultiTenant: queuedMultiTenantIds.size
+        queuedMultiTenant: queuedMultiTenantIds.size,
+        selectedTopicId,
+        articlesFiltered: {
+          legacyExcluded: (legacyArticlesResult.data || []).length - legacyArticles.length,
+          multiTenantExcluded: (multiTenantArticlesResult.data || []).length - multiTenantArticles.length
+        }
       });
+
+      if (allArticles.length === 0) {
+        console.log('🔍 Empty Feed Analysis:', {
+          legacyRawCount: legacyArticlesResult.data?.length || 0,
+          multiTenantRawCount: multiTenantArticlesResult.data?.length || 0,
+          publishedCount: publishedStoriesData?.length || 0,
+          queuedCount: queueItemsForFiltering?.length || 0,
+          message: 'All articles have been either published or are in processing queue'
+        });
+      }
 
       setArticles(allArticles);
       // Declare variables for filtered data

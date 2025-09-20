@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield } from "lucide-react";
+import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 
@@ -65,6 +65,28 @@ export default function MultiTenantArticlesList({
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkDeleteCount, setBulkDeleteCount] = useState<number | null>(null);
+
+  // Clear selection and animation states when articles array becomes empty
+  useEffect(() => {
+    if (articles.length === 0) {
+      setSelectedArticles(new Set());
+      setShowBulkActions(false);
+      setBulkDeleteCount(null);
+    }
+  }, [articles.length]);
+
+  // Debug logging for article management
+  useEffect(() => {
+    console.log('🔍 MultiTenantArticlesList Debug:', {
+      articlesCount: articles.length,
+      selectedCount: selectedArticles.size,
+      deletingCount: deletingArticles.size,
+      animatingCount: animatingArticles.size,
+      processingArticle,
+      showBulkActions
+    });
+  }, [articles.length, selectedArticles.size, deletingArticles.size, animatingArticles.size, processingArticle, showBulkActions]);
 
   // Helper functions
   const getRelevanceColor = (score: number) => {
@@ -98,9 +120,19 @@ export default function MultiTenantArticlesList({
   // Bulk action handlers
   const handleBulkDelete = () => {
     if (selectedArticles.size === 0) return;
+    
+    // Show immediate feedback
+    setBulkDeleteCount(selectedArticles.size);
+    
+    // Execute deletion
     onBulkDelete?.(Array.from(selectedArticles));
+    
+    // Clear states immediately for better UX
     setSelectedArticles(new Set());
     setShowBulkActions(false);
+    
+    // Clear count after a delay
+    setTimeout(() => setBulkDeleteCount(null), 3000);
   };
 
   const handleBulkDeleteByRelevance = () => {
@@ -109,7 +141,15 @@ export default function MultiTenantArticlesList({
       .map(article => article.id);
     
     if (lowRelevanceIds.length === 0) return;
+    
+    // Show immediate feedback
+    setBulkDeleteCount(lowRelevanceIds.length);
+    
+    // Execute deletion
     onBulkDelete?.(lowRelevanceIds);
+    
+    // Clear count after a delay
+    setTimeout(() => setBulkDeleteCount(null), 3000);
   };
 
   const handleSelectAll = () => {
@@ -320,6 +360,29 @@ export default function MultiTenantArticlesList({
     );
   };
 
+  // Success message for bulk delete
+  if (bulkDeleteCount !== null && articles.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
+          <CheckCircle className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Articles Deleted Successfully
+        </h3>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          {bulkDeleteCount} article{bulkDeleteCount !== 1 ? 's' : ''} deleted successfully. The feed is now empty.
+        </p>
+        <div className="flex gap-3">
+          <Button onClick={onRefresh} variant="outline" className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Gather More Content
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Empty state
   if (articles.length === 0) {
     return (
@@ -331,7 +394,7 @@ export default function MultiTenantArticlesList({
           No Articles Available
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          No new articles have been discovered yet. Click "Gather Content" to search for fresh content.
+          No new articles have been discovered yet. All articles have been processed or the feed is empty.
         </p>
         <div className="flex gap-3">
           <Button onClick={onRefresh} variant="outline" className="gap-2">
