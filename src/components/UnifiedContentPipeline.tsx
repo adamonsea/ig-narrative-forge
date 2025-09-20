@@ -376,7 +376,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </Button>
           </div>
           
-          {stories.filter(s => s.is_published && s.status === 'published').length === 0 ? (
+          {stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published')).length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -388,7 +388,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => s.is_published && s.status === 'published')}
+                  stories={stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published'))}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}

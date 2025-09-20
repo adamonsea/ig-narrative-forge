@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Slide {
   id: string;
@@ -50,6 +54,53 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onRefresh,
   loading = false
 }) => {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const saveSlide = async (slideId: string) => {
+    const content = edits[slideId];
+    if (content === undefined) return;
+    setSaving(prev => new Set([...prev, slideId]));
+    try {
+      const { error } = await supabase
+        .from('slides')
+        .update({ content })
+        .eq('id', slideId);
+      if (error) throw error;
+      toast({ title: 'Slide saved', description: 'Changes have been saved.' });
+      setSaving(prev => { const n = new Set(prev); n.delete(slideId); return n; });
+    } catch (e) {
+      console.error('Error saving slide', e);
+      toast({ title: 'Save failed', description: 'Could not save slide', variant: 'destructive' });
+      setSaving(prev => { const n = new Set(prev); n.delete(slideId); return n; });
+    }
+  };
+
+  const saveAllForStory = async (storyId: string, slides: Slide[]) => {
+    const toSave = slides.filter(s => edits[s.id] !== undefined);
+    if (toSave.length === 0) return;
+    try {
+      await Promise.all(
+        toSave.map(s =>
+          supabase.from('slides').update({ content: edits[s.id] as string }).eq('id', s.id)
+        )
+      );
+      toast({ title: 'Slides saved', description: `${toSave.length} slide(s) updated.` });
+    } catch (e) {
+      console.error('Error saving slides', e);
+      toast({ title: 'Save failed', description: 'Could not save slides', variant: 'destructive' });
+    }
+  };
   if (loading) {
     return (
       <div className="space-y-4">
@@ -136,36 +187,6 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               </p>
             )}
 
-            {/* Slides Preview */}
-            {story.slides.length > 0 && (
-              <div className="mb-4">
-                <div className="text-xs font-medium text-muted-foreground mb-2">
-                  {story.slides.length} slide{story.slides.length !== 1 ? 's' : ''}
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {story.slides.slice(0, 3).map((slide, index) => (
-                    <div
-                      key={slide.id}
-                      className="flex-shrink-0 w-20 h-12 bg-muted rounded border text-xs p-1 overflow-hidden"
-                      title={slide.content}
-                    >
-                      <div className="text-[10px] font-medium text-muted-foreground">
-                        {slide.slide_number || index + 1}
-                      </div>
-                      <div className="text-[9px] leading-tight line-clamp-2">
-                        {slide.content.substring(0, 40)}...
-                      </div>
-                    </div>
-                  ))}
-                  {story.slides.length > 3 && (
-                    <div className="flex-shrink-0 w-20 h-12 bg-muted rounded border text-xs flex items-center justify-center text-muted-foreground">
-                      +{story.slides.length - 3}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             <Separator className="my-4" />
 
             {/* Action Buttons */}
@@ -173,11 +194,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onViewStory(story)}
+                onClick={() => toggleExpanded(story.id)}
                 className="h-8"
               >
                 <Eye className="mr-1 h-3 w-3" />
-                View
+                {expanded.has(story.id) ? 'Hide' : 'View'}
+              </Button
               </Button>
 
               <Button

@@ -579,10 +579,27 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   }, [articles, deleteMultiTenantArticle, loadTopicContent, toast, supabase]);
 
   const handleMultiTenantBulkDelete = useCallback(async (articleIds: string[]) => {
-    await deleteMultipleMultiTenantArticles(articleIds);
+    // Split into legacy vs multi-tenant
+    const legacyIds = articles.filter(a => articleIds.includes(a.id) && a.article_type === 'legacy').map(a => a.id);
+    const multiTenantIds = articleIds.filter(id => !legacyIds.includes(id));
+
+    if (legacyIds.length > 0) {
+      const { error: legacyError } = await supabase
+        .from('articles')
+        .update({ processing_status: 'discarded' })
+        .in('id', legacyIds);
+      if (legacyError) {
+        console.error('Error discarding legacy articles:', legacyError);
+      }
+    }
+
+    if (multiTenantIds.length > 0) {
+      await deleteMultipleMultiTenantArticles(multiTenantIds);
+    }
+
     // Force immediate reload to show bulk deletion
     await loadTopicContent();
-  }, [deleteMultipleMultiTenantArticles, loadTopicContent]);
+  }, [articles, deleteMultipleMultiTenantArticles, loadTopicContent]);
 
   const handleMultiTenantCancelQueue = useCallback(async (queueId: string) => {
     await cancelMultiTenantQueueItem(queueId);
