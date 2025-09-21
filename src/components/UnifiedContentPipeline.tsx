@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
+import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
 import EventsListing from "@/components/EventsListing";
@@ -43,6 +44,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [processingRejection, setProcessingRejection] = useState<Set<string>>(new Set());
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
+  const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
   const [eventsCount, setEventsCount] = useState(0);
   const { toast } = useToast();
@@ -58,6 +60,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     handleMultiTenantApprove,
     handleMultiTenantDelete,
     handleMultiTenantBulkDelete,
+    handleMultiTenantCancelQueue,
     handleMultiTenantApproveStory,
     handleMultiTenantRejectStory,
     markArticleAsDiscarded,
