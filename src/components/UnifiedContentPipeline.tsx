@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -370,11 +370,23 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         <TabsContent value="processing" className="space-y-4">
           <Card>
             <CardContent>
+            {queueItems.length > 0 ? (
               <MultiTenantQueueList
                 queueItems={queueItems}
                 deletingQueueItems={deletingQueueItems}
                 onCancel={handleMultiTenantCancelQueue}
               />
+            ) : (
+              <div className="text-center py-12">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                  <Zap className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold">No Items Processing</h3>
+                <p className="text-muted-foreground">
+                  Content generation queue is empty. Approved articles will appear here while being processed.
+                </p>
+              </div>
+            )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -407,7 +419,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published'))}
+                  stories={(() => {
+                    const filteredStories = stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published'));
+                    
+                    // Debug logging for stories visibility issue
+                    console.log('DEBUG - All stories:', stories);
+                    console.log('DEBUG - Stories status breakdown:', stories.reduce((acc, story) => {
+                      acc[story.status] = (acc[story.status] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>));
+                    console.log('DEBUG - Filtered published stories:', filteredStories.length, filteredStories);
+                    
+                    return filteredStories;
+                  })()}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}
