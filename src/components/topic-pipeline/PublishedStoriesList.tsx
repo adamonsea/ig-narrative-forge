@@ -199,7 +199,6 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               >
                 <Eye className="mr-1 h-3 w-3" />
                 {expanded.has(story.id) ? 'Hide' : 'View'}
-              </Button
               </Button>
 
               <Button
@@ -249,6 +248,65 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 </Button>
               )}
             </div>
+
+            {/* Expandable Slide Content */}
+            {expanded.has(story.id) && (
+              <div className="mt-4 border-t pt-4">
+                <Accordion type="single" collapsible className="w-full">
+                  {story.slides.map((slide, index) => (
+                    <AccordionItem key={slide.id} value={`slide-${slide.id}`}>
+                      <AccordionTrigger className="text-sm">
+                        Slide {slide.slide_number} ({slide.word_count || 0} words)
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3">
+                          <Textarea
+                            value={edits[slide.id] !== undefined ? edits[slide.id] : slide.content}
+                            onChange={(e) => setEdits(prev => ({ ...prev, [slide.id]: e.target.value }))}
+                            className="min-h-[120px]"
+                            placeholder="Slide content..."
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => saveSlide(slide.id)}
+                              disabled={saving.has(slide.id) || edits[slide.id] === undefined}
+                            >
+                              <Save className="mr-1 h-3 w-3" />
+                              {saving.has(slide.id) ? 'Saving...' : 'Save'}
+                            </Button>
+                            {edits[slide.id] !== undefined && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEdits(prev => {
+                                  const next = { ...prev };
+                                  delete next[slide.id];
+                                  return next;
+                                })}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+                {story.slides.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => saveAllForStory(story.id, story.slides)}
+                    className="mt-3"
+                  >
+                    <Save className="mr-1 h-3 w-3" />
+                    Save All Changes
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
