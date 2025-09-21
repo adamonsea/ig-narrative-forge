@@ -290,12 +290,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     <div className="space-y-6">
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="articles">
             Arrivals ({totalArticles})
           </TabsTrigger>
-          <TabsTrigger value="published" className="flex items-center gap-2">
-            <span>Published ({stories.filter(s => s.is_published && s.status === 'published').length})</span>
+          <TabsTrigger value="processing" className="flex items-center gap-2">
+            <span>Processing ({queueItems.length})</span>
             {processingCount > 0 && (
               <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
                 <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
@@ -308,6 +308,9 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 <span className="text-xs" title={`${stuckCount} items need attention`}>{stuckCount}</span>
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="published">
+            Published ({stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published')).length})
           </TabsTrigger>
           <TabsTrigger value="events">
             Events ({eventsCount})
@@ -358,6 +361,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Processing Tab */}
+        <TabsContent value="processing" className="space-y-4">
+          <Card>
+            <CardContent>
+              <MultiTenantQueueList
+                queueItems={queueItems}
+                deletingQueueItems={deletingQueueItems}
+                onCancel={handleMultiTenantCancelQueue}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Published Tab */}
