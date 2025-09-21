@@ -213,23 +213,26 @@ export const PromptTemplates = {
 
     deepseek: (article: any, slideCount: number, publication: string) =>
       new DeepSeekPromptBuilder()
-        .context(`Transform this news article into ${slideCount} engaging carousel slides.\n\nARTICLE: "${article.title}"\n${article.body}\n\nSOURCE: ${publication}`)
+        .context(`Transform this news article into exactly ${slideCount} engaging carousel slides.\n\nARTICLE: "${article.title}"\n${article.body}\n\nSOURCE: ${publication}`)
         .addCriticalPoint(`Create exactly ${slideCount} slides - no more, no less`)
-        .addInstruction('Analyze the article structure and identify key information', [
-          'Main story elements and facts',
-          'Supporting details and context',
-          'Important quotes or statistics'
+        .addCriticalPoint(`STRICT WORD LIMITS: Slide 1 maximum 25 words, all other slides maximum 30-40 words each`)
+        .addInstruction('Create slide 1 as an engaging hook', [
+          'Maximum 25 words only',
+          'Include headline and compelling opening',
+          'Make readers want to continue'
         ])
-        .addInstruction('Create engaging slide content', [
+        .addInstruction('Create remaining slides with key content', [
+          'Maximum 30-40 words per slide',
+          'One key point per slide',
           'Use conversational, accessible language',
-          'Make each slide informative and substantial',
           'Include compelling visual descriptions',
           'Ensure accuracy to source material'
         ])
         .addInstruction('Format for social media consumption', [
-          'Keep slides concise but informative',
+          'Keep slides extremely concise',
           'Use proper accessibility alt text',
-          'Create specific, actionable visual prompts'
+          'Create specific, actionable visual prompts',
+          'Final slide should include source attribution'
         ])
         .outputFormat('Return as JSON array with slideNumber, content, visualPrompt, and altText for each slide')
         .build()

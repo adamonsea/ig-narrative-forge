@@ -97,6 +97,7 @@ serve(async (req) => {
     tone: string, 
     expertise: string, 
     slideType: string,
+    slideCount: number,
     publicationName: string
   ): Promise<SlideContent[]> {
     try {
@@ -111,11 +112,12 @@ Author: ${article.author || 'Staff Reporter'}
 REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
-- Create exactly 5-7 slides
-- Each slide should be concise but informative
+- Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
+- STRICT WORD LIMITS: Slide 1 maximum 25 words, all other slides maximum 30-40 words each
 - Include visual prompts for each slide
-- Make it shareable and engaging
+- Make it shareable and engaging  
 - Include alt text for accessibility
+- Final slide should include source attribution
 
 OUTPUT FORMAT (JSON):
 {
@@ -223,11 +225,12 @@ Author: ${article.author || 'Staff Reporter'}
 REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
-- Create exactly 5-7 slides
-- Each slide should be concise but informative
+- Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
+- STRICT WORD LIMITS: Slide 1 maximum 25 words, all other slides maximum 30-40 words each
 - Include visual prompts for each slide
 - Make it shareable and engaging
 - Include alt text for accessibility
+- Final slide should include source attribution
 
 OUTPUT FORMAT (JSON):
 {
@@ -593,6 +596,16 @@ Return in JSON format:
       finalSlideType = 'short';
     }
 
+    // Create slides with correct slide count mapping
+    const slideTypeMapping = {
+      'short': 4,
+      'tabloid': 6, 
+      'indepth': 8,
+      'extensive': 12
+    };
+    
+    const targetSlideCount = slideTypeMapping[finalSlideType] || 6;
+    
     // Generate slides with the selected AI provider
     let slides: SlideContent[];
     let actualProvider = aiProvider;
@@ -600,20 +613,20 @@ Return in JSON format:
     try {
       if (aiProvider === 'deepseek' && deepseekApiKey) {
         console.log('🤖 Using DeepSeek for slide generation...');
-        slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
+        slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
       } else if (aiProvider === 'openai' && openaiApiKey) {
         console.log('🤖 Using OpenAI for slide generation...');
-        slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
+        slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
       } else {
         // Fallback logic
         console.log('🔄 Primary provider not available, trying fallback...');
         if (openaiApiKey) {
           console.log('📝 Falling back to OpenAI...');
-          slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
+          slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
           actualProvider = 'openai';
         } else if (deepseekApiKey) {
-          console.log('📝 Falling back to DeepSeek...');
-          slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, publicationName);
+          console.log('��� Falling back to DeepSeek...');
+          slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
           actualProvider = 'deepseek';
         } else {
           throw new Error('No AI provider available - both OpenAI and DeepSeek API keys missing');
@@ -732,7 +745,7 @@ Return in JSON format:
       // Create new story with full multi-tenant support
       const insertData: any = {
         title: article.title,
-        status: 'draft',
+        status: 'ready',
         tone: effectiveTone,
         audience_expertise: topicExpertise
       };
