@@ -9,6 +9,10 @@ import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save } from "lucide-reac
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCredits } from "@/hooks/useCredits";
+import { useAuth } from "@/hooks/useAuth";
+import { CreditService } from "@/lib/creditService";
+import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 
 interface Slide {
   id: string;
@@ -33,6 +37,9 @@ interface PublishedStory {
   article_id?: string;
   topic_article_id?: string;
   story_type?: 'legacy' | 'multi_tenant';
+  cover_illustration_url?: string | null;
+  cover_illustration_prompt?: string | null;
+  illustration_generated_at?: string | null;
 }
 
 interface PublishedStoriesListProps {
@@ -55,9 +62,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   loading = false
 }) => {
   const { toast } = useToast();
+  const { credits } = useCredits();
+  const { isSuperAdmin } = useAuth();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
+  const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -99,6 +109,87 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     } catch (e) {
       console.error('Error saving slides', e);
       toast({ title: 'Save failed', description: 'Could not save slides', variant: 'destructive' });
+    }
+  };
+
+  const handleGenerateIllustration = async (story: PublishedStory, model: ImageModel) => {
+    if (generatingIllustrations.has(story.id)) return;
+    
+    // Check credits (bypass for super admin)
+    if (!isSuperAdmin && (!credits || credits.credits_balance < model.credits)) {
+      toast({
+        title: 'Insufficient Credits',
+        description: `You need ${model.credits} credits to generate with ${model.name}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+
+    try {
+      const result = await CreditService.generateStoryIllustration(story.id, model.id);
+      
+      if (result.success) {
+        toast({
+          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
+          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
+        });
+        
+        // Refresh stories to show the new illustration
+        onRefresh();
+      } else {
+        toast({
+          title: 'Generation Failed',
+          description: result.error || 'Failed to generate illustration',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error generating illustration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate story illustration',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingIllustrations(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteIllustration = async (storyId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-story-illustration', {
+        body: { storyId }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        toast({
+          title: 'Illustration Deleted',
+          description: 'Cover illustration has been removed successfully.',
+        });
+        
+        setTimeout(() => {
+          onRefresh();
+        }, 500);
+      } else {
+        throw new Error(data?.error || 'Failed to delete illustration');
+      }
+    } catch (error) {
+      console.error('Error deleting illustration:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete illustration',
+        variant: 'destructive',
+      });
     }
   };
   if (loading) {
@@ -190,7 +281,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             <Separator className="my-4" />
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -200,6 +291,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <Eye className="mr-1 h-3 w-3" />
                 {expanded.has(story.id) ? 'Hide' : 'View'}
               </Button>
+
+              {/* Cover Generation Button */}
+              <ImageModelSelector
+                onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                isGenerating={generatingIllustrations.has(story.id)}
+                hasExistingImage={!!story.cover_illustration_url}
+                size="sm"
+              />
 
               <Button
                 variant="outline"
@@ -252,6 +351,45 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             {/* Expandable Slide Content */}
             {expanded.has(story.id) && (
               <div className="mt-4 border-t pt-4">
+                {/* Show cover illustration if exists */}
+                {story.cover_illustration_url && (
+                  <div className="mb-4 bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium">Cover Illustration</h4>
+                      <div className="flex gap-2">
+                        <ImageModelSelector
+                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                          isGenerating={generatingIllustrations.has(story.id)}
+                          hasExistingImage={false}
+                          size="sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteIllustration(story.id)}
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="relative w-full max-w-md">
+                      <img
+                        src={story.cover_illustration_url}
+                        alt={`Cover illustration for ${story.title || story.headline}`}
+                        className="w-full h-48 object-contain bg-white rounded-lg border"
+                        style={{ imageRendering: 'crisp-edges' }}
+                      />
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Generated: {story.illustration_generated_at ? 
+                          new Date(story.illustration_generated_at).toLocaleString() : 
+                          'Unknown'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <Accordion type="single" collapsible className="w-full">
                   {story.slides.map((slide, index) => (
                     <AccordionItem key={slide.id} value={`slide-${slide.id}`}>

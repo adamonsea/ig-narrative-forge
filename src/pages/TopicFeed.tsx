@@ -10,13 +10,10 @@ import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { Hash, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const { user } = useAuth();
 
   const {
     stories,
@@ -105,19 +102,17 @@ const TopicFeed = () => {
         {/* Topic Header - Clean and minimal */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            {user && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                asChild
-                className="absolute left-4 top-8"
-              >
-                <a href="/dashboard">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </a>
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              asChild
+              className="absolute left-4 top-8"
+            >
+              <a href="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </a>
+            </Button>
             {topic.topic_type === 'regional' ? (
               <MapPin className="w-6 h-6 text-blue-500" />
             ) : (
