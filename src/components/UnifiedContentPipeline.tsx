@@ -419,19 +419,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={(() => {
-                    const filteredStories = stories.filter(s => s.status === 'ready' || (s.is_published && s.status === 'published'));
-                    
-                    // Debug logging for stories visibility issue
-                    console.log('DEBUG - All stories:', stories);
-                    console.log('DEBUG - Stories status breakdown:', stories.reduce((acc, story) => {
-                      acc[story.status] = (acc[story.status] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>));
-                    console.log('DEBUG - Filtered published stories:', filteredStories.length, filteredStories);
-                    
-                    return filteredStories;
-                  })()}
+                  stories={stories.filter(s => 
+                    s.status === 'ready' || 
+                    s.status === 'published' || 
+                    (s.is_published && ['draft', 'ready', 'published'].includes(s.status))
+                  )}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}

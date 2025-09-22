@@ -298,45 +298,90 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       let filteredQueueItems: any[] = [];
       let filteredStories: any[] = [];
 
-      // Get queue items for articles from this topic
-      const queueResult = await supabase
-        .from('content_generation_queue')
-        .select(`
-          id,
-          topic_article_id,
-          shared_content_id,
-          status,
-          created_at,
-          attempts,
-          max_attempts,
-          error_message,
-          slidetype,
-          tone,
-          writing_style,
-          shared_article_content!inner(title, url)
-        `)
-        .not('topic_article_id', 'is', null)
-        .order('created_at', { ascending: false });
+      // Get queue items for both legacy and multi-tenant articles from this topic
+      const [legacyQueueResult, multiTenantQueueResult] = await Promise.all([
+        // Legacy queue items
+        supabase
+          .from('content_generation_queue')
+          .select(`
+            id,
+            article_id,
+            status,
+            created_at,
+            started_at,
+            completed_at,
+            attempts,
+            max_attempts,
+            error_message,
+            slidetype,
+            tone,
+            writing_style,
+            articles!inner(id, topic_id, title, source_url)
+          `)
+          .eq('articles.topic_id', selectedTopicId)
+          .in('status', ['pending', 'processing'])
+          .order('created_at', { ascending: false }),
+        
+        // Multi-tenant queue items
+        supabase
+          .from('content_generation_queue')
+          .select(`
+            id,
+            topic_article_id,
+            shared_content_id,
+            status,
+            created_at,
+            started_at,
+            completed_at,
+            attempts,
+            max_attempts,
+            error_message,
+            slidetype,
+            tone,
+            writing_style,
+            topic_articles!inner(
+              id, topic_id,
+              shared_content:shared_article_content(title, url)
+            )
+          `)
+          .eq('topic_articles.topic_id', selectedTopicId)
+          .in('status', ['pending', 'processing'])
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (queueResult.error) {
-        console.error('Error loading queue items:', queueResult.error);
+      console.log('🔄 Queue items loaded:', {
+        legacy: legacyQueueResult.data?.length || 0,
+        multiTenant: multiTenantQueueResult.data?.length || 0,
+        legacyError: legacyQueueResult.error,
+        multiTenantError: multiTenantQueueResult.error
+      });
+
+      if (legacyQueueResult.error || multiTenantQueueResult.error) {
+        console.error('Error loading queue items:', {
+          legacy: legacyQueueResult.error,
+          multiTenant: multiTenantQueueResult.error
+        });
         setQueueItems([]);
       } else {
-      // Filter queue items to only include those from articles in this topic  
-      const allTopicArticleIds = new Set([
-        ...(legacyArticlesResult.data || []).map((a: any) => a.id),
-        ...(multiTenantArticlesResult.data || []).map((a: any) => a.id)
-      ]);
-      filteredQueueItems = (queueResult.data || []).filter((item: any) => 
-        (item.article_id && allTopicArticleIds.has(item.article_id)) ||
-        (item.topic_article_id && allTopicArticleIds.has(item.topic_article_id))
-      );
+        // Combine both legacy and multi-tenant queue items
+        filteredQueueItems = [
+          ...(legacyQueueResult.data || []).map((item: any) => ({
+            ...item,
+            title: item.articles?.title || 'Unknown Title',
+            article_url: item.articles?.source_url || ''
+          })),
+          ...(multiTenantQueueResult.data || []).map((item: any) => ({
+            ...item,
+            title: item.topic_articles?.shared_content?.title || 'Unknown Title',
+            article_url: item.topic_articles?.shared_content?.url || ''
+          }))
+        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         
         const queueItemsData = filteredQueueItems.map((item: any) => ({
           id: item.id,
-          article_id: null,
-          topic_article_id: item.topic_article_id,
-          shared_content_id: item.shared_content_id,
+          article_id: item.article_id || null,
+          topic_article_id: item.topic_article_id || null,
+          shared_content_id: item.shared_content_id || null,
           status: item.status,
           created_at: item.created_at,
           started_at: item.started_at,
@@ -350,11 +395,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           audience_expertise: item.audience_expertise || 'intermediate',
           ai_provider: item.ai_provider || 'deepseek',
           writing_style: item.writing_style || 'journalistic',
-          title: item.shared_article_content?.title || 'Unknown Title',
-          article_title: item.shared_article_content?.title || 'Unknown Title',
-          article_url: item.shared_article_content?.url || ''
+          title: item.title,
+          article_title: item.title,
+          article_url: item.article_url
         }));
         setQueueItems(queueItemsData);
+        
+        console.log('✅ Queue items processed:', queueItemsData.length, 'items found');
       }
 
       console.log('🔄 Loading stories via server-side filters for topic:', selectedTopicId);
