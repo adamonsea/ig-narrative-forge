@@ -327,7 +327,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       const statuses = ['ready', 'published']; // Only published stories
       
-      // Fetch ONLY multi-tenant stories that are published
+      // Fetch BOTH multi-tenant AND legacy stories that are published
       const multiTenantStoriesResult = await supabase
         .from('stories')
         .select(`
@@ -343,13 +343,33 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         .eq('topic_articles.topic_id', selectedTopicId)
         .order('created_at', { ascending: false });
 
-      console.log('📊 Multi-tenant stories query results:', {
+      // Fetch legacy stories that are published
+      const legacyStoriesResult = await supabase
+        .from('stories')
+        .select(`
+          *,
+          slides(*),
+          article:articles!inner(
+            id, topic_id, title, source_url, author, published_at
+          )
+        `)
+        .in('status', statuses)
+        .in('is_published', [true, false]) // Include both published and ready stories
+        .eq('articles.topic_id', selectedTopicId)
+        .order('created_at', { ascending: false });
+
+      console.log('📊 Stories query results:', {
         multiTenant: multiTenantStoriesResult.data?.length || 0,
-        multiTenantError: multiTenantStoriesResult.error
+        legacy: legacyStoriesResult.data?.length || 0,
+        multiTenantError: multiTenantStoriesResult.error,
+        legacyError: legacyStoriesResult.error
       });
 
-      // Use only multi-tenant stories
-      const allStories = multiTenantStoriesResult.data || [];
+      // Combine both multi-tenant and legacy stories
+      const allStories = [
+        ...(multiTenantStoriesResult.data || []),
+        ...(legacyStoriesResult.data || [])
+      ];
       
       const uniqueStories = allStories.filter((story, index, arr) => 
         arr.findIndex(s => s.id === story.id) === index
@@ -361,13 +381,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
 
-      // Map to MultiTenantStory shape (multi-tenant only)
+      // Map to MultiTenantStory shape (both multi-tenant and legacy)
       const storiesData = sortedStories.map((story: any) => {
-        const articleData = story.topic_article?.shared_content;
+        // Check if this is a multi-tenant or legacy story
+        const isMultiTenant = !!story.topic_article;
+        const isLegacy = !!story.article;
+        
+        const articleData = isMultiTenant 
+          ? story.topic_article?.shared_content 
+          : story.article;
+        
         return {
           id: story.id,
-          article_id: null, // No legacy stories
-          topic_article_id: story.topic_article_id || null,
+          article_id: isLegacy ? story.article_id : null,
+          topic_article_id: isMultiTenant ? story.topic_article_id : null,
           headline: story.headline || story.title || articleData?.title || 'Untitled',
           summary: story.summary,
           status: story.status,
@@ -376,10 +403,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           updated_at: story.updated_at,
           slides: Array.isArray(story.slides) ? story.slides : [],
           article_title: articleData?.title || 'Untitled',
-          story_type: 'multi_tenant' as const,
+          story_type: isLegacy ? 'legacy' as const : 'multi_tenant' as const,
           title: story.headline || story.title || articleData?.title,
-          url: story.topic_article?.shared_content?.url || '',
-          author: story.topic_article?.shared_content?.author || '',
+          url: isMultiTenant 
+            ? (story.topic_article?.shared_content?.url || '') 
+            : (story.article?.source_url || ''),
+          author: isMultiTenant 
+            ? (story.topic_article?.shared_content?.author || '') 
+            : (story.article?.author || ''),
           word_count: story.word_count || 0,
           cover_illustration_url: story.cover_illustration_url,
           illustration_generated_at: story.illustration_generated_at,
