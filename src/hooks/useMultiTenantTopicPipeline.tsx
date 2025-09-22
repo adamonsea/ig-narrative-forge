@@ -163,7 +163,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Process ONLY multi-tenant articles (including snippets) that are still available for processing
       const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
         .filter((item: any) => 
-          item.processing_status === 'new' && // Only show new articles in Arrivals
+          ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
           !publishedMultiTenantIds.has(item.id) &&
           !queuedMultiTenantIds.has(item.id)
         )
