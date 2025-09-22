@@ -325,21 +325,21 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('🔄 Loading stories via server-side filters for topic:', selectedTopicId);
       
-      const statuses = ['ready', 'published']; // Only published stories
-      
-      // Use the unified RPC function for better performance
-      const unifiedStoriesResult = await supabase
-        .rpc('get_unified_topic_stories', {
+      // Align with public feed: use the same RPC first
+      const statuses = ['ready', 'published']; // used for fallbacks
+
+      const topicStoriesResult = await supabase
+        .rpc('get_topic_stories', {
           p_topic_id: selectedTopicId,
-          p_status: null, // Get both ready and published
+          p_status: 'published',
           p_limit: 200,
           p_offset: 0
         });
 
-      // Add robust fallback if unified RPC fails or returns no data
-      let fallbackStoriesResult = null;
-      if (unifiedStoriesResult.error || !unifiedStoriesResult.data || unifiedStoriesResult.data.length === 0) {
-        console.log('🔄 Unified RPC failed or empty, trying fallback queries...', unifiedStoriesResult.error);
+      // Robust fallback if RPC fails or returns no data
+      let fallbackStoriesResult: { data: any[]; error: any } | null = null;
+      if (topicStoriesResult.error || !topicStoriesResult.data || topicStoriesResult.data.length === 0) {
+        console.log('🔄 get_topic_stories RPC failed or empty, trying fallback queries...', topicStoriesResult.error);
         
         // Fallback 1: Legacy stories
         const legacyStoriesResult = await supabase
@@ -409,10 +409,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         };
       }
 
-      // Also get slides for the stories
+      // Also get slides for the stories (from RPC path)
       let slidesResult;
-      if (unifiedStoriesResult.data && unifiedStoriesResult.data.length > 0) {
-        const storyIds = unifiedStoriesResult.data.map((s: any) => s.id);
+      if (topicStoriesResult.data && topicStoriesResult.data.length > 0) {
+        const storyIds = topicStoriesResult.data.map((s: any) => s.id);
         slidesResult = await supabase
           .from('slides')
           .select('*')
@@ -420,16 +420,16 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           .order('slide_number', { ascending: true });
       }
 
-      console.log('📊 Unified stories query results:', {
-        unified: unifiedStoriesResult.data?.length || 0,
+      console.log('📊 Stories query results:', {
+        rpc: topicStoriesResult.data?.length || 0,
         fallback: fallbackStoriesResult?.data?.length || 0,
         slides: slidesResult?.data?.length || 0,
-        unifiedError: unifiedStoriesResult.error,
+        rpcError: topicStoriesResult.error,
         slidesError: slidesResult?.error
       });
 
-      // Use unified stories data or fallback
-      const allStories = unifiedStoriesResult.data || fallbackStoriesResult?.data || [];
+      // Use RPC stories data or fallback
+      const allStories = topicStoriesResult.data || fallbackStoriesResult?.data || [];
       
       const uniqueStories = allStories.filter((story, index, arr) => 
         arr.findIndex(s => s.id === story.id) === index
@@ -448,7 +448,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         publishedCount,
         readyCount: sortedStories.filter(s => s.status === 'ready' && s.is_published).length,
         publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length,
-        unifiedUsed: !!unifiedStoriesResult.data?.length,
+        rpcUsed: !!topicStoriesResult.data?.length,
         fallbackUsed: !!fallbackStoriesResult?.data?.length
       });
 
