@@ -345,7 +345,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         const legacyStoriesResult = await supabase
           .from('stories')
           .select(`
-            id, article_id, title, status, created_at, updated_at, is_published, summary,
+            id, article_id, title, status, created_at, updated_at, is_published,
             cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
             audience_expertise, is_teaser,
             articles!inner(id, topic_id, title, body, source_url, published_at, author)
@@ -359,7 +359,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         const multiTenantStoriesResult = await supabase
           .from('stories')
           .select(`
-            id, topic_article_id, shared_content_id, title, status, created_at, updated_at, is_published, summary,
+            id, topic_article_id, shared_content_id, title, status, created_at, updated_at, is_published,
             cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
             audience_expertise, is_teaser,
             topic_articles!inner(id, topic_id, shared_content_id,
