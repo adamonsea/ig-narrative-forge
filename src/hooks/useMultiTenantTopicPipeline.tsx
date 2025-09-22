@@ -336,6 +336,79 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           p_offset: 0
         });
 
+      // Add robust fallback if unified RPC fails or returns no data
+      let fallbackStoriesResult = null;
+      if (unifiedStoriesResult.error || !unifiedStoriesResult.data || unifiedStoriesResult.data.length === 0) {
+        console.log('🔄 Unified RPC failed or empty, trying fallback queries...', unifiedStoriesResult.error);
+        
+        // Fallback 1: Legacy stories
+        const legacyStoriesResult = await supabase
+          .from('stories')
+          .select(`
+            id, article_id, title, status, created_at, updated_at, is_published, summary,
+            cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
+            audience_expertise, is_teaser,
+            articles!inner(id, topic_id, title, body, source_url, published_at, author)
+          `)
+          .eq('articles.topic_id', selectedTopicId)
+          .eq('is_published', true)
+          .in('status', statuses)
+          .order('updated_at', { ascending: false });
+
+        // Fallback 2: Multi-tenant stories
+        const multiTenantStoriesResult = await supabase
+          .from('stories')
+          .select(`
+            id, topic_article_id, shared_content_id, title, status, created_at, updated_at, is_published, summary,
+            cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
+            audience_expertise, is_teaser,
+            topic_articles!inner(id, topic_id, shared_content_id,
+              shared_content:shared_article_content(title, body, url, published_at, author)
+            )
+          `)
+          .eq('topic_articles.topic_id', selectedTopicId)
+          .eq('is_published', true)
+          .in('status', statuses)
+          .order('updated_at', { ascending: false });
+
+        console.log('🔄 Fallback queries complete:', {
+          legacy: legacyStoriesResult.data?.length || 0,
+          multiTenant: multiTenantStoriesResult.data?.length || 0,
+          legacyError: legacyStoriesResult.error,
+          multiTenantError: multiTenantStoriesResult.error
+        });
+
+        // Merge fallback results
+        const legacyStories = (legacyStoriesResult.data || []).map((s: any) => ({
+          ...s,
+          story_type: 'legacy',
+          article_title: s.articles?.title,
+          article_body: s.articles?.body,
+          article_source_url: s.articles?.source_url,
+          article_published_at: s.articles?.published_at,
+          article_author: s.articles?.author,
+          headline: s.title,
+          slide_count: 0
+        }));
+
+        const multiTenantStories = (multiTenantStoriesResult.data || []).map((s: any) => ({
+          ...s,
+          story_type: 'multi_tenant',
+          article_title: s.topic_articles?.shared_content?.title,
+          article_body: s.topic_articles?.shared_content?.body,
+          article_source_url: s.topic_articles?.shared_content?.url,
+          article_published_at: s.topic_articles?.shared_content?.published_at,
+          article_author: s.topic_articles?.shared_content?.author,
+          headline: s.title,
+          slide_count: 0
+        }));
+
+        fallbackStoriesResult = {
+          data: [...legacyStories, ...multiTenantStories],
+          error: null
+        };
+      }
+
       // Also get slides for the stories
       let slidesResult;
       if (unifiedStoriesResult.data && unifiedStoriesResult.data.length > 0) {
@@ -349,13 +422,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('📊 Unified stories query results:', {
         unified: unifiedStoriesResult.data?.length || 0,
+        fallback: fallbackStoriesResult?.data?.length || 0,
         slides: slidesResult?.data?.length || 0,
         unifiedError: unifiedStoriesResult.error,
         slidesError: slidesResult?.error
       });
 
-      // Use unified stories data
-      const allStories = unifiedStoriesResult.data || [];
+      // Use unified stories data or fallback
+      const allStories = unifiedStoriesResult.data || fallbackStoriesResult?.data || [];
       
       const uniqueStories = allStories.filter((story, index, arr) => 
         arr.findIndex(s => s.id === story.id) === index
@@ -366,6 +440,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       );
 
       console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
+      
+      // Validation logging for QA
+      const publishedCount = sortedStories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length;
+      console.log('📊 Published Stories Validation:', {
+        totalStories: sortedStories.length,
+        publishedCount,
+        readyCount: sortedStories.filter(s => s.status === 'ready' && s.is_published).length,
+        publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length,
+        unifiedUsed: !!unifiedStoriesResult.data?.length,
+        fallbackUsed: !!fallbackStoriesResult?.data?.length
+      });
 
       // Map to MultiTenantStory shape (both multi-tenant and legacy from unified RPC)
       const storiesData = sortedStories.map((story: any) => {        

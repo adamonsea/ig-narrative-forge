@@ -343,7 +343,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
           </TabsTrigger>
           <TabsTrigger value="published">
-            Published ({stories.filter(s => s.is_published && s.status === 'published').length})
+            Published ({stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length})
           </TabsTrigger>
           <TabsTrigger value="events">
             Events ({eventsCount})
@@ -437,7 +437,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </Button>
           </div>
           
-          {stories.filter(s => s.is_published && s.status === 'published').length === 0 ? (
+          {stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -449,7 +449,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => s.is_published && s.status === 'published')}
+                  stories={stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status))}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}
