@@ -49,6 +49,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [eventsCount, setEventsCount] = useState(0);
   const { toast } = useToast();
 
+  const [runningPublishMigration, setRunningPublishMigration] = useState(false);
+
   // Multi-tenant system data (now the only system)
   const {
     articles,
@@ -258,6 +260,45 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
+  // One-time migration to publish any 'ready' stories
+  const runPublishMigration = useCallback(async () => {
+    try {
+      setRunningPublishMigration(true);
+      const { data, error } = await supabase.functions.invoke('publish-ready-stories', {
+        body: {}
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to publish ready stories');
+      }
+      toast({
+        title: 'Published',
+        description: data.message || 'Converted ready stories to published',
+      });
+      await refreshContent();
+    } catch (err: any) {
+      console.error('Publish migration failed:', err);
+      toast({
+        title: 'Migration failed',
+        description: err.message || 'Could not publish ready stories',
+        variant: 'destructive',
+      });
+    } finally {
+      setRunningPublishMigration(false);
+    }
+  }, [supabase, toast, refreshContent]);
+
+  useEffect(() => {
+    // Auto-run once per browser to fix visibility after status change
+    const key = 'publish_ready_stories_migrated_v1';
+    if (!localStorage.getItem(key)) {
+      runPublishMigration().finally(() => {
+        try { localStorage.setItem(key, 'true'); } catch {}
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!selectedTopicId) {
     return (
       <Card>
@@ -397,14 +438,25 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <div className="text-sm text-muted-foreground">
               Stories that are published and visible in the feed
             </div>
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={refreshContent}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={runPublishMigration}
+                disabled={runningPublishMigration}
+              >
+                {runningPublishMigration ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Publish ready
+              </Button>
+              <Button
+                variant="outline" 
+                size="sm"
+                onClick={refreshContent}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
           
           {stories.filter(s => s.is_published && s.status === 'published').length === 0 ? (
