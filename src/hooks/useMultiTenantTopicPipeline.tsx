@@ -129,7 +129,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Get ONLY multi-tenant articles for arrivals (no legacy articles)
       const multiTenantArticlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
         p_topic_id: selectedTopicId,
-        p_status: 'new',
+        p_status: null, // Get all statuses to filter out processed ones
         p_limit: 100 // Increased limit to ensure more content
       });
 
@@ -160,9 +160,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       const queuedMultiTenantIds = new Set(queueItemsForFiltering?.map(q => q.topic_article_id) || []);
 
-      // Process ONLY multi-tenant articles (including snippets)
+      // Process ONLY multi-tenant articles (including snippets) that are still available for processing
       const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
         .filter((item: any) => 
+          item.processing_status === 'new' && // Only show new articles in Arrivals
           !publishedMultiTenantIds.has(item.id) &&
           !queuedMultiTenantIds.has(item.id)
         )
@@ -338,7 +339,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           )
         `)
         .in('status', statuses)
-        .eq('is_published', true)
+        .in('is_published', [true, false]) // Include both published and ready stories
         .eq('topic_articles.topic_id', selectedTopicId)
         .order('created_at', { ascending: false });
 

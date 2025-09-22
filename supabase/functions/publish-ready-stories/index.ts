@@ -32,7 +32,7 @@ serve(async (req) => {
         is_published: true
       })
       .eq('status', 'ready')
-      .select('id, headline');
+      .select('id, title');
 
     if (updateError) {
       console.error('Error updating ready stories:', updateError);
@@ -46,7 +46,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: `Published ${updatedCount} ready stories`,
-        updatedStories: updatedStories?.map(s => ({ id: s.id, headline: s.headline })) || []
+        updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

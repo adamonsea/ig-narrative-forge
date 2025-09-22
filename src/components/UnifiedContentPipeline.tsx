@@ -260,7 +260,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     }
   };
 
-  // One-time migration to publish any 'ready' stories
+  // Publish ready stories migration
   const runPublishMigration = useCallback(async () => {
     try {
       setRunningPublishMigration(true);
@@ -287,17 +287,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       setRunningPublishMigration(false);
     }
   }, [supabase, toast, refreshContent]);
-
-  useEffect(() => {
-    // Auto-run once per browser to fix visibility after status change
-    const key = 'publish_ready_stories_migrated_v1';
-    if (!localStorage.getItem(key)) {
-      runPublishMigration().finally(() => {
-        try { localStorage.setItem(key, 'true'); } catch {}
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (!selectedTopicId) {
     return (
@@ -438,25 +427,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <div className="text-sm text-muted-foreground">
               Stories that are published and visible in the feed
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={runPublishMigration}
-                disabled={runningPublishMigration}
-              >
-                {runningPublishMigration ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Publish ready
-              </Button>
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={refreshContent}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-            </div>
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={refreshContent}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
           </div>
           
           {stories.filter(s => s.is_published && s.status === 'published').length === 0 ? (
