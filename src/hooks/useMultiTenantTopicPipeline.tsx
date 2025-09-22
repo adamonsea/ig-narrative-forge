@@ -460,6 +460,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           ? slidesResult.data.filter((slide: any) => slide.story_id === story.id) 
           : [];
         
+        console.log('🔍 Story slides debug:', {
+          storyId: story.id,
+          storyTitle: story.article_title || story.title,
+          slidesFound: storySlides.length,
+          totalSlides: slidesResult?.data?.length || 0,
+          slidesError: slidesResult?.error
+        });
+        
         return {
           id: story.id,
           article_id: story.article_id,
@@ -485,6 +493,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           audience_expertise: story.audience_expertise || '',
           is_teaser: story.is_teaser || false
         };
+      });
+
+      console.log('📊 Final stories data with slides:', {
+        totalStories: storiesData.length,
+        storiesWithSlides: storiesData.filter(s => s.slides.length > 0).length,
+        slideDistribution: storiesData.map(s => ({ id: s.id, title: s.title, slideCount: s.slides.length }))
       });
 
       setStories(storiesData);
@@ -717,6 +731,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   useEffect(() => {
     if (!selectedTopicId) return;
 
+    console.log('🔄 Setting up real-time subscriptions for topic:', selectedTopicId);
+
     const channel = supabase
       .channel('multi-tenant-topic-changes')
       .on(
@@ -726,8 +742,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'topic_articles'
         },
-        () => {
-          console.log('Topic articles changed, reloading...');
+        (payload) => {
+          console.log('🔄 Topic articles changed, reloading...', payload);
           loadTopicContent();
         }
       )
@@ -738,8 +754,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'shared_article_content'
         },
-        () => {
-          console.log('Shared content changed, reloading...');
+        (payload) => {
+          console.log('🔄 Shared content changed, reloading...', payload);
           loadTopicContent();
         }
       )
@@ -750,8 +766,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'stories'
         },
-        () => {
-          console.log('Stories changed, reloading...');
+        (payload) => {
+          console.log('🔄 Stories changed, reloading...', payload);
+          loadTopicContent();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'slides'
+        },
+        (payload) => {
+          console.log('🔄 Slides changed, reloading...', payload);
           loadTopicContent();
         }
       )
@@ -762,12 +790,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'content_generation_queue'
         },
-        () => {
-          console.log('Queue changed, reloading...');
+        (payload) => {
+          console.log('🔄 Queue changed, reloading...', payload);
           loadTopicContent();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔄 Real-time subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

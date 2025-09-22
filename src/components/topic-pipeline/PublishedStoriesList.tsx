@@ -234,6 +234,18 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     return 'Draft';
   };
 
+  console.log('🎬 PublishedStoriesList render debug:', {
+    storiesCount: stories.length,
+    storiesWithSlides: stories.filter(s => s.slides && s.slides.length > 0).length,
+    expandedStories: Array.from(expanded),
+    firstStory: stories[0] ? {
+      id: stories[0].id,
+      title: stories[0].title || stories[0].headline,
+      slidesCount: stories[0].slides?.length || 0,
+      hasSlides: !!(stories[0].slides && stories[0].slides.length > 0)
+    } : null
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -351,6 +363,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             {/* Expandable Slide Content */}
             {expanded.has(story.id) && (
               <div className="mt-4 border-t pt-4">
+                {(() => {
+                  console.log('🎬 Rendering expanded story:', {
+                    storyId: story.id,
+                    slidesCount: story.slides?.length || 0,
+                    slides: story.slides
+                  });
+                  return null;
+                })()}
                 {/* Show cover illustration if exists */}
                 {story.cover_illustration_url && (
                   <div className="mb-4 bg-muted/30 rounded-lg p-4">
