@@ -2818,20 +2818,52 @@ export type Database = {
               p_topic_id: string
             }
         Returns: {
+          article_author: string
+          article_id: string
+          article_published_at: string
+          article_title: string
+          author: string
+          created_at: string
+          id: string
+          slides: Json
+          story_type: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_unified_topic_stories: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
+        Returns: {
+          article_author: string
           article_body: string
           article_id: string
           article_published_at: string
           article_source_url: string
           article_title: string
+          audience_expertise: string
+          cover_illustration_url: string
           created_at: string
+          headline: string
           id: string
+          illustration_generated_at: string
           is_published: boolean
+          is_teaser: boolean
           shared_content_id: string
           slide_count: number
+          slidetype: string
           status: string
+          story_type: string
+          summary: string
           title: string
+          tone: string
           topic_article_id: string
           updated_at: string
+          writing_style: string
         }[]
       }
       gtrgm_compress: {

@@ -327,49 +327,35 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       const statuses = ['ready', 'published']; // Only published stories
       
-      // Fetch BOTH multi-tenant AND legacy stories that are published
-      const multiTenantStoriesResult = await supabase
-        .from('stories')
-        .select(`
-          *,
-          slides(*),
-          topic_article:topic_articles!inner(
-            id, topic_id,
-            shared_content:shared_article_content(title, url, author, published_at)
-          )
-        `)
-        .in('status', statuses)
-        .in('is_published', [true, false]) // Include both published and ready stories
-        .eq('topic_articles.topic_id', selectedTopicId)
-        .order('created_at', { ascending: false });
+      // Use the unified RPC function for better performance
+      const unifiedStoriesResult = await supabase
+        .rpc('get_unified_topic_stories', {
+          p_topic_id: selectedTopicId,
+          p_status: null, // Get both ready and published
+          p_limit: 200,
+          p_offset: 0
+        });
 
-      // Fetch legacy stories that are published
-      const legacyStoriesResult = await supabase
-        .from('stories')
-        .select(`
-          *,
-          slides(*),
-          article:articles!inner(
-            id, topic_id, title, source_url, author, published_at
-          )
-        `)
-        .in('status', statuses)
-        .in('is_published', [true, false]) // Include both published and ready stories
-        .eq('articles.topic_id', selectedTopicId)
-        .order('created_at', { ascending: false });
+      // Also get slides for the stories
+      let slidesResult;
+      if (unifiedStoriesResult.data && unifiedStoriesResult.data.length > 0) {
+        const storyIds = unifiedStoriesResult.data.map((s: any) => s.id);
+        slidesResult = await supabase
+          .from('slides')
+          .select('*')
+          .in('story_id', storyIds)
+          .order('slide_number', { ascending: true });
+      }
 
-      console.log('📊 Stories query results:', {
-        multiTenant: multiTenantStoriesResult.data?.length || 0,
-        legacy: legacyStoriesResult.data?.length || 0,
-        multiTenantError: multiTenantStoriesResult.error,
-        legacyError: legacyStoriesResult.error
+      console.log('📊 Unified stories query results:', {
+        unified: unifiedStoriesResult.data?.length || 0,
+        slides: slidesResult?.data?.length || 0,
+        unifiedError: unifiedStoriesResult.error,
+        slidesError: slidesResult?.error
       });
 
-      // Combine both multi-tenant and legacy stories
-      const allStories = [
-        ...(multiTenantStoriesResult.data || []),
-        ...(legacyStoriesResult.data || [])
-      ];
+      // Use unified stories data
+      const allStories = unifiedStoriesResult.data || [];
       
       const uniqueStories = allStories.filter((story, index, arr) => 
         arr.findIndex(s => s.id === story.id) === index
@@ -381,36 +367,29 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
 
-      // Map to MultiTenantStory shape (both multi-tenant and legacy)
-      const storiesData = sortedStories.map((story: any) => {
-        // Check if this is a multi-tenant or legacy story
-        const isMultiTenant = !!story.topic_article;
-        const isLegacy = !!story.article;
-        
-        const articleData = isMultiTenant 
-          ? story.topic_article?.shared_content 
-          : story.article;
+      // Map to MultiTenantStory shape (both multi-tenant and legacy from unified RPC)
+      const storiesData = sortedStories.map((story: any) => {        
+        // Add slides from separate query if available
+        const storySlides = slidesResult?.data 
+          ? slidesResult.data.filter((slide: any) => slide.story_id === story.id) 
+          : [];
         
         return {
           id: story.id,
-          article_id: isLegacy ? story.article_id : null,
-          topic_article_id: isMultiTenant ? story.topic_article_id : null,
-          headline: story.headline || story.title || articleData?.title || 'Untitled',
+          article_id: story.article_id,
+          topic_article_id: story.topic_article_id,
+          headline: story.headline || story.title || story.article_title || 'Untitled',
           summary: story.summary,
           status: story.status,
           is_published: Boolean(story.is_published),
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: Array.isArray(story.slides) ? story.slides : [],
-          article_title: articleData?.title || 'Untitled',
-          story_type: isLegacy ? 'legacy' as const : 'multi_tenant' as const,
-          title: story.headline || story.title || articleData?.title,
-          url: isMultiTenant 
-            ? (story.topic_article?.shared_content?.url || '') 
-            : (story.article?.source_url || ''),
-          author: isMultiTenant 
-            ? (story.topic_article?.shared_content?.author || '') 
-            : (story.article?.author || ''),
+          slides: storySlides || [],
+          article_title: story.article_title || 'Untitled',
+          story_type: story.story_type as 'legacy' | 'multi_tenant',
+          title: story.headline || story.title || story.article_title,
+          url: story.article_source_url || '',
+          author: story.article_author || '',
           word_count: story.word_count || 0,
           cover_illustration_url: story.cover_illustration_url,
           illustration_generated_at: story.illustration_generated_at,
