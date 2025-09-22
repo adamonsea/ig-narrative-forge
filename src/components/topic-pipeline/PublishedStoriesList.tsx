@@ -390,30 +390,46 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   </div>
                 )}
                 
-                <Accordion type="single" collapsible className="w-full">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">Slides ({story.slides.length})</h4>
                   {story.slides.map((slide, index) => (
-                    <AccordionItem key={slide.id} value={`slide-${slide.id}`}>
-                      <AccordionTrigger className="text-sm">
-                        Slide {slide.slide_number} ({slide.word_count || 0} words)
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-3">
-                          <Textarea
-                            value={edits[slide.id] !== undefined ? edits[slide.id] : slide.content}
-                            onChange={(e) => setEdits(prev => ({ ...prev, [slide.id]: e.target.value }))}
-                            className="min-h-[120px]"
-                            placeholder="Slide content..."
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => saveSlide(slide.id)}
-                              disabled={saving.has(slide.id) || edits[slide.id] === undefined}
-                            >
-                              <Save className="mr-1 h-3 w-3" />
-                              {saving.has(slide.id) ? 'Saving...' : 'Save'}
-                            </Button>
-                            {edits[slide.id] !== undefined && (
+                    <div key={slide.id} className="border rounded-lg p-4 bg-muted/20">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Slide {slide.slide_number || index + 1}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {slide.word_count || 0} words
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="bg-background rounded p-3">
+                          {edits[slide.id] !== undefined ? (
+                            <Textarea
+                              value={edits[slide.id]}
+                              onChange={(e) => setEdits(prev => ({ ...prev, [slide.id]: e.target.value }))}
+                              className="min-h-[120px] border-0 bg-transparent resize-none focus-visible:ring-0"
+                              placeholder="Slide content..."
+                            />
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                              {slide.content}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {edits[slide.id] !== undefined ? (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => saveSlide(slide.id)}
+                                disabled={saving.has(slide.id)}
+                              >
+                                <Save className="mr-1 h-3 w-3" />
+                                {saving.has(slide.id) ? 'Saving...' : 'Save'}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -425,13 +441,21 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                               >
                                 Cancel
                               </Button>
-                            )}
-                          </div>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEdits(prev => ({ ...prev, [slide.id]: slide.content }))}
+                            >
+                              Edit
+                            </Button>
+                          )}
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
+                      </div>
+                    </div>
                   ))}
-                </Accordion>
+                </div>
                 {story.slides.length > 0 && (
                   <Button
                     variant="outline"

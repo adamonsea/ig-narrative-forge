@@ -2823,8 +2823,11 @@ export type Database = {
           article_published_at: string
           article_source_url: string
           article_title: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
           created_at: string
           id: string
+          illustration_generated_at: string
           is_published: boolean
           shared_content_id: string
           slide_count: number

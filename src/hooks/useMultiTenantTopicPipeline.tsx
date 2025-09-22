@@ -74,6 +74,7 @@ export interface MultiTenantStory {
   author?: string;
   word_count?: number;
   cover_illustration_url?: string;
+  cover_illustration_prompt?: string;
   illustration_generated_at?: string;
   slidetype?: string;
   tone?: string;

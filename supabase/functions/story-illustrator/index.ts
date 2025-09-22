@@ -248,8 +248,8 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
             aspect_ratio: 'ASPECT_9_16', // Smaller portrait format for optimization
             model: 'V_2_TURBO', 
             magic_prompt_option: 'ON',
-            style_type: 'DESIGN',
-            resolution: '512x720' // Explicit smaller resolution
+            style_type: 'DESIGN'
+            // Remove resolution parameter - Ideogram will use aspect_ratio automatically
           }
         }),
       })
