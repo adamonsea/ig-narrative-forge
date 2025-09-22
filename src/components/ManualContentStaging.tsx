@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Upload, 
   FileImage, 
@@ -16,7 +17,8 @@ import {
   AlertTriangle,
   Trash2,
   RotateCcw,
-  CloudUpload
+  CloudUpload,
+  ChevronDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +49,7 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
   const STORAGE_KEY = `manual-content-staging-${topicId}`;
   const [processingFiles, setProcessingFiles] = useState<ProcessingFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const isProcessingRef = useRef(false);
   const { toast } = useToast();
 
@@ -366,49 +369,67 @@ try {
   );
 
   const completedFiles = processingFiles.filter(f => f.status === 'completed').length;
+  const totalFiles = processingFiles.length;
 
   return (
-    <Card className="mb-6 border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="w-5 h-5" />
-          Manual Content Staging
-          {hasActiveFiles && (
-            <Badge variant="secondary" className="animate-pulse">
-              Processing...
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="mb-6">
+      <CollapsibleTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15"
+        >
+          <Upload className="w-4 h-4" />
+          {totalFiles > 0 && (
+            <Badge variant="secondary" className="ml-2 text-xs">
+              {hasActiveFiles ? `${totalFiles} processing` : `${completedFiles} ready`}
             </Badge>
           )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Drop Zone */}
-        <div
-          {...getRootProps()}
-          className={`
-            border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
-            ${isDragActive 
-              ? 'border-primary bg-primary/10' 
-              : 'border-muted-foreground/25 hover:border-primary/50'
-            }
-          `}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center gap-2">
-            <Upload className={`w-8 h-8 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-            <div className="text-sm">
-              {isDragActive ? (
-                <p className="font-medium">Drop files here to process</p>
-              ) : (
-                <>
-                  <p className="font-medium">Drag & drop files here, or click to select</p>
-                  <p className="text-muted-foreground">
-                    Support: Images (screenshots), PDFs, text files • Max 20MB each
-                  </p>
-                </>
+          <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-4 mt-4">
+        <Card className="border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Manual Content Staging
+              {hasActiveFiles && (
+                <Badge variant="secondary" className="animate-pulse">
+                  Processing...
+                </Badge>
               )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Drop Zone */}
+            <div
+              {...getRootProps()}
+              className={`
+                border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
+                ${isDragActive 
+                  ? 'border-primary bg-primary/10' 
+                  : 'border-muted-foreground/25 hover:border-primary/50'
+                }
+              `}
+            >
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center gap-2">
+                <Upload className={`w-8 h-8 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div className="text-sm">
+                  {isDragActive ? (
+                    <p className="font-medium">Drop files here to process</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">Drag & drop files here, or click to select</p>
+                      <p className="text-muted-foreground">
+                        Support: Images (screenshots), PDFs, text files • Max 20MB each
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
         {/* Critical: Show processing queue with clear status */}
         {processingFiles.length > 0 && (
@@ -498,7 +519,9 @@ try {
             reloads. Completed articles appear in the arrivals queue below for review.
           </AlertDescription>
         </Alert>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
