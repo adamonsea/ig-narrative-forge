@@ -126,30 +126,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     try {
       setLoading(true);
 
-      // Get both legacy and multi-tenant articles for this topic
-      const [legacyArticlesResult, multiTenantArticlesResult] = await Promise.all([
-        // Legacy articles
-        supabase
-          .from('articles')
-          .select('*')
-          .eq('topic_id', selectedTopicId)
-          .eq('processing_status', 'new')
-          .order('created_at', { ascending: false })
-          .limit(50),
-        
-        // Multi-tenant articles using the RPC function
-        supabase.rpc('get_topic_articles_multi_tenant', {
-          p_topic_id: selectedTopicId,
-          p_status: 'new',
-          p_limit: 50
-        })
-      ]);
+      // Get ONLY multi-tenant articles for arrivals (no legacy articles)
+      const multiTenantArticlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
+        p_topic_id: selectedTopicId,
+        p_status: 'new',
+        p_limit: 100 // Increased limit to ensure more content
+      });
 
-      if (legacyArticlesResult.error || multiTenantArticlesResult.error) {
-        console.error('Error loading articles:', {
-          legacy: legacyArticlesResult.error,
-          multiTenant: multiTenantArticlesResult.error
-        });
+      if (multiTenantArticlesResult.error) {
+        console.error('Error loading multi-tenant articles:', multiTenantArticlesResult.error);
         toast({
           title: "Error loading articles",
           description: "Failed to load articles. Please try refreshing.",
@@ -160,71 +145,23 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Get story IDs to filter out articles that are already published
       const { data: publishedStoriesData } = await supabase
         .from('stories')
-        .select('article_id, topic_article_id')
-        .eq('status', 'published');
+        .select('topic_article_id')
+        .in('status', ['published', 'ready'])
+        .not('topic_article_id', 'is', null);
       
-      const publishedLegacyIds = new Set();
-      const publishedMultiTenantIds = new Set();
-      publishedStoriesData?.forEach(story => {
-        if (story.article_id) publishedLegacyIds.add(story.article_id);
-        if (story.topic_article_id) publishedMultiTenantIds.add(story.topic_article_id);
-      });
+      const publishedMultiTenantIds = new Set(publishedStoriesData?.map(s => s.topic_article_id) || []);
 
-      // Get pending/processing queue items to hide approved articles
+      // Get pending/processing queue items to hide approved articles  
       const { data: queueItemsForFiltering } = await supabase
         .from('content_generation_queue')
-        .select('article_id, topic_article_id')
-        .in('status', ['pending', 'processing']);
+        .select('topic_article_id')
+        .in('status', ['pending', 'processing'])
+        .not('topic_article_id', 'is', null);
       
-      const queuedLegacyIds = new Set();
-      const queuedMultiTenantIds = new Set();
-      queueItemsForFiltering?.forEach(item => {
-        if (item.article_id) queuedLegacyIds.add(item.article_id);
-        if (item.topic_article_id) queuedMultiTenantIds.add(item.topic_article_id);
-      });
+      const queuedMultiTenantIds = new Set(queueItemsForFiltering?.map(q => q.topic_article_id) || []);
 
-      // Process legacy articles
-      const legacyArticles = (legacyArticlesResult.data || [])
-        .filter((article: any) => 
-          !publishedLegacyIds.has(article.id) &&
-          !queuedLegacyIds.has(article.id)
-        )
-        .map((article: any) => {
-          const wordCount = article.word_count || 0;
-          const isSnippet = wordCount > 0 && wordCount < 150;
-          return {
-            id: article.id,
-            shared_content_id: null, // Legacy articles don't have shared content
-            topic_id: selectedTopicId,
-            source_id: article.source_id,
-            regional_relevance_score: article.regional_relevance_score || 0,
-            content_quality_score: article.content_quality_score || 0,
-            import_metadata: article.import_metadata || {},
-            originality_confidence: article.originality_confidence || 100,
-            created_at: article.created_at,
-            updated_at: article.updated_at,
-            processing_status: article.processing_status,
-            keyword_matches: article.keywords || [],
-            url: article.source_url,
-            normalized_url: article.canonical_url || article.source_url,
-            title: article.title,
-            body: article.body,
-            author: article.author,
-            image_url: article.image_url,
-            canonical_url: article.canonical_url,
-            content_checksum: article.content_checksum,
-            published_at: article.published_at,
-            word_count: wordCount,
-            language: article.language || 'en',
-            source_domain: article.source_url ? new URL(article.source_url).hostname : '',
-            last_seen_at: article.updated_at,
-            is_snippet: isSnippet,
-            article_type: 'legacy' as const
-          };
-        });
-
-      // Process multi-tenant articles
-      const multiTenantArticles = (multiTenantArticlesResult.data || [])
+      // Process ONLY multi-tenant articles (including snippets)
+      const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
         .filter((item: any) => 
           !publishedMultiTenantIds.has(item.id) &&
           !queuedMultiTenantIds.has(item.id)
@@ -263,33 +200,51 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           };
         });
 
-      // Merge and sort all articles by creation date
-      const allArticles = [...legacyArticles, ...multiTenantArticles].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      // Deduplicate articles by normalized title and shared_content_id
+      const seenTitles = new Set();
+      const seenContentIds = new Set();
+      const allArticles = rawMultiTenantArticles
+        .filter(article => {
+          const normalizedTitle = article.title.toLowerCase().trim();
+          
+          // Skip if we've seen this exact title
+          if (seenTitles.has(normalizedTitle)) {
+            console.log('🔄 Duplicate title filtered:', normalizedTitle);
+            return false;
+          }
+          
+          // Skip if we've seen this shared content ID
+          if (article.shared_content_id && seenContentIds.has(article.shared_content_id)) {
+            console.log('🔄 Duplicate content ID filtered:', article.shared_content_id);
+            return false;
+          }
+          
+          // Add to seen sets
+          seenTitles.add(normalizedTitle);
+          if (article.shared_content_id) {
+            seenContentIds.add(article.shared_content_id);
+          }
+          
+          return true;
+        })
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      console.log('🧪 Pipeline Debug - Articles Loaded:', {
-        legacy: legacyArticles.length,
-        multiTenant: multiTenantArticles.length,
-        total: allArticles.length,
-        publishedLegacy: publishedLegacyIds.size,
+      console.log('🧪 Multi-Tenant Only Pipeline - Articles Loaded:', {
+        rawMultiTenant: (multiTenantArticlesResult.data || []).length,
+        afterFiltering: rawMultiTenantArticles.length,
+        afterDeduplication: allArticles.length,
         publishedMultiTenant: publishedMultiTenantIds.size,
-        queuedLegacy: queuedLegacyIds.size,
         queuedMultiTenant: queuedMultiTenantIds.size,
         selectedTopicId,
-        articlesFiltered: {
-          legacyExcluded: (legacyArticlesResult.data || []).length - legacyArticles.length,
-          multiTenantExcluded: (multiTenantArticlesResult.data || []).length - multiTenantArticles.length
-        }
+        duplicatesRemoved: rawMultiTenantArticles.length - allArticles.length
       });
 
       if (allArticles.length === 0) {
-        console.log('🔍 Empty Feed Analysis:', {
-          legacyRawCount: legacyArticlesResult.data?.length || 0,
+        console.log('🔍 Empty Multi-Tenant Feed Analysis:', {
           multiTenantRawCount: multiTenantArticlesResult.data?.length || 0,
           publishedCount: publishedStoriesData?.length || 0,
           queuedCount: queueItemsForFiltering?.length || 0,
-          message: 'All articles have been either published or are in processing queue'
+          message: 'All multi-tenant articles have been either published or are in processing queue'
         });
       }
 
@@ -298,84 +253,47 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       let filteredQueueItems: any[] = [];
       let filteredStories: any[] = [];
 
-      // Get queue items for both legacy and multi-tenant articles from this topic
-      const [legacyQueueResult, multiTenantQueueResult] = await Promise.all([
-        // Legacy queue items
-        supabase
-          .from('content_generation_queue')
-          .select(`
-            id,
-            article_id,
-            status,
-            created_at,
-            started_at,
-            completed_at,
-            attempts,
-            max_attempts,
-            error_message,
-            slidetype,
-            tone,
-            writing_style,
-            articles!inner(id, topic_id, title, source_url)
-          `)
-          .eq('articles.topic_id', selectedTopicId)
-          .in('status', ['pending', 'processing'])
-          .order('created_at', { ascending: false }),
-        
-        // Multi-tenant queue items
-        supabase
-          .from('content_generation_queue')
-          .select(`
-            id,
-            topic_article_id,
-            shared_content_id,
-            status,
-            created_at,
-            started_at,
-            completed_at,
-            attempts,
-            max_attempts,
-            error_message,
-            slidetype,
-            tone,
-            writing_style,
-            topic_articles!inner(
-              id, topic_id,
-              shared_content:shared_article_content(title, url)
-            )
-          `)
-          .eq('topic_articles.topic_id', selectedTopicId)
-          .in('status', ['pending', 'processing'])
-          .order('created_at', { ascending: false })
-      ]);
+      // Get ONLY multi-tenant queue items for this topic
+      const multiTenantQueueResult = await supabase
+        .from('content_generation_queue')
+        .select(`
+          id,
+          topic_article_id,
+          shared_content_id,
+          status,
+          created_at,
+          started_at,
+          completed_at,
+          attempts,
+          max_attempts,
+          error_message,
+          slidetype,
+          tone,
+          writing_style,
+          topic_articles!inner(
+            id, topic_id,
+            shared_content:shared_article_content(title, url)
+          )
+        `)
+        .eq('topic_articles.topic_id', selectedTopicId)
+        .in('status', ['pending', 'processing'])
+        .order('created_at', { ascending: false });
 
-      console.log('🔄 Queue items loaded:', {
-        legacy: legacyQueueResult.data?.length || 0,
+      console.log('🔄 Multi-tenant queue items loaded:', {
         multiTenant: multiTenantQueueResult.data?.length || 0,
-        legacyError: legacyQueueResult.error,
         multiTenantError: multiTenantQueueResult.error
       });
 
-      if (legacyQueueResult.error || multiTenantQueueResult.error) {
-        console.error('Error loading queue items:', {
-          legacy: legacyQueueResult.error,
-          multiTenant: multiTenantQueueResult.error
-        });
+      if (multiTenantQueueResult.error) {
+        console.error('Error loading multi-tenant queue items:', multiTenantQueueResult.error);
         setQueueItems([]);
       } else {
-        // Combine both legacy and multi-tenant queue items
-        filteredQueueItems = [
-          ...(legacyQueueResult.data || []).map((item: any) => ({
-            ...item,
-            title: item.articles?.title || 'Unknown Title',
-            article_url: item.articles?.source_url || ''
-          })),
-          ...(multiTenantQueueResult.data || []).map((item: any) => ({
-            ...item,
-            title: item.topic_articles?.shared_content?.title || 'Unknown Title',
-            article_url: item.topic_articles?.shared_content?.url || ''
-          }))
-        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // Process ONLY multi-tenant queue items
+        filteredQueueItems = (multiTenantQueueResult.data || []).map((item: any) => ({
+          ...item,
+          title: item.topic_articles?.shared_content?.title || 'Unknown Title',
+          article_url: item.topic_articles?.shared_content?.url || ''
+        })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         
         const queueItemsData = filteredQueueItems.map((item: any) => ({
           id: item.id,
@@ -401,57 +319,36 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         }));
         setQueueItems(queueItemsData);
         
-        console.log('✅ Queue items processed:', queueItemsData.length, 'items found');
+        console.log('✅ Multi-tenant queue items processed:', queueItemsData.length, 'items found');
       }
 
       console.log('🔄 Loading stories via server-side filters for topic:', selectedTopicId);
       
-      const statuses = ['draft', 'ready', 'published'];
+      const statuses = ['ready', 'published']; // Only published stories
       
-      // Fetch stories without large IN() lists by filtering via server-side joins
-      const [legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-        // Legacy stories joined to articles filtered by topic_id
-        supabase
-          .from('stories')
-          .select(`
-            *,
-            slides(*),
-            article:articles!inner(
-              id, topic_id, title, source_url, author, published_at
-            )
-          `)
-          .in('status', statuses)
-          .eq('articles.topic_id', selectedTopicId)
-          .order('created_at', { ascending: false }),
-        
-        // Multi-tenant stories joined to topic_articles filtered by topic_id
-        supabase
-          .from('stories')
-          .select(`
-            *,
-            slides(*),
-            topic_article:topic_articles!inner(
-              id, topic_id,
-              shared_content:shared_article_content(title, url, author, published_at)
-            )
-          `)
-          .in('status', statuses)
-          .eq('topic_articles.topic_id', selectedTopicId)
-          .order('created_at', { ascending: false })
-      ]);
+      // Fetch ONLY multi-tenant stories that are published
+      const multiTenantStoriesResult = await supabase
+        .from('stories')
+        .select(`
+          *,
+          slides(*),
+          topic_article:topic_articles!inner(
+            id, topic_id,
+            shared_content:shared_article_content(title, url, author, published_at)
+          )
+        `)
+        .in('status', statuses)
+        .eq('is_published', true)
+        .eq('topic_articles.topic_id', selectedTopicId)
+        .order('created_at', { ascending: false });
 
-      console.log('📊 Stories query results (server-side filtered):', {
-        legacy: legacyStoriesResult.data?.length || 0,
+      console.log('📊 Multi-tenant stories query results:', {
         multiTenant: multiTenantStoriesResult.data?.length || 0,
-        legacyError: legacyStoriesResult.error,
         multiTenantError: multiTenantStoriesResult.error
       });
 
-      // Merge and deduplicate results
-      const allStories = [
-        ...(legacyStoriesResult.data || []),
-        ...(multiTenantStoriesResult.data || [])
-      ];
+      // Use only multi-tenant stories
+      const allStories = multiTenantStoriesResult.data || [];
       
       const uniqueStories = allStories.filter((story, index, arr) => 
         arr.findIndex(s => s.id === story.id) === index
@@ -463,28 +360,25 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
 
-      // Map to MultiTenantStory shape
+      // Map to MultiTenantStory shape (multi-tenant only)
       const storiesData = sortedStories.map((story: any) => {
-        const isLegacy = !!story.article_id;
-        const articleData = isLegacy 
-          ? story.article 
-          : story.topic_article?.shared_content;
+        const articleData = story.topic_article?.shared_content;
         return {
           id: story.id,
-          article_id: story.article_id || null,
+          article_id: null, // No legacy stories
           topic_article_id: story.topic_article_id || null,
           headline: story.headline || story.title || articleData?.title || 'Untitled',
           summary: story.summary,
           status: story.status,
-          is_published: Boolean(story.is_published) || story.status === 'published',
+          is_published: Boolean(story.is_published),
           created_at: story.created_at,
           updated_at: story.updated_at,
           slides: Array.isArray(story.slides) ? story.slides : [],
           article_title: articleData?.title || 'Untitled',
-          story_type: isLegacy ? ('legacy' as const) : ('multi_tenant' as const),
+          story_type: 'multi_tenant' as const,
           title: story.headline || story.title || articleData?.title,
-          url: isLegacy ? (story.article?.source_url || '') : (story.topic_article?.shared_content?.url || ''),
-          author: isLegacy ? (story.article?.author || '') : (story.topic_article?.shared_content?.author || ''),
+          url: story.topic_article?.shared_content?.url || '',
+          author: story.topic_article?.shared_content?.author || '',
           word_count: story.word_count || 0,
           cover_illustration_url: story.cover_illustration_url,
           illustration_generated_at: story.illustration_generated_at,

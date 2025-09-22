@@ -713,9 +713,11 @@ Return in JSON format:
     if (existingStory?.id) {
       storyId = existingStory.id;
       
-      // Update story with multi-tenant linkage if needed
+      // Update story with multi-tenant linkage and auto-publish
       const updateData: any = { 
-        title: article.title, 
+        title: article.title,
+        status: 'published', // Auto-publish updated stories
+        is_published: true, // Auto-publish updated stories
         updated_at: new Date().toISOString()
       };
       
@@ -742,10 +744,11 @@ Return in JSON format:
         console.log(`📝 Updated existing story ${storyId} with multi-tenant linkage`);
       }
     } else {
-      // Create new story with full multi-tenant support
+      // Create new story with full multi-tenant support (auto-published)
       const insertData: any = {
         title: article.title,
-        status: 'ready',
+        status: 'published', // Auto-publish new stories
+        is_published: true, // Auto-publish new stories
         tone: effectiveTone,
         audience_expertise: topicExpertise
       };
