@@ -13,7 +13,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
-  // Use auth hook optionally - public feeds don't require authentication
   const { user } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
