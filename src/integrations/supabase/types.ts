@@ -2559,6 +2559,10 @@ export type Database = {
         Args: { p_topic_id?: string }
         Returns: Json
       }
+      can_access_newsletter_signups: {
+        Args: { p_topic_id: string }
+        Returns: boolean
+      }
       check_newsletter_signup_rate_limit: {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
