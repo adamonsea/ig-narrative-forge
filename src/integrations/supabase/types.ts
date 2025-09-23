@@ -316,6 +316,53 @@ export type Database = {
           },
         ]
       }
+      community_insights: {
+        Row: {
+          confidence_score: number | null
+          content: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          insight_type: string
+          metadata: Json | null
+          source_identifier: string
+          source_type: string
+          topic_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          content: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_type: string
+          metadata?: Json | null
+          source_identifier: string
+          source_type?: string
+          topic_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          content?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_type?: string
+          metadata?: Json | null
+          source_identifier?: string
+          source_type?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_insights_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_generation_queue: {
         Row: {
           ai_provider: string | null
@@ -2240,6 +2287,8 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config: Json | null
+          community_config: Json | null
+          community_intelligence_enabled: boolean | null
           competing_regions: string[] | null
           created_at: string | null
           created_by: string
@@ -2269,6 +2318,8 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config?: Json | null
+          community_config?: Json | null
+          community_intelligence_enabled?: boolean | null
           competing_regions?: string[] | null
           created_at?: string | null
           created_by: string
@@ -2298,6 +2349,8 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           branding_config?: Json | null
+          community_config?: Json | null
+          community_intelligence_enabled?: boolean | null
           competing_regions?: string[] | null
           created_at?: string | null
           created_by?: string
@@ -2575,6 +2628,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      cleanup_expired_community_insights: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       cleanup_old_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2825,22 +2882,16 @@ export type Database = {
               p_topic_id: string
             }
         Returns: {
-          article_body: string
+          article_author: string
           article_id: string
           article_published_at: string
-          article_source_url: string
           article_title: string
-          cover_illustration_prompt: string
-          cover_illustration_url: string
+          author: string
           created_at: string
           id: string
-          illustration_generated_at: string
-          is_published: boolean
-          shared_content_id: string
-          slide_count: number
-          status: string
+          slides: Json
+          story_type: string
           title: string
-          topic_article_id: string
           updated_at: string
         }[]
       }

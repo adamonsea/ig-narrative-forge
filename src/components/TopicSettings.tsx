@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Settings, HelpCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Settings, HelpCircle, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,13 +14,15 @@ interface TopicSettingsProps {
   currentExpertise?: 'beginner' | 'intermediate' | 'expert';
   currentTone?: 'formal' | 'conversational' | 'engaging';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  currentCommunityEnabled?: boolean;
   onUpdate?: () => void;
 }
 
-export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentWritingStyle, onUpdate }: TopicSettingsProps) => {
+export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, onUpdate }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
+  const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -27,7 +30,8 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
     if (currentExpertise) setExpertise(currentExpertise);
     if (currentTone) setTone(currentTone);
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
-  }, [currentExpertise, currentTone, currentWritingStyle]);
+    if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -38,6 +42,7 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           audience_expertise: expertise,
           default_tone: tone,
           default_writing_style: writingStyle,
+          community_intelligence_enabled: communityEnabled,
           updated_at: new Date().toISOString()
         })
         .eq('id', topicId);
@@ -187,10 +192,43 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           </div>
         </div>
 
+        {/* Community Intelligence Toggle */}
+        <div className="border-t pt-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Community Voice
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Community Voice:</strong> Analyzes relevant Reddit discussions to understand local sentiment and community concerns</p>
+                        <p>Provides gentle background insights about what your community is discussing - processes slowly over hours/days</p>
+                        <p className="text-muted-foreground">Premium feature</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {communityEnabled ? "Gathering community insights in background" : "Add community discussions to enrich your feed"}
+              </p>
+            </div>
+            <Switch
+              checked={communityEnabled}
+              onCheckedChange={setCommunityEnabled}
+            />
+          </div>
+        </div>
+
         <div className="flex justify-end">
           <Button 
             onClick={handleSave} 
-            disabled={saving || (expertise === currentExpertise && tone === currentTone && writingStyle === currentWritingStyle)}
+            disabled={saving || (expertise === currentExpertise && tone === currentTone && writingStyle === currentWritingStyle && communityEnabled === currentCommunityEnabled)}
           >
             {saving ? "Saving..." : "Save Settings"}
           </Button>

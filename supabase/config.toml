@@ -141,3 +141,9 @@ verify_jwt = false
 
 [functions.screenshot-ai-scraper]
 verify_jwt = false
+
+[functions.reddit-community-processor]
+verify_jwt = false
+
+[functions.reddit-community-scheduler]
+verify_jwt = false

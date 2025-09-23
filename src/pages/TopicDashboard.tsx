@@ -49,6 +49,8 @@ interface Topic {
   created_at: string;
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
   default_tone?: 'formal' | 'conversational' | 'engaging';
+  default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  community_intelligence_enabled?: boolean;
 }
 
 const TopicDashboard = () => {
@@ -108,7 +110,8 @@ const TopicDashboard = () => {
         postcodes: topicData.postcodes || [],
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],
-        competing_regions: topicData.competing_regions || []
+        competing_regions: topicData.competing_regions || [],
+        default_writing_style: (topicData.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven') || 'journalistic'
       });
 
       setNegativeKeywords(topicData.negative_keywords || []);
@@ -518,6 +521,8 @@ const TopicDashboard = () => {
                       topicId={topic.id}
                       currentExpertise={topic.audience_expertise}
                       currentTone={topic.default_tone}
+                      currentWritingStyle={topic.default_writing_style}
+                      currentCommunityEnabled={topic.community_intelligence_enabled}
                       onUpdate={() => loadTopicAndStats()}
                     />
                     
