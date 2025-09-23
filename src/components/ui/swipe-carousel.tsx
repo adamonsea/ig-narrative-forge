@@ -39,15 +39,21 @@ export function SwipeCarousel({
     return () => ro.disconnect();
   }, []);
 
-  // animate to new index
+  // keep x aligned on resize (no animation)
+  useEffect(() => {
+    x.set(-index * width);
+  }, [width]);
+
+  // animate to index when changed via dots/click
   useEffect(() => {
     const controls = animate(x, -index * width, {
-      type: "tween",
-      ease: [0.22, 1, 0.36, 1],
-      duration: 0.55,
+      type: "spring",
+      stiffness: 520,
+      damping: 46,
+      mass: 0.9,
     });
     return controls.stop;
-  }, [index, width, x]);
+  }, [index]);
 
   // notify parent of slide changes
   useEffect(() => {
@@ -61,12 +67,41 @@ export function SwipeCarousel({
   const prev = () => goTo(index - 1);
   const next = () => goTo(index + 1);
 
+  // Instagram-like gesture: user drives position while dragging
+  // On release, project momentum to candidate target, snap to nearest slide within bounds
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const swipe = info.offset.x + info.velocity.x * 0.5;
-    const threshold = Math.min(0.15 * width, 80);
-    if (swipe > threshold) prev();
-    else if (swipe < -threshold) next();
-    else goTo(index);
+    // Momentum projection (pixels): tune 200–300 for desktop feel
+    const projected = x.get() + info.velocity.x * 220;
+    const rawTarget = -projected / width;
+    const targetIndex = clamp(Math.round(rawTarget));
+    const controls = animate(x, -targetIndex * width, {
+      type: "spring",
+      stiffness: 560,
+      damping: 48,
+      mass: 0.9,
+    });
+    setIndex(targetIndex);
+    return () => controls.stop();
+  };
+
+  // Desktop click-to-advance without overlay (prevents drag blocking)
+  const downX = useRef<number | null>(null);
+  const moved = useRef(false);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    downX.current = e.clientX;
+    moved.current = false;
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (downX.current == null) return;
+    if (Math.abs(e.clientX - downX.current) > 6) moved.current = true; // tiny slop
+  };
+  const onClickViewport = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Ignore if it was a drag
+    if (moved.current) return;
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const leftHalf = e.clientX - rect.left < rect.width / 2;
+    if (leftHalf) prev(); else next();
   };
 
   const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
@@ -75,17 +110,24 @@ export function SwipeCarousel({
 
   return (
     <div className={"relative select-none " + className} role="region" aria-roledescription="carousel" aria-label={ariaLabel}>
-      <div ref={viewportRef} className="overflow-hidden w-full" style={heightStyle}>
+      <div 
+        ref={viewportRef} 
+        className="overflow-hidden w-full" 
+        style={heightStyle}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onClick={onClickViewport}
+      >
         <motion.div
-          className="flex h-full cursor-grab active:cursor-grabbing select-none"
-          drag="x"
-          dragElastic={0.3}
+          className="flex h-full"
+          drag={width > 0 ? "x" : false}
+          dragElastic={0.12}
+          dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          style={{ x, touchAction: "pan-y pinch-zoom" }}
-          onDragEnd={onDragEnd}
-          dragMomentum={true}
+          dragTransition={{ power: 0.35, timeConstant: 260 }}
           whileDrag={{ cursor: "grabbing" }}
-          dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
+          style={{ x, touchAction: "pan-y" }}
+          onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
@@ -94,24 +136,6 @@ export function SwipeCarousel({
           ))}
         </motion.div>
       </div>
-
-      {/* Click zones for desktop only */}
-      {count > 1 && (
-        <div className="absolute inset-0 flex pointer-events-none hidden md:flex">
-          <button 
-            onClick={prev} 
-            aria-label="Previous slide" 
-            className="w-1/2 h-full cursor-w-resize focus:outline-none pointer-events-auto" 
-            disabled={index === 0}
-          />
-          <button 
-            onClick={next} 
-            aria-label="Next slide" 
-            className="w-1/2 h-full cursor-e-resize focus:outline-none pointer-events-auto" 
-            disabled={index === count - 1}
-          />
-        </div>
-      )}
 
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">

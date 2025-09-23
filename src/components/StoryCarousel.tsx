@@ -246,45 +246,43 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
         )}
 
         {/* Slide Content */}
-        <div className="flex-1 flex items-center justify-center p-6 md:p-8">
-          <div className="w-full max-w-lg mx-auto">
-            <div className="text-center leading-relaxed flex items-center justify-center h-full">
-              <div className={`${
-                index === 0 
-                ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
-                : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
-              }`}>
-                {/* Main story content with links */}
-                <div dangerouslySetInnerHTML={{
-                  __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
-                }} />
-                    
-                {/* CTA content with special styling on last slide */}
-                {index === validSlides.length - 1 && ctaContent && (
-                  <div className="mt-4 pt-4 border-t border-muted">
-                    <div 
-                      className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                      dangerouslySetInnerHTML={{
-                        __html: ctaContent
-                          .replace(
-                            /visit ([^\s]+)/gi, 
-                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /call (\d{5}\s?\d{6})/gi,
-                            'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
-                            (match, domain, dateText) => sourceUrl ? 
-                              `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
-                              `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
-                          )
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+        <div className="flex-1 grid place-items-center p-6 md:p-8">
+          <div className="w-full max-w-lg mx-auto text-center">
+            <div className={`leading-relaxed ${
+              index === 0 
+              ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
+              : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
+            }`}>
+              {/* Main story content with links */}
+              <div dangerouslySetInnerHTML={{
+                __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
+              }} />
+                  
+              {/* CTA content with special styling on last slide */}
+              {index === validSlides.length - 1 && ctaContent && (
+                <div className="mt-4 pt-4 border-t border-muted">
+                  <div 
+                    className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                    dangerouslySetInnerHTML={{
+                      __html: ctaContent
+                        .replace(
+                          /visit ([^\s]+)/gi, 
+                          'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                        )
+                        .replace(
+                          /call (\d{5}\s?\d{6})/gi,
+                          'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                        )
+                        .replace(
+                          /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
+                          (match, domain, dateText) => sourceUrl ? 
+                            `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
+                            `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
+                        )
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
