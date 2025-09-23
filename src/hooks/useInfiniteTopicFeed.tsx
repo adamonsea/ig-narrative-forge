@@ -105,8 +105,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
       // Use server-side RPC to fetch stories with proper filtering and pagination
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories', {
-          p_topic_id: topicData.id,
-          p_status: 'published',
+          p_topic_slug: slug,
           p_limit: STORIES_PER_PAGE,
           p_offset: from
         });
