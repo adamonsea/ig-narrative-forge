@@ -95,9 +95,9 @@ export function SwipeCarousel({
         </motion.div>
       </div>
 
-      {/* Click zones for desktop */}
+      {/* Click zones for desktop only */}
       {count > 1 && (
-        <div className="absolute inset-0 flex pointer-events-none">
+        <div className="absolute inset-0 flex pointer-events-none hidden md:flex">
           <button 
             onClick={prev} 
             aria-label="Previous slide" 

@@ -248,7 +248,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
         {/* Slide Content */}
         <div className="flex-1 flex items-center justify-center p-6 md:p-8">
           <div className="w-full max-w-lg mx-auto">
-            <div className="text-center leading-relaxed flex items-center justify-center min-h-[200px]">
+            <div className="text-center leading-relaxed flex items-center justify-center h-full">
               <div className={`${
                 index === 0 
                 ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
