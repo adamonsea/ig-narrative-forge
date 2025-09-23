@@ -32,60 +32,27 @@
     @apply text-xs sm:text-sm break-words;
   }
   
-  /* Enhanced swipe animations for Instagram-like feel */
+  /* Enhanced swipe container for Instagram-like gestures */
   .swipe-container {
     @apply relative overflow-hidden;
     contain: layout style paint;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   
   .swipe-content {
     @apply transition-none;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     perspective: 1000px;
   }
-  
-  .swipe-peek-left {
-    @apply absolute inset-0 opacity-60 scale-95;
-    transform: translateX(-20px) translateZ(-1px);
-  }
-  
-  .swipe-peek-right {
-    @apply absolute inset-0 opacity-60 scale-95;
-    transform: translateX(20px) translateZ(-1px);
-  }
-  
-  /* Smooth spring entrance animations */
-  .slide-enter {
-    @apply animate-[slide-enter_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards];
-  }
-  
-  .slide-exit-left {
-    @apply animate-[slide-exit-left_0.3s_cubic-bezier(0.25,0.46,0.45,0.94)_forwards];
-  }
-  
-  .slide-exit-right {
-    @apply animate-[slide-exit-right_0.3s_cubic-bezier(0.25,0.46,0.45,0.94)_forwards];
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
   }
 
-  /* Legacy animations for backward compatibility */
-  .animate-slide-out-right {
-    @apply animate-[slide-out-right_0.3s_ease-in-out_forwards];
-  }
-  
-  .animate-slide-out-left {
-    @apply animate-[slide-out-left_0.3s_ease-in-out_forwards];
-  }
-
-  .animate-slide-in {
-    @apply animate-[slide-in_0.3s_ease-in-out_forwards];
-  }
-  
-  .animate-discard {
-    @apply animate-[discard_0.3s_ease-in-out_forwards];
-  }
-  
-  .animate-fade-out {
-    @apply animate-[fade-out_0.3s_ease-in-out_forwards];
+  .story-link {
+    @apply relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left;
   }
   
   /* Line clamp utilities */

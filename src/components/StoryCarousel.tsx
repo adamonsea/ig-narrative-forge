@@ -46,8 +46,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
-  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Defensive checks for slides data
   const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
@@ -82,26 +80,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
 
   const nextSlide = () => {
-    if (!isLastSlide && validSlides.length > 0 && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('next');
+    if (!isLastSlide && validSlides.length > 0) {
       setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
-      setTimeout(() => {
-        setSlideDirection(null);
-        setIsTransitioning(false);
-      }, 400);
     }
   };
 
   const prevSlide = () => {
-    if (!isFirstSlide && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('prev');
+    if (!isFirstSlide) {
       setCurrentSlideIndex(currentSlideIndex - 1);
-      setTimeout(() => {
-        setSlideDirection(null);
-        setIsTransitioning(false);
-      }, 400);
     }
   };
 
@@ -321,77 +307,64 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           )}
 
           {/* Slide Content */}
-          <div className="relative flex-1 flex items-center justify-center">
-            {/* Invisible navigation areas */}
-            {validSlides.length > 1 && (
-              <>
-                {/* Left area - previous slide */}
-                {!isFirstSlide && (
-                  <button
-                    onClick={prevSlide}
-                    className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                    aria-label="Previous slide"
-                  />
-                )}
-                {/* Right area - next slide */}
-                {!isLastSlide && (
-                  <button
-                    onClick={nextSlide}
-                    className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                    aria-label="Next slide"
-                  />
-                )}
-              </>
-            )}
-            
-            <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
-              <div className="mb-8 relative overflow-hidden">
-                <div 
-                  className={`swipe-content ${
-                    slideDirection === 'next' ? 'slide-exit-left' : 
-                    slideDirection === 'prev' ? 'slide-exit-right' : 
-                    slideDirection === null && isTransitioning ? 'slide-enter' : ''
-                  }`}
-                  style={swipeGesture.getTransformStyle()}
-                >
-                  <div className={`text-center leading-relaxed ${
-                    safeSlideIndex === 0 
-                    ? `${getTextSize(currentSlide?.content || '', true)} font-bold uppercase text-balance` 
-                    : `${getTextSize(isLastSlide ? mainContent : (currentSlide?.content || ''), false)} font-light text-balance`
-                }`}>
-                  {/* Main story content with links */}
-                  <div dangerouslySetInnerHTML={{
-                    __html: isLastSlide ? contentWithLinks : renderContentWithLinks(currentSlide?.content || 'Content not available', currentSlide?.links)
-                  }} />
-                      
-                  {/* CTA content with special styling on last slide */}
-                  {isLastSlide && ctaContent && (
-                    <div className="mt-4 pt-4 border-t border-muted">
-                      <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                        dangerouslySetInnerHTML={{
-                          __html: ctaContent
-                            .replace(
-                              /visit ([^\s]+)/gi, 
-                              'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                            )
-                            .replace(
-                              /call (\d{5}\s?\d{6})/gi,
-                              'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                            )
-                            .replace(
-                              /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
-                              (match, domain, dateText) => sourceUrl ? 
-                                `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
-                                `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
-                            )
-                        }}
-                      />
+          <div className="relative flex-1 flex items-center justify-center overflow-hidden">            
+            <div className="relative w-full h-full">
+              {validSlides.map((slide, index) => {
+                const slideOffset = (index - safeSlideIndex) * 100;
+                const totalOffset = slideOffset + (swipeGesture.offset / (swipeGesture.containerRef.current?.offsetWidth || 1)) * 100;
+                
+                return (
+                  <div
+                    key={slide.id}
+                    className="absolute inset-0 p-6 md:p-8 flex items-center justify-center"
+                    style={{
+                      transform: `translate3d(${totalOffset}%, 0, 0)`,
+                      willChange: swipeGesture.isDragging || swipeGesture.isAnimating ? 'transform' : 'auto',
+                    }}
+                  >
+                    <div className="w-full max-w-lg mx-auto">
+                      <div className="mb-8">
+                        <div className={`text-center leading-relaxed ${
+                          index === 0 
+                          ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
+                          : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false)} font-light text-balance`
+                        }`}>
+                          {/* Main story content with links */}
+                          <div dangerouslySetInnerHTML={{
+                            __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
+                          }} />
+                              
+                          {/* CTA content with special styling on last slide */}
+                          {index === validSlides.length - 1 && ctaContent && (
+                            <div className="mt-4 pt-4 border-t border-muted">
+                              <div 
+                                className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                                dangerouslySetInnerHTML={{
+                                  __html: ctaContent
+                                    .replace(
+                                      /visit ([^\s]+)/gi, 
+                                      'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                                    )
+                                    .replace(
+                                      /call (\d{5}\s?\d{6})/gi,
+                                      'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                                    )
+                                    .replace(
+                                      /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
+                                      (match, domain, dateText) => sourceUrl ? 
+                                        `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
+                                        `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
+                                    )
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
-                </div>
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

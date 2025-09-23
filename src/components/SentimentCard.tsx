@@ -44,8 +44,6 @@ export const SentimentCard = ({
   slides = []
 }: SentimentCardProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Parse external sentiment for Reddit data
   const parseExternalSentiment = () => {
@@ -137,26 +135,14 @@ export const SentimentCard = ({
   };
 
   const nextSlide = () => {
-    if (currentSlide < displaySlides.length - 1 && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('next');
-      setTimeout(() => {
-        setCurrentSlide(currentSlide + 1);
-        setSlideDirection(null);
-        setIsTransitioning(false);
-      }, 400);
+    if (currentSlide < displaySlides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
     }
   };
 
   const prevSlide = () => {
-    if (currentSlide > 0 && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('prev');
-      setTimeout(() => {
-        setCurrentSlide(currentSlide - 1);
-        setSlideDirection(null);
-        setIsTransitioning(false);
-      }, 400);
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
     }
   };
 
@@ -487,16 +473,27 @@ export const SentimentCard = ({
             )}
             
           {/* Slide Content */}
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div 
-              className={`w-full max-w-lg swipe-content ${
-                slideDirection === 'next' ? 'slide-exit-left' : 
-                slideDirection === 'prev' ? 'slide-exit-right' : 
-                slideDirection === null && isTransitioning ? 'slide-enter' : ''
-              }`}
-              style={swipeGesture.getTransformStyle()}
-            >
-              {renderSlideContent(displaySlides[currentSlide])}
+          <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+            <div className="relative w-full h-full">
+              {displaySlides.map((slide, index) => {
+                const slideOffset = (index - currentSlide) * 100;
+                const totalOffset = slideOffset + (swipeGesture.offset / (swipeGesture.containerRef.current?.offsetWidth || 1)) * 100;
+                
+                return (
+                  <div
+                    key={index}
+                    className="absolute inset-0 p-6 flex items-center justify-center"
+                    style={{
+                      transform: `translate3d(${totalOffset}%, 0, 0)`,
+                      willChange: swipeGesture.isDragging || swipeGesture.isAnimating ? 'transform' : 'auto',
+                    }}
+                  >
+                    <div className="w-full max-w-lg">
+                      {renderSlideContent(slide)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
           </div>
