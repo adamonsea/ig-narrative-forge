@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { Settings, HelpCircle, Users } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Settings, HelpCircle, Users, Bot, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,14 +17,27 @@ interface TopicSettingsProps {
   currentTone?: 'formal' | 'conversational' | 'engaging';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentCommunityEnabled?: boolean;
+  currentAutoSimplifyEnabled?: boolean;
+  currentAutomationQualityThreshold?: number;
   onUpdate?: () => void;
 }
 
-export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, onUpdate }: TopicSettingsProps) => {
+export const TopicSettings = ({ 
+  topicId, 
+  currentExpertise, 
+  currentTone, 
+  currentWritingStyle, 
+  currentCommunityEnabled, 
+  currentAutoSimplifyEnabled,
+  currentAutomationQualityThreshold,
+  onUpdate 
+}: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
+  const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled !== false);
+  const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -31,7 +46,9 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
     if (currentTone) setTone(currentTone);
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
-  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled]);
+    if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
+    if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentAutoSimplifyEnabled, currentAutomationQualityThreshold]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -43,6 +60,8 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           default_tone: tone,
           default_writing_style: writingStyle,
           community_intelligence_enabled: communityEnabled,
+          auto_simplify_enabled: autoSimplifyEnabled,
+          automation_quality_threshold: automationQualityThreshold,
           updated_at: new Date().toISOString()
         })
         .eq('id', topicId);
@@ -225,10 +244,80 @@ export const TopicSettings = ({ topicId, currentExpertise, currentTone, currentW
           </div>
         </div>
 
+        <Separator />
+
+        {/* Automation Settings */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            <Label className="text-base font-medium">Automation Settings</Label>
+          </div>
+          
+          <div className="space-y-4 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Auto-Simplification
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <div className="space-y-2 text-sm">
+                          <p><strong>Auto-Simplification:</strong> Automatically processes new articles that meet quality thresholds</p>
+                          <p>Articles are queued for story generation without manual approval</p>
+                          <p className="text-muted-foreground">Requires global automation to be enabled</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {autoSimplifyEnabled ? "New articles will be automatically processed" : "Manual approval required for story generation"}
+                </p>
+              </div>
+              <Switch
+                checked={autoSimplifyEnabled}
+                onCheckedChange={setAutoSimplifyEnabled}
+              />
+            </div>
+
+            {autoSimplifyEnabled && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>
+                    Quality Threshold: {automationQualityThreshold}%
+                  </Label>
+                  <Slider
+                    value={[automationQualityThreshold]}
+                    onValueChange={([value]) => setAutomationQualityThreshold(value)}
+                    max={100}
+                    min={30}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Only articles with quality scores above this threshold will be automatically processed
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex justify-end">
           <Button 
             onClick={handleSave} 
-            disabled={saving || (expertise === currentExpertise && tone === currentTone && writingStyle === currentWritingStyle && communityEnabled === currentCommunityEnabled)}
+            disabled={saving || (
+              expertise === currentExpertise && 
+              tone === currentTone && 
+              writingStyle === currentWritingStyle && 
+              communityEnabled === currentCommunityEnabled &&
+              autoSimplifyEnabled === currentAutoSimplifyEnabled &&
+              automationQualityThreshold === currentAutomationQualityThreshold
+            )}
           >
             {saving ? "Saving..." : "Save Settings"}
           </Button>

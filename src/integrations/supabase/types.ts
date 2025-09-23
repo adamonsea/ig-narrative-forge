@@ -952,6 +952,39 @@ export type Database = {
           },
         ]
       }
+      global_automation_settings: {
+        Row: {
+          auto_simplify_enabled: boolean
+          auto_simplify_quality_threshold: number
+          created_at: string
+          enabled: boolean
+          id: string
+          scrape_frequency_hours: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          auto_simplify_enabled?: boolean
+          auto_simplify_quality_threshold?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          scrape_frequency_hours?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          auto_simplify_enabled?: boolean
+          auto_simplify_quality_threshold?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          scrape_frequency_hours?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       image_generation_tests: {
         Row: {
           api_provider: string
@@ -2286,6 +2319,8 @@ export type Database = {
           audience_expertise:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          auto_simplify_enabled: boolean | null
+          automation_quality_threshold: number | null
           branding_config: Json | null
           community_config: Json | null
           community_intelligence_enabled: boolean | null
@@ -2317,6 +2352,8 @@ export type Database = {
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          auto_simplify_enabled?: boolean | null
+          automation_quality_threshold?: number | null
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
@@ -2348,6 +2385,8 @@ export type Database = {
           audience_expertise?:
             | Database["public"]["Enums"]["audience_expertise"]
             | null
+          auto_simplify_enabled?: boolean | null
+          automation_quality_threshold?: number | null
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
