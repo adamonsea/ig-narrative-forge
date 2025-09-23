@@ -120,11 +120,10 @@ export function SwipeCarousel({
   if (count === 0) return null;
 
   return (
-    <div className={"relative select-none " + className} role="region" aria-roledescription="carousel" aria-label={ariaLabel}>
+    <div className={"relative select-none h-full " + className} role="region" aria-roledescription="carousel" aria-label={ariaLabel} style={heightStyle}>
       <div 
         ref={viewportRef} 
-        className="overflow-hidden w-full" 
-        style={heightStyle}
+        className="overflow-hidden w-full h-full" 
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onClick={onClickViewport}

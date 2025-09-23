@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
@@ -46,6 +46,11 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  
+  // Fit-to-height for last slide
+  const lastFitContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastFitInnerRef = useRef<HTMLDivElement | null>(null);
+  const [lastScale, setLastScale] = useState(1);
   
   // Defensive checks for slides data
   const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
@@ -117,6 +122,37 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
   // Enhanced touch handling is now managed by useSwipeGesture hook
 
+  // Auto fit last slide text to available height
+  useEffect(() => {
+    const fit = () => {
+      if (currentSlideIndex !== validSlides.length - 1) {
+        setLastScale(1);
+        return;
+      }
+      const container = lastFitContainerRef.current;
+      const inner = lastFitInnerRef.current;
+      if (!container || !inner) return;
+      // Measure natural content height; transforms don't affect scrollHeight
+      const available = container.clientHeight;
+      const needed = inner.scrollHeight;
+      if (available <= 0 || needed <= 0) return;
+      const ratio = available / needed;
+      // Clamp to sensible minimum so text remains legible
+      const nextScale = Math.max(0.7, Math.min(1, ratio));
+      setLastScale(nextScale);
+    };
+
+    fit();
+
+    const ro = lastFitContainerRef.current ? new ResizeObserver(fit) : null;
+    if (ro && lastFitContainerRef.current) ro.observe(lastFitContainerRef.current);
+    window.addEventListener('resize', fit);
+
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', fit);
+    };
+  }, [currentSlideIndex, validSlides.length, currentSlide?.content]);
 
   // Parse content for last slide styling and ensure source attribution
   const parseContentForLastSlide = (content: string, links: any[] = []) => {
@@ -231,6 +267,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const slideComponents = validSlides.map((slide, index) => {
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
+    const isLast = index === validSlides.length - 1;
     
     return (
       <div key={slide.id} className="h-full w-full">
@@ -259,44 +296,49 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             </div>
           </div>
         ) : (
-          // Slides without image - use grid for perfect centering
-          <div className="h-full grid place-items-center p-6 md:p-8">
-            <div className="w-full max-w-lg mx-auto text-center">
-              <div className={`leading-relaxed ${
-                index === 0 
-                ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
-                : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
-              }`}>
-                {/* Main story content with links */}
-                <div dangerouslySetInnerHTML={{
-                  __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
-                }} />
-                    
-                {/* CTA content with special styling on last slide */}
-                {index === validSlides.length - 1 && ctaContent && (
-                  <div className="mt-4 pt-4 border-t border-muted">
-                    <div 
-                      className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                      dangerouslySetInnerHTML={{
-                        __html: ctaContent
-                          .replace(
-                            /visit ([^\s]+)/gi, 
-                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /call (\d{5}\s?\d{6})/gi,
-                            'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                          )
-                          .replace(
-                            /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
-                            (match, domain, dateText) => sourceUrl ? 
-                              `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
-                              `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
-                          )
-                      }}
-                    />
-                  </div>
-                )}
+          // Slides without image - use grid for perfect centering and fit-to-height on last slide
+          <div className="h-full grid place-items-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
+            <div
+              ref={isLast ? lastFitInnerRef : undefined}
+              style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
+            >
+              <div className="w-full max-w-lg mx-auto text-center">
+                <div className={`leading-relaxed ${
+                  index === 0 
+                  ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
+                }`}>
+                  {/* Main story content with links */}
+                  <div dangerouslySetInnerHTML={{
+                    __html: isLast ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
+                  }} />
+                      
+                  {/* CTA content with special styling on last slide */}
+                  {isLast && ctaContent && (
+                    <div className="mt-4 pt-4 border-t border-muted">
+                      <div 
+                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                        dangerouslySetInnerHTML={{
+                          __html: ctaContent
+                            .replace(
+                              /visit ([^\s]+)/gi, 
+                              'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                            )
+                            .replace(
+                              /call (\d{5}\s?\d{6})/gi,
+                              'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                            )
+                            .replace(
+                              /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
+                              (match, domain, dateText) => sourceUrl ? 
+                                `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
+                                `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
+                            )
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
