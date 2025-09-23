@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, Minus, MessageSquare, BarChart3, Quote, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 
 interface SentimentSlide {
   type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
@@ -43,9 +44,8 @@ export const SentimentCard = ({
   slides = []
 }: SentimentCardProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Parse external sentiment for Reddit data
   const parseExternalSentiment = () => {
@@ -120,6 +120,16 @@ export const SentimentCard = ({
       metadata: { sources }
     }
   ];
+  // Enhanced swipe gesture hook
+  const swipeGesture = useSwipeGesture({
+    threshold: 0.3, // 30% of container width
+    velocityThreshold: 0.3,
+    canSwipeLeft: currentSlide < displaySlides.length - 1,
+    canSwipeRight: currentSlide > 0,
+    onSwipeLeft: () => nextSlide(),
+    onSwipeRight: () => prevSlide(),
+  });
+
   const getSentimentBadge = () => {
     if (sentimentScore > 20) return { icon: <TrendingUp className="h-3 w-3" />, variant: "secondary" as const };
     if (sentimentScore < -20) return { icon: <TrendingDown className="h-3 w-3" />, variant: "destructive" as const };
@@ -127,47 +137,30 @@ export const SentimentCard = ({
   };
 
   const nextSlide = () => {
-    if (currentSlide < displaySlides.length - 1) {
+    if (currentSlide < displaySlides.length - 1 && !isTransitioning) {
+      setIsTransitioning(true);
       setSlideDirection('next');
       setTimeout(() => {
         setCurrentSlide(currentSlide + 1);
         setSlideDirection(null);
-      }, 150);
+        setIsTransitioning(false);
+      }, 400);
     }
   };
 
   const prevSlide = () => {
-    if (currentSlide > 0) {
+    if (currentSlide > 0 && !isTransitioning) {
+      setIsTransitioning(true);
       setSlideDirection('prev');
       setTimeout(() => {
         setCurrentSlide(currentSlide - 1);
         setSlideDirection(null);
-      }, 150);
+        setIsTransitioning(false);
+      }, 400);
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(0);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 30;
-    const isRightSwipe = distance < -30;
-
-    if (isLeftSwipe && currentSlide < displaySlides.length - 1) {
-      nextSlide();
-    }
-    if (isRightSwipe && currentSlide > 0) {
-      prevSlide();
-    }
-  };
+  // Enhanced touch handling is now managed by useSwipeGesture hook
 
   const getTextSize = (content: string, isHero: boolean) => {
     const length = content.length;
@@ -453,10 +446,9 @@ export const SentimentCard = ({
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
         <div 
-          className={`relative h-[600px] flex flex-col overflow-hidden ${temperature.bgClass}`}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          ref={swipeGesture.containerRef}
+          className={`relative h-[600px] flex flex-col overflow-hidden swipe-container ${temperature.bgClass}`}
+          {...swipeGesture.handlers}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
@@ -494,19 +486,19 @@ export const SentimentCard = ({
               </>
             )}
             
-            <div className="p-6 md:p-8 w-full max-w-lg mx-auto h-full">
-              <div className="h-full relative overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-300 ease-in-out ${
-                    slideDirection === 'next' ? 'animate-slide-out-left' : 
-                    slideDirection === 'prev' ? 'animate-slide-out-right' : 
-                    'animate-slide-in'
-                  }`}
-                >
-                  {renderSlideContent(displaySlides[currentSlide])}
-                </div>
-                </div>
+          {/* Slide Content */}
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div 
+              className={`w-full max-w-lg swipe-content ${
+                slideDirection === 'next' ? 'slide-exit-left' : 
+                slideDirection === 'prev' ? 'slide-exit-right' : 
+                slideDirection === null && isTransitioning ? 'slide-enter' : ''
+              }`}
+              style={swipeGesture.getTransformStyle()}
+            >
+              {renderSlideContent(displaySlides[currentSlide])}
             </div>
+          </div>
           </div>
 
           {/* Bottom section */}

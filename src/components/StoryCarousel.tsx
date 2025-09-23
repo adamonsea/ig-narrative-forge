@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed } from '@/lib/dateUtils';
 import { format } from 'date-fns';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 interface Story {
   id: string;
@@ -45,12 +46,8 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [touchOffset, setTouchOffset] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const [isEntering, setIsEntering] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Defensive checks for slides data
   const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
@@ -58,6 +55,16 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const currentSlide = validSlides[safeSlideIndex];
   const isFirstSlide = safeSlideIndex === 0;
   const isLastSlide = safeSlideIndex === validSlides.length - 1;
+
+  // Enhanced swipe gesture hook
+  const swipeGesture = useSwipeGesture({
+    threshold: 0.25, // 25% of container width
+    velocityThreshold: 0.4,
+    canSwipeLeft: !isLastSlide,
+    canSwipeRight: !isFirstSlide,
+    onSwipeLeft: () => nextSlide(),
+    onSwipeRight: () => prevSlide(),
+  });
 
   // Early return if no valid slides
   if (!currentSlide || validSlides.length === 0) {
@@ -75,18 +82,26 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
 
   const nextSlide = () => {
-    if (!isLastSlide && validSlides.length > 0) {
+    if (!isLastSlide && validSlides.length > 0 && !isTransitioning) {
+      setIsTransitioning(true);
       setSlideDirection('next');
       setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
-      setTimeout(() => setSlideDirection(null), 350);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsTransitioning(false);
+      }, 400);
     }
   };
 
   const prevSlide = () => {
-    if (!isFirstSlide) {
+    if (!isFirstSlide && !isTransitioning) {
+      setIsTransitioning(true);
       setSlideDirection('prev');
       setCurrentSlideIndex(currentSlideIndex - 1);
-      setTimeout(() => setSlideDirection(null), 350);
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsTransitioning(false);
+      }, 400);
     }
   };
 
@@ -124,43 +139,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     console.log('Download image functionality will be available when carousel images are generated');
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(0);
-    setTouchStart(e.targetTouches[0].clientX);
-    setTouchOffset(0);
-    setIsSwiping(false);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart) return;
-    const currentX = e.targetTouches[0].clientX;
-    const offset = currentX - touchStart;
-    
-    // Only allow horizontal movement in valid directions
-    if ((offset > 0 && !isFirstSlide) || (offset < 0 && !isLastSlide)) {
-      setTouchOffset(offset);
-      setIsSwiping(true);
-    }
-    setTouchEnd(currentX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe && !isLastSlide) {
-      nextSlide();
-    }
-    if (isRightSwipe && !isFirstSlide) {
-      prevSlide();
-    }
-    
-    // Reset touch state
-    setTouchOffset(0);
-    setIsSwiping(false);
-  };
+  // Enhanced touch handling is now managed by useSwipeGesture hook
 
 
   // Parse content for last slide styling and ensure source attribution
@@ -277,10 +256,9 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
         <div 
-          className="relative bg-background min-h-[600px] flex flex-col"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          ref={swipeGesture.containerRef}
+          className="relative bg-background min-h-[600px] flex flex-col swipe-container"
+          {...swipeGesture.handlers}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
@@ -367,15 +345,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             )}
             
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
-              <div 
-                className="mb-8 relative overflow-hidden"
-              >
+              <div className="mb-8 relative overflow-hidden">
                 <div 
-                  className={`transition-all duration-300 ease-in-out ${
-                    slideDirection === 'next' ? 'animate-slide-out-left' : 
-                    slideDirection === 'prev' ? 'animate-slide-out-right' : 
-                    'animate-slide-in'
+                  className={`swipe-content ${
+                    slideDirection === 'next' ? 'slide-exit-left' : 
+                    slideDirection === 'prev' ? 'slide-exit-right' : 
+                    slideDirection === null && isTransitioning ? 'slide-enter' : ''
                   }`}
+                  style={swipeGesture.getTransformStyle()}
                 >
                   <div className={`text-center leading-relaxed ${
                     safeSlideIndex === 0 

@@ -32,7 +32,42 @@
     @apply text-xs sm:text-sm break-words;
   }
   
-  /* Animation classes for smooth card removal */
+  /* Enhanced swipe animations for Instagram-like feel */
+  .swipe-container {
+    @apply relative overflow-hidden;
+    contain: layout style paint;
+  }
+  
+  .swipe-content {
+    @apply transition-none;
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  .swipe-peek-left {
+    @apply absolute inset-0 opacity-60 scale-95;
+    transform: translateX(-20px) translateZ(-1px);
+  }
+  
+  .swipe-peek-right {
+    @apply absolute inset-0 opacity-60 scale-95;
+    transform: translateX(20px) translateZ(-1px);
+  }
+  
+  /* Smooth spring entrance animations */
+  .slide-enter {
+    @apply animate-[slide-enter_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards];
+  }
+  
+  .slide-exit-left {
+    @apply animate-[slide-exit-left_0.3s_cubic-bezier(0.25,0.46,0.45,0.94)_forwards];
+  }
+  
+  .slide-exit-right {
+    @apply animate-[slide-exit-right_0.3s_cubic-bezier(0.25,0.46,0.45,0.94)_forwards];
+  }
+
+  /* Legacy animations for backward compatibility */
   .animate-slide-out-right {
     @apply animate-[slide-out-right_0.3s_ease-in-out_forwards];
   }
