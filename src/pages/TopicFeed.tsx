@@ -8,10 +8,12 @@ import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
-import { Hash, MapPin, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Hash, MapPin } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -99,20 +101,20 @@ const TopicFeed = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       <div className="container mx-auto px-4 py-8">
+        {/* User Avatar for logged in users */}
+        {user && (
+          <div className="absolute left-4 top-8">
+            <Avatar className="w-8 h-8">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                {user.email?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
+
         {/* Topic Header - Clean and minimal */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              asChild
-              className="absolute left-4 top-8"
-            >
-              <a href="/dashboard">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </a>
-            </Button>
             {topic.topic_type === 'regional' ? (
               <MapPin className="w-6 h-6 text-blue-500" />
             ) : (

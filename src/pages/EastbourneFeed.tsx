@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Story {
   id: string;
@@ -242,11 +244,24 @@ export default function EastbourneFeed() {
     );
   }
 
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-6 text-center">
+        <div className="relative max-w-2xl mx-auto px-4 py-6 text-center">
+          {/* User Avatar for logged in users */}
+          {user && (
+            <div className="absolute left-4 top-6">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+          
           <div className="flex items-center gap-2 justify-center mb-2">
             <h1 className="text-2xl font-bold text-primary">Eastbourne</h1>
             <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
