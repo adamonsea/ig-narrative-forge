@@ -45,6 +45,7 @@ export const useSwipeGesture = (config: SwipeConfig = {}) => {
   const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
   const velocityRef = useRef(0);
   const lastMoveTimeRef = useRef(0);
+  const lastXRef = useRef(0);
   const animationRef = useRef<number | undefined>(undefined);
 
   // Spring animation function
@@ -118,20 +119,20 @@ export const useSwipeGesture = (config: SwipeConfig = {}) => {
   const handleTouchStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (isAnimating) return;
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const clientX = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
 
     touchStartRef.current = { 
       x: clientX, 
       y: clientY, 
       time: Date.now() 
     };
-    
+    lastXRef.current = clientX;
     setIsDragging(true);
     velocityRef.current = 0;
     lastMoveTimeRef.current = Date.now();
 
-    // Add haptic feedback for mobile
+    // Haptic feedback for mobile
     if ('vibrate' in navigator && 'touches' in e) {
       (navigator as any).vibrate(1);
     }
@@ -142,28 +143,29 @@ export const useSwipeGesture = (config: SwipeConfig = {}) => {
 
     e.preventDefault(); // Prevent scrolling
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const clientX = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
     
-    const deltaX = clientX - touchStartRef.current.x;
+    const deltaXTotal = clientX - touchStartRef.current.x;
     const deltaY = clientY - touchStartRef.current.y;
     
     // Only process horizontal swipes (ignore if too vertical)
-    if (Math.abs(deltaY) > Math.abs(deltaX) * 2) return;
+    if (Math.abs(deltaY) > Math.abs(deltaXTotal) * 2) return;
 
     const containerWidth = containerRef.current.offsetWidth;
     const currentTime = Date.now();
     const timeDelta = currentTime - lastMoveTimeRef.current;
     
-    // Calculate velocity (px/ms)
+    // Calculate velocity based on movement since last frame (px/ms)
     if (timeDelta > 0) {
-      velocityRef.current = deltaX / timeDelta;
+      const dxSinceLast = clientX - lastXRef.current;
+      velocityRef.current = dxSinceLast / timeDelta;
     }
-    
+    lastXRef.current = clientX;
     lastMoveTimeRef.current = currentTime;
     
     // Apply rubber band effect
-    const adjustedOffset = applyRubberBand(deltaX, containerWidth);
+    const adjustedOffset = applyRubberBand(deltaXTotal, containerWidth);
     setOffset(adjustedOffset);
   }, [isDragging, applyRubberBand]);
 
@@ -222,12 +224,25 @@ export const useSwipeGesture = (config: SwipeConfig = {}) => {
     );
   }, [isDragging, offset, threshold, velocityThreshold, canSwipeLeft, canSwipeRight, onSwipeLeft, onSwipeRight, animateSpring, minDuration, maxDuration]);
 
-  // Mouse event handlers for desktop
+  // Mouse event handlers for desktop (use window listeners for robust dragging)
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     handleTouchStart(e);
-  }, [handleTouchStart]);
+
+    const onMove = (ev: MouseEvent) => {
+      handleTouchMove(ev as unknown as React.MouseEvent);
+    };
+    const onUp = () => {
+      handleTouchEnd();
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Fallback for environments where window listeners may not fire
     handleTouchMove(e);
   }, [handleTouchMove]);
 

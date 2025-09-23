@@ -310,20 +310,21 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           <div className="relative flex-1 flex items-center justify-center overflow-hidden">            
             <div className="relative w-full h-full">
               {validSlides.map((slide, index) => {
-                const slideOffset = (index - safeSlideIndex) * 100;
-                const totalOffset = slideOffset + (swipeGesture.offset / (swipeGesture.containerRef.current?.offsetWidth || 1)) * 100;
+                const containerWidth = swipeGesture.containerRef.current?.offsetWidth || 1;
+                const baseX = (index - safeSlideIndex) * containerWidth;
+                const totalX = baseX + swipeGesture.offset;
                 
                 return (
                   <div
                     key={slide.id}
                     className="absolute inset-0 p-6 md:p-8 flex items-center justify-center"
                     style={{
-                      transform: `translate3d(${totalOffset}%, 0, 0)`,
+                      transform: `translate3d(${totalX}px, 0, 0)`,
                       willChange: swipeGesture.isDragging || swipeGesture.isAnimating ? 'transform' : 'auto',
                     }}
                   >
-                    <div className="w-full max-w-lg mx-auto">
-                      <div className="mb-8">
+                    <div className="w-full max-w-lg mx-auto h-full">
+                      <div className="mb-8 max-h-full overflow-y-auto">
                         <div className={`text-center leading-relaxed ${
                           index === 0 
                           ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
