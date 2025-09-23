@@ -67,18 +67,29 @@ export function SwipeCarousel({
   const prev = () => goTo(index - 1);
   const next = () => goTo(index + 1);
 
-  // Instagram-like gesture: user drives position while dragging
-  // On release, project momentum to candidate target, snap to nearest slide within bounds
+  // Instagram-like gesture: smooth slide-by-slide navigation
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    // Momentum projection (pixels): tune 200–300 for desktop feel
-    const projected = x.get() + info.velocity.x * 220;
-    const rawTarget = -projected / width;
-    const targetIndex = clamp(Math.round(rawTarget));
+    const threshold = width * 0.25; // 25% of width to trigger slide change
+    const swipeDistance = info.offset.x;
+    const swipeVelocity = info.velocity.x;
+    
+    let targetIndex = index;
+    
+    // Determine direction based on distance and velocity
+    if (swipeDistance > threshold || (swipeDistance > 50 && swipeVelocity > 500)) {
+      // Swiped right (previous slide)
+      targetIndex = Math.max(0, index - 1);
+    } else if (swipeDistance < -threshold || (swipeDistance < -50 && swipeVelocity < -500)) {
+      // Swiped left (next slide)
+      targetIndex = Math.min(count - 1, index + 1);
+    }
+    
+    // Animate to target slide
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      stiffness: 560,
-      damping: 48,
-      mass: 0.9,
+      stiffness: 400,
+      damping: 40,
+      mass: 1,
     });
     setIndex(targetIndex);
     return () => controls.stop();
