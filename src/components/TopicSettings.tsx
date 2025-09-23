@@ -252,18 +252,17 @@ export const TopicSettings = ({
 
         <Separator />
 
-        {/* Automation Settings - Only show for authorized users, hide completely for super admin */}
-        {!isSuperAdmin && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4" />
-              <Label className="text-base font-medium">Automation Settings</Label>
-              {!hasAutomationAccess && (
-                <Badge variant="outline" className="text-xs">Limited Access</Badge>
-              )}
-            </div>
-            
-            <div className={`space-y-4 p-4 border rounded-lg ${!hasAutomationAccess ? 'opacity-60' : ''}`}>
+        {/* Automation Settings */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            <Label className="text-base font-medium">Automation Settings</Label>
+            {!hasAutomationAccess && (
+              <Badge variant="outline" className="text-xs">Limited Access</Badge>
+            )}
+          </div>
+          
+          <div className={`space-y-4 p-4 border rounded-lg ${!hasAutomationAccess ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label className="flex items-center gap-2">
@@ -318,7 +317,6 @@ export const TopicSettings = ({
             )}
           </div>
         </div>
-        )}
 
         <div className="flex justify-end">
           <Button 
