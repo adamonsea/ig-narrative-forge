@@ -729,23 +729,23 @@ export const UnifiedSourceManager = ({
           description += `, filtered ${filtered} for low relevance`;
         }
         
-        // Improved toast messaging based on results
+        // Enhanced toast messaging with specific queue information
         if (stored > 0) {
           toast({
             title: 'Content Gathering Complete',
-            description,
+            description: `Discovered ${totalFound} articles • ${stored} added to arrivals queue${duplicates > 0 ? ` • ${duplicates} duplicates skipped` : ''}`,
             variant: 'default'
           });
         } else if (totalFound > 0) {
           toast({
             title: 'Gathering Complete - Articles Filtered',
-            description: `Found ${totalFound} articles but they weren't relevant enough for your feed. Consider adjusting your topic keywords or sources.`,
+            description: `Discovered ${totalFound} articles • 0 added to arrivals queue (filtered for relevance)`,
             variant: 'default'
           });
         } else {
           toast({
             title: 'Gathering Complete - No Articles Found',
-            description: `No articles were discovered from ${source.source_name}. The source may need time to publish new content.`,
+            description: `0 articles discovered from ${source.source_name} • 0 added to arrivals queue`,
             variant: 'default'
           });
         }
@@ -832,8 +832,8 @@ export const UnifiedSourceManager = ({
       }
 
       toast({
-        title: 'Bulk Scraping Complete',
-        description: `Found ${totalArticlesFound} articles, scraped ${totalArticlesScraped} relevant ones. ${failedSources} sources failed.`,
+        title: 'Bulk Gathering Complete',
+        description: `Discovered ${totalArticlesFound} articles • ${totalArticlesScraped} added to arrivals queue${failedSources > 0 ? ` • ${failedSources} sources failed` : ''}`,
       });
 
       loadSources();
