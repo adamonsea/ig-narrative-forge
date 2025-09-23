@@ -53,17 +53,19 @@ export const GlobalAutomationSettings = () => {
 
   const loadSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('global_automation_settings')
+      const { data } = await supabase
+        .from('scheduler_settings')
         .select('*')
-        .single();
+        .eq('setting_key', 'automation_config');
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        setSettings(data);
+      if (data && data[0]) {
+        const config = data[0].setting_value as any;
+        setSettings({
+          enabled: config?.enabled || false,
+          scrape_frequency_hours: config?.scrape_frequency_hours || 12,
+          auto_simplify_enabled: config?.auto_simplify_enabled || true,
+          auto_simplify_quality_threshold: config?.auto_simplify_quality_threshold || 60
+        });
       }
     } catch (error) {
       console.error('Error loading automation settings:', error);
@@ -111,15 +113,18 @@ export const GlobalAutomationSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const payload = {
-        user_id: user.id,
-        ...settings
-      };
-
       const { error } = await supabase
-        .from('global_automation_settings')
-        .upsert(payload, {
-          onConflict: 'user_id'
+        .from('scheduler_settings')
+        .upsert({
+          setting_key: 'automation_config',
+          setting_value: {
+            enabled: settings.enabled,
+            scrape_frequency_hours: settings.scrape_frequency_hours,
+            auto_simplify_enabled: settings.auto_simplify_enabled,
+            auto_simplify_quality_threshold: settings.auto_simplify_quality_threshold
+          }
+        }, { 
+          onConflict: 'setting_key'
         });
 
       if (error) throw error;

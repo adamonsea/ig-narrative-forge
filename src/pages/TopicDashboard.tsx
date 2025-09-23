@@ -28,6 +28,8 @@ interface TopicDashboardStats {
   pending_articles: number;
   processing_queue: number;
   ready_stories: number;
+  arrivals_count: number;
+  simplified_stories_24h: number;
 }
 
 interface Topic {
@@ -65,7 +67,9 @@ const TopicDashboard = () => {
     sources: 0,
     pending_articles: 0,
     processing_queue: 0,
-    ready_stories: 0
+    ready_stories: 0,
+    arrivals_count: 0,
+    simplified_stories_24h: 0
   });
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
@@ -160,13 +164,32 @@ const TopicDashboard = () => {
         .in('article_id', articleIds)
         .eq('status', 'published') : { count: 0 };
 
+      // Get arrivals count (articles + topic_articles)
+      const arrivalsRes = await supabase
+        .from('topic_articles')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id)
+        .eq('processing_status', 'new');
+
+      // Get simplified stories in last 24h
+      const yesterday = new Date();
+      yesterday.setHours(yesterday.getHours() - 24);
+      
+      const simplifiedRes = articleIds.length > 0 ? await supabase
+        .from('stories')
+        .select('id', { count: 'exact' })
+        .in('article_id', articleIds)
+        .gte('created_at', yesterday.toISOString()) : { count: 0 };
+
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
         sources: sourcesRes.count || 0,
         pending_articles: pendingArticlesRes.count || 0,
         processing_queue: queueRes.count || 0,
-        ready_stories: readyStoriesRes.count || 0
+        ready_stories: readyStoriesRes.count || 0,
+        arrivals_count: arrivalsRes.count || 0,
+        simplified_stories_24h: simplifiedRes.count || 0
       });
 
     } catch (error) {
@@ -388,6 +411,33 @@ const TopicDashboard = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
+            {/* Essential Metrics - New Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <div className="text-2xl font-bold text-blue-500">{stats.arrivals_count}</div>
+                      <p className="text-sm text-muted-foreground">Articles in Arrivals</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-green-500" />
+                    <div>
+                      <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
+                      <p className="text-sm text-muted-foreground">Stories Simplified (24h)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Essential Metrics - Available Stories */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>

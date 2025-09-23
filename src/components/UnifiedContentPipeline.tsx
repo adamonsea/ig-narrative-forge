@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -27,6 +27,8 @@ interface Topic {
   organizations?: string[];
   default_tone?: 'formal' | 'conversational' | 'engaging';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
+  auto_simplify_enabled?: boolean;
+  automation_quality_threshold?: number;
 }
 
 interface UnifiedContentPipelineProps {
@@ -84,7 +86,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       try {
         const { data, error } = await supabase
           .from('topics')
-          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone, default_writing_style')
+          .select('id, name, topic_type, is_active, keywords, landmarks, organizations, default_tone, default_writing_style, auto_simplify_enabled, automation_quality_threshold')
           .eq('is_active', true)
           .order('name');
 
@@ -324,8 +326,16 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="articles">
-            Arrivals ({totalArticles})
+          <TabsTrigger value="articles" className="relative">
+            <div className="flex items-center gap-2">
+              <span>Arrivals ({totalArticles})</span>
+              {currentTopic?.auto_simplify_enabled && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  <Bot className="w-3 h-3 mr-1" />
+                  Auto
+                </Badge>
+              )}
+            </div>
           </TabsTrigger>
           <TabsTrigger value="processing" className="flex items-center gap-2">
             <span>Processing ({queueItems.length})</span>
@@ -355,6 +365,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <div className="flex justify-between items-center">
             <div className="text-sm text-muted-foreground">
               Showing new articles awaiting review
+              {currentTopic?.auto_simplify_enabled && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  <Bot className="w-3 h-3 mr-1" />
+                  Auto-simplification enabled (threshold: {currentTopic.automation_quality_threshold || 60}%)
+                </Badge>
+              )}
             </div>
           </div>
           

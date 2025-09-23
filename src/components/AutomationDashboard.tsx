@@ -57,8 +57,9 @@ export const AutomationDashboard = () => {
   const loadAutomationStatus = async () => {
     try {
       const { data: globalSettings } = await supabase
-        .from('global_automation_settings')
+        .from('scheduler_settings')
         .select('*')
+        .eq('setting_key', 'automation_enabled')
         .single();
 
       const { data: queueSize } = await supabase
@@ -67,7 +68,7 @@ export const AutomationDashboard = () => {
         .eq('status', 'pending');
 
       setStatus({
-        enabled: globalSettings?.enabled || false,
+        enabled: (globalSettings?.setting_value as any)?.enabled || false,
         topics_processing: 0, // TODO: Get from system logs
         queue_size: queueSize?.length || 0,
         success_rate: 95 // TODO: Calculate from recent runs

@@ -7,9 +7,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Settings, HelpCircle, Users, Bot, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TopicSettingsProps {
   topicId: string;
@@ -36,10 +38,11 @@ export const TopicSettings = ({
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
-  const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled !== false);
+  const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { isSuperAdmin } = useAuth();
 
   useEffect(() => {
     if (currentExpertise) setExpertise(currentExpertise);
@@ -251,9 +254,12 @@ export const TopicSettings = ({
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4" />
             <Label className="text-base font-medium">Automation Settings</Label>
+            {!isSuperAdmin && (
+              <Badge variant="outline" className="text-xs">Super Admin Only</Badge>
+            )}
           </div>
           
-          <div className="space-y-4 p-4 border rounded-lg">
+          <div className={`space-y-4 p-4 border rounded-lg ${!isSuperAdmin ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label className="flex items-center gap-2">
@@ -281,6 +287,7 @@ export const TopicSettings = ({
               <Switch
                 checked={autoSimplifyEnabled}
                 onCheckedChange={setAutoSimplifyEnabled}
+                disabled={!isSuperAdmin}
               />
             </div>
 
@@ -297,6 +304,7 @@ export const TopicSettings = ({
                     min={30}
                     step={5}
                     className="w-full"
+                    disabled={!isSuperAdmin}
                   />
                   <p className="text-xs text-muted-foreground">
                     Only articles with quality scores above this threshold will be automatically processed
@@ -315,8 +323,8 @@ export const TopicSettings = ({
               tone === currentTone && 
               writingStyle === currentWritingStyle && 
               communityEnabled === currentCommunityEnabled &&
-              autoSimplifyEnabled === currentAutoSimplifyEnabled &&
-              automationQualityThreshold === currentAutomationQualityThreshold
+              autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
+              automationQualityThreshold === (currentAutomationQualityThreshold || 60)
             )}
           >
             {saving ? "Saving..." : "Save Settings"}
