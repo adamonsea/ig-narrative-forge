@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save } from "lucide-react";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,14 @@ import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
+import { LinkEditor } from "@/components/LinkEditor";
+
+interface Link {
+  start: number;
+  end: number;
+  url: string;
+  text: string;
+}
 
 interface Slide {
   id: string;
@@ -21,6 +29,7 @@ interface Slide {
   word_count?: number;
   alt_text?: string;
   visual_prompt?: string;
+  links?: Link[];
 }
 
 interface PublishedStory {
@@ -68,6 +77,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [linkEditorSlide, setLinkEditorSlide] = useState<Slide | null>(null);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -192,6 +202,88 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       });
     }
   };
+  const handleSaveLinks = async (slide: Slide, links: Link[]) => {
+    try {
+      const { error } = await supabase
+        .from('slides')
+        .update({ 
+          links: links as any, // Cast to any for Supabase JSONB compatibility
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', slide.id);
+
+      if (error) throw error;
+
+      toast({ 
+        title: 'Links saved', 
+        description: `${links.length} links updated for slide ${slide.slide_number}` 
+      });
+
+      // Update local state
+      setTimeout(() => {
+        onRefresh();
+      }, 500);
+
+    } catch (error) {
+      console.error('Error saving links:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to save links', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const renderContentWithLinks = (content: string, links: Link[] = []) => {
+    if (!links || links.length === 0) {
+      return <span>{content}</span>;
+    }
+
+    const parts = [];
+    let lastIndex = 0;
+
+    // Sort links by start position
+    const sortedLinks = [...links].sort((a, b) => a.start - b.start);
+
+    sortedLinks.forEach((link, index) => {
+      // Add text before link
+      if (link.start > lastIndex) {
+        parts.push(
+          <span key={`text-${index}`}>
+            {content.substring(lastIndex, link.start)}
+          </span>
+        );
+      }
+
+      // Add link
+      parts.push(
+        <a
+          key={`link-${index}`}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+        >
+          {link.text}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      );
+
+      lastIndex = link.end;
+    });
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(
+        <span key="text-end">
+          {content.substring(lastIndex)}
+        </span>
+      );
+    }
+
+    return <>{parts}</>;
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -433,8 +525,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                               placeholder="Slide content..."
                             />
                           ) : (
-                            <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                              {slide.content}
+                            <p className="text-sm leading-relaxed">
+                              {renderContentWithLinks(slide.content, slide.links)}
                             </p>
                           )}
                         </div>
@@ -463,13 +555,23 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                               </Button>
                             </>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEdits(prev => ({ ...prev, [slide.id]: slide.content }))}
-                            >
-                              Edit
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEdits(prev => ({ ...prev, [slide.id]: slide.content }))}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLinkEditorSlide(slide)}
+                              >
+                                <Link className="mr-1 h-3 w-3" />
+                                Links ({slide.links?.length || 0})
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -486,11 +588,22 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     <Save className="mr-1 h-3 w-3" />
                     Save All Changes
                   </Button>
-                )}
-              </div>
+                 )}
+               </div>
+             )}
+
+            {/* Link Editor Dialog */}
+            {linkEditorSlide && (
+              <LinkEditor
+                content={linkEditorSlide.content}
+                existingLinks={linkEditorSlide.links || []}
+                onSaveLinks={(links) => handleSaveLinks(linkEditorSlide, links)}
+                open={!!linkEditorSlide}
+                onClose={() => setLinkEditorSlide(null)}
+              />
             )}
-          </CardContent>
-        </Card>
+           </CardContent>
+         </Card>
       ))}
     </div>
   );

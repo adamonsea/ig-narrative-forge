@@ -20,6 +20,12 @@ interface Story {
     id: string;
     slide_number: number;
     content: string;
+    links?: Array<{
+      start: number;
+      end: number;
+      url: string;
+      text: string;
+    }>;
   }>;
   article: {
     source_url: string;
@@ -161,8 +167,8 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
 
   // Parse content for last slide styling and ensure source attribution
-  const parseContentForLastSlide = (content: string) => {
-    if (!isLastSlide) return { mainContent: content, ctaContent: null, sourceUrl: null };
+  const parseContentForLastSlide = (content: string, links: any[] = []) => {
+    if (!isLastSlide) return { mainContent: content, ctaContent: null, sourceUrl: null, contentWithLinks: renderContentWithLinks(content, links) };
     
     // Look for CTA patterns (removed "Comment, like, share.")
     const ctaPatterns = [
@@ -217,11 +223,43 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     return {
       mainContent,
       ctaContent: finalCtaContent,
-      sourceUrl: validSourceUrl
+      sourceUrl: validSourceUrl,
+      contentWithLinks: renderContentWithLinks(mainContent, links)
     };
   };
 
-  const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide?.content || 'Content not available');
+  const renderContentWithLinks = (content: string, links: any[] = []) => {
+    if (!links || links.length === 0) {
+      return content;
+    }
+
+    const parts = [];
+    let lastIndex = 0;
+
+    // Sort links by start position
+    const sortedLinks = [...links].sort((a: any, b: any) => a.start - b.start);
+
+    sortedLinks.forEach((link: any, index: number) => {
+      // Add text before link
+      if (link.start > lastIndex) {
+        parts.push(content.substring(lastIndex, link.start));
+      }
+
+      // Add link HTML
+      parts.push(`<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-medium">${link.text}</a>`);
+
+      lastIndex = link.end;
+    });
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+
+    return parts.join('');
+  };
+
+  const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(currentSlide?.content || 'Content not available', currentSlide?.links);
 
   // Dynamic text sizing based on content length
   const getTextSize = (content: string, isTitle: boolean) => {
@@ -348,8 +386,10 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                     ? `${getTextSize(currentSlide?.content || '', true)} font-bold uppercase text-balance` 
                     : `${getTextSize(isLastSlide ? mainContent : (currentSlide?.content || ''), false)} font-light text-balance`
                 }`}>
-                  {/* Main story content */}
-                  {isLastSlide ? mainContent : (currentSlide?.content || 'Content not available')}
+                  {/* Main story content with links */}
+                  <div dangerouslySetInnerHTML={{
+                    __html: isLastSlide ? contentWithLinks : renderContentWithLinks(currentSlide?.content || 'Content not available', currentSlide?.links)
+                  }} />
                       
                   {/* CTA content with special styling on last slide */}
                   {isLastSlide && ctaContent && (

@@ -324,6 +324,34 @@ export const useInfiniteTopicFeed = (slug: string) => {
     }
   }, [slug, sortBy, loadTopic, loadStories]);
 
+  // Real-time subscription for slide updates
+  useEffect(() => {
+    if (!topic) return;
+
+    const channel = supabase
+      .channel('slide-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'slides'
+        },
+        (payload) => {
+          console.log('🔄 Slide updated in real-time:', payload);
+          // Debounced refresh to avoid excessive updates
+          setTimeout(() => {
+            refresh();
+          }, 1000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [topic, refresh]);
+
   return {
     stories,
     topic,
