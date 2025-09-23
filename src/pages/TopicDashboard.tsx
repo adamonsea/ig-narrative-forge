@@ -53,6 +53,8 @@ interface Topic {
   default_tone?: 'formal' | 'conversational' | 'engaging';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   community_intelligence_enabled?: boolean;
+  auto_simplify_enabled?: boolean;
+  automation_quality_threshold?: number;
 }
 
 const TopicDashboard = () => {
@@ -86,7 +88,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*')
+        .select('*, auto_simplify_enabled, automation_quality_threshold')
         .eq('slug', slug)
         .single();
 
@@ -573,6 +575,8 @@ const TopicDashboard = () => {
                       currentTone={topic.default_tone}
                       currentWritingStyle={topic.default_writing_style}
                       currentCommunityEnabled={topic.community_intelligence_enabled}
+                      currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
+                      currentAutomationQualityThreshold={topic.automation_quality_threshold}
                       onUpdate={() => loadTopicAndStats()}
                     />
                     
