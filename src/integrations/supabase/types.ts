@@ -456,6 +456,7 @@ export type Database = {
           articles_scraped: number | null
           avg_response_time_ms: number | null
           canonical_domain: string | null
+          consecutive_failures: number | null
           content_type: string | null
           created_at: string | null
           credibility_score: number | null
@@ -464,7 +465,10 @@ export type Database = {
           is_active: boolean | null
           is_blacklisted: boolean | null
           is_whitelisted: boolean | null
+          last_failure_at: string | null
+          last_failure_reason: string | null
           last_scraped_at: string | null
+          recommend_replacement: boolean | null
           region: string | null
           scrape_frequency_hours: number | null
           scraping_config: Json | null
@@ -473,12 +477,14 @@ export type Database = {
           source_type: string | null
           success_rate: number | null
           topic_id: string | null
+          total_failures: number | null
           updated_at: string | null
         }
         Insert: {
           articles_scraped?: number | null
           avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          consecutive_failures?: number | null
           content_type?: string | null
           created_at?: string | null
           credibility_score?: number | null
@@ -487,7 +493,10 @@ export type Database = {
           is_active?: boolean | null
           is_blacklisted?: boolean | null
           is_whitelisted?: boolean | null
+          last_failure_at?: string | null
+          last_failure_reason?: string | null
           last_scraped_at?: string | null
+          recommend_replacement?: boolean | null
           region?: string | null
           scrape_frequency_hours?: number | null
           scraping_config?: Json | null
@@ -496,12 +505,14 @@ export type Database = {
           source_type?: string | null
           success_rate?: number | null
           topic_id?: string | null
+          total_failures?: number | null
           updated_at?: string | null
         }
         Update: {
           articles_scraped?: number | null
           avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          consecutive_failures?: number | null
           content_type?: string | null
           created_at?: string | null
           credibility_score?: number | null
@@ -510,7 +521,10 @@ export type Database = {
           is_active?: boolean | null
           is_blacklisted?: boolean | null
           is_whitelisted?: boolean | null
+          last_failure_at?: string | null
+          last_failure_reason?: string | null
           last_scraped_at?: string | null
+          recommend_replacement?: boolean | null
           region?: string | null
           scrape_frequency_hours?: number | null
           scraping_config?: Json | null
@@ -519,6 +533,7 @@ export type Database = {
           source_type?: string | null
           success_rate?: number | null
           topic_id?: string | null
+          total_failures?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -951,39 +966,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      global_automation_settings: {
-        Row: {
-          auto_simplify_enabled: boolean
-          auto_simplify_quality_threshold: number
-          created_at: string
-          enabled: boolean
-          id: string
-          scrape_frequency_hours: number
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          auto_simplify_enabled?: boolean
-          auto_simplify_quality_threshold?: number
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          scrape_frequency_hours?: number
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          auto_simplify_enabled?: boolean
-          auto_simplify_quality_threshold?: number
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          scrape_frequency_hours?: number
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: []
       }
       image_generation_tests: {
         Row: {
@@ -2072,31 +2054,37 @@ export type Database = {
       }
       topic_automation_settings: {
         Row: {
+          auto_simplify_enabled: boolean | null
           created_at: string
           id: string
           is_active: boolean
           last_run_at: string | null
           next_run_at: string
+          quality_threshold: number | null
           scrape_frequency_hours: number
           topic_id: string
           updated_at: string
         }
         Insert: {
+          auto_simplify_enabled?: boolean | null
           created_at?: string
           id?: string
           is_active?: boolean
           last_run_at?: string | null
           next_run_at?: string
+          quality_threshold?: number | null
           scrape_frequency_hours?: number
           topic_id: string
           updated_at?: string
         }
         Update: {
+          auto_simplify_enabled?: boolean | null
           created_at?: string
           id?: string
           is_active?: boolean
           last_run_at?: string | null
           next_run_at?: string
+          quality_threshold?: number | null
           scrape_frequency_hours?: number
           topic_id?: string
           updated_at?: string
