@@ -278,14 +278,19 @@ export class EnhancedRetryStrategies {
     
     try {
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 10000); // 10 second timeout for quick check
+      setTimeout(() => controller.abort(), 5000); // Reduced timeout for edge functions
+
+      // Use enhanced headers for better acceptance
+      const headers = this.getEnhancedHeaders({ 
+        url, 
+        isGovernmentSite: this.isGovernmentSite(url), 
+        previousAttempts: 0 
+      }, this.userAgents[0]);
 
       const response = await fetch(url, {
         method: 'HEAD',
         signal: controller.signal,
-        headers: {
-          'User-Agent': this.userAgents[0]
-        }
+        headers
       });
 
       return {
@@ -300,6 +305,59 @@ export class EnhancedRetryStrategies {
         responseTime: Date.now() - startTime,
         error: error.message
       };
+    }
+  }
+
+  // Enhanced method for problematic sources
+  async fetchWithDomainSpecificStrategy(url: string): Promise<string> {
+    const domain = new URL(url).hostname.toLowerCase();
+    
+    // Special handling for known problematic sources
+    const problemDomains = [
+      'theargus.co.uk',
+      'sussexnews24.co.uk', 
+      'easbournenews.co.uk',
+      'brightonandhovenews.org'
+    ];
+
+    if (problemDomains.some(d => domain.includes(d))) {
+      console.log(`🎯 Using specialized strategy for problematic domain: ${domain}`);
+      
+      // Use longer delays and more conservative approach
+      const config: RetryConfig = {
+        maxRetries: 3,
+        baseDelay: 2000, // 2 seconds base delay
+        maxDelay: 15000,
+        exponentialBackoff: true
+      };
+
+      return this.fetchWithEnhancedRetry(url, config);
+    }
+
+    // Standard approach for other domains
+    return this.fetchWithEnhancedRetry(url);
+  }
+
+  // Source health monitoring
+  async logSourceHealth(sourceId: string, url: string, success: boolean, error?: string): Promise<void> {
+    try {
+      const healthData = {
+        source_id: sourceId,
+        check_time: new Date().toISOString(),
+        is_accessible: success,
+        response_time_ms: null,
+        error_details: error || null,
+        check_type: 'scraping_attempt'
+      };
+
+      console.log(`📊 Logging source health for ${url}: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      // You could store this in a source_health table if needed
+      // For now, we'll log it to system_logs
+      console.log('Source health data:', JSON.stringify(healthData, null, 2));
+      
+    } catch (logError) {
+      console.log(`❌ Failed to log source health: ${logError.message}`);
     }
   }
 }

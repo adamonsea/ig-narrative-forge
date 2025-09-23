@@ -110,18 +110,22 @@ export class FastTrackScraper {
     try {
       const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
       
-      // Single attempt with fast config
-      const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(feedUrl, {
-        maxRetries: 1,
-        baseDelay: 200,
-        maxDelay: 2000,
-        exponentialBackoff: false
-      });
+      // Use domain-specific strategy for better success rates
+      const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedUrl);
       
       return await this.parseFastRSSContent(rssContent, feedUrl);
       
     } catch (error) {
       console.log(`❌ Fast RSS parsing failed: ${error.message}`);
+      
+      // Log source health for monitoring
+      await this.retryStrategy.logSourceHealth(
+        this.sourceInfo?.id,
+        feedUrl,
+        false,
+        error.message
+      );
+      
       return {
         success: false,
         articles: [],
@@ -137,25 +141,18 @@ export class FastTrackScraper {
     console.log('🔄 Fast HTML parsing...');
     
     try {
-      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl, {
-        maxRetries: 1,
-        baseDelay: 200,
-        maxDelay: 2000,
-        exponentialBackoff: false
-      });
+      // Use domain-specific strategy for better success
+      const html = await this.retryStrategy.fetchWithDomainSpecificStrategy(this.baseUrl);
       
       // Look for RSS feeds first
       const feedLinks = this.extractFeedLinks(html, this.baseUrl);
       for (const feedLink of feedLinks.slice(0, 2)) { // Only try first 2 feeds
         try {
-          const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(feedLink, {
-            maxRetries: 1,
-            baseDelay: 200,
-            maxDelay: 2000,
-            exponentialBackoff: false
-          });
+          console.log(`📡 Trying discovered feed: ${feedLink}`);
+          const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedLink);
           const result = await this.parseFastRSSContent(rssContent, feedLink);
           if (result.success && result.articles.length > 0) {
+            console.log(`✅ Feed discovery successful: ${result.articles.length} articles`);
             return { ...result, method: 'fast_rss_discovery' };
           }
         } catch (error) {
@@ -168,6 +165,15 @@ export class FastTrackScraper {
       
     } catch (error) {
       console.log(`❌ Fast HTML parsing failed: ${error.message}`);
+      
+      // Log source health for monitoring
+      await this.retryStrategy.logSourceHealth(
+        this.sourceInfo?.id,
+        this.baseUrl,
+        false,
+        error.message
+      );
+      
       return {
         success: false,
         articles: [],
