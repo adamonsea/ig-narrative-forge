@@ -62,8 +62,8 @@ export function SwipeCarousel({
   const next = () => goTo(index + 1);
 
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const swipe = info.offset.x + info.velocity.x * 0.35;
-    const threshold = Math.min(0.22 * width, 160);
+    const swipe = info.offset.x + info.velocity.x * 0.4;
+    const threshold = Math.min(0.25 * width, 120);
     if (swipe > threshold) prev();
     else if (swipe < -threshold) next();
     else goTo(index);
@@ -77,12 +77,15 @@ export function SwipeCarousel({
     <div className={"relative select-none " + className} role="region" aria-roledescription="carousel" aria-label={ariaLabel}>
       <div ref={viewportRef} className="overflow-hidden w-full" style={heightStyle}>
         <motion.div
-          className="flex h-full"
+          className="flex h-full cursor-grab active:cursor-grabbing select-none"
           drag="x"
           dragElastic={0.18}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          style={{ x, touchAction: "pan-y" }}
+          style={{ x, touchAction: "pan-y pinch-zoom" }}
           onDragEnd={onDragEnd}
+          dragMomentum={false}
+          whileDrag={{ cursor: "grabbing" }}
+          dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">

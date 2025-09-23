@@ -212,17 +212,19 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   };
 
   // Dynamic text sizing based on content length
-  const getTextSize = (content: string, isTitle: boolean) => {
+  const getTextSize = (content: string, isTitle: boolean, isLaterSlide: boolean = false) => {
     const length = content.length;
     if (isTitle) {
       if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
       if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
       return "text-xl md:text-2xl lg:text-3xl";
     } else {
-      if (length < 80) return "text-xl md:text-2xl lg:text-3xl";
-      if (length < 150) return "text-lg md:text-xl lg:text-2xl";
-      if (length < 250) return "text-base md:text-lg lg:text-xl";
-      return "text-sm md:text-base lg:text-lg";
+      // Bigger text for slides after the first
+      const sizeMultiplier = isLaterSlide ? 1 : 0;
+      if (length < 80) return isLaterSlide ? "text-2xl md:text-3xl lg:text-4xl" : "text-xl md:text-2xl lg:text-3xl";
+      if (length < 150) return isLaterSlide ? "text-xl md:text-2xl lg:text-3xl" : "text-lg md:text-xl lg:text-2xl";
+      if (length < 250) return isLaterSlide ? "text-lg md:text-xl lg:text-2xl" : "text-base md:text-lg lg:text-xl";
+      return isLaterSlide ? "text-base md:text-lg lg:text-xl" : "text-sm md:text-base lg:text-lg";
     }
   };
 
@@ -246,12 +248,12 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
 
         {/* Slide Content */}
         <div className="flex-1 flex items-center justify-center p-6 md:p-8">
-          <div className="w-full max-w-lg mx-auto">
+          <div className="w-full max-w-lg mx-auto flex items-center justify-center min-h-full">
             <div className="text-center leading-relaxed">
               <div className={`${
                 index === 0 
                 ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
-                : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false)} font-light text-balance`
+                : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
               }`}>
                 {/* Main story content with links */}
                 <div dangerouslySetInnerHTML={{
