@@ -2905,6 +2905,12 @@ export type Database = {
           | {
               p_limit?: number
               p_offset?: number
+              p_sort_by?: string
+              p_topic_slug: string
+            }
+          | {
+              p_limit?: number
+              p_offset?: number
               p_status?: string
               p_topic_id: string
             }

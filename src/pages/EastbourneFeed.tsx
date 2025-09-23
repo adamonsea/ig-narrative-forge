@@ -1,52 +1,32 @@
-import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRef, useEffect } from "react";
+import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
+import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 
 export default function EastbourneFeed() {
   const { user } = useAuth();
-  const { 
-    stories, 
-    topic, 
-    loading, 
-    loadingMore, 
-    hasMore, 
-    sortBy, 
-    setSortBy, 
-    loadMore 
+  const {
+    stories,
+    topic,
+    loading,
+    loadingMore,
+    hasMore,
+    sortBy,
+    setSortBy,
+    loadMore,
+    refresh
   } = useInfiniteTopicFeed('eastbourne');
 
-  // Intersection observer for infinite scroll
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && hasMore && !loadingMore && !loading) {
-          loadMore();
-        }
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '100px'
-      }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+  // Handle load more with intersection observer
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      loadMore();
     }
+  };
 
-    return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
-      }
-    };
-  }, [hasMore, loadingMore, loading, loadMore]);
-
-  if (loading && stories.length === 0) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -82,7 +62,7 @@ export default function EastbourneFeed() {
           <FeedFilters
             sortBy={sortBy}
             setSortBy={setSortBy}
-            slideCount={stories.reduce((total, story) => total + (story.slides?.length || 0), 0)}
+            slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
           />
         </div>
       </header>
@@ -91,37 +71,58 @@ export default function EastbourneFeed() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {stories.length > 0 ? (
           <div className="space-y-8">
-            {stories.map((story) => (
-              <StoryCarousel 
-                key={story.id} 
-                story={story} 
-                topicName={topic?.name || "Eastbourne"}
-                storyUrl={`${window.location.origin}/eastbourne-feed/story/${story.id}`}
-              />
-            ))}
+            {stories.map((story, index) => {
+              const isLast = index === stories.length - 1;
+              return (
+                <div 
+                  key={story.id}
+                  ref={isLast && hasMore ? (el) => {
+                    if (el) {
+                      const observer = new IntersectionObserver(
+                        (entries) => {
+                          if (entries[0].isIntersecting) {
+                            handleLoadMore();
+                            observer.disconnect();
+                          }
+                        },
+                        { threshold: 0.1 }
+                      );
+                      observer.observe(el);
+                    }
+                  } : undefined}
+                >
+                  <StoryCarousel 
+                    story={story} 
+                    topicName={topic?.name || "Eastbourne"}
+                    storyUrl={`${window.location.origin}/eastbourne-feed/story/${story.id}`}
+                  />
+                </div>
+              );
+            })}
             
-            {/* Infinite scroll trigger */}
-            {hasMore && (
-              <div ref={loadMoreRef} className="flex justify-center py-8">
-                {loadingMore ? (
-                  <div className="text-center">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    <p className="text-sm text-muted-foreground">Loading more stories...</p>
-                  </div>
-                ) : (
-                  <div className="h-20" />
-                )}
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
             )}
+            
+            {/* End of feed */}
+            {!hasMore && stories.length > 0 && (
+              <EndOfFeedCTA 
+                topicName={topic?.name || "Eastbourne"}
+                topicId={topic?.id || "d224e606-1a4c-4713-8135-1d30e2d6d0c6"}
+              />
+            )}
           </div>
-        ) : !loading ? (
+        ) : (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">No stories found for Eastbourne</p>
             <p className="text-sm text-muted-foreground mt-2">
               Try adjusting your filters or check back later
             </p>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
