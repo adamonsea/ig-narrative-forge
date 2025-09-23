@@ -45,6 +45,7 @@ export const SentimentCard = ({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   
   // Parse external sentiment for Reddit data
   const parseExternalSentiment = () => {
@@ -127,13 +128,17 @@ export const SentimentCard = ({
 
   const nextSlide = () => {
     if (currentSlide < displaySlides.length - 1) {
+      setSlideDirection('next');
       setCurrentSlide(currentSlide + 1);
+      setTimeout(() => setSlideDirection(null), 300);
     }
   };
 
   const prevSlide = () => {
     if (currentSlide > 0) {
+      setSlideDirection('prev');
       setCurrentSlide(currentSlide - 1);
+      setTimeout(() => setSlideDirection(null), 300);
     }
   };
 
@@ -486,7 +491,16 @@ export const SentimentCard = ({
             )}
             
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto h-full">
-              <div className="transition-all duration-300 animate-fade-in h-full">
+              <div 
+                className={`transition-transform duration-300 ease-in-out h-full ${
+                  slideDirection === 'next' ? 'transform translate-x-[-100%] opacity-0' : 
+                  slideDirection === 'prev' ? 'transform translate-x-[100%] opacity-0' : 
+                  'transform translate-x-0 opacity-100'
+                }`}
+                style={{
+                  transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
+                }}
+              >
                 {renderSlideContent(displaySlides[currentSlide])}
               </div>
             </div>

@@ -76,20 +76,16 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const nextSlide = () => {
     if (!isLastSlide && validSlides.length > 0) {
       setSlideDirection('next');
-      setTimeout(() => {
-        setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
-        setSlideDirection(null);
-      }, 150);
+      setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
+      setTimeout(() => setSlideDirection(null), 300);
     }
   };
 
   const prevSlide = () => {
     if (!isFirstSlide) {
       setSlideDirection('prev');
-      setTimeout(() => {
-        setCurrentSlideIndex(currentSlideIndex - 1);
-        setSlideDirection(null);
-      }, 150);
+      setCurrentSlideIndex(currentSlideIndex - 1);
+      setTimeout(() => setSlideDirection(null), 300);
     }
   };
 
@@ -371,14 +367,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
               <div 
-                className={`mb-8 transition-all duration-300 ${
-                  slideDirection === 'next' ? 'animate-fade-out translate-x-[-20px]' : 
-                  slideDirection === 'prev' ? 'animate-fade-out translate-x-[20px]' : 
-                  'animate-fade-in'
+                className={`mb-8 transition-transform duration-300 ease-in-out ${
+                  slideDirection === 'next' ? 'transform translate-x-[-100%] opacity-0' : 
+                  slideDirection === 'prev' ? 'transform translate-x-[100%] opacity-0' : 
+                  'transform translate-x-0 opacity-100'
                 }`}
                 style={{
                   transform: isSwiping ? `translateX(${touchOffset * 0.8}px)` : undefined,
-                  transition: isSwiping ? 'none' : undefined
+                  transition: isSwiping ? 'none' : 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
                 }}
               >
                 <div className={`text-center leading-relaxed ${
