@@ -190,15 +190,6 @@ export const SentimentCard = ({
     };
   };
 
-  // Create slide components for SwipeCarousel
-  const slideComponents = displaySlides.map((slide, index) => (
-    <div key={index} className="h-full flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
-        {renderSlideContent(slide)}
-      </div>
-    </div>
-  ));
-
   const renderSlideContent = (slide: SentimentSlide) => {
     const temperature = getSentimentTemperature();
     
@@ -409,6 +400,15 @@ export const SentimentCard = ({
         );
     }
   };
+
+  // Create slide components for SwipeCarousel
+  const slideComponents = displaySlides.map((slide, index) => (
+    <div key={index} className="h-full flex items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+        {renderSlideContent(slide)}
+      </div>
+    </div>
+  ));
 
   const sentimentBadge = getSentimentBadge();
   const temperature = getSentimentTemperature();
