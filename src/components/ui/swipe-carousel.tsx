@@ -62,8 +62,8 @@ export function SwipeCarousel({
   const next = () => goTo(index + 1);
 
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const swipe = info.offset.x + info.velocity.x * 0.4;
-    const threshold = Math.min(0.25 * width, 120);
+    const swipe = info.offset.x + info.velocity.x * 0.5;
+    const threshold = Math.min(0.15 * width, 80);
     if (swipe > threshold) prev();
     else if (swipe < -threshold) next();
     else goTo(index);
@@ -79,13 +79,13 @@ export function SwipeCarousel({
         <motion.div
           className="flex h-full cursor-grab active:cursor-grabbing select-none"
           drag="x"
-          dragElastic={0.18}
+          dragElastic={0.3}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           style={{ x, touchAction: "pan-y pinch-zoom" }}
           onDragEnd={onDragEnd}
-          dragMomentum={false}
+          dragMomentum={true}
           whileDrag={{ cursor: "grabbing" }}
-          dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+          dragTransition={{ bounceStiffness: 400, bounceDamping: 25 }}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
