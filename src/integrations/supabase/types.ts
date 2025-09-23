@@ -2915,16 +2915,22 @@ export type Database = {
               p_topic_id: string
             }
         Returns: {
-          article_author: string
+          article_body: string
           article_id: string
           article_published_at: string
+          article_source_url: string
           article_title: string
-          author: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
           created_at: string
           id: string
-          slides: Json
-          story_type: string
+          illustration_generated_at: string
+          is_published: boolean
+          shared_content_id: string
+          slide_count: number
+          status: string
           title: string
+          topic_article_id: string
           updated_at: string
         }[]
       }

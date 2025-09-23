@@ -6,7 +6,6 @@ import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 
 export default function EastbourneFeed() {
-  // Use auth hook optionally - public feeds don't require authentication
   const { user } = useAuth();
   const {
     stories,

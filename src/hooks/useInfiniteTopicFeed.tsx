@@ -55,21 +55,18 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
   const loadTopic = useCallback(async () => {
     try {
-      // First try to get topic (works for both authenticated and anonymous users)
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
         .select('*')
         .eq('slug', slug)
         .eq('is_active', true)
-        .maybeSingle(); // Use maybeSingle to handle no results gracefully
+        .single();
 
       if (topicError) {
-        console.error('Error fetching topic:', topicError);
+        if (topicError.code === 'PGRST116') {
+          throw new Error('Topic not found');
+        }
         throw topicError;
-      }
-
-      if (!topicData) {
-        throw new Error('Topic not found');
       }
 
       setTopic({
@@ -97,15 +94,21 @@ export const useInfiniteTopicFeed = (slug: string) => {
       
       console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
-      // Use the topic data we already have
-      if (!topicData?.id) {
-        throw new Error('Topic ID not available');
+      // Get topic ID first to use with RPC
+      const { data: topicForRpc } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('slug', slug)
+        .single();
+
+      if (!topicForRpc) {
+        throw new Error('Topic not found for RPC call');
       }
 
       // Use server-side RPC to fetch stories with proper filtering and pagination
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories', {
-          p_topic_id: topicData.id,
+          p_topic_id: topicForRpc.id,
           p_status: 'published',
           p_limit: STORIES_PER_PAGE,
           p_offset: from
