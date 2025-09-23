@@ -12,6 +12,8 @@ interface Story {
   publication_name: string | null;
   created_at: string;
   updated_at: string;
+  cover_illustration_url?: string;
+  cover_illustration_prompt?: string;
   slides: Array<{
     id: string;
     slide_number: number;
@@ -30,6 +32,7 @@ export default function EastbourneFeed() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const { user } = useAuth();
 
   useEffect(() => {
     loadStories();
@@ -88,6 +91,8 @@ export default function EastbourneFeed() {
             publication_name,
             created_at,
             updated_at,
+            cover_illustration_url,
+            cover_illustration_prompt,
             slides!inner (
               id,
               slide_number,
@@ -118,6 +123,8 @@ export default function EastbourneFeed() {
             publication_name,
             created_at,
             updated_at,
+            cover_illustration_url,
+            cover_illustration_prompt,
             slides!inner (
               id,
               slide_number,
@@ -152,6 +159,8 @@ export default function EastbourneFeed() {
         publication_name: story.publication_name,
         created_at: story.created_at,
         updated_at: story.updated_at,
+        cover_illustration_url: story.cover_illustration_url,
+        cover_illustration_prompt: story.cover_illustration_prompt,
         slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
         article: {
           source_url: story.articles?.source_url,
@@ -169,6 +178,8 @@ export default function EastbourneFeed() {
           publication_name: story.publication_name,
           created_at: story.created_at,
           updated_at: story.updated_at,
+          cover_illustration_url: story.cover_illustration_url,
+          cover_illustration_prompt: story.cover_illustration_prompt,
           slides: (story.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number),
           article: {
             source_url: sac?.url,
@@ -243,8 +254,6 @@ export default function EastbourneFeed() {
       </div>
     );
   }
-
-  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
