@@ -91,8 +91,24 @@ export class ScrapingStrategies {
       for (const itemMatch of itemMatches.slice(0, 10)) { // Limit to 10 articles
         try {
           const article = await this.parseRSSItem(itemMatch, baseUrl);
-          if (article && article.word_count >= 150 && !this.isContentSnippet(article.body, article.title)) {
-            articles.push(article);
+          if (article) {
+            // More flexible acceptance for regional sources - accept snippets if reasonable
+            const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+            const isWhitelistedDomain = this.isWhitelistedDomain(article.source_url);
+            const minWordCount = (isRegionalTopic || isWhitelistedDomain) ? 75 : 150;
+            const isSnippet = this.isContentSnippet(article.body, article.title);
+            
+            if (article.word_count >= minWordCount && (!isSnippet || isRegionalTopic || isWhitelistedDomain)) {
+              // Mark snippets for editor review
+              if (isSnippet) {
+                article.import_metadata = {
+                  ...article.import_metadata,
+                  content_type: 'snippet',
+                  needs_review: true
+                };
+              }
+              articles.push(article);
+            }
           }
         } catch (error) {
           errors.push(`RSS item parsing error: ${error.message}`);
@@ -145,8 +161,26 @@ export class ScrapingStrategies {
       const finalTitle = extractedContent.title || title;
       const wordCount = this.countWords(finalContent);
       
-      if (!finalContent || wordCount < 150 || this.isContentSnippet(finalContent, finalTitle)) {
-        console.log(`⚠️ Insufficient or snippet content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
+      // More flexible content acceptance - try to use RSS snippet if full extraction fails
+      const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+      const isWhitelistedDomain = this.isWhitelistedDomain(articleUrl);
+      const minWordCount = (isRegionalTopic || isWhitelistedDomain) ? 75 : 150;
+      const isSnippet = this.isContentSnippet(finalContent, finalTitle);
+      
+      // Use RSS description as fallback if full extraction insufficient
+      if (!finalContent || wordCount < minWordCount) {
+        if (description && this.countWords(description) >= 50) {
+          console.log(`📝 Using RSS description as fallback content: ${this.countWords(description)} words`);
+          finalContent = `${description}\n\n[Note: Content extracted from RSS feed]`;
+          wordCount = this.countWords(finalContent);
+        } else {
+          console.log(`⚠️ Insufficient content for: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
+          return null;
+        }
+      }
+      
+      // Skip only if clearly inadequate content
+      if (!finalContent || wordCount < 25) {
         return null;
       }
 
@@ -205,7 +239,13 @@ export class ScrapingStrategies {
           const articleHtml = await fetchWithRetry(articleUrl);
           const extractedContent = extractContentFromHTML(articleHtml, articleUrl);
           
-          if (extractedContent.body && extractedContent.word_count >= 150 && !this.isContentSnippet(extractedContent.body, extractedContent.title)) {
+          // More flexible acceptance for regional topics
+          const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+          const isWhitelistedDomain = this.isWhitelistedDomain(articleUrl);
+          const minWordCount = (isRegionalTopic || isWhitelistedDomain) ? 75 : 150;
+          const isSnippet = this.isContentSnippet(extractedContent.body, extractedContent.title);
+          
+          if (extractedContent.body && extractedContent.word_count >= minWordCount && (!isSnippet || isRegionalTopic || isWhitelistedDomain)) {
             // Calculate regional relevance - for hyperlocal sources, give higher base scores
             let regionalRelevance = calculateRegionalRelevance(
               extractedContent.body,
@@ -347,14 +387,14 @@ export class ScrapingStrategies {
     
     const wordCount = this.countWords(content);
     
-    // Too short to be full article
-    if (wordCount < 100) return true;
+    // Very short content is definitely a snippet
+    if (wordCount < 25) return true;
     
     // Check for common snippet indicators
     const snippetIndicators = [
       'read more', 'continue reading', 'full story', 'view more',
       'the post', 'appeared first', 'original article', 'source:',
-      'click here', 'see more', '...', 'read the full',
+      'click here', 'see more', 'read the full',
       'subscribe', 'follow us', 'newsletter'
     ];
     
@@ -363,12 +403,30 @@ export class ScrapingStrategies {
       contentLower.includes(indicator)
     );
     
-    // Check if content ends abruptly (common in RSS snippets)
-    const endsAbruptly = content.trim().endsWith('...') || 
-                         content.trim().endsWith('…') ||
-                         !content.includes('.') || // No sentences
-                         content.split('.').length < 3; // Very few sentences
+    // More nuanced snippet detection - focus on clear truncation indicators
+    const hasEllipsis = content.trim().endsWith('...') || content.trim().endsWith('…');
+    const hasNoSentences = !content.includes('.') || content.split('.').length < 2;
+    const isClearlyTruncated = hasEllipsis || hasNoSentences;
     
-    return hasSnippetIndicators || endsAbruptly;
+    // Only consider it a snippet if it has clear indicators AND is relatively short
+    return hasSnippetIndicators || (isClearlyTruncated && wordCount < 75);
+  }
+
+  private isWhitelistedDomain(url: string): boolean {
+    const whitelistedDomains = [
+      'theargus.co.uk',
+      'sussexexpress.co.uk',
+      'brightonandhovenews.org',
+      'sussexlive.co.uk',
+      'eastsussexnews.co.uk',
+      'brightonjournal.co.uk'
+    ];
+    
+    try {
+      const domain = new URL(url).hostname.toLowerCase();
+      return whitelistedDomains.some(whitelist => domain.includes(whitelist));
+    } catch {
+      return false;
+    }
   }
 }

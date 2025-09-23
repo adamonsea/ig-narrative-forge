@@ -380,13 +380,14 @@ function normalizeDate(dateStr: string): string {
 function calculateContentQuality(content: string, title: string): number {
   let score = 0;
   
-  // Enhanced word count scoring for 150+ word requirement
+  // More flexible word count scoring to accommodate regional news snippets
   const wordCount = countWords(content);
   if (wordCount >= 500) score += 40;
   else if (wordCount >= 300) score += 35;
   else if (wordCount >= 200) score += 30;
-  else if (wordCount >= 150) score += 25; // Target threshold for local news
-  else if (wordCount >= 100) score += 20;
+  else if (wordCount >= 150) score += 25;
+  else if (wordCount >= 100) score += 22; // Increased score for moderate content
+  else if (wordCount >= 75) score += 18;  // Better score for regional snippets
   else if (wordCount >= 50) score += 15;
   else if (wordCount >= 25) score += 10;
   

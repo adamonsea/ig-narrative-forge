@@ -241,47 +241,49 @@ export class FastTrackScraper {
     let finalTitle = title;
     let wordCount = this.countWords(finalContent);
 
-  // Phase 1: Enhanced snippet detection and forced full-content for regional topics
-  const isLikelySnippet = this.isContentSnippet(description || '', title);
-  const hasEllipsis = (description || '').includes('[&#8230;') || (description || '').includes('…') || (description || '').includes('[...]');
-  const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
-  
-  // Force full extraction for: truncated RSS, low word count, or regional topics with snippets
-  const needsFullExtraction = wordCount < 150 || isLikelySnippet || hasEllipsis || 
-                             (isRegionalTopic && wordCount < 200);
-  
-  if (needsFullExtraction) {
-    try {
-      console.log(`📄 Phase 1: Forcing full extraction - ${wordCount} words, snippet: ${isLikelySnippet}, ellipsis: ${hasEllipsis}, regional: ${isRegionalTopic}`);
-      const extractor = new UniversalContentExtractor(articleUrl);
-      const articleHtml = await extractor.fetchWithRetry(articleUrl);
-      const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
-      
-      // Use extracted content if available and better than RSS
-      if (extractedContent.body) {
-        const extractedWordCount = this.countWords(extractedContent.body);
+    // Enhanced snippet acceptance logic with regional source prioritization
+    const isLikelySnippet = this.isContentSnippet(description || '', title);
+    const hasEllipsis = (description || '').includes('[&#8230;') || (description || '').includes('…') || (description || '').includes('[...]');
+    const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+    const isWhitelistedDomain = this.isWhitelistedDomain(articleUrl);
+    
+    // Try full extraction for: very low word count or clear truncation indicators
+    const needsFullExtraction = wordCount < 75 || 
+                               (hasEllipsis && wordCount < 100) ||
+                               (isRegionalTopic && wordCount < 100 && !isWhitelistedDomain);
+    
+    if (needsFullExtraction) {
+      try {
+        console.log(`📄 Attempting full extraction - ${wordCount} words, snippet: ${isLikelySnippet}, ellipsis: ${hasEllipsis}, regional: ${isRegionalTopic}`);
+        const extractor = new UniversalContentExtractor(articleUrl);
+        const articleHtml = await extractor.fetchWithRetry(articleUrl);
+        const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
         
-        // Always use full content if RSS had ellipsis or was very short
-        if (hasEllipsis || wordCount < 100 || extractedWordCount > wordCount * 1.5) {
-          finalContent = extractedContent.body;
-          finalTitle = extractedContent.title || title;
-          wordCount = extractedContent.word_count || extractedWordCount;
-          console.log(`✅ Phase 1: Full extraction successful: ${wordCount} words (was ${this.countWords(description || '')})`);
-        } else {
-          console.log(`⚠️ Extracted content not significantly better, keeping RSS`);
+        // Use extracted content if significantly better than RSS
+        if (extractedContent.body) {
+          const extractedWordCount = this.countWords(extractedContent.body);
+          
+          // Use full content if it's meaningfully longer or RSS was clearly truncated
+          if (hasEllipsis || extractedWordCount > wordCount * 1.8 || extractedWordCount >= 150) {
+            finalContent = extractedContent.body;
+            finalTitle = extractedContent.title || title;
+            wordCount = extractedContent.word_count || extractedWordCount;
+            console.log(`✅ Full extraction successful: ${wordCount} words (was ${this.countWords(description || '')})`);
+          } else {
+            console.log(`⚠️ Extracted content not significantly better, keeping RSS content`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ Full extraction failed, using RSS content as fallback: ${error.message}`);
+        
+        // For regional sources, accept RSS snippet even if extraction failed
+        if (isRegionalTopic || isWhitelistedDomain) {
+          console.log(`📝 Regional/whitelisted source: Accepting RSS snippet as fallback content`);
+          // Mark content as snippet for editor review
+          finalContent = `${description}\n\n[Note: This is a content snippet from RSS feed. Full article extraction failed.]`;
         }
       }
-    } catch (error) {
-      console.log(`⚠️ Full extraction failed, keeping RSS content: ${error.message}`);
-      
-      // Phase 1: If this is a regional topic and we couldn't extract, try fallback scrapers
-      if (isRegionalTopic && (hasEllipsis || wordCount < 100)) {
-        console.log(`🔄 Phase 1: Triggering fallback scraper for regional content`);
-        // Mark this for fallback processing (this will be caught by the calling function)
-        throw new Error(`FALLBACK_NEEDED: RSS truncated and full extraction failed for regional topic`);
-      }
     }
-  }
 
     // Calculate regional relevance quickly
     const regionalRelevance = calculateRegionalRelevance(
@@ -383,10 +385,14 @@ export class FastTrackScraper {
     }
   }
 
-  // Phase 1: Whitelisted domains for relaxed qualification
+  // Enhanced whitelisted domains for regional sources that commonly use snippets
   private WHITELISTED_DOMAINS = [
     'theargus.co.uk',
-    'sussexexpress.co.uk'
+    'sussexexpress.co.uk',
+    'brightonandhovenews.org',
+    'sussexlive.co.uk',
+    'eastsussexnews.co.uk',
+    'brightonjournal.co.uk'
   ];
 
   private isWhitelistedDomain(url: string): boolean {
@@ -400,12 +406,12 @@ export class FastTrackScraper {
 
   private isFastQualified(content: any): boolean {
     const isWhitelisted = this.isWhitelistedDomain(this.baseUrl);
+    const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
     
-    // Phase 1: Handle missing dates for whitelisted domains
+    // Handle missing dates - more permissive for regional/whitelisted sources
     if (!content.published_at) {
-      if (isWhitelisted) {
-        console.log(`🟡 Whitelisted domain: Accepting article with missing date - "${content.title?.substring(0, 50)}..."`);
-        // Set published_at to now() for whitelisted domains
+      if (isWhitelisted || isRegionalTopic) {
+        console.log(`🟡 Regional/whitelisted source: Accepting article with missing date - "${content.title?.substring(0, 50)}..."`);
         content.published_at = new Date().toISOString();
       } else {
         console.log(`🚫 Fast-track REJECT (no date): "${content.title?.substring(0, 50)}..."`);
@@ -413,7 +419,7 @@ export class FastTrackScraper {
       }
     }
 
-    // Phase 1: Validate date for all domains
+    // Validate date for all domains
     try {
       const pubDate = new Date(content.published_at);
       if (!isNaN(pubDate.getTime())) {
@@ -425,8 +431,8 @@ export class FastTrackScraper {
           return false;
         }
       } else {
-        if (isWhitelisted) {
-          console.log(`🟡 Whitelisted domain: Fixing invalid date - "${content.title?.substring(0, 50)}..."`);
+        if (isWhitelisted || isRegionalTopic) {
+          console.log(`🟡 Regional/whitelisted source: Fixing invalid date - "${content.title?.substring(0, 50)}..."`);
           content.published_at = new Date().toISOString();
         } else {
           console.log(`🚫 Fast-track REJECT (invalid date): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
@@ -434,8 +440,8 @@ export class FastTrackScraper {
         }
       }
     } catch (error) {
-      if (isWhitelisted) {
-        console.log(`🟡 Whitelisted domain: Fixing date parse error - "${content.title?.substring(0, 50)}..."`);
+      if (isWhitelisted || isRegionalTopic) {
+        console.log(`🟡 Regional/whitelisted source: Fixing date parse error - "${content.title?.substring(0, 50)}..."`);
         content.published_at = new Date().toISOString();
       } else {
         console.log(`🚫 Fast-track REJECT (date parse error): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
@@ -443,7 +449,7 @@ export class FastTrackScraper {
       }
     }
 
-    // Enhanced qualification to avoid snippets
+    // Basic content validation
     if (!content.title && !content.body) {
       return false;
     }
@@ -451,11 +457,11 @@ export class FastTrackScraper {
     const wordCount = this.countWords(content.body || '');
     const isSnippet = this.isContentSnippet(content.body || '', content.title || '');
     
-    // Phase 1: Relaxed requirements for whitelisted domains
-    if (isWhitelisted) {
-      // Allow snippets and lower word count for trusted regional sources
-      console.log(`🟡 Whitelisted domain qualification: ${wordCount} words, snippet: ${isSnippet}`);
-      return wordCount >= 50; // Reduced from 100 words
+    // More permissive requirements for regional/whitelisted sources
+    if (isWhitelisted || isRegionalTopic) {
+      console.log(`🟡 Regional/whitelisted qualification: ${wordCount} words, snippet: ${isSnippet}`);
+      // Accept snippets if they have reasonable word count for regional sources
+      return wordCount >= 50 && (wordCount >= 75 || !isSnippet);
     }
     
     // Standard requirements for other domains
@@ -524,14 +530,14 @@ export class FastTrackScraper {
     
     const wordCount = this.countWords(content);
     
-    // Too short to be full article
-    if (wordCount < 100) return true;
+    // Very short content is definitely a snippet
+    if (wordCount < 25) return true;
     
     // Check for common snippet indicators
     const snippetIndicators = [
       'read more', 'continue reading', 'full story', 'view more',
       'the post', 'appeared first', 'original article', 'source:',
-      'click here', 'see more', '...', 'read the full',
+      'click here', 'see more', 'read the full',
       'subscribe', 'follow us', 'newsletter'
     ];
     
@@ -540,12 +546,12 @@ export class FastTrackScraper {
       contentLower.includes(indicator)
     );
     
-    // Check if content ends abruptly (common in RSS snippets)
-    const endsAbruptly = content.trim().endsWith('...') || 
-                         content.trim().endsWith('…') ||
-                         !content.includes('.') || // No sentences
-                         content.split('.').length < 3; // Very few sentences
+    // More nuanced snippet detection - only flag as snippet if clearly truncated AND short
+    const hasEllipsis = content.trim().endsWith('...') || content.trim().endsWith('…');
+    const hasNoSentences = !content.includes('.') || content.split('.').length < 2;
+    const isClearlyTruncated = hasEllipsis || hasNoSentences;
     
-    return hasSnippetIndicators || endsAbruptly;
+    // Only consider it a snippet if it has clear indicators AND is relatively short
+    return hasSnippetIndicators || (isClearlyTruncated && wordCount < 75);
   }
 }
