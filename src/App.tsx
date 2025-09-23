@@ -32,9 +32,9 @@ const App = () => (
               <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
-          <Route path="/feed/topic/:slug" element={<TopicFeed />} />
-          <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />
-          <Route path="/eastbourne-feed/story/:storyId" element={<StoryPage />} />
+              <Route path="/feed/topic/:slug" element={<TopicFeed />} />
+              <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />
+              <Route path="/eastbourne-feed/story/:storyId" element={<StoryPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
