@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, Minus, MessageSquare, BarChart3, Quote, ExternalLink } from "lucide-react";
 import { useState } from "react";
-import { useSwipeGesture } from "@/hooks/useSwipeGesture";
+import { SwipeCarousel } from "@/components/ui/swipe-carousel";
 
 interface SentimentSlide {
   type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
@@ -118,35 +118,12 @@ export const SentimentCard = ({
       metadata: { sources }
     }
   ];
-  // Enhanced swipe gesture hook
-  const swipeGesture = useSwipeGesture({
-    threshold: 0.3, // 30% of container width
-    velocityThreshold: 0.3,
-    canSwipeLeft: currentSlide < displaySlides.length - 1,
-    canSwipeRight: currentSlide > 0,
-    onSwipeLeft: () => nextSlide(),
-    onSwipeRight: () => prevSlide(),
-  });
 
   const getSentimentBadge = () => {
     if (sentimentScore > 20) return { icon: <TrendingUp className="h-3 w-3" />, variant: "secondary" as const };
     if (sentimentScore < -20) return { icon: <TrendingDown className="h-3 w-3" />, variant: "destructive" as const };
     return { icon: <Minus className="h-3 w-3" />, variant: "outline" as const };
   };
-
-  const nextSlide = () => {
-    if (currentSlide < displaySlides.length - 1) {
-      setCurrentSlide(currentSlide + 1);
-    }
-  };
-
-  const prevSlide = () => {
-    if (currentSlide > 0) {
-      setCurrentSlide(currentSlide - 1);
-    }
-  };
-
-  // Enhanced touch handling is now managed by useSwipeGesture hook
 
   const getTextSize = (content: string, isHero: boolean) => {
     const length = content.length;
@@ -212,6 +189,15 @@ export const SentimentCard = ({
       description: "Freezing"
     };
   };
+
+  // Create slide components for SwipeCarousel
+  const slideComponents = displaySlides.map((slide, index) => (
+    <div key={index} className="h-full flex items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+        {renderSlideContent(slide)}
+      </div>
+    </div>
+  ));
 
   const renderSlideContent = (slide: SentimentSlide) => {
     const temperature = getSentimentTemperature();
@@ -425,17 +411,12 @@ export const SentimentCard = ({
   };
 
   const sentimentBadge = getSentimentBadge();
-
   const temperature = getSentimentTemperature();
 
   return (
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
-        <div 
-          ref={swipeGesture.containerRef}
-          className={`relative h-[600px] flex flex-col overflow-hidden swipe-container ${temperature.bgClass}`}
-          {...swipeGesture.handlers}
-        >
+        <div className={`relative h-[600px] flex flex-col overflow-hidden ${temperature.bgClass}`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <Badge variant={sentimentBadge.variant} className="text-sm font-medium flex items-center gap-1">
@@ -448,54 +429,16 @@ export const SentimentCard = ({
             )}
           </div>
 
-          {/* Slide Content */}
-          <div className="relative flex-1 flex items-center justify-center">
-            {/* Invisible navigation areas */}
-            {displaySlides.length > 1 && (
-              <>
-                {/* Left area - previous slide */}
-                {currentSlide > 0 && (
-                  <button
-                    onClick={prevSlide}
-                    className="absolute left-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                    aria-label="Previous slide"
-                  />
-                )}
-                {/* Right area - next slide */}
-                {currentSlide < displaySlides.length - 1 && (
-                  <button
-                    onClick={nextSlide}
-                    className="absolute right-0 top-0 bottom-0 w-1/4 z-10 cursor-pointer"
-                    aria-label="Next slide"
-                  />
-                )}
-              </>
-            )}
-            
-          {/* Slide Content */}
-          <div className="relative flex-1 flex items-center justify-center overflow-hidden">
-            <div className="relative w-full h-full">
-              {displaySlides.map((slide, index) => {
-                const slideOffset = (index - currentSlide) * 100;
-                const totalOffset = slideOffset + (swipeGesture.offset / (swipeGesture.containerRef.current?.offsetWidth || 1)) * 100;
-                
-                return (
-                  <div
-                    key={index}
-                    className="absolute inset-0 p-6 flex items-center justify-center"
-                    style={{
-                      transform: `translate3d(${totalOffset}%, 0, 0)`,
-                      willChange: swipeGesture.isDragging || swipeGesture.isAnimating ? 'transform' : 'auto',
-                    }}
-                  >
-                    <div className="w-full max-w-lg">
-                      {renderSlideContent(slide)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* SwipeCarousel */}
+          <div className="flex-1">
+            <SwipeCarousel
+              slides={slideComponents}
+              height="100%"
+              initialIndex={currentSlide}
+              showDots={false}
+              onSlideChange={setCurrentSlide}
+              ariaLabel="Sentiment analysis slides"
+            />
           </div>
 
           {/* Bottom section */}

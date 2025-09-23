@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed } from '@/lib/dateUtils';
 import { format } from 'date-fns';
-import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 
 interface Story {
   id: string;
@@ -53,16 +53,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const currentSlide = validSlides[safeSlideIndex];
   const isFirstSlide = safeSlideIndex === 0;
   const isLastSlide = safeSlideIndex === validSlides.length - 1;
-
-  // Enhanced swipe gesture hook
-  const swipeGesture = useSwipeGesture({
-    threshold: 0.25, // 25% of container width
-    velocityThreshold: 0.4,
-    canSwipeLeft: !isLastSlide,
-    canSwipeRight: !isFirstSlide,
-    onSwipeLeft: () => nextSlide(),
-    onSwipeRight: () => prevSlide(),
-  });
 
   // Early return if no valid slides
   if (!currentSlide || validSlides.length === 0) {
@@ -221,8 +211,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     return parts.join('');
   };
 
-  const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(currentSlide?.content || 'Content not available', currentSlide?.links);
-
   // Dynamic text sizing based on content length
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
@@ -238,14 +226,75 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
     }
   };
 
+  // Create slide components for SwipeCarousel
+  const slideComponents = validSlides.map((slide, index) => {
+    const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
+    
+    return (
+      <div key={slide.id} className="h-full flex flex-col">
+        {/* Cover Illustration - only show on first slide */}
+        {story.cover_illustration_url && index === 0 && (
+          <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
+            <img
+              src={story.cover_illustration_url}
+              alt={`Cover illustration for ${story.title}`}
+              className="w-full h-full object-contain bg-white rounded-lg"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
+          </div>
+        )}
+
+        {/* Slide Content */}
+        <div className="flex-1 flex items-center justify-center p-6 md:p-8">
+          <div className="w-full max-w-lg mx-auto">
+            <div className="text-center leading-relaxed">
+              <div className={`${
+                index === 0 
+                ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
+                : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false)} font-light text-balance`
+              }`}>
+                {/* Main story content with links */}
+                <div dangerouslySetInnerHTML={{
+                  __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
+                }} />
+                    
+                {/* CTA content with special styling on last slide */}
+                {index === validSlides.length - 1 && ctaContent && (
+                  <div className="mt-4 pt-4 border-t border-muted">
+                    <div 
+                      className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                      dangerouslySetInnerHTML={{
+                        __html: ctaContent
+                          .replace(
+                            /visit ([^\s]+)/gi, 
+                            'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                          )
+                          .replace(
+                            /call (\d{5}\s?\d{6})/gi,
+                            'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
+                          )
+                          .replace(
+                            /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
+                            (match, domain, dateText) => sourceUrl ? 
+                              `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
+                              `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
+                          )
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  });
+
   return (
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
-        <div 
-          ref={swipeGesture.containerRef}
-          className="relative bg-background min-h-[600px] flex flex-col swipe-container"
-          {...swipeGesture.handlers}
-        >
+        <div className="relative bg-background min-h-[600px] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
@@ -290,83 +339,20 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               })()}
             </div>
             <span className="text-sm text-muted-foreground">
-              {safeSlideIndex + 1} of {validSlides.length}
+              {currentSlideIndex + 1} of {validSlides.length}
             </span>
           </div>
 
-          {/* Cover Illustration */}
-          {story.cover_illustration_url && currentSlideIndex === 0 && (
-            <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
-              <img
-                src={story.cover_illustration_url}
-                alt={`Cover illustration for ${story.title}`}
-                className="w-full h-full object-contain bg-white rounded-lg"
-                style={{ imageRendering: 'crisp-edges' }}
-              />
-            </div>
-          )}
-
-          {/* Slide Content */}
-          <div className="relative flex-1 flex items-center justify-center overflow-hidden">            
-            <div className="relative w-full h-full">
-              {validSlides.map((slide, index) => {
-                const containerWidth = swipeGesture.containerRef.current?.offsetWidth || 1;
-                const baseX = (index - safeSlideIndex) * containerWidth;
-                const totalX = baseX + swipeGesture.offset;
-                
-                return (
-                  <div
-                    key={slide.id}
-                    className="absolute inset-0 p-6 md:p-8 flex items-center justify-center"
-                    style={{
-                      transform: `translate3d(${totalX}px, 0, 0)`,
-                      willChange: swipeGesture.isDragging || swipeGesture.isAnimating ? 'transform' : 'auto',
-                    }}
-                  >
-                    <div className="w-full max-w-lg mx-auto h-full">
-                      <div className="mb-8 max-h-full overflow-y-auto">
-                        <div className={`text-center leading-relaxed ${
-                          index === 0 
-                          ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
-                          : `${getTextSize(index === validSlides.length - 1 ? mainContent : (slide?.content || ''), false)} font-light text-balance`
-                        }`}>
-                          {/* Main story content with links */}
-                          <div dangerouslySetInnerHTML={{
-                            __html: index === validSlides.length - 1 ? contentWithLinks : renderContentWithLinks(slide?.content || 'Content not available', slide?.links)
-                          }} />
-                              
-                          {/* CTA content with special styling on last slide */}
-                          {index === validSlides.length - 1 && ctaContent && (
-                            <div className="mt-4 pt-4 border-t border-muted">
-                              <div 
-                                className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                                dangerouslySetInnerHTML={{
-                                  __html: ctaContent
-                                    .replace(
-                                      /visit ([^\s]+)/gi, 
-                                      'visit <a href="https://$1" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                                    )
-                                    .replace(
-                                      /call (\d{5}\s?\d{6})/gi,
-                                      'call <a href="tel:$1" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">$1</a>'
-                                    )
-                                    .replace(
-                                      /Read the full story at ([^\s\n]+)(\s+\(Originally published[^)]+\))?/gi,
-                                      (match, domain, dateText) => sourceUrl ? 
-                                        `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at ${domain}</a>${dateText || ''}` :
-                                        `Read the full story at <span class="text-primary font-extrabold">${domain}</span>${dateText || ''}`
-                                    )
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* SwipeCarousel */}
+          <div className="flex-1">
+            <SwipeCarousel
+              slides={slideComponents}
+              height="100%"
+              initialIndex={currentSlideIndex}
+              showDots={false}
+              onSlideChange={setCurrentSlideIndex}
+              ariaLabel={`${story.title} story slides`}
+            />
           </div>
 
           {/* Bottom section */}
@@ -380,7 +366,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                       key={index}
                       onClick={() => goToSlide(index)}
                       className={`w-2 h-2 rounded-full transition-all ${
-                        index === safeSlideIndex 
+                        index === currentSlideIndex 
                           ? 'bg-primary scale-125' 
                           : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
                       }`}
