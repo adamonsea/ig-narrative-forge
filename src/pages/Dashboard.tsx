@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopicManager } from "@/components/TopicManager";
+import { AutomationDashboard } from "@/components/AutomationDashboard";
 
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut, Archive } from "lucide-react";
+import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut, Archive, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import {
@@ -235,14 +237,30 @@ const Dashboard = () => {
 
 
         {/* Main Dashboard Content */}
-        <div className="space-y-6">
-          <div className="flex gap-6">
-            <div className="flex-1">
-              <TopicManager />
+        <Tabs defaultValue="topics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="topics" className="flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Topics
+            </TabsTrigger>
+            <TabsTrigger value="automation" className="flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              Automation
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="topics" className="space-y-6">
+            <div className="flex gap-6">
+              <div className="flex-1">
+                <TopicManager />
+              </div>
             </div>
-            
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="automation" className="space-y-6">
+            <AutomationDashboard />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
