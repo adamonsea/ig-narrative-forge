@@ -40,6 +40,10 @@
   .animate-slide-out-left {
     @apply animate-[slide-out-left_0.3s_ease-in-out_forwards];
   }
+
+  .animate-slide-in {
+    @apply animate-[slide-in_0.3s_ease-in-out_forwards];
+  }
   
   .animate-discard {
     @apply animate-[discard_0.3s_ease-in-out_forwards];

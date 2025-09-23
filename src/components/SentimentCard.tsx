@@ -129,16 +129,20 @@ export const SentimentCard = ({
   const nextSlide = () => {
     if (currentSlide < displaySlides.length - 1) {
       setSlideDirection('next');
-      setCurrentSlide(currentSlide + 1);
-      setTimeout(() => setSlideDirection(null), 300);
+      setTimeout(() => {
+        setCurrentSlide(currentSlide + 1);
+        setSlideDirection(null);
+      }, 150);
     }
   };
 
   const prevSlide = () => {
     if (currentSlide > 0) {
       setSlideDirection('prev');
-      setCurrentSlide(currentSlide - 1);
-      setTimeout(() => setSlideDirection(null), 300);
+      setTimeout(() => {
+        setCurrentSlide(currentSlide - 1);
+        setSlideDirection(null);
+      }, 150);
     }
   };
 
@@ -491,18 +495,17 @@ export const SentimentCard = ({
             )}
             
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto h-full">
-              <div 
-                className={`transition-transform duration-300 ease-in-out h-full ${
-                  slideDirection === 'next' ? 'transform translate-x-[-100%] opacity-0' : 
-                  slideDirection === 'prev' ? 'transform translate-x-[100%] opacity-0' : 
-                  'transform translate-x-0 opacity-100'
-                }`}
-                style={{
-                  transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
-                }}
-              >
-                {renderSlideContent(displaySlides[currentSlide])}
-              </div>
+              <div className="h-full relative overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-300 ease-in-out ${
+                    slideDirection === 'next' ? 'animate-slide-out-left' : 
+                    slideDirection === 'prev' ? 'animate-slide-out-right' : 
+                    'animate-slide-in'
+                  }`}
+                >
+                  {renderSlideContent(displaySlides[currentSlide])}
+                </div>
+                </div>
             </div>
           </div>
 
