@@ -50,6 +50,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [touchOffset, setTouchOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
   
   // Defensive checks for slides data
   const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
@@ -76,20 +77,16 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
   const nextSlide = () => {
     if (!isLastSlide && validSlides.length > 0) {
       setSlideDirection('next');
-      setTimeout(() => {
-        setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
-        setSlideDirection(null);
-      }, 150);
+      setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
+      setTimeout(() => setSlideDirection(null), 350);
     }
   };
 
   const prevSlide = () => {
     if (!isFirstSlide) {
       setSlideDirection('prev');
-      setTimeout(() => {
-        setCurrentSlideIndex(currentSlideIndex - 1);
-        setSlideDirection(null);
-      }, 150);
+      setCurrentSlideIndex(currentSlideIndex - 1);
+      setTimeout(() => setSlideDirection(null), 350);
     }
   };
 
@@ -372,10 +369,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             <div className="p-6 md:p-8 w-full max-w-lg mx-auto">
               <div 
                 className="mb-8 relative overflow-hidden"
-                style={{
-                  transform: isSwiping ? `translateX(${touchOffset * 0.8}px)` : undefined,
-                  transition: isSwiping ? 'none' : undefined
-                }}
               >
                 <div 
                   className={`transition-all duration-300 ease-in-out ${
