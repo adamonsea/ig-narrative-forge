@@ -4,17 +4,9 @@ import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { DuplicateDetection } from '@/components/DuplicateDetection';
-import { DuplicateCleanup } from '@/components/DuplicateCleanup';
-import ErrorTicketDashboard from '@/components/ErrorTicketDashboard';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
-import { SourceHealthDashboard } from '@/components/SourceHealthDashboard';
-import { UnifiedTestingDashboard } from '@/components/UnifiedTestingDashboard';
-import { CleanSlateMigration } from '@/components/CleanSlateMigration';
-import { TopicArchiveManager } from '@/components/TopicArchiveManager';
-import { SourceValidationTester } from '@/components/SourceValidationTester';
-import { DiscardedArticlesBackfillButton } from '@/components/DiscardedArticlesBackfillButton';
 import { QueueManager } from '@/components/QueueManager';
+import { AutomationDashboard } from '@/components/AutomationDashboard';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function AdminPanel() {
@@ -49,12 +41,10 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
             <TabsTrigger value="queue">Queue Manager</TabsTrigger>
-            <TabsTrigger value="testing">Testing</TabsTrigger>
-            <TabsTrigger value="archive">Topic Archive</TabsTrigger>
-            <TabsTrigger value="migration">Clean Migration</TabsTrigger>
+            <TabsTrigger value="automation">Global Automation</TabsTrigger>
           </TabsList>
           
           <TabsContent value="sources" className="mt-6">
@@ -93,22 +83,8 @@ export default function AdminPanel() {
             </div>
           </TabsContent>
 
-          <TabsContent value="testing" className="mt-6">
-            <div className="space-y-8">
-              <SourceValidationTester />
-              <UnifiedTestingDashboard />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="archive" className="mt-6">
-            <TopicArchiveManager />
-          </TabsContent>
-          
-          <TabsContent value="migration" className="mt-6">
-            <div className="space-y-6">
-              <DiscardedArticlesBackfillButton />
-              <CleanSlateMigration />
-            </div>
+          <TabsContent value="automation" className="mt-6">
+            <AutomationDashboard />
           </TabsContent>
         </Tabs>
       </div>

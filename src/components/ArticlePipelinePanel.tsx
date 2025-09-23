@@ -25,7 +25,6 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DuplicateCleanupDialog } from "./DuplicateCleanupDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface Article {
@@ -587,10 +586,6 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
                           <RefreshCw className="w-3 h-3 mr-1" />
                           Refresh
                         </Button>
-                        <DuplicateCleanupDialog onSuccess={() => {
-                          loadPendingArticles();
-                          loadQueuedArticles();
-                        }} />
                      </div>
                    </div>
                    {queuedArticles.map((article) => (
