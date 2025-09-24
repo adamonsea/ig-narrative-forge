@@ -465,7 +465,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status))}
+                  stories={stories.filter(s => s.is_published)}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}

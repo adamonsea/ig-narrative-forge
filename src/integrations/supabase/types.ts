@@ -2764,6 +2764,25 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_public_topic_feed: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_sort_by?: string
+          p_topic_slug: string
+        }
+        Returns: {
+          article_published_at: string
+          article_source_url: string
+          author: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_queue_items_unified: {
         Args: { p_topic_id?: string }
         Returns: {

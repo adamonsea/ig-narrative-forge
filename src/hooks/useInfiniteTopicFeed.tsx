@@ -60,6 +60,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
         .select('*')
         .eq('slug', slug)
         .eq('is_active', true)
+        .eq('is_public', true) // Only load public topics for feeds
         .single();
 
       if (topicError) {
@@ -94,24 +95,13 @@ export const useInfiniteTopicFeed = (slug: string) => {
       
       console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
-      // Get topic ID first to use with RPC
-      const { data: topicForRpc } = await supabase
-        .from('topics')
-        .select('id')
-        .eq('slug', slug)
-        .single();
-
-      if (!topicForRpc) {
-        throw new Error('Topic not found for RPC call');
-      }
-
-      // Use server-side RPC to fetch stories with proper filtering and pagination
+      // Use the public feed function for consistent access
       const { data: storiesData, error } = await supabase
-        .rpc('get_topic_stories', {
-          p_topic_id: topicForRpc.id,
-          p_status: 'published',
+        .rpc('get_public_topic_feed', {
+          p_topic_slug: slug,
           p_limit: STORIES_PER_PAGE,
-          p_offset: from
+          p_offset: from,
+          p_sort_by: sortBy
         });
 
       if (error) {
