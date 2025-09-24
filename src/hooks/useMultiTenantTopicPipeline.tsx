@@ -324,123 +324,37 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         console.log('✅ Multi-tenant queue items processed:', queueItemsData.length, 'items found');
       }
 
-      console.log('🔄 Loading stories via server-side filters for topic:', selectedTopicId);
-      
-      // Align with public feed: use the same RPC first
-      const statuses = ['ready', 'published']; // used for fallbacks
+      console.log('🔄 Loading all stories for topic:', selectedTopicId);
 
+      // Use the new unified admin function for all stories (including published ones)
       const topicStoriesResult = await supabase
-        .rpc('get_topic_stories', {
+        .rpc('get_admin_topic_stories', {
           p_topic_id: selectedTopicId,
-          p_status: 'published',
+          p_status: null, // Get all stories - we'll filter on the frontend
           p_limit: 200,
           p_offset: 0
         });
 
-      // Robust fallback if RPC fails or returns no data
-      let fallbackStoriesResult: { data: any[]; error: any } | null = null;
-      if (topicStoriesResult.error || !topicStoriesResult.data || topicStoriesResult.data.length === 0) {
-        console.log('🔄 get_topic_stories RPC failed or empty, trying fallback queries...', topicStoriesResult.error);
-        
-        // Fallback 1: Legacy stories
-        const legacyStoriesResult = await supabase
-          .from('stories')
-          .select(`
-            id, article_id, title, status, created_at, updated_at, is_published,
-            cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
-            audience_expertise, is_teaser,
-            articles!inner(id, topic_id, title, body, source_url, published_at, author)
-          `)
-          .eq('articles.topic_id', selectedTopicId)
-          .eq('is_published', true)
-          .in('status', statuses)
-          .order('updated_at', { ascending: false });
-
-        // Fallback 2: Multi-tenant stories
-        const multiTenantStoriesResult = await supabase
-          .from('stories')
-          .select(`
-            id, topic_article_id, shared_content_id, title, status, created_at, updated_at, is_published,
-            cover_illustration_url, illustration_generated_at, slidetype, tone, writing_style,
-            audience_expertise, is_teaser,
-            topic_articles!inner(id, topic_id, shared_content_id,
-              shared_content:shared_article_content(title, body, url, published_at, author)
-            )
-          `)
-          .eq('topic_articles.topic_id', selectedTopicId)
-          .eq('is_published', true)
-          .in('status', statuses)
-          .order('updated_at', { ascending: false });
-
-        console.log('🔄 Fallback queries complete:', {
-          legacy: legacyStoriesResult.data?.length || 0,
-          multiTenant: multiTenantStoriesResult.data?.length || 0,
-          legacyError: legacyStoriesResult.error,
-          multiTenantError: multiTenantStoriesResult.error
-        });
-
-        // Merge fallback results
-        const legacyStories = (legacyStoriesResult.data || []).map((s: any) => ({
-          ...s,
-          story_type: 'legacy',
-          article_title: s.articles?.title,
-          article_body: s.articles?.body,
-          article_source_url: s.articles?.source_url,
-          article_published_at: s.articles?.published_at,
-          article_author: s.articles?.author,
-          headline: s.title,
-          slide_count: 0
-        }));
-
-        const multiTenantStories = (multiTenantStoriesResult.data || []).map((s: any) => ({
-          ...s,
-          story_type: 'multi_tenant',
-          article_title: s.topic_articles?.shared_content?.title,
-          article_body: s.topic_articles?.shared_content?.body,
-          article_source_url: s.topic_articles?.shared_content?.url,
-          article_published_at: s.topic_articles?.shared_content?.published_at,
-          article_author: s.topic_articles?.shared_content?.author,
-          headline: s.title,
-          slide_count: 0
-        }));
-
-        fallbackStoriesResult = {
-          data: [...legacyStories, ...multiTenantStories],
-          error: null
-        };
-      }
-
-      // Also get slides for the stories (from RPC path)
-      let slidesResult;
-      if (topicStoriesResult.data && topicStoriesResult.data.length > 0) {
-        const storyIds = topicStoriesResult.data.map((s: any) => s.id);
-        slidesResult = await supabase
-          .from('slides')
-          .select('*')
-          .in('story_id', storyIds)
-          .order('slide_number', { ascending: true });
-      }
-
-      console.log('📊 Stories query results:', {
-        rpc: topicStoriesResult.data?.length || 0,
-        fallback: fallbackStoriesResult?.data?.length || 0,
-        slides: slidesResult?.data?.length || 0,
-        rpcError: topicStoriesResult.error,
-        slidesError: slidesResult?.error
+      console.log('📊 Admin stories query results:', {
+        stories: topicStoriesResult.data?.length || 0,
+        error: topicStoriesResult.error
       });
 
-      // Use RPC stories data or fallback
-      const allStories = topicStoriesResult.data || fallbackStoriesResult?.data || [];
+      if (topicStoriesResult.error) {
+        console.error('Error loading topic stories:', topicStoriesResult.error);
+        setStories([]);
+        return;
+      }
+
+      // Use the clean, unified data
+      const allStories = topicStoriesResult.data || [];
       
-      const uniqueStories = allStories.filter((story, index, arr) => 
-        arr.findIndex(s => s.id === story.id) === index
-      );
-      
-      const sortedStories = uniqueStories.sort((a, b) => 
+      // The RPC already returns clean, deduplicated data - no need for complex filtering
+      const sortedStories = allStories.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.log('✅ Stories loaded successfully:', sortedStories.length, 'total unique stories');
+      console.log('✅ Stories loaded successfully:', sortedStories.length, 'total stories');
       
       // Validation logging for QA
       const publishedCount = sortedStories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length;
@@ -448,19 +362,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         totalStories: sortedStories.length,
         publishedCount,
         readyCount: sortedStories.filter(s => s.status === 'ready' && s.is_published).length,
-        publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length,
-        rpcUsed: !!topicStoriesResult.data?.length,
-        fallbackUsed: !!fallbackStoriesResult?.data?.length
+        publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length
       });
 
-      // Map to MultiTenantStory shape (both multi-tenant and legacy from unified RPC)
+      // Map to MultiTenantStory shape - the RPC already provides clean data structure
       const storiesData = sortedStories.map((story: any) => {        
-        // Add slides from separate query if available
-        const storySlides = slidesResult?.data 
-          ? slidesResult.data.filter((slide: any) => slide.story_id === story.id) 
-          : [];
-        
-        console.log('🔍 Story slides debug:', {
+        console.log('🔍 Story mapping debug:', {
           storyId: story.id,
           storyTitle: story.article_title || story.title,
           slidesFound: storySlides.length,
