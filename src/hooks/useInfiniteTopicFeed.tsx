@@ -55,9 +55,9 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
   const loadTopic = useCallback(async () => {
     try {
-      // Use the secure function to get public topics
+      // Use the secure function to get public topic info
       const { data: topics, error: topicError } = await supabase
-        .rpc('get_safe_public_topics');
+        .rpc('get_safe_public_topic_info');
 
       if (topicError) {
         throw topicError;
@@ -74,7 +74,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
         ...topicData,
         topic_type: topicData.topic_type as 'regional' | 'keyword',
         keywords: [], // Not exposed in safe function
-        is_public: true, // All topics from safe function are public
+        is_public: topicData.is_public,
         created_by: '' // Not exposed in safe function
       });
 
