@@ -64,13 +64,47 @@ export const TopicManager = () => {
 
       if (error) throw error;
       
-      // Type assertion to ensure topic_type is correctly typed
-      setTopics((data || []).map(topic => ({
-        ...topic,
-        topic_type: topic.topic_type as 'regional' | 'keyword',
-        articles_in_arrivals: Math.floor(Math.random() * 15), // Mock data for now
-        stories_published_this_week: Math.floor(Math.random() * 8)
-      })));
+      // Get real stats for each topic
+      const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
+        // Get articles in arrivals (new and processed status) - check both legacy and multi-tenant
+        const [legacyArticlesResult, multiTenantArticlesResult, publishedStoriesResult] = await Promise.all([
+          // Legacy articles
+          supabase
+            .from('articles')
+            .select('id', { count: 'exact' })
+            .eq('topic_id', topic.id)
+            .in('processing_status', ['new', 'processed']),
+          
+          // Multi-tenant articles  
+          supabase
+            .from('topic_articles')
+            .select('id', { count: 'exact' })
+            .eq('topic_id', topic.id)
+            .in('processing_status', ['new', 'processed']),
+          
+          // Published stories from this week
+          supabase
+            .from('stories')
+            .select('id', { count: 'exact' })
+            .eq('is_published', true)
+            .in('status', ['ready', 'published'])
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .or(`article_id.in.(${await getTopicArticleIds(topic.id)})`)
+        ]);
+
+        const legacyCount = legacyArticlesResult.count || 0;
+        const multiTenantCount = multiTenantArticlesResult.count || 0;
+        const publishedCount = publishedStoriesResult.count || 0;
+
+        return {
+          ...topic,
+          topic_type: topic.topic_type as 'regional' | 'keyword',
+          articles_in_arrivals: legacyCount + multiTenantCount,
+          stories_published_this_week: publishedCount
+        };
+      }));
+      
+      setTopics(topicsWithStats);
     } catch (error) {
       console.error('Error loading topics:', error);
       toast({
@@ -80,6 +114,32 @@ export const TopicManager = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to get article IDs for a topic (both legacy and multi-tenant)
+  const getTopicArticleIds = async (topicId: string): Promise<string> => {
+    try {
+      const [legacyResult, multiTenantResult] = await Promise.all([
+        supabase
+          .from('articles')
+          .select('id')
+          .eq('topic_id', topicId),
+        supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicId)
+      ]);
+
+      const allIds = [
+        ...(legacyResult.data || []).map(a => a.id),
+        ...(multiTenantResult.data || []).map(a => a.id)
+      ];
+      
+      return allIds.length > 0 ? allIds.join(',') : 'no-articles';
+    } catch (error) {
+      console.error('Error getting topic article IDs:', error);
+      return 'no-articles';
     }
   };
 
@@ -295,35 +355,51 @@ export const TopicManager = () => {
                           <span className="font-medium">{topic.topic_type === 'regional' ? 'Regional' : 'General'}</span>
                         </Badge>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 bg-card/40 backdrop-blur-sm rounded-lg p-2 border border-border/30">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            Status:
+                          </div>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Switch 
-                                  checked={topic.is_active} 
-                                  onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
-                                  onClick={(e) => e.preventDefault()}
-                                />
+                                <Button
+                                  variant={topic.is_active ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    toggleTopicStatus(topic.id, !topic.is_active);
+                                  }}
+                                >
+                                  {topic.is_active ? 'Published' : 'Draft'}
+                                </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{topic.is_active ? 'Topic Published' : 'Topic Draft'}</p>
+                                <p>Click to {topic.is_active ? 'move to draft' : 'publish'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
 
-                          <span className="text-xs text-muted-foreground">•</span>
-
+                          <div className="text-xs font-medium text-muted-foreground">
+                            Feed:
+                          </div>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Switch 
-                                  checked={topic.is_public} 
-                                  onCheckedChange={(checked) => toggleTopicPublic(topic.id, checked)}
-                                  onClick={(e) => e.preventDefault()}
-                                />
+                                <Button
+                                  variant={topic.is_public ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    toggleTopicPublic(topic.id, !topic.is_public);
+                                  }}
+                                >
+                                  {topic.is_public ? 'Public' : 'Private'}
+                                </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{topic.is_public ? 'Feed Public' : 'Feed Private'}</p>
+                                <p>Click to make feed {topic.is_public ? 'private' : 'public'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
