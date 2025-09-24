@@ -2994,6 +2994,18 @@ export type Database = {
           topic_type: string
         }[]
       }
+      get_safe_public_topics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          region: string
+          slug: string
+          topic_type: string
+        }[]
+      }
       get_source_topics: {
         Args: { p_source_id: string }
         Returns: {
