@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SystemErrorBoundary } from "@/components/SystemErrorBoundary";
+import { useState } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -15,34 +16,47 @@ import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 import StoryPage from "./pages/StoryPage";
 
-const queryClient = new QueryClient();
+// Create QueryClient with stable configuration
+const createQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <SystemErrorBoundary>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
-              <Route path="/admin" element={<AdminPanel />} />
-              <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
-              <Route path="/feed/topic/:slug" element={<TopicFeed />} />
-              <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />
-              <Route path="/eastbourne-feed/story/:storyId" element={<StoryPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </SystemErrorBoundary>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [queryClient] = useState(() => createQueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <SystemErrorBoundary>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
+                <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/feed/eastbourne" element={<EastbourneFeed />} />
+                <Route path="/feed/topic/:slug" element={<TopicFeed />} />
+                <Route path="/feed/topic/:slug/story/:storyId" element={<StoryPage />} />
+                <Route path="/eastbourne-feed/story/:storyId" element={<StoryPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </SystemErrorBoundary>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
