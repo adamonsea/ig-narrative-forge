@@ -2754,7 +2754,7 @@ export type Database = {
           is_published: boolean
           shared_content_id: string
           slide_count: number
-          slidetype: string
+          slide_type: string
           status: string
           story_type: string
           title: string
