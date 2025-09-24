@@ -2944,6 +2944,16 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: number
       }
+      get_public_slides_for_stories: {
+        Args: { p_story_ids: string[] }
+        Returns: {
+          content: string
+          id: string
+          slide_number: number
+          story_id: string
+          word_count: number
+        }[]
+      }
       get_public_topic_feed: {
         Args: {
           p_limit?: number

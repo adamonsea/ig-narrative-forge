@@ -212,14 +212,27 @@ export const useInfiniteTopicFeed = (slug: string) => {
       
       let slidesData: any[] = [];
       if (storyIds.length > 0) {
+        // Use the secure public slides function for anonymous users
         const { data: slides, error: slidesError } = await supabase
-          .from('slides')
-          .select('*')
-          .in('story_id', storyIds)
-          .order('slide_number', { ascending: true });
+          .rpc('get_public_slides_for_stories', {
+            p_story_ids: storyIds
+          });
         
         if (slidesError) {
-          console.warn('⚠️ Failed to load slides:', slidesError);
+          console.warn('⚠️ Failed to load slides via RPC, trying direct query:', slidesError);
+          
+          // Fallback to direct query
+          const { data: fallbackSlides, error: fallbackError } = await supabase
+            .from('slides')
+            .select('*')
+            .in('story_id', storyIds)
+            .order('slide_number', { ascending: true });
+          
+          if (fallbackError) {
+            console.warn('⚠️ Failed to load slides:', fallbackError);
+          } else {
+            slidesData = fallbackSlides || [];
+          }
         } else {
           slidesData = slides || [];
         }
