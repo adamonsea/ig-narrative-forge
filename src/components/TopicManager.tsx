@@ -68,20 +68,10 @@ export const TopicManager = () => {
       const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
         // Get articles awaiting review/simplification (articles ready but not yet in queue or published)
         // Calculate statistics with separate, clear queries
-        const [legacyArticlesResult, multiTenantArticlesResult, legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-          // Legacy articles in 'processed' status WITHOUT published stories (awaiting simplification)
-          supabase
-            .from('articles')
-            .select('id', { count: 'exact' })
-            .eq('topic_id', topic.id)
-            .eq('processing_status', 'processed'),
-          
-          // Multi-tenant articles in 'processed' status WITHOUT published stories (awaiting simplification)
-          supabase
-            .from('topic_articles')
-            .select('id', { count: 'exact' })
-            .eq('topic_id', topic.id)
-            .eq('processing_status', 'processed'),
+        const [legacyArrivalsResult, multiTenantArrivalsResult, legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
+          // Get accurate arrivals count using RPC functions
+          supabase.rpc('get_legacy_articles_awaiting_simplification', { p_topic_id: topic.id }),
+          supabase.rpc('get_multitenant_articles_awaiting_simplification', { p_topic_id: topic.id }),
           
           // Legacy published stories from this week
           supabase
@@ -111,33 +101,8 @@ export const TopicManager = () => {
             .not('topic_article_id', 'is', null)
         ]);
 
-        // Now get published story IDs to filter out articles that already have stories
-        const [publishedLegacyStories, publishedMultiTenantStories] = await Promise.all([
-          supabase
-            .from('stories')
-            .select('article_id')
-            .eq('is_published', true)
-            .in('status', ['ready', 'published'])
-            .not('article_id', 'is', null),
-          
-          supabase
-            .from('stories')
-            .select('topic_article_id')
-            .eq('is_published', true)
-            .in('status', ['ready', 'published'])
-            .not('topic_article_id', 'is', null)
-        ]);
-
-        const publishedArticleIds = publishedLegacyStories.data?.map(s => s.article_id).filter(Boolean) || [];
-        const publishedTopicArticleIds = publishedMultiTenantStories.data?.map(s => s.topic_article_id).filter(Boolean) || [];
-
-        // Calculate arrivals by subtracting articles that have published stories
-        const totalLegacyProcessed = legacyArticlesResult.count || 0;
-        const totalMultiTenantProcessed = multiTenantArticlesResult.count || 0;
-        
-        // For simplicity, use direct counts (the RPC functions would be more accurate but cause type issues)
-        const legacyArrivals = Math.max(0, totalLegacyProcessed); // Simplified for now
-        const multiTenantArrivals = Math.max(0, totalMultiTenantProcessed); // Simplified for now
+        const legacyArrivals = legacyArrivalsResult.data || 0;
+        const multiTenantArrivals = multiTenantArrivalsResult.data || 0;
         
         const legacyPublishedThisWeek = legacyStoriesResult.count || 0;
         const multiTenantPublishedThisWeek = multiTenantStoriesResult.count || 0;
