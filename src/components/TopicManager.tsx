@@ -66,13 +66,14 @@ export const TopicManager = () => {
       
       // Get real stats for each topic
       const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
-        // Get articles awaiting review/simplification (articles ready but not yet in queue or published)
-        // Calculate statistics with separate, clear queries
-        const [legacyArrivalsResult, multiTenantArrivalsResult, legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
-          // Get accurate arrivals count using RPC functions
-          supabase.rpc('get_legacy_articles_awaiting_simplification', { p_topic_id: topic.id }),
-          supabase.rpc('get_multitenant_articles_awaiting_simplification', { p_topic_id: topic.id }),
-          
+        // Get accurate stats that match the Arrivals tab UX
+        // 1) Multi-tenant articles for this topic
+        const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT] = await Promise.all([
+          supabase.rpc('get_topic_articles_multi_tenant', {
+            p_topic_id: topic.id,
+            p_status: null,
+            p_limit: 500
+          }),
           // Legacy published stories from this week
           supabase
             .from('stories')
@@ -81,11 +82,9 @@ export const TopicManager = () => {
               article_id,
               articles!inner(topic_id)
             `, { count: 'exact' })
-            .eq('is_published', true)
             .in('status', ['ready', 'published'])
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .eq('articles.topic_id', topic.id),
-          
           // Multi-tenant published stories from this week
           supabase
             .from('stories')
@@ -94,24 +93,44 @@ export const TopicManager = () => {
               topic_article_id,
               topic_articles!inner(topic_id)
             `, { count: 'exact' })
-            .eq('is_published', true)
             .in('status', ['ready', 'published'])
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .eq('topic_articles.topic_id', topic.id)
             .not('topic_article_id', 'is', null)
         ]);
 
-        const legacyArrivals = legacyArrivalsResult.data || 0;
-        const multiTenantArrivals = multiTenantArrivalsResult.data || 0;
-        
-        const legacyPublishedThisWeek = legacyStoriesResult.count || 0;
-        const multiTenantPublishedThisWeek = multiTenantStoriesResult.count || 0;
-        const publishedThisWeek = legacyPublishedThisWeek + multiTenantPublishedThisWeek;
+        const mtArticles = (mtArticlesRes.data || []) as any[];
+        const mtIds = new Set(mtArticles.map(a => a.id));
+
+        // 2) Published stories for this topic (ready/published) to exclude from arrivals
+        const [{ data: publishedStories }, { data: queuedItems }] = await Promise.all([
+          supabase
+            .from('stories')
+            .select(`topic_article_id, topic_articles!inner(topic_id)`) 
+            .in('status', ['ready', 'published'])
+            .not('topic_article_id', 'is', null)
+            .eq('topic_articles.topic_id', topic.id),
+          supabase
+            .from('content_generation_queue')
+            .select('topic_article_id')
+            .in('status', ['pending', 'processing'])
+            .not('topic_article_id', 'is', null)
+        ]);
+
+        const publishedIds = new Set((publishedStories || []).map(s => s.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
+        const queuedIds = new Set((queuedItems || []).map(q => q.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
+
+        // 3) Count arrivals exactly like the Arrivals tab
+        const arrivalsCount = mtArticles.filter(a => (
+          a.processing_status === 'new' || a.processing_status === 'processed'
+        ) && !publishedIds.has(a.id) && !queuedIds.has(a.id)).length;
+
+        const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
 
         return {
           ...topic,
           topic_type: topic.topic_type as 'regional' | 'keyword',
-          articles_in_arrivals: legacyArrivals + multiTenantArrivals,
+          articles_in_arrivals: arrivalsCount,
           stories_published_this_week: publishedThisWeek
         };
       }));
@@ -345,50 +364,9 @@ export const TopicManager = () => {
                           <div className="text-xs font-medium text-muted-foreground">
                             Status:
                           </div>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant={topic.is_active ? "default" : "outline"}
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleTopicStatus(topic.id, !topic.is_active);
-                                  }}
-                                >
-                                  {topic.is_active ? 'Published' : 'Draft'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Click to {topic.is_active ? 'move to draft' : 'publish'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <div className="text-xs font-medium text-muted-foreground">
-                            Feed:
-                          </div>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant={topic.is_public ? "default" : "outline"}
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleTopicPublic(topic.id, !topic.is_public);
-                                  }}
-                                >
-                                  {topic.is_public ? 'Public' : 'Private'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Click to make feed {topic.is_public ? 'private' : 'public'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Badge variant="secondary" className="h-6 px-2 text-xs font-semibold">
+                            Published
+                          </Badge>
                         </div>
 
                         {topic.keywords && topic.keywords.length > 0 && (
