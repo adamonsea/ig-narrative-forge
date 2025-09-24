@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { createSafeHTML } from '@/lib/sanitizer';
 
 interface Slide {
   id: string;
@@ -151,8 +152,8 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
                   <div className="mt-6 pt-6 border-t border-muted">
                     <div 
                       className="text-xl font-bold text-muted-foreground text-balance"
-                      dangerouslySetInnerHTML={{
-                        __html: ctaContent
+                      dangerouslySetInnerHTML={createSafeHTML(
+                        ctaContent
                           .replace(
                             /visit ([^\s]+)/gi, 
                             'visit <span class="text-primary font-extrabold">$1</span>'
@@ -166,8 +167,9 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
                             sourceUrl && sourceUrl !== '#' ? 
                               `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary/80 underline transition-colors font-extrabold">Read the full story at $1</a>` :
                               'Read the full story at <span class="text-primary font-extrabold">$1</span>'
-                          )
-                      }}
+                          ),
+                        true
+                      )}
                     />
                   </div>
                 )}
