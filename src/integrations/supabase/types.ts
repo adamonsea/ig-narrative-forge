@@ -2788,6 +2788,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_legacy_articles_awaiting_simplification: {
+        Args: { p_topic_id: string }
+        Returns: number
+      }
+      get_multitenant_articles_awaiting_simplification: {
+        Args: { p_topic_id: string }
+        Returns: number
+      }
       get_public_topic_feed: {
         Args: {
           p_limit?: number

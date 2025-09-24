@@ -194,11 +194,12 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
       console.log('📚 Found stories via RPC:', storiesData.length);
 
-      // Deduplicate stories by ID to prevent duplicates
+      // Deduplicate stories by ID and title to prevent duplicates
       const uniqueStoriesMap = new Map();
       storiesData.forEach((story: any) => {
-        if (!uniqueStoriesMap.has(story.id)) {
-          uniqueStoriesMap.set(story.id, story);
+        const key = `${story.id}-${story.title}`;
+        if (!uniqueStoriesMap.has(key)) {
+          uniqueStoriesMap.set(key, story);
         }
       });
       const deduplicatedStories = Array.from(uniqueStoriesMap.values());
@@ -222,7 +223,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
       }
 
       // Transform RPC response with slides data
-      const transformedStories = storiesData.map((story: any) => {
+      const transformedStories = deduplicatedStories.map((story: any) => {
         const storySlides = slidesData
           .filter((slide: any) => slide.story_id === story.id)
           .map((slide: any) => ({
