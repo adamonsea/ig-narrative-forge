@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
 interface TopicDashboardStats {
   articles: number;
@@ -206,47 +207,6 @@ const TopicDashboard = () => {
     }
   };
 
-  // Generate gradient based on topic ID for consistency with dashboard
-  const getTopicGradient = (topicId: string) => {
-    const gradients = [
-      'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
-      'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20',
-      'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
-      'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
-      'from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20',
-      'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20',
-      'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
-      'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
-    ];
-    
-    // Use topic ID to consistently select the same gradient
-    const hash = topicId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    return gradients[Math.abs(hash) % gradients.length];
-  };
-
-  const getAccentGradient = (topicId: string) => {
-    const accentGradients = [
-      'from-blue-500/10 to-indigo-500/5 dark:from-blue-400/10 dark:to-indigo-400/5',
-      'from-purple-500/10 to-pink-500/5 dark:from-purple-400/10 dark:to-pink-400/5',
-      'from-green-500/10 to-emerald-500/5 dark:from-green-400/10 dark:to-emerald-400/5',
-      'from-orange-500/10 to-red-500/5 dark:from-orange-400/10 dark:to-red-400/5',
-      'from-teal-500/10 to-cyan-500/5 dark:from-teal-400/10 dark:to-cyan-400/5',
-      'from-violet-500/10 to-purple-500/5 dark:from-violet-400/10 dark:to-purple-400/5',
-      'from-rose-500/10 to-pink-500/5 dark:from-rose-400/10 dark:to-pink-400/5',
-      'from-amber-500/10 to-yellow-500/5 dark:from-amber-400/10 dark:to-yellow-400/5',
-    ];
-    
-    const hash = topicId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    return accentGradients[Math.abs(hash) % accentGradients.length];
-  };
 
   if (!user) {
     return (
@@ -296,11 +256,11 @@ const TopicDashboard = () => {
     );
   }
 
-  const topicGradient = topic ? getTopicGradient(topic.id) : '';
-  const accentGradient = topic ? getAccentGradient(topic.id) : '';
+  const topicGradient = topic ? generateTopicGradient(topic.id) : '';
+  const accentColor = topic ? generateAccentColor(topic.id) : '';
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${topicGradient}`}>
+    <div className={`min-h-screen ${topicGradient}`}>
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
         <Breadcrumb className="mb-6">
@@ -319,7 +279,7 @@ const TopicDashboard = () => {
 
         {/* Topic Header */}
         <div className="mb-8">
-          <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+          <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
             <CardContent className="p-6 relative">
               <Button variant="outline" asChild className="absolute top-4 right-4 z-10">
                 <Link to={`/feed/topic/${topic.slug}`} target="_blank">
@@ -406,7 +366,7 @@ const TopicDashboard = () => {
             <Button 
               variant="outline" 
               size="sm"
-              className={`bg-gradient-to-br ${accentGradient} border-border/30 hover:bg-accent`}
+              className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
             >
               <BarChart3 className="h-4 w-4" />
               <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
@@ -519,7 +479,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-2 mobile-tabs bg-gradient-to-r ${accentGradient} border-border/50`}>
+          <TabsList className={`grid w-full grid-cols-2 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content">Content Pipeline</TabsTrigger>
             <TabsTrigger value="management">Management</TabsTrigger>
           </TabsList>
@@ -530,7 +490,7 @@ const TopicDashboard = () => {
               topicId={topic.id} 
               onContentProcessed={loadTopicAndStats}
             />
-            <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <UnifiedContentPipeline selectedTopicId={topic.id} />
               </CardContent>
@@ -547,7 +507,7 @@ const TopicDashboard = () => {
               </TabsList>
 
               <TabsContent value="sources" className="space-y-6">
-                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
                   <CardContent className="p-6">
                     <TopicScheduleMonitor 
                       topicId={topic.id}
@@ -558,7 +518,7 @@ const TopicDashboard = () => {
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-8">
-                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Settings className="w-5 h-5" />
@@ -621,7 +581,7 @@ const TopicDashboard = () => {
               </TabsContent>
 
               <TabsContent value="subscribers" className="space-y-6">
-                <Card className={`border-border/30 bg-gradient-to-br ${accentGradient} backdrop-blur-sm`}>
+                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="w-5 h-5" />
