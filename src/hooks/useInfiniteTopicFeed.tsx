@@ -194,8 +194,17 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
       console.log('📚 Found stories via RPC:', storiesData.length);
 
+      // Deduplicate stories by ID to prevent duplicates
+      const uniqueStoriesMap = new Map();
+      storiesData.forEach((story: any) => {
+        if (!uniqueStoriesMap.has(story.id)) {
+          uniqueStoriesMap.set(story.id, story);
+        }
+      });
+      const deduplicatedStories = Array.from(uniqueStoriesMap.values());
+      
       // Load slides for each story to complete the feed data
-      const storyIds = storiesData.map((story: any) => story.id);
+      const storyIds = deduplicatedStories.map((story: any) => story.id);
       
       let slidesData: any[] = [];
       if (storyIds.length > 0) {

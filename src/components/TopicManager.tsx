@@ -67,40 +67,50 @@ export const TopicManager = () => {
       // Get real stats for each topic
       const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
         // Get articles awaiting review/simplification (articles ready but not yet in queue or published)
-        const [legacyArrivalsResult, multiTenantArrivalsResult, publishedStoriesResult] = await Promise.all([
-          // Legacy articles in 'processed' status (awaiting simplification)
+        // Calculate statistics with separate, clear queries
+        const [legacyArrivalsResult, multiTenantArrivalsResult, legacyStoriesResult, multiTenantStoriesResult] = await Promise.all([
+          // Legacy articles in 'processed' status WITHOUT published stories (awaiting simplification)
           supabase
-            .from('articles')
-            .select('id', { count: 'exact' })
-            .eq('topic_id', topic.id)
-            .eq('processing_status', 'processed'),
+            .rpc('get_legacy_articles_awaiting_simplification', { p_topic_id: topic.id }),
           
-          // Multi-tenant articles in 'processed' status (awaiting simplification)
+          // Multi-tenant articles in 'processed' status WITHOUT published stories (awaiting simplification)
           supabase
-            .from('topic_articles')
-            .select('id', { count: 'exact' })
-            .eq('topic_id', topic.id)
-            .eq('processing_status', 'processed'),
+            .rpc('get_multitenant_articles_awaiting_simplification', { p_topic_id: topic.id }),
           
-          // Published stories from this week (simplified and published)
+          // Legacy published stories from this week
           supabase
             .from('stories')
             .select(`
               id,
               article_id,
-              created_at,
-              articles!inner(topic_id),
-              topic_articles(topic_id)
+              articles!inner(topic_id)
             `, { count: 'exact' })
             .eq('is_published', true)
             .in('status', ['ready', 'published'])
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-            .or(`articles.topic_id.eq.${topic.id},topic_articles.topic_id.eq.${topic.id}`)
+            .eq('articles.topic_id', topic.id),
+          
+          // Multi-tenant published stories from this week
+          supabase
+            .from('stories')
+            .select(`
+              id,
+              topic_article_id,
+              topic_articles!inner(topic_id)
+            `, { count: 'exact' })
+            .eq('is_published', true)
+            .in('status', ['ready', 'published'])
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .eq('topic_articles.topic_id', topic.id)
+            .not('topic_article_id', 'is', null)
         ]);
 
-        const legacyArrivals = legacyArrivalsResult.count || 0;
-        const multiTenantArrivals = multiTenantArrivalsResult.count || 0;
-        const publishedThisWeek = publishedStoriesResult.count || 0;
+        // Handle RPC results vs count results
+        const legacyArrivals = legacyArrivalsResult.data || 0;
+        const multiTenantArrivals = multiTenantArrivalsResult.data || 0;
+        const legacyPublishedThisWeek = legacyStoriesResult.count || 0;
+        const multiTenantPublishedThisWeek = multiTenantStoriesResult.count || 0;
+        const publishedThisWeek = legacyPublishedThisWeek + multiTenantPublishedThisWeek;
 
         return {
           ...topic,
