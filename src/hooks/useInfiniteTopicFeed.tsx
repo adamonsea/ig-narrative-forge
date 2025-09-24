@@ -55,24 +55,27 @@ export const useInfiniteTopicFeed = (slug: string) => {
 
   const loadTopic = useCallback(async () => {
     try {
-      const { data: topicData, error: topicError } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_active', true)
-        .eq('is_public', true) // Only load public topics for feeds
-        .single();
+      // Use the secure function to get public topics
+      const { data: topics, error: topicError } = await supabase
+        .rpc('get_safe_public_topics');
 
       if (topicError) {
-        if (topicError.code === 'PGRST116') {
-          throw new Error('Topic not found');
-        }
         throw topicError;
+      }
+
+      // Find the topic by slug
+      const topicData = topics?.find(t => t.slug === slug);
+
+      if (!topicData) {
+        throw new Error('Topic not found');
       }
 
       setTopic({
         ...topicData,
-        topic_type: topicData.topic_type as 'regional' | 'keyword'
+        topic_type: topicData.topic_type as 'regional' | 'keyword',
+        keywords: [], // Not exposed in safe function
+        is_public: true, // All topics from safe function are public
+        created_by: '' // Not exposed in safe function
       });
 
       return topicData;
