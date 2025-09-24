@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info } from "lucide-react";
+import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,8 @@ interface Topic {
   created_at: string;
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
   default_tone?: 'formal' | 'conversational' | 'engaging';
+  articles_in_arrivals?: number;
+  stories_published_this_week?: number;
   _count?: {
     articles: number;
     sources: number;
@@ -60,10 +63,13 @@ export const TopicManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
       // Type assertion to ensure topic_type is correctly typed
       setTopics((data || []).map(topic => ({
         ...topic,
-        topic_type: topic.topic_type as 'regional' | 'keyword'
+        topic_type: topic.topic_type as 'regional' | 'keyword',
+        articles_in_arrivals: Math.floor(Math.random() * 15), // Mock data for now
+        stories_published_this_week: Math.floor(Math.random() * 8)
       })));
     } catch (error) {
       console.error('Error loading topics:', error);
@@ -206,141 +212,149 @@ export const TopicManager = () => {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {topics.map((topic) => (
-            <Card key={topic.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl">{topic.name}</CardTitle>
-                    <CardDescription>{topic.description}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Switch 
-                            checked={topic.is_active} 
-                            onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{topic.is_active ? 'Published' : 'Draft'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      {topic.topic_type === 'regional' ? <MapPin className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
-                      {topic.topic_type === 'regional' ? 'Regional' : 'General Topic'}
-                    </Badge>
-                    <Badge variant={topic.is_active ? 'default' : 'secondary'}>
-                      {topic.is_active ? 'Published' : 'Draft'}
-                    </Badge>
-                  </div>
-
-                  {topic.keywords && topic.keywords.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Keywords:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {topic.keywords.map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {keyword}
-                          </Badge>
-                        ))}
+          {topics.map((topic) => {
+            const gradientClass = generateTopicGradient(topic.id);
+            const accentClass = generateAccentColor(topic.id);
+            
+            return (
+              <Card key={topic.id} className={`${gradientClass} border ${accentClass} relative overflow-hidden group hover:shadow-lg transition-all duration-300`}>
+                <Link 
+                  to={`/dashboard/topic/${topic.slug}`}
+                  className="block"
+                  onClick={(e) => {
+                    // Let buttons handle their own clicks
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('[role="button"]')) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 pr-6">
+                        <h3 className="text-2xl font-bold tracking-tight mb-2 group-hover:text-primary transition-colors">
+                          {topic.name}
+                        </h3>
+                        <p className="text-base font-normal text-muted-foreground leading-relaxed">
+                          {topic.description}
+                        </p>
+                      </div>
+                      
+                      {/* Stats Section */}
+                      <div className="flex flex-col gap-3 min-w-[140px]">
+                        <div className="bg-card/60 backdrop-blur-sm rounded-lg p-3 border border-border/50">
+                          <div className="text-2xl font-bold text-foreground">
+                            {topic.articles_in_arrivals || 0}
+                          </div>
+                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Articles in arrivals
+                          </div>
+                        </div>
+                        <div className="bg-card/60 backdrop-blur-sm rounded-lg p-3 border border-border/50">
+                          <div className="text-2xl font-bold text-foreground">
+                            {topic.stories_published_this_week || 0}
+                          </div>
+                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Stories this week
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Created {new Date(topic.created_at).toLocaleDateString()}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <Link to={`/feed/${topic.slug}`}>
-                                View Feed
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>View public feed</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border-border/50">
+                          {topic.topic_type === 'regional' ? <MapPin className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
+                          <span className="font-medium">{topic.topic_type === 'regional' ? 'Regional' : 'General'}</span>
+                        </Badge>
+                        
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Switch 
+                                checked={topic.is_active} 
+                                onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
+                                onClick={(e) => e.preventDefault()}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{topic.is_active ? 'Published' : 'Draft'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <Link to={`/dashboard/topic/${topic.slug}`}>
-                                <Settings className="w-4 h-4 mr-1" />
-                                Manage
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Manage sources and settings</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                        {topic.keywords && topic.keywords.length > 0 && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button 
+                                  className="p-1 rounded-full hover:bg-card/60 transition-colors"
+                                  onClick={(e) => e.preventDefault()}
+                                >
+                                  <Info className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-medium text-xs">Keywords:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {topic.keywords.map((keyword, index) => (
+                                      <Badge key={index} variant="secondary" className="text-xs">
+                                        {keyword}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setManagingCTAForTopic({ id: topic.id, name: topic.name })}
-                            >
-                              <MessageSquare className="w-4 h-4 mr-1" />
-                              CTA
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Manage call-to-action settings</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {new Date(topic.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleArchiveTopic(topic.id, topic.name)}
-                            >
-                              <Archive className="w-4 h-4 mr-1" />
-                              Archive
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Archive this topic</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          <Link to={`/feed/${topic.slug}`}>
+                            Feed
+                          </Link>
+                        </Button>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-destructive/10 hover:text-destructive p-2"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleArchiveTopic(topic.id, topic.name);
+                                }}
+                              >
+                                <Archive className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Archive this topic</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                </Link>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
