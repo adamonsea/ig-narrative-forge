@@ -2735,33 +2735,27 @@ export type Database = {
         Returns: Json
       }
       get_admin_topic_stories: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_status?: string
-          p_topic_id: string
-        }
+        Args:
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_status?: string
+              p_topic_id: string
+            }
+          | { p_topic_id: string }
         Returns: {
-          article_author: string
           article_id: string
-          article_published_at: string
-          article_title: string
-          article_url: string
-          audience_expertise: string
+          author: string
           cover_illustration_url: string
           created_at: string
           id: string
           is_published: boolean
-          shared_content_id: string
           slide_count: number
-          slide_type: string
+          source_format: string
           status: string
-          story_type: string
+          summary: string
           title: string
-          tone: string
-          topic_article_id: string
           updated_at: string
-          writing_style: string
         }[]
       }
       get_article_content_unified: {

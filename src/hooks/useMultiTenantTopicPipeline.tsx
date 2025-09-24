@@ -346,11 +346,22 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         return;
       }
 
-      // Use the clean, unified data
+      // Use the clean, unified data with frontend deduplication as safety net
       const allStories = topicStoriesResult.data || [];
       
-      // The RPC already returns clean, deduplicated data - no need for complex filtering
-      const sortedStories = allStories.sort((a, b) => 
+      // Frontend deduplication safety net
+      const seenStoryIds = new Set();
+      const deduplicatedStories = allStories.filter((story: any) => {
+        if (seenStoryIds.has(story.id)) {
+          console.warn('🚨 Duplicate story detected and filtered:', story.id, story.title);
+          return false;
+        }
+        seenStoryIds.add(story.id);
+        return true;
+      });
+      
+      // The RPC already returns clean, deduplicated data - this is just a safety net
+      const sortedStories = deduplicatedStories.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
