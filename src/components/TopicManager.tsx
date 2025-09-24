@@ -66,41 +66,47 @@ export const TopicManager = () => {
       
       // Get real stats for each topic
       const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
-        // Get articles in arrivals (new and processed status) - check both legacy and multi-tenant
-        const [legacyArticlesResult, multiTenantArticlesResult, publishedStoriesResult] = await Promise.all([
-          // Legacy articles
+        // Get articles awaiting review/simplification (articles ready but not yet in queue or published)
+        const [legacyArrivalsResult, multiTenantArrivalsResult, publishedStoriesResult] = await Promise.all([
+          // Legacy articles in 'processed' status (awaiting simplification)
           supabase
             .from('articles')
             .select('id', { count: 'exact' })
             .eq('topic_id', topic.id)
-            .in('processing_status', ['new', 'processed']),
+            .eq('processing_status', 'processed'),
           
-          // Multi-tenant articles  
+          // Multi-tenant articles in 'processed' status (awaiting simplification)
           supabase
             .from('topic_articles')
             .select('id', { count: 'exact' })
             .eq('topic_id', topic.id)
-            .in('processing_status', ['new', 'processed']),
+            .eq('processing_status', 'processed'),
           
-          // Published stories from this week
+          // Published stories from this week (simplified and published)
           supabase
             .from('stories')
-            .select('id', { count: 'exact' })
+            .select(`
+              id,
+              article_id,
+              created_at,
+              articles!inner(topic_id),
+              topic_articles(topic_id)
+            `, { count: 'exact' })
             .eq('is_published', true)
             .in('status', ['ready', 'published'])
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-            .or(`article_id.in.(${await getTopicArticleIds(topic.id)})`)
+            .or(`articles.topic_id.eq.${topic.id},topic_articles.topic_id.eq.${topic.id}`)
         ]);
 
-        const legacyCount = legacyArticlesResult.count || 0;
-        const multiTenantCount = multiTenantArticlesResult.count || 0;
-        const publishedCount = publishedStoriesResult.count || 0;
+        const legacyArrivals = legacyArrivalsResult.count || 0;
+        const multiTenantArrivals = multiTenantArrivalsResult.count || 0;
+        const publishedThisWeek = publishedStoriesResult.count || 0;
 
         return {
           ...topic,
           topic_type: topic.topic_type as 'regional' | 'keyword',
-          articles_in_arrivals: legacyCount + multiTenantCount,
-          stories_published_this_week: publishedCount
+          articles_in_arrivals: legacyArrivals + multiTenantArrivals,
+          stories_published_this_week: publishedThisWeek
         };
       }));
       
@@ -114,32 +120,6 @@ export const TopicManager = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Helper function to get article IDs for a topic (both legacy and multi-tenant)
-  const getTopicArticleIds = async (topicId: string): Promise<string> => {
-    try {
-      const [legacyResult, multiTenantResult] = await Promise.all([
-        supabase
-          .from('articles')
-          .select('id')
-          .eq('topic_id', topicId),
-        supabase
-          .from('topic_articles')
-          .select('id')
-          .eq('topic_id', topicId)
-      ]);
-
-      const allIds = [
-        ...(legacyResult.data || []).map(a => a.id),
-        ...(multiTenantResult.data || []).map(a => a.id)
-      ];
-      
-      return allIds.length > 0 ? allIds.join(',') : 'no-articles';
-    } catch (error) {
-      console.error('Error getting topic article IDs:', error);
-      return 'no-articles';
     }
   };
 

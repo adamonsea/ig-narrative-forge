@@ -50,3 +50,39 @@ export const generateAccentColor = (topicId: string): string => {
   const index = Math.abs(hash) % colors.length;
   return colors[index];
 };
+
+// Generate a random color for new topics
+export const generateRandomTopicColors = () => {
+  const gradients = [
+    'from-blue-50/80 to-blue-100/60',
+    'from-purple-50/80 to-purple-100/60', 
+    'from-emerald-50/80 to-emerald-100/60',
+    'from-orange-50/80 to-orange-100/60',
+    'from-pink-50/80 to-pink-100/60',
+    'from-indigo-50/80 to-indigo-100/60',
+    'from-teal-50/80 to-teal-100/60',
+    'from-rose-50/80 to-rose-100/60',
+    'from-cyan-50/80 to-cyan-100/60',
+    'from-amber-50/80 to-amber-100/60',
+  ];
+
+  const colors = [
+    'border-blue-200/60',
+    'border-purple-200/60',
+    'border-emerald-200/60', 
+    'border-orange-200/60',
+    'border-pink-200/60',
+    'border-indigo-200/60',
+    'border-teal-200/60',
+    'border-rose-200/60',
+    'border-cyan-200/60',
+    'border-amber-200/60',
+  ];
+
+  const index = Math.floor(Math.random() * gradients.length);
+  
+  return {
+    gradient: `bg-gradient-to-br ${gradients[index]}`,
+    border: colors[index]
+  };
+};

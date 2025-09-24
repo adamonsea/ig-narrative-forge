@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { generateRandomTopicColors } from "@/lib/colorUtils";
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -36,9 +37,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   });
   const [keywordInput, setKeywordInput] = useState('');
   const [creating, setCreating] = useState(false);
+  const [previewColors, setPreviewColors] = useState<{gradient: string, border: string} | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Generate preview colors when dialog opens
+  useEffect(() => {
+    if (open && !previewColors) {
+      const colors = generateRandomTopicColors();
+      setPreviewColors(colors);
+    }
+  }, [open, previewColors]);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -179,6 +189,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     });
     setCurrentStep(1);
     setKeywordInput('');
+    setPreviewColors(null); // Reset colors
     clearDraft();
   };
 
@@ -191,9 +202,17 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className={`max-w-2xl ${previewColors ? previewColors.gradient : ''} ${previewColors ? previewColors.border : ''} border-2`}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Create New Topic</DialogTitle>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            Create New Topic
+            {previewColors && (
+              <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                <div className="w-3 h-3 bg-gradient-to-br from-current to-current/50 rounded-full"></div>
+                Preview Colors
+              </div>
+            )}
+          </DialogTitle>
           <div className="flex items-center gap-2 mt-4">
             <Progress value={progress} className="flex-1" />
             <span className="text-sm font-medium text-muted-foreground">
