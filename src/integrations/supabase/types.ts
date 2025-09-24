@@ -267,6 +267,13 @@ export type Database = {
             foreignKeyName: "articles_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -354,6 +361,13 @@ export type Database = {
           topic_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "community_insights_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "community_insights_topic_id_fkey"
             columns: ["topic_id"]
@@ -541,6 +555,13 @@ export type Database = {
             foreignKeyName: "content_sources_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_sources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -658,6 +679,13 @@ export type Database = {
             foreignKeyName: "daily_content_availability_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_content_availability_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -713,6 +741,13 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discarded_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
             referencedColumns: ["id"]
           },
           {
@@ -888,6 +923,13 @@ export type Database = {
             foreignKeyName: "events_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -958,6 +1000,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feed_cta_configs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feed_cta_configs_topic_id_fkey"
             columns: ["topic_id"]
@@ -1593,6 +1642,13 @@ export type Database = {
             foreignKeyName: "scraping_automation_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraping_automation_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -1699,6 +1755,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sentiment_cards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sentiment_cards_topic_id_fkey"
             columns: ["topic_id"]
@@ -2047,6 +2110,13 @@ export type Database = {
             foreignKeyName: "topic_articles_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -2094,6 +2164,13 @@ export type Database = {
             foreignKeyName: "topic_automation_settings_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: true
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_automation_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -2129,6 +2206,13 @@ export type Database = {
             foreignKeyName: "topic_event_preferences_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_event_preferences_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -2157,6 +2241,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "topic_memberships_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "topic_memberships_topic_id_fkey"
             columns: ["topic_id"]
@@ -2202,6 +2293,13 @@ export type Database = {
             foreignKeyName: "topic_newsletter_signups_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_newsletter_signups_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
             referencedRelation: "topics"
             referencedColumns: ["id"]
           },
@@ -2239,6 +2337,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "topic_sentiment_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "topic_sentiment_settings_topic_id_fkey"
             columns: ["topic_id"]
@@ -2289,6 +2394,13 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_sources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
             referencedColumns: ["id"]
           },
           {
@@ -2592,6 +2704,42 @@ export type Database = {
         }
         Relationships: []
       }
+      safe_public_topics: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          is_public: boolean | null
+          name: string | null
+          region: string | null
+          slug: string | null
+          topic_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
+          name?: string | null
+          region?: string | null
+          slug?: string | null
+          topic_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
+          name?: string | null
+          region?: string | null
+          slug?: string | null
+          topic_type?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_source_to_topic: {
@@ -2830,6 +2978,20 @@ export type Database = {
           tone: Database["public"]["Enums"]["tone_type"]
           topic_article_id: string
           writing_style: string
+        }[]
+      }
+      get_safe_public_topic_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_public: boolean
+          name: string
+          region: string
+          slug: string
+          topic_type: string
         }[]
       }
       get_source_topics: {
