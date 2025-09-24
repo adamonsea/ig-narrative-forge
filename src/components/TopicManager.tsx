@@ -119,6 +119,33 @@ export const TopicManager = () => {
     }
   };
 
+  const toggleTopicPublic = async (topicId: string, isPublic: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ is_public: isPublic })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      setTopics(topics.map(topic => 
+        topic.id === topicId ? { ...topic, is_public: isPublic } : topic
+      ));
+
+      toast({
+        title: "Success",
+        description: `Feed ${isPublic ? 'published' : 'unpublished'}`
+      });
+    } catch (error) {
+      console.error('Error updating feed status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update feed status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleArchiveTopic = async (topicId: string, topicName: string) => {
     if (!confirm(`Archive "${topicName}"? You can restore it later from the archive.`)) {
       return;
@@ -268,20 +295,39 @@ export const TopicManager = () => {
                           <span className="font-medium">{topic.topic_type === 'regional' ? 'Regional' : 'General'}</span>
                         </Badge>
                         
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Switch 
-                                checked={topic.is_active} 
-                                onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
-                                onClick={(e) => e.preventDefault()}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{topic.is_active ? 'Published' : 'Draft'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Switch 
+                                  checked={topic.is_active} 
+                                  onCheckedChange={(checked) => toggleTopicStatus(topic.id, checked)}
+                                  onClick={(e) => e.preventDefault()}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{topic.is_active ? 'Topic Published' : 'Topic Draft'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <span className="text-xs text-muted-foreground">•</span>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Switch 
+                                  checked={topic.is_public} 
+                                  onCheckedChange={(checked) => toggleTopicPublic(topic.id, checked)}
+                                  onClick={(e) => e.preventDefault()}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{topic.is_public ? 'Feed Public' : 'Feed Private'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
 
                         {topic.keywords && topic.keywords.length > 0 && (
                           <TooltipProvider>
@@ -323,7 +369,7 @@ export const TopicManager = () => {
                           className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
                           onClick={(e) => e.preventDefault()}
                         >
-                          <Link to={`/feed/${topic.slug}`}>
+                          <Link to={`/feed/topic/${topic.slug}`}>
                             Feed
                           </Link>
                         </Button>

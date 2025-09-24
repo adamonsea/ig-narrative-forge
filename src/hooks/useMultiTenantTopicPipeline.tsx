@@ -376,12 +376,33 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         publishedStatusCount: sortedStories.filter(s => s.status === 'published' && s.is_published).length
       });
 
+      // Load slides for stories to enable edit functionality
+      const storyIds = sortedStories.map((story: any) => story.id);
+      let slidesData: any[] = [];
+      
+      if (storyIds.length > 0) {
+        const { data: slidesResult, error: slidesError } = await supabase
+          .from('slides')
+          .select('*')
+          .in('story_id', storyIds)
+          .order('slide_number');
+        
+        if (slidesError) {
+          console.error('Error loading slides:', slidesError);
+        } else {
+          slidesData = slidesResult || [];
+        }
+      }
+
       // Map to MultiTenantStory shape - the RPC already provides clean data structure
       const storiesData = sortedStories.map((story: any) => {        
+        const storySlides = slidesData.filter(slide => slide.story_id === story.id);
+        
         console.log('🔍 Story mapping debug:', {
           storyId: story.id,
           storyTitle: story.article_title || story.title,
-          slideCount: story.slide_count || 0
+          slideCount: story.slide_count || 0,
+          actualSlides: storySlides.length
         });
         
         return {
@@ -394,7 +415,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           is_published: story.is_published,
           created_at: story.created_at,
           updated_at: story.updated_at,
-          slides: [], // Slides loaded separately when needed
+          slides: storySlides, // Now properly loaded with slide data
           article_title: story.article_title,
           story_type: story.story_type,
           title: story.title,
