@@ -100,8 +100,9 @@ serve(async (req) => {
       }
       
     } catch (error) {
-      console.log(`❌ Direct extraction failed: ${error.message}`);
-      error_message = error.message;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Direct extraction failed: ${errorMessage}`);
+      error_message = errorMessage;
       
       // Try AI enhancement if OpenAI API key is available
       if (openAIApiKey && articleRecord) {
@@ -117,8 +118,10 @@ serve(async (req) => {
             throw new Error('AI enhancement produced insufficient content');
           }
         } catch (aiError) {
-          console.log(`❌ AI enhancement failed: ${aiError.message}`);
-          error_message = `Direct: ${error.message}, AI: ${aiError.message}`;
+          const aiErrorMessage = aiError instanceof Error ? aiError.message : String(aiError);
+          const originalErrorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`❌ AI enhancement failed: ${aiErrorMessage}`);
+          error_message = `Direct: ${originalErrorMessage}, AI: ${aiErrorMessage}`;
         }
       }
     }
@@ -177,9 +180,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Content extractor error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: errorMessage,
       extracted: false
     }), {
       status: 500,

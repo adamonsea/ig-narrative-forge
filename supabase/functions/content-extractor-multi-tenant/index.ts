@@ -69,7 +69,7 @@ serve(async (req) => {
     };
 
     const multiTenantDb = new MultiTenantDatabaseOperations(supabase);
-    const extractedArticles = [];
+    const extractedArticles: any[] = [];
 
     // Process URLs in batches to avoid overwhelming the system
     const batches = [];
@@ -85,7 +85,7 @@ serve(async (req) => {
         const batchResult = batchResults[i];
         const url = batch[i];
         
-        if (batchResult.status === 'fulfilled' && batchResult.value.success) {
+        if (batchResult.status === 'fulfilled' && batchResult.value.success && batchResult.value.article) {
           const extraction = batchResult.value;
           extractedArticles.push(extraction.article);
           result.articlesExtracted++;
@@ -94,10 +94,10 @@ serve(async (req) => {
           const method = extraction.method || 'unknown';
           result.extractionMethods[method] = (result.extractionMethods[method] || 0) + 1;
           
-          console.log(`✅ Extracted: "${extraction.article.title}" via ${method}`);
+          console.log(`✅ Extracted: "${extraction.article?.title || 'Unknown title'}" via ${method}`);
         } else {
           const error = batchResult.status === 'rejected' 
-            ? batchResult.reason.message 
+            ? (batchResult.reason instanceof Error ? batchResult.reason.message : String(batchResult.reason))
             : batchResult.value?.error || 'Unknown error';
           result.errors.push(`${url}: ${error}`);
           console.log(`❌ Failed to extract: ${url} - ${error}`);
@@ -111,6 +111,11 @@ serve(async (req) => {
       
       // Filter out articles that look like index page content
       const validArticles = extractedArticles.filter(article => {
+        if (!article || !article.title) {
+          console.log(`🚫 Filtered out article without title`);
+          return false;
+        }
+        
         const title = article.title.toLowerCase();
         const invalidTitlePatterns = [
           /latest news/,
@@ -192,7 +197,7 @@ serve(async (req) => {
       articlesExtracted: 0,
       articlesStored: 0,
       duplicatesSkipped: 0,
-      errors: [error.message],
+      errors: [error instanceof Error ? error.message : String(error)],
       extractionMethods: {},
       responseTime: Date.now() - startTime
     }), {
@@ -203,7 +208,12 @@ serve(async (req) => {
 });
 
 async function extractArticleContent(url: string, supabase: any, fallbackToScreenshot: boolean, sourceId?: string) {
-  const extractionResult = {
+  const extractionResult: {
+    success: boolean;
+    article: any;
+    method: string;
+    error: string;
+  } = {
     success: false,
     article: null,
     method: '',
@@ -285,7 +295,7 @@ async function extractArticleContent(url: string, supabase: any, fallbackToScree
     return extractionResult;
 
   } catch (error) {
-    extractionResult.error = error.message;
+    extractionResult.error = error instanceof Error ? error.message : String(error);
     return extractionResult;
   }
 }
@@ -381,8 +391,9 @@ async function tryRssExtraction(rssUrl: string) {
     };
     
   } catch (error) {
-    console.log(`RSS extraction failed: ${error.message}`);
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log(`RSS extraction failed: ${errorMessage}`);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -444,7 +455,8 @@ async function tryHtmlExtraction(url: string) {
     }
     
   } catch (error) {
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 

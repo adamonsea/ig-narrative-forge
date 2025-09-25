@@ -60,10 +60,10 @@ Deno.serve(async (req) => {
       const startTime = Date.now()
       
       try {
-        console.log(`🔍 Checking: ${topicSource.content_sources.source_name} for topic ${topicSource.topics.name}`)
+        console.log(`🔍 Checking: ${(topicSource.content_sources as any)?.source_name || 'Unknown Source'} for topic ${(topicSource.topics as any)?.name || 'Unknown Topic'}`)
 
         // Discover URLs from the source
-        const discoveryResult = await discoverUrls(topicSource.content_sources.feed_url)
+        const discoveryResult = await discoverUrls((topicSource.content_sources as any)?.feed_url)
         
         if (!discoveryResult.success) {
           throw new Error(discoveryResult.error || 'URL discovery failed')
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         const topicRelevantUrls = await filterUrlsByTopicRelevance(
           discoveryResult.urls, 
           topicSource.topics,
-          topicSource.content_sources.source_name
+          (topicSource.content_sources as any)?.source_name || 'Unknown Source'
         )
         
         // Check which topic-relevant URLs we've seen before
@@ -120,9 +120,9 @@ Deno.serve(async (req) => {
 
         results.push({
           topic_id: topicSource.topic_id,
-          topic_name: topicSource.topics.name,
+          topic_name: (topicSource.topics as any)?.name || 'Unknown Topic',
           source_id: topicSource.source_id,
-          source_name: topicSource.content_sources.source_name,
+          source_name: (topicSource.content_sources as any)?.source_name || 'Unknown Source',
           new_urls: newTopicRelevantUrls.length,
           total_urls: discoveryResult.urls.length,
           topic_relevant_urls: topicRelevantUrls.length,
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
             discovery_method: null,
             check_duration_ms: checkDuration,
             success: false,
-            error_message: error.message
+            error_message: error instanceof Error ? error.message : String(error)
           }, { 
             onConflict: 'topic_id,source_id,check_date',
             ignoreDuplicates: false 
@@ -157,15 +157,15 @@ Deno.serve(async (req) => {
 
         results.push({
           topic_id: topicSource.topic_id,
-          topic_name: topicSource.topics.name,
+          topic_name: (topicSource.topics as any)?.name || 'Unknown Topic',
           source_id: topicSource.source_id,
-          source_name: topicSource.content_sources.source_name,
-          error: error.message,
+          source_name: (topicSource.content_sources as any)?.source_name || 'Unknown Source',
+          error: error instanceof Error ? error.message : String(error),
           duration_ms: checkDuration,
           success: false
         })
 
-        console.error(`❌ ${topicSource.content_sources.source_name}: ${error.message}`)
+        console.error(`❌ ${(topicSource.content_sources as any)?.source_name || 'Unknown Source'}: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -254,7 +254,7 @@ async function discoverUrls(feedUrl: string): Promise<DiscoveryResult> {
       urls: [],
       method: 'html',
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }
   }
 }
