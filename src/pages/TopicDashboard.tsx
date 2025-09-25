@@ -18,7 +18,7 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -76,6 +76,7 @@ const TopicDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
+  const [gatheringAll, setGatheringAll] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -204,6 +205,66 @@ const TopicDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGatherAll = async () => {
+    if (!topic) return;
+    
+    setGatheringAll(true);
+    try {
+      // Call the universal scraper for this topic
+      const response = await supabase.functions.invoke('universal-topic-scraper', {
+        body: { topicId: topic.id }
+      });
+
+      if (response.error) throw response.error;
+      
+      toast({
+        title: "Gathering Started",
+        description: "Content gathering initiated for all sources",
+      });
+      
+      // Refresh stats after a short delay
+      setTimeout(loadTopicAndStats, 2000);
+    } catch (error) {
+      console.error('Error gathering content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start content gathering",
+        variant: "destructive"
+      });
+    } finally {
+      setGatheringAll(false);
+    }
+  };
+
+  const handleAutoSimplifyToggle = async () => {
+    if (!topic) return;
+    
+    try {
+      const newValue = !topic.auto_simplify_enabled;
+      
+      const { error } = await supabase
+        .from('topics')
+        .update({ auto_simplify_enabled: newValue })
+        .eq('id', topic.id);
+
+      if (error) throw error;
+
+      setTopic(prev => prev ? { ...prev, auto_simplify_enabled: newValue } : prev);
+      
+      toast({
+        title: "Settings Updated",
+        description: `Auto-simplify ${newValue ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling auto-simplify:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update auto-simplify setting",
+        variant: "destructive"
+      });
     }
   };
 
@@ -477,14 +538,60 @@ const TopicDashboard = () => {
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Primary Action Bar */}
+        <Card className={`${accentColor} bg-card/60 backdrop-blur-sm mb-6`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <Button 
+                  onClick={handleGatherAll}
+                  disabled={gatheringAll}
+                  className="flex items-center gap-2"
+                >
+                  {gatheringAll ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
+                  {gatheringAll ? 'Gathering...' : 'Gather All'}
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Auto-simplify:</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAutoSimplifyToggle}
+                    className="p-1 h-auto"
+                  >
+                    {topic?.auto_simplify_enabled ? (
+                      <ToggleRight className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              <Button variant="outline" asChild size="sm">
+                <Link to={`/feed/topic/${topic.slug}`} target="_blank">
+                  <Globe className="w-4 h-4 mr-2" />
+                  Preview Feed
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Main Content Tabs */}
-        <Tabs defaultValue="content" className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-2 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
-            <TabsTrigger value="content">Content Pipeline</TabsTrigger>
-            <TabsTrigger value="management">Management</TabsTrigger>
+        <Tabs defaultValue="content-flow" className="space-y-6">
+          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+            <TabsTrigger value="content-flow">Content Flow</TabsTrigger>
+            <TabsTrigger value="automation">Automation & Sources</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced Tools</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="content" className="space-y-6">
+          <TabsContent value="content-flow" className="space-y-6">
             {/* Manual Content Staging Area - Critical: Above main pipeline */}
             <ManualContentStaging 
               topicId={topic.id} 
@@ -497,110 +604,94 @@ const TopicDashboard = () => {
             </Card>
           </TabsContent>
 
-
-          <TabsContent value="management" className="space-y-8">
-            <Tabs defaultValue="sources" className="space-y-6">
-              <TabsList className={`w-full bg-card/50 border border-border/30`}>
-                <TabsTrigger value="sources" className="flex-1">Sources & Automation</TabsTrigger>
-                <TabsTrigger value="settings" className="flex-1">Topic Settings</TabsTrigger>
-                <TabsTrigger value="subscribers" className="flex-1">Subscribers</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="sources" className="space-y-6">
-                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                  <CardContent className="p-6">
-                    <TopicScheduleMonitor 
-                      topicId={topic.id}
-                      topicName={topic.name}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="settings" className="space-y-8">
-                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Settings className="w-5 h-5" />
-                      Topic Configuration
-                    </CardTitle>
-                    <CardDescription>
-                      Manage your topic's call-to-action and keyword settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-8">
-                    <TopicSettings
-                      topicId={topic.id}
-                      currentExpertise={topic.audience_expertise}
-                      currentTone={topic.default_tone}
-                      currentWritingStyle={topic.default_writing_style}
-                      currentCommunityEnabled={topic.community_intelligence_enabled}
-                      currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
-                      currentAutomationQualityThreshold={topic.automation_quality_threshold}
-                      onUpdate={() => loadTopicAndStats()}
-                    />
-                    
-                    <div className="border-t pt-8">
-                      <TopicCTAManager 
-                        topicId={topic.id} 
-                        topicName={topic.name}
-                        onClose={() => {}} 
-                      />
-                    </div>
-                    
-                    <div className="border-t pt-8">
-                      <KeywordManager 
-                        topic={topic} 
-                        onTopicUpdate={(updatedTopic: Topic) => {
-                          setTopic((prevTopic) => ({
-                            ...prevTopic!,
-                            ...updatedTopic
-                          }));
-                          loadTopicAndStats();
-                        }} 
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Advanced Filtering for Regional Topics */}
-                {topic.topic_type === 'regional' && (
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <TopicNegativeKeywords
-                      topicId={topic.id}
-                      negativeKeywords={negativeKeywords}
-                      onUpdate={setNegativeKeywords}
-                    />
-                    <TopicCompetingRegions
-                      topicId={topic.id}
-                      competingRegions={competingRegions}
-                      onUpdate={setCompetingRegions}
-                    />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="subscribers" className="space-y-6">
-                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Topic Subscribers
-                    </CardTitle>
-                    <CardDescription>
-                      View and manage users who have subscribed to notifications for this topic
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <NewsletterSignupsManager topicId={topic.id} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-            </Tabs>
+          <TabsContent value="automation" className="space-y-6">
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardContent className="p-6">
+                <TopicScheduleMonitor 
+                  topicId={topic.id}
+                  topicName={topic.name}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
+          <TabsContent value="advanced" className="space-y-8">
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Topic Configuration
+                </CardTitle>
+                <CardDescription>
+                  Manage your topic's call-to-action and keyword settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <TopicSettings
+                  topicId={topic.id}
+                  currentExpertise={topic.audience_expertise}
+                  currentTone={topic.default_tone}
+                  currentWritingStyle={topic.default_writing_style}
+                  currentCommunityEnabled={topic.community_intelligence_enabled}
+                  currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
+                  currentAutomationQualityThreshold={topic.automation_quality_threshold}
+                  onUpdate={() => loadTopicAndStats()}
+                />
+                
+                <div className="border-t pt-8">
+                  <TopicCTAManager 
+                    topicId={topic.id} 
+                    topicName={topic.name}
+                    onClose={() => {}} 
+                  />
+                </div>
+                
+                <div className="border-t pt-8">
+                  <KeywordManager 
+                    topic={topic} 
+                    onTopicUpdate={(updatedTopic: Topic) => {
+                      setTopic((prevTopic) => ({
+                        ...prevTopic!,
+                        ...updatedTopic
+                      }));
+                      loadTopicAndStats();
+                    }} 
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
+            {/* Advanced Filtering for Regional Topics */}
+            {topic.topic_type === 'regional' && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <TopicNegativeKeywords
+                  topicId={topic.id}
+                  negativeKeywords={negativeKeywords}
+                  onUpdate={setNegativeKeywords}
+                />
+                <TopicCompetingRegions
+                  topicId={topic.id}
+                  competingRegions={competingRegions}
+                  onUpdate={setCompetingRegions}
+                />
+              </div>
+            )}
+
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Topic Subscribers
+                </CardTitle>
+                <CardDescription>
+                  View and manage users who have subscribed to notifications for this topic
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <NewsletterSignupsManager topicId={topic.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
