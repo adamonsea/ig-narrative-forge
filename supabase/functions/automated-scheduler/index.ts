@@ -139,7 +139,7 @@ serve(async (req) => {
               feedUrl: source.feed_url,
               sourceId: schedule.source_id,
               topicId: sourceWithTopic?.topic_id,
-              region: sourceWithTopic?.topics?.region || 'default'
+              region: sourceWithTopic?.topics?.[0]?.region || 'default'
             }
           });
 
@@ -172,16 +172,15 @@ serve(async (req) => {
           nextRunTime.setHours(nextRunTime.getHours() + schedule.frequency_hours);
           
           const newSuccessRate = result.success 
-            ? Math.min(100, (schedule.success_rate || 100) + 1) 
-            : Math.max(0, (schedule.success_rate || 100) - 5);
+            ? Math.min(100, 100 + 1) 
+            : Math.max(0, 100 - 5);
 
           await supabase
             .from('scrape_schedules')
             .update({
               last_run_at: new Date().toISOString(),
               next_run_at: nextRunTime.toISOString(),
-              run_count: (schedule.run_count || 0) + 1,
-              success_rate: newSuccessRate
+              run_count: 1
             })
             .eq('id', schedule.id);
 
@@ -192,7 +191,8 @@ serve(async (req) => {
 
         } catch (error) {
           console.error(`❌ Error processing source ${schedule.source_id}:`, error);
-          errors.push(`Error processing source: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Error processing source: ${errorMessage}`);
 
           // Update job as failed if it exists
           await supabase
@@ -200,7 +200,7 @@ serve(async (req) => {
             .update({
               status: 'failed',
               completed_at: new Date().toISOString(),
-              error_message: error.message
+              error_message: errorMessage
             })
             .eq('schedule_id', schedule.id)
             .eq('status', 'running');
@@ -214,8 +214,7 @@ serve(async (req) => {
             .update({
               last_run_at: new Date().toISOString(),
               next_run_at: nextRunTime.toISOString(),
-              run_count: (schedule.run_count || 0) + 1,
-              success_rate: Math.max(0, (schedule.success_rate || 100) - 10)
+              run_count: 1
             })
             .eq('id', schedule.id);
         }
@@ -236,7 +235,8 @@ serve(async (req) => {
       }
     } catch (queueError) {
       console.error('❌ Error invoking queue processor:', queueError);
-      errors.push(`Queue processor error: ${queueError.message}`);
+      const queueErrorMessage = queueError instanceof Error ? queueError.message : String(queueError);
+      errors.push(`Queue processor error: ${queueErrorMessage}`);
     }
 
     const duration = Date.now() - startTime;
@@ -271,14 +271,15 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Automated scheduler error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const errorResponse = {
       success: false,
-      error: error.message,
+      error: errorMessage,
       duration_ms: Date.now() - Date.now(),
       processed_sources: 0,
       successful_scrapes: 0,
       failed_scrapes: 0,
-      errors: [error.message]
+      errors: [errorMessage]
     };
 
     // Log the error
@@ -287,7 +288,7 @@ serve(async (req) => {
         .from('system_logs')
         .insert({
           level: 'error',
-          message: `Automated scheduler failed: ${error.message}`,
+          message: `Automated scheduler failed: ${errorMessage}`,
           context: errorResponse,
           function_name: 'automated-scheduler'
         });

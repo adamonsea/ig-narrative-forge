@@ -46,7 +46,7 @@ serve(async (req) => {
     const updates = [];
 
     for (const story of storiesNeedingLinkage || []) {
-      const importMetadata = story.articles?.import_metadata || {};
+      const importMetadata = story.articles?.[0]?.import_metadata || {};
       
       // Check if this is a multi-tenant bridge article
       if (importMetadata.multi_tenant_bridge && 
@@ -98,9 +98,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Backfill error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

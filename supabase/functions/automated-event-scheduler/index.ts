@@ -107,11 +107,12 @@ serve(async (req) => {
 
       } catch (topicError) {
         console.error(`❌ Error processing topic ${topic.name}:`, topicError);
+        const topicErrorMessage = topicError instanceof Error ? topicError.message : String(topicError);
         results.push({
           topicId: topic.id,
           topicName: topic.name,
           success: false,
-          error: topicError.message,
+          error: topicErrorMessage,
           eventsGenerated: 0
         });
       }
@@ -133,11 +134,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error in automated-event-scheduler:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
-        details: error.stack
+        error: errorMessage,
+        details: errorStack
       }),
       {
         status: 500,

@@ -106,7 +106,7 @@ serve(async (req) => {
         .in('processing_status', ['new'])
         .lt('created_at', new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()) // Older than 5 days
         .or('regional_relevance_score.lt.10,regional_relevance_score.is.null')
-        .select('*', { count: 'exact', head: true });
+        .select('*');
 
       if (updateError) throw updateError;
       cleanedCount = count || 0;
@@ -126,10 +126,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error in bulk-cleanup-articles function:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: errorMessage
       }),
       {
         status: 500,

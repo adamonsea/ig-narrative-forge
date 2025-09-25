@@ -81,8 +81,9 @@ serve(async (req) => {
             break; // Success with RSS, no need to try HTML parsing
           }
         } catch (error) {
-          console.log(`❌ RSS feed failed: ${rssUrl} - ${error.message}`);
-          errors.push(`RSS failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`❌ RSS feed failed: ${rssUrl} - ${errorMessage}`);
+          errors.push(`RSS failed: ${errorMessage}`);
         }
       }
     }
@@ -107,16 +108,18 @@ serve(async (req) => {
               console.log(`✅ Extracted: ${articleResult.title?.substring(0, 60)}...`);
             }
           } catch (error) {
-            console.log(`❌ Article extraction failed: ${articleUrl} - ${error.message}`);
-            errors.push(`Article failed: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.log(`❌ Article extraction failed: ${articleUrl} - ${errorMessage}`);
+            errors.push(`Article failed: ${errorMessage}`);
           }
 
           // Rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (error) {
-        console.log(`❌ Beautiful Soup HTML parsing failed: ${error.message}`);
-        errors.push(`HTML parsing failed: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Beautiful Soup HTML parsing failed: ${errorMessage}`);
+        errors.push(`HTML parsing failed: ${errorMessage}`);
       }
     }
 
@@ -152,7 +155,8 @@ serve(async (req) => {
             storedCount++;
           }
         } catch (error) {
-          console.log(`❌ Article processing failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`❌ Article processing failed: ${errorMessage}`);
           discardedCount++;
         }
       }
@@ -177,7 +181,7 @@ serve(async (req) => {
       articlesFound,
       articlesScraped: storedCount,
       errors,
-      method: 'beautiful_soup'
+      method: 'html'
     };
 
     console.log(`🍲 Beautiful Soup scraping completed:`);
@@ -190,13 +194,14 @@ serve(async (req) => {
   } catch (error) {
     console.error('🚨 Beautiful Soup scraper error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: errorMessage,
       articles: [],
       articlesFound: 0,
       articlesScraped: 0,
-      errors: [error.message],
+      errors: [errorMessage],
       method: 'beautiful_soup'
     }), {
       status: 500,
@@ -258,11 +263,8 @@ async function tryRSSExtraction(rssUrl: string, sourceId?: string, topicId?: str
           regional_relevance_score: calculateRegionalRelevance(body, title, region),
           content_quality_score: calculateContentQuality(body, title),
           processing_status: 'new' as const,
-          source_id: sourceId,
-          topic_id: topicId,
-          region: region,
           import_metadata: {
-            extraction_method: 'beautiful_soup_rss',
+            extraction_method: 'html',
             scrape_timestamp: new Date().toISOString(),
             extractor_version: '2.0'
           }
@@ -277,7 +279,7 @@ async function tryRSSExtraction(rssUrl: string, sourceId?: string, topicId?: str
     articlesFound: itemMatches.length,
     articlesScraped: articles.length,
     errors: [],
-    method: 'beautiful_soup_rss'
+    method: 'rss'
   };
 }
 
@@ -315,17 +317,15 @@ async function extractArticleContent(url: string, sourceId?: string, topicId?: s
       regional_relevance_score: calculateRegionalRelevance(content.body, content.title, region),
       content_quality_score: content.content_quality_score,
       processing_status: 'new' as const,
-      source_id: sourceId,
-      topic_id: topicId,
-      region: region,
       import_metadata: {
-        extraction_method: content.extraction_method || 'beautiful_soup_html',
+        extraction_method: 'html',
         scrape_timestamp: new Date().toISOString(),
         extractor_version: '2.0'
       }
     };
   } catch (error) {
-    console.log(`❌ Article extraction failed: ${url} - ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log(`❌ Article extraction failed: ${url} - ${errorMessage}`);
     return null;
   }
 }
