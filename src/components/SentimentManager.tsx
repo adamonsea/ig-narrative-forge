@@ -34,6 +34,7 @@ interface Topic {
   keywords?: string[];
 }
 
+// Sentiment Analysis Manager Component
 export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   const [cards, setCards] = useState<SentimentCard[]>([]);
   const [settings, setSettings] = useState({
