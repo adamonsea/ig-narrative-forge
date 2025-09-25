@@ -20,7 +20,7 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -82,6 +82,7 @@ const TopicDashboard = () => {
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState("content-flow");
+  const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -332,6 +333,14 @@ const TopicDashboard = () => {
   const topicGradient = topic ? generateTopicGradient(topic.id) : '';
   const accentColor = topic ? generateAccentColor(topic.id) : '';
 
+  // Progressive disclosure logic
+  const hasEnoughArticles = stats.articles > 10;
+  const needsAttention = {
+    contentFlow: stats.pending_articles > 0 || stats.processing_queue > 0,
+    automation: stats.sources === 0,
+    advanced: !topic.audience_expertise || !topic.default_tone || topic.keywords.length === 0
+  };
+
   return (
     <div className={`min-h-screen ${topicGradient}`}>
       <div className="container mx-auto px-4 py-8">
@@ -562,15 +571,15 @@ const TopicDashboard = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Primary Action Bar */}
+        {/* Primary Action Bar - Mobile Responsive */}
         <Card className={`${accentColor} bg-card/60 backdrop-blur-sm mb-6`}>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <Button 
                   onClick={handleGatherAll}
                   disabled={gatheringAll}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 w-full sm:w-auto"
                 >
                   {gatheringAll ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -580,7 +589,7 @@ const TopicDashboard = () => {
                   {gatheringAll ? 'Gathering...' : 'Gather All'}
                 </Button>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
                   <span className="text-sm text-muted-foreground">Auto-simplify:</span>
                   <Button
                     variant="ghost"
@@ -597,7 +606,7 @@ const TopicDashboard = () => {
                 </div>
               </div>
               
-              <Button variant="outline" asChild size="sm">
+              <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
                 <Link to={`/feed/topic/${topic.slug}`} target="_blank">
                   <Globe className="w-4 h-4 mr-2" />
                   Preview Feed
@@ -609,11 +618,43 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
-            <TabsTrigger value="content-flow">Content Flow</TabsTrigger>
-            <TabsTrigger value="automation">Automation & Sources</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced Tools</TabsTrigger>
+          <TabsList className={`grid w-full ${hasEnoughArticles ? 'grid-cols-3' : 'grid-cols-2'} mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+            <TabsTrigger value="content-flow" className="relative">
+              Content Flow
+              {needsAttention.contentFlow && (
+                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
+                  <AlertCircle className="h-2 w-2" />
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="automation" className="relative">
+              Automation & Sources
+              {needsAttention.automation && (
+                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
+                  <AlertCircle className="h-2 w-2" />
+                </Badge>
+              )}
+            </TabsTrigger>
+            {hasEnoughArticles && (
+              <TabsTrigger value="advanced" className="relative">
+                Advanced Tools
+                {needsAttention.advanced && (
+                  <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
+                    <AlertCircle className="h-2 w-2" />
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          {!hasEnoughArticles && (
+            <div className="flex items-center gap-2 mt-4 p-3 bg-muted/50 rounded-md">
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Advanced Tools will unlock when you have processed more than 10 articles ({stats.articles}/10)
+              </p>
+            </div>
+          )}
 
           <TabsContent value="content-flow" className="space-y-6">
             {/* Sentiment Insights - Show when data exists */}
@@ -657,7 +698,8 @@ const TopicDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="advanced" className="space-y-8">
+          {hasEnoughArticles && (
+            <TabsContent value="advanced" className="space-y-8">
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -734,21 +776,31 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Topic Subscribers
-                </CardTitle>
-                <CardDescription>
-                  View and manage users who have subscribed to notifications for this topic
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <NewsletterSignupsManager topicId={topic.id} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>
+              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        Topic Subscribers
+                      </div>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${subscribersCollapsed ? '' : 'rotate-180'}`} />
+                    </CardTitle>
+                    <CardDescription>
+                      View and manage users who have subscribed to notifications for this topic
+                    </CardDescription>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <NewsletterSignupsManager topicId={topic.id} />
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
