@@ -78,13 +78,14 @@ export class EnhancedScrapingStrategies {
       }
       
     } catch (error) {
-      console.log(`❌ RSS parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ RSS parsing failed: ${errorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'rss'
       };
     }
@@ -104,10 +105,11 @@ export class EnhancedScrapingStrategies {
           const rssContent = await this.extractor.fetchWithRetry(feedLink);
           const result = await this.parseRSSContent(rssContent, feedLink);
           if (result.success && result.articles.length > 0) {
-            return { ...result, method: 'rss_discovery' };
+            return { ...result, method: 'rss' };
           }
         } catch (error) {
-          console.log(`⚠️ Feed link failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`⚠️ Feed link failed: ${errorMessage}`);
         }
       }
       
@@ -115,13 +117,14 @@ export class EnhancedScrapingStrategies {
       return await this.parseHTMLForArticles(html, this.baseUrl);
       
     } catch (error) {
-      console.log(`❌ Enhanced HTML parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Enhanced HTML parsing failed: ${errorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'html'
       };
     }
@@ -147,7 +150,8 @@ export class EnhancedScrapingStrategies {
             articles.push(article);
           }
         } catch (error) {
-          errors.push(`RSS item parsing error: ${error.message}`);
+          const parseErrorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`RSS item parsing error: ${parseErrorMessage}`);
         }
       }
 
@@ -161,12 +165,13 @@ export class EnhancedScrapingStrategies {
       };
 
     } catch (error) {
+      const parseErrorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [parseErrorMessage],
         method: 'rss'
       };
     }
@@ -213,7 +218,8 @@ export class EnhancedScrapingStrategies {
       
     } catch (error) {
       // Graceful fallback to RSS content when extraction fails
-      console.log(`❌ Failed to fetch enhanced content for: ${title.substring(0, 50)}... - ${error.message}`);
+      const extractErrorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Failed to fetch enhanced content for: ${title.substring(0, 50)}... - ${extractErrorMessage}`);
       console.log(`📝 Using RSS content as fallback`);
       
       // Use RSS description as content when extraction fails
@@ -313,7 +319,8 @@ export class EnhancedScrapingStrategies {
             });
           }
         } catch (error) {
-          errors.push(`Article extraction error: ${error.message}`);
+          const articleErrorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Article extraction error: ${articleErrorMessage}`);
         }
       }
 
@@ -323,26 +330,33 @@ export class EnhancedScrapingStrategies {
         articlesFound: articleLinks.length,
         articlesScraped: articles.length,
         errors,
-        method: 'enhanced_html'
+        method: 'html'
       };
 
     } catch (error) {
+      const htmlErrorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'enhanced_html'
+        errors: [htmlErrorMessage],
+        method: 'html'
       };
     }
   }
 
   private calculateEnhancedRegionalRelevance(content: string, title: string, url: string): number {
+    // Create minimal regional config for calculation
+    const regionalConfig = {
+      keywords: [], // Will be populated if needed
+      region_name: this.region || 'unknown'
+    };
+    
     let relevance = calculateRegionalRelevance(
       content,
       title,
-      this.region,
+      regionalConfig,
       this.sourceInfo?.source_type || 'national'
     );
 
@@ -560,7 +574,8 @@ export class EnhancedScrapingStrategies {
         }
       } catch (error) {
         // Silently continue - expected for many URLs
-        console.log(`⚠️ RSS pattern ${pattern} failed: ${error.message}`);
+        const patternErrorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ RSS pattern ${pattern} failed: ${patternErrorMessage}`);
       }
     }
     

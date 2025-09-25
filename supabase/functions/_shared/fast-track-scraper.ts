@@ -18,6 +18,8 @@ export class FastTrackScraper {
   private baseUrl: string = '';
 
   constructor(private supabase: any) {
+    // Initialize with a placeholder URL - will be updated when needed
+    this.extractor = new UniversalContentExtractor('https://example.com');
     this.retryStrategy = new EnhancedRetryStrategies();
   }
 
@@ -62,14 +64,15 @@ export class FastTrackScraper {
       return await this.executeScrapingStrategy();
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`❌ FastTrackScraper.scrapeContent error:`, error);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'fast_track_setup_error'
+        errors: [errorMessage],
+        method: 'fallback'
       };
     }
   }
@@ -87,7 +90,7 @@ export class FastTrackScraper {
         articlesFound: 0,
         articlesScraped: 0,
         errors: [`Source not accessible: ${accessibilityResult.error}`],
-        method: 'fast_track_accessibility_check'
+        method: 'fallback'
       };
     }
 
@@ -107,23 +110,24 @@ export class FastTrackScraper {
   private async tryFastRSSStrategy(): Promise<ScrapingResult> {
     console.log('🔄 Fast RSS parsing...');
     
+    const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
+    
     try {
-      const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
-      
       // Use domain-specific strategy for better success rates
       const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedUrl);
       
       return await this.parseFastRSSContent(rssContent, feedUrl);
       
     } catch (error) {
-      console.log(`❌ Fast RSS parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Fast RSS parsing failed: ${errorMessage}`);
       
       // Log source health for monitoring
       await this.retryStrategy.logSourceHealth(
         this.sourceInfo?.id,
         feedUrl,
         false,
-        error.message
+        errorMessage
       );
       
       return {
@@ -131,8 +135,8 @@ export class FastTrackScraper {
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'fast_rss'
+        errors: [errorMessage],
+        method: 'rss'
       };
     }
   }
@@ -153,10 +157,11 @@ export class FastTrackScraper {
           const result = await this.parseFastRSSContent(rssContent, feedLink);
           if (result.success && result.articles.length > 0) {
             console.log(`✅ Feed discovery successful: ${result.articles.length} articles`);
-            return { ...result, method: 'fast_rss_discovery' };
+            return { ...result, method: 'rss' };
           }
         } catch (error) {
-          console.log(`⚠️ Fast feed failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`⚠️ Fast feed failed: ${errorMessage}`);
         }
       }
       
@@ -164,14 +169,15 @@ export class FastTrackScraper {
       return await this.parseFastHTMLArticles(html, this.baseUrl);
       
     } catch (error) {
-      console.log(`❌ Fast HTML parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Fast HTML parsing failed: ${errorMessage}`);
       
       // Log source health for monitoring
       await this.retryStrategy.logSourceHealth(
         this.sourceInfo?.id,
         this.baseUrl,
         false,
-        error.message
+        errorMessage
       );
       
       return {
@@ -179,8 +185,8 @@ export class FastTrackScraper {
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'fast_html'
+        errors: [errorMessage],
+        method: 'html'
       };
     }
   }
@@ -203,7 +209,8 @@ export class FastTrackScraper {
             articles.push(article);
           }
         } catch (error) {
-          errors.push(`RSS item error: ${error.message}`);
+          const parseErrorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`RSS item error: ${parseErrorMessage}`);
           if (errors.length > 5) break; // Stop after 5 errors
         }
       }
@@ -214,17 +221,19 @@ export class FastTrackScraper {
         articlesFound: itemMatches.length,
         articlesScraped: articles.length,
         errors,
-        method: 'fast_rss'
+        method: 'rss'
       };
 
     } catch (error) {
+      const parseErrorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ RSS content parsing failed: ${parseErrorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'fast_rss'
+        errors: [parseErrorMessage],
+        method: 'rss'
       };
     }
   }
@@ -280,7 +289,8 @@ export class FastTrackScraper {
           }
         }
       } catch (error) {
-        console.log(`⚠️ Full extraction failed, using RSS content as fallback: ${error.message}`);
+        const extractErrorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ Full extraction failed, using RSS content as fallback: ${extractErrorMessage}`);
         
         // For regional sources, accept RSS snippet even if extraction failed
         if (isRegionalTopic || isWhitelistedDomain) {
@@ -292,10 +302,15 @@ export class FastTrackScraper {
     }
 
     // Calculate regional relevance quickly
+    const regionalConfig = {
+      keywords: [],
+      region_name: this.region || 'unknown'
+    };
+    
     const regionalRelevance = calculateRegionalRelevance(
       finalContent,
       finalTitle,
-      this.region,
+      regionalConfig,
       this.sourceInfo?.source_type || 'national'
     );
 
@@ -338,10 +353,15 @@ export class FastTrackScraper {
           const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
           
           if (extractedContent.body && this.isFastQualified(extractedContent)) {
+            const regionalConfig = {
+              keywords: [],
+              region_name: this.region || 'unknown'
+            };
+            
             const regionalRelevance = calculateRegionalRelevance(
               extractedContent.body,
               extractedContent.title,
-              this.region,
+              regionalConfig,
               this.sourceInfo?.source_type || 'national'
             );
 
@@ -365,7 +385,8 @@ export class FastTrackScraper {
             });
           }
         } catch (error) {
-          errors.push(`Article error: ${error.message}`);
+          const articleErrorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Article error: ${articleErrorMessage}`);
           if (errors.length > 3) break; // Stop after 3 errors
         }
       }
@@ -376,17 +397,19 @@ export class FastTrackScraper {
         articlesFound: articleLinks.length,
         articlesScraped: articles.length,
         errors,
-        method: 'fast_track_html'
+        method: 'html'
       };
 
     } catch (error) {
+      const htmlErrorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ HTML article parsing failed: ${htmlErrorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
-        method: 'fast_track_html'
+        errors: [htmlErrorMessage],
+        method: 'html'
       };
     }
   }

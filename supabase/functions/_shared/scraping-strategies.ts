@@ -12,13 +12,14 @@ export class ScrapingStrategies {
       const rssContent = await fetchWithRetry(feedUrl);
       return await this.parseRSSContent(rssContent, feedUrl);
     } catch (error) {
-      console.log(`❌ RSS parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ RSS parsing failed: ${errorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'rss'
       };
     }
@@ -31,13 +32,14 @@ export class ScrapingStrategies {
       const html = await fetchWithRetry(url);
       return await this.parseHTMLContent(html, url);
     } catch (error) {
-      console.log(`❌ HTML parsing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ HTML parsing failed: ${errorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'html'
       };
     }
@@ -64,13 +66,14 @@ export class ScrapingStrategies {
       return await this.parseHTMLContent(html, url);
       
     } catch (error) {
-      console.log(`❌ Fallback method failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Fallback method failed: ${errorMessage}`);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'fallback'
       };
     }
@@ -111,7 +114,8 @@ export class ScrapingStrategies {
             }
           }
         } catch (error) {
-          errors.push(`RSS item parsing error: ${error.message}`);
+          const parseErrorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`RSS item parsing error: ${parseErrorMessage}`);
         }
       }
 
@@ -125,12 +129,13 @@ export class ScrapingStrategies {
       };
 
     } catch (error) {
+      const parseErrorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [parseErrorMessage],
         method: 'rss'
       };
     }
@@ -185,10 +190,15 @@ export class ScrapingStrategies {
       }
 
       // Calculate regional relevance - for hyperlocal sources, give higher base scores
+      const regionalConfig = {
+        keywords: [],
+        region_name: this.region || 'unknown'
+      };
+      
       let regionalRelevance = calculateRegionalRelevance(
         finalContent,
         finalTitle,
-        this.region,
+        regionalConfig,
         this.sourceInfo?.source_type || 'national'
       );
       
@@ -247,10 +257,15 @@ export class ScrapingStrategies {
           
           if (extractedContent.body && extractedContent.word_count >= minWordCount && (!isSnippet || isRegionalTopic || isWhitelistedDomain)) {
             // Calculate regional relevance - for hyperlocal sources, give higher base scores
+            const regionalConfig = {
+              keywords: [],
+              region_name: this.region || 'unknown'
+            };
+            
             let regionalRelevance = calculateRegionalRelevance(
               extractedContent.body,
               extractedContent.title,
-              this.region,
+              regionalConfig,
               this.sourceInfo?.source_type || 'national'
             );
             

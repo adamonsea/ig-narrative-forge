@@ -192,7 +192,8 @@ export class MultiTenantDatabaseOperations {
 
       } catch (error) {
         console.error('Error processing article:', error)
-        result.errors.push(`Article "${article.title}": ${error.message}`)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        result.errors.push(`Article "${article.title}": ${errorMessage}`)
       }
     }
 
@@ -346,7 +347,8 @@ export class MultiTenantDatabaseOperations {
         })
     } catch (error) {
       // Legacy errors are expected during migration, don't fail the whole process
-      console.log('Legacy article insert warning:', error.message)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log('Legacy article insert warning:', errorMessage)
     }
   }
 
@@ -438,7 +440,7 @@ export class MultiTenantDatabaseOperations {
       const organizations = topic.organizations || []
       
       const allLocationItems = landmarks.concat(postcodes).concat(organizations)
-      allLocationItems.forEach(item => {
+      allLocationItems.forEach((item: any) => {
         if (title.includes(item.toLowerCase()) || body.includes(item.toLowerCase())) {
           score += 25
         }
