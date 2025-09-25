@@ -19,6 +19,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Declare variables at function scope with default values to avoid "used before assignment" errors
+  let feedUrl = '';
+  let topicId = ''; 
+  let sourceId = '';
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -31,8 +36,11 @@ serve(async (req) => {
       });
     }
 
-  // Parse request body
-  const { feedUrl, topicId, sourceId } = await req.json();
+    // Parse request body
+    const requestBody = await req.json();
+    feedUrl = requestBody.feedUrl || '';
+    topicId = requestBody.topicId || '';
+    sourceId = requestBody.sourceId || '';
 
   if (!feedUrl || !topicId || !sourceId) {
     return new Response(JSON.stringify({ error: 'feedUrl, topicId, and sourceId are required' }), {
@@ -112,7 +120,7 @@ serve(async (req) => {
       feedUrl
     );
     const dbOps = new DatabaseOperations(supabase);
-    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase);
+    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase as any);
 
     const startTime = Date.now();
 
@@ -246,7 +254,7 @@ serve(async (req) => {
       console.error('Multi-tenant storage failed (expected during migration):', multiTenantError);
       multiTenantResult = {
         success: false,
-        error: multiTenantError.message,
+        error: multiTenantError instanceof Error ? multiTenantError.message : String(multiTenantError),
         articlesProcessed: 0,
         newContentCreated: 0,
         topicArticlesCreated: 0,
@@ -344,7 +352,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

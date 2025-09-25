@@ -141,7 +141,7 @@ serve(async (req) => {
     
     const extractionResult = await supabase.functions.invoke('content-extractor-multi-tenant', {
       body: { 
-        urls: discoveredUrls.map(u => u.url), 
+        urls: discoveredUrls.map((u: any) => u.url), 
         topicId, 
         sourceId, 
         maxConcurrent: 3, // Conservative concurrent limit
@@ -168,7 +168,7 @@ serve(async (req) => {
       await supabase
         .from('content_sources')
         .update({
-          articles_scraped: supabase.sql`articles_scraped + ${result.articlesStored}`,
+          articles_scraped: (result.articlesStored || 0),
           last_scraped_at: new Date().toISOString()
         })
         .eq('id', sourceId);
@@ -212,7 +212,7 @@ serve(async (req) => {
       articlesStored: 0,
       duplicatesSkipped: 0,
       responseTime: Date.now() - startTime,
-      errors: [error.message],
+      errors: [error instanceof Error ? error.message : String(error)],
       discoveredUrls: []
     }), {
       status: 500,

@@ -83,7 +83,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Universal platform fix failed',
+        error: error instanceof Error ? (error.message || 'Universal platform fix failed') : String(error),
         timestamp: new Date().toISOString()
       }),
       { 

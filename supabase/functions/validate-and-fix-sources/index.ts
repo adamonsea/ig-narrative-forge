@@ -135,7 +135,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Source validation failed',
+        error: error instanceof Error ? error.message : 'Source validation failed',
         message: 'Source validation encountered an error'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -198,7 +198,7 @@ async function validateAndFixSource(source: any): Promise<SourceValidationResult
     return result;
 
   } catch (error) {
-    result.errorMessage = error.message;
+    result.errorMessage = error instanceof Error ? error.message : String(error);
     result.suggestedFix = 'Validation process failed. Manual review required.';
     return result;
   }
@@ -303,7 +303,7 @@ async function testFeedUrl(url: string): Promise<{ isValid: boolean; feedType?: 
 
     return {
       isValid: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
@@ -367,11 +367,11 @@ async function discoverAlternativeFeeds(source: any): Promise<string[]> {
         alternatives.push(...feedLinks);
       }
     } catch (error) {
-      console.log(`⚠️ Could not scrape homepage for feed links: ${error.message}`);
+      console.log(`⚠️ Could not scrape homepage for feed links: ${error instanceof Error ? error.message : String(error)}`);
     }
 
   } catch (error) {
-    console.log(`⚠️ Error discovering alternatives: ${error.message}`);
+    console.log(`⚠️ Error discovering alternatives: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // Remove duplicates and original URL

@@ -41,7 +41,7 @@ async function quickUrlCheck(url: string, timeoutMs: number = 3000): Promise<boo
     clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
-    console.log(`⚡ Quick check failed for ${url}: ${error.message}`);
+    console.log(`⚡ Quick check failed for ${url}: ${error instanceof Error ? error.message : String(error)}`);
     return false;
   }
 }
@@ -117,7 +117,7 @@ serve(async (req) => {
 
     // Filter sources if specific sourceIds provided
     let targetSources = sourceIds 
-      ? topicSources.filter(source => sourceIds.includes(source.source_id))
+      ? topicSources.filter((source: any) => sourceIds.includes(source.source_id))
       : topicSources;
     
     // Apply maxSources limit for test mode or explicit limit
@@ -141,7 +141,7 @@ serve(async (req) => {
     console.log(`Processing ${targetSources.length} sources for topic: ${topic.name}${testMode ? ' (ULTRA-FAST TEST MODE)' : ''}`);
 
     const scraper = new FastTrackScraper(supabase);
-    const dbOps = new MultiTenantDatabaseOperations(supabase);
+    const dbOps = new MultiTenantDatabaseOperations(supabase as any);
     const results = [];
     let processedCount = 0;
     const startTime = Date.now();
@@ -282,7 +282,7 @@ serve(async (req) => {
               })
               .eq('id', source.source_id)
               .then(() => console.log(`📈 Updated metrics for ${source.source_name}`))
-              .catch(err => console.log(`⚠️ Failed to update metrics: ${err.message}`));
+              .catch((err: any) => console.log(`⚠️ Failed to update metrics: ${err instanceof Error ? err.message : String(err)}`));
 
             const result: ScraperSourceResult = {
               sourceId: source.source_id,
@@ -385,7 +385,7 @@ serve(async (req) => {
                   console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
                 }
               } catch (fallbackError) {
-                console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError.message}`);
+                console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
               }
             }
 
@@ -411,7 +411,7 @@ serve(async (req) => {
             sourceId: source.source_id,
             sourceName: source.source_name,
             success: false,
-            error: sourceError.message,
+            error: sourceError instanceof Error ? sourceError.message : String(sourceError),
             articlesFound: 0,
             articlesScraped: 0
           } as ScraperSourceResult;
@@ -433,7 +433,7 @@ serve(async (req) => {
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
-          error: `Processing timeout: ${timeoutError.message}`,
+          error: `Processing timeout: ${timeoutError instanceof Error ? timeoutError.message : String(timeoutError)}`,
           articlesFound: 0,
           articlesScraped: 0
         };

@@ -150,17 +150,17 @@ serve(async (req) => {
 
         console.log(`✓ ${topic.name}: ${scrapeResult?.totalArticles || 0} articles scraped`);
 
-      } catch (topicError) {
-        console.error(`Error processing topic ${topic.name}:`, topicError);
-        
-        results.push({
-          topicId: topic.id,
-          topicName: topic.name,
-          success: false,
-          error: topicError.message,
-          executedAt: now.toISOString()
-        });
-      }
+        } catch (topicError) {
+          console.error(`Error processing topic ${topic.name}:`, topicError);
+          
+          results.push({
+            topicId: topic.id,
+            topicName: topic.name,
+            success: false,
+            error: topicError instanceof Error ? topicError.message : String(topicError),
+            executedAt: now.toISOString()
+          });
+        }
     }
 
     // Log automation event
@@ -205,7 +205,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       }),
       { 

@@ -150,7 +150,7 @@ serve(async (req) => {
           sourceId: source.id,
           sourceName: source.source_name,
           success: false,
-          error: sourceError.message
+          error: sourceError instanceof Error ? sourceError.message : String(sourceError)
         });
       }
     }
@@ -172,7 +172,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

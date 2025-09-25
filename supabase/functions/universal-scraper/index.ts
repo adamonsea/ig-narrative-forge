@@ -73,7 +73,7 @@ serve(async (req) => {
     // Find the associated regional topic for this source and region
     let topicId = null;
     let topicConfig = null;
-    let otherRegionalTopics = [];
+    let otherRegionalTopics: any[] = [];
 
     if (sourceInfo.topic_id) {
       topicId = sourceInfo.topic_id;
@@ -162,13 +162,22 @@ serve(async (req) => {
 
 
     // Initialize fast-track scraping system for better performance
-    const fastTrackScraper = new FastTrackScraper(region, sourceInfo, feedUrl);
+    const fastTrackScraper = new FastTrackScraper(supabase);
     const dbOps = new DatabaseOperations(supabase);
-    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase);
+    const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase as any);
 
     // Execute fast-track scraping with timeout protection
     console.log(`🔄 Starting fast-track scraping for ${sourceInfo.source_name}`);
-    const scrapingResult = await fastTrackScraper.executeScrapingStrategy();
+    const scrapingResult = await fastTrackScraper.scrapeContent(
+      feedUrl,
+      sourceId,
+      {
+        userAgent: 'eeZee Universal Scraper/1.0',
+        timeout: 20000,
+        maxRetries: 3,
+        retryDelay: 2000
+      }
+    );
 
     let storedCount = 0;
     let duplicateCount = 0;
@@ -243,14 +252,14 @@ serve(async (req) => {
       console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
       // Store articles in legacy system (existing functionality)
-      const storageResult = await dbOps.storeArticles(
-        scrapingResult.articles,
-        sourceId,
-        region,
-        topicId,
-        topicConfig,
-        otherRegionalTopics
-      );
+        const storageResult = await dbOps.storeArticles(
+          scrapingResult.articles,
+          sourceId,
+          region,
+          topicId,
+          topicConfig,
+          otherRegionalTopics
+        );
       
       storedCount = storageResult.stored;
       duplicateCount = storageResult.duplicates;
@@ -378,17 +387,17 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
-        } catch (methodError) {
-          console.error(`❌ Fallback method ${method} failed:`, methodError);
-          continue;
-        }
+          } catch (methodError) {
+            console.error(`❌ Fallback method ${method} failed:`, methodError);
+            continue;
+          }
       }
       
       if (!fallbackSuccess) {
         const dbOps = new DatabaseOperations(supabase);
         await dbOps.logSystemEvent('error', 
           `All scraping methods failed including fallbacks`,
-          { sourceId, primaryError: error.message, fallbackMethods },
+          { sourceId, primaryError: error instanceof Error ? error.message : String(error), fallbackMethods },
           'universal-scraper'
         );
       }
@@ -401,10 +410,10 @@ serve(async (req) => {
       const dbOps = new DatabaseOperations(supabase);
       await dbOps.logSystemEvent(
         'error',
-        `Universal scraper failed: ${error.message}`,
+        `Universal scraper failed: ${error instanceof Error ? error.message : String(error)}`,
         { 
-          error: error.message, 
-          stack: error.stack,
+          error: error instanceof Error ? error.message : String(error), 
+          stack: error instanceof Error ? error.stack : undefined,
           sourceId: sourceId || 'unknown',
           feedUrl: feedUrl || 'unknown',
           region: region || 'unknown'
@@ -418,7 +427,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Internal server error',
+        error: error instanceof Error ? error.message : 'Internal server error',
         message: 'Universal scraper encountered an error',
         fallback_attempted: true
       }),

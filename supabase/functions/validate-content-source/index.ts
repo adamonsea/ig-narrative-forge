@@ -145,11 +145,11 @@ async function discoverRSSFeeds(url: string): Promise<string[]> {
         alternatives.push(...feedLinks);
       }
     } catch (error) {
-      console.log(`⚠️ Could not scrape page for feed links: ${error.message}`);
+      console.log(`⚠️ Could not scrape page for feed links: ${error instanceof Error ? error.message : String(error)}`);
     }
 
   } catch (error) {
-    console.log(`⚠️ Error discovering RSS feeds: ${error.message}`);
+    console.log(`⚠️ Error discovering RSS feeds: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // Remove duplicates and original URL
@@ -219,7 +219,7 @@ async function testRSSFeed(url: string): Promise<{isValidRSS: boolean, articleCo
       hasContent: hasItems && articleCount > 0 
     };
   } catch (error) {
-    console.log(`⚠️ RSS test failed for ${url}: ${error.message}`);
+    console.log(`⚠️ RSS test failed for ${url}: ${error instanceof Error ? error.message : String(error)}`);
     return { isValidRSS: false, articleCount: 0, hasContent: false };
   }
 }
@@ -391,10 +391,10 @@ serve(async (req) => {
         } else {
           result.warnings.push('Cannot test scraping: Supabase configuration missing');
         }
-      } catch (error) {
-        result.warnings.push(`Validation error: ${error.message}`);
-        console.error('❌ Validation failed:', error);
-      }
+    } catch (error) {
+      result.warnings.push(`Validation error: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('❌ Validation failed:', error);
+    }
     }
 
     // Determine overall success - be very lenient, focus on accessibility
@@ -412,7 +412,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         isAccessible: false,
         warnings: ['Validation process failed']
       }),
