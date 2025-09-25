@@ -29,7 +29,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: false,
         error: 'Invalid JSON in request body',
-        details: parseError.message 
+        details: parseError instanceof Error ? parseError.message : String(parseError) 
       }),
       {
         status: 400,
@@ -151,7 +151,7 @@ serve(async (req) => {
           api_provider: 'midjourney',
           generation_time_ms: 30000, // Estimated time for MidJourney
           estimated_cost: mjData.cost || 0.02,
-          style_reference_used: hasStyleReference,
+          style_reference_used: styleReferenceUrl !== null,
           success: true,
           visual_id: mjData.visualId
         });
@@ -816,7 +816,7 @@ serve(async (req) => {
             console.log('Available Nebius models:', JSON.stringify(modelsData, null, 2));
             
             // Look for image generation models
-            const imageModels = modelsData.data?.filter(model => 
+            const imageModels = modelsData.data?.filter((model: any) => 
               model.id?.toLowerCase().includes('flux') || 
               model.id?.toLowerCase().includes('sdxl') ||
               model.id?.toLowerCase().includes('image')
@@ -826,7 +826,7 @@ serve(async (req) => {
             console.log('Models endpoint failed:', modelsResponse.status, await modelsResponse.text());
           }
         } catch (modelsError) {
-          console.log('Could not fetch models list:', modelsError.message);
+          console.log('Could not fetch models list:', modelsError instanceof Error ? modelsError.message : String(modelsError));
         }
 
         // Call the dedicated Nebius image generator function
@@ -1069,7 +1069,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in test-image-generator function:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     // Log failed test result to database
     try {
@@ -1078,6 +1078,12 @@ serve(async (req) => {
       
       if (slideId) {
         // Get slide details for story_id
+        // Create supabase client for error logging
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        
         const { data: slide } = await supabase
           .from('slides')
           .select('story_id')
@@ -1090,7 +1096,7 @@ serve(async (req) => {
           story_id: slide?.story_id || null,
           api_provider: apiProvider,
           success: false,
-          error_message: error.message || 'Unknown error occurred',
+          error_message: error instanceof Error ? error.message : String(error) || 'Unknown error occurred',
           generation_time_ms: 0,
           estimated_cost: 0,
           style_reference_used: false
@@ -1103,8 +1109,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Unknown error occurred',
-        details: error.stack
+        error: (error instanceof Error ? error.message : String(error)) || 'Unknown error occurred',
+        details: error instanceof Error ? error.stack : 'No stack trace available'
       }),
       {
         status: 500,

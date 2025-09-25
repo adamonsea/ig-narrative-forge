@@ -276,7 +276,7 @@ serve(async (req) => {
     // Prepare keyword suggestions (keywords that could be added to topic)
     const keywordSuggestions = keywordAnalysis
       .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Lower threshold for suggestions
-      .filter(k => !topicKeywords.some(tk => 
+      .filter(k => !topicKeywords.some((tk: any) => 
         tk.toLowerCase().includes(k.phrase.toLowerCase()) || 
         k.phrase.toLowerCase().includes(tk.toLowerCase())
       )) // Only suggest if not already in topic keywords

@@ -73,11 +73,11 @@ serve(async (req) => {
         results.push({
           url: testUrl,
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           articlesFound: 0,
           articlesScraped: 0
         });
-        console.log(`❌ Test error: ${error.message}`);
+        console.log(`❌ Test error: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       // Rate limiting between tests
@@ -110,7 +110,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -372,7 +372,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
       }
     } catch (decodeError) {
       console.error('Base64 decode error:', decodeError)
-      throw new Error(`Failed to process image data: ${decodeError.message}`)
+      throw new Error(`Failed to process image data: ${decodeError instanceof Error ? decodeError.message : String(decodeError)}`)
     }
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
@@ -408,7 +408,7 @@ Style: Black and white editorial cartoon illustration in the style of newspaper 
   } catch (error) {
     console.error('Story illustrator error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

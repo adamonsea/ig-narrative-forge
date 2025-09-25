@@ -31,9 +31,9 @@ serve(async (req) => {
     let publishedContext = '';
     if (publishedStories.length > 0) {
       const storyKeywords = publishedStories
-        .flatMap(story => story.keywords || [])
+        .flatMap((story: any) => story.keywords || [])
         .filter(Boolean);
-      const storyTitles = publishedStories.map(story => story.title).join(', ');
+      const storyTitles = publishedStories.map((story: any) => story.title).join(', ');
       
       publishedContext = `
 Published Story Context:
@@ -172,7 +172,7 @@ Focus on expanding and building upon what has already been successful rather tha
     console.error('Error in suggest-keywords function:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

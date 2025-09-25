@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
           isHealthy: false,
           successRate: 0,
           avgResponseTime: 0,
-          lastError: error.message,
+          lastError: error instanceof Error ? error.message : String(error),
           recommendedAction: 'investigate',
           healthScore: 0
         });
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('❌ Source health monitoring error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : String(error) }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

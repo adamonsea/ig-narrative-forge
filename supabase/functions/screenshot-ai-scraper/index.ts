@@ -489,7 +489,7 @@ export async function takeScreenshot(url: string, supabase?: any): Promise<{
       jsonResponse = JSON.parse(responseText);
     } catch (parseError) {
       if (supabase) await logProgress(supabase, 'screenshot-response-parse', 'error', 'Invalid JSON');
-      throw new Error(`Invalid JSON response from ScreenshotAPI: ${parseError.message}`);
+      throw new Error(`Invalid JSON response from ScreenshotAPI: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
     
     if (!jsonResponse.screenshot) {
@@ -562,13 +562,13 @@ export async function takeScreenshot(url: string, supabase?: any): Promise<{
     console.error('💥 Screenshot error:', error);
     
     if (supabase) await logProgress(supabase, 'screenshot-error', 'error', {
-      message: error.message,
-      type: error.name
+      message: error instanceof Error ? error.message : String(error),
+      type: error instanceof Error ? error.name : 'unknown'
     });
     
     return {
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
@@ -703,7 +703,7 @@ Extract only actual news articles, not navigation or ads. If no clear articles a
           articles = JSON.parse(jsonMatch[0]);
         } catch (secondParseError) {
           if (supabase) await logProgress(supabase, 'openai-response-parse', 'error', 'Failed to parse JSON');
-          throw new Error(`Failed to parse extracted JSON: ${secondParseError.message}`);
+          throw new Error(`Failed to parse extracted JSON: ${secondParseError instanceof Error ? secondParseError.message : String(secondParseError)}`);
         }
       } else {
         if (supabase) await logProgress(supabase, 'openai-response-parse', 'error', 'No JSON array found');
@@ -745,14 +745,14 @@ Extract only actual news articles, not navigation or ads. If no clear articles a
   } catch (error) {
     console.error('💥 OpenAI extraction error:', error);
     
-    if (supabase) await logProgress(supabase, 'openai-error', 'error', {
-      message: error.message,
-      type: error.name
+    if (supabase) await logProgress(supabase, 'content-extraction-error', 'error', {
+      message: error instanceof Error ? error.message : String(error),
+      type: error instanceof Error ? error.name : 'unknown'
     });
     
     return {
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }

@@ -126,7 +126,7 @@ serve(async (req) => {
           success: false,
           articles_found: 0,
           articles_stored: 0,
-          errors: [error.message],
+          errors: [error instanceof Error ? error.message : String(error)],
           duration_ms: 0,
           scraper_used: 'failed'
         });
@@ -185,7 +185,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       message: '🚨 Emergency scraping test failed - check logs for details'
     }), {
       status: 500,

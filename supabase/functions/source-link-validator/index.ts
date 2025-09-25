@@ -116,7 +116,7 @@ serve(async (req) => {
     console.error('❌ Error in source-link-validator:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -153,12 +153,12 @@ async function validateUrl(url: string): Promise<{status: 'valid' | 'broken' | '
       };
     }
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       return { status: 'timeout', error: 'Request timeout' };
     }
     return { 
       status: 'broken', 
-      error: error.message || 'Network error' 
+      error: (error instanceof Error ? error.message : String(error)) || 'Network error' 
     };
   }
 }

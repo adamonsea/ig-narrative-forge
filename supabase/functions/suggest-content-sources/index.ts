@@ -151,7 +151,7 @@ Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
     console.error('Error in suggest-content-sources function:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: error.message || 'Failed to generate source suggestions',
+      error: (error instanceof Error ? error.message : String(error)) || 'Failed to generate source suggestions',
       suggestions: []
     }), {
       status: 200, // Changed from 500 to avoid CORS issues
