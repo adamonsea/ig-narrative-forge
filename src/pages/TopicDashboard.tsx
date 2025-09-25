@@ -18,7 +18,6 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
-import { SmartKeywordSuggestions } from "@/components/SmartKeywordSuggestions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle } from "lucide-react";
@@ -616,25 +615,10 @@ const TopicDashboard = () => {
           </TabsList>
 
           <TabsContent value="content-flow" className="space-y-6">
-            {/* Smart Keyword Suggestions */}
-            <SmartKeywordSuggestions
-              topicId={topic.id}
-              currentKeywords={topic.keywords}
-              onKeywordAdd={async (keyword: string) => {
-                const updatedKeywords = [...topic.keywords, keyword];
-                const { error } = await supabase
-                  .from('topics')
-                  .update({ keywords: updatedKeywords })
-                  .eq('id', topic.id);
-                
-                if (error) throw error;
-                
-                setTopic(prev => prev ? { ...prev, keywords: updatedKeywords } : prev);
-              }}
-            />
-            
             {/* Sentiment Insights - Show when data exists */}
-            <SentimentInsights topicId={topic.id} />
+            {stats.sentiment_cards > 0 && (
+              <SentimentInsights topicId={topic.id} isExpanded={false} />
+            )}
             
             {/* Manual Content Staging Area - Critical: Above main pipeline */}
             <ManualContentStaging 

@@ -270,6 +270,22 @@ serve(async (req) => {
         ...(topicSettings ? {} : { analysis_frequency_hours: 24 })
       });
 
+    // Prepare keyword suggestions (keywords that could be added to topic)
+    const keywordSuggestions = keywordAnalysis
+      .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Lower threshold for suggestions
+      .filter(k => !topicKeywords.some(tk => 
+        tk.toLowerCase().includes(k.phrase.toLowerCase()) || 
+        k.phrase.toLowerCase().includes(tk.toLowerCase())
+      )) // Only suggest if not already in topic keywords
+      .slice(0, 8) // Limit to top 8 suggestions
+      .map(k => ({
+        keyword: k.phrase,
+        frequency: k.frequency,
+        confidence: Math.min(95, Math.round((k.frequency / Math.max(contentForAnalysis.length, 1)) * 100 + 50)),
+        sources_count: k.sources.length,
+        sentiment_context: k.sentiment_context
+      }));
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -277,7 +293,8 @@ serve(async (req) => {
         stories_analyzed: contentForAnalysis.length,
         keywords_identified: keywordAnalysis.length,
         cards_generated: generatedCards,
-        content_fingerprint: contentFingerprint
+        content_fingerprint: contentFingerprint,
+        keyword_suggestions: keywordSuggestions
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

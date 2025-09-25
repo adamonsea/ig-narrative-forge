@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Trash2, TrendingUp, TrendingDown, Minus, Bell } from "lucide-react";
+import { Eye, EyeOff, Trash2, TrendingUp, TrendingDown, Minus, Bell, Plus, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -29,6 +29,11 @@ interface SentimentManagerProps {
   topicId: string;
 }
 
+// Add topic interface for the addSuggestedKeyword function
+interface Topic {
+  keywords?: string[];
+}
+
 export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   const [cards, setCards] = useState<SentimentCard[]>([]);
   const [settings, setSettings] = useState({
@@ -38,6 +43,8 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   });
   const [newKeyword, setNewKeyword] = useState("");
   const [loading, setLoading] = useState(true);
+  const [keywordSuggestions, setKeywordSuggestions] = useState<any[]>([]);
+  const [topic, setTopic] = useState<Topic | null>(null);
   const { toast } = useToast();
 
   // Load sentiment cards and settings
@@ -47,6 +54,16 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
 
   const loadSentimentData = async () => {
     try {
+      // Load topic data
+      const { data: topicData, error: topicError } = await supabase
+        .from('topics')
+        .select('keywords')
+        .eq('id', topicId)
+        .single();
+
+      if (topicError) throw topicError;
+      setTopic(topicData);
+
       // Load cards
       const { data: cardsData, error: cardsError } = await supabase
         .from('sentiment_cards')
@@ -105,9 +122,15 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
 
       if (error) throw error;
 
+      // Extract keyword suggestions from response
+      if (data?.keyword_suggestions) {
+        setKeywordSuggestions(data.keyword_suggestions);
+        console.log('📈 Keyword suggestions received:', data.keyword_suggestions);
+      }
+
       toast({
-        title: "Analysis Started",
-        description: "Sentiment analysis has been triggered. Cards will appear shortly."
+        title: "Analysis Complete",
+        description: `Analysis complete! ${data?.cards_generated || 0} cards generated, ${data?.keyword_suggestions?.length || 0} keyword suggestions found.`
       });
 
       console.log('✅ Analysis triggered successfully');
@@ -233,6 +256,35 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
     }
   };
 
+  const addSuggestedKeyword = async (keyword: string) => {
+    try {
+      // Add to topic keywords
+      const { error } = await supabase
+        .from('topics')
+        .update({ 
+          keywords: [...(topic?.keywords || []), keyword] 
+        })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      // Remove from suggestions
+      setKeywordSuggestions(prev => prev.filter(s => s.keyword !== keyword));
+
+      toast({
+        title: "Keyword Added",
+        description: `"${keyword}" has been added to your topic keywords`
+      });
+    } catch (error) {
+      console.error('Error adding keyword:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add keyword",
+        variant: "destructive"
+      });
+    }
+  };
+
   const removeExcludedKeyword = (keyword: string) => {
     updateSettings({
       excluded_keywords: settings.excluded_keywords.filter(k => k !== keyword)
@@ -284,6 +336,7 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
               </p>
             </div>
             <Button onClick={triggerAnalysis} variant="outline">
+              <Sparkles className="h-4 w-4 mr-2" />
               Run Analysis
             </Button>
           </div>
@@ -380,9 +433,42 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Keyword Suggestions */}
+          {keywordSuggestions.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Trending Keywords Found
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Keywords extracted from your published content that could enhance targeting
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {keywordSuggestions.map((suggestion) => (
+                    <Badge
+                      key={suggestion.keyword}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onClick={() => addSuggestedKeyword(suggestion.keyword)}
+                      title={`${suggestion.frequency} mentions, ${suggestion.sources_count} sources, ${suggestion.confidence}% confidence`}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {suggestion.keyword}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Click to add keywords to your topic • Based on {keywordSuggestions.reduce((sum, s) => sum + s.sources_count, 0)} sources
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
       )}
 
       {/* All Sentiment Cards */}
