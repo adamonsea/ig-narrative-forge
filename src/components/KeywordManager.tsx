@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, X, Hash, MapPin, Building, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { KeywordSuggestionTool } from "./KeywordSuggestionTool";
+import { RegionalElementsSuggestionTool } from "./RegionalElementsSuggestionTool";
 
 interface Topic {
   id: string;
@@ -56,11 +58,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     return () => window.removeEventListener('keywordAdded', handleKeywordAdded);
   }, [topic]);
 
-  const addKeyword = async () => {
-    if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      const newKeywords = [...keywords, newKeyword.trim()];
+  const addKeyword = async (keywordToAdd?: string) => {
+    const keywordValue = keywordToAdd || newKeyword.trim();
+    if (keywordValue && !keywords.includes(keywordValue)) {
+      const newKeywords = [...keywords, keywordValue];
       setKeywords(newKeywords);
-      setNewKeyword('');
+      if (!keywordToAdd) setNewKeyword(''); // Only clear input if manually typed
       
       // Auto-save keyword immediately
       setSaving(true);
@@ -88,7 +91,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
 
         toast({
           title: "Keyword Added",
-          description: `"${newKeywords[newKeywords.length - 1]}" added and articles rescored`,
+          description: `"${keywordValue}" added and articles rescored`,
         });
       } catch (error) {
         console.error('Error adding keyword:', error);
@@ -146,11 +149,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     }
   };
 
-  const addLandmark = async () => {
-    if (newLandmark.trim() && !landmarks.includes(newLandmark.trim())) {
-      const newLandmarks = [...landmarks, newLandmark.trim()];
+  const addLandmark = async (landmarkToAdd?: string) => {
+    const landmarkValue = landmarkToAdd || newLandmark.trim();
+    if (landmarkValue && !landmarks.includes(landmarkValue)) {
+      const newLandmarks = [...landmarks, landmarkValue];
       setLandmarks(newLandmarks);
-      setNewLandmark('');
+      if (!landmarkToAdd) setNewLandmark(''); // Only clear input if manually typed
       
       // Auto-save for regional fields too
       if (topic.topic_type === 'regional') {
@@ -232,11 +236,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     }
   };
 
-  const addPostcode = async () => {
-    if (newPostcode.trim() && !postcodes.includes(newPostcode.trim())) {
-      const newPostcodes = [...postcodes, newPostcode.trim()];
+  const addPostcode = async (postcodeToAdd?: string) => {
+    const postcodeValue = postcodeToAdd || newPostcode.trim();
+    if (postcodeValue && !postcodes.includes(postcodeValue)) {
+      const newPostcodes = [...postcodes, postcodeValue];
       setPostcodes(newPostcodes);
-      setNewPostcode('');
+      if (!postcodeToAdd) setNewPostcode(''); // Only clear input if manually typed
       
       if (topic.topic_type === 'regional') {
         setSaving(true);
@@ -317,11 +322,12 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
     }
   };
 
-  const addOrganization = async () => {
-    if (newOrganization.trim() && !organizations.includes(newOrganization.trim())) {
-      const newOrganizations = [...organizations, newOrganization.trim()];
+  const addOrganization = async (organizationToAdd?: string) => {
+    const organizationValue = organizationToAdd || newOrganization.trim();
+    if (organizationValue && !organizations.includes(organizationValue)) {
+      const newOrganizations = [...organizations, organizationValue];
       setOrganizations(newOrganizations);
-      setNewOrganization('');
+      if (!organizationToAdd) setNewOrganization(''); // Only clear input if manually typed
       
       if (topic.topic_type === 'regional') {
         setSaving(true);
@@ -429,7 +435,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                 onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
               />
               <Button 
-                onClick={addKeyword} 
+                onClick={() => addKeyword()} 
                 size="sm" 
                 variant="outline"
                 disabled={saving}
@@ -453,6 +459,17 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                 </Badge>
               ))}
             </div>
+            
+            {/* Keyword Suggestions */}
+            <KeywordSuggestionTool
+              topicName={topic.name}
+              description=""
+              keywords={keywords}
+              topicType={topic.topic_type}
+              region={topic.region}
+              onKeywordAdd={addKeyword}
+              existingKeywords={keywords}
+            />
           </div>
 
           {/* Regional-specific fields */}
@@ -473,7 +490,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     placeholder="Add landmark or place..."
                     onKeyPress={(e) => e.key === 'Enter' && addLandmark()}
                   />
-                  <Button onClick={addLandmark} size="sm" variant="outline">
+                  <Button onClick={() => addLandmark()} size="sm" variant="outline">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -492,6 +509,22 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     </Badge>
                   ))}
                 </div>
+                
+                {/* Landmark Suggestions */}
+                {topic.region && (
+                  <RegionalElementsSuggestionTool
+                    topicName={topic.name}
+                    region={topic.region}
+                    description=""
+                    keywords={keywords}
+                    elementType="landmarks"
+                    existingElements={landmarks}
+                    onElementAdd={addLandmark}
+                    existingLandmarks={landmarks}
+                    existingPostcodes={postcodes}
+                    existingOrganizations={organizations}
+                  />
+                )}
               </div>
 
               {/* Postcodes */}
@@ -507,7 +540,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     placeholder="Add postcode..."
                     onKeyPress={(e) => e.key === 'Enter' && addPostcode()}
                   />
-                  <Button onClick={addPostcode} size="sm" variant="outline">
+                  <Button onClick={() => addPostcode()} size="sm" variant="outline">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -526,6 +559,22 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     </Badge>
                   ))}
                 </div>
+                
+                {/* Postcode Suggestions */}
+                {topic.region && (
+                  <RegionalElementsSuggestionTool
+                    topicName={topic.name}
+                    region={topic.region}
+                    description=""
+                    keywords={keywords}
+                    elementType="postcodes"
+                    existingElements={postcodes}
+                    onElementAdd={addPostcode}
+                    existingLandmarks={landmarks}
+                    existingPostcodes={postcodes}
+                    existingOrganizations={organizations}
+                  />
+                )}
               </div>
 
               {/* Organizations */}
@@ -541,7 +590,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     placeholder="Add organization..."
                     onKeyPress={(e) => e.key === 'Enter' && addOrganization()}
                   />
-                  <Button onClick={addOrganization} size="sm" variant="outline">
+                  <Button onClick={() => addOrganization()} size="sm" variant="outline">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -560,6 +609,22 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
                     </Badge>
                   ))}
                 </div>
+                
+                {/* Organization Suggestions */}
+                {topic.region && (
+                  <RegionalElementsSuggestionTool
+                    topicName={topic.name}
+                    region={topic.region}
+                    description=""
+                    keywords={keywords}
+                    elementType="organizations"
+                    existingElements={organizations}
+                    onElementAdd={addOrganization}
+                    existingLandmarks={landmarks}
+                    existingPostcodes={postcodes}
+                    existingOrganizations={organizations}
+                  />
+                )}
               </div>
             </>
           )}
