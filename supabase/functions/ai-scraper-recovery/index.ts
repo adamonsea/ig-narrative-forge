@@ -147,7 +147,8 @@ serve(async (req) => {
             storedCount++;
           }
         } catch (error) {
-          console.log(`❌ Article storage failed: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(`❌ Article storage failed: ${errorMessage}`);
         }
       }
 
@@ -189,10 +190,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 AI Scraper Recovery error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: errorMessage,
         method: 'ai_recovery',
         articles: [],
         articlesFound: 0,
@@ -288,10 +291,11 @@ async function tryUrlRecovery(failedUrl: string, source: any, apiKey: string): P
     }
   } catch (error) {
     console.error('❌ URL recovery failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       method: 'url_recovery_failed',
-      error: error.message
+      error: errorMessage
     };
   }
 }
@@ -404,7 +408,8 @@ async function tryAIContentExtraction(url: string, source: any, region?: string,
         throw new Error('No JSON array found in response');
       }
     } catch (error) {
-      console.log('❌ Failed to parse AI response as JSON:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log('❌ Failed to parse AI response as JSON:', errorMessage);
       return {
         success: false,
         method: 'ai_extraction_failed',
@@ -459,10 +464,11 @@ async function tryAIContentExtraction(url: string, source: any, region?: string,
 
   } catch (error) {
     console.error('❌ AI content extraction failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       method: 'ai_extraction_failed',
-      error: error.message,
+      error: errorMessage,
       articlesFound: 0,
       articlesScraped: 0
     };

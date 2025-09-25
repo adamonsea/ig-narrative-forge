@@ -217,11 +217,14 @@ Create a perfect mix for ${regionText} - make locals excited about both the big 
 
   } catch (error) {
     console.error('❌ Error in ai-event-generator function:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
-        details: error.stack
+        error: errorMessage,
+        details: errorStack
       }),
       {
         status: 500,

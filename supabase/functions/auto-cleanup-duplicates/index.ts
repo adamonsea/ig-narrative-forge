@@ -33,7 +33,7 @@ serve(async (req) => {
       .update({ processing_status: 'discarded' })
       .eq('processing_status', 'new')
       .or(`created_at.lt.${oneWeekAgo},shared_article_content.published_at.lt.${oneWeekAgo}`)
-      .select('*, shared_article_content!inner(published_at)', { count: 'exact' });
+      .select('*, shared_article_content!inner(published_at)');
 
     if (oldArticlesError) {
       console.error('❌ Error cleaning old articles:', oldArticlesError);
@@ -106,10 +106,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Error in auto-cleanup-duplicates:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: errorMessage 
       }),
       {
         status: 500,

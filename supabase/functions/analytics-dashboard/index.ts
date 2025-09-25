@@ -93,10 +93,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in analytics-dashboard function:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: errorMessage 
       }),
       {
         status: 500,
@@ -164,7 +165,7 @@ async function generateAnalyticsData(supabase: any, startDate: Date, endDate: Da
     success_rate: source.success_rate || 0,
     avg_quality: 0, // Would calculate from related quality reports
     last_scraped: source.last_scraped_at || 'Never'
-  })).filter(s => s.articles_count > 0);
+  })).filter((s: any) => s.articles_count > 0);
 
   const recommendations = generateRecommendations(performanceMetrics, sourcePerformance, qualityReports || []);
 
