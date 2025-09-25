@@ -16,9 +16,12 @@ import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager"
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
+import { SentimentManager } from "@/components/SentimentManager";
+import { SentimentInsights } from "@/components/SentimentInsights";
+import { SmartKeywordSuggestions } from "@/components/SmartKeywordSuggestions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -31,6 +34,7 @@ interface TopicDashboardStats {
   ready_stories: number;
   arrivals_count: number;
   simplified_stories_24h: number;
+  sentiment_cards: number;
 }
 
 interface Topic {
@@ -72,7 +76,8 @@ const TopicDashboard = () => {
     processing_queue: 0,
     ready_stories: 0,
     arrivals_count: 0,
-    simplified_stories_24h: 0
+    simplified_stories_24h: 0,
+    sentiment_cards: 0
   });
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
@@ -185,6 +190,12 @@ const TopicDashboard = () => {
         .in('article_id', articleIds)
         .gte('created_at', yesterday.toISOString()) : { count: 0 };
 
+      // Get sentiment cards count
+      const sentimentRes = await supabase
+        .from('sentiment_cards')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id);
+
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
@@ -193,7 +204,8 @@ const TopicDashboard = () => {
         processing_queue: queueRes.count || 0,
         ready_stories: readyStoriesRes.count || 0,
         arrivals_count: arrivalsRes.count || 0,
-        simplified_stories_24h: simplifiedRes.count || 0
+        simplified_stories_24h: simplifiedRes.count || 0,
+        sentiment_cards: sentimentRes.count || 0
       });
 
     } catch (error) {
@@ -462,7 +474,7 @@ const TopicDashboard = () => {
             </div>
 
             {/* Essential Metrics - Available Stories */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
@@ -494,6 +506,18 @@ const TopicDashboard = () => {
                     <div>
                       <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
                       <p className="text-sm text-muted-foreground">Available Stories</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-purple-500" />
+                    <div>
+                      <div className="text-2xl font-bold text-purple-500">{stats.sentiment_cards}</div>
+                      <p className="text-sm text-muted-foreground">Sentiment Cards</p>
                     </div>
                   </div>
                 </CardContent>
@@ -592,6 +616,26 @@ const TopicDashboard = () => {
           </TabsList>
 
           <TabsContent value="content-flow" className="space-y-6">
+            {/* Smart Keyword Suggestions */}
+            <SmartKeywordSuggestions
+              topicId={topic.id}
+              currentKeywords={topic.keywords}
+              onKeywordAdd={async (keyword: string) => {
+                const updatedKeywords = [...topic.keywords, keyword];
+                const { error } = await supabase
+                  .from('topics')
+                  .update({ keywords: updatedKeywords })
+                  .eq('id', topic.id);
+                
+                if (error) throw error;
+                
+                setTopic(prev => prev ? { ...prev, keywords: updatedKeywords } : prev);
+              }}
+            />
+            
+            {/* Sentiment Insights - Show when data exists */}
+            <SentimentInsights topicId={topic.id} />
+            
             {/* Manual Content Staging Area - Critical: Above main pipeline */}
             <ManualContentStaging 
               topicId={topic.id} 
@@ -676,6 +720,21 @@ const TopicDashboard = () => {
                 />
               </div>
             )}
+
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5" />
+                  Sentiment Analysis
+                </CardTitle>
+                <CardDescription>
+                  Monitor community sentiment and trends from your published content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <SentimentManager topicId={topic.id} />
+              </CardContent>
+            </Card>
 
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
