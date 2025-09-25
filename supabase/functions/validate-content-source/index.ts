@@ -58,7 +58,7 @@ async function testAccessibility(url: string): Promise<{success: boolean, conten
 
   } catch (error) {
     // Better error categorization
-    let errorMsg = error.message;
+    let errorMsg = error instanceof Error ? error.message : String(error);
     if (errorMsg.includes('certificate') || errorMsg.includes('SSL') || errorMsg.includes('TLS')) {
       errorMsg = 'SSL/TLS certificate error - source may have security issues';
     } else if (errorMsg.includes('timeout') || errorMsg.includes('TIMEOUT')) {

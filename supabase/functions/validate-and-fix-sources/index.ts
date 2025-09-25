@@ -288,7 +288,7 @@ async function testFeedUrl(url: string): Promise<{ isValid: boolean; feedType?: 
     };
 
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if ((error as any)?.name === 'AbortError') {
       return {
         isValid: false,
         error: 'Request timed out'
@@ -296,7 +296,7 @@ async function testFeedUrl(url: string): Promise<{ isValid: boolean; feedType?: 
     }
 
     // Handle SSL certificate errors
-    if (error.message.includes('certificate') && url.startsWith('https://')) {
+    if (error instanceof Error && error.message.includes('certificate') && url.startsWith('https://')) {
       const httpUrl = url.replace('https://', 'http://');
       return await testFeedUrl(httpUrl);
     }

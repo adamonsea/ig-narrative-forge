@@ -142,7 +142,7 @@ serve(async (req) => {
 
     const scraper = new FastTrackScraper(supabase);
     const dbOps = new MultiTenantDatabaseOperations(supabase as any);
-    const results = [];
+    const results: ScraperSourceResult[] = [];
     let processedCount = 0;
     const startTime = Date.now();
     const maxExecutionTime = testMode ? 45000 : 180000; // 45s test mode, 3min normal
@@ -217,7 +217,7 @@ serve(async (req) => {
           success: true,
           message: 'No valid sources to scrape after pre-validation',
           topicId,
-          results
+          results: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -231,14 +231,15 @@ serve(async (req) => {
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime > maxExecutionTime * 0.8) { // Exit at 80% of max time
         console.log(`⏰ Approaching timeout (${elapsedTime}ms), stopping with partial results`);
-        results.push({
+        const timeoutResult: ScraperSourceResult = {
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
           error: 'Stopped due to approaching function timeout',
           articlesFound: 0,
           articlesScraped: 0
-        });
+        };
+        standardResponse.addSourceResult(timeoutResult);
         break;
       }
 
@@ -273,16 +274,14 @@ serve(async (req) => {
             );
 
             // Background update of source metrics (don't wait for it)
-            supabase
+            void supabase
               .from('content_sources')
               .update({
                 articles_scraped: source.articles_scraped + scrapeResult.articlesScraped,
                 last_scraped_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
-              .eq('id', source.source_id)
-              .then(() => console.log(`📈 Updated metrics for ${source.source_name}`))
-              .catch((err: any) => console.log(`⚠️ Failed to update metrics: ${err instanceof Error ? err.message : String(err)}`));
+              .eq('id', source.source_id);
 
             const result: ScraperSourceResult = {
               sourceId: source.source_id,
@@ -420,7 +419,7 @@ serve(async (req) => {
 
       // Apply timeout to the entire source processing
       try {
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise<ScraperSourceResult>((_, reject) => 
           setTimeout(() => reject(new Error(`Source timeout after ${sourceTimeout}ms`)), sourceTimeout)
         );
         
@@ -449,7 +448,7 @@ serve(async (req) => {
     const finalResponse = standardResponse.finalize();
 
     // Background system event logging (don't wait for it)
-    supabase
+    void supabase
       .from('system_logs')
       .insert({
         level: 'info',
@@ -465,9 +464,7 @@ serve(async (req) => {
           testMode
         },
         function_name: 'universal-topic-scraper'
-      })
-      .then(() => console.log('📝 System log recorded'))
-      .catch(err => console.log(`⚠️ Failed to log: ${err.message}`));
+      });
 
     return new Response(
       JSON.stringify(finalResponse),
@@ -483,7 +480,7 @@ serve(async (req) => {
     console.error('Universal Topic Scraper Error:', error);
     
     const errorResponse = new StandardizedScraperResponse();
-    errorResponse.addError(`Critical scraper error: ${error.message}`);
+    errorResponse.addError(`Critical scraper error: ${error instanceof Error ? error.message : String(error)}`);
     errorResponse.setExecutionTime(Date.now() - 1000); // Fallback timing
     
     return new Response(
