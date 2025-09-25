@@ -162,9 +162,9 @@ export class ScrapingStrategies {
       const extractedContent = extractContentFromHTML(articleHtml, articleUrl);
       
       // Use full extracted content, fallback to RSS description
-      const finalContent = extractedContent.body || description || '';
+      let finalContent = extractedContent.body || description || '';
       const finalTitle = extractedContent.title || title;
-      const wordCount = this.countWords(finalContent);
+      let wordCount = this.countWords(finalContent);
       
       // More flexible content acceptance - try to use RSS snippet if full extraction fails
       const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
@@ -227,7 +227,8 @@ export class ScrapingStrategies {
       };
 
     } catch (error) {
-      console.log(`❌ Failed to fetch full content for: ${title.substring(0, 50)}... - ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Failed to fetch full content for: ${title.substring(0, 50)}... - ${errorMessage}`);
       return null;
     }
   }
@@ -293,7 +294,8 @@ export class ScrapingStrategies {
             });
           }
         } catch (error) {
-          errors.push(`Article extraction error: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push(`Article extraction error: ${errorMessage}`);
         }
       }
 
@@ -307,12 +309,13 @@ export class ScrapingStrategies {
       };
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [error.message],
+        errors: [errorMessage],
         method: 'html'
       };
     }

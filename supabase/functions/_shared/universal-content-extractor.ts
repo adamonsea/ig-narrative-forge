@@ -243,15 +243,9 @@ export class UniversalContentExtractor {
     this.siteConfig = SITE_CONFIGS[this.domain] || SITE_CONFIGS['default'];
     this.isGovernmentSite = this.detectGovernmentSite(normalizedUrl);
     
-    // Enhanced configuration for better success rates
+    // Enhanced configuration for better success rates - just keep the site config as is for government sites
     if (this.isGovernmentSite) {
-      this.siteConfig = {
-        ...this.siteConfig,
-        respectfulCrawling: true,
-        minDelay: 3000,
-        maxRetries: 5,
-        timeout: 45000
-      };
+      // Government sites get default config, no extra properties needed
     }
   }
 
@@ -436,7 +430,8 @@ export class UniversalContentExtractor {
         
       } catch (error) {
         lastError = error as Error;
-        console.log(`❌ Attempt ${attempt} failed: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Attempt ${attempt} failed: ${errorMessage}`);
         
         if (attempt < enhancedMaxRetries) {
           // ENHANCED: Intelligent delay based on site type and request count
@@ -461,7 +456,7 @@ export class UniversalContentExtractor {
   }
 
   // Phase 1: New JSON-LD extraction method
-  private extractJSONLDData(doc: Document, property: string): string {
+  private extractJSONLDData(doc: any, property: string): string {
     try {
       const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
       for (const script of scripts) {
@@ -492,7 +487,8 @@ export class UniversalContentExtractor {
         }
       }
     } catch (error) {
-      console.log(`⚠️ JSON-LD extraction failed for ${property}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ JSON-LD extraction failed for ${property}: ${errorMessage}`);
     }
     return '';
   }
@@ -521,7 +517,8 @@ export class UniversalContentExtractor {
         }
       } catch (error) {
         // Silently continue - expected for many URLs
-        console.log(`⚠️ Government RSS pattern ${pattern} failed: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ Government RSS pattern ${pattern} failed: ${errorMessage}`);
       }
     }
 
@@ -656,7 +653,8 @@ export class UniversalContentExtractor {
           bestScore = score;
         }
       } catch (error) {
-        console.log(`⚠️ Strategy "${selector}" failed: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ Strategy "${selector}" failed: ${errorMessage}`);
       }
     }
 
@@ -719,12 +717,6 @@ export class UniversalContentExtractor {
     }
     
     return paragraphs.join('\n\n');
-  }
-  
-  private isNavigationContent(text: string): boolean {
-    const navKeywords = ['menu', 'navigation', 'subscribe', 'follow us', 'share', 'comment', 'related articles'];
-    const textLower = text.toLowerCase();
-    return navKeywords.some(keyword => textLower.includes(keyword)) || text.length < 15;
   }
   
   private isNavigationContent(text: string): boolean {
