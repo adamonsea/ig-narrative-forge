@@ -305,7 +305,9 @@ export class DatabaseOperations {
 
         // Only update articles_scraped if we actually stored articles
         if (articlesStored > 0) {
-          updateData.articles_scraped = (source.articles_scraped || 0) + articlesStored;
+          // Note: articles_scraped field may not exist on source object, so we handle it safely
+          const currentArticlesScraped = (source as any).articles_scraped || 0;
+          (updateData as any).articles_scraped = currentArticlesScraped + articlesStored;
         }
 
         await this.supabase

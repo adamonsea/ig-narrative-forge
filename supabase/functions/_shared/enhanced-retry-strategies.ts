@@ -135,9 +135,10 @@ export class EnhancedRetryStrategies {
 
       } catch (error) {
         context.previousAttempts = attempt;
-        context.lastError = error.message;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        context.lastError = errorMessage;
         
-        console.log(`❌ Attempt ${attempt + 1} failed: ${error.message}`);
+        console.log(`❌ Attempt ${attempt + 1} failed: ${errorMessage}`);
         
         // Don't retry on certain errors
         if (this.isFatalError(error)) {
@@ -146,7 +147,8 @@ export class EnhancedRetryStrategies {
         
         // If this was our last attempt, throw the error
         if (attempt === config.maxRetries) {
-          throw new Error(`All retry attempts failed. Last error: ${error.message}`);
+          const lastErrorMessage = error instanceof Error ? error.message : String(error);
+          throw new Error(`All retry attempts failed. Last error: ${lastErrorMessage}`);
         }
         
         console.log(`⏳ Retrying in ${Math.round(this.calculateDelay(context, config))}ms...`);
@@ -300,10 +302,11 @@ export class EnhancedRetryStrategies {
       };
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         accessible: false,
         responseTime: Date.now() - startTime,
-        error: error.message
+        error: errorMessage
       };
     }
   }
@@ -357,7 +360,8 @@ export class EnhancedRetryStrategies {
       console.log('Source health data:', JSON.stringify(healthData, null, 2));
       
     } catch (logError) {
-      console.log(`❌ Failed to log source health: ${logError.message}`);
+      const logErrorMessage = logError instanceof Error ? logError.message : String(logError);
+      console.log(`❌ Failed to log source health: ${logErrorMessage}`);
     }
   }
 }

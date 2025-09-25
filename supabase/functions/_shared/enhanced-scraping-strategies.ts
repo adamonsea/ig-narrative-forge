@@ -36,7 +36,8 @@ export class EnhancedScrapingStrategies {
         const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(feedUrl);
         return await this.parseRSSContent(rssContent, feedUrl);
       } catch (primaryError) {
-        console.log(`❌ Primary RSS URL failed: ${primaryError.message}`);
+        const primaryErrorMessage = primaryError instanceof Error ? primaryError.message : String(primaryError);
+        console.log(`❌ Primary RSS URL failed: ${primaryErrorMessage}`);
         
         // Smart URL discovery - try common RSS patterns
         const discoveredFeeds = await this.discoverRSSFeeds(this.baseUrl);
@@ -47,10 +48,11 @@ export class EnhancedScrapingStrategies {
             const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(discoveredFeedUrl);
             const result = await this.parseRSSContent(rssContent, discoveredFeedUrl);
             if (result.success && result.articles.length > 0) {
-              return { ...result, method: 'rss_discovery' };
+              return { ...result, method: 'rss' }; // Use 'rss' instead of 'rss_discovery'
             }
           } catch (discoverError) {
-            console.log(`⚠️ Discovered RSS feed ${discoveredFeedUrl} failed: ${discoverError.message}`);
+            const discoverErrorMessage = discoverError instanceof Error ? discoverError.message : String(discoverError);
+            console.log(`⚠️ Discovered RSS feed ${discoveredFeedUrl} failed: ${discoverErrorMessage}`);
           }
         }
         
@@ -63,10 +65,11 @@ export class EnhancedScrapingStrategies {
             const rssContent = await this.extractor.fetchWithRetry(govFeedUrl);
             const result = await this.parseRSSContent(rssContent, govFeedUrl);
             if (result.success && result.articles.length > 0) {
-              return { ...result, method: 'government_rss_discovery' };
+              return { ...result, method: 'rss' }; // Use 'rss' instead of 'government_rss_discovery'
             }
           } catch (govError) {
-            console.log(`⚠️ Government RSS feed ${govFeedUrl} failed: ${govError.message}`);
+            const govErrorMessage = govError instanceof Error ? govError.message : String(govError);
+            console.log(`⚠️ Government RSS feed ${govFeedUrl} failed: ${govErrorMessage}`);
           }
         }
         
