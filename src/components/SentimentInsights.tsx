@@ -26,9 +26,10 @@ interface SentimentCard {
 interface SentimentInsightsProps {
   topicId: string;
   isExpanded?: boolean;
+  onNavigateToSentiment?: () => void;
 }
 
-export const SentimentInsights = ({ topicId, isExpanded = false }: SentimentInsightsProps) => {
+export const SentimentInsights = ({ topicId, isExpanded = false, onNavigateToSentiment }: SentimentInsightsProps) => {
   const [cards, setCards] = useState<SentimentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(isExpanded);
@@ -222,11 +223,14 @@ export const SentimentInsights = ({ topicId, isExpanded = false }: SentimentInsi
                 size="sm" 
                 className="w-full"
                 onClick={() => {
-                  // This could navigate to the full sentiment manager or trigger analysis
-                  toast({
-                    title: "Feature Available",
-                    description: "Full sentiment management is available in Advanced Tools",
-                  });
+                  if (onNavigateToSentiment) {
+                    onNavigateToSentiment();
+                  } else {
+                    toast({
+                      title: "Feature Available",
+                      description: "Full sentiment management is available in Advanced Tools",
+                    });
+                  }
                 }}
               >
                 <MessageCircle className="w-4 h-4 mr-2" />

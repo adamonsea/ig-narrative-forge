@@ -55,6 +55,7 @@ serve(async (req) => {
     }
 
     console.log('Starting sentiment analysis for topic:', topicId);
+    console.log('Enhanced version: supports both ready and published status');
 
     // Get topic settings and configuration
     const { data: topicSettings, error: settingsError } = await supabase
@@ -97,7 +98,7 @@ serve(async (req) => {
 
     console.log('Fetching published stories for topic:', topicId);
     
-    // Only get published, ready stories with high regional relevance (like the topic feed)
+    // Get published stories using the existing legacy structure that we know works for Eastbourne
     const { data: stories, error: storiesError } = await supabase
       .from('stories')
       .select(`
@@ -119,10 +120,10 @@ serve(async (req) => {
       `)
       .eq('articles.topic_id', topicId)
       .eq('is_published', true)
-      .eq('status', 'ready')
+      .in('status', ['ready', 'published']) // Accept both ready and published status
       .eq('articles.processing_status', 'processed')
-      .gte('articles.regional_relevance_score', topicSettings?.region ? 25 : 0)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .gte('articles.regional_relevance_score', 0) // Lower threshold to be more inclusive
+      .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Extended to 14 days
       .order('created_at', { ascending: false });
 
     if (storiesError) {
@@ -130,7 +131,9 @@ serve(async (req) => {
       throw storiesError;
     }
 
-    // Use only published story content for analysis
+    console.log(`Found ${stories?.length || 0} published stories for analysis`);
+
+    // Use published story content for analysis
     const contentForAnalysis = stories.map(story => ({
       title: story.articles.title,
       body: story.articles.body,

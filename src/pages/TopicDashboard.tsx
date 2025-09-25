@@ -81,6 +81,7 @@ const TopicDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const [gatheringAll, setGatheringAll] = useState(false);
+  const [activeTab, setActiveTab] = useState("content-flow");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -607,7 +608,7 @@ const TopicDashboard = () => {
         </Card>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="content-flow" className="space-y-6">
+        <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content-flow">Content Flow</TabsTrigger>
             <TabsTrigger value="automation">Automation & Sources</TabsTrigger>
@@ -617,7 +618,20 @@ const TopicDashboard = () => {
           <TabsContent value="content-flow" className="space-y-6">
             {/* Sentiment Insights - Show when data exists */}
             {stats.sentiment_cards > 0 && (
-              <SentimentInsights topicId={topic.id} isExpanded={false} />
+              <SentimentInsights 
+                topicId={topic.id} 
+                isExpanded={false} 
+                onNavigateToSentiment={() => {
+                  setActiveTab("advanced");
+                  // Scroll to sentiment section after tab change
+                  setTimeout(() => {
+                    const sentimentSection = document.getElementById('sentiment-section');
+                    if (sentimentSection) {
+                      sentimentSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 100);
+                }}
+              />
             )}
             
             {/* Manual Content Staging Area - Critical: Above main pipeline */}
@@ -705,7 +719,7 @@ const TopicDashboard = () => {
               </div>
             )}
 
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+            <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageCircle className="w-5 h-5" />
