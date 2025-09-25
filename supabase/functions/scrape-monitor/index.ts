@@ -37,7 +37,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Scrape monitor error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -86,14 +86,14 @@ async function getDashboardData(supabase: any) {
 
   // Calculate metrics
   const totalSchedules = schedules.length;
-  const avgSuccessRate = schedules.reduce((sum, s) => sum + (s.success_rate || 0), 0) / totalSchedules;
+  const avgSuccessRate = schedules.reduce((sum: number, s: any) => sum + (s.success_rate || 0), 0) / totalSchedules;
   
-  const jobsByStatus = jobs.reduce((acc, job) => {
+  const jobsByStatus = jobs.reduce((acc: Record<string, number>, job: any) => {
     acc[job.status] = (acc[job.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const articlesPerDay = articles.reduce((acc, article) => {
+  const articlesPerDay = articles.reduce((acc: Record<string, number>, article: any) => {
     const date = new Date(article.created_at).toDateString();
     acc[date] = (acc[date] || 0) + 1;
     return acc;
@@ -188,7 +188,7 @@ async function getScheduleHealth(supabase: any) {
     throw new Error(`Failed to fetch schedule health: ${error.message}`);
   }
 
-  const healthData = (schedules || []).map(schedule => {
+  const healthData = (schedules || []).map((schedule: any) => {
     const source = schedule.content_sources as any;
     const timeSinceLastRun = schedule.last_run_at 
       ? Date.now() - new Date(schedule.last_run_at).getTime()

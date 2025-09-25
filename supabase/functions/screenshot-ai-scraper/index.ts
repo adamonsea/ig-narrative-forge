@@ -72,7 +72,7 @@ function safeParseDateString(dateStr: string): Date | null {
 
     return null;
   } catch (error) {
-    console.error('Date parsing error:', error);
+    console.error('Date parsing error:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }
@@ -117,7 +117,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Failed to create Supabase client: ${clientError.message}`,
+        error: `Failed to create Supabase client: ${clientError instanceof Error ? clientError.message : String(clientError)}`,
         debug: 'Check Supabase configuration'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -194,7 +194,7 @@ serve(async (req) => {
           accessible: fallbackResponse.ok 
         });
       } catch (fallbackError) {
-        await logProgress(supabase, 'fallback-test', 'error', fallbackError.message);
+        await logProgress(supabase, 'fallback-test', 'error', fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
       }
       
       return new Response(
@@ -247,7 +247,7 @@ serve(async (req) => {
 
     const { articles, cost } = extractionResult;
     await logProgress(supabase, 'ai-extraction', 'success', { 
-      articlesCount: articles.length,
+      articlesCount: articles?.length || 0,
       cost 
     });
 
@@ -258,7 +258,7 @@ serve(async (req) => {
     let successfullyInserted = [];
 
     // Store articles in database
-    if (articles.length > 0) {
+    if (articles && articles.length > 0) {
       await logProgress(supabase, 'database-insert', 'start', { count: articles.length });
       
       const articlesToInsert = articles.map((article: any) => {
@@ -322,7 +322,7 @@ serve(async (req) => {
         } catch (error) {
           actualErrors.push({
             article: article.title,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           });
         }
       }
@@ -357,7 +357,7 @@ serve(async (req) => {
     }
 
     await logProgress(supabase, 'function-complete', 'success', {
-      articlesExtracted: articles.length,
+      articlesExtracted: articles?.length || 0,
       articlesInserted: insertedCount || 0,
       duplicatesFound: duplicateCount || 0,
       cost: cost || 0
@@ -366,28 +366,28 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        articles,
-        articlesFound: articles.length,
+        articles: articles || [],
+        articlesFound: articles?.length || 0,
         articlesInserted: insertedCount || 0,
         duplicatesFound: duplicateCount || 0,
         cost,
         screenshotUrl: screenshotResult.screenshotUrl,
         message: duplicateCount > 0 ? 
-          `Successfully extracted ${articles.length} articles. ${insertedCount || 0} new articles added, ${duplicateCount} duplicates prevented.` :
-          `Successfully extracted and stored ${articles.length} articles.`
+          `Successfully extracted ${articles?.length || 0} articles. ${insertedCount || 0} new articles added, ${duplicateCount} duplicates prevented.` :
+          `Successfully extracted and stored ${articles?.length || 0} articles.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('💥 Critical function error:', error);
-    console.error('💥 Stack trace:', error.stack);
+    console.error('💥 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     
     // Always log critical errors
     try {
       await logProgress(supabase, 'critical-error', 'error', {
-        message: error.message,
-        stack: error.stack,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack trace',
         timestamp: new Date().toISOString()
       });
     } catch (logError) {
@@ -398,7 +398,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: `Critical error: ${error.message}`,
+        error: `Critical error: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date().toISOString(),
         debug: 'Check system_logs table for detailed error information'
       }),

@@ -38,7 +38,7 @@ serve(async (req) => {
     
     console.log(`🔄 Reset action: ${action}`, { jobId, storyId });
 
-    let result = { success: false, message: '', data: null };
+    let result: { success: boolean; message: string; data: any } = { success: false, message: '', data: null };
 
     switch (action) {
       case 'reset_stuck_processing':
@@ -182,7 +182,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

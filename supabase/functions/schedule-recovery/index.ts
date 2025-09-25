@@ -60,7 +60,7 @@ serve(async (req) => {
         console.log('✅ Universal platform fix completed')
       }
     } catch (error) {
-      console.error('Failed to invoke universal platform fix:', error)
+      console.error('Failed to invoke universal platform fix:', error instanceof Error ? error.message : String(error))
     }
 
     // 5. Clean up old logs and data
@@ -89,7 +89,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Schedule recovery failed',
+        error: error instanceof Error ? error.message : String(error) || 'Schedule recovery failed',
         timestamp: new Date().toISOString()
       }),
       { 
@@ -127,6 +127,6 @@ async function performMaintenanceCleanup(supabase: any) {
     console.log('✅ Maintenance cleanup completed')
     
   } catch (error) {
-    console.error('Maintenance cleanup failed:', error)
+    console.error('Maintenance cleanup failed:', error instanceof Error ? error.message : String(error))
   }
 }

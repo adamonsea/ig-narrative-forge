@@ -153,7 +153,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in reddit-community-processor:', error);
     return new Response(
-      JSON.stringify({ error: error.message }), 
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), 
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -260,7 +260,7 @@ async function fetchRedditRSS(subreddit: string): Promise<RedditPost[]> {
     return posts;
     
   } catch (error) {
-    console.warn(`Failed to fetch RSS for r/${subreddit}:`, error.message);
+    console.warn(`Failed to fetch RSS for r/${subreddit}:`, error instanceof Error ? error.message : String(error));
     return [];
   }
 }
@@ -328,7 +328,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
     })) || [];
     
   } catch (error) {
-    console.warn('DeepSeek analysis failed:', error.message);
+    console.warn('DeepSeek analysis failed:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
