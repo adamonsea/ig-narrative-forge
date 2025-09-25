@@ -84,10 +84,11 @@ export async function fetchWithRetry(url: string, maxRetries: number = 3): Promi
       
     } catch (error) {
       lastError = error as Error;
-      console.log(`❌ Attempt ${attempt} failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Attempt ${attempt} failed: ${errorMessage}`);
       
       // If it's an HTTP/2 error, try alternative URL schemes on next attempt
-      if (error.message.includes('http2') && attempt < maxRetries) {
+      if (errorMessage.includes('http2') && attempt < maxRetries) {
         console.log(`🔄 HTTP/2 protocol error detected, will retry with different headers`);
       }
       
@@ -211,8 +212,8 @@ export function extractContentFromHTML(html: string, url: string): ContentExtrac
   }
 
   // Strategy 3: Paragraph extraction as fallback - FOCUS ON WORD COUNT
-  const wordCount = countWords(content);
-  if (!content || wordCount < 50) {
+  const initialWordCount = countWords(content);
+  if (!content || initialWordCount < 50) {
     console.log('🔄 Trying paragraph extraction fallback...');
     content = extractParagraphs(cleanHtml);
     extractionMethod = 'paragraph-fallback';
@@ -275,7 +276,8 @@ function extractBySelector(html: string, selector: string): string {
       }
     }
   } catch (error) {
-    console.log(`Error extracting with selector ${selector}: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log(`Error extracting with selector ${selector}: ${errorMessage}`);
   }
   return '';
 }
@@ -372,7 +374,8 @@ function normalizeDate(dateStr: string): string {
     return new Date().toISOString();
     
   } catch (error) {
-    console.error(`❌ Date parsing error for "${dateStr}": ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Date parsing error for "${dateStr}": ${errorMessage}`);
     return new Date().toISOString();
   }
 }

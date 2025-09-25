@@ -20,11 +20,11 @@ export class BeautifulSoupParser {
 
   // Beautiful Soup-like find methods
   find(selector: string): cheerio.Cheerio<cheerio.Element> {
-    return this.$(selector);
+    return this.$(selector) as cheerio.Cheerio<cheerio.Element>;
   }
 
   findAll(selector: string): cheerio.Cheerio<cheerio.Element> {
-    return this.$(selector);
+    return this.$(selector) as cheerio.Cheerio<cheerio.Element>;
   }
 
   // Extract main article content (like Beautiful Soup's get_text())
@@ -50,7 +50,8 @@ export class BeautifulSoupParser {
           return result;
         }
       } catch (error) {
-        console.log(`❌ Strategy failed: ${strategy.name} - ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Strategy failed: ${strategy.name} - ${errorMessage}`);
       }
     }
 
@@ -339,8 +340,7 @@ export class BeautifulSoupParser {
       author: this.extractAuthor(),
       published_at: this.extractPublishDate(),
       word_count: wordCount,
-      content_quality_score: this.calculateQualityScore(content, wordCount),
-      extraction_method: method
+      content_quality_score: this.calculateQualityScore(content, wordCount)
     };
   }
 

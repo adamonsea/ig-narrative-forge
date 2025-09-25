@@ -239,19 +239,21 @@ export class DatabaseOperations {
           });
 
       } catch (error) {
-        console.error(`❌ Exception processing article "${article.title}": ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        console.error(`❌ Exception processing article "${article.title}": ${errorMessage}`);
         console.error('Exception details:', error);
         
         // Log system error for monitoring
         await this.logSystemEvent(
           'error',
-          `Exception processing article: ${error.message}`,
+          `Exception processing article: ${errorMessage}`,
           {
             article_title: article.title,
             source_url: article.source_url,
             source_id: sourceId,
             topic_id: topicId,
-            stack: error.stack
+            stack: errorStack
           },
           'database-operations.storeArticles'
         );
@@ -314,7 +316,8 @@ export class DatabaseOperations {
         console.log(`📈 Updated source metrics: success ${successCount}/${totalScrapes}, ${newSuccessRate}% rate${articlesStored > 0 ? `, +${articlesStored} articles` : ''}`);
       }
     } catch (error) {
-      console.error(`❌ Error updating source metrics: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error updating source metrics: ${errorMessage}`);
     }
   }
 
@@ -369,7 +372,8 @@ export class DatabaseOperations {
         console.log(`🚫 Permanently discarded article: ${article.title} (${article.source_url})`);
       }
     } catch (error) {
-      console.error(`❌ Error marking article as manually discarded: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error marking article as manually discarded: ${errorMessage}`);
     }
   }
 
@@ -390,7 +394,8 @@ export class DatabaseOperations {
           created_at: new Date().toISOString()
         });
     } catch (error) {
-      console.error(`❌ Error logging system event: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error logging system event: ${errorMessage}`);
     }
   }
 
@@ -417,7 +422,8 @@ export class DatabaseOperations {
       
       return data || this.normalizeUrl(url);
     } catch (error) {
-      console.warn(`Warning: Enhanced URL normalization error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Enhanced URL normalization error: ${errorMessage}`);
       return this.normalizeUrl(url);
     }
   }
@@ -484,7 +490,8 @@ export class DatabaseOperations {
       }
       
     } catch (error) {
-      console.warn(`Warning: Error calculating originality confidence: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`Warning: Error calculating originality confidence: ${errorMessage}`);
     }
     
     return Math.max(0, Math.min(100, confidence));
@@ -639,10 +646,11 @@ export class DatabaseOperations {
       
       return recovered;
     } catch (error) {
-      console.error(`❌ Error during URL recovery: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Error during URL recovery: ${errorMessage}`);
       await this.logSystemEvent(
         'error',
-        `Failed to recover orphaned URLs: ${error.message}`,
+        `Failed to recover orphaned URLs: ${errorMessage}`,
         { source_id: sourceId, topic_id: topicId },
         'database-operations.recoverOrphanedUrls'
       );
