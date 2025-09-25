@@ -258,7 +258,7 @@ serve(async (req) => {
                     .single();
 
                   if (existingQueue) {
-                    console.log(`⏭️ Article already in queue: ${article.shared_article_content.title}`);
+                    console.log(`⏭️ Article already in queue: ${(article.shared_article_content as any)?.title || 'Unknown Title'}`);
                     continue;
                   }
 
@@ -291,7 +291,7 @@ serve(async (req) => {
                     .eq('id', article.id);
 
                   userStoriesGenerated++;
-                  console.log(`✅ Queued for simplification: ${article.shared_article_content.title}`);
+                  console.log(`✅ Queued for simplification: ${(article.shared_article_content as any)?.title || 'Unknown Title'}`);
 
                 } catch (articleError) {
                   console.error(`❌ Error processing article ${article.id}:`, articleError);
@@ -327,7 +327,7 @@ serve(async (req) => {
       userResults.push({
         userId: targetUserId || 'global',
         success: false,
-        error: automationError.message
+        error: automationError instanceof Error ? automationError.message : String(automationError)
       });
     }
 
@@ -378,7 +378,7 @@ serve(async (req) => {
     
     const errorResponse = {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       duration_ms: Date.now(),
       processed_users: 0,
       total_articles_gathered: 0,
@@ -392,7 +392,7 @@ serve(async (req) => {
         .from('system_logs')
         .insert({
           level: 'error',
-          message: `eezee News Automation Service failed: ${error.message}`,
+          message: `eezee News Automation Service failed: ${error instanceof Error ? error.message : String(error)}`,
           context: errorResponse,
           function_name: 'eezee-automation-service'
         });

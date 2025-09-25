@@ -157,7 +157,7 @@ serve(async (req) => {
       discoveredUrls: [],
       totalFound: 0,
       method: 'html-parser',
-      errors: [error.message],
+      errors: [error instanceof Error ? error.message : String(error)],
       indexUrl: ''
     }), {
       status: 500,
@@ -439,7 +439,7 @@ async function discoverRssFeeds(html: string, baseUrl: string): Promise<string[]
 
 async function parseRssFeeds(rssUrls: string[], maxUrls: number): Promise<DiscoveredUrl[]> {
   const articles: DiscoveredUrl[] = [];
-  let bestRssResult = { articles: [], contentQuality: 0, feedUrl: '' };
+  let bestRssResult: { articles: DiscoveredUrl[]; contentQuality: number; feedUrl: string } = { articles: [], contentQuality: 0, feedUrl: '' };
   
   for (const rssUrl of rssUrls) {
     try {
@@ -597,7 +597,7 @@ function parseRssDate(dateString: string): string | undefined {
     return date.toISOString();
     
   } catch (error) {
-    console.log(`⚠️ Date parsing error for "${cleanDate}": ${error.message}`);
+    console.log(`⚠️ Date parsing error for "${cleanDate}": ${error instanceof Error ? error.message : String(error)}`);
     return undefined;
   }
 }

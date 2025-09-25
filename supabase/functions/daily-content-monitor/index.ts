@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           success: true
         })
 
-        console.log(`✅ ${topicSource.content_sources.source_name}: ${newTopicRelevantUrls.length} new topic-relevant URLs (${discoveryResult.urls.length} total, ${topicRelevantUrls.length} relevant)`)
+        console.log(`✅ ${(topicSource.content_sources as any)?.source_name || 'Unknown Source'}: ${newTopicRelevantUrls.length} new topic-relevant URLs (${discoveryResult.urls.length} total, ${topicRelevantUrls.length} relevant)`)
 
       } catch (error) {
         const checkDuration = Date.now() - startTime

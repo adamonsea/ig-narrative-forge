@@ -136,13 +136,13 @@ serve(async (req) => {
 
           testedCount++;
         } catch (error) {
-          console.error(`❌ Error testing ${source.source_name}:`, error.message);
+          console.error(`❌ Error testing ${source.source_name}:`, error instanceof Error ? error.message : String(error));
           results.push({
             source_name: source.source_name,
             feed_url: source.feed_url,
             status: 0,
             success: false,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           });
         }
       }
@@ -172,7 +172,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error) 
       }),
       { 
         status: 500,
