@@ -78,8 +78,8 @@ serve(async (req) => {
       return null;
     }
 
-    const systemPrompts = templates?.filter(t => t.category === 'system') || [];
-    const contentPrompts = templates?.filter(t => t.category === 'content') || [];
+    const systemPrompts = templates?.filter((t: any) => t.category === 'system') || [];
+    const contentPrompts = templates?.filter((t: any) => t.category === 'content') || [];
 
     return {
       systemPrompts,
@@ -211,9 +211,15 @@ OUTPUT FORMAT (JSON):
     tone: string, 
     expertise: string, 
     slideType: string,
+    slideCount: number,
     publicationName: string
   ): Promise<SlideContent[]> {
     try {
+      // Determine slide count based on slide type
+      const slideCount = slideType === 'short' ? 4 : 
+                        slideType === 'tabloid' ? 6 : 
+                        slideType === 'indepth' ? 8 : 12;
+      
       const prompt = `Create engaging Instagram carousel slides for this ${slideType} story.
 
 ARTICLE DETAILS:
@@ -604,7 +610,7 @@ Return in JSON format:
       'extensive': 12
     };
     
-    const targetSlideCount = slideTypeMapping[finalSlideType] || 6;
+    const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
     
     // Generate slides with the selected AI provider
     let slides: SlideContent[];

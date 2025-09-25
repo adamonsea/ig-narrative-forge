@@ -133,7 +133,7 @@ serve(async (req) => {
           topic_id: topic.id,
           topic_name: topic.name,
           status: 'error',
-          error: topicError.message
+          error: topicError instanceof Error ? topicError.message : String(topicError)
         });
         continue;
       }

@@ -69,7 +69,7 @@ serve(async (req) => {
     const scrapeResult = intelligentResult;
 
     const result = scrapeResult.data || scrapeResult;
-    console.log(`✅ Hybrid scraper completed for ${source.source_name}:`, result);
+    console.log(`✅ Hybrid scraper completed:`, result);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -81,7 +81,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         articles_imported: 0 
       }),
       { 

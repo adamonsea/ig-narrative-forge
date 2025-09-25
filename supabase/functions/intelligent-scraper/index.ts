@@ -97,7 +97,7 @@ serve(async (req) => {
           });
         }
       } catch (error) {
-        console.error(`❌ Method "${method}" failed:`, error.message);
+        console.error(`❌ Method "${method}" failed:`, error instanceof Error ? error.message : String(error));
         
         const errorClass = classifyError(error);
         console.log(`🔍 Error classification:`, errorClass);
@@ -131,7 +131,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Intelligent scraper error:', error);
-    return createErrorResponse(error.message, 500);
+    return createErrorResponse(error instanceof Error ? error.message : String(error), 500);
   }
 });
 

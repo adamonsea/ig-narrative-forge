@@ -245,10 +245,10 @@ serve(async (req) => {
             .from('content_generation_queue')
             .update({
               status: 'pending',
-              error_message: jobError.message,
+              error_message: jobError instanceof Error ? jobError.message : String(jobError),
               result_data: {
                 success: false,
-                error: jobError.message,
+                error: jobError instanceof Error ? jobError.message : String(jobError),
                 retry_scheduled_for: new Date(Date.now() + nextAttemptDelay).toISOString()
               }
             })
@@ -305,7 +305,7 @@ serve(async (req) => {
           jobId: job.id,
           articleId: jobIdentifier,
           success: false,
-          error: jobError.message,
+          error: jobError instanceof Error ? jobError.message : String(jobError),
           sourceType: jobType
         });
       }
@@ -329,7 +329,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

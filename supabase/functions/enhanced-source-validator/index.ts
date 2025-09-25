@@ -61,7 +61,7 @@ serve(async (req) => {
     
     if (!accessibilityResult.success) {
       result.errors.push(accessibilityResult.error || 'URL not accessible');
-      result.userGuidance = generateUserGuidance(accessibilityResult.errorType, url);
+      result.userGuidance = generateUserGuidance(accessibilityResult.errorType || 'unknown', url);
       return createResponse(result);
     }
 
@@ -128,7 +128,7 @@ serve(async (req) => {
       overallScore: 0,
       userGuidance: 'Validation failed due to technical error',
       warnings: [],
-      errors: [error.message]
+      errors: [error instanceof Error ? error.message : String(error)]
     });
   }
 });
@@ -180,15 +180,15 @@ async function testEnhancedAccessibility(url: string): Promise<{
 
     } catch (error) {
       if (attempt.protocol === 'http_fallback') {
-        const errorType = classifyNetworkError(error.message);
+        const errorType = classifyNetworkError(error instanceof Error ? error.message : String(error));
         return {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           errorType
         };
       }
       // Continue to HTTP fallback
-      console.log(`⚠️ HTTPS failed, trying HTTP: ${error.message}`);
+      console.log(`⚠️ HTTPS failed, trying HTTP: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -294,7 +294,7 @@ async function testScrapingMethod(
       success: false,
       articlesFound: 0,
       successRate: 0,
-      errors: [error.message],
+      errors: [error instanceof Error ? error.message : String(error)],
       recommendedUsage: 'Not recommended - test failed'
     };
   }

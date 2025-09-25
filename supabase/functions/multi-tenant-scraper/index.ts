@@ -110,19 +110,26 @@ serve(async (req) => {
 
       } catch (articleError) {
         console.error('Error processing article:', articleError);
-        result.errors.push(`Article error: ${articleError.message}`);
+        result.errors.push(`Article error: ${articleError instanceof Error ? articleError.message : String(articleError)}`);
       }
     }
 
     // Update source metrics properly
     if (sourceId) {
+      // Get current metrics first
+      const { data: currentSource } = await supabase
+        .from('content_sources')
+        .select('articles_scraped, success_count')
+        .eq('id', sourceId)
+        .single();
+      
       const { error: updateError } = await supabase
         .from('content_sources')
         .update({
-          articles_scraped: supabase.sql`COALESCE(articles_scraped, 0) + ${result.articlesScraped}`,
+          articles_scraped: (currentSource?.articles_scraped || 0) + result.articlesScraped,
           last_scraped_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          success_count: supabase.sql`COALESCE(success_count, 0) + 1`
+          success_count: (currentSource?.success_count || 0) + 1
         })
         .eq('id', sourceId);
         
@@ -142,7 +149,7 @@ serve(async (req) => {
     console.error('❌ Multi-tenant test failed:', error);
     return new Response(JSON.stringify({
       success: false, articlesFound: 0, articlesScraped: 0, newContentCreated: 0,
-      topicArticlesCreated: 0, errors: [error.message], method: 'multi-tenant-test'
+      topicArticlesCreated: 0, errors: [error instanceof Error ? error.message : String(error)], method: 'multi-tenant-test'
     }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -165,7 +172,7 @@ function calculateWordCount(text: string): number {
 function calculateRelevanceScore(article: any, topic: any): number {
   if (!topic.keywords || topic.keywords.length === 0) return 50;
   const content = `${article.title} ${article.body}`.toLowerCase();
-  const matches = topic.keywords.filter(keyword => content.includes(keyword.toLowerCase())).length;
+  const matches = topic.keywords.filter((keyword: string) => content.includes(keyword.toLowerCase())).length;
   return Math.min(100, 20 + (matches * 15));
 }
 
@@ -227,7 +234,7 @@ function isContentSnippet(content: string, title: string): boolean {
 function findKeywordMatches(article: any, topic: any): string[] {
   if (!topic.keywords || topic.keywords.length === 0) return [];
   const content = `${article.title} ${article.body}`.toLowerCase();
-  return topic.keywords.filter(keyword => content.includes(keyword.toLowerCase()));
+  return topic.keywords.filter((keyword: string) => content.includes(keyword.toLowerCase()));
 }
 
 function generateChecksum(content: string): string {

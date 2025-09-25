@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Generate smart recommendations based on error patterns
-function generateRecommendations(errorsByType, successRate) {
+function generateRecommendations(errorsByType: any, successRate: any) {
   const recommendations = [];
   
   if (errorsByType.access_denied?.length > 0) {
@@ -202,7 +202,7 @@ serve(async (req) => {
           success: false, 
           sourceId: source.id, 
           sourceName: source.source_name,
-          error: error.message || 'Unknown error',
+          error: error instanceof Error ? error.message : String(error) || 'Unknown error',
           errorType: 'exception',
           articlesStored: 0
         };
@@ -211,9 +211,9 @@ serve(async (req) => {
 
     const results = await Promise.allSettled(triggerPromises);
     const fulfilledResults = results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
-    const successful = fulfilledResults.filter(r => r.success).length;
+    const successful = fulfilledResults.filter(r => r && r.success).length;
     const failed = results.length - successful;
-    const totalArticles = fulfilledResults.reduce((sum, r) => sum + (r.articlesStored || 0), 0);
+    const totalArticles = fulfilledResults.reduce((sum, r) => sum + (r?.articlesStored || 0), 0);
 
     // Calculate success rate and determine response status
     const successRate = sources.length > 0 ? (successful / sources.length) * 100 : 0;
@@ -221,14 +221,16 @@ serve(async (req) => {
     const isCompleteFailure = successful === 0 && failed > 0;
     
     // Group errors by type for better reporting
-    const errorsByType = {};
-    fulfilledResults.filter(r => !r.success).forEach(result => {
-      const type = result.errorType || 'unknown';
-      if (!errorsByType[type]) errorsByType[type] = [];
-      errorsByType[type].push({
-        source: result.sourceName,
-        error: result.error
-      });
+    const errorsByType: { [key: string]: any[] } = {};
+    fulfilledResults.filter(r => r && !r.success).forEach(result => {
+      if (result) {
+        const type = result.errorType || 'unknown';
+        if (!errorsByType[type]) errorsByType[type] = [];
+        errorsByType[type].push({
+          source: result.sourceName,
+          error: result.error
+        });
+      }
     });
 
     // Create detailed response message
@@ -298,7 +300,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Internal server error',
+        error: error instanceof Error ? error.message : String(error) || 'Internal server error',
         message: 'Keyword rescan trigger failed'
       }),
       { 

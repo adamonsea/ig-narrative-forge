@@ -32,8 +32,7 @@ serve(async (req) => {
     // 2. Check queue status
     const { data: queueStats, error: queueError } = await supabase
       .from('content_generation_queue')
-      .select('status, COUNT(*)')
-      .groupBy('status');
+      .select('status', { count: 'exact' });
 
     console.log('📊 Queue status:', queueStats);
 
@@ -91,7 +90,7 @@ serve(async (req) => {
 
         if (createdStory) {
           console.log('✅ Story created with multi-tenant linkage:', createdStory);
-          generatorTest.story = createdStory;
+          (generatorTest as any).story = createdStory;
         }
       }
     }

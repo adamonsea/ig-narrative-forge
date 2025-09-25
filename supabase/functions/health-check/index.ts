@@ -88,7 +88,7 @@ serve(async (req) => {
     const unhealthyResponse = {
       timestamp: new Date().toISOString(),
       overall_status: 'unhealthy',
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     };
 
     return new Response(

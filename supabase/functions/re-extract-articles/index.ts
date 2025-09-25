@@ -127,9 +127,9 @@ serve(async (req) => {
         }
 
       } catch (error) {
-        console.error(`❌ Failed to re-extract article: ${error.message}`);
+        console.error(`❌ Failed to re-extract article: ${error instanceof Error ? error.message : String(error)}`);
         results.failed++;
-        results.errors.push(error.message);
+        results.errors.push(error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -145,7 +145,7 @@ serve(async (req) => {
       processed: 0,
       improved: 0,
       failed: 1,
-      errors: [error.message]
+      errors: [error instanceof Error ? error.message : String(error)]
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
