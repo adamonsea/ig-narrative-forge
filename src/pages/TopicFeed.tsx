@@ -6,8 +6,10 @@ import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
+import { useKeywordFilter } from "@/hooks/useKeywordFilter";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
+import { KeywordFilterModal } from "@/components/KeywordFilterModal";
 import { Hash, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,6 +31,19 @@ const TopicFeed = () => {
   } = useInfiniteTopicFeed(slug || '');
 
   const { sentimentCards } = useSentimentCards(topic?.id);
+  
+  // Keyword filtering
+  const {
+    selectedKeywords,
+    availableKeywords,
+    filteredStories,
+    isModalOpen,
+    setIsModalOpen,
+    toggleKeyword,
+    clearAllFilters,
+    removeKeyword,
+    hasActiveFilters
+  } = useKeywordFilter(stories, topic?.keywords || []);
 
   // Intersection Observer for infinite scroll
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -142,20 +157,34 @@ const TopicFeed = () => {
             sortBy={sortBy} 
             setSortBy={setSortBy}
             slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
+            onFilterClick={() => setIsModalOpen(true)}
+            selectedKeywords={selectedKeywords}
+            onRemoveKeyword={removeKeyword}
+            hasActiveFilters={hasActiveFilters}
           />
         </div>
 
+        {/* Keyword Filter Modal */}
+        <KeywordFilterModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          availableKeywords={availableKeywords}
+          selectedKeywords={selectedKeywords}
+          onKeywordToggle={toggleKeyword}
+          onClearAll={clearAllFilters}
+        />
+
         {/* Stories with infinite scroll - mixed with sentiment cards */}
-        {stories.length > 0 ? (
+        {filteredStories.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
-            {stories.map((story, index) => {
+            {filteredStories.map((story, index) => {
               const items = [];
               
               // Add the story
               items.push(
                 <div
                   key={`story-${story.id}`}
-                  ref={index === stories.length - 1 ? lastStoryElementRef : null}
+                  ref={index === filteredStories.length - 1 ? lastStoryElementRef : null}
                 >
                   <StoryCarousel 
                     story={story} 
@@ -217,6 +246,22 @@ const TopicFeed = () => {
                 <EndOfFeedCTA topicName={topic.name} topicId={topic.id} />
               </div>
             )}
+          </div>
+        ) : hasActiveFilters ? (
+          <div className="text-center py-12 space-y-4">
+            <Hash className="w-12 h-12 mx-auto text-muted-foreground/50" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No stories match your filters</h3>
+              <p className="text-muted-foreground mb-4">
+                Try removing some keywords or adjusting your filters
+              </p>
+              <button
+                onClick={clearAllFilters}
+                className="text-primary hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
           </div>
         ) : (
           <div className="pt-8">
