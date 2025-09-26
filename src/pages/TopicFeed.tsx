@@ -10,6 +10,8 @@ import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { KeywordFilterModal } from "@/components/KeywordFilterModal";
 import { Hash, MapPin, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
@@ -150,10 +152,10 @@ const TopicFeed = () => {
               </div>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
               >
                 <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Filters</span>
+                <span className="hidden sm:inline text-sm font-medium">Filters</span>
                 {hasActiveFilters && (
                   <span className="w-2 h-2 bg-primary rounded-full" />
                 )}
@@ -203,6 +205,18 @@ const TopicFeed = () => {
             <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
               beta
             </span>
+
+            {/* Mobile filter button - positioned in top right */}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+              aria-label="Open filters"
+            >
+              <Filter className="w-4 h-4" />
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+              )}
+            </button>
           </div>
           {topic.branding_config?.subheader ? (
             <p className="text-muted-foreground max-w-2xl mx-auto text-center px-4">
@@ -215,8 +229,8 @@ const TopicFeed = () => {
           ) : null}
         </div>
 
-        {/* Filters */}
-        <div className="mb-8">
+        {/* Filters - Hidden on mobile when filter button is in header */}
+        <div className="mb-8 hidden sm:block">
           <FeedFilters 
             slideCount={filteredStories.reduce((total, story) => total + story.slides.length, 0)}
             onFilterClick={() => setIsModalOpen(true)}
@@ -225,6 +239,30 @@ const TopicFeed = () => {
             hasActiveFilters={hasActiveFilters}
           />
         </div>
+
+        {/* Mobile-only selected keywords display */}
+        {selectedKeywords.length > 0 && (
+          <div className="mb-6 sm:hidden">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs text-muted-foreground mb-2 w-full text-center">Filtering by:</span>
+              {selectedKeywords.map((keyword) => (
+                <Badge
+                  key={keyword}
+                  variant="secondary"
+                  className="flex items-center gap-1 pr-1"
+                >
+                  <span className="capitalize">{keyword}</span>
+                  <button
+                    onClick={() => removeKeyword(keyword)}
+                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Keyword Filter Modal */}
         <KeywordFilterModal
