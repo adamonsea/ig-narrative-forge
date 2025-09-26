@@ -113,7 +113,7 @@ REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- STRICT WORD LIMITS: Slide 1 maximum 25 words, all other slides maximum 30-40 words each
+- CRITICAL WORD LIMITS: Slide 1 MUST be maximum 25 words, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
 - Make it shareable and engaging  
 - Include alt text for accessibility
@@ -232,7 +232,7 @@ REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- STRICT WORD LIMITS: Slide 1 maximum 25 words, all other slides maximum 30-40 words each
+- CRITICAL WORD LIMITS: Slide 1 MUST be maximum 25 words, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
 - Make it shareable and engaging
 - Include alt text for accessibility

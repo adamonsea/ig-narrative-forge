@@ -71,10 +71,29 @@ export const useInfiniteTopicFeed = (slug: string) => {
         throw new Error('Topic not found');
       }
 
+      // For public topics, we need to get keywords for filtering
+      let topicKeywords: string[] = [];
+      if (topicData.is_public) {
+        const { data: fullTopicData, error: keywordError } = await supabase
+          .from('topics')
+          .select('keywords, landmarks, organizations')
+          .eq('slug', slug)
+          .eq('is_public', true)
+          .single();
+        
+        if (!keywordError && fullTopicData) {
+          topicKeywords = [
+            ...(fullTopicData.keywords || []),
+            ...(fullTopicData.landmarks || []),
+            ...(fullTopicData.organizations || [])
+          ];
+        }
+      }
+
       setTopic({
         ...topicData,
         topic_type: topicData.topic_type as 'regional' | 'keyword',
-        keywords: [], // Not exposed in safe function
+        keywords: topicKeywords,
         is_public: topicData.is_public,
         created_by: '' // Not exposed in safe function
       });

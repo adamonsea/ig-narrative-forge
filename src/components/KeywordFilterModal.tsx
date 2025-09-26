@@ -49,43 +49,44 @@ export const KeywordFilterModal = ({
             </div>
           )}
 
-          {/* Keywords grid */}
-          <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto">
-            {availableKeywords.length > 0 ? (
-              availableKeywords.map(({ keyword, count }) => {
-                const isSelected = selectedKeywords.includes(keyword);
-                return (
-                  <button
-                    key={keyword}
-                    onClick={() => onKeywordToggle(keyword)}
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-lg border text-left transition-all",
-                      "hover:bg-muted/50 active:scale-[0.98]",
-                      isSelected && "bg-primary/10 border-primary text-primary"
-                    )}
-                  >
-                    <span className="font-medium capitalize">{keyword}</span>
-                    <Badge 
-                      variant={isSelected ? "default" : "secondary"}
-                      className="ml-2 text-xs"
+          {/* Keywords as minimalist pill-shaped tabs */}
+          {availableKeywords.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {availableKeywords
+                .filter(({ keyword }) => keyword.length > 2) // Filter out very short keywords
+                .slice(0, 20) // Show top 20 keywords
+                .map(({ keyword, count }) => {
+                  const isSelected = selectedKeywords.includes(keyword);
+                  return (
+                    <button
+                      key={keyword}
+                      onClick={() => onKeywordToggle(keyword)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                        "hover:scale-105 active:scale-95",
+                        isSelected 
+                          ? "bg-primary text-primary-foreground shadow-sm" 
+                          : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                      )}
                     >
-                      {count > 999 ? 'topic' : count}
-                    </Badge>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No topic keywords configured or found in stories</p>
-                <p className="text-xs mt-2">Add keywords in your topic settings to enable filtering</p>
-              </div>
-            )}
-          </div>
+                      <span className="capitalize">{keyword}</span>
+                      <span className="text-xs opacity-70">({count})</span>
+                    </button>
+                  );
+                })
+              }
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No keywords found in current stories</p>
+              <p className="text-xs mt-2">Keywords will appear as stories are loaded</p>
+            </div>
+          )}
 
           {/* Help text */}
           <p className="text-xs text-muted-foreground text-center">
-            Filter by keywords configured in your topic settings. Numbers show how many stories contain each keyword.
+            Click keywords to filter stories. Numbers show how many stories contain each keyword.
           </p>
         </div>
       </DialogContent>
