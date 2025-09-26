@@ -34,10 +34,14 @@ interface KeywordCount {
 export const useKeywordFilter = (stories: Story[], topicKeywords: string[] = []) => {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filtering, setFiltering] = useState(false);
 
   // Count how many times each topic keyword appears in stories
   const availableKeywords = useMemo((): KeywordCount[] => {
+    setFiltering(true);
+    
     if (topicKeywords.length === 0) {
+      setFiltering(false);
       return [];
     }
 
@@ -64,24 +68,33 @@ export const useKeywordFilter = (stories: Story[], topicKeywords: string[] = [])
     });
 
     // Return keywords that appear at least once in the stories, sorted by frequency
-    return Array.from(keywordCounts.entries())
+    const result = Array.from(keywordCounts.entries())
       .filter(([_, count]) => count > 0)
       .map(([keyword, count]) => ({ keyword, count }))
       .sort((a, b) => b.count - a.count);
+    
+    setFiltering(false);
+    return result;
   }, [stories, topicKeywords]);
 
   // Filter stories based on selected keywords
   const filteredStories = useMemo(() => {
+    setFiltering(true);
+    
     if (selectedKeywords.length === 0) {
+      setFiltering(false);
       return stories;
     }
 
-    return stories.filter(story => {
+    const result = stories.filter(story => {
       const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
       return selectedKeywords.some(keyword => 
         text.includes(keyword.toLowerCase())
       );
     });
+    
+    setFiltering(false);
+    return result;
   }, [stories, selectedKeywords]);
 
   const toggleKeyword = (keyword: string) => {
@@ -104,6 +117,7 @@ export const useKeywordFilter = (stories: Story[], topicKeywords: string[] = [])
     selectedKeywords,
     availableKeywords,
     filteredStories,
+    filtering,
     isModalOpen,
     setIsModalOpen,
     toggleKeyword,
