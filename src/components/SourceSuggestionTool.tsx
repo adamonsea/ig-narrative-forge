@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Search, Plus, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { SourceQualityGuide } from './SourceQualityGuide';
 
 interface SourceSuggestion {
   url: string;
@@ -33,6 +35,7 @@ export const SourceSuggestionTool = ({
   const [suggestions, setSuggestions] = useState<SourceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingSourceId, setAddingSourceId] = useState<string | null>(null);
+  const [manualUrl, setManualUrl] = useState('');
   const { toast } = useToast();
 
   const getSuggestions = async () => {
@@ -260,10 +263,37 @@ export const SourceSuggestionTool = ({
     return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
   };
 
+  const handleAddManualSource = async () => {
+    if (!manualUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid URL",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create a manual suggestion and add it
+    const domain = new URL(manualUrl).hostname.replace('www.', '');
+    const manualSuggestion: SourceSuggestion = {
+      url: manualUrl,
+      source_name: domain,
+      type: manualUrl.includes('/feed') || manualUrl.includes('/rss') ? 'RSS' : 'News',
+      confidence_score: 70,
+      rationale: 'Manually added source'
+    };
+
+    await addSource(manualSuggestion);
+    setManualUrl('');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Find Sources</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-medium">Find Sources</h3>
+          <SourceQualityGuide currentUrl={manualUrl} />
+        </div>
         <Button 
           onClick={getSuggestions}
           disabled={loading}
@@ -278,9 +308,27 @@ export const SourceSuggestionTool = ({
           ) : (
             <>
               <Search className="w-4 h-4 mr-2" />
-              Find Sources
+              Discover Sources
             </>
           )}
+        </Button>
+      </div>
+
+      {/* Manual URL input */}
+      <div className="flex gap-2">
+        <Input
+          placeholder="Or paste a website/RSS URL directly..."
+          value={manualUrl}
+          onChange={(e) => setManualUrl(e.target.value)}
+          className="text-sm"
+        />
+        <Button
+          onClick={handleAddManualSource}
+          disabled={!manualUrl.trim() || loading}
+          size="sm"
+          variant="ghost"
+        >
+          <Plus className="w-4 h-4" />
         </Button>
       </div>
 
@@ -304,9 +352,10 @@ export const SourceSuggestionTool = ({
                       {suggestion.confidence_score}%
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {suggestion.url}
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">{suggestion.url}</span>
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {suggestion.rationale}
                   </p>
