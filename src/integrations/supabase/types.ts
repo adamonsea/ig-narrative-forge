@@ -2008,6 +2008,48 @@ export type Database = {
           },
         ]
       }
+      suggested_keywords: {
+        Row: {
+          added_at: string | null
+          created_at: string
+          frequency_count: number | null
+          id: string
+          is_added: boolean | null
+          keyword: string
+          relevance_score: number | null
+          suggested_at: string
+          suggestion_source: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          added_at?: string | null
+          created_at?: string
+          frequency_count?: number | null
+          id?: string
+          is_added?: boolean | null
+          keyword: string
+          relevance_score?: number | null
+          suggested_at?: string
+          suggestion_source?: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          added_at?: string | null
+          created_at?: string
+          frequency_count?: number | null
+          id?: string
+          is_added?: boolean | null
+          keyword?: string
+          relevance_score?: number | null
+          suggested_at?: string
+          suggestion_source?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_logs: {
         Row: {
           context: Json | null
@@ -2959,17 +3001,14 @@ export type Database = {
           p_limit?: number
           p_offset?: number
           p_sort_by?: string
-          p_topic_slug: string
+          topic_slug_param: string
         }
         Returns: {
-          article_author: string
-          article_published_at: string
-          article_source_url: string
-          article_title: string
-          cover_illustration_prompt: string
-          cover_illustration_url: string
+          author: string
           created_at: string
           id: string
+          slides: Json
+          summary: string
           title: string
           updated_at: string
         }[]
