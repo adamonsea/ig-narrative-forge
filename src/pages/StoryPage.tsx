@@ -282,7 +282,6 @@ const StoryPage = () => {
         <div className="max-w-4xl mx-auto">
           <StoryCarousel 
             story={story} 
-            topicName={topic.name}
             storyUrl={isRegionalFeed 
               ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
               : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`

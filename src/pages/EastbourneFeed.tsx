@@ -94,7 +94,6 @@ export default function EastbourneFeed() {
                 >
                   <StoryCarousel 
                     story={story} 
-                    topicName={topic?.name || "Eastbourne"}
                     storyUrl={`${window.location.origin}/eastbourne-feed/story/${story.id}`}
                   />
                 </div>

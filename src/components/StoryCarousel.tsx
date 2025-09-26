@@ -39,11 +39,10 @@ interface Story {
 
 interface StoryCarouselProps {
   story: Story;
-  topicName: string;
   storyUrl?: string;
 }
 
-export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
@@ -346,9 +345,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-sm font-medium">
-                {topicName}
-              </Badge>
               {story.is_teaser && (
                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                   Teaser
