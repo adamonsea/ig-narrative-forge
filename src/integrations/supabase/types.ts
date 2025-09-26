@@ -3408,6 +3408,19 @@ export type Database = {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: undefined
       }
+      record_story_interaction: {
+        Args: {
+          p_interaction_type: string
+          p_referrer?: string
+          p_share_platform?: string
+          p_slide_index?: number
+          p_story_id: string
+          p_topic_id: string
+          p_user_agent?: string
+          p_visitor_id: string
+        }
+        Returns: undefined
+      }
       remove_source_from_topic: {
         Args: { p_source_id: string; p_topic_id: string }
         Returns: boolean

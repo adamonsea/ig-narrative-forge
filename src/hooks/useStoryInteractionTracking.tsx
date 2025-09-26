@@ -34,14 +34,14 @@ export const useStoryInteractionTracking = () => {
       const userAgent = navigator.userAgent;
       const referrer = document.referrer;
 
-      await supabase.from('story_interactions').insert({
-        story_id: storyId,
-        topic_id: topicId,
-        visitor_id: visitorId,
-        interaction_type: 'swipe',
-        slide_index: slideIndex,
-        user_agent: userAgent,
-        referrer: referrer || null
+      await supabase.rpc('record_story_interaction', {
+        p_story_id: storyId,
+        p_topic_id: topicId,
+        p_visitor_id: visitorId,
+        p_interaction_type: 'swipe',
+        p_slide_index: slideIndex,
+        p_user_agent: userAgent,
+        p_referrer: referrer || null
       });
     } catch (error) {
       // Silent fail - don't disrupt user experience
@@ -55,14 +55,14 @@ export const useStoryInteractionTracking = () => {
       const userAgent = navigator.userAgent;
       const referrer = document.referrer;
 
-      await supabase.from('story_interactions').insert({
-        story_id: storyId,
-        topic_id: topicId,
-        visitor_id: visitorId,
-        interaction_type: 'share_click',
-        share_platform: platform,
-        user_agent: userAgent,
-        referrer: referrer || null
+      await supabase.rpc('record_story_interaction', {
+        p_story_id: storyId,
+        p_topic_id: topicId,
+        p_visitor_id: visitorId,
+        p_interaction_type: 'share_click',
+        p_share_platform: platform,
+        p_user_agent: userAgent,
+        p_referrer: referrer || null
       });
     } catch (error) {
       // Silent fail - don't disrupt user experience
