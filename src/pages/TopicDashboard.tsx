@@ -16,6 +16,7 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
+import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
@@ -61,6 +62,7 @@ interface Topic {
   community_intelligence_enabled?: boolean;
   auto_simplify_enabled?: boolean;
   automation_quality_threshold?: number;
+  branding_config?: any; // Use any to handle Json type from Supabase
 }
 
 const TopicDashboard = () => {
@@ -100,7 +102,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config')
         .eq('slug', slug)
         .single();
 
@@ -784,6 +786,17 @@ const TopicDashboard = () => {
                   currentAutomationQualityThreshold={topic.automation_quality_threshold}
                   onUpdate={() => loadTopicAndStats()}
                 />
+                
+                <div className="border-t pt-8">
+                  <TopicBrandingSettings
+                    topic={{
+                      id: topic.id,
+                      name: topic.name,
+                      branding_config: topic.branding_config
+                    }}
+                    onUpdate={() => loadTopicAndStats()}
+                  />
+                </div>
                 
                 <div className="border-t pt-8">
                   <TopicCTAManager 
