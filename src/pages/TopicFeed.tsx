@@ -36,7 +36,6 @@ const TopicFeed = () => {
     selectedKeywords,
     availableKeywords,
     filteredStories,
-    filtering,
     isModalOpen,
     setIsModalOpen,
     toggleKeyword,
@@ -86,8 +85,7 @@ const TopicFeed = () => {
     };
   }, []);
 
-  // Show loading skeleton while topic is loading OR while filtering is happening
-  if (loading || filtering) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <div className="container mx-auto px-4 py-8">
