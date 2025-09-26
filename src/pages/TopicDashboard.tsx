@@ -692,7 +692,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full ${hasEnoughArticles ? 'grid-cols-3' : 'grid-cols-2'} mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content-flow" className="relative">
               Content Flow
               {needsAttention.contentFlow && (
@@ -709,26 +709,16 @@ const TopicDashboard = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            {hasEnoughArticles && (
-              <TabsTrigger value="advanced" className="relative">
-                Advanced Tools
-                {needsAttention.advanced && (
-                  <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
-                    <AlertCircle className="h-2 w-2" />
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="advanced" className="relative">
+              Advanced Tools
+              {needsAttention.advanced && (
+                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
+                  <AlertCircle className="h-2 w-2" />
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
-          {!hasEnoughArticles && (
-            <div className="flex items-center gap-2 mt-4 p-3 bg-muted/50 rounded-md">
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                Advanced Tools will unlock when you have processed more than 10 articles ({stats.articles}/10)
-              </p>
-            </div>
-          )}
 
           <TabsContent value="content-flow" className="space-y-6">
             {/* Sentiment Insights - Show when data exists */}
@@ -772,8 +762,7 @@ const TopicDashboard = () => {
             </Card>
           </TabsContent>
 
-          {hasEnoughArticles && (
-            <TabsContent value="advanced" className="space-y-8">
+          <TabsContent value="advanced" className="space-y-8">
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -874,7 +863,6 @@ const TopicDashboard = () => {
               </Card>
             </Collapsible>
             </TabsContent>
-          )}
         </Tabs>
       </div>
 
