@@ -4,9 +4,9 @@ import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
-import { useKeywordFilter } from "@/hooks/useKeywordFilter";
+import { useKeywordFilterWithDatabase } from "@/hooks/useKeywordFilterWithDatabase";
+import { useInfiniteTopicFeedWithKeywords } from "@/hooks/useInfiniteTopicFeedWithKeywords";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { KeywordFilterModal } from "@/components/KeywordFilterModal";
@@ -19,31 +19,28 @@ const TopicFeed = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    stories,
-    topic,
-    loading,
-    loadingMore,
-    hasMore,
-    sortBy,
-    setSortBy,
-    loadMore
-  } = useInfiniteTopicFeed(slug || '');
-
-  const { sentimentCards } = useSentimentCards(topic?.id);
-  
-  // Keyword filtering
+  // Keyword filtering state
   const {
     selectedKeywords,
     availableKeywords,
-    filteredStories,
     isModalOpen,
     setIsModalOpen,
     toggleKeyword,
     clearAllFilters,
     removeKeyword,
     hasActiveFilters
-  } = useKeywordFilter(stories, topic?.keywords || []);
+  } = useKeywordFilterWithDatabase([]); // Will be updated when topic loads
+
+  const {
+    stories,
+    topic,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore
+  } = useInfiniteTopicFeedWithKeywords(slug || '', selectedKeywords);
+
+  const { sentimentCards } = useSentimentCards(topic?.id);
 
   // Intersection Observer for infinite scroll
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -127,7 +124,7 @@ const TopicFeed = () => {
           </div>
         )}
 
-        {/* Topic Header - Clean and minimal */}
+        {/* Topic Header - Clean and minimal with branding support */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             {topic.topic_type === 'regional' ? (
@@ -136,26 +133,36 @@ const TopicFeed = () => {
               <Hash className="w-6 h-6 text-green-500" />
             )}
             <div className="flex items-center gap-2">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                {topic.name}
-              </h1>
+              {topic.branding_config?.logo_url ? (
+                <img
+                  src={topic.branding_config.logo_url}
+                  alt={`${topic.name} logo`}
+                  className="max-h-16 max-w-64 object-contain"
+                />
+              ) : (
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  {topic.name}
+                </h1>
+              )}
               <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
                 beta
               </span>
             </div>
           </div>
-          {topic.description && (
+          {topic.branding_config?.subheader ? (
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              {topic.branding_config.subheader}
+            </p>
+          ) : topic.description ? (
             <p className="text-muted-foreground max-w-2xl mx-auto">
               {topic.description}
             </p>
-          )}
+          ) : null}
         </div>
 
         {/* Filters */}
         <div className="mb-8">
           <FeedFilters 
-            sortBy={sortBy} 
-            setSortBy={setSortBy}
             slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
@@ -168,23 +175,23 @@ const TopicFeed = () => {
         <KeywordFilterModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          availableKeywords={availableKeywords}
+          availableKeywords={topic?.keywords?.map(k => ({ keyword: k, count: 0 })) || []}
           selectedKeywords={selectedKeywords}
           onKeywordToggle={toggleKeyword}
           onClearAll={clearAllFilters}
         />
 
         {/* Stories with infinite scroll - mixed with sentiment cards */}
-        {filteredStories.length > 0 ? (
+        {stories.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
-            {filteredStories.map((story, index) => {
+            {stories.map((story, index) => {
               const items = [];
               
               // Add the story
               items.push(
                 <div
                   key={`story-${story.id}`}
-                  ref={index === filteredStories.length - 1 ? lastStoryElementRef : null}
+                  ref={index === stories.length - 1 ? lastStoryElementRef : null}
                 >
                   <StoryCarousel 
                     story={story} 

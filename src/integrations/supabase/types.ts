@@ -3196,6 +3196,27 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_topic_stories_with_keywords: {
+        Args: {
+          p_keywords?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_topic_slug: string
+        }
+        Returns: {
+          article_author: string
+          article_published_at: string
+          article_source_url: string
+          article_title: string
+          author: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown

@@ -1,14 +1,9 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SortOption = "newest" | "oldest";
-
 interface FeedFiltersProps {
-  sortBy: SortOption;
-  setSortBy: (sort: SortOption) => void;
   slideCount: number;
   // Keyword filtering props
   onFilterClick?: () => void;
@@ -18,8 +13,6 @@ interface FeedFiltersProps {
 }
 
 export function FeedFilters({ 
-  sortBy, 
-  setSortBy, 
   slideCount,
   onFilterClick,
   selectedKeywords = [],
@@ -30,19 +23,6 @@ export function FeedFilters({
     <div className="space-y-4">
       {/* Main filter controls */}
       <div className="flex items-center justify-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Sort:</span>
-          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background border shadow-lg z-50">
-              <SelectItem value="newest">Newest first</SelectItem>
-              <SelectItem value="oldest">Oldest first</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Filter button */}
         {onFilterClick && (
           <Button

@@ -13,8 +13,6 @@ export default function EastbourneFeed() {
     loading,
     loadingMore,
     hasMore,
-    sortBy,
-    setSortBy,
     loadMore,
     refresh
   } = useInfiniteTopicFeed('eastbourne');
@@ -60,8 +58,6 @@ export default function EastbourneFeed() {
             </span>
           </div>
           <FeedFilters
-            sortBy={sortBy}
-            setSortBy={setSortBy}
             slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
           />
         </div>

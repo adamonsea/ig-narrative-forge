@@ -49,7 +49,6 @@ export const useInfiniteTopicFeed = (slug: string) => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [page, setPage] = useState(0);
   const [lastError, setLastError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -124,7 +123,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
           topic_slug_param: slug,
           p_limit: STORIES_PER_PAGE,
           p_offset: from,
-          p_sort_by: sortBy
+          p_sort_by: 'newest' // Always sort by newest since we removed sorting
         });
 
       // Handle RPC errors (like permission denied)
@@ -178,7 +177,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
               `)
               .eq('status', 'published')
               .ilike('articles.region', `%${topicData.region}%`)
-              .order('created_at', { ascending: sortBy === 'oldest' })
+              .order('created_at', { ascending: false }) // Always descending since we removed sorting
               .range(from, from + STORIES_PER_PAGE - 1);
             
             if (!fallbackError && fallbackData) {
@@ -419,7 +418,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [slug, sortBy, toast]);
+  }, [slug, toast]);
 
   const loadMore = useCallback(async () => {
     if (!topic || loadingMore || !hasMore) return;
@@ -451,7 +450,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
     if (slug) {
       initialize();
     }
-  }, [slug, sortBy, loadTopic, loadStories]);
+  }, [slug, loadTopic, loadStories]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
@@ -487,8 +486,6 @@ export const useInfiniteTopicFeed = (slug: string) => {
     loading,
     loadingMore,
     hasMore,
-    sortBy,
-    setSortBy,
     loadMore,
     refresh
   };

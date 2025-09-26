@@ -12,6 +12,7 @@ import { Settings, HelpCircle, Users, Bot, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 
 interface TopicSettingsProps {
   topicId: string;
