@@ -14,6 +14,23 @@ interface AutomationRequest {
   targetTopics?: string[];
 }
 
+// Function to check if user is superadmin
+async function isSuperAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'superadmin')
+      .single();
+    
+    return !error && data !== null;
+  } catch (error) {
+    console.log('Error checking superadmin status:', error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -53,16 +70,23 @@ serve(async (req) => {
 
     const automationConfig = settingsData?.setting_value as any;
     if (!automationConfig?.enabled) {
-      console.log('⏭️ Global automation is disabled');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Global automation is disabled',
-        processed_users: 0,
-        total_articles_gathered: 0,
-        total_stories_generated: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Check if requester is superadmin - allow bypass for superadmins
+      const isSuperAdminUser = userId ? await isSuperAdmin(supabase, userId) : false;
+      
+      if (!isSuperAdminUser) {
+        console.log('⏭️ Global automation is disabled and user is not superadmin');
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Global automation is disabled',
+          processed_users: 0,
+          total_articles_gathered: 0,
+          total_stories_generated: 0
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } else {
+        console.log('🔓 Global automation disabled but allowing superadmin bypass');
+      }
     }
 
     console.log('✅ Global automation is enabled, proceeding...');

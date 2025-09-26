@@ -257,7 +257,7 @@ export const AutomationDashboard = () => {
           
           <Button 
             onClick={runTestAutomation}
-            disabled={runningTest || !status.enabled}
+            disabled={runningTest}
             variant="outline"
             className="flex items-center gap-2"
           >
