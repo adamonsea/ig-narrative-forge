@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye } from "lucide-react";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,8 @@ interface Topic {
   default_tone?: 'formal' | 'conversational' | 'engaging';
   articles_in_arrivals?: number;
   stories_published_this_week?: number;
+  visits_today?: number;
+  visits_this_week?: number;
   _count?: {
     articles: number;
     sources: number;
@@ -68,7 +70,7 @@ export const TopicManager = () => {
       const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
         // Get accurate stats that match the Arrivals tab UX
         // 1) Multi-tenant articles for this topic
-        const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT] = await Promise.all([
+        const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats] = await Promise.all([
           supabase.rpc('get_topic_articles_multi_tenant', {
             p_topic_id: topic.id,
             p_status: null,
@@ -96,7 +98,9 @@ export const TopicManager = () => {
             .in('status', ['ready', 'published'])
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .eq('topic_articles.topic_id', topic.id)
-            .not('topic_article_id', 'is', null)
+            .not('topic_article_id', 'is', null),
+          // Get visitor stats
+          supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id })
         ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
@@ -126,12 +130,15 @@ export const TopicManager = () => {
         ) && !publishedIds.has(a.id) && !queuedIds.has(a.id)).length;
 
         const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
+        const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
 
         return {
           ...topic,
           topic_type: topic.topic_type as 'regional' | 'keyword',
           articles_in_arrivals: arrivalsCount,
-          stories_published_this_week: publishedThisWeek
+          stories_published_this_week: publishedThisWeek,
+          visits_today: visitorData.visits_today || 0,
+          visits_this_week: visitorData.visits_this_week || 0
         };
       }));
       
@@ -333,21 +340,56 @@ export const TopicManager = () => {
                       </div>
                       
                       {/* Stats Section */}
-                      <div className="flex flex-col gap-3 min-w-[140px]">
-                        <div className="bg-card/60 backdrop-blur-sm rounded-lg p-3 border border-border/50">
-                          <div className="text-2xl font-bold text-foreground">
-                            {topic.articles_in_arrivals || 0}
+                      <div className="flex flex-col gap-3 min-w-[180px]">
+                        {/* Content Generation Stats */}
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                            <BarChart3 className="w-3 h-3" />
+                            Content
                           </div>
-                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Articles in arrivals
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                              <div className="text-lg font-bold text-foreground">
+                                {topic.articles_in_arrivals || 0}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Arrivals
+                              </div>
+                            </div>
+                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                              <div className="text-lg font-bold text-foreground">
+                                {topic.stories_published_this_week || 0}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Stories
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="bg-card/60 backdrop-blur-sm rounded-lg p-3 border border-border/50">
-                          <div className="text-2xl font-bold text-foreground">
-                            {topic.stories_published_this_week || 0}
+                        
+                        {/* Visitor Stats */}
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            Visitors
                           </div>
-                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Stories this week
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
+                              <div className="text-lg font-bold text-primary">
+                                {topic.visits_today || 0}
+                              </div>
+                              <div className="text-xs font-medium text-primary/70">
+                                Today
+                              </div>
+                            </div>
+                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
+                              <div className="text-lg font-bold text-primary">
+                                {topic.visits_this_week || 0}
+                              </div>
+                              <div className="text-xs font-medium text-primary/70">
+                                This week
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

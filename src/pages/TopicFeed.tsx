@@ -13,6 +13,8 @@ import { KeywordFilterModal } from "@/components/KeywordFilterModal";
 import { Hash, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useVisitorTracking } from "@/hooks/useVisitorTracking";
+
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
@@ -41,6 +43,9 @@ const TopicFeed = () => {
   } = useInfiniteTopicFeedWithKeywords(slug || '', selectedKeywords);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
+
+  // Track visitor stats
+  useVisitorTracking(topic?.id);
 
   // Intersection Observer for infinite scroll
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {

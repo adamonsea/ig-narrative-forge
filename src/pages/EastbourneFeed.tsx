@@ -4,9 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInfiniteTopicFeed } from "@/hooks/useInfiniteTopicFeed";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
+import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 
 export default function EastbourneFeed() {
   const { user } = useAuth();
+  
+  // Track visitor stats for Eastbourne topic
+  useVisitorTracking('d224e606-1a4c-4713-8135-1d30e2d6d0c6');
+  
   const {
     stories,
     topic,

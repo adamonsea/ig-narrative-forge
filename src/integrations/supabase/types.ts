@@ -1016,6 +1016,39 @@ export type Database = {
           },
         ]
       }
+      feed_visits: {
+        Row: {
+          created_at: string
+          id: string
+          referrer: string | null
+          topic_id: string
+          user_agent: string | null
+          visit_date: string
+          visit_timestamp: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          topic_id: string
+          user_agent?: string | null
+          visit_date?: string
+          visit_timestamp?: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          topic_id?: string
+          user_agent?: string | null
+          visit_date?: string
+          visit_timestamp?: string
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       image_generation_tests: {
         Row: {
           api_provider: string
@@ -3217,6 +3250,13 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_topic_visitor_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          visits_this_week: number
+          visits_today: number
+        }[]
+      }
       gtrgm_compress: {
         Args: { "": unknown }
         Returns: unknown
@@ -3307,6 +3347,15 @@ export type Database = {
               p_writing_style?: string
             }
         Returns: string
+      }
+      record_feed_visit: {
+        Args: {
+          p_referrer?: string
+          p_topic_id: string
+          p_user_agent?: string
+          p_visitor_id: string
+        }
+        Returns: boolean
       }
       record_newsletter_signup_attempt: {
         Args: { p_email: string; p_ip_hash?: string }
