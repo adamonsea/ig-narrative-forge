@@ -3005,6 +3005,7 @@ export type Database = {
         }
         Returns: {
           article_id: string
+          article_source_url: string
           author: string
           cover_illustration_url: string
           created_at: string
