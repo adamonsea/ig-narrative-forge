@@ -302,13 +302,12 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
           </div>
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full grid place-items-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
+          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
             <div
               ref={isLast ? lastFitInnerRef : undefined}
               style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
-               className="w-full max-w-lg mx-auto text-center"
-             >
-               <div className="w-full max-w-lg mx-auto text-center">
+              className="w-full max-w-lg mx-auto text-center"
+            >
                  <div className={`leading-relaxed ${
                   index === 0 
                   ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
@@ -332,11 +331,9 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                       />
                     </div>
                   )}
-                </div>
-              </div>
-              
-            </div>
-          </div>
+                 </div>
+             </div>
+           </div>
         )}
       </div>
     );
