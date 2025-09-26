@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { ManualContentStaging } from "@/components/ManualContentStaging";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
@@ -20,7 +22,7 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -83,6 +85,8 @@ const TopicDashboard = () => {
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState("content-flow");
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -281,6 +285,53 @@ const TopicDashboard = () => {
     }
   };
 
+  const handlePublishToggle = (newState: boolean) => {
+    if (!topic) return;
+    
+    if (!newState) {
+      // Unpublishing - show confirmation dialog
+      setPendingPublishState(newState);
+      setShowConfirmDialog(true);
+    } else {
+      // Publishing - do it directly
+      confirmPublishToggle(newState);
+    }
+  };
+
+  const confirmPublishToggle = async (newState: boolean) => {
+    if (!topic) return;
+    
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ 
+          is_public: newState,
+          is_active: newState // Keep both in sync
+        })
+        .eq('id', topic.id);
+
+      if (error) throw error;
+
+      setTopic(prev => prev ? { 
+        ...prev, 
+        is_public: newState,
+        is_active: newState 
+      } : null);
+      
+      toast({
+        title: "Success",
+        description: `Feed ${newState ? 'published' : 'unpublished'}`,
+      });
+    } catch (error) {
+      console.error('Error updating publish status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update publish status",
+        variant: "destructive"
+      });
+    }
+  };
+
 
   if (!user) {
     return (
@@ -380,10 +431,33 @@ const TopicDashboard = () => {
                     <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                       {topic.name}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Badge variant={topic.is_active ? "default" : "secondary"}>
-                        {topic.is_active ? "Published" : "Draft"}
-                      </Badge>
+                    <div className="flex items-center gap-4 mt-1 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={topic.is_public ? "default" : "secondary"}>
+                          {topic.is_public ? (
+                            <>
+                              <Eye className="w-3 h-3 mr-1" />
+                              Published
+                            </>
+                          ) : (
+                            <>
+                              <EyeOff className="w-3 h-3 mr-1" />
+                              Draft
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="publish-toggle" className="text-sm font-medium cursor-pointer">
+                          {topic.is_public ? 'Live' : 'Draft'}
+                        </label>
+                        <Switch
+                          id="publish-toggle"
+                          checked={topic.is_public}
+                          onCheckedChange={handlePublishToggle}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -803,6 +877,19 @@ const TopicDashboard = () => {
           )}
         </Tabs>
       </div>
+
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={() => {
+          confirmPublishToggle(pendingPublishState);
+          setShowConfirmDialog(false);
+        }}
+        title="Unpublish Feed"
+        description="This will make your feed private and remove it from public access. Subscribers won't be able to view new content. Are you sure?"
+        confirmText="Unpublish"
+        variant="destructive"
+      />
     </div>
   );
 };
