@@ -202,12 +202,14 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
       ` (Originally published ${format(new Date(story.article.published_at), 'MMM d, yyyy')})` : 
       '';
     
-    const sourceAttribution = `Read the full story at ${sourceDomain}${originalDateText}`;
+    const sourceLinkHtml = validSourceUrl
+      ? `<a href="${validSourceUrl}" target="_blank" rel="noopener noreferrer" class="underline text-primary hover:text-primary/80">Read the full story at ${sourceDomain}${originalDateText}</a>`
+      : `Read the full story at ${sourceDomain}${originalDateText}`;
     
-    // If we have existing CTA content, append source; otherwise, use source as CTA content
-    const finalCtaContent = ctaContent ? 
-      `${ctaContent}\n\n${sourceAttribution}` : 
-      sourceAttribution;
+    // If we have existing CTA content, append source link; otherwise, use source link as CTA content
+    const finalCtaContent = ctaContent 
+      ? `${ctaContent}\n\n${sourceLinkHtml}` 
+      : sourceLinkHtml;
     
     return {
       mainContent,
@@ -295,26 +297,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                   )} />
                 </div>
                 
-                {/* Source link at bottom of first slide */}
-                {story.article?.source_url && story.article.source_url !== '#' && (
-                  <div className="mt-6 pt-4 border-t border-muted/20">
-                    <a 
-                      href={story.article.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Read original at {(() => {
-                        try {
-                          return new URL(story.article.source_url).hostname.replace('www.', '');
-                        } catch {
-                          return 'source';
-                        }
-                      })()}
-                    </a>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -353,26 +335,6 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
                 </div>
               </div>
               
-              {/* Source link at bottom of each slide */}
-              {story.article?.source_url && story.article.source_url !== '#' && (
-                <div className="mt-6 pt-4 border-t border-muted/20">
-                  <a 
-                    href={story.article.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Read original at {(() => {
-                      try {
-                        return new URL(story.article.source_url).hostname.replace('www.', '');
-                      } catch {
-                        return 'source';
-                      }
-                    })()}
-                  </a>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -465,7 +427,7 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
               )}
               
               {/* Source link */}
-              {story.article?.source_url && (
+              {story.article?.source_url && story.article.source_url !== '#' && (
                 <a
                   href={story.article.source_url}
                   target="_blank"
