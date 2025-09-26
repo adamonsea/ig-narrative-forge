@@ -46,7 +46,7 @@ interface Topic {
 
 const STORIES_PER_PAGE = 10;
 
-export const useInfiniteTopicFeedWithKeywords = (slug: string, selectedKeywords: string[] = []) => {
+export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
   const [stories, setStories] = useState<Story[]>([]);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,8 +111,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string, selectedKeywords:
   const loadStories = useCallback(async (
     topicData: any, 
     pageNum: number = 0, 
-    append: boolean = false,
-    keywords: string[] = []
+    append: boolean = false
   ) => {
     try {
       if (pageNum === 0) setLoading(true);
@@ -120,13 +119,13 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string, selectedKeywords:
 
       const from = pageNum * STORIES_PER_PAGE;
       
-      console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum, 'keywords', keywords);
+      console.log('🔍 Feed: Loading stories for topic', topicData.id, 'page', pageNum);
 
       // Use the new keyword-aware function
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories_with_keywords', {
           p_topic_slug: slug,
-          p_keywords: keywords.length > 0 ? keywords : null,
+          p_keywords: null,
           p_limit: STORIES_PER_PAGE,
           p_offset: from
         });
@@ -231,23 +230,23 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string, selectedKeywords:
     
     const nextPage = page + 1;
     setPage(nextPage);
-    await loadStories(topic, nextPage, true, selectedKeywords);
-  }, [topic, loadingMore, hasMore, page, loadStories, selectedKeywords]);
+    await loadStories(topic, nextPage, true);
+  }, [topic, loadingMore, hasMore, page, loadStories]);
 
   const refresh = useCallback(async () => {
     if (!topic) return;
     
     setPage(0);
     setHasMore(true);
-    await loadStories(topic, 0, false, selectedKeywords);
-  }, [topic, loadStories, selectedKeywords]);
+    await loadStories(topic, 0, false);
+  }, [topic, loadStories]);
 
   useEffect(() => {
     const initialize = async () => {
       try {
         const topicData = await loadTopic();
         setPage(0);
-        await loadStories(topicData, 0, false, selectedKeywords);
+        await loadStories(topicData, 0, false);
       } catch (error) {
         console.error('Error initializing feed:', error);
       }
@@ -256,16 +255,8 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string, selectedKeywords:
     if (slug) {
       initialize();
     }
-  }, [slug, loadTopic, loadStories, selectedKeywords]);
+  }, [slug, loadTopic, loadStories]);
 
-  // Reset pagination when keywords change
-  useEffect(() => {
-    if (topic) {
-      setPage(0);
-      setHasMore(true);
-      loadStories(topic, 0, false, selectedKeywords);
-    }
-  }, [selectedKeywords, topic, loadStories]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
