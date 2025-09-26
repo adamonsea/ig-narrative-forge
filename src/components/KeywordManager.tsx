@@ -462,6 +462,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
             
             {/* Keyword Suggestions */}
             <KeywordSuggestionTool
+              topicId={topic.id}
               topicName={topic.name}
               description=""
               keywords={keywords}

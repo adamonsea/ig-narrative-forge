@@ -14,6 +14,7 @@ interface KeywordSuggestion {
 }
 
 interface KeywordSuggestionToolProps {
+  topicId: string;
   topicName: string;
   description?: string;
   keywords?: string[];
@@ -24,6 +25,7 @@ interface KeywordSuggestionToolProps {
 }
 
 export function KeywordSuggestionTool({
+  topicId,
   topicName,
   description,
   keywords = [],
@@ -44,23 +46,53 @@ export function KeywordSuggestionTool({
   const getSuggestions = async () => {
     setLoading(true);
     try {
-      // Get published stories and their keywords for learning context
-      const { data: publishedStories } = await supabase
+      // Get topic-specific published stories for learning context
+      // Handle both legacy articles and multi-tenant stories
+      const { data: legacyStories } = await supabase
         .from('articles')
         .select('title, body, keywords')
+        .eq('topic_id', topicId)
         .eq('processing_status', 'processed')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(5);
+
+      const { data: multiTenantStories } = await supabase
+        .from('topic_articles')
+        .select('shared_article_content(title, body)')
+        .eq('topic_id', topicId)
+        .eq('processing_status', 'processed')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // Get topic sources for additional context when no stories exist
+      const { data: topicSources } = await supabase
+        .from('topic_sources')
+        .select('content_sources(source_name, canonical_domain)')
+        .eq('topic_id', topicId)
+        .eq('is_active', true)
+        .limit(5);
+
+      // Combine and format stories
+      const publishedStories = [
+        ...(legacyStories || []),
+        ...(multiTenantStories || []).map(ts => ({
+          title: ts.shared_article_content?.title || '',
+          body: ts.shared_article_content?.body || '',
+          keywords: []
+        }))
+      ];
 
       const { data, error } = await supabase.functions.invoke('suggest-keywords', {
         body: {
+          topicId,
           topicName,
           description,
           keywords,
           topicType,
           region,
           existingKeywords,
-          publishedStories: publishedStories || []
+          publishedStories: publishedStories || [],
+          topicSources: topicSources || []
         }
       });
 

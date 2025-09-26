@@ -21,13 +21,13 @@ serve(async (req) => {
   }
 
   try {
-    const { topicName, description, keywords, topicType, region, existingKeywords = [], publishedStories = [] } = await req.json();
+    const { topicId, topicName, description, keywords, topicType, region, existingKeywords = [], publishedStories = [], topicSources = [] } = await req.json();
 
     if (!DEEPSEEK_API_KEY) {
       throw new Error('DEEPSEEK_API_KEY is not configured');
     }
 
-    // Construct context from published stories
+    // Construct context from published stories and sources
     let publishedContext = '';
     if (publishedStories.length > 0) {
       const storyKeywords = publishedStories
@@ -36,9 +36,22 @@ serve(async (req) => {
       const storyTitles = publishedStories.map((story: any) => story.title).join(', ');
       
       publishedContext = `
-Published Story Context:
+Published Story Context (Topic-Specific):
 - Recent story titles: ${storyTitles}
 - Keywords from published stories: ${storyKeywords.join(', ')}`;
+    }
+
+    // Add source context when no published stories available
+    let sourceContext = '';
+    if (publishedStories.length === 0 && topicSources.length > 0) {
+      const sourceNames = topicSources
+        .map((ts: any) => ts.content_sources?.source_name || ts.content_sources?.canonical_domain)
+        .filter(Boolean);
+      
+      sourceContext = `
+Topic Sources Context:
+- Content sources: ${sourceNames.join(', ')}
+- Use these sources to understand what type of content this topic focuses on`;
     }
 
     // Construct the prompt for keyword suggestions
@@ -56,6 +69,10 @@ Already Added Keywords: ${existingKeywords.join(', ') || 'None'}`;
 
     if (publishedContext) {
       prompt += publishedContext;
+    }
+
+    if (sourceContext) {
+      prompt += sourceContext;
     }
 
     prompt += `
