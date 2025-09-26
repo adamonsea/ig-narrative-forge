@@ -29,7 +29,7 @@ const TopicFeed = () => {
     loadingMore,
     hasMore,
     loadMore
-  } = useInfiniteTopicFeedWithKeywords(slug || '', []);
+  } = useInfiniteTopicFeedWithKeywords(slug || '');
 
   // Keyword filtering state - only using topic keywords
   const {
