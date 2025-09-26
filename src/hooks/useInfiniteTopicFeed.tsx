@@ -101,7 +101,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
       // Use the public feed function for consistent access
       const { data: storiesData, error } = await supabase
         .rpc('get_public_topic_feed', {
-          p_topic_slug: slug,
+          topic_slug_param: slug,
           p_limit: STORIES_PER_PAGE,
           p_offset: from,
           p_sort_by: sortBy
@@ -194,7 +194,70 @@ export const useInfiniteTopicFeed = (slug: string) => {
       }
 
       if (!storiesData || storiesData.length === 0) {
-        console.log('📄 No stories found for topic');
+        console.log('📄 No stories found for topic via public RPC');
+        // If topic is not public, try admin feed for the owner/editor context
+        if (topicData?.is_public === false) {
+          console.log('🔒 Trying admin topic feed for private topic', topicData.id);
+          const { data: adminData, error: adminError } = await supabase
+            .rpc('get_admin_topic_stories', { p_topic_id: topicData.id });
+          if (adminError) {
+            console.warn('⚠️ Admin topic feed RPC error:', adminError);
+          }
+          if (adminData && adminData.length > 0) {
+            // Load slides for admin stories
+            const adminStoryIds = adminData.map((s: any) => s.id);
+            let slidesData: any[] = [];
+            if (adminStoryIds.length > 0) {
+              const { data: slides, error: slidesError } = await supabase
+                .rpc('get_public_slides_for_stories', { p_story_ids: adminStoryIds });
+              if (slidesError) {
+                console.warn('⚠️ Failed to load slides for admin feed, trying direct query:', slidesError);
+                const { data: fallbackSlides } = await supabase
+                  .from('slides')
+                  .select('*')
+                  .in('story_id', adminStoryIds)
+                  .order('slide_number', { ascending: true });
+                slidesData = fallbackSlides || [];
+              } else {
+                slidesData = slides || [];
+              }
+            }
+            const transformedStories = adminData.map((story: any) => {
+              const storySlides = slidesData
+                .filter((slide: any) => slide.story_id === story.id)
+                .map((slide: any) => ({
+                  id: slide.id,
+                  slide_number: slide.slide_number,
+                  content: slide.content,
+                  word_count: slide.word_count || 0,
+                  visual: slide.visuals && slide.visuals[0] ? {
+                    image_url: slide.visuals[0].image_url,
+                    alt_text: slide.visuals[0].alt_text || ''
+                  } : undefined
+                }));
+              return {
+                id: story.id,
+                title: story.title,
+                author: story.author || 'Unknown',
+                publication_name: 'eeZee News',
+                created_at: story.created_at,
+                updated_at: story.updated_at,
+                cover_illustration_url: story.cover_illustration_url,
+                cover_illustration_prompt: undefined,
+                slides: storySlides,
+                article: {
+                  source_url: '#',
+                  published_at: story.created_at,
+                  region: topicData.region || 'Unknown'
+                }
+              };
+            });
+            if (append) setStories(prev => [...prev, ...transformedStories]);
+            else setStories(transformedStories);
+            setHasMore(adminData.length === STORIES_PER_PAGE);
+            return;
+          }
+        }
         if (!append) {
           setStories([]);
         }
