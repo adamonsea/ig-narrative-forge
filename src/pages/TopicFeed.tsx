@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
@@ -10,7 +10,7 @@ import { useInfiniteTopicFeedWithKeywords } from "@/hooks/useInfiniteTopicFeedWi
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { KeywordFilterModal } from "@/components/KeywordFilterModal";
-import { Hash, MapPin } from "lucide-react";
+import { Hash, MapPin, Filter } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
@@ -20,6 +20,7 @@ const TopicFeed = () => {
   const { user } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Keyword filtering state
   const {
@@ -46,6 +47,17 @@ const TopicFeed = () => {
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
+
+  // Scroll detection for sticky header
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Intersection Observer for infinite scroll
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -117,7 +129,45 @@ const TopicFeed = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      <div className="container mx-auto px-4 py-8">
+      {/* Sticky header for scrollers */}
+      {isScrolled && topic && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {topic.branding_config?.logo_url ? (
+                  <img
+                    src={topic.branding_config.logo_url}
+                    alt={`${topic.name} logo`}
+                    className="h-8 w-auto object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {topic.topic_type === 'regional' ? (
+                      <MapPin className="w-4 h-4 text-blue-500" />
+                    ) : (
+                      <Hash className="w-4 h-4 text-green-500" />
+                    )}
+                    <span className="font-semibold text-lg">{topic.name}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filters</span>
+                {hasActiveFilters && (
+                  <span className="w-2 h-2 bg-primary rounded-full" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={`container mx-auto px-4 py-8 ${isScrolled ? 'pt-20' : ''}`}>
         {/* User Avatar for logged in users */}
         {user && (
           <div className="absolute left-4 top-8">
@@ -132,17 +182,21 @@ const TopicFeed = () => {
         {/* Topic Header - Clean and minimal with branding support */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            {topic.topic_type === 'regional' ? (
-              <MapPin className="w-6 h-6 text-blue-500" />
-            ) : (
-              <Hash className="w-6 h-6 text-green-500" />
+            {!topic.branding_config?.logo_url && (
+              <>
+                {topic.topic_type === 'regional' ? (
+                  <MapPin className="w-6 h-6 text-blue-500" />
+                ) : (
+                  <Hash className="w-6 h-6 text-green-500" />
+                )}
+              </>
             )}
             <div className="flex items-center gap-2">
               {topic.branding_config?.logo_url ? (
                 <img
                   src={topic.branding_config.logo_url}
                   alt={`${topic.name} logo`}
-                  className="max-h-16 max-w-64 object-contain"
+                  className="max-h-20 w-3/4 max-w-none object-contain"
                 />
               ) : (
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
