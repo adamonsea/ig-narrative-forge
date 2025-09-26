@@ -184,31 +184,29 @@ const TopicFeed = () => {
         <div className="text-center mb-8">
           <div className="relative flex items-center justify-center mb-4">
             {/* Centered logo or title */}
-            <div className="flex items-center gap-2">
-              {!topic.branding_config?.logo_url && (
-                <>
-                  {topic.topic_type === 'regional' ? (
-                    <MapPin className="w-6 h-6 text-blue-500" />
-                  ) : (
-                    <Hash className="w-6 h-6 text-green-500" />
-                  )}
-                </>
-              )}
-              {topic.branding_config?.logo_url ? (
+            {topic.branding_config?.logo_url ? (
+              <div className="flex justify-center">
                 <img
                   src={topic.branding_config.logo_url}
                   alt={`${topic.name} logo`}
-                  className="max-h-20 w-3/4 max-w-none object-contain"
+                  className="h-16 max-w-xs object-contain"
                 />
-              ) : (
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {topic.topic_type === 'regional' ? (
+                  <MapPin className="w-6 h-6 text-blue-500" />
+                ) : (
+                  <Hash className="w-6 h-6 text-green-500" />
+                )}
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   {topic.name}
                 </h1>
-              )}
-            </div>
+              </div>
+            )}
             
             {/* Beta badge positioned to the right */}
-            <span className="absolute left-1/2 translate-x-full ml-6 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+            <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
               beta
             </span>
           </div>
