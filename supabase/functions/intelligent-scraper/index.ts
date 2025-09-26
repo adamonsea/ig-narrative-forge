@@ -223,17 +223,17 @@ function analyzeUrlPatterns(url: string): { likelyRSS: boolean; modernSite: bool
 }
 
 function getFallbackMethods(primaryMethod: string): string[] {
-  // EMERGENCY FIX: Improved fallback chains with better coverage
+  // Updated fallback chains using unified scraper approach
   const fallbacks: Record<string, string[]> = {
-    'rss_discovery': ['topic-aware-scraper', 'enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
-    'topic-aware-scraper': ['enhanced_html', 'universal-scraper', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
-    'enhanced_html': ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
-    'universal-scraper': ['topic-aware-scraper', 'beautiful-soup-scraper', 'enhanced_html', 'ai-scraper-recovery'],
-    'beautiful-soup-scraper': ['topic-aware-scraper', 'universal-scraper', 'enhanced_html', 'ai-scraper-recovery'],
-    'ai-scraper-recovery': ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper']
+    'rss_discovery': ['universal-topic-scraper', 'enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
+    'topic-aware-scraper': ['universal-topic-scraper', 'enhanced_html', 'universal-scraper', 'beautiful-soup-scraper'],
+    'enhanced_html': ['universal-topic-scraper', 'universal-scraper', 'beautiful-soup-scraper', 'ai-scraper-recovery'],
+    'universal-scraper': ['universal-topic-scraper', 'beautiful-soup-scraper', 'enhanced_html', 'ai-scraper-recovery'],
+    'beautiful-soup-scraper': ['universal-topic-scraper', 'universal-scraper', 'enhanced_html', 'ai-scraper-recovery'],
+    'ai-scraper-recovery': ['universal-topic-scraper', 'universal-scraper', 'beautiful-soup-scraper']
   };
   
-  return fallbacks[primaryMethod] || ['topic-aware-scraper', 'universal-scraper', 'beautiful-soup-scraper'];
+  return fallbacks[primaryMethod] || ['universal-topic-scraper', 'universal-scraper', 'beautiful-soup-scraper'];
 }
 
 function getAverageSuccessRate(performanceData: any[], method: string): number | null {
@@ -255,7 +255,7 @@ async function executeScrapingMethod(
   const methodMap: Record<string, string> = {
     'rss_discovery': 'universal-scraper', // Will auto-discover RSS
     'enhanced_html': 'beautiful-soup-scraper',
-    'topic-aware-scraper': 'topic-aware-scraper',
+    'topic-aware-scraper': 'universal-topic-scraper', // Route to unified scraper
     'universal-scraper': 'universal-scraper',
     'beautiful-soup-scraper': 'beautiful-soup-scraper',
     'ai-scraper-recovery': 'ai-scraper-recovery'

@@ -13,17 +13,9 @@ export interface Topic {
  * @returns The appropriate scraper function name
  */
 export const getScraperFunction = (topicType: 'regional' | 'keyword', feedUrl?: string): string => {
-  // Phase 1 Standardization: ALL regional topics use universal-topic-scraper
-  if (topicType === 'regional') {
-    return 'universal-topic-scraper';
-  }
-  
-  // For keyword topics, check if URL appears to be an index/listing page
-  if (feedUrl && isIndexPage(feedUrl)) {
-    return 'unified-scraper'; // Use new two-phase scraper for index pages
-  }
-  
-  return 'topic-aware-scraper';
+  // Unified strategy: Always use universal scraper for all topic types
+  // It handles both regional and keyword topics and routes to appropriate sub-scrapers
+  return 'universal-topic-scraper';
 };
 
 /**
@@ -70,31 +62,12 @@ export const createScraperRequestBody = (
     region?: string;
   }
 ) => {
-  // Phase 1 Standardization: ALL regional topics use universal-topic-scraper format
-  if (topicType === 'regional') {
-    return {
-      topicId: options.topicId,
-      sourceIds: options.sourceId ? [options.sourceId] : undefined,
-      forceRescrape: false,
-      testMode: false
-    };
-  }
-
-  // For keyword topics, check if this is an index page requiring two-phase scraping
-  if (isIndexPage(feedUrl)) {
-    return {
-      indexUrl: feedUrl,
-      topicId: options.topicId,
-      sourceId: options.sourceId,
-      maxArticles: 20,
-      fallbackToScreenshot: true
-    };
-  }
-  
-  // Standard keyword topic scraping
+  // Unified strategy: Universal scraper expects a simple body with topicId
+  // It handles the complexity of routing to appropriate sub-scrapers internally
   return {
-    feedUrl,
     topicId: options.topicId,
-    sourceId: options.sourceId
+    sourceIds: options.sourceId ? [options.sourceId] : undefined,
+    forceRescrape: false,
+    testMode: false
   };
 };

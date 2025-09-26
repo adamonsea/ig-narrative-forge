@@ -228,11 +228,11 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
   const handleRescanSource = async (sourceId: string, feedUrl: string) => {
     setRescanning(sourceId);
     try {
-      const { data: result, error } = await supabase.functions.invoke('topic-aware-scraper', {
+      const { data: result, error } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
-          feedUrl,
           topicId,
-          sourceId
+          sourceIds: [sourceId], // Target specific source
+          testMode: false
         }
       });
 
@@ -240,14 +240,14 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
       toast({
         title: "Success",
-        description: `Re-scan completed: ${result.articlesStored} articles stored`,
+        description: `Gather completed: ${result.totalArticles || 0} articles found`,
       });
 
       fetchTopicData(); // Refresh data
     } catch (error: any) {
       toast({
         title: "Error",
-        description: `Re-scan failed: ${error.message}`,
+        description: `Gather failed: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -255,35 +255,32 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
     }
   };
 
+  // This function is now redundant as we have "Gather All" in TopicDashboard
+  // Keeping it for backward compatibility with event listeners
   const handleRescanAllSources = async () => {
     if (!data) return;
     
     setLoading(true);
     try {
-      const activeSources = data.sources.filter(s => s.is_active);
-      const promises = activeSources.map(source => 
-        supabase.functions.invoke('topic-aware-scraper', {
-          body: {
-            feedUrl: source.feed_url,
-            topicId,
-            sourceId: source.id
-          }
-        })
-      );
+      const { data: result, error } = await supabase.functions.invoke('universal-topic-scraper', {
+        body: {
+          topicId,
+          testMode: false
+        }
+      });
 
-      const results = await Promise.allSettled(promises);
-      const successful = results.filter(r => r.status === 'fulfilled').length;
+      if (error) throw error;
       
       toast({
-        title: "Bulk Re-scan Complete",
-        description: `${successful}/${activeSources.length} sources processed successfully`,
+        title: "Gather All Complete",
+        description: `Found ${result.totalArticles || 0} articles from ${result.successfulSources || 0} sources`,
       });
 
       fetchTopicData();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: `Bulk re-scan failed: ${error.message}`,
+        description: `Gather all failed: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -359,24 +356,16 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
           <h3 className="text-2xl font-bold">Sources & Automation</h3>
           <p className="text-muted-foreground">Manage content sources and automated scraping for "{topicName}"</p>
         </div>
-        <div className="flex gap-2">
-            <Button 
-              onClick={fetchTopicData} 
-              variant="outline" 
-              size="sm"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          <Button 
-            onClick={handleRescanAllSources}
-            disabled={loading || !data?.active_sources}
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            Scan All Sources
-          </Button>
-        </div>
+        {/* Refresh button for manual data reload */}
+        <Button 
+          onClick={fetchTopicData} 
+          variant="outline" 
+          size="sm"
+          disabled={loading}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
       </div>
 
       {/* Add New Source */}

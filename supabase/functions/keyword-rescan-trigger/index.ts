@@ -104,9 +104,9 @@ serve(async (req) => {
       );
     }
 
-    // Determine which scraper to use based on topic type
-    const scraperFunction = topicInfo.topic_type === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
-    console.log(`📍 Using ${scraperFunction} for ${topicInfo.topic_type} topic`);
+    // Determine scraper to use - now unified approach
+    const scraperFunction = 'universal-topic-scraper'; // All topic types use unified scraper
+    console.log(`📍 Using ${scraperFunction} for ${topicInfo.topic_type} topic (unified approach)`);
 
     // Get all active sources for this topic
     const { data: sources, error: sourcesError } = await supabase

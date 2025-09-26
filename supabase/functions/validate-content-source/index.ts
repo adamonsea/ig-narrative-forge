@@ -351,9 +351,8 @@ serve(async (req) => {
             });
           }
           
-          // Test scraping functionality
-          // Determine which scraper to use
-          const scraperFunction = topicType === 'regional' ? 'universal-scraper' : 'topic-aware-scraper';
+          // Test scraping functionality using unified approach
+          const scraperFunction = 'universal-topic-scraper'; // All topics use unified scraper now
           
           // Use the suggested URL if we discovered a better RSS feed
           const testUrl = result.suggestedUrl || url;
