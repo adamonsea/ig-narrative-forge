@@ -139,11 +139,11 @@ serve(async (req) => {
     }
 
     // Generate optimized illustration prompt
-    const illustrationPrompt = `Create a detailed editorial cartoon illustration for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    const illustrationPrompt = `Create a black-and-white line drawing editorial cartoon illustration for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: Black and white editorial cartoon illustration in the style of newspaper political cartoons or magazine editorial art. Rich linework with expressive character, detailed but clean composition. Think New Yorker cartoon meets editorial illustration - sophisticated, engaging, and storytelling-focused rather than symbolic or icon-like. Use varied line weights, cross-hatching, and shading techniques to create depth and visual interest. The illustration should capture the mood and essence of the story with personality and editorial flair, while remaining professional and newspaper-appropriate.`
+Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shading. Lighthearted, humorous, slightly satirical tone. Characters should have cartoonishly exaggerated features — rounded faces, expressive body language that enhances the humor. Use medium to heavy outlines for main characters, lighter lines for background elements. Line quality should be loose, confident, slightly sketchy but controlled. Classic editorial cartoon/newspaper comic style that captures situational humor in a single frame. Think mid-20th-century newspaper editorial cartoons with over-the-top expressions and professional attire. Monochrome — relies on line work and contrast rather than color. The composition should feel like a classic editorial cartoon with depth created through varied line weights and cross-hatching techniques.`
 
     // Generate image based on selected model
     const startTime = Date.now()
