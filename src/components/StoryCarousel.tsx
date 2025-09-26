@@ -306,10 +306,10 @@ export default function StoryCarousel({ story, topicName, storyUrl }: StoryCarou
             <div
               ref={isLast ? lastFitInnerRef : undefined}
               style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
-              className="flex flex-col h-full justify-center"
-            >
-              <div className="w-full max-w-lg mx-auto text-center">
-                <div className={`leading-relaxed ${
+               className="w-full max-w-lg mx-auto text-center"
+             >
+               <div className="w-full max-w-lg mx-auto text-center">
+                 <div className={`leading-relaxed ${
                   index === 0 
                   ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
                   : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
