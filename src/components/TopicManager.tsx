@@ -402,24 +402,24 @@ export const TopicManager = () => {
                         
                         {/* Visitor Stats */}
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-secondary uppercase tracking-wider flex items-center gap-1">
+                          <div className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
                             <Eye className="w-3 h-3" />
                             Visitors
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-secondary/10 backdrop-blur-sm rounded-lg p-2 border border-secondary/20">
-                              <div className="text-lg font-bold text-secondary">
+                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
+                              <div className="text-lg font-bold text-primary">
                                 {topic.visits_today || 0}
                               </div>
-                              <div className="text-xs font-medium text-secondary/70">
+                              <div className="text-xs font-medium text-primary/70">
                                 Today
                               </div>
                             </div>
-                            <div className="bg-secondary/10 backdrop-blur-sm rounded-lg p-2 border border-secondary/20">
-                              <div className="text-lg font-bold text-secondary">
+                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
+                              <div className="text-lg font-bold text-primary">
                                 {topic.visits_this_week || 0}
                               </div>
-                              <div className="text-xs font-medium text-secondary/70">
+                              <div className="text-xs font-medium text-primary/70">
                                 This week
                               </div>
                             </div>
