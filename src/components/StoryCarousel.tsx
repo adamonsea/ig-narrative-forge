@@ -8,6 +8,7 @@ import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFla
 import { format } from 'date-fns';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
+import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 
 interface Story {
   id: string;
@@ -40,12 +41,14 @@ interface Story {
 interface StoryCarouselProps {
   story: Story;
   storyUrl?: string;
+  topicId?: string; // Add topicId for tracking
 }
 
-export default function StoryCarousel({ story, storyUrl }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  const { trackShareClick } = useStoryInteractionTracking();
   
   // Fit-to-height for last slide
   const lastFitContainerRef = useRef<HTMLDivElement | null>(null);
@@ -98,6 +101,11 @@ export default function StoryCarousel({ story, storyUrl }: StoryCarouselProps) {
   };
 
   const handleShare = () => {
+    // Track share click
+    if (topicId) {
+      trackShareClick(story.id, topicId, navigator.share ? 'native' : 'clipboard');
+    }
+
     // Always use the story URL if available, otherwise construct one
     const shareUrl = storyUrl || `${window.location.origin}/story/${story.id}`;
     const shareText = `Check out this story: ${story.title}`;
@@ -396,6 +404,8 @@ export default function StoryCarousel({ story, storyUrl }: StoryCarouselProps) {
               showDots={false}
               onSlideChange={setCurrentSlideIndex}
               ariaLabel={`${story.title} story slides`}
+              storyId={story.id}
+              topicId={topicId}
             />
           </div>
 

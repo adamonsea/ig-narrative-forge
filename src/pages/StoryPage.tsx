@@ -286,6 +286,7 @@ const StoryPage = () => {
               ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
               : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
             }
+            topicId={topic?.id}
           />
         </div>
       </div>

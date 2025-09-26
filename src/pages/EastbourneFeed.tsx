@@ -95,6 +95,7 @@ export default function EastbourneFeed() {
                   <StoryCarousel 
                     story={story} 
                     storyUrl={`${window.location.origin}/eastbourne-feed/story/${story.id}`}
+                    topicId="d224e606-1a4c-4713-8135-1d30e2d6d0c6"
                   />
                 </div>
               );

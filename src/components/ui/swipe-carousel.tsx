@@ -10,6 +10,9 @@ export type SwipeCarouselProps = {
   showDots?: boolean;
   onSlideChange?: (index: number) => void;
   ariaLabel?: string;
+  // Story tracking props
+  storyId?: string;
+  topicId?: string;
 };
 
 export function SwipeCarousel({
@@ -20,12 +23,15 @@ export function SwipeCarousel({
   showDots = true,
   onSlideChange,
   ariaLabel = "Carousel",
+  storyId,
+  topicId,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
   const [width, setWidth] = useState(0);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
+  const hasTrackedSwipe = useRef(false);
 
   // measure width
   useEffect(() => {
@@ -55,12 +61,22 @@ export function SwipeCarousel({
     return controls.stop;
   }, [index]);
 
-  // notify parent of slide changes
+  // notify parent of slide changes and track swipes
   useEffect(() => {
     if (onSlideChange) {
       onSlideChange(index);
     }
-  }, [index, onSlideChange]);
+
+    // Track swipe interaction if we have story/topic context and this is a real swipe
+    if (storyId && topicId && index > 0 && !hasTrackedSwipe.current) {
+      hasTrackedSwipe.current = true;
+      // Dynamic import to avoid circular dependencies
+      import('@/hooks/useStoryInteractionTracking').then(({ useStoryInteractionTracking }) => {
+        const { trackSwipe } = useStoryInteractionTracking();
+        trackSwipe(storyId, topicId, index);
+      });
+    }
+  }, [index, onSlideChange, storyId, topicId]);
 
   const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
   const goTo = (i: number) => setIndex(clamp(i));
