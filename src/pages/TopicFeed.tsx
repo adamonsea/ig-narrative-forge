@@ -181,17 +181,23 @@ const TopicFeed = () => {
 
         {/* Topic Header - Clean and minimal with branding support */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            {!topic.branding_config?.logo_url && (
-              <>
-                {topic.topic_type === 'regional' ? (
-                  <MapPin className="w-6 h-6 text-blue-500" />
-                ) : (
-                  <Hash className="w-6 h-6 text-green-500" />
-                )}
-              </>
-            )}
+          <div className="relative flex items-center justify-center mb-4">
+            {/* Beta badge positioned to the left */}
+            <span className="absolute left-1/2 -translate-x-full -ml-6 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+              beta
+            </span>
+            
+            {/* Centered logo or title */}
             <div className="flex items-center gap-2">
+              {!topic.branding_config?.logo_url && (
+                <>
+                  {topic.topic_type === 'regional' ? (
+                    <MapPin className="w-6 h-6 text-blue-500" />
+                  ) : (
+                    <Hash className="w-6 h-6 text-green-500" />
+                  )}
+                </>
+              )}
               {topic.branding_config?.logo_url ? (
                 <img
                   src={topic.branding_config.logo_url}
@@ -203,9 +209,6 @@ const TopicFeed = () => {
                   {topic.name}
                 </h1>
               )}
-              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                beta
-              </span>
             </div>
           </div>
           {topic.branding_config?.subheader ? (
