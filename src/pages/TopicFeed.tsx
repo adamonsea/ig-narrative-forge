@@ -263,11 +263,17 @@ const TopicFeed = () => {
               </button>
             </div>
           </div>
-        ) : (
-          <div className="pt-8">
-            <EndOfFeedCTA topicName={topic.name} topicId={topic.id} />
+        ) : !loading && !loadingMore ? (
+          <div className="text-center py-12 space-y-4">
+            <Hash className="w-12 h-12 mx-auto text-muted-foreground/50" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No stories yet</h3>
+              <p className="text-muted-foreground mb-4">
+                This feed doesn't have any published content yet. Check back soon for fresh stories!
+              </p>
+            </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

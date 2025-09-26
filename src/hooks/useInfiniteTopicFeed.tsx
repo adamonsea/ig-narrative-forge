@@ -51,6 +51,7 @@ export const useInfiniteTopicFeed = (slug: string) => {
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [page, setPage] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadTopic = useCallback(async () => {
@@ -106,6 +107,20 @@ export const useInfiniteTopicFeed = (slug: string) => {
           p_offset: from,
           p_sort_by: sortBy
         });
+
+      // Handle RPC errors (like permission denied)
+      if (error) {
+        console.error('🚨 Public feed RPC error:', error);
+        setLastError(error.message);
+        
+        if (error.message.includes('permission denied') || error.code === '42501') {
+          toast({
+            title: "Feed Access Issue",
+            description: "Having trouble loading the public feed. Trying alternative access...",
+            variant: "destructive",
+          });
+        }
+      }
 
       if (error) {
         console.error('❌ Error fetching stories via RPC:', error);
@@ -193,10 +208,10 @@ export const useInfiniteTopicFeed = (slug: string) => {
         console.log('⚠️ RPC had error but may have returned data, continuing...');
       }
 
-      if (!storiesData || storiesData.length === 0) {
-        console.log('📄 No stories found for topic via public RPC');
-        // If topic is not public, try admin feed for the owner/editor context
-        if (topicData?.is_public === false) {
+      if (!storiesData || storiesData.length === 0 || error) {
+        console.log('📄 No stories found for topic via public RPC, or RPC failed');
+        // If public RPC failed or topic is not public, try admin feed as fallback
+        if (error || topicData?.is_public === false) {
           console.log('🔒 Trying admin topic feed for private topic', topicData.id);
           const { data: adminData, error: adminError } = await supabase
             .rpc('get_admin_topic_stories', { p_topic_id: topicData.id });
@@ -260,8 +275,17 @@ export const useInfiniteTopicFeed = (slug: string) => {
         }
         if (!append) {
           setStories([]);
+          // If there was an error and no stories, inform the user
+          if (error && !lastError) {
+            toast({
+              title: "Feed Loading Issue",
+              description: "Unable to load content right now. Please try again later.",
+              variant: "destructive",
+            });
+          }
         }
         setHasMore(false);
+        setLastError(error?.message || null);
         return;
       }
 
