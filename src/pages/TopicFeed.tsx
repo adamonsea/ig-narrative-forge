@@ -5,7 +5,7 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
-import { useKeywordFilterWithDatabase } from "@/hooks/useKeywordFilterWithDatabase";
+import { useKeywordFilter } from "@/hooks/useKeywordFilter";
 import { useInfiniteTopicFeedWithKeywords } from "@/hooks/useInfiniteTopicFeedWithKeywords";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
@@ -22,18 +22,6 @@ const TopicFeed = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Keyword filtering state
-  const {
-    selectedKeywords,
-    availableKeywords,
-    isModalOpen,
-    setIsModalOpen,
-    toggleKeyword,
-    clearAllFilters,
-    removeKeyword,
-    hasActiveFilters
-  } = useKeywordFilterWithDatabase([]); // Will be updated when topic loads
-
   const {
     stories,
     topic,
@@ -41,7 +29,20 @@ const TopicFeed = () => {
     loadingMore,
     hasMore,
     loadMore
-  } = useInfiniteTopicFeedWithKeywords(slug || '', selectedKeywords);
+  } = useInfiniteTopicFeedWithKeywords(slug || '', []);
+
+  // Keyword filtering state - only using topic keywords
+  const {
+    selectedKeywords,
+    availableKeywords,
+    filteredStories,
+    isModalOpen,
+    setIsModalOpen,
+    toggleKeyword,
+    clearAllFilters,
+    removeKeyword,
+    hasActiveFilters
+  } = useKeywordFilter(stories, topic?.keywords || []);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
 
@@ -182,11 +183,6 @@ const TopicFeed = () => {
         {/* Topic Header - Clean and minimal with branding support */}
         <div className="text-center mb-8">
           <div className="relative flex items-center justify-center mb-4">
-            {/* Beta badge positioned to the left */}
-            <span className="absolute left-1/2 -translate-x-full -ml-6 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
-              beta
-            </span>
-            
             {/* Centered logo or title */}
             <div className="flex items-center gap-2">
               {!topic.branding_config?.logo_url && (
@@ -210,6 +206,11 @@ const TopicFeed = () => {
                 </h1>
               )}
             </div>
+            
+            {/* Beta badge positioned to the right */}
+            <span className="absolute left-1/2 translate-x-full ml-6 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+              beta
+            </span>
           </div>
           {topic.branding_config?.subheader ? (
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -225,7 +226,7 @@ const TopicFeed = () => {
         {/* Filters */}
         <div className="mb-8">
           <FeedFilters 
-            slideCount={stories.reduce((total, story) => total + story.slides.length, 0)}
+            slideCount={filteredStories.reduce((total, story) => total + story.slides.length, 0)}
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={removeKeyword}
@@ -237,23 +238,23 @@ const TopicFeed = () => {
         <KeywordFilterModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          availableKeywords={topic?.keywords?.map(k => ({ keyword: k, count: 0 })) || []}
+          availableKeywords={availableKeywords}
           selectedKeywords={selectedKeywords}
           onKeywordToggle={toggleKeyword}
           onClearAll={clearAllFilters}
         />
 
         {/* Stories with infinite scroll - mixed with sentiment cards */}
-        {stories.length > 0 ? (
+        {filteredStories.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
-            {stories.map((story, index) => {
+            {filteredStories.map((story, index) => {
               const items = [];
               
               // Add the story
               items.push(
                 <div
                   key={`story-${story.id}`}
-                  ref={index === stories.length - 1 ? lastStoryElementRef : null}
+                  ref={index === filteredStories.length - 1 ? lastStoryElementRef : null}
                 >
                   <StoryCarousel 
                     story={story} 
