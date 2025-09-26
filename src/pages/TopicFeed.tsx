@@ -5,8 +5,7 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
-import { useKeywordFilter } from "@/hooks/useKeywordFilter";
-import { useInfiniteTopicFeedWithKeywords } from "@/hooks/useInfiniteTopicFeedWithKeywords";
+import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { KeywordFilterModal } from "@/components/KeywordFilterModal";
@@ -23,26 +22,22 @@ const TopicFeed = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   const {
-    stories,
+    stories: filteredStories,
     topic,
     loading,
     loadingMore,
     hasMore,
-    loadMore
-  } = useInfiniteTopicFeedWithKeywords(slug || '');
-
-  // Keyword filtering state - only using topic keywords
-  const {
+    loadMore,
     selectedKeywords,
     availableKeywords,
-    filteredStories,
     isModalOpen,
     setIsModalOpen,
     toggleKeyword,
     clearAllFilters,
     removeKeyword,
-    hasActiveFilters
-  } = useKeywordFilter(stories, topic?.keywords || []);
+    hasActiveFilters,
+    isServerFiltering
+  } = useHybridTopicFeedWithKeywords(slug || '');
 
   const { sentimentCards } = useSentimentCards(topic?.id);
 
@@ -299,11 +294,16 @@ const TopicFeed = () => {
             }).flat()}
             
             {/* Loading more indicator */}
-            {loadingMore && (
+            {(loadingMore || isServerFiltering) && (
               <div className="space-y-8">
                 {[...Array(2)].map((_, i) => (
                   <Skeleton key={i} className="w-full h-96 rounded-lg" />
                 ))}
+                {isServerFiltering && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    Filtering stories...
+                  </div>
+                )}
               </div>
             )}
             
