@@ -3004,10 +3004,15 @@ export type Database = {
           topic_slug_param: string
         }
         Returns: {
+          article_id: string
           author: string
+          cover_illustration_url: string
           created_at: string
           id: string
+          is_published: boolean
+          slide_count: number
           slides: Json
+          status: string
           summary: string
           title: string
           updated_at: string
