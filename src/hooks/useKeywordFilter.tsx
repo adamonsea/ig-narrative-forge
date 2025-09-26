@@ -35,44 +35,39 @@ export const useKeywordFilter = (stories: Story[], topicKeywords: string[] = [])
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Extract and count keywords from stories
+  // Count how many times each topic keyword appears in stories
   const availableKeywords = useMemo((): KeywordCount[] => {
+    if (topicKeywords.length === 0) {
+      return [];
+    }
+
     const keywordCounts = new Map<string, number>();
     
-    // Add topic keywords with high priority
+    // Initialize counts for all topic keywords
     topicKeywords.forEach(keyword => {
-      keywordCounts.set(keyword.toLowerCase(), 999); // High count to ensure they appear
+      keywordCounts.set(keyword.toLowerCase(), 0);
     });
 
-    // Analyze story content for keywords
+    // Count occurrences of each topic keyword in stories
     stories.forEach(story => {
       const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
       
-      // Extract meaningful words (filter out common words)
-      const words = text.match(/\b[a-z]{3,}\b/g) || [];
-      const commonWords = new Set([
-        'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 
-        'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'who', 
-        'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use', 'with', 'that', 'have', 'this', 
-        'will', 'your', 'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time', 'very', 
-        'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many', 'over', 'such', 'take', 'than', 
-        'them', 'well', 'were', 'what', 'year', 'about', 'after', 'could', 'first', 'into', 'might', 
-        'other', 'right', 'should', 'their', 'these', 'think', 'through', 'where', 'would', 'years'
-      ]);
-      
-      words.forEach(word => {
-        if (!commonWords.has(word) && word.length >= 3) {
-          keywordCounts.set(word, (keywordCounts.get(word) || 0) + 1);
+      topicKeywords.forEach(keyword => {
+        const keywordLower = keyword.toLowerCase();
+        // Count occurrences of this keyword (including partial matches)
+        const regex = new RegExp(keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        const matches = text.match(regex);
+        if (matches) {
+          keywordCounts.set(keywordLower, (keywordCounts.get(keywordLower) || 0) + matches.length);
         }
       });
     });
 
-    // Filter keywords that appear at least 3 times and sort by frequency
+    // Return keywords that appear at least once in the stories, sorted by frequency
     return Array.from(keywordCounts.entries())
-      .filter(([_, count]) => count >= 3)
+      .filter(([_, count]) => count > 0)
       .map(([keyword, count]) => ({ keyword, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20); // Limit to top 20 keywords
+      .sort((a, b) => b.count - a.count);
   }, [stories, topicKeywords]);
 
   // Filter stories based on selected keywords

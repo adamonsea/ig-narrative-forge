@@ -77,14 +77,15 @@ export const KeywordFilterModal = ({
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No keywords found in current stories</p>
+                <p>No topic keywords configured or found in stories</p>
+                <p className="text-xs mt-2">Add keywords in your topic settings to enable filtering</p>
               </div>
             )}
           </div>
 
           {/* Help text */}
           <p className="text-xs text-muted-foreground text-center">
-            Keywords are extracted from story titles and content. Only keywords appearing 3+ times are shown.
+            Filter by keywords configured in your topic settings. Numbers show how many stories contain each keyword.
           </p>
         </div>
       </DialogContent>
