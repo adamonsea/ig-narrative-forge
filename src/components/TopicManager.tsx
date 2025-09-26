@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2 } from "lucide-react";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,8 @@ interface Topic {
   stories_published_this_week?: number;
   visits_today?: number;
   visits_this_week?: number;
+  articles_swiped?: number;
+  share_clicks?: number;
   _count?: {
     articles: number;
     sources: number;
@@ -66,42 +68,44 @@ export const TopicManager = () => {
 
       if (error) throw error;
       
-      // Get real stats for each topic
-      const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
-        // Get accurate stats that match the Arrivals tab UX
-        // 1) Multi-tenant articles for this topic
-        const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats] = await Promise.all([
-          supabase.rpc('get_topic_articles_multi_tenant', {
-            p_topic_id: topic.id,
-            p_status: null,
-            p_limit: 500
-          }),
-          // Legacy published stories from this week
-          supabase
-            .from('stories')
-            .select(`
-              id,
-              article_id,
-              articles!inner(topic_id)
-            `, { count: 'exact' })
-            .in('status', ['ready', 'published'])
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-            .eq('articles.topic_id', topic.id),
-          // Multi-tenant published stories from this week
-          supabase
-            .from('stories')
-            .select(`
-              id,
-              topic_article_id,
-              topic_articles!inner(topic_id)
-            `, { count: 'exact' })
-            .in('status', ['ready', 'published'])
-            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-            .eq('topic_articles.topic_id', topic.id)
-            .not('topic_article_id', 'is', null),
-          // Get visitor stats
-          supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id })
-        ]);
+        // Get real stats for each topic
+        const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
+          // Get accurate stats that match the Arrivals tab UX
+          // 1) Multi-tenant articles for this topic
+          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats] = await Promise.all([
+            supabase.rpc('get_topic_articles_multi_tenant', {
+              p_topic_id: topic.id,
+              p_status: null,
+              p_limit: 500
+            }),
+            // Legacy published stories from this week
+            supabase
+              .from('stories')
+              .select(`
+                id,
+                article_id,
+                articles!inner(topic_id)
+              `, { count: 'exact' })
+              .in('status', ['ready', 'published'])
+              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+              .eq('articles.topic_id', topic.id),
+            // Multi-tenant published stories from this week
+            supabase
+              .from('stories')
+              .select(`
+                id,
+                topic_article_id,
+                topic_articles!inner(topic_id)
+              `, { count: 'exact' })
+              .in('status', ['ready', 'published'])
+              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+              .eq('topic_articles.topic_id', topic.id)
+              .not('topic_article_id', 'is', null),
+            // Get visitor stats
+            supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id }),
+            // Get interaction stats (swipes and shares)
+            supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 })
+          ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
         const mtIds = new Set(mtArticles.map(a => a.id));
@@ -129,17 +133,20 @@ export const TopicManager = () => {
           a.processing_status === 'new' || a.processing_status === 'processed'
         ) && !publishedIds.has(a.id) && !queuedIds.has(a.id)).length;
 
-        const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
-        const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
+          const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
+          const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
+          const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
 
-        return {
-          ...topic,
-          topic_type: topic.topic_type as 'regional' | 'keyword',
-          articles_in_arrivals: arrivalsCount,
-          stories_published_this_week: publishedThisWeek,
-          visits_today: visitorData.visits_today || 0,
-          visits_this_week: visitorData.visits_this_week || 0
-        };
+          return {
+            ...topic,
+            topic_type: topic.topic_type as 'regional' | 'keyword',
+            articles_in_arrivals: arrivalsCount,
+            stories_published_this_week: publishedThisWeek,
+            visits_today: visitorData.visits_today || 0,
+            visits_this_week: visitorData.visits_this_week || 0,
+            articles_swiped: Number(interactionData.articles_swiped) || 0,
+            share_clicks: Number(interactionData.share_clicks) || 0
+          };
       }));
       
       setTopics(topicsWithStats);
@@ -367,26 +374,52 @@ export const TopicManager = () => {
                           </div>
                         </div>
                         
+                        {/* Engagement Stats */}
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                            <MousePointer className="w-3 h-3" />
+                            Engagement
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                              <div className="text-lg font-bold text-foreground">
+                                {topic.articles_swiped || 0}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Swiped
+                              </div>
+                            </div>
+                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                              <div className="text-lg font-bold text-foreground">
+                                {topic.share_clicks || 0}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Shares
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
                         {/* Visitor Stats */}
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
+                          <div className="text-xs font-semibold text-secondary uppercase tracking-wider flex items-center gap-1">
                             <Eye className="w-3 h-3" />
                             Visitors
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
-                              <div className="text-lg font-bold text-primary">
+                            <div className="bg-secondary/10 backdrop-blur-sm rounded-lg p-2 border border-secondary/20">
+                              <div className="text-lg font-bold text-secondary">
                                 {topic.visits_today || 0}
                               </div>
-                              <div className="text-xs font-medium text-primary/70">
+                              <div className="text-xs font-medium text-secondary/70">
                                 Today
                               </div>
                             </div>
-                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
-                              <div className="text-lg font-bold text-primary">
+                            <div className="bg-secondary/10 backdrop-blur-sm rounded-lg p-2 border border-secondary/20">
+                              <div className="text-lg font-bold text-secondary">
                                 {topic.visits_this_week || 0}
                               </div>
-                              <div className="text-xs font-medium text-primary/70">
+                              <div className="text-xs font-medium text-secondary/70">
                                 This week
                               </div>
                             </div>

@@ -2041,6 +2041,45 @@ export type Database = {
           },
         ]
       }
+      story_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_type: string
+          referrer: string | null
+          share_platform: string | null
+          slide_index: number | null
+          story_id: string
+          topic_id: string
+          user_agent: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_type: string
+          referrer?: string | null
+          share_platform?: string | null
+          slide_index?: number | null
+          story_id: string
+          topic_id: string
+          user_agent?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          referrer?: string | null
+          share_platform?: string | null
+          slide_index?: number | null
+          story_id?: string
+          topic_id?: string
+          user_agent?: string | null
+          visitor_id?: string
+        }
+        Relationships: []
+      }
       suggested_keywords: {
         Row: {
           added_at: string | null
@@ -3192,6 +3231,14 @@ export type Database = {
           start_date: string
           start_time: string
           title: string
+        }[]
+      }
+      get_topic_interaction_stats: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          articles_swiped: number
+          share_clicks: number
+          total_swipes: number
         }[]
       }
       get_topic_sources: {
