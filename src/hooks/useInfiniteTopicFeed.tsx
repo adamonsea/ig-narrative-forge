@@ -110,80 +110,87 @@ export const useInfiniteTopicFeed = (slug: string) => {
       if (error) {
         console.error('❌ Error fetching stories via RPC:', error);
         
-        // Regional fallback for topics with no direct article matches
-        if (topicData?.topic_type === 'regional' && topicData?.region) {
-          console.log('🔄 Feed: Trying regional fallback for', topicData.region);
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('stories')
-            .select(`
-              id,
-              title,
-              author,
-              publication_name,
-              created_at,
-              updated_at,
-              cover_illustration_url,
-              cover_illustration_prompt,
-              slides!inner (
+        // Only use regional fallback if RPC completely failed AND no data was returned
+        if (!storiesData && topicData?.topic_type === 'regional' && topicData?.region) {
+          console.log('🔄 Feed: RPC failed completely, trying regional fallback for', topicData.region);
+          try {
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from('stories')
+              .select(`
                 id,
-                slide_number,
-                content,
-                word_count,
-                visuals (
-                  image_url,
-                  alt_text
+                title,
+                author,
+                publication_name,
+                created_at,
+                updated_at,
+                cover_illustration_url,
+                cover_illustration_prompt,
+                slides!inner (
+                  id,
+                  slide_number,
+                  content,
+                  word_count,
+                  visuals (
+                    image_url,
+                    alt_text
+                  )
+                ),
+                articles!inner (
+                  source_url,
+                  published_at,
+                  region,
+                  topic_id
                 )
-              ),
-              articles!inner (
-                source_url,
-                published_at,
-                region,
-                topic_id
-              )
-            `)
-            .eq('status', 'published')
-            .ilike('articles.region', `%${topicData.region}%`)
-            .order('created_at', { ascending: sortBy === 'oldest' })
-            .range(from, from + STORIES_PER_PAGE - 1);
-          
-          if (!fallbackError && fallbackData) {
-            const regionalTransformed = fallbackData.map((story: any) => ({
-              id: story.id,
-              title: story.title,
-              author: story.author || 'Unknown',
-              publication_name: story.publication_name || 'Unknown Publication',
-              created_at: story.created_at,
-              updated_at: story.updated_at,
-              cover_illustration_url: story.cover_illustration_url,
-              cover_illustration_prompt: story.cover_illustration_prompt,
-              slides: (story.slides || [])
-                .sort((a: any, b: any) => a.slide_number - b.slide_number)
-                .map((slide: any) => ({
-                  id: slide.id,
-                  slide_number: slide.slide_number,
-                  content: slide.content,
-                  word_count: slide.word_count,
-                  visual: slide.visuals && slide.visuals[0] ? {
-                    image_url: slide.visuals[0].image_url,
-                    alt_text: slide.visuals[0].alt_text || ''
-                  } : undefined
-                })),
-              article: {
-                source_url: story.articles?.source_url,
-                published_at: story.articles?.published_at,
-                region: story.articles?.region || topicData.region || 'Unknown'
-              }
-            }));
+              `)
+              .eq('status', 'published')
+              .ilike('articles.region', `%${topicData.region}%`)
+              .order('created_at', { ascending: sortBy === 'oldest' })
+              .range(from, from + STORIES_PER_PAGE - 1);
+            
+            if (!fallbackError && fallbackData) {
+              const regionalTransformed = fallbackData.map((story: any) => ({
+                id: story.id,
+                title: story.title,
+                author: story.author || 'Unknown',
+                publication_name: story.publication_name || 'Unknown Publication',
+                created_at: story.created_at,
+                updated_at: story.updated_at,
+                cover_illustration_url: story.cover_illustration_url,
+                cover_illustration_prompt: story.cover_illustration_prompt,
+                slides: (story.slides || [])
+                  .sort((a: any, b: any) => a.slide_number - b.slide_number)
+                  .map((slide: any) => ({
+                    id: slide.id,
+                    slide_number: slide.slide_number,
+                    content: slide.content,
+                    word_count: slide.word_count,
+                    visual: slide.visuals && slide.visuals[0] ? {
+                      image_url: slide.visuals[0].image_url,
+                      alt_text: slide.visuals[0].alt_text || ''
+                    } : undefined
+                  })),
+                article: {
+                  source_url: story.articles?.source_url,
+                  published_at: story.articles?.published_at,
+                  region: story.articles?.region || topicData.region || 'Unknown'
+                }
+              }));
 
-            if (append) {
-              setStories(prev => [...prev, ...regionalTransformed]);
-            } else {
-              setStories(regionalTransformed);
+              if (append) {
+                setStories(prev => [...prev, ...regionalTransformed]);
+              } else {
+                setStories(regionalTransformed);
+              }
+              setHasMore(fallbackData.length === STORIES_PER_PAGE);
+              return; // Only return after successful fallback
             }
-            setHasMore(fallbackData.length === STORIES_PER_PAGE);
+          } catch (fallbackError) {
+            console.error('❌ Regional fallback also failed:', fallbackError);
           }
         }
-        return;
+        
+        // If RPC returned data despite error, continue processing it
+        console.log('⚠️ RPC had error but may have returned data, continuing...');
       }
 
       if (!storiesData || storiesData.length === 0) {
