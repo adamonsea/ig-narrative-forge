@@ -101,7 +101,7 @@ serve(async (req) => {
     publicationName: string
   ): Promise<SlideContent[]> {
     try {
-      const prompt = `Create engaging Instagram carousel slides for this ${slideType} story.
+      const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
 
 ARTICLE DETAILS:
 Title: ${article.title}
@@ -115,9 +115,11 @@ REQUIREMENTS:
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
 - CRITICAL WORD LIMITS: Slide 1 MUST be maximum 25 words, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
-- Make it shareable and engaging  
+- Make it shareable and engaging for web readers
 - Include alt text for accessibility
 - Final slide should include source attribution
+- CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
+- Avoid social media specific language like "tag", "follow", or platform-specific terms
 
 OUTPUT FORMAT (JSON):
 {
@@ -142,7 +144,7 @@ OUTPUT FORMAT (JSON):
           messages: [
             {
               role: 'system',
-              content: `You are an expert content creator specializing in ${slideType} Instagram carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences.`
+              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
             },
             {
               role: 'user',
@@ -220,7 +222,7 @@ OUTPUT FORMAT (JSON):
                         slideType === 'tabloid' ? 6 : 
                         slideType === 'indepth' ? 8 : 12;
       
-      const prompt = `Create engaging Instagram carousel slides for this ${slideType} story.
+      const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
 
 ARTICLE DETAILS:
 Title: ${article.title}
@@ -234,9 +236,11 @@ REQUIREMENTS:
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
 - CRITICAL WORD LIMITS: Slide 1 MUST be maximum 25 words, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
-- Make it shareable and engaging
+- Make it shareable and engaging for web readers
 - Include alt text for accessibility
 - Final slide should include source attribution
+- CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
+- Avoid social media specific language like "tag", "follow", or platform-specific terms
 
 OUTPUT FORMAT (JSON):
 {
@@ -261,7 +265,7 @@ OUTPUT FORMAT (JSON):
           messages: [
             {
               role: 'system',
-              content: `You are an expert content creator specializing in ${slideType} Instagram carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences.`
+              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
             },
             {
               role: 'user',
@@ -329,16 +333,18 @@ OUTPUT FORMAT (JSON):
     apiKey: string, 
     publicationName: string
   ): Promise<{ caption: string; hashtags: string[] }> {
-    const prompt = `Create engaging Instagram post copy for this carousel about: ${article.title}
+    const prompt = `Create engaging web content copy for this news carousel about: ${article.title}
 
 SLIDES PREVIEW:
 ${slides.map((slide, i) => `Slide ${i + 1}: ${slide.content.substring(0, 100)}...`).join('\n')}
 
 Create:
-1. An engaging caption (max 2200 characters)
-2. Relevant hashtags (10-15 hashtags)
+1. An engaging caption for web readers (max 2200 characters)
+2. Relevant hashtags for web sharing (10-15 hashtags)
 
-Make it engaging and shareable for ${publicationName}.
+Make it engaging and shareable for ${publicationName} web readers.
+Use web-appropriate language like "share with friends", "discuss this story", "read more".
+Avoid social media platform-specific terms.
 
 Return in JSON format:
 {
@@ -358,7 +364,7 @@ Return in JSON format:
           messages: [
             {
               role: 'system',
-              content: 'You are a social media expert. Create engaging Instagram captions and hashtags.'
+              content: 'You are a web content expert. Create engaging captions and hashtags appropriate for web feed sharing.'
             },
             {
               role: 'user',
@@ -406,16 +412,18 @@ Return in JSON format:
     apiKey: string, 
     publicationName: string
   ): Promise<{ caption: string; hashtags: string[] }> {
-    const prompt = `Create engaging Instagram post copy for this carousel about: ${article.title}
+    const prompt = `Create engaging web content copy for this news carousel about: ${article.title}
 
 SLIDES PREVIEW:
 ${slides.map((slide, i) => `Slide ${i + 1}: ${slide.content.substring(0, 100)}...`).join('\n')}
 
 Create:
-1. An engaging caption (max 2200 characters) 
-2. Relevant hashtags (10-15 hashtags)
+1. An engaging caption for web readers (max 2200 characters) 
+2. Relevant hashtags for web sharing (10-15 hashtags)
 
-Make it engaging and shareable for ${publicationName}.
+Make it engaging and shareable for ${publicationName} web readers.
+Use web-appropriate language like "share with friends", "discuss this story", "read more".
+Avoid social media platform-specific terms.
 
 Return in JSON format:
 {
@@ -435,7 +443,7 @@ Return in JSON format:
           messages: [
             {
               role: 'system',
-              content: 'You are a social media expert. Create engaging Instagram captions and hashtags.'
+              content: 'You are a web content expert. Create engaging captions and hashtags appropriate for web feed sharing.'
             },
             {
               role: 'user',

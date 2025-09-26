@@ -184,7 +184,7 @@ const TopicFeed = () => {
                 <img
                   src={topic.branding_config.logo_url}
                   alt={`${topic.name} logo`}
-                  className="h-16 max-w-xs object-contain"
+                  className="h-12 sm:h-16 max-w-[280px] sm:max-w-xs object-contain"
                 />
               </div>
             ) : (
@@ -194,23 +194,22 @@ const TopicFeed = () => {
                 ) : (
                   <Hash className="w-6 h-6 text-green-500" />
                 )}
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   {topic.name}
                 </h1>
               </div>
             )}
             
-            {/* Beta badge positioned to the right */}
             <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
               beta
             </span>
           </div>
           {topic.branding_config?.subheader ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-4">
               {topic.branding_config.subheader}
             </p>
           ) : topic.description ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-4">
               {topic.description}
             </p>
           ) : null}
