@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link } from "lucide-react";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,16 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   const [linkEditorSlide, setLinkEditorSlide] = useState<Slide | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  const paginatedStories = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return stories.slice(startIndex, endIndex);
+  }, [stories, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(stories.length / pageSize);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -343,6 +353,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {stories.length} published {stories.length === 1 ? 'story' : 'stories'}
+          {totalPages > 1 && (
+            <span className="ml-2">
+              • Page {currentPage} of {totalPages}
+            </span>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh}>
           <RotateCcw className="mr-2 h-4 w-4" />
@@ -350,7 +365,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         </Button>
       </div>
 
-      {stories.map((story) => (
+      {paginatedStories.map((story) => (
         <Card key={story.id} className="relative">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
@@ -603,8 +618,47 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               />
             )}
            </CardContent>
-         </Card>
+          </Card>
       ))}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <Button
+                key={pageNum}
+                variant={pageNum === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className="w-8 h-8 p-0"
+              >
+                {pageNum}
+              </Button>
+            ))}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
