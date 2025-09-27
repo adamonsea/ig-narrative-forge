@@ -187,37 +187,51 @@ export function SwipeCarousel({
       </div>
 
       {centerDragArea && (
-        <div 
-          className="absolute inset-0 pointer-events-auto"
-          onPointerDown={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            
-            // Check if click is within center 70% area
-            const centerWidth = rect.width * 0.7;
-            const centerHeight = rect.height * 0.7;
-            const centerLeft = (rect.width - centerWidth) / 2;
-            const centerTop = (rect.height - centerHeight) / 2;
-            
-            const isInCenterArea = 
-              clickX >= centerLeft && 
-              clickX <= centerLeft + centerWidth &&
-              clickY >= centerTop && 
-              clickY <= centerTop + centerHeight;
-            
-            if (!isInCenterArea) {
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Left edge blocker */}
+          <div
+            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto"
+            onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setIsDragBlocked(true);
-              // Reset after a short delay
+              console.debug?.('edge-block', 'left');
               setTimeout(() => setIsDragBlocked(false), 100);
-            }
-          }}
-        >
-          <div className="absolute inset-[15%] cursor-grab bg-transparent" />
+            }}
+          />
+          {/* Right edge blocker */}
+          <div
+            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragBlocked(true);
+              console.debug?.('edge-block', 'right');
+              setTimeout(() => setIsDragBlocked(false), 100);
+            }}
+          />
+          {/* Top edge blocker */}
+          <div
+            className="absolute inset-x-0 top-0 h-[15%] pointer-events-auto"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragBlocked(true);
+              console.debug?.('edge-block', 'top');
+              setTimeout(() => setIsDragBlocked(false), 100);
+            }}
+          />
+          {/* Bottom edge blocker */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-[15%] pointer-events-auto"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragBlocked(true);
+              console.debug?.('edge-block', 'bottom');
+              setTimeout(() => setIsDragBlocked(false), 100);
+            }}
+          />
         </div>
       )}
 
