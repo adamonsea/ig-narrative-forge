@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, animate, useDragControls } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -39,7 +39,7 @@ export function SwipeCarousel({
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  const dragControls = useDragControls();
+  const [isDragBlocked, setIsDragBlocked] = useState(false);
 
   // measure width
   useEffect(() => {
@@ -169,7 +169,7 @@ export function SwipeCarousel({
       >
         <motion.div
           className="flex h-full"
-          drag={width > 0 ? "x" : false}
+          drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
@@ -177,8 +177,6 @@ export function SwipeCarousel({
           whileDrag={{ cursor: "grabbing" }}
           style={{ x, touchAction: "pan-y" }}
           onDragEnd={onDragEnd}
-          dragControls={dragControls}
-          dragListener={!centerDragArea}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
@@ -189,12 +187,37 @@ export function SwipeCarousel({
       </div>
 
       {centerDragArea && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            aria-label="Drag to navigate"
-            className="pointer-events-auto h-[70%] w-[70%] cursor-grab"
-            onPointerDown={(e) => dragControls.start(e)}
-          />
+        <div 
+          className="absolute inset-0 pointer-events-auto"
+          onPointerDown={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            // Check if click is within center 70% area
+            const centerWidth = rect.width * 0.7;
+            const centerHeight = rect.height * 0.7;
+            const centerLeft = (rect.width - centerWidth) / 2;
+            const centerTop = (rect.height - centerHeight) / 2;
+            
+            const isInCenterArea = 
+              clickX >= centerLeft && 
+              clickX <= centerLeft + centerWidth &&
+              clickY >= centerTop && 
+              clickY <= centerTop + centerHeight;
+            
+            if (!isInCenterArea) {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragBlocked(true);
+              // Reset after a short delay
+              setTimeout(() => setIsDragBlocked(false), 100);
+            }
+          }}
+        >
+          <div className="absolute inset-[15%] cursor-grab bg-transparent" />
         </div>
       )}
 
