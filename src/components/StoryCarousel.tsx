@@ -291,181 +291,75 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
     }
   };
 
-
-  // Create enhanced slide components with overlays for full-area swiping
-  const enhancedSlideComponents = validSlides.map((slide, index) => {
+  // Create slide components for SwipeCarousel
+  const slideComponents = validSlides.map((slide, index) => {
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
-    const isFirst = index === 0;
     
     return (
-      <div key={slide.id} className="relative w-full h-full bg-background">
-        {/* Background image for first slide - never intercepts input */}
-        {hasImage && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <img
-              src={story.cover_illustration_url}
-              alt={`Cover illustration for ${story.title}`}
-              className="w-full h-full object-contain opacity-20"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
-          </div>
-        )}
-
-        {/* Header Overlay */}
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-gradient-to-b from-background/95 to-transparent pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto">
-            {story.is_teaser && (
-              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                Teaser
-              </Badge>
-            )}
-            {(() => {
-              // Use story updated_at for feed freshness (when it was published to feed)
-              const storyPublishDate = story.updated_at;
-              
-              // Show "New" if story was published to feed in last 24 hours
-              if (isNewInFeed(storyPublishDate)) {
-                return (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
-                  >
-                    New
-                  </Badge>
-                );
-              }
-              
-              // Otherwise show relative time based on story publish date
-              const timeLabel = getRelativeTimeLabel(storyPublishDate);
-              if (timeLabel) {
-                return (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
-                  >
-                    {timeLabel}
-                  </Badge>
-                );
-              }
-              
-              return null;
-            })()}
-          </div>
-          <span className="text-sm text-muted-foreground pointer-events-auto">
-            {index + 1} of {validSlides.length}
-          </span>
-        </div>
-
-        {/* Main Content - centered and swipeable */}
-        <div className="absolute inset-0 flex items-center justify-center p-6 pt-20 pb-32">
-          <div className="text-center max-w-lg mx-auto">
-            {isFirst ? (
-              <>
-                <h1 className={`font-bold mb-4 text-foreground leading-tight ${getTextSize(slide?.content || '', true)} uppercase text-balance`}>
-                  {story.title}
-                </h1>
-                {slide?.content && (
-                  <div className={`text-muted-foreground leading-relaxed ${getTextSize(slide?.content || '', false)}`}>
-                    <div dangerouslySetInnerHTML={createSafeHTML(
-                      sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
-                      true
-                    )} />
-                  </div>
-                )}
-              </>
-            ) : isLast ? (
-              <div 
-                ref={index === currentSlideIndex ? lastFitContainerRef : null}
-                className="overflow-hidden"
-              >
-                <div
-                  ref={index === currentSlideIndex ? lastFitInnerRef : null}
-                  style={{ transform: index === currentSlideIndex ? `scale(${lastScale})` : 'scale(1)', transformOrigin: 'center center' }}
-                  className={`text-foreground leading-relaxed ${getTextSize(mainContent, false, true)} font-light text-balance`}
-                >
+      <div key={slide.id} className="h-full w-full">
+        {hasImage ? (
+          // First slide with image - use flex layout
+          <div className="h-full flex flex-col">
+            {/* Cover Illustration */}
+            <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
+              <img
+                src={story.cover_illustration_url}
+                alt={`Cover illustration for ${story.title}`}
+                className="w-full h-full object-contain bg-white rounded-lg"
+                style={{ imageRendering: 'crisp-edges' }}
+              />
+            </div>
+            
+            {/* Content below image */}
+            <div className="flex-1 flex items-center justify-center p-6 md:p-8">
+              <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
+                <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
-                    sanitizeContentWithLinks(mainContent),
+                    sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
                   )} />
-                  {ctaContent && (
-                    <div className="mt-6 p-4 bg-muted/30 rounded-lg border text-sm text-muted-foreground">
-                      <div dangerouslySetInnerHTML={createSafeHTML(
-                        sanitizeContentWithLinks(ctaContent),
-                        true
-                      )} />
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Slides without image - use grid for perfect centering and fit-to-height on last slide
+          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
+            <div
+              ref={isLast ? lastFitInnerRef : undefined}
+              style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
+              className="w-full max-w-lg mx-auto text-center"
+            >
+                 <div className={`leading-relaxed ${
+                  index === 0 
+                  ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
+                  : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
+                }`}>
+                  {/* Main story content with links */}
+                  <div dangerouslySetInnerHTML={createSafeHTML(
+                    isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+                    true
+                  )} />
+                      
+                  {/* CTA content with special styling on last slide */}
+                  {isLast && ctaContent && (
+                    <div className="mt-4 pt-4 border-t border-muted">
+                      <div 
+                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
+                        dangerouslySetInnerHTML={createSafeHTML(
+                          sanitizeContentWithLinks(ctaContent),
+                          true
+                        )}
+                      />
                     </div>
                   )}
-                </div>
-              </div>
-            ) : (
-              <div className={`text-foreground leading-relaxed ${getTextSize(slide?.content || '', false)} font-light text-balance`}>
-                <div dangerouslySetInnerHTML={createSafeHTML(
-                  sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
-                  true
-                )} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Overlay - Progress dots, source, and actions */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-background/95 to-transparent pointer-events-none">
-          {/* Progress dots and source link */}
-          <div className="flex flex-col items-center space-y-2 mb-4">
-            {validSlides.length > 1 && (
-              <div className="flex justify-center space-x-2 pointer-events-auto">
-                {validSlides.map((_, dotIndex) => (
-                  <button
-                    key={dotIndex}
-                    onClick={() => goToSlide(dotIndex)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      dotIndex === index 
-                        ? 'bg-primary scale-125' 
-                        : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                    }`}
-                    aria-label={`Go to slide ${dotIndex + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-            
-            {/* Source link */}
-            {story.article?.source_url && story.article.source_url !== '#' && (
-              <a
-                href={story.article.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary transition-colors underline pointer-events-auto"
-              >
-                Source
-              </a>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex justify-center gap-3 pointer-events-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShare}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
-            <Button
-              variant={isLoved ? "default" : "outline"}
-              size="sm"
-              onClick={toggleLove}
-              className="flex items-center gap-2"
-            >
-              <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
-              {loveCount}
-            </Button>
-          </div>
-        </div>
+                 </div>
+             </div>
+           </div>
+        )}
       </div>
     );
   });
@@ -473,18 +367,123 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
   return (
     <div className="flex justify-center px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale" data-story-card data-story-id={story.id}>
-        <div className="relative bg-background min-h-[600px]">
-          <SwipeCarousel
-            slides={enhancedSlideComponents}
-            height="600px"
-            initialIndex={currentSlideIndex}
-            showDots={false}
-            onSlideChange={setCurrentSlideIndex}
-            ariaLabel={`${story.title} story slides`}
-            storyId={story.id}
-            topicId={topicId}
-            showPreviewAnimation={isFirstCard}
-          />
+        <div className="relative bg-background min-h-[600px] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              {story.is_teaser && (
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  Teaser
+                </Badge>
+              )}
+              {(() => {
+                // Use story updated_at for feed freshness (when it was published to feed)
+                const storyPublishDate = story.updated_at;
+                
+                // Show "New" if story was published to feed in last 24 hours
+                if (isNewInFeed(storyPublishDate)) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
+                    >
+                      New
+                    </Badge>
+                  );
+                }
+                
+                // Otherwise show relative time based on story publish date
+                const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                if (timeLabel) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
+                    >
+                      {timeLabel}
+                    </Badge>
+                  );
+                }
+                
+                return null;
+              })()}
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {currentSlideIndex + 1} of {validSlides.length}
+            </span>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 relative overflow-hidden">
+            <SwipeCarousel
+              slides={slideComponents}
+              height="100%"
+              initialIndex={currentSlideIndex}
+              showDots={false}
+              onSlideChange={setCurrentSlideIndex}
+              ariaLabel={`${story.title} story slides`}
+              storyId={story.id}
+              topicId={topicId}
+              showPreviewAnimation={isFirstCard}
+              centerDragArea
+            />
+          </div>
+
+          {/* Bottom section */}
+          <div className="p-4">
+            {/* Progress dots and source link */}
+            <div className="flex flex-col items-center space-y-2 mb-4">
+              {validSlides.length > 1 && (
+                <div className="flex justify-center space-x-2">
+                  {validSlides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentSlideIndex 
+                          ? 'bg-primary scale-125' 
+                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Source link */}
+              {story.article?.source_url && story.article.source_url !== '#' && (
+                <a
+                  href={story.article.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
+                >
+                  Source
+                </a>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                variant={isLoved ? "default" : "outline"}
+                size="sm"
+                onClick={toggleLove}
+                className="flex items-center gap-2"
+              >
+                <Heart className={`h-4 w-4 ${isLoved ? "fill-current" : ""}`} />
+                {loveCount}
+              </Button>
+            </div>
+          </div>
         </div>
       </Card>
     </div>
