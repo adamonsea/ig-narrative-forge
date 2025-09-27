@@ -300,17 +300,17 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
     
     return (
       <div key={slide.id} className="relative w-full h-full flex items-center justify-center p-6 bg-background">
-        {/* Background image for first slide - never intercepts input */}
-        {hasImage && (
-          <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-4">
-            <img
-              src={story.cover_illustration_url}
-              alt={`Cover illustration for ${story.title}`}
-              className="w-full max-w-sm h-64 md:h-80 object-contain bg-white rounded-lg opacity-20"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
-          </div>
-        )}
+         {/* Background image for first slide - never intercepts input */}
+         {hasImage && (
+           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+             <img
+               src={story.cover_illustration_url}
+               alt={`Cover illustration for ${story.title}`}
+               className="w-full h-full object-contain opacity-20"
+               style={{ imageRendering: 'crisp-edges' }}
+             />
+           </div>
+         )}
 
         {/* Centered content */}
         <div className="relative z-10 text-center max-w-lg mx-auto">

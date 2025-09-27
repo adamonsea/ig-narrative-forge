@@ -55,6 +55,11 @@ export function SwipeCarousel({
     x.set(-index * width);
   }, [width]);
 
+  // keep SwipeCarousel in sync with parent-controlled index
+  useEffect(() => {
+    setIndex(Math.min(Math.max(0, initialIndex), count - 1));
+  }, [initialIndex, count]);
+
   // animate to index when changed via dots/click
   useEffect(() => {
     const controls = animate(x, -index * width, {
@@ -149,7 +154,7 @@ export function SwipeCarousel({
   // Handle pointer down for drag initiation - avoid starting drag on interactive elements
   const handlePointerDown = (e: React.PointerEvent) => {
     const el = e.target as HTMLElement;
-    if (el.closest("a,button,input,select,textarea,[onclick],[onpointerdown],[role='button']")) return;
+    if (el.closest("a,button,input,select,textarea,[contenteditable=true],[onclick],[onpointerdown],[role='button']")) return;
     dragControls.start(e);
   };
 
@@ -174,7 +179,7 @@ export function SwipeCarousel({
       >
         <motion.div
           className="flex h-full"
-          drag="x"
+          drag={width > 0 ? "x" : false}
           dragControls={dragControls}
           dragListener={false}
           dragElastic={0.12}
