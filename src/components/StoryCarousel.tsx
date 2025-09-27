@@ -296,70 +296,71 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
+    const isFirst = index === 0;
     
     return (
-      <div key={slide.id} className="h-full w-full">
-        {hasImage ? (
-          // First slide with image - use flex layout
-          <div className="h-full flex flex-col">
-            {/* Cover Illustration */}
-            <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
-              <img
-                src={story.cover_illustration_url}
-                alt={`Cover illustration for ${story.title}`}
-                className="w-full h-full object-contain bg-white rounded-lg"
-                style={{ imageRendering: 'crisp-edges' }}
-              />
-            </div>
-            
-            {/* Content below image */}
-            <div className="flex-1 flex items-center justify-center p-6 md:p-8">
-              <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
-                <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance`}>
+      <div key={slide.id} className="relative w-full h-full flex items-center justify-center p-6 bg-background">
+        {/* Background image for first slide - never intercepts input */}
+        {hasImage && (
+          <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-4">
+            <img
+              src={story.cover_illustration_url}
+              alt={`Cover illustration for ${story.title}`}
+              className="w-full max-w-sm h-64 md:h-80 object-contain bg-white rounded-lg opacity-20"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
+          </div>
+        )}
+
+        {/* Centered content */}
+        <div className="relative z-10 text-center max-w-lg mx-auto">
+          {isFirst ? (
+            <>
+              <h1 className={`font-bold mb-4 text-foreground leading-tight ${getTextSize(slide?.content || '', true)} uppercase text-balance`}>
+                {story.title}
+              </h1>
+              {slide?.content && (
+                <div className={`text-muted-foreground leading-relaxed ${getTextSize(slide?.content || '', false)}`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
                     sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
                   )} />
                 </div>
-                
+              )}
+            </>
+          ) : isLast ? (
+            <div 
+              ref={lastFitContainerRef}
+              className="overflow-hidden"
+            >
+              <div
+                ref={lastFitInnerRef}
+                style={{ transform: `scale(${lastScale})`, transformOrigin: 'center center' }}
+                className={`text-foreground leading-relaxed ${getTextSize(mainContent, false, true)} font-light text-balance`}
+              >
+                <div dangerouslySetInnerHTML={createSafeHTML(
+                  sanitizeContentWithLinks(mainContent),
+                  true
+                )} />
+                {ctaContent && (
+                  <div className="mt-6 p-4 bg-muted/30 rounded-lg border text-sm text-muted-foreground">
+                    <div dangerouslySetInnerHTML={createSafeHTML(
+                      sanitizeContentWithLinks(ctaContent),
+                      true
+                    )} />
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ) : (
-          // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
-            <div
-              ref={isLast ? lastFitInnerRef : undefined}
-              style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
-              className="w-full max-w-lg mx-auto text-center"
-            >
-                 <div className={`leading-relaxed ${
-                  index === 0 
-                  ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
-                  : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
-                }`}>
-                  {/* Main story content with links */}
-                  <div dangerouslySetInnerHTML={createSafeHTML(
-                    isLast ? sanitizeContentWithLinks(mainContent) : sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
-                    true
-                  )} />
-                      
-                  {/* CTA content with special styling on last slide */}
-                  {isLast && ctaContent && (
-                    <div className="mt-4 pt-4 border-t border-muted">
-                      <div 
-                        className="text-sm md:text-base lg:text-lg font-bold text-muted-foreground text-balance"
-                        dangerouslySetInnerHTML={createSafeHTML(
-                          sanitizeContentWithLinks(ctaContent),
-                          true
-                        )}
-                      />
-                    </div>
-                  )}
-                 </div>
-             </div>
-           </div>
-        )}
+          ) : (
+            <div className={`text-foreground leading-relaxed ${getTextSize(slide?.content || '', false)} font-light text-balance`}>
+              <div dangerouslySetInnerHTML={createSafeHTML(
+                sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
+                true
+              )} />
+            </div>
+          )}
+        </div>
       </div>
     );
   });
