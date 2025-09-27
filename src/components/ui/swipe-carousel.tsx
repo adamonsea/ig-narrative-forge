@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion, useMotionValue, animate, useDragControls } from "framer-motion";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -15,6 +15,8 @@ export type SwipeCarouselProps = {
   topicId?: string;
   // Enhanced animation props
   showPreviewAnimation?: boolean;
+  // Limit drag start to centered area
+  centerDragArea?: boolean;
 };
 
 export function SwipeCarousel({
@@ -28,6 +30,7 @@ export function SwipeCarousel({
   storyId,
   topicId,
   showPreviewAnimation = false,
+  centerDragArea = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -36,6 +39,7 @@ export function SwipeCarousel({
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
+  const dragControls = useDragControls();
 
   // measure width
   useEffect(() => {
@@ -173,6 +177,8 @@ export function SwipeCarousel({
           whileDrag={{ cursor: "grabbing" }}
           style={{ x, touchAction: "pan-y" }}
           onDragEnd={onDragEnd}
+          dragControls={dragControls}
+          dragListener={!centerDragArea}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
@@ -181,6 +187,16 @@ export function SwipeCarousel({
           ))}
         </motion.div>
       </div>
+
+      {centerDragArea && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            aria-label="Drag to navigate"
+            className="pointer-events-auto h-[70%] w-[70%] cursor-grab"
+            onPointerDown={(e) => dragControls.start(e)}
+          />
+        </div>
+      )}
 
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
