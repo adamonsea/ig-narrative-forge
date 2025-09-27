@@ -13,6 +13,9 @@ export type SwipeCarouselProps = {
   // Story tracking props
   storyId?: string;
   topicId?: string;
+  // Enhanced drag and animation props
+  enableExternalDrag?: boolean;
+  showPreviewAnimation?: boolean;
 };
 
 export function SwipeCarousel({
@@ -25,6 +28,8 @@ export function SwipeCarousel({
   ariaLabel = "Carousel",
   storyId,
   topicId,
+  enableExternalDrag = false,
+  showPreviewAnimation = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -32,6 +37,7 @@ export function SwipeCarousel({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
+  const previewAnimationRef = useRef<HTMLDivElement | null>(null);
 
   // measure width
   useEffect(() => {
@@ -77,6 +83,36 @@ export function SwipeCarousel({
       });
     }
   }, [index, onSlideChange, storyId, topicId]);
+
+  // Preview animation effect
+  useEffect(() => {
+    if (!showPreviewAnimation || !previewAnimationRef.current) return;
+    
+    const element = previewAnimationRef.current;
+    const sessionKey = topicId ? `swipe_preview_shown_${topicId}` : 'swipe_preview_shown_default';
+    
+    // Check if animation already shown in this session
+    if (sessionStorage.getItem(sessionKey)) return;
+    
+    const timer = setTimeout(() => {
+      const controls = animate(element, 
+        { x: [-20, 0] }, 
+        { 
+          duration: 1.4,
+          ease: "easeOut"
+        }
+      );
+      
+      // Mark as shown after animation completes
+      setTimeout(() => {
+        sessionStorage.setItem(sessionKey, 'true');
+      }, 1400);
+      
+      return () => controls.stop();
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [showPreviewAnimation, topicId]);
 
   const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
   const goTo = (i: number) => setIndex(clamp(i));
@@ -136,24 +172,31 @@ export function SwipeCarousel({
   if (count === 0) return null;
 
   return (
-    <div className={"relative select-none h-full " + className} role="region" aria-roledescription="carousel" aria-label={ariaLabel} style={heightStyle}>
+    <div 
+      className={"relative select-none h-full " + className} 
+      role="region" 
+      aria-roledescription="carousel" 
+      aria-label={ariaLabel} 
+      style={heightStyle}
+      ref={showPreviewAnimation ? previewAnimationRef : undefined}
+    >
       <div 
         ref={viewportRef} 
         className="overflow-hidden w-full h-full" 
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onClick={onClickViewport}
+        onPointerDown={enableExternalDrag ? onPointerDown : undefined}
+        onPointerMove={enableExternalDrag ? onPointerMove : undefined}
+        onClick={enableExternalDrag ? onClickViewport : undefined}
       >
         <motion.div
           className="flex h-full"
-          drag={width > 0 ? "x" : false}
+          drag={width > 0 && !enableExternalDrag ? "x" : false}
           dragElastic={0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={{ power: 0.35, timeConstant: 260 }}
           whileDrag={{ cursor: "grabbing" }}
           style={{ x, touchAction: "pan-y" }}
-          onDragEnd={onDragEnd}
+          onDragEnd={!enableExternalDrag ? onDragEnd : undefined}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
@@ -49,6 +50,12 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const { trackShareClick } = useStoryInteractionTracking();
+  
+  // Refs for external drag handling
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  const x = useMotionValue(0);
+  const [isFirstCard, setIsFirstCard] = useState(false);
   
   // Fit-to-height for last slide
   const lastFitContainerRef = useRef<HTMLDivElement | null>(null);
@@ -128,7 +135,62 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
     console.log('Download image functionality will be available when carousel images are generated');
   };
 
-  // Enhanced touch handling is now managed by useSwipeGesture hook
+  // Measure content width for drag handling
+  useEffect(() => {
+    const node = contentRef.current;
+    if (!node) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) setWidth(Math.floor(entry.contentRect.width));
+    });
+    ro.observe(node);
+    setWidth(Math.floor(node.getBoundingClientRect().width));
+    return () => ro.disconnect();
+  }, []);
+
+  // Keep x aligned on resize and slide changes
+  useEffect(() => {
+    x.set(-currentSlideIndex * width);
+  }, [width, currentSlideIndex]);
+
+  // Determine if this is the first card (for animation)
+  useEffect(() => {
+    const checkIfFirstCard = () => {
+      const cards = document.querySelectorAll('[data-story-card]');
+      const currentCard = contentRef.current?.closest('[data-story-card]');
+      setIsFirstCard(currentCard === cards[0]);
+    };
+    
+    checkIfFirstCard();
+    // Re-check when cards are added/removed
+    const observer = new MutationObserver(checkIfFirstCard);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  // External drag handling for content area
+  const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const threshold = width * 0.25;
+    const swipeDistance = info.offset.x;
+    const swipeVelocity = info.velocity.x;
+    
+    let targetIndex = currentSlideIndex;
+    
+    if (swipeDistance > threshold || (swipeDistance > 50 && swipeVelocity > 500)) {
+      targetIndex = Math.max(0, currentSlideIndex - 1);
+    } else if (swipeDistance < -threshold || (swipeDistance < -50 && swipeVelocity < -500)) {
+      targetIndex = Math.min(validSlides.length - 1, currentSlideIndex + 1);
+    }
+    
+    const controls = animate(x, -targetIndex * width, {
+      type: "spring",
+      stiffness: 400,
+      damping: 40,
+      mass: 1,
+    });
+    setCurrentSlideIndex(targetIndex);
+    return () => controls.stop();
+  };
 
   // Auto fit last slide text to available height
   useEffect(() => {
@@ -348,7 +410,7 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
 
   return (
     <div className="flex justify-center px-4">
-      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale" data-story-card>
         <div className="relative bg-background min-h-[600px] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
@@ -395,8 +457,19 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
             </span>
           </div>
 
-          {/* SwipeCarousel */}
-          <div className="flex-1">
+          {/* Content Area with External Drag */}
+          <motion.div 
+            ref={contentRef}
+            className="flex-1 relative overflow-hidden"
+            drag={width > 0 ? "x" : false}
+            dragElastic={0.12}
+            dragMomentum
+            dragConstraints={{ left: -(validSlides.length - 1) * width, right: 0 }}
+            dragTransition={{ power: 0.35, timeConstant: 260 }}
+            whileDrag={{ cursor: "grabbing" }}
+            style={{ x, touchAction: "pan-y" }}
+            onDragEnd={onDragEnd}
+          >
             <SwipeCarousel
               slides={slideComponents}
               height="100%"
@@ -406,8 +479,10 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
               ariaLabel={`${story.title} story slides`}
               storyId={story.id}
               topicId={topicId}
+              enableExternalDrag={true}
+              showPreviewAnimation={isFirstCard}
             />
-          </div>
+          </motion.div>
 
           {/* Bottom section */}
           <div className="p-4">
