@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion, useMotionValue, animate, useDragControls } from "framer-motion";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -15,8 +15,6 @@ export type SwipeCarouselProps = {
   topicId?: string;
   // Enhanced animation props
   showPreviewAnimation?: boolean;
-  // Limit drag start to centered area
-  centerDragArea?: boolean;
 };
 
 export function SwipeCarousel({
@@ -30,7 +28,6 @@ export function SwipeCarousel({
   storyId,
   topicId,
   showPreviewAnimation = false,
-  centerDragArea = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -39,7 +36,7 @@ export function SwipeCarousel({
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  const [isDragBlocked, setIsDragBlocked] = useState(false);
+  const dragControls = useDragControls();
 
   // measure width
   useEffect(() => {
@@ -149,6 +146,13 @@ export function SwipeCarousel({
     return () => controls.stop();
   };
 
+  // Handle pointer down for drag initiation - avoid starting drag on interactive elements
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const el = e.target as HTMLElement;
+    if (el.closest("a,button,input,select,textarea,[onclick],[onpointerdown],[role='button']")) return;
+    dragControls.start(e);
+  };
+
 
   const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
 
@@ -165,11 +169,14 @@ export function SwipeCarousel({
     >
       <div 
         ref={viewportRef} 
-        className="overflow-hidden w-full h-full" 
+        className="overflow-hidden w-full h-full"
+        onPointerDown={handlePointerDown}
       >
         <motion.div
           className="flex h-full"
-          drag={width > 0 && !isDragBlocked ? "x" : false}
+          drag="x"
+          dragControls={dragControls}
+          dragListener={false}
           dragElastic={0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
@@ -185,55 +192,6 @@ export function SwipeCarousel({
           ))}
         </motion.div>
       </div>
-
-      {centerDragArea && (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Left edge blocker */}
-          <div
-            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'left');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
-          />
-          {/* Right edge blocker */}
-          <div
-            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'right');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
-          />
-          {/* Top edge blocker */}
-          <div
-            className="absolute inset-x-0 top-0 h-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'top');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
-          />
-          {/* Bottom edge blocker */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'bottom');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
-          />
-        </div>
-      )}
 
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">

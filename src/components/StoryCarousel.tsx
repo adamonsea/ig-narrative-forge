@@ -425,7 +425,6 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
               storyId={story.id}
               topicId={topicId}
               showPreviewAnimation={isFirstCard}
-              centerDragArea
             />
           </div>
 
