@@ -13,8 +13,7 @@ export type SwipeCarouselProps = {
   // Story tracking props
   storyId?: string;
   topicId?: string;
-  // Enhanced drag and animation props
-  enableExternalDrag?: boolean;
+  // Enhanced animation props
   showPreviewAnimation?: boolean;
 };
 
@@ -28,7 +27,6 @@ export function SwipeCarousel({
   ariaLabel = "Carousel",
   storyId,
   topicId,
-  enableExternalDrag = false,
   showPreviewAnimation = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
@@ -147,25 +145,6 @@ export function SwipeCarousel({
     return () => controls.stop();
   };
 
-  // Desktop click-to-advance without overlay (prevents drag blocking)
-  const downX = useRef<number | null>(null);
-  const moved = useRef(false);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    downX.current = e.clientX;
-    moved.current = false;
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (downX.current == null) return;
-    if (Math.abs(e.clientX - downX.current) > 6) moved.current = true; // tiny slop
-  };
-  const onClickViewport = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Ignore if it was a drag
-    if (moved.current) return;
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const leftHalf = e.clientX - rect.left < rect.width / 2;
-    if (leftHalf) prev(); else next();
-  };
 
   const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
 
@@ -183,20 +162,17 @@ export function SwipeCarousel({
       <div 
         ref={viewportRef} 
         className="overflow-hidden w-full h-full" 
-        onPointerDown={enableExternalDrag ? onPointerDown : undefined}
-        onPointerMove={enableExternalDrag ? onPointerMove : undefined}
-        onClick={enableExternalDrag ? onClickViewport : undefined}
       >
         <motion.div
           className="flex h-full"
-          drag={width > 0 && !enableExternalDrag ? "x" : false}
+          drag={width > 0 ? "x" : false}
           dragElastic={0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={{ power: 0.35, timeConstant: 260 }}
           whileDrag={{ cursor: "grabbing" }}
           style={{ x, touchAction: "pan-y" }}
-          onDragEnd={!enableExternalDrag ? onDragEnd : undefined}
+          onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
