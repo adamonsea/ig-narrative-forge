@@ -297,11 +297,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
 
-      // Create mixed feed content with chronological ordering
       const storyContent: FeedContent[] = transformedStories.map(story => ({
         type: 'story' as const,
         id: story.id,
-        content_date: story.created_at,
+        content_date: story.article.published_at || story.created_at,
         data: story
       }));
 
@@ -331,10 +330,24 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       if (append) {
         setAllStories(prev => [...prev, ...transformedStories]);
-        // For append, only add new stories (parliamentary mentions are only loaded on first page)
-        setAllContent(prev => [...prev, ...storyContent]);
+        // Merge new stories with existing mixed content and re-sort chronologically
+        setAllContent(prev => {
+          const merged = [...prev, ...storyContent];
+          return merged.sort((a, b) => {
+            const aTime = new Date(a.content_date).getTime();
+            const bTime = new Date(b.content_date).getTime();
+            return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+          });
+        });
         if (!keywords || keywords.length === 0) {
-          setFilteredContent(prev => [...prev, ...storyContent]);
+          setFilteredContent(prev => {
+            const merged = [...prev, ...storyContent];
+            return merged.sort((a, b) => {
+              const aTime = new Date(a.content_date).getTime();
+              const bTime = new Date(b.content_date).getTime();
+              return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+            });
+          });
         }
       } else {
         setAllStories(transformedStories);
@@ -399,13 +412,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setAvailableKeywords(keywords);
   }, []);
 
-  // Client-side filtering for immediate feedback - now handles mixed content
+  // Client-side filtering for immediate feedback - now handles mixed content and preserves chronology
   const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[]) => {
     if (keywords.length === 0) {
-      return content;
+      // Ensure content is sorted when no filters too
+      return [...content].sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
     }
 
-    return content.filter(item => {
+    const filtered = content.filter(item => {
       if (item.type === 'story') {
         const story = item.data as Story;
         const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
@@ -414,6 +428,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       // Parliamentary mentions are not keyword-filtered for now
       return false;
     });
+
+    return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
   }, []);
 
   // Debounced server-side filtering
