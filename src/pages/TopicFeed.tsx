@@ -15,6 +15,9 @@ import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
+import { useParliamentaryMentions } from "@/hooks/useParliamentaryMentions";
+import { ParliamentaryVoteCard } from "@/components/ParliamentaryVoteCard";
+import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -45,6 +48,12 @@ const TopicFeed = () => {
   } = useHybridTopicFeedWithKeywords(actualSlug || '');
 
   const { sentimentCards } = useSentimentCards(topic?.id);
+
+  // Fetch parliamentary mentions for regional topics with tracking enabled
+  const { mentions: parliamentaryMentions } = useParliamentaryMentions({
+    topicId: topic?.id || '',
+    enabled: topic?.topic_type === 'regional' && topic?.parliamentary_tracking_enabled === true
+  });
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
@@ -324,6 +333,47 @@ const TopicFeed = () => {
                     />
                   </div>
                 );
+              }
+
+              // Add parliamentary mentions every 8 stories (for regional topics with tracking enabled)
+              if ((index + 1) % 8 === 0 && topic?.topic_type === 'regional' && topic?.parliamentary_tracking_enabled && parliamentaryMentions.length > 0) {
+                const mentionIndex = Math.floor(index / 8) % parliamentaryMentions.length;
+                const mention = parliamentaryMentions[mentionIndex];
+                
+                if (mention.mention_type === 'vote' && mention.vote_title && mention.mp_name) {
+                  items.push(
+                    <div key={`parliamentary-vote-${mention.id}-${index}`}>
+                      <ParliamentaryVoteCard
+                        mpName={mention.mp_name}
+                        constituency={mention.constituency || ''}
+                        party={mention.party || ''}
+                        voteTitle={mention.vote_title}
+                        voteDirection={mention.vote_direction as 'aye' | 'no' | 'abstain'}
+                        voteDate={mention.vote_date || ''}
+                        voteUrl={mention.vote_url || undefined}
+                        regionMentioned={mention.region_mentioned || undefined}
+                        relevanceScore={mention.relevance_score}
+                      />
+                    </div>
+                  );
+                } else if (mention.mention_type === 'debate' && mention.debate_title && mention.mp_name && mention.debate_excerpt) {
+                  items.push(
+                    <div key={`parliamentary-debate-${mention.id}-${index}`}>
+                      <ParliamentaryDebateCard
+                        mpName={mention.mp_name}
+                        constituency={mention.constituency || ''}
+                        party={mention.party || ''}
+                        debateTitle={mention.debate_title}
+                        debateExcerpt={mention.debate_excerpt}
+                        debateDate={mention.debate_date || ''}
+                        hansardUrl={mention.hansard_url || undefined}
+                        regionMentioned={mention.region_mentioned || undefined}
+                        landmarkMentioned={mention.landmark_mentioned || undefined}
+                        relevanceScore={mention.relevance_score}
+                      />
+                    </div>
+                  );
+                }
               }
 
               // Add events accordion every 10 stories

@@ -42,6 +42,7 @@ interface Topic {
   region?: string;
   is_public: boolean;
   created_by: string;
+  parliamentary_tracking_enabled?: boolean;
   branding_config?: {
     logo_url?: string;
     subheader?: string;

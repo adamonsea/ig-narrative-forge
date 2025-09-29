@@ -21,8 +21,10 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
+import { ParliamentaryTestPanel } from "@/components/ParliamentaryTestPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
@@ -62,6 +64,7 @@ interface Topic {
   community_intelligence_enabled?: boolean;
   auto_simplify_enabled?: boolean;
   automation_quality_threshold?: number;
+  parliamentary_tracking_enabled?: boolean;
   branding_config?: any; // Use any to handle Json type from Supabase
 }
 
@@ -90,6 +93,13 @@ const TopicDashboard = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const { toast } = useToast();
+
+  // Set up parliamentary automation when enabled
+  useParliamentaryAutomation({
+    topicId: topic?.id || '',
+    enabled: topic?.topic_type === 'regional' && topic?.parliamentary_tracking_enabled === true,
+    region: topic?.region
+  });
 
   useEffect(() => {
     if (slug && user) {
@@ -784,6 +794,8 @@ const TopicDashboard = () => {
                   currentCommunityEnabled={topic.community_intelligence_enabled}
                   currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
                   currentAutomationQualityThreshold={topic.automation_quality_threshold}
+                  currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
+                  topicType={topic.topic_type}
                   onUpdate={() => loadTopicAndStats()}
                 />
                 
@@ -835,6 +847,15 @@ const TopicDashboard = () => {
                   onUpdate={setCompetingRegions}
                 />
               </div>
+            )}
+
+            {/* Parliamentary Integration Test - Only for regional topics */}
+            {topic.topic_type === 'regional' && topic.region && (
+              <ParliamentaryTestPanel
+                topicId={topic.id}
+                region={topic.region}
+                parliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled || false}
+              />
             )}
 
             <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>

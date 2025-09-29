@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, HelpCircle, Users, Bot, Clock } from "lucide-react";
+import { Settings, HelpCircle, Users, Bot, Clock, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,8 @@ interface TopicSettingsProps {
   currentCommunityEnabled?: boolean;
   currentAutoSimplifyEnabled?: boolean;
   currentAutomationQualityThreshold?: number;
+  currentParliamentaryTrackingEnabled?: boolean;
+  topicType?: string;
   onUpdate?: () => void;
 }
 
@@ -33,6 +35,8 @@ export const TopicSettings = ({
   currentCommunityEnabled, 
   currentAutoSimplifyEnabled,
   currentAutomationQualityThreshold,
+  currentParliamentaryTrackingEnabled,
+  topicType,
   onUpdate 
 }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
@@ -41,6 +45,7 @@ export const TopicSettings = ({
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
+  const [parliamentaryTrackingEnabled, setParliamentaryTrackingEnabled] = useState<boolean>(currentParliamentaryTrackingEnabled || false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const { isSuperAdmin, user } = useAuth();
@@ -55,7 +60,8 @@ export const TopicSettings = ({
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
-  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentAutoSimplifyEnabled, currentAutomationQualityThreshold]);
+    if (currentParliamentaryTrackingEnabled !== undefined) setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -69,6 +75,7 @@ export const TopicSettings = ({
           community_intelligence_enabled: communityEnabled,
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
+          parliamentary_tracking_enabled: parliamentaryTrackingEnabled,
           updated_at: new Date().toISOString()
         })
         .eq('id', topicId);
@@ -253,6 +260,43 @@ export const TopicSettings = ({
 
         <Separator />
 
+        {/* Parliamentary Tracking - Only show for regional topics */}
+        {topicType === 'regional' && (
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Parliamentary Tracking
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <div className="space-y-2 text-sm">
+                          <p><strong>Parliamentary Tracking:</strong> Monitor MP voting records and parliamentary debates mentioning your region</p>
+                          <p>Displays voting cards and debate references in your feed when MPs discuss local issues</p>
+                          <p className="text-muted-foreground">Beta feature</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {parliamentaryTrackingEnabled ? "Monitoring parliamentary activity for your region" : "Track MP votes and debates about your area"}
+                </p>
+              </div>
+              <Switch
+                checked={parliamentaryTrackingEnabled}
+                onCheckedChange={setParliamentaryTrackingEnabled}
+              />
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
         {/* Automation Settings */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -328,7 +372,8 @@ export const TopicSettings = ({
               writingStyle === currentWritingStyle && 
               communityEnabled === currentCommunityEnabled &&
               autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
-              automationQualityThreshold === (currentAutomationQualityThreshold || 60)
+              automationQualityThreshold === (currentAutomationQualityThreshold || 60) &&
+              parliamentaryTrackingEnabled === (currentParliamentaryTrackingEnabled === true)
             )}
           >
             {saving ? "Saving..." : "Save Settings"}
