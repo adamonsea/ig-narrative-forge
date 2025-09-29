@@ -209,11 +209,6 @@ export function SwipeCarousel({
               }
             }}
           />
-          {/* Center area for enhanced swipe detection on mobile */}
-          <div
-            className="absolute inset-y-0 left-[10%] right-[10%] md:left-[15%] md:right-[15%] pointer-events-auto touch-pan-x"
-            style={{ touchAction: 'pan-x' }}
-          />
         </div>
       )}
 
