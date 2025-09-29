@@ -121,12 +121,23 @@ REQUIREMENTS:
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
+SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY):
+- Extract the single most compelling TRUE fact/angle from the article content
+- Maximum 25 words, single sentence
+- Focus on what makes this genuinely matter to local readers
+- Use the strongest claim that the article content fully supports
+- Prioritize: local impact > surprising facts > genuine consequences > human interest
+- When formal: Lead with authoritative findings ("Council reveals...", "Data shows...")  
+- When conversational: Lead with local relevance ("Local residents face...", "New changes mean...")
+- NEVER oversell - the content must fully deliver on the hook's promise
+- Test: "Does this accurately represent the most important aspect of this story?"
+
 OUTPUT FORMAT (JSON):
 {
   "slides": [
     {
       "slideNumber": 1,
-      "content": "Main headline and key point",
+      "content": "Extract most compelling TRUE local angle (max 25 words, single sentence)",
       "visualPrompt": "Description for visual/image",
       "altText": "Accessibility description"
     }
@@ -242,12 +253,23 @@ REQUIREMENTS:
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
+SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY):
+- Extract the single most compelling TRUE fact/angle from the article content
+- Maximum 25 words, single sentence
+- Focus on what makes this genuinely matter to local readers
+- Use the strongest claim that the article content fully supports
+- Prioritize: local impact > surprising facts > genuine consequences > human interest
+- When formal: Lead with authoritative findings ("Council reveals...", "Data shows...")  
+- When conversational: Lead with local relevance ("Local residents face...", "New changes mean...")
+- NEVER oversell - the content must fully deliver on the hook's promise
+- Test: "Does this accurately represent the most important aspect of this story?"
+
 OUTPUT FORMAT (JSON):
 {
   "slides": [
     {
       "slideNumber": 1,
-      "content": "Main headline and key point",
+      "content": "Extract most compelling TRUE local angle (max 25 words, single sentence)",
       "visualPrompt": "Description for visual/image",
       "altText": "Accessibility description"
     }
