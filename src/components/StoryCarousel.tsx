@@ -108,7 +108,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     setLoveCount(prev => isLoved ? prev - 1 : prev + 1);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    console.log('Share button clicked for story:', story.id);
+    
     // Track share click
     if (topicId) {
       trackShareClick(story.id, topicId, navigator.share ? 'native' : 'clipboard');
@@ -118,16 +120,44 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const shareUrl = storyUrl || `${window.location.origin}/story/${story.id}`;
     const shareText = `Check out this story: ${story.title}`;
     
-    if (navigator.share) {
-      navigator.share({
-        title: story.title,
-        text: shareText,
-        url: shareUrl,
+    console.log('Share URL:', shareUrl);
+    console.log('Share text:', shareText);
+    
+    try {
+      if (navigator.share) {
+        console.log('Using native share API');
+        await navigator.share({
+          title: story.title,
+          text: shareText,
+          url: shareUrl,
+        });
+        console.log('Native share successful');
+      } else {
+        console.log('Using clipboard fallback');
+        // Fallback - copy to clipboard
+        const clipboardText = `${story.title}\n\n${shareUrl}`;
+        await navigator.clipboard.writeText(clipboardText);
+        console.log('Clipboard copy successful');
+        
+        // Show toast notification for clipboard copy
+        import('@/components/ui/use-toast').then(({ toast }) => {
+          toast({
+            title: "Link copied!",
+            description: "Story link has been copied to your clipboard.",
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+      
+      // Show error toast
+      import('@/components/ui/use-toast').then(({ toast }) => {
+        toast({
+          title: "Share failed",
+          description: "Unable to share this story. Please try again.",
+          variant: "destructive",
+        });
       });
-    } else {
-      // Fallback - copy to clipboard
-      const clipboardText = `${story.title}\n\n${shareUrl}`;
-      navigator.clipboard.writeText(clipboardText);
     }
   };
 
