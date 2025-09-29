@@ -3078,24 +3078,22 @@ export type Database = {
         }[]
       }
       get_public_topic_feed: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_sort_by?: string
-          topic_slug_param: string
-        }
+        Args:
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_sort_by?: string
+              topic_slug_param: string
+            }
+          | { p_limit?: number; p_offset?: number; p_topic_slug: string }
         Returns: {
-          article_id: string
+          article_published_at: string
           article_source_url: string
           author: string
+          cover_illustration_prompt: string
           cover_illustration_url: string
           created_at: string
           id: string
-          is_published: boolean
-          slide_count: number
-          slides: Json
-          status: string
-          summary: string
           title: string
           updated_at: string
         }[]
@@ -3293,10 +3291,8 @@ export type Database = {
           p_topic_slug: string
         }
         Returns: {
-          article_author: string
           article_published_at: string
           article_source_url: string
-          article_title: string
           author: string
           cover_illustration_prompt: string
           cover_illustration_url: string
@@ -3346,6 +3342,10 @@ export type Database = {
       }
       is_story_published: {
         Args: { p_story_id: string }
+        Returns: boolean
+      }
+      is_story_visible: {
+        Args: { story_updated_at: string }
         Returns: boolean
       }
       log_error_ticket: {
