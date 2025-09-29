@@ -168,69 +168,75 @@ const TopicFeed = () => {
         </div>
       )}
 
-      <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-20' : ''}`}>
-        {/* User Avatar for logged in users */}
-        {user && (
-          <div className="absolute left-4 top-8">
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+      {/* White banner header */}
+      <div className="bg-background border-b border-border">
+        <div className="container mx-auto px-1 md:px-4 py-12">
+          {/* User Avatar for logged in users */}
+          {user && (
+            <div className="absolute left-4 top-4">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                 {user.email?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
-            </Avatar>
-          </div>
-        )}
+              </Avatar>
+            </div>
+          )}
 
-        {/* Topic Header - Clean and minimal with branding support */}
-        <div className="text-center mb-8">
-          <div className="relative flex items-center justify-center mb-4">
-            {/* Centered logo or title */}
-            {topic.branding_config?.logo_url ? (
-              <div className="flex justify-center">
-                <img
-                  src={topic.branding_config.logo_url}
-                  alt={`${topic.name} logo`}
-                  className="h-12 sm:h-16 max-w-[280px] sm:max-w-xs object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                {topic.topic_type === 'regional' ? (
-                  <MapPin className="w-6 h-6 text-blue-500" />
-                ) : (
-                  <Hash className="w-6 h-6 text-green-500" />
-                )}
-                <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  {topic.name}
-                </h1>
-              </div>
-            )}
-            
-            <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
-              beta
-            </span>
-
-            {/* Mobile filter button - positioned in top right */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-              aria-label="Open filters"
-            >
-              <Filter className="w-4 h-4" />
-              {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+          {/* Topic Header - Clean and minimal with branding support */}
+          <div className="text-center">
+            <div className="relative flex items-center justify-center mb-6">
+              {/* Centered logo or title */}
+              {topic.branding_config?.logo_url ? (
+                <div className="flex justify-center">
+                  <img
+                    src={topic.branding_config.logo_url}
+                    alt={`${topic.name} logo`}
+                    className="h-12 sm:h-16 max-w-[280px] sm:max-w-xs object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {topic.topic_type === 'regional' ? (
+                    <MapPin className="w-6 h-6 text-blue-500" />
+                  ) : (
+                    <Hash className="w-6 h-6 text-green-500" />
+                  )}
+                  <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    {topic.name}
+                  </h1>
+                </div>
               )}
-            </button>
+              
+              <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                beta
+              </span>
+
+              {/* Mobile filter button - positioned in top right */}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                aria-label="Open filters"
+              >
+                <Filter className="w-4 h-4" />
+                {hasActiveFilters && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                )}
+              </button>
+            </div>
+            {topic.branding_config?.subheader ? (
+              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
+                {topic.branding_config.subheader}
+              </p>
+            ) : topic.description ? (
+              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
+                {topic.description}
+              </p>
+            ) : null}
           </div>
-          {topic.branding_config?.subheader ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
-              {topic.branding_config.subheader}
-            </p>
-          ) : topic.description ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
-              {topic.description}
-            </p>
-          ) : null}
         </div>
+      </div>
+
+      <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
 
         {/* Filters - Hidden on mobile when filter button is in header */}
         <div className="mb-8 hidden sm:block">
