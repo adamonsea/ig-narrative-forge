@@ -17,7 +17,7 @@ interface ParliamentaryDebateCardProps {
   landmarkMentioned?: string;
   relevanceScore: number;
   storyId?: string;
-  topicId?: string;
+  topicSlug?: string;
 }
 
 export const ParliamentaryDebateCard = ({
@@ -32,7 +32,7 @@ export const ParliamentaryDebateCard = ({
   landmarkMentioned,
   relevanceScore,
   storyId,
-  topicId
+  topicSlug
 }: ParliamentaryDebateCardProps) => {
   return (
     <div className="flex justify-center px-1 md:px-4 mb-4">
@@ -95,12 +95,12 @@ export const ParliamentaryDebateCard = ({
                 Relevance: {relevanceScore}%
               </div>
               <div className="flex gap-2 flex-wrap">
-                {storyId && topicId && (
+                {storyId && topicSlug && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-8 px-3 text-xs"
-                    onClick={() => window.open(`/@${topicId}/${storyId}`, '_blank', 'noopener,noreferrer')}
+                    onClick={() => window.open(`/@${topicSlug}/${storyId}`, '_blank', 'noopener,noreferrer')}
                   >
                     <Link2 className="w-3 h-3 mr-1" />
                     View Story

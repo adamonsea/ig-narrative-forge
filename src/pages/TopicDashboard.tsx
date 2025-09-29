@@ -790,6 +790,7 @@ const TopicDashboard = () => {
                   <ParliamentaryTrackingPanel 
                     topicId={topic.id}
                     region={topic.region || ''}
+                    topicSlug={topic.slug || ''}
                   />
                 </CardContent>
               </Card>

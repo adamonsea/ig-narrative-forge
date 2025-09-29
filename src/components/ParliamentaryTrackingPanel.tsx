@@ -33,9 +33,10 @@ interface ParliamentaryMention {
 interface ParliamentaryTrackingPanelProps {
   topicId: string;
   region: string;
+  topicSlug: string;
 }
 
-export const ParliamentaryTrackingPanel = ({ topicId, region }: ParliamentaryTrackingPanelProps) => {
+export const ParliamentaryTrackingPanel = ({ topicId, region, topicSlug }: ParliamentaryTrackingPanelProps) => {
   const [mentions, setMentions] = useState<ParliamentaryMention[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,9 +165,9 @@ export const ParliamentaryTrackingPanel = ({ topicId, region }: ParliamentaryTra
               Added {format(new Date(vote.created_at), 'MMM d, h:mm a')}
             </span>
             <div className="flex gap-2">
-              {vote.story_id && (
+              {vote.story_id && topicSlug && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={`/@${topicId}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/@${topicSlug}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
                     <Link2 className="w-3 h-3 mr-1" />
                     View Story
                   </a>
@@ -240,9 +241,9 @@ export const ParliamentaryTrackingPanel = ({ topicId, region }: ParliamentaryTra
               Added {format(new Date(debate.created_at), 'MMM d, h:mm a')}
             </span>
             <div className="flex gap-2">
-              {debate.story_id && (
+              {debate.story_id && topicSlug && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={`/@${topicId}/${debate.story_id}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/@${topicSlug}/${debate.story_id}`} target="_blank" rel="noopener noreferrer">
                     <Link2 className="w-3 h-3 mr-1" />
                     View Story
                   </a>

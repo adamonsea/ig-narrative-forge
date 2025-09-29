@@ -343,7 +343,7 @@ const TopicFeed = () => {
                         regionMentioned={mention.region_mentioned || undefined}
                         relevanceScore={mention.relevance_score}
                         storyId={mention.story_id || undefined}
-                        topicId={topic?.id}
+                        topicSlug={slug}
                       />
                     </div>
                   );
@@ -363,7 +363,7 @@ const TopicFeed = () => {
                         landmarkMentioned={mention.landmark_mentioned || undefined}
                         relevanceScore={mention.relevance_score}
                         storyId={mention.story_id || undefined}
-                        topicId={topic?.id}
+                        topicSlug={slug}
                       />
                     </div>
                   );
