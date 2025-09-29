@@ -205,19 +205,4 @@ All colors MUST be HSL.
   .feed-header {
     background-color: hsl(var(--feed-header-background));
   }
-  
-  /* Arrow indicators for swipe engagement */
-  .swipe-arrow {
-    @apply absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center;
-    @apply text-muted-foreground/40 hover:text-muted-foreground/80 transition-all duration-200;
-    @apply pointer-events-auto z-10;
-  }
-  
-  .swipe-arrow-left {
-    @apply left-4;
-  }
-  
-  .swipe-arrow-right {
-    @apply right-4;
-  }
 }
