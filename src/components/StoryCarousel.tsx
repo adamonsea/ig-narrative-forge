@@ -395,21 +395,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               {(() => {
                 const badges = [];
                 
-                // Check for popularity (can coexist with all other badges)
-                if (story.popularity_data && isPopularStory(story.popularity_data)) {
-                  badges.push(
-                    <Badge 
-                      key="popular"
-                      variant="outline" 
-                      className={`text-xs px-2 py-1 scale-80 origin-left ${getPopularBadgeStyle()}`}
-                    >
-                      Popular
-                    </Badge>
-                  );
-                }
+                // Badge logic: If "New" flag exists, show only that
+                const isNew = isNewStory(storyIndex);
                 
-                // Show "New" flag for first 3 stories (can coexist with time badges)
-                if (isNewStory(storyIndex)) {
+                if (isNew) {
+                  // Show only "New" flag when present
                   badges.push(
                     <Badge 
                       key="new"
@@ -419,21 +409,36 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                       New
                     </Badge>
                   );
-                }
-                
-                // Always show time-based badge (Today, Yesterday, This week, This month)
-                const storyPublishDate = story.updated_at;
-                const timeLabel = getRelativeTimeLabel(storyPublishDate);
-                if (timeLabel) {
-                  badges.push(
-                    <Badge 
-                      key="time"
-                      variant="outline" 
-                      className={`text-xs px-2 py-1 scale-80 origin-left ${getRelativeTimeColor(storyPublishDate)}`}
-                    >
-                      {timeLabel}
-                    </Badge>
-                  );
+                } else {
+                  // Show other badges only when "New" is not present
+                  
+                  // Show "Popular" badge for popular stories
+                  if (story.popularity_data && isPopularStory(story.popularity_data)) {
+                    badges.push(
+                      <Badge 
+                        key="popular"
+                        variant="outline" 
+                        className={`text-xs px-2 py-1 scale-80 origin-left ${getPopularBadgeStyle()}`}
+                      >
+                        Popular
+                      </Badge>
+                    );
+                  }
+                  
+                  // Show time-based badge (Today, Yesterday, This week, This month)
+                  const storyPublishDate = story.updated_at;
+                  const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                  if (timeLabel) {
+                    badges.push(
+                      <Badge 
+                        key="time"
+                        variant="outline" 
+                        className={`text-xs px-2 py-1 scale-80 origin-left ${getRelativeTimeColor(storyPublishDate)}`}
+                      >
+                        {timeLabel}
+                      </Badge>
+                    );
+                  }
                 }
                 
                 return badges;
