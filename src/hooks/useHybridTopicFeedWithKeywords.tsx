@@ -451,6 +451,22 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }, 1000);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'topics',
+          filter: `id=eq.${topic.id}`
+        },
+        (payload) => {
+          console.log('🔄 Topic updated in real-time:', payload);
+          // Reload topic data to get updated branding_config
+          loadTopic().then(updatedTopic => {
+            setTopic(updatedTopic);
+          });
+        }
+      )
       .subscribe();
 
     return () => {
