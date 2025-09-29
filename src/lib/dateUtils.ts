@@ -33,19 +33,19 @@ export const getRelativeTimeColor = (dateString: string): string => {
   const date = new Date(dateString);
   
   if (isToday(date)) {
-    return 'border-0 text-black font-semibold bg-[#FFCC00]';
+    return 'border-2 border-[#FFCC00] text-[#FFCC00] bg-white font-semibold';
   }
   
   if (isYesterday(date)) {
-    return 'border-0 text-white font-semibold bg-[#00BAFF]';
+    return 'border-2 border-[#00BAFF] text-[#00BAFF] bg-white font-semibold';
   }
   
   if (isThisWeek(date)) {
-    return 'border-0 text-white font-semibold bg-[#CE00FF]';
+    return 'border-2 border-[#CE00FF] text-[#CE00FF] bg-white font-semibold';
   }
   
   // This month (beyond this week)
-  return 'border-0 text-white font-semibold bg-[#090202]';
+  return 'border-2 border-[#090202] text-[#090202] bg-white font-semibold';
 };
 
 export const isNewlyPublished = (dateString: string): boolean => {
@@ -66,7 +66,7 @@ export const isNewStory = (storyIndex: number): boolean => {
 };
 
 export const getNewFlagColor = (): string => {
-  return 'border-0 text-white font-semibold bg-[#FF0000]';
+  return 'border-2 border-[#FF0000] text-[#FF0000] bg-white font-semibold';
 };
 
 // Currentness tag functions for arrival articles
@@ -102,21 +102,21 @@ export const getCurrentnessColor = (publishedAt?: string, createdAt?: string): s
   const dateToUse = publishedAt || createdAt;
   
   if (!dateToUse) {
-    return 'border-0 text-white font-semibold bg-[#FF0000]';
+    return 'border-2 border-[#FF0000] text-[#FF0000] bg-white font-semibold';
   }
   
   const date = new Date(dateToUse);
   
   if (isToday(date)) {
-    return 'border-0 text-black font-semibold bg-[#FFCC00]';
+    return 'border-2 border-[#FFCC00] text-[#FFCC00] bg-white font-semibold';
   }
   
   if (isYesterday(date)) {
-    return 'border-0 text-white font-semibold bg-[#00BAFF]';
+    return 'border-2 border-[#00BAFF] text-[#00BAFF] bg-white font-semibold';
   }
   
   // For older articles
-  return 'border-0 text-white font-semibold bg-[#090202]';
+  return 'border-2 border-[#090202] text-[#090202] bg-white font-semibold';
 };
 
 // Popular badge utilities
