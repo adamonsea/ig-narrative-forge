@@ -138,12 +138,12 @@ serve(async (req) => {
       }
     }
 
-    // Generate optimized illustration prompt with pen and ink editorial style
-    const illustrationPrompt = `Create a professional pen and ink illustration for a news story editorial. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    // Generate optimized illustration prompt with light satirical editorial cartoon style
+    const illustrationPrompt = `Create a light-weight satirical editorial cartoon for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use cross-hatching and stippling for shading with minimal tonal gradients. Serious, editorial, newsworthy tone with high contrast stark black-and-white lighting. Contemporary, newspaper editorial cartoon style framing with clean, uncluttered background and emphasized negative space. Mood should be urgent, journalistic, and slightly satirical. Format as halftone or line art reproduction ready for newsprint. Avoid soft graphite look, loose cartoon exaggeration, coloured pencil effects, or smudgy shading. High resolution with crisp lines for a clean, scan-ready illustration.`
+Style: Broadsheet newspaper cartoon with minimal, expressive linework. Light pen strokes, NOT heavy ink work. Simple, clean lines with minimal detail - think Guardian or Telegraph editorial cartoons. Satirical and witty but intelligent, not frivolous. Characters should have neutral or slightly upbeat expressions - avoid frowning, scowling, or heavy negative emotions. Focus on clever visual storytelling with economical mark-making. Clean, unfussy composition with plenty of white space. Black and white line drawing with light, sketch-like quality. Avoid cross-hatching, heavy shading, intricate detail, or dense pen work. Keep it simple, expressive, and visually clear with a touch of wit.`
 
     // Generate image based on selected model
     const startTime = Date.now()
