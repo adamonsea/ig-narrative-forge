@@ -314,7 +314,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                       <img 
                         src={arrowRightSvg} 
                         alt="Next slide" 
-                        className="w-[125px] h-[28px] opacity-60"
+                        className="w-[125px] h-[28px]"
                       />
                     </motion.div>
                   </div>
@@ -365,11 +365,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                        className="cursor-pointer"
                        onClick={nextSlide}
                      >
-                       <img 
-                         src={arrowRightSvg} 
-                         alt="Next slide" 
-                         className="w-[125px] h-[28px] opacity-60"
-                       />
+                        <img 
+                          src={arrowRightSvg} 
+                          alt="Next slide" 
+                          className="w-[125px] h-[28px]"
+                        />
                      </motion.div>
                    </div>
                  )}
