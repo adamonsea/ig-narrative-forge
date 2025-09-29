@@ -189,65 +189,30 @@ export function SwipeCarousel({
 
       {centerDragArea && (
         <div className="absolute inset-0 pointer-events-none">
-          {/* Left edge click handler for navigation */}
+          {/* Left edge click handler for navigation - smaller on mobile */}
           <div
-            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto cursor-pointer"
+            className="absolute inset-y-0 left-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
             onClick={() => {
               if (index > 0) {
                 prev();
                 console.debug?.('edge-click', 'left', 'prev');
               }
             }}
-            onPointerDown={(e) => {
-              // Only block drag starts, allow clicks
-              if (e.pointerType !== 'mouse') {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragBlocked(true);
-                setTimeout(() => setIsDragBlocked(false), 100);
-              }
-            }}
           />
-          {/* Right edge click handler for navigation */}
+          {/* Right edge click handler for navigation - smaller on mobile */}
           <div
-            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto cursor-pointer"
+            className="absolute inset-y-0 right-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
             onClick={() => {
               if (index < count - 1) {
                 next();
                 console.debug?.('edge-click', 'right', 'next');
               }
             }}
-            onPointerDown={(e) => {
-              // Only block drag starts, allow clicks
-              if (e.pointerType !== 'mouse') {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragBlocked(true);
-                setTimeout(() => setIsDragBlocked(false), 100);
-              }
-            }}
           />
-          {/* Top edge blocker for vertical scroll protection */}
+          {/* Center area for enhanced swipe detection on mobile */}
           <div
-            className="absolute inset-x-0 top-0 h-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'top');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
-          />
-          {/* Bottom edge blocker for vertical scroll protection */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[15%] pointer-events-auto"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'bottom');
-              setTimeout(() => setIsDragBlocked(false), 100);
-            }}
+            className="absolute inset-y-0 left-[10%] right-[10%] md:left-[15%] md:right-[15%] pointer-events-auto touch-pan-x"
+            style={{ touchAction: 'pan-x' }}
           />
         </div>
       )}
