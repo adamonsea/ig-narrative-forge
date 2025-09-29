@@ -438,7 +438,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     <Badge 
                       key="popular"
                       variant="outline" 
-                      className={`text-xs px-2 py-1 ${getPopularBadgeStyle()}`}
+                      className={`text-xs px-2 py-1 scale-80 origin-left ${getPopularBadgeStyle()}`}
                     >
                       Popular
                     </Badge>
@@ -451,7 +451,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     <Badge 
                       key="new"
                       variant="outline" 
-                      className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
+                      className={`text-xs px-2 py-1 scale-80 origin-left ${getNewFlagColor()}`}
                     >
                       New
                     </Badge>
@@ -466,7 +466,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     <Badge 
                       key="time"
                       variant="outline" 
-                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
+                      className={`text-xs px-2 py-1 scale-80 origin-left ${getRelativeTimeColor(storyPublishDate)}`}
                     >
                       {timeLabel}
                     </Badge>
