@@ -148,9 +148,15 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         });
       }
     } catch (error) {
+      // Check if the error is because the user cancelled the share
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Share cancelled by user');
+        return; // Don't show error for user cancellation
+      }
+      
       console.error('Share failed:', error);
       
-      // Show error toast
+      // Show error toast only for actual errors, not cancellations
       import('@/components/ui/use-toast').then(({ toast }) => {
         toast({
           title: "Share failed",
