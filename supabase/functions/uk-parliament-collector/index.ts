@@ -144,16 +144,18 @@ serve(async (req) => {
       console.error('Error collecting Hansard mentions:', error);
     }
 
-    // Store mentions in database
+    // Store mentions in database and create stories
     if (mentions.length > 0) {
       const mentionsWithTopicId = mentions.map(mention => ({
         ...mention,
         topic_id: topicId
       }));
 
-      const { error: insertError } = await supabase
+      // Insert mentions first
+      const { data: insertedMentions, error: insertError } = await supabase
         .from('parliamentary_mentions')
-        .insert(mentionsWithTopicId);
+        .insert(mentionsWithTopicId)
+        .select();
 
       if (insertError) {
         console.error('Error inserting parliamentary mentions:', insertError);
@@ -161,6 +163,118 @@ serve(async (req) => {
       }
 
       console.log(`Successfully stored ${mentions.length} parliamentary mentions`);
+
+      // Create stories for each mention so they appear in the feed
+      if (insertedMentions && insertedMentions.length > 0) {
+        for (const mention of insertedMentions) {
+          try {
+            // Create a shared content entry for the parliamentary mention
+            const { data: sharedContent, error: contentError } = await supabase
+              .from('shared_content')
+              .insert({
+                title: mention.mention_type === 'vote' ? mention.vote_title : mention.debate_title,
+                body: mention.mention_type === 'vote' 
+                  ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
+                  : mention.debate_excerpt || '',
+                published_at: mention.mention_type === 'vote' ? mention.vote_date : mention.debate_date,
+                source_url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url,
+                import_metadata: {
+                  ...mention.import_metadata,
+                  parliamentary_mention_id: mention.id,
+                  mention_type: mention.mention_type
+                }
+              })
+              .select()
+              .single();
+
+            if (contentError) {
+              console.error('Error creating shared content:', contentError);
+              continue;
+            }
+
+            // Create topic_article link for proper topic association
+            const { data: topicArticle, error: topicArticleError } = await supabase
+              .from('topic_articles')
+              .insert({
+                topic_id: topicId,
+                shared_content_id: sharedContent.id,
+                processing_status: 'ready',
+                regional_relevance_score: mention.relevance_score || 50,
+                content_quality_score: 70,
+                import_metadata: {
+                  source: 'parliamentary_mention',
+                  mention_id: mention.id
+                }
+              })
+              .select()
+              .single();
+
+            if (topicArticleError) {
+              console.error('Error creating topic article:', topicArticleError);
+              continue;
+            }
+
+            // Create a story from the shared content
+            const { data: story, error: storyError } = await supabase
+              .from('stories')
+              .insert({
+                topic_article_id: topicArticle.id,
+                shared_content_id: sharedContent.id,
+                title: sharedContent.title,
+                status: 'ready',
+                is_published: true,
+                audience_expertise: 'general',
+                tone: 'formal',
+                writing_style: 'journalistic',
+                slide_type: 'tabloid'
+              })
+              .select()
+              .single();
+
+            if (storyError) {
+              console.error('Error creating story:', storyError);
+              continue;
+            }
+
+            // Create a slide for the story with parliamentary card styling
+            const slideContent = mention.mention_type === 'vote'
+              ? `**${mention.mp_name}** from **${mention.constituency}** (${mention.party}) voted **${mention.vote_direction}** on:\n\n${mention.vote_title}\n\nRegion mentioned: ${mention.region_mentioned}\n\nRelevance: ${mention.relevance_score}%`
+              : `**House of Commons Debate**\n\n${mention.debate_title}\n\n*"${mention.debate_excerpt}"*\n\n**${mention.mp_name}** • ${mention.constituency} • ${mention.party}\n\n${mention.region_mentioned ? `Region: ${mention.region_mentioned}` : ''}${mention.landmark_mentioned ? `\nLandmark: ${mention.landmark_mentioned}` : ''}\n\nRelevance: ${mention.relevance_score}%`;
+
+            const { error: slideError } = await supabase
+              .from('slides')
+              .insert({
+                story_id: story.id,
+                slide_number: 1,
+                content: slideContent,
+                word_count: slideContent.split(' ').length,
+                links: [{
+                  text: mention.mention_type === 'vote' ? 'View on Parliament.uk' : 'View Hansard',
+                  url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url
+                }]
+              });
+
+            if (slideError) {
+              console.error('Error creating slide:', slideError);
+              continue;
+            }
+
+            // Update the parliamentary mention with the story_id
+            const { error: updateError } = await supabase
+              .from('parliamentary_mentions')
+              .update({ story_id: story.id })
+              .eq('id', mention.id);
+
+            if (updateError) {
+              console.error('Error updating mention with story_id:', updateError);
+            }
+
+            console.log(`Created story ${story.id} for parliamentary mention ${mention.id}`);
+          } catch (error) {
+            console.error(`Error creating story for mention ${mention.id}:`, error);
+          }
+        }
+      }
     }
 
     return new Response(
