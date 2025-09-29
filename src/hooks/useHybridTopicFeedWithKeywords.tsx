@@ -228,7 +228,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           id: story.id,
           title: story.title,
           author: story.author || 'Unknown',
-          publication_name: 'eeZee News',
+          publication_name: '',
           created_at: story.created_at,
           updated_at: story.updated_at,
           cover_illustration_url: story.cover_illustration_url,

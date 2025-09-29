@@ -509,13 +509,27 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               {/* Enhanced source link */}
               {(() => {
                 // Get source name from article's source, fallback to domain extraction, then 'source'
-                let sourceName = story.publication_name;
-                let sourceUrl = story.article?.source_url;
+                let sourceName = (story.publication_name || '').trim();
+                const sourceUrl = story.article?.source_url;
                 
+                // Treat generic placeholders as unknown
+                const genericNames = ['eezee news', 'unknown publication', 'unknown'];
+                if (genericNames.includes(sourceName.toLowerCase())) {
+                  sourceName = '';
+                }
+                
+                // Prefer extracted source fields if present
+                // @ts-expect-error - optional shapes may exist on story
+                const extractedSourceName = story.article?.source?.source_name || story.article?.source_name || (story as any).source_name;
+                if (!sourceName && extractedSourceName) {
+                  sourceName = String(extractedSourceName);
+                }
+                
+                // Fallback to domain from URL
                 if (!sourceName && sourceUrl && sourceUrl !== '#') {
                   try {
                     const url = new URL(sourceUrl);
-                    sourceName = url.hostname.replace('www.', '');
+                    sourceName = url.hostname.replace(/^www\./, '');
                   } catch {
                     sourceName = 'source';
                   }
