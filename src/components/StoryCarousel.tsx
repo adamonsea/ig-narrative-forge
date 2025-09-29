@@ -505,21 +505,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           <div className="p-4">
             {/* Progress dots and source link */}
             <div className="flex flex-col items-center space-y-2 mb-4">
-              {validSlides.length > 1 && (
-                <div className="flex justify-center space-x-2">
-                  {validSlides.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToSlide(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentSlideIndex 
-                          ? 'bg-primary scale-125' 
-                          : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
               
               {/* Enhanced source link */}
               {(() => {
