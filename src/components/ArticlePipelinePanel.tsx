@@ -79,6 +79,59 @@ export const ArticlePipelinePanel = ({ onRefresh }: ArticlePipelinePanelProps) =
     loadQueuedArticles();
   }, []);
 
+  // Real-time subscription for articles and queue changes
+  useEffect(() => {
+    console.log('🔄 Setting up ArticlePipelinePanel real-time subscriptions...');
+    
+    const channel = supabase
+      .channel('article-pipeline-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'articles'
+        },
+        (payload) => {
+          console.log('🔄 Articles changed in ArticlePipelinePanel, reloading...', payload);
+          loadPendingArticles();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content_generation_queue'
+        },
+        (payload) => {
+          console.log('🔄 Queue changed in ArticlePipelinePanel, reloading...', payload);
+          loadQueuedArticles();
+          loadPendingArticles(); // Also reload pending to update counts
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          console.log('🔄 Stories changed in ArticlePipelinePanel, reloading pending articles...', payload);
+          loadPendingArticles(); // Reload to update which articles are available
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 ArticlePipelinePanel real-time subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔄 Cleaning up ArticlePipelinePanel real-time subscriptions...');
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const loadQueuedArticles = async () => {
     try {
       const { data: queueData, error: queueError } = await supabase

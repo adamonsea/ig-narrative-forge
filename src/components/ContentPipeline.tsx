@@ -78,6 +78,58 @@ export const ContentPipeline = ({ onRefresh }: ContentPipelineProps) => {
     loadStories();
   }, []);
 
+  // Real-time subscription for stories and queue changes
+  useEffect(() => {
+    console.log('🔄 Setting up ContentPipeline real-time subscriptions...');
+    
+    const channel = supabase
+      .channel('content-pipeline-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          console.log('🔄 Stories changed in ContentPipeline, reloading...', payload);
+          loadStories();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'slides'
+        },
+        (payload) => {
+          console.log('🔄 Slides changed in ContentPipeline, reloading...', payload);
+          loadStories();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content_generation_queue'
+        },
+        (payload) => {
+          console.log('🔄 Queue changed in ContentPipeline, reloading...', payload);
+          loadStories();
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 ContentPipeline real-time subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔄 Cleaning up ContentPipeline real-time subscriptions...');
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const loadStories = async () => {
     setLoadingStories(true);
     try {
