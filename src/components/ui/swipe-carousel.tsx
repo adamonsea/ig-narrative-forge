@@ -188,29 +188,45 @@ export function SwipeCarousel({
 
       {centerDragArea && (
         <div className="absolute inset-0 pointer-events-none">
-          {/* Left edge blocker */}
+          {/* Left edge click handler for navigation */}
           <div
-            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto"
+            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto cursor-pointer"
+            onClick={() => {
+              if (index > 0) {
+                prev();
+                console.debug?.('edge-click', 'left', 'prev');
+              }
+            }}
             onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'left');
-              setTimeout(() => setIsDragBlocked(false), 100);
+              // Only block drag starts, allow clicks
+              if (e.pointerType !== 'mouse') {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragBlocked(true);
+                setTimeout(() => setIsDragBlocked(false), 100);
+              }
             }}
           />
-          {/* Right edge blocker */}
+          {/* Right edge click handler for navigation */}
           <div
-            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto"
+            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto cursor-pointer"
+            onClick={() => {
+              if (index < count - 1) {
+                next();
+                console.debug?.('edge-click', 'right', 'next');
+              }
+            }}
             onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsDragBlocked(true);
-              console.debug?.('edge-block', 'right');
-              setTimeout(() => setIsDragBlocked(false), 100);
+              // Only block drag starts, allow clicks
+              if (e.pointerType !== 'mouse') {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragBlocked(true);
+                setTimeout(() => setIsDragBlocked(false), 100);
+              }
             }}
           />
-          {/* Top edge blocker */}
+          {/* Top edge blocker for vertical scroll protection */}
           <div
             className="absolute inset-x-0 top-0 h-[15%] pointer-events-auto"
             onPointerDown={(e) => {
@@ -221,7 +237,7 @@ export function SwipeCarousel({
               setTimeout(() => setIsDragBlocked(false), 100);
             }}
           />
-          {/* Bottom edge blocker */}
+          {/* Bottom edge blocker for vertical scroll protection */}
           <div
             className="absolute inset-x-0 bottom-0 h-[15%] pointer-events-auto"
             onPointerDown={(e) => {
