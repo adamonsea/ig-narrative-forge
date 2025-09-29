@@ -138,12 +138,12 @@ serve(async (req) => {
       }
     }
 
-    // Generate optimized illustration prompt
-    const illustrationPrompt = `Create a black-and-white line drawing editorial cartoon illustration for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    // Generate optimized illustration prompt with pen and ink editorial style
+    const illustrationPrompt = `Create a professional pen and ink illustration for a news story editorial. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shading. Lighthearted, humorous, slightly satirical tone. Characters should have cartoonishly exaggerated features — rounded faces, expressive body language that enhances the humor. Use medium to heavy outlines for main characters, lighter lines for background elements. Line quality should be loose, confident, slightly sketchy but controlled. Classic editorial cartoon/newspaper comic style that captures situational humor in a single frame. Think mid-20th-century newspaper editorial cartoons with over-the-top expressions and professional attire. Monochrome — relies on line work and contrast rather than color. The composition should feel like a classic editorial cartoon with depth created through varied line weights and cross-hatching techniques.`
+Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use cross-hatching and stippling for shading with minimal tonal gradients. Serious, editorial, newsworthy tone with high contrast stark black-and-white lighting. Mid-century newspaper editorial cartoon style framing with clean, uncluttered background and emphasized negative space. Mood should be urgent, journalistic, and slightly satirical. Format as halftone or line art reproduction ready for newsprint. Avoid soft graphite look, loose cartoon exaggeration, coloured pencil effects, or smudgy shading. High resolution with crisp lines for a clean, scan-ready illustration.`
 
     // Generate image based on selected model
     const startTime = Date.now()
@@ -161,7 +161,7 @@ Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shadin
           model: model,
           prompt: illustrationPrompt,
           n: 1,
-          size: model === 'gpt-image-1' ? '1024x1024' : (model === 'dall-e-3' ? '1024x1024' : '512x512'),
+          size: model === 'gpt-image-1' ? '1024x1280' : (model === 'dall-e-3' ? '1024x1280' : '512x640'),
           ...(model === 'gpt-image-1' ? {
             // GPT-Image-1 specific parameters
             quality: 'high',
@@ -208,7 +208,7 @@ Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shadin
           inputs: illustrationPrompt,
           parameters: {
             width: 512,
-            height: 512
+            height: 640
           },
           options: {
             wait_for_model: true
@@ -245,7 +245,7 @@ Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shadin
         body: JSON.stringify({
           image_request: {
             prompt: illustrationPrompt,
-            aspect_ratio: 'ASPECT_9_16', // Smaller portrait format for optimization
+            aspect_ratio: 'ASPECT_4_5', // 4:5 aspect ratio for editorial style
             model: 'V_2_TURBO', 
             magic_prompt_option: 'ON',
             style_type: 'DESIGN'
@@ -291,7 +291,7 @@ Style: Hand-drawn, ink-style illustration with cross-hatching and minimal shadin
           model: 'flux-1.1-pro-ultra',
           prompt: illustrationPrompt,
           width: 512,
-          height: 512,
+          height: 640,
           num_images: 1,
           guidance_scale: 3.5,
           num_inference_steps: 28,
