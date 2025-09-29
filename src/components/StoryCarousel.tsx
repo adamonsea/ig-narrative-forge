@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
+import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewStory, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
@@ -48,9 +48,10 @@ interface StoryCarouselProps {
   story: Story;
   storyUrl?: string;
   topicId?: string; // Add topicId for tracking
+  storyIndex?: number; // Add story index for "New" flag logic
 }
 
-export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0 }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
@@ -384,7 +385,7 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
               {(() => {
                 const badges = [];
                 
-                // Check for popularity (can coexist with time badges)
+                // Check for popularity (can coexist with all other badges)
                 if (story.popularity_data && isPopularStory(story.popularity_data)) {
                   badges.push(
                     <Badge 
@@ -397,11 +398,8 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
                   );
                 }
                 
-                // Use story updated_at for feed freshness (when it was published to feed)
-                const storyPublishDate = story.updated_at;
-                
-                // Show "New" if story was published to feed in last 24 hours
-                if (isNewInFeed(storyPublishDate)) {
+                // Show "New" flag for first 3 stories (can coexist with time badges)
+                if (isNewStory(storyIndex)) {
                   badges.push(
                     <Badge 
                       key="new"
@@ -411,20 +409,21 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
                       New
                     </Badge>
                   );
-                } else {
-                  // Otherwise show relative time based on story publish date
-                  const timeLabel = getRelativeTimeLabel(storyPublishDate);
-                  if (timeLabel) {
-                    badges.push(
-                      <Badge 
-                        key="time"
-                        variant="outline" 
-                        className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
-                      >
-                        {timeLabel}
-                      </Badge>
-                    );
-                  }
+                }
+                
+                // Always show time-based badge (Today, Yesterday, This week, This month)
+                const storyPublishDate = story.updated_at;
+                const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                if (timeLabel) {
+                  badges.push(
+                    <Badge 
+                      key="time"
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
+                    >
+                      {timeLabel}
+                    </Badge>
+                  );
                 }
                 
                 return badges;

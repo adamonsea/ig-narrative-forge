@@ -290,6 +290,7 @@ const TopicFeed = () => {
                     story={story} 
                     storyUrl={`${window.location.origin}/feed/topic/${slug}/story/${story.id}`}
                     topicId={topic?.id}
+                    storyIndex={index}
                   />
                 </div>
               );

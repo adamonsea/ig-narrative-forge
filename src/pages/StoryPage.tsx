@@ -287,6 +287,7 @@ const StoryPage = () => {
               : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
             }
             topicId={topic?.id}
+            storyIndex={0}
           />
         </div>
       </div>

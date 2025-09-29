@@ -33,15 +33,19 @@ export const getRelativeTimeColor = (dateString: string): string => {
   const date = new Date(dateString);
   
   if (isToday(date)) {
-    return 'bg-green-500/20 text-green-700 border-green-200';
+    return 'border-0 text-black font-semibold bg-[#FFCC00]';
+  }
+  
+  if (isYesterday(date)) {
+    return 'border-0 text-white font-semibold bg-[#00BAFF]';
   }
   
   if (isThisWeek(date)) {
-    return 'bg-blue-500/20 text-blue-700 border-blue-200';
+    return 'border-0 text-white font-semibold bg-[#CE00FF]';
   }
   
   // This month (beyond this week)
-  return 'bg-muted text-muted-foreground border-muted';
+  return 'border-0 text-white font-semibold bg-[#090202]';
 };
 
 export const isNewlyPublished = (dateString: string): boolean => {
@@ -56,21 +60,13 @@ export const isNewlyPublished = (dateString: string): boolean => {
   return daysDiff <= 2;
 };
 
-// New function for 24-hour "New" flag based on story publication to feed
-export const isNewInFeed = (dateString: string): boolean => {
-  if (!dateString) {
-    return false;
-  }
-  
-  const date = new Date(dateString);
-  const now = new Date();
-  const hoursDiff = differenceInHours(now, date);
-  
-  return hoursDiff <= 24;
+// New function for first 3 stories (position-based, not time-based)
+export const isNewStory = (storyIndex: number): boolean => {
+  return storyIndex < 3;
 };
 
 export const getNewFlagColor = (): string => {
-  return 'bg-orange-500/20 text-orange-700 border-orange-200';
+  return 'border-0 text-white font-semibold bg-[#FF0000]';
 };
 
 // Currentness tag functions for arrival articles
@@ -106,21 +102,21 @@ export const getCurrentnessColor = (publishedAt?: string, createdAt?: string): s
   const dateToUse = publishedAt || createdAt;
   
   if (!dateToUse) {
-    return 'bg-purple-500/20 text-purple-700 border-purple-200';
+    return 'border-0 text-white font-semibold bg-[#FF0000]';
   }
   
   const date = new Date(dateToUse);
   
   if (isToday(date)) {
-    return 'bg-green-500/20 text-green-700 border-green-200';
+    return 'border-0 text-black font-semibold bg-[#FFCC00]';
   }
   
   if (isYesterday(date)) {
-    return 'bg-blue-500/20 text-blue-700 border-blue-200';
+    return 'border-0 text-white font-semibold bg-[#00BAFF]';
   }
   
   // For older articles
-  return 'bg-muted/50 text-muted-foreground border-muted';
+  return 'border-0 text-white font-semibold bg-[#090202]';
 };
 
 // Popular badge utilities
