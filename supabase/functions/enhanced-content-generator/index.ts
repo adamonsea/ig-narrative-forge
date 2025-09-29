@@ -113,7 +113,7 @@ REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 15 words ideal, 20 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
+- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 8 words ideal, 15 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
@@ -123,7 +123,7 @@ REQUIREMENTS:
 
 SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Extract the single most compelling TRUE fact/angle from the article content
-- IDEAL: 15 words, MAXIMUM: 20 words, single sentence
+- IDEAL: 8 words, MAXIMUM: 15 words, single sentence
 - Focus on what makes this genuinely matter to local readers
 - Use the strongest claim that the article content fully supports
 - Prioritize: local impact > surprising facts > genuine consequences > human interest
@@ -137,7 +137,7 @@ OUTPUT FORMAT (JSON):
   "slides": [
     {
       "slideNumber": 1,
-      "content": "Extract most compelling TRUE local angle (IDEAL: 15 words, MAX: 20 words, single sentence)",
+      "content": "Extract most compelling TRUE local angle (IDEAL: 8 words, MAX: 15 words, single sentence)",
       "visualPrompt": "Description for visual/image",
       "altText": "Accessibility description"
     }
@@ -245,7 +245,7 @@ REQUIREMENTS:
 - Tone: ${tone}
 - Audience expertise: ${expertise}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 15 words ideal, 20 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
+- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 8 words ideal, 15 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
 - Make it shareable and engaging for web readers
 - Include alt text for accessibility
@@ -255,7 +255,7 @@ REQUIREMENTS:
 
 SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Extract the single most compelling TRUE fact/angle from the article content
-- IDEAL: 15 words, MAXIMUM: 20 words, single sentence
+- IDEAL: 8 words, MAXIMUM: 15 words, single sentence
 - Focus on what makes this genuinely matter to local readers
 - Use the strongest claim that the article content fully supports
 - Prioritize: local impact > surprising facts > genuine consequences > human interest
@@ -269,7 +269,7 @@ OUTPUT FORMAT (JSON):
   "slides": [
     {
       "slideNumber": 1,
-      "content": "Extract most compelling TRUE local angle (IDEAL: 15 words, MAX: 20 words, single sentence)",
+      "content": "Extract most compelling TRUE local angle (IDEAL: 8 words, MAX: 15 words, single sentence)",
       "visualPrompt": "Description for visual/image",
       "altText": "Accessibility description"
     }
