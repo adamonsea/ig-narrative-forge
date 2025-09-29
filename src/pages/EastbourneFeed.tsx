@@ -69,7 +69,7 @@ export default function EastbourneFeed() {
       </header>
 
       {/* Feed */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto px-1 md:px-4 py-6">
         {stories.length > 0 ? (
           <div className="space-y-8">
             {stories.map((story, index) => {

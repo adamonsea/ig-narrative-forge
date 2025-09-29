@@ -165,7 +165,7 @@ const TopicFeed = () => {
         </div>
       )}
 
-      <div className={`container mx-auto px-4 py-8 ${isScrolled ? 'pt-20' : ''}`}>
+      <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-20' : ''}`}>
         {/* User Avatar for logged in users */}
         {user && (
           <div className="absolute left-4 top-8">
@@ -219,11 +219,11 @@ const TopicFeed = () => {
             </button>
           </div>
           {topic.branding_config?.subheader ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-4">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
               {topic.branding_config.subheader}
             </p>
           ) : topic.description ? (
-            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-4">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
               {topic.description}
             </p>
           ) : null}
