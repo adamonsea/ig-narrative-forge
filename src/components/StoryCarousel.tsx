@@ -310,12 +310,12 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         {hasImage ? (
           // First slide with image - use flex layout
           <div className="h-full flex flex-col">
-            {/* Cover Illustration */}
-            <div className="relative w-full h-64 md:h-80 mb-4 p-4 overflow-hidden">
+            {/* Cover Illustration - Full card width */}
+            <div className="relative w-full h-64 md:h-80 overflow-hidden">
               <img
                 src={story.cover_illustration_url}
                 alt={`Cover illustration for ${story.title}`}
-                className="w-full h-full object-contain bg-white rounded-lg"
+                className="w-full h-full object-cover"
                 style={{ imageRendering: 'crisp-edges' }}
               />
             </div>
