@@ -16,11 +16,11 @@ export const getRelativeTimeLabel = (dateString: string): string | null => {
     return 'Yesterday';
   }
   
-  if (isThisWeek(date)) {
-    return 'This week';
+  const daysDiff = differenceInDays(now, date);
+  if (daysDiff <= 7) {
+    return 'Last 7 days';
   }
   
-  const daysDiff = differenceInDays(now, date);
   if (daysDiff <= 30) {
     return 'This month';
   }
@@ -40,11 +40,12 @@ export const getRelativeTimeColor = (dateString: string): string => {
     return 'border-2 border-[#00BAFF] text-[#00BAFF] bg-white font-semibold';
   }
   
-  if (isThisWeek(date)) {
+  const daysDiff = differenceInDays(new Date(), date);
+  if (daysDiff <= 7) {
     return 'border-2 border-[#CE00FF] text-[#CE00FF] bg-white font-semibold';
   }
   
-  // This month (beyond this week)
+  // This month (beyond last 7 days)
   return 'border-2 border-[#090202] text-[#090202] bg-white font-semibold';
 };
 
