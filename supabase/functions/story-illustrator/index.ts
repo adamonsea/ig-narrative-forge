@@ -161,7 +161,7 @@ Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use 
           model: model,
           prompt: illustrationPrompt,
           n: 1,
-          size: model === 'gpt-image-1' ? '1024x1280' : (model === 'dall-e-3' ? '1024x1280' : '512x640'),
+          size: model === 'gpt-image-1' ? '1024x1536' : (model === 'dall-e-3' ? '1024x1536' : '1024x1024'),
           ...(model === 'gpt-image-1' ? {
             // GPT-Image-1 specific parameters
             quality: 'high',

@@ -121,6 +121,19 @@ REQUIREMENTS:
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
+FACT vs OPINION HANDLING:
+- FACTUAL STATEMENTS: Present verifiable actions, events, dates, locations without attribution (e.g., "Planning meeting scheduled for Tuesday")
+- OPINIONS/CLAIMS: ALWAYS attribute to speaker using "says", "claims", "according to" (e.g., "Councillor Smith says it will boost tourism")
+- PARAPHRASED OPINIONS: Use attribution without quotes (e.g., "The mayor claims the policy will reduce traffic")
+- DIRECT QUOTES: Use attribution with quotation marks (e.g., 'Mayor calls it "a game-changer for residents"')
+- NEVER present subjective claims, predictions, or opinions as if they are established facts
+
+ATTRIBUTION REQUIREMENTS:
+- Any statement involving judgment, evaluation, or prediction MUST be attributed
+- Use specific titles and names when available (e.g., "Councillor Sarah Brown says" not "officials say")
+- Avoid presenting causation claims as facts unless explicitly proven in the article
+- When uncertain if something is fact or opinion, err on the side of attribution
+
 SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Extract the single most compelling TRUE fact/angle from the article content
 - IDEAL: 8 words, MAXIMUM: 15 words, single sentence
@@ -252,6 +265,19 @@ REQUIREMENTS:
 - Final slide should include source attribution
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
+
+FACT vs OPINION HANDLING:
+- FACTUAL STATEMENTS: Present verifiable actions, events, dates, locations without attribution (e.g., "Planning meeting scheduled for Tuesday")
+- OPINIONS/CLAIMS: ALWAYS attribute to speaker using "says", "claims", "according to" (e.g., "Councillor Smith says it will boost tourism")
+- PARAPHRASED OPINIONS: Use attribution without quotes (e.g., "The mayor claims the policy will reduce traffic")
+- DIRECT QUOTES: Use attribution with quotation marks (e.g., 'Mayor calls it "a game-changer for residents"')
+- NEVER present subjective claims, predictions, or opinions as if they are established facts
+
+ATTRIBUTION REQUIREMENTS:
+- Any statement involving judgment, evaluation, or prediction MUST be attributed
+- Use specific titles and names when available (e.g., "Councillor Sarah Brown says" not "officials say")
+- Avoid presenting causation claims as facts unless explicitly proven in the article
+- When uncertain if something is fact or opinion, err on the side of attribution
 
 SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
 - Extract the single most compelling TRUE fact/angle from the article content

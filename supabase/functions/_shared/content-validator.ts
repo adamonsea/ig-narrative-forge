@@ -27,6 +27,19 @@ export class ContentValidator {
     'confirmed', 'disclosed', 'mentioned', 'noted', 'explained'
   ];
 
+  private opinionIndicators = [
+    'will boost', 'will improve', 'will reduce', 'will increase', 'will help', 
+    'will benefit', 'is expected to', 'should lead to', 'aims to', 'hopes to',
+    'plans to', 'believes', 'feels', 'thinks', 'could help', 'might improve',
+    'appears to be', 'seems to suggest', 'indicates that', 'suggests that'
+  ];
+
+  private attributionWords = [
+    'says', 'claims', 'states', 'according to', 'believes', 'argues',
+    'suggests', 'maintains', 'calls it', 'describes', 'explains',
+    'told', 'added', 'noted', 'commented'
+  ];
+
   /**
    * Validates generated slides against source material for factual accuracy
    */
@@ -44,6 +57,19 @@ export class ContentValidator {
       for (const fabrication of this.forbiddenFabrications) {
         if (slideContent.includes(fabrication) && !sourceText.includes(fabrication)) {
           fabricatedTopics.push(`Slide ${slide.slideNumber}: "${fabrication}" not found in source`);
+        }
+      }
+      
+      // Check for opinion statements presented as facts
+      for (const opinion of this.opinionIndicators) {
+        if (slideContent.includes(opinion)) {
+          // Check if it's properly attributed
+          const hasAttribution = this.attributionWords.some(attr => 
+            slideContent.includes(attr.toLowerCase())
+          );
+          if (!hasAttribution) {
+            issues.push(`Slide ${slide.slideNumber}: Opinion/prediction "${opinion}" presented as fact without attribution`);
+          }
         }
       }
       
