@@ -12,6 +12,7 @@ interface Story {
   title: string;
   author: string | null;
   publication_name: string | null;
+  cover_illustration_url: string | null;
   created_at: string;
   updated_at: string;
   slides: Array<{
@@ -73,6 +74,7 @@ const StoryPage = () => {
             title,
             author,
             publication_name,
+            cover_illustration_url,
             created_at,
             updated_at,
             slides (
@@ -100,6 +102,7 @@ const StoryPage = () => {
           title: storyData.title,
           author: storyData.author,
           publication_name: storyData.publication_name,
+          cover_illustration_url: storyData.cover_illustration_url,
           created_at: storyData.created_at,
           updated_at: storyData.updated_at,
           slides: storyData.slides.sort((a, b) => a.slide_number - b.slide_number),
@@ -157,6 +160,7 @@ const StoryPage = () => {
             title,
             author,
             publication_name,
+            cover_illustration_url,
             created_at,
             updated_at,
             slides (
@@ -184,6 +188,7 @@ const StoryPage = () => {
           title: storyData.title,
           author: storyData.author,
           publication_name: storyData.publication_name,
+          cover_illustration_url: storyData.cover_illustration_url,
           created_at: storyData.created_at,
           updated_at: storyData.updated_at,
           slides: storyData.slides
@@ -255,41 +260,17 @@ const StoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      <div className="container mx-auto px-1 md:px-4 py-8">
-        {/* Back Button and Topic Header */}
-        <div className="mb-6">
-            <Button variant="outline" asChild className="mb-4">
-              <Link to={isRegionalFeed ? '/feed/eastbourne' : `/feed/topic/${slug}`}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {topic.name}
-              </Link>
-            </Button>
-          
-          <div className="flex items-center gap-2 mb-2">
-            {topic.topic_type === 'regional' ? (
-              <MapPin className="w-5 h-5 text-blue-500" />
-            ) : (
-              <Hash className="w-5 h-5 text-green-500" />
-            )}
-            <h1 className="text-2xl font-bold text-muted-foreground">
-              {topic.name}
-            </h1>
-          </div>
-        </div>
-
-        {/* Story */}
-        <div className="max-w-4xl mx-auto">
-          <StoryCarousel 
-            story={story} 
-            storyUrl={isRegionalFeed 
-              ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
-              : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
-            }
-            topicId={topic?.id}
-            storyIndex={0}
-          />
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-lg mx-auto">
+        <StoryCarousel 
+          story={story} 
+          storyUrl={isRegionalFeed 
+            ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
+            : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
+          }
+          topicId={topic?.id}
+          storyIndex={0}
+        />
       </div>
     </div>
   );
