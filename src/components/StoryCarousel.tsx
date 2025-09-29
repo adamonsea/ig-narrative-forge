@@ -61,10 +61,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
-  // Fit-to-height for last slide
-  const lastFitContainerRef = useRef<HTMLDivElement | null>(null);
-  const lastFitInnerRef = useRef<HTMLDivElement | null>(null);
-  const [lastScale, setLastScale] = useState(1);
+  // Remove fit-to-height scaling functionality
   
   // Defensive checks for slides data
   const validSlides = story.slides && Array.isArray(story.slides) && story.slides.length > 0 ? story.slides : [];
@@ -156,37 +153,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     return () => observer.disconnect();
   }, [story.id]);
 
-  // Auto fit last slide text to available height
-  useEffect(() => {
-    const fit = () => {
-      if (currentSlideIndex !== validSlides.length - 1) {
-        setLastScale(1);
-        return;
-      }
-      const container = lastFitContainerRef.current;
-      const inner = lastFitInnerRef.current;
-      if (!container || !inner) return;
-      // Measure natural content height; transforms don't affect scrollHeight
-      const available = container.clientHeight;
-      const needed = inner.scrollHeight;
-      if (available <= 0 || needed <= 0) return;
-      const ratio = available / needed;
-      // Clamp to sensible minimum so text remains legible
-      const nextScale = Math.max(0.7, Math.min(1, ratio));
-      setLastScale(nextScale);
-    };
-
-    fit();
-
-    const ro = lastFitContainerRef.current ? new ResizeObserver(fit) : null;
-    if (ro && lastFitContainerRef.current) ro.observe(lastFitContainerRef.current);
-    window.addEventListener('resize', fit);
-
-    return () => {
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', fit);
-    };
-  }, [currentSlideIndex, validSlides.length, currentSlide?.content]);
+  // Remove auto-fit scaling logic
 
   // Parse content for last slide styling and ensure source attribution
   const parseContentForLastSlide = (content: string, links: any[] = []) => {
@@ -357,12 +324,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           </div>
         ) : (
           // Slides without image - use grid for perfect centering and fit-to-height on last slide
-          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden" ref={isLast ? lastFitContainerRef : undefined}>
-            <div
-              ref={isLast ? lastFitInnerRef : undefined}
-              style={isLast ? { transform: `scale(${lastScale})`, transformOrigin: 'center center' } : undefined}
-              className="w-full max-w-lg mx-auto text-center"
-            >
+          <div className="h-full flex items-center justify-center p-6 md:p-8 overflow-hidden">
+            <div className="w-full max-w-lg mx-auto text-center">
                  <div className={`leading-relaxed ${
                   index === 0 
                   ? `${getTextSize(slide?.content || '', true)} font-bold uppercase text-balance` 
