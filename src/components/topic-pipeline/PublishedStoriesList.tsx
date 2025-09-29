@@ -77,6 +77,13 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
+    isOpen: boolean; 
+    storyId?: string; 
+    storyTitle?: string;
+    coverOptions?: any[];
+    selectedCoverId?: string;
+  }>({ isOpen: false });
   const [linkEditorSlide, setLinkEditorSlide] = useState<Slide | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;

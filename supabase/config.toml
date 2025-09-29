@@ -150,3 +150,9 @@ verify_jwt = false
 
 [functions.uk-parliament-collector]
 verify_jwt = false
+
+[functions.select-story-cover]
+verify_jwt = true
+
+[functions.delete-cover-option]
+verify_jwt = true

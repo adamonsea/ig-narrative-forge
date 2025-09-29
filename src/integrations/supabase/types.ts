@@ -2036,6 +2036,7 @@ export type Database = {
           last_quality_check: string | null
           publication_name: string | null
           quality_score: number | null
+          selected_cover_id: string | null
           shared_content_id: string | null
           slide_type: string | null
           status: string
@@ -2058,6 +2059,7 @@ export type Database = {
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
           status?: string
@@ -2080,6 +2082,7 @@ export type Database = {
           last_quality_check?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
           status?: string
@@ -2098,6 +2101,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stories_selected_cover_id_fkey"
+            columns: ["selected_cover_id"]
+            isOneToOne: false
+            referencedRelation: "story_cover_options"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stories_shared_content_id_fkey"
             columns: ["shared_content_id"]
             isOneToOne: false
@@ -2109,6 +2119,44 @@ export type Database = {
             columns: ["topic_article_id"]
             isOneToOne: false
             referencedRelation: "topic_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_cover_options: {
+        Row: {
+          cover_url: string
+          created_at: string
+          generated_at: string
+          generation_prompt: string | null
+          id: string
+          model_used: string | null
+          story_id: string
+        }
+        Insert: {
+          cover_url: string
+          created_at?: string
+          generated_at?: string
+          generation_prompt?: string | null
+          id?: string
+          model_used?: string | null
+          story_id: string
+        }
+        Update: {
+          cover_url?: string
+          created_at?: string
+          generated_at?: string
+          generation_prompt?: string | null
+          id?: string
+          model_used?: string | null
+          story_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_cover_options_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
             referencedColumns: ["id"]
           },
         ]

@@ -87,6 +87,13 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
+    isOpen: boolean; 
+    storyId?: string; 
+    storyTitle?: string;
+    coverOptions?: any[];
+    selectedCoverId?: string;
+  }>({ isOpen: false });
   
   const { toast } = useToast();
   const { credits } = useCredits();
