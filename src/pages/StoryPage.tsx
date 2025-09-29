@@ -260,7 +260,7 @@ const StoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-slate-900 to-black">
+    <div className="min-h-screen feed-background">
       <div className="max-w-lg mx-auto">
         {/* Back Button */}
         <div className="p-4">
