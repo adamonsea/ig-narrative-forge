@@ -161,7 +161,7 @@ Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use 
           model: model,
           prompt: illustrationPrompt,
           n: 1,
-          size: model === 'gpt-image-1' ? '1024x1536' : (model === 'dall-e-3' ? '1024x1536' : '1024x1024'),
+          size: model === 'gpt-image-1' ? '1536x1024' : (model === 'dall-e-3' ? '1792x1024' : '1024x1024'),
           ...(model === 'gpt-image-1' ? {
             // GPT-Image-1 specific parameters
             quality: 'high',
@@ -245,7 +245,7 @@ Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use 
         body: JSON.stringify({
           image_request: {
             prompt: illustrationPrompt,
-            aspect_ratio: 'ASPECT_4_5', // 4:5 aspect ratio for editorial style
+            aspect_ratio: 'ASPECT_3_2', // 3:2 landscape aspect ratio for editorial style
             model: 'V_2_TURBO', 
             magic_prompt_option: 'ON',
             style_type: 'DESIGN'
