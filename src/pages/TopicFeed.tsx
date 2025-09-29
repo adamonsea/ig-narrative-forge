@@ -138,7 +138,7 @@ const TopicFeed = () => {
               <div className="flex items-center gap-3">
                 {topic.branding_config?.logo_url ? (
                   <img
-                    src={topic.branding_config.logo_url}
+                    src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
                     alt={`${topic.name} logo`}
                     className="h-8 w-auto object-contain"
                   />
@@ -189,7 +189,7 @@ const TopicFeed = () => {
               {topic.branding_config?.logo_url ? (
                 <div className="flex justify-center">
                   <img
-                    src={topic.branding_config.logo_url}
+                    src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
                     alt={`${topic.name} logo`}
                     className="h-12 sm:h-16 max-w-[280px] sm:max-w-xs object-contain"
                   />

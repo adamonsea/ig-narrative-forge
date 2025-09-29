@@ -109,17 +109,21 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         logoUrl = undefined;
       }
 
-      // Update topic branding config
+      // Update topic branding config with cache-busting timestamp
       const brandingConfig = {
         ...topic.branding_config,
         logo_url: logoUrl,
         subheader: subheader.trim() || undefined,
-        show_topic_name: !logoUrl // Hide topic name when logo exists
+        show_topic_name: !logoUrl, // Hide topic name when logo exists
+        updated_at: new Date().toISOString() // Force cache refresh
       };
 
       const { error } = await supabase
         .from('topics')
-        .update({ branding_config: brandingConfig })
+        .update({ 
+          branding_config: brandingConfig,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', topic.id);
 
       if (error) {
