@@ -138,12 +138,12 @@ serve(async (req) => {
       }
     }
 
-    // Generate optimized illustration prompt with light satirical editorial cartoon style
-    const illustrationPrompt = `Create a light-weight satirical editorial cartoon for a news story. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    // Generate optimized illustration prompt with Private Eye satirical editorial cartoon style
+    const illustrationPrompt = `Create a satirical editorial cartoon in the style of Private Eye magazine. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: Broadsheet newspaper cartoon with minimal, expressive linework. Light pen strokes, NOT heavy ink work. Simple, clean lines with minimal detail - think Guardian or Telegraph editorial cartoons. Satirical and witty but intelligent, not frivolous. Characters should have neutral or slightly upbeat expressions - avoid frowning, scowling, or heavy negative emotions. Focus on clever visual storytelling with economical mark-making. Clean, unfussy composition with plenty of white space. Black and white line drawing with light, sketch-like quality. Avoid cross-hatching, heavy shading, intricate detail, or dense pen work. Keep it simple, expressive, and visually clear with a touch of wit.`
+Style: PEN AND INK ONLY - solid black marks on true white background. Think Private Eye magazine covers - clarity and simplicity above all. Bold, confident black ink lines on pure white (#FFFFFF). NO gray tones, NO shading, NO textures. Clean, minimal linework with maximum clarity. Witty and satirical but intelligent, not frivolous. Characters with neutral or slightly upbeat expressions - avoid frowning or negative emotions. Simple shapes, economical mark-making, immediately readable composition. British satirical cartoon aesthetic - sharp, clear, unfussy. Avoid cross-hatching, avoid dense pen work, avoid intricate detail. Pure black ink on pure white - nothing else.`
 
     // Generate image based on selected model
     const startTime = Date.now()
