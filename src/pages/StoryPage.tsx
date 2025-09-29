@@ -220,7 +220,7 @@ const StoryPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-1 md:px-4 py-8">
           <div className="mb-6">
             <Skeleton className="w-32 h-10" />
           </div>
@@ -236,7 +236,7 @@ const StoryPage = () => {
   if (!story || !topic) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-1 md:px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Story Not Found</h1>
             <p className="text-muted-foreground">
@@ -256,7 +256,7 @@ const StoryPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-1 md:px-4 py-8">
         {/* Back Button and Topic Header */}
         <div className="mb-6">
             <Button variant="outline" asChild className="mb-4">
