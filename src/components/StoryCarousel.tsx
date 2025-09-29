@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download } from 'lucide-react';
+import { Share2, Heart, Download, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewStory, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
@@ -329,6 +329,25 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   )} />
                 </div>
                 
+                {/* Arrow below content - show on all slides except the last */}
+                {!isLast && validSlides.length > 1 && (
+                  <div className="flex justify-center mt-8">
+                    <motion.div
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: [0.6, 1, 0.6] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="flex items-center text-foreground/60 cursor-pointer"
+                      onClick={nextSlide}
+                    >
+                      <div className="w-12 h-[1px] bg-current mr-1" />
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -364,6 +383,26 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     </div>
                   )}
                  </div>
+                 
+                 {/* Arrow below content - show on all slides except the last */}
+                 {!isLast && validSlides.length > 1 && (
+                   <div className="flex justify-center mt-8">
+                     <motion.div
+                       initial={{ opacity: 0.6 }}
+                       animate={{ opacity: [0.6, 1, 0.6] }}
+                       transition={{
+                         duration: 2,
+                         repeat: Infinity,
+                         ease: "easeInOut"
+                       }}
+                       className="flex items-center text-foreground/60 cursor-pointer"
+                       onClick={nextSlide}
+                     >
+                       <div className="w-12 h-[1px] bg-current mr-1" />
+                       <ArrowRight className="w-4 h-4" />
+                     </motion.div>
+                   </div>
+                 )}
              </div>
            </div>
         )}

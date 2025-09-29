@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -185,26 +184,6 @@ export function SwipeCarousel({
             </div>
           ))}
           
-          {/* Engagement arrow - positioned center-right like in design */}
-          {count > 1 && index < count - 1 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="absolute right-8 flex items-center gap-2 text-muted-foreground/40">
-                <motion.div
-                  initial={{ opacity: 0.4, x: 0 }}
-                  animate={{ opacity: [0.4, 0.8, 0.4], x: [0, 8, 0] }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <div className="w-8 h-[1px] bg-current" />
-                  <ArrowRight className="w-4 h-4" />
-                </motion.div>
-              </div>
-            </div>
-          )}
         </motion.div>
       </div>
 
