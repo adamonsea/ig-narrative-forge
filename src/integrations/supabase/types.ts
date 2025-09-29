@@ -1189,6 +1189,78 @@ export type Database = {
         }
         Relationships: []
       }
+      parliamentary_mentions: {
+        Row: {
+          constituency: string | null
+          created_at: string | null
+          debate_date: string | null
+          debate_excerpt: string | null
+          debate_title: string | null
+          hansard_url: string | null
+          id: string
+          import_metadata: Json | null
+          landmark_mentioned: string | null
+          mention_type: string
+          mp_name: string | null
+          party: string | null
+          region_mentioned: string | null
+          relevance_score: number | null
+          source_api: string | null
+          topic_id: string
+          updated_at: string | null
+          vote_date: string | null
+          vote_direction: string | null
+          vote_title: string | null
+          vote_url: string | null
+        }
+        Insert: {
+          constituency?: string | null
+          created_at?: string | null
+          debate_date?: string | null
+          debate_excerpt?: string | null
+          debate_title?: string | null
+          hansard_url?: string | null
+          id?: string
+          import_metadata?: Json | null
+          landmark_mentioned?: string | null
+          mention_type: string
+          mp_name?: string | null
+          party?: string | null
+          region_mentioned?: string | null
+          relevance_score?: number | null
+          source_api?: string | null
+          topic_id: string
+          updated_at?: string | null
+          vote_date?: string | null
+          vote_direction?: string | null
+          vote_title?: string | null
+          vote_url?: string | null
+        }
+        Update: {
+          constituency?: string | null
+          created_at?: string | null
+          debate_date?: string | null
+          debate_excerpt?: string | null
+          debate_title?: string | null
+          hansard_url?: string | null
+          id?: string
+          import_metadata?: Json | null
+          landmark_mentioned?: string | null
+          mention_type?: string
+          mp_name?: string | null
+          party?: string | null
+          region_mentioned?: string | null
+          relevance_score?: number | null
+          source_api?: string | null
+          topic_id?: string
+          updated_at?: string | null
+          vote_date?: string | null
+          vote_direction?: string | null
+          vote_title?: string | null
+          vote_url?: string | null
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           caption: string | null
@@ -2554,6 +2626,7 @@ export type Database = {
           name: string
           negative_keywords: string[] | null
           organizations: string[] | null
+          parliamentary_tracking_enabled: boolean | null
           postcodes: string[] | null
           region: string | null
           slug: string | null
@@ -2587,6 +2660,7 @@ export type Database = {
           name: string
           negative_keywords?: string[] | null
           organizations?: string[] | null
+          parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null
           slug?: string | null
@@ -2620,6 +2694,7 @@ export type Database = {
           name?: string
           negative_keywords?: string[] | null
           organizations?: string[] | null
+          parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null
           slug?: string | null

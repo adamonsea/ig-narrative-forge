@@ -147,3 +147,6 @@ verify_jwt = false
 
 [functions.reddit-community-scheduler]
 verify_jwt = false
+
+[functions.uk-parliament-collector]
+verify_jwt = false
