@@ -311,7 +311,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         data: mention
       }));
 
-      const mixedContent = [...storyContent, ...parliamentaryContent]
+      // Defensive deduplication: use Map to ensure each ID appears exactly once
+      const contentMap = new Map<string, FeedContent>();
+      [...storyContent, ...parliamentaryContent].forEach(item => {
+        if (!contentMap.has(item.id)) {
+          contentMap.set(item.id, item);
+        } else {
+          console.warn(`⚠️ Duplicate content ID detected and removed: ${item.id.substring(0, 8)}...`);
+        }
+      });
+
+      const mixedContent = Array.from(contentMap.values())
         .sort((a, b) => {
           const dateA = new Date(a.content_date).getTime();
           const dateB = new Date(b.content_date).getTime();
@@ -330,10 +340,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       if (append) {
         setAllStories(prev => [...prev, ...transformedStories]);
-        // Merge new stories with existing mixed content and re-sort chronologically
+        // Merge new stories with existing mixed content and re-sort chronologically with deduplication
         setAllContent(prev => {
-          const merged = [...prev, ...storyContent];
-          return merged.sort((a, b) => {
+          const contentMap = new Map<string, FeedContent>();
+          [...prev, ...storyContent].forEach(item => {
+            if (!contentMap.has(item.id)) {
+              contentMap.set(item.id, item);
+            }
+          });
+          return Array.from(contentMap.values()).sort((a, b) => {
             const aTime = new Date(a.content_date).getTime();
             const bTime = new Date(b.content_date).getTime();
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
@@ -341,8 +356,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         });
         if (!keywords || keywords.length === 0) {
           setFilteredContent(prev => {
-            const merged = [...prev, ...storyContent];
-            return merged.sort((a, b) => {
+            const contentMap = new Map<string, FeedContent>();
+            [...prev, ...storyContent].forEach(item => {
+              if (!contentMap.has(item.id)) {
+                contentMap.set(item.id, item);
+              }
+            });
+            return Array.from(contentMap.values()).sort((a, b) => {
               const aTime = new Date(a.content_date).getTime();
               const bTime = new Date(b.content_date).getTime();
               return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);

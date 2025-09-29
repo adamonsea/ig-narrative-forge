@@ -290,7 +290,25 @@ const TopicFeed = () => {
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
         {filteredContent.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
-            {filteredContent.map((contentItem, index) => {
+            {(() => {
+              // Defensive duplicate detection with console warning
+              const seenIds = new Set<string>();
+              const duplicates: string[] = [];
+              
+              filteredContent.forEach(item => {
+                if (seenIds.has(item.id)) {
+                  duplicates.push(item.id.substring(0, 8));
+                } else {
+                  seenIds.add(item.id);
+                }
+              });
+              
+              if (duplicates.length > 0) {
+                console.warn(`⚠️ DUPLICATE CONTENT IDs IN FEED: ${duplicates.join(', ')}...`);
+              }
+              
+              return filteredContent;
+            })().map((contentItem, index) => {
               const items = [];
               
               if (contentItem.type === 'story') {
