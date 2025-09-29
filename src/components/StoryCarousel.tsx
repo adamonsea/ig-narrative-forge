@@ -347,7 +347,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                       <img 
                         src={arrowRightSvg} 
                         alt="Next slide" 
-                        className="w-[62px] h-[13.7px] opacity-60"
+                        className="w-[125px] h-[28px] opacity-60"
                       />
                     </motion.div>
                   </div>
@@ -405,7 +405,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                        <img 
                          src={arrowRightSvg} 
                          alt="Next slide" 
-                         className="w-[62px] h-[13.7px] opacity-60"
+                         className="w-[125px] h-[28px] opacity-60"
                        />
                      </motion.div>
                    </div>
