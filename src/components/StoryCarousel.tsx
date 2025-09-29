@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed } from '@/lib/dateUtils';
+import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewInFeed, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
 import { format } from 'date-fns';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
@@ -20,6 +20,11 @@ interface Story {
   updated_at: string;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
+  popularity_data?: {
+    period_type: string;
+    swipe_count: number;
+    rank_position: number;
+  };
   slides: Array<{
     id: string;
     slide_number: number;
@@ -377,6 +382,18 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
                 </Badge>
               )}
               {(() => {
+                // Check for popularity first (highest priority)
+                if (story.popularity_data && isPopularStory(story.popularity_data)) {
+                  return (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-2 py-1 ${getPopularBadgeStyle()}`}
+                    >
+                      Popular
+                    </Badge>
+                  );
+                }
+                
                 // Use story updated_at for feed freshness (when it was published to feed)
                 const storyPublishDate = story.updated_at;
                 

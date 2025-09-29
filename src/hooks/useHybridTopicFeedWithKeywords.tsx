@@ -11,6 +11,11 @@ interface Story {
   updated_at: string;
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
+  popularity_data?: {
+    period_type: string;
+    swipe_count: number;
+    rank_position: number;
+  };
   slides: Array<{
     id: string;
     slide_number: number;
@@ -181,7 +186,30 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
 
-      // Transform stories with slides data
+      // Fetch popularity data for all stories
+      let popularityMap = new Map();
+      if (storyIds.length > 0) {
+        try {
+          const { data: popularityData, error: popularityError } = await supabase
+            .rpc('get_popular_stories_by_period', {
+              p_topic_id: topicData.id
+            });
+          
+          if (!popularityError && popularityData) {
+            popularityData.forEach((item: any) => {
+              popularityMap.set(item.story_id, {
+                period_type: item.period_type,
+                swipe_count: item.swipe_count,
+                rank_position: item.rank_position
+              });
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ Failed to load popularity data:', error);
+        }
+      }
+
+      // Transform stories with slides data and popularity
       const transformedStories = storiesData.map((story: any) => {
         const storySlides = slidesData
           .filter((slide: any) => slide.story_id === story.id)
@@ -205,6 +233,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           updated_at: story.updated_at,
           cover_illustration_url: story.cover_illustration_url,
           cover_illustration_prompt: story.cover_illustration_prompt,
+          popularity_data: popularityMap.get(story.id),
           slides: storySlides,
           article: {
             source_url: story.article_source_url || '#',

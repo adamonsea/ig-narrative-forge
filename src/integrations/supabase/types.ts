@@ -3058,6 +3058,15 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: number
       }
+      get_popular_stories_by_period: {
+        Args: { p_topic_id: string }
+        Returns: {
+          period_type: string
+          rank_position: number
+          story_id: string
+          swipe_count: number
+        }[]
+      }
       get_public_slides_for_stories: {
         Args: { p_story_ids: string[] }
         Returns: {

@@ -124,3 +124,33 @@ export const getCurrentnessColor = (publishedAt?: string, createdAt?: string): s
   // For older articles
   return 'bg-muted/50 text-muted-foreground border-muted';
 };
+
+// Popular badge utilities
+export const getPopularBadgeStyle = (): string => {
+  return 'bg-[#58FFBC] text-white border-0';
+};
+
+export interface PopularityData {
+  period_type: string;
+  swipe_count: number;
+  rank_position: number;
+}
+
+export const isPopularStory = (popularityData?: PopularityData): boolean => {
+  if (!popularityData) return false;
+  
+  const { period_type, rank_position } = popularityData;
+  
+  switch (period_type) {
+    case 'today':
+      return rank_position <= 2;
+    case 'yesterday':
+      return rank_position <= 1;
+    case 'this_week':
+      return rank_position <= 2;
+    case 'older':
+      return rank_position <= 2;
+    default:
+      return false;
+  }
+};
