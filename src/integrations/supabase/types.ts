@@ -1206,6 +1206,7 @@ export type Database = {
           region_mentioned: string | null
           relevance_score: number | null
           source_api: string | null
+          story_id: string | null
           topic_id: string
           updated_at: string | null
           vote_date: string | null
@@ -1229,6 +1230,7 @@ export type Database = {
           region_mentioned?: string | null
           relevance_score?: number | null
           source_api?: string | null
+          story_id?: string | null
           topic_id: string
           updated_at?: string | null
           vote_date?: string | null
@@ -1252,6 +1254,7 @@ export type Database = {
           region_mentioned?: string | null
           relevance_score?: number | null
           source_api?: string | null
+          story_id?: string | null
           topic_id?: string
           updated_at?: string | null
           vote_date?: string | null
@@ -1259,7 +1262,15 @@ export type Database = {
           vote_title?: string | null
           vote_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "parliamentary_mentions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {

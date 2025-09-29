@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { ExternalLink, ThumbsUp, ThumbsDown, Minus, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ParliamentaryVoteCardProps {
@@ -15,6 +15,8 @@ interface ParliamentaryVoteCardProps {
   voteUrl?: string;
   regionMentioned?: string;
   relevanceScore: number;
+  storyId?: string;
+  topicId?: string;
 }
 
 export const ParliamentaryVoteCard = ({
@@ -26,7 +28,9 @@ export const ParliamentaryVoteCard = ({
   voteDate,
   voteUrl,
   regionMentioned,
-  relevanceScore
+  relevanceScore,
+  storyId,
+  topicId
 }: ParliamentaryVoteCardProps) => {
   const getVoteIcon = () => {
     switch (voteDirection) {
@@ -92,21 +96,34 @@ export const ParliamentaryVoteCard = ({
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
               <div className="text-xs text-muted-foreground">
                 Relevance: {relevanceScore}%
               </div>
-              {voteUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-3 text-xs"
-                  onClick={() => window.open(voteUrl, '_blank', 'noopener,noreferrer')}
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  View on Parliament.uk
-                </Button>
-              )}
+              <div className="flex gap-2 flex-wrap">
+                {storyId && topicId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => window.open(`/@${topicId}/${storyId}`, '_blank', 'noopener,noreferrer')}
+                  >
+                    <Link2 className="w-3 h-3 mr-1" />
+                    View Story
+                  </Button>
+                )}
+                {voteUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    onClick={() => window.open(voteUrl, '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View on Parliament.uk
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, Vote, MessageSquare, Calendar, RefreshCw, Clock, Star } from "lucide-react";
+import { ExternalLink, Vote, MessageSquare, Calendar, RefreshCw, Clock, Star, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -27,6 +27,7 @@ interface ParliamentaryMention {
   landmark_mentioned: string | null;
   relevance_score: number;
   created_at: string;
+  story_id: string | null;
 }
 
 interface ParliamentaryTrackingPanelProps {
@@ -158,18 +159,28 @@ export const ParliamentaryTrackingPanel = ({ topicId, region }: ParliamentaryTra
             </div>
           )}
           
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2">
             <span className="text-xs text-muted-foreground">
               Added {format(new Date(vote.created_at), 'MMM d, h:mm a')}
             </span>
-            {vote.vote_url && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  View Vote
-                </a>
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {vote.story_id && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`/@${topicId}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
+                    <Link2 className="w-3 h-3 mr-1" />
+                    View Story
+                  </a>
+                </Button>
+              )}
+              {vote.vote_url && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Vote
+                  </a>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -224,18 +235,28 @@ export const ParliamentaryTrackingPanel = ({ topicId, region }: ParliamentaryTra
             </div>
           )}
           
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2">
             <span className="text-xs text-muted-foreground">
               Added {format(new Date(debate.created_at), 'MMM d, h:mm a')}
             </span>
-            {debate.hansard_url && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={debate.hansard_url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  View Hansard
-                </a>
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {debate.story_id && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`/@${topicId}/${debate.story_id}`} target="_blank" rel="noopener noreferrer">
+                    <Link2 className="w-3 h-3 mr-1" />
+                    View Story
+                  </a>
+                </Button>
+              )}
+              {debate.hansard_url && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={debate.hansard_url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Hansard
+                  </a>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -342,6 +342,8 @@ const TopicFeed = () => {
                         voteUrl={mention.vote_url || undefined}
                         regionMentioned={mention.region_mentioned || undefined}
                         relevanceScore={mention.relevance_score}
+                        storyId={mention.story_id || undefined}
+                        topicId={topic?.id}
                       />
                     </div>
                   );
@@ -360,6 +362,8 @@ const TopicFeed = () => {
                         regionMentioned={mention.region_mentioned || undefined}
                         landmarkMentioned={mention.landmark_mentioned || undefined}
                         relevanceScore={mention.relevance_score}
+                        storyId={mention.story_id || undefined}
+                        topicId={topic?.id}
                       />
                     </div>
                   );
