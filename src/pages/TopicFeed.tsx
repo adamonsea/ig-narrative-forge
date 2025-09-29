@@ -84,7 +84,7 @@ const TopicFeed = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen feed-background">
         <div className="container mx-auto px-4 py-8">
           {/* Loading skeleton for header */}
           <div className="text-center mb-8">
@@ -112,7 +112,7 @@ const TopicFeed = () => {
 
   if (!topic) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+      <div className="min-h-screen feed-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold">Topic Not Found</h1>
@@ -126,10 +126,10 @@ const TopicFeed = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+    <div className="min-h-screen feed-background">
       {/* Sticky header for scrollers */}
       {isScrolled && topic && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

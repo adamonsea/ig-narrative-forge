@@ -373,10 +373,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
   return (
     <div className="flex justify-center px-4">
-      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale" data-story-card data-story-id={story.id}>
-        <div className="relative bg-background min-h-[600px] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale feed-card" data-story-card data-story-id={story.id}>
+        <div className="relative min-h-[600px] flex flex-col">
+          {/* Header with subtle grey background */}
+          <div className="flex items-center justify-between p-4 border-b feed-card-header">
             <div className="flex items-center gap-2">
               {story.is_teaser && (
                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
@@ -475,17 +475,31 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                 </div>
               )}
               
-              {/* Source link */}
-              {story.article?.source_url && story.article.source_url !== '#' && (
-                <a
-                  href={story.article.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
-                >
-                  Source
-                </a>
-              )}
+              {/* Enhanced source link */}
+              {(() => {
+                let sourceName = story.publication_name;
+                let sourceUrl = story.article?.source_url;
+                
+                if (!sourceName && sourceUrl && sourceUrl !== '#') {
+                  try {
+                    const url = new URL(sourceUrl);
+                    sourceName = url.hostname.replace('www.', '');
+                  } catch {
+                    sourceName = 'source';
+                  }
+                }
+                
+                return sourceName && sourceUrl && sourceUrl !== '#' ? (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors underline font-medium"
+                  >
+                    from {sourceName}
+                  </a>
+                ) : null;
+              })()}
             </div>
 
             {/* Action buttons */}

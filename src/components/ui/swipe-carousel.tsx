@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -168,7 +169,7 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full" 
       >
         <motion.div
-          className="flex h-full"
+          className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={0.12}
           dragMomentum
@@ -183,6 +184,33 @@ export function SwipeCarousel({
               <div className="h-full w-full">{slide}</div>
             </div>
           ))}
+          
+          {/* Integrated navigation arrows within draggable zone */}
+          {count > 1 && (
+            <>
+              {/* Left arrow - show only if not on first slide */}
+              {index > 0 && (
+                <button
+                  className="swipe-arrow swipe-arrow-left"
+                  onClick={prev}
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+              
+              {/* Right arrow - show only if not on last slide */}
+              {index < count - 1 && (
+                <button
+                  className="swipe-arrow swipe-arrow-right"
+                  onClick={next}
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
+            </>
+          )}
         </motion.div>
       </div>
 

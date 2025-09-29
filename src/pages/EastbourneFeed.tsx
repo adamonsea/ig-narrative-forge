@@ -31,7 +31,7 @@ export default function EastbourneFeed() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen feed-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading Eastbourne stories...</p>
@@ -41,9 +41,9 @@ export default function EastbourneFeed() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <div className="min-h-screen feed-background">
+      {/* Header - Keep white with sticky functionality */}
+      <header className="border-b feed-header backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="relative max-w-2xl mx-auto px-4 py-6 text-center">
           {/* User Avatar for logged in users */}
           {user && (

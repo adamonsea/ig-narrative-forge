@@ -84,6 +84,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Light Mode 1 (Original Design) */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -114,20 +115,20 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Feed-specific dark theme variables */
+    --feed-background: 210 11% 15%;
+    --feed-card: 0 0% 100%;
+    --feed-card-foreground: 222.2 84% 4.9%;
+    --feed-card-header: 210 7% 97%;
+    --feed-header-background: 0 0% 100%;
+
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -159,6 +160,14 @@ All colors MUST be HSL.
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Dark mode feed-specific overrides */
+    --feed-background: 210 11% 15%;
+    --feed-card: 222.2 84% 4.9%;
+    --feed-card-foreground: 210 40% 98%;
+    --feed-card-header: 217.2 32.6% 17.5%;
+    --feed-header-background: 0 0% 100%;
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -177,5 +186,38 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Feed-specific utility classes */
+  .feed-background {
+    background-color: hsl(var(--feed-background));
+  }
+  
+  .feed-card {
+    background-color: hsl(var(--feed-card));
+    color: hsl(var(--feed-card-foreground));
+  }
+  
+  .feed-card-header {
+    background-color: hsl(var(--feed-card-header));
+  }
+  
+  .feed-header {
+    background-color: hsl(var(--feed-header-background));
+  }
+  
+  /* Arrow indicators for swipe engagement */
+  .swipe-arrow {
+    @apply absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center;
+    @apply text-muted-foreground/40 hover:text-muted-foreground/80 transition-all duration-200;
+    @apply pointer-events-auto z-10;
+  }
+  
+  .swipe-arrow-left {
+    @apply left-4;
+  }
+  
+  .swipe-arrow-right {
+    @apply right-4;
   }
 }
