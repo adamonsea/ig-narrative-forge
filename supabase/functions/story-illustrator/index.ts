@@ -143,7 +143,7 @@ serve(async (req) => {
 
 Visual concept: "${story.title}"
 
-Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use cross-hatching and stippling for shading with minimal tonal gradients. Serious, editorial, newsworthy tone with high contrast stark black-and-white lighting. Mid-century newspaper editorial cartoon style framing with clean, uncluttered background and emphasized negative space. Mood should be urgent, journalistic, and slightly satirical. Format as halftone or line art reproduction ready for newsprint. Avoid soft graphite look, loose cartoon exaggeration, coloured pencil effects, or smudgy shading. High resolution with crisp lines for a clean, scan-ready illustration.`
+Style: Bold, deliberate pen and ink linework with sharp black ink outlines. Use cross-hatching and stippling for shading with minimal tonal gradients. Serious, editorial, newsworthy tone with high contrast stark black-and-white lighting. Contemporary, newspaper editorial cartoon style framing with clean, uncluttered background and emphasized negative space. Mood should be urgent, journalistic, and slightly satirical. Format as halftone or line art reproduction ready for newsprint. Avoid soft graphite look, loose cartoon exaggeration, coloured pencil effects, or smudgy shading. High resolution with crisp lines for a clean, scan-ready illustration.`
 
     // Generate image based on selected model
     const startTime = Date.now()
