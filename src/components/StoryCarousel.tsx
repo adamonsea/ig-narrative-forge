@@ -382,10 +382,13 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
                 </Badge>
               )}
               {(() => {
-                // Check for popularity first (highest priority)
+                const badges = [];
+                
+                // Check for popularity (can coexist with time badges)
                 if (story.popularity_data && isPopularStory(story.popularity_data)) {
-                  return (
+                  badges.push(
                     <Badge 
+                      key="popular"
                       variant="outline" 
                       className={`text-xs px-2 py-1 ${getPopularBadgeStyle()}`}
                     >
@@ -399,31 +402,37 @@ export default function StoryCarousel({ story, storyUrl, topicId }: StoryCarouse
                 
                 // Show "New" if story was published to feed in last 24 hours
                 if (isNewInFeed(storyPublishDate)) {
-                  return (
+                  badges.push(
                     <Badge 
+                      key="new"
                       variant="outline" 
                       className={`text-xs px-2 py-1 ${getNewFlagColor()}`}
                     >
                       New
                     </Badge>
                   );
+                } else {
+                  // Otherwise show relative time based on story publish date
+                  const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                  if (timeLabel) {
+                    badges.push(
+                      <Badge 
+                        key="time"
+                        variant="outline" 
+                        className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
+                      >
+                        {timeLabel}
+                      </Badge>
+                    );
+                  }
                 }
                 
-                // Otherwise show relative time based on story publish date
-                const timeLabel = getRelativeTimeLabel(storyPublishDate);
-                if (timeLabel) {
-                  return (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs px-2 py-1 ${getRelativeTimeColor(storyPublishDate)}`}
-                    >
-                      {timeLabel}
-                    </Badge>
-                  );
-                }
-                
-                return null;
-              })()}
+                return badges;
+              })().map((badge, index) => (
+                <React.Fragment key={index}>
+                  {badge}
+                </React.Fragment>
+              ))}
             </div>
             <span className="text-sm text-muted-foreground">
               {currentSlideIndex + 1} of {validSlides.length}
