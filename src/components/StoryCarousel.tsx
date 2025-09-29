@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download, ArrowRight } from 'lucide-react';
+import { Share2, Heart, Download } from 'lucide-react';
+import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewStory, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
@@ -340,11 +341,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                         repeat: Infinity,
                         ease: "easeInOut"
                       }}
-                      className="flex items-center text-foreground/60 cursor-pointer"
+                      className="cursor-pointer"
                       onClick={nextSlide}
                     >
-                      <div className="w-12 h-[1px] bg-current mr-1" />
-                      <ArrowRight className="w-4 h-4" />
+                      <img 
+                        src={arrowRightSvg} 
+                        alt="Next slide" 
+                        className="w-[62px] h-[13.7px] opacity-60"
+                      />
                     </motion.div>
                   </div>
                 )}
@@ -395,11 +399,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                          repeat: Infinity,
                          ease: "easeInOut"
                        }}
-                       className="flex items-center text-foreground/60 cursor-pointer"
+                       className="cursor-pointer"
                        onClick={nextSlide}
                      >
-                       <div className="w-12 h-[1px] bg-current mr-1" />
-                       <ArrowRight className="w-4 h-4" />
+                       <img 
+                         src={arrowRightSvg} 
+                         alt="Next slide" 
+                         className="w-[62px] h-[13.7px] opacity-60"
+                       />
                      </motion.div>
                    </div>
                  )}
