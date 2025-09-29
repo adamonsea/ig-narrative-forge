@@ -508,6 +508,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               
               {/* Enhanced source link */}
               {(() => {
+                // Get source name from article's source, fallback to domain extraction, then 'source'
                 let sourceName = story.publication_name;
                 let sourceUrl = story.article?.source_url;
                 
@@ -520,7 +521,12 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   }
                 }
                 
-                return sourceName && sourceUrl && sourceUrl !== '#' ? (
+                // Always show source, even if no URL
+                if (!sourceName) {
+                  sourceName = 'source';
+                }
+                
+                return sourceUrl && sourceUrl !== '#' ? (
                   <a
                     href={sourceUrl}
                     target="_blank"
@@ -529,7 +535,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   >
                     from {sourceName}
                   </a>
-                ) : null;
+                ) : (
+                  <span className="text-xs text-muted-foreground font-medium">
+                    from {sourceName}
+                  </span>
+                );
               })()}
             </div>
 
