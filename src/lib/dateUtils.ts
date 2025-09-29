@@ -146,7 +146,7 @@ export const isPopularStory = (popularityData?: PopularityData): boolean => {
       return rank_position <= 1;
     case 'this_week':
       return rank_position <= 2;
-    case 'older':
+    case 'this_month':
       return rank_position <= 2;
     default:
       return false;
