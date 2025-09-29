@@ -138,12 +138,72 @@ serve(async (req) => {
       }
     }
 
+    // First, analyze the story tone to determine appropriate visual mood
+    const toneAnalysisPrompt = `Analyze this headline and determine the appropriate emotional tone for an editorial cartoon:
+
+"${story.title}"
+
+Respond with ONE word only from: serious, lighthearted, playful, contentious, somber`;
+
+    let storyTone = 'balanced'; // fallback
+    
+    // Use OpenAI for tone analysis if available
+    if (Deno.env.get('OPENAI_API_KEY')) {
+      try {
+        const toneResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are an editorial cartoon expert who assesses story tone.' },
+              { role: 'user', content: toneAnalysisPrompt }
+            ],
+            max_tokens: 10,
+            temperature: 0.3
+          }),
+        });
+        
+        if (toneResponse.ok) {
+          const toneData = await toneResponse.json();
+          storyTone = toneData.choices[0]?.message?.content?.trim().toLowerCase() || 'balanced';
+        }
+      } catch (error) {
+        console.error('Tone analysis failed, using balanced tone:', error);
+      }
+    }
+
+    // Map tone to facial expression guidance
+    const toneGuidance: Record<string, string> = {
+      serious: 'neutral or concerned expressions - no smiles, thoughtful faces',
+      lighthearted: 'gentle, mild expressions - slight smiles acceptable but not exaggerated',
+      playful: 'upbeat expressions - comfortable with smiles but keep tasteful',
+      contentious: 'tense or stern expressions - furrowed brows, no smiles',
+      somber: 'grave, serious expressions - downcast eyes, no positive emotion',
+      balanced: 'neutral, measured expressions - subtle, understated'
+    };
+
+    const expressionInstruction = toneGuidance[storyTone] || toneGuidance['balanced'];
+
     // Generate optimized illustration prompt with Private Eye satirical editorial cartoon style
     const illustrationPrompt = `Create a satirical editorial cartoon in the style of Private Eye magazine. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
-Style: PEN AND INK ONLY - solid black marks on true white background. Think Private Eye magazine covers - clarity and simplicity above all. Bold, confident black ink lines on pure white (#FFFFFF). NO gray tones, NO shading, NO textures. Clean, minimal linework with maximum clarity. Witty and satirical but intelligent, not frivolous. Characters with neutral or slightly upbeat expressions - avoid frowning or negative emotions. Simple shapes, economical mark-making, immediately readable composition. British satirical cartoon aesthetic - sharp, clear, unfussy. Avoid cross-hatching, avoid dense pen work, avoid intricate detail. Pure black ink on pure white - nothing else.`
+Tone: ${storyTone.toUpperCase()} - ${expressionInstruction}
+
+Style: PEN AND INK ONLY - hand-drawn quality, confident but slightly imperfect lines. Think Private Eye magazine covers - clarity and simplicity above all. 
+
+Line work: Drawn by an experienced editorial cartoonist - lines should feel certain and authoritative but NOT mechanically perfect. Hand-drawn confidence with natural variation - not sketchy, but not geometrically precise either. The authority of a practiced hand.
+
+Composition: Solid black ink on pure white (#FFFFFF) background. NO gray tones, NO shading, NO cross-hatching. Clean, economical linework with maximum clarity. Witty and satirical but intelligent. Simple shapes, immediately readable. British satirical cartoon aesthetic - sharp, clear, unfussy.
+
+CRITICAL: Match the emotional tone to the story content. ${expressionInstruction}
+
+Avoid: Cross-hatching, dense pen work, intricate detail, mechanical precision, overly geometric shapes.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
