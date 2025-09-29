@@ -260,8 +260,18 @@ const StoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-slate-900 to-black">
       <div className="max-w-lg mx-auto">
+        {/* Back Button */}
+        <div className="p-4">
+          <Button variant="outline" asChild>
+            <Link to={isRegionalFeed ? '/feed/eastbourne' : `/feed/topic/${slug}`}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to {topic.name}
+            </Link>
+          </Button>
+        </div>
+        
         <StoryCarousel 
           story={story} 
           storyUrl={isRegionalFeed 
