@@ -381,7 +381,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   });
 
   return (
-    <div className="flex justify-center px-2 md:px-4">
+    <div className="flex justify-center px-1 md:px-4">
       <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card" data-story-card data-story-id={story.id}>
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
