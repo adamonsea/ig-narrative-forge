@@ -18,7 +18,7 @@ export const getRelativeTimeLabel = (dateString: string): string | null => {
   
   const daysDiff = differenceInDays(now, date);
   if (daysDiff <= 7) {
-    return 'Last 7 days';
+    return 'this week';
   }
   
   if (daysDiff <= 30) {
