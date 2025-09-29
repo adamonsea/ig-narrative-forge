@@ -21,14 +21,11 @@ export const getRelativeTimeLabel = (dateString: string): string | null => {
   }
   
   const daysDiff = differenceInDays(now, date);
-  if (daysDiff <= 7) {
-    return 'This week';
+  if (daysDiff <= 30) {
+    return 'This month';
   }
   
-  if (daysDiff > 7) {
-    return 'Older than a week';
-  }
-  
+  // Stories older than 30 days should not be visible
   return null;
 };
 
@@ -43,6 +40,7 @@ export const getRelativeTimeColor = (dateString: string): string => {
     return 'bg-blue-500/20 text-blue-700 border-blue-200';
   }
   
+  // This month (beyond this week)
   return 'bg-muted text-muted-foreground border-muted';
 };
 
@@ -96,12 +94,12 @@ export const getCurrentnessTag = (publishedAt?: string, createdAt?: string): str
   }
   
   const daysDiff = differenceInDays(now, date);
-  if (daysDiff <= 7) {
+  if (daysDiff <= 30) {
     return `${daysDiff} days ago`;
   }
   
-  // Fallback for very old articles (shouldn't happen with our 1-week cleanup)
-  return 'older';
+  // Fallback for very old articles (shouldn't happen with our 1-month visibility limit)
+  return 'archived';
 };
 
 export const getCurrentnessColor = (publishedAt?: string, createdAt?: string): string => {
