@@ -311,7 +311,7 @@ const TopicFeed = () => {
               } else if (contentItem.type === 'parliamentary_mention') {
                 const mention = contentItem.data as any;
                 
-                if (mention.mention_type === 'vote' && mention.vote_title && mention.mp_name) {
+                if ((mention.mention_type === 'vote' || mention.mention_type === 'parliamentary_vote') && mention.vote_title && mention.mp_name) {
                   items.push(
                     <div key={`parliamentary-vote-${mention.id}`}>
                       <ParliamentaryVoteCard
@@ -327,15 +327,16 @@ const TopicFeed = () => {
                       />
                     </div>
                   );
-                } else if (mention.mention_type === 'debate' && mention.debate_title && mention.mp_name && mention.debate_excerpt) {
+                } else if ((mention.mention_type === 'debate' || mention.mention_type === 'debate_mention') && mention.debate_title) {
+                  // Show debate card even if mp_name is missing, but use fallback
                   items.push(
                     <div key={`parliamentary-debate-${mention.id}`}>
                       <ParliamentaryDebateCard
-                        mpName={mention.mp_name}
+                        mpName={mention.mp_name || 'Parliament'}
                         constituency={mention.constituency || ''}
                         party={mention.party || ''}
                         debateTitle={mention.debate_title}
-                        debateExcerpt={mention.debate_excerpt}
+                        debateExcerpt={mention.debate_excerpt || 'Parliamentary discussion mentioning this region.'}
                         debateDate={mention.debate_date || ''}
                         hansardUrl={mention.hansard_url || undefined}
                         regionMentioned={mention.region_mentioned || undefined}

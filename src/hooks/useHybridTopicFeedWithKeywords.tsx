@@ -313,16 +313,32 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }));
 
       const mixedContent = [...storyContent, ...parliamentaryContent]
-        .sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
+        .sort((a, b) => {
+          const dateA = new Date(a.content_date).getTime();
+          const dateB = new Date(b.content_date).getTime();
+          // If dates are invalid, fall back to treating as very old
+          const validDateA = isNaN(dateA) ? 0 : dateA;
+          const validDateB = isNaN(dateB) ? 0 : dateB;
+          return validDateB - validDateA; // Newest first
+        });
+
+      console.log('🔍 Mixed content ordering:', mixedContent.slice(0, 5).map(item => ({
+        type: item.type,
+        id: item.id.substring(0, 8),
+        date: item.content_date,
+        title: item.type === 'story' ? (item.data as any).title : (item.data as any).vote_title || (item.data as any).debate_title
+      })));
 
       if (append) {
         setAllStories(prev => [...prev, ...transformedStories]);
+        // For append, only add new stories (parliamentary mentions are only loaded on first page)
         setAllContent(prev => [...prev, ...storyContent]);
         if (!keywords || keywords.length === 0) {
           setFilteredContent(prev => [...prev, ...storyContent]);
         }
       } else {
         setAllStories(transformedStories);
+        // For initial load, use the mixed content with proper chronological order
         setAllContent(mixedContent);
         if (!keywords || keywords.length === 0) {
           setFilteredContent(mixedContent);
