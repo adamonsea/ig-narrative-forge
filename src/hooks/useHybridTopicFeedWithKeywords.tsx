@@ -58,10 +58,39 @@ interface KeywordCount {
 const STORIES_PER_PAGE = 10;
 const DEBOUNCE_DELAY_MS = 500;
 
+// Enhanced Story interface to include parliamentary mentions
+interface FeedContent {
+  type: 'story' | 'parliamentary_mention';
+  id: string;
+  content_date: string; // Used for chronological sorting
+  data: Story | ParliamentaryMention;
+}
+
+interface ParliamentaryMention {
+  id: string;
+  mention_type: string;
+  mp_name: string | null;
+  constituency: string | null;
+  party: string | null;
+  vote_title: string | null;
+  vote_direction: string | null;
+  vote_date: string | null;
+  vote_url: string | null;
+  debate_title: string | null;
+  debate_excerpt: string | null;
+  debate_date: string | null;
+  hansard_url: string | null;
+  region_mentioned: string | null;
+  landmark_mentioned: string | null;
+  relevance_score: number;
+  created_at: string;
+}
+
 export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Base data state
   const [allStories, setAllStories] = useState<Story[]>([]);
-  const [filteredStories, setFilteredStories] = useState<Story[]>([]);
+  const [allContent, setAllContent] = useState<FeedContent[]>([]);
+  const [filteredContent, setFilteredContent] = useState<FeedContent[]>([]);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -77,6 +106,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Refs for debouncing
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const serverFilteredRef = useRef(false);
+  
+  // Derived filtered stories for backward compatibility
+  const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
 
   const loadTopic = useCallback(async () => {
     try {
@@ -158,7 +190,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         console.log('📄 No stories found');
         if (!append) {
           setAllStories([]);
-          setFilteredStories([]);
+          setAllContent([]);
+          setFilteredContent([]);
         }
         setHasMore(false);
         return;
@@ -244,17 +277,58 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         };
       });
 
+      // Fetch parliamentary mentions if enabled for regional topics
+      let parliamentaryMentions: ParliamentaryMention[] = [];
+      if (topicData.topic_type === 'regional' && topicData.parliamentary_tracking_enabled && pageNum === 0) {
+        try {
+          const { data: mentionsData, error: mentionsError } = await supabase
+            .from('parliamentary_mentions')
+            .select('*')
+            .eq('topic_id', topicData.id)
+            .gte('relevance_score', 30)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          if (!mentionsError && mentionsData) {
+            parliamentaryMentions = mentionsData;
+          }
+        } catch (error) {
+          console.warn('Failed to load parliamentary mentions:', error);
+        }
+      }
+
+      // Create mixed feed content with chronological ordering
+      const storyContent: FeedContent[] = transformedStories.map(story => ({
+        type: 'story' as const,
+        id: story.id,
+        content_date: story.created_at,
+        data: story
+      }));
+
+      const parliamentaryContent: FeedContent[] = parliamentaryMentions.map(mention => ({
+        type: 'parliamentary_mention' as const,
+        id: mention.id,
+        content_date: mention.vote_date || mention.debate_date || mention.created_at,
+        data: mention
+      }));
+
+      const mixedContent = [...storyContent, ...parliamentaryContent]
+        .sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
+
       if (append) {
         setAllStories(prev => [...prev, ...transformedStories]);
+        setAllContent(prev => [...prev, ...storyContent]);
         if (!keywords || keywords.length === 0) {
-          setFilteredStories(prev => [...prev, ...transformedStories]);
+          setFilteredContent(prev => [...prev, ...storyContent]);
         }
       } else {
         setAllStories(transformedStories);
+        setAllContent(mixedContent);
         if (!keywords || keywords.length === 0) {
-          setFilteredStories(transformedStories);
+          setFilteredContent(mixedContent);
         } else {
-          setFilteredStories(transformedStories);
+          // For keyword filtering, only include stories for now
+          setFilteredContent(storyContent);
           serverFilteredRef.current = true;
         }
       }
@@ -309,17 +383,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setAvailableKeywords(keywords);
   }, []);
 
-  // Client-side filtering for immediate feedback
-  const applyClientSideFiltering = useCallback((stories: Story[], keywords: string[]) => {
+  // Client-side filtering for immediate feedback - now handles mixed content
+  const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[]) => {
     if (keywords.length === 0) {
-      return stories;
+      return content;
     }
 
-    return stories.filter(story => {
-      const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
-      return keywords.some(keyword => 
-        text.includes(keyword.toLowerCase())
-      );
+    return content.filter(item => {
+      if (item.type === 'story') {
+        const story = item.data as Story;
+        const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
+        return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+      }
+      // Parliamentary mentions are not keyword-filtered for now
+      return false;
     });
   }, []);
 
@@ -354,11 +431,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Apply immediate client-side filtering if we have server-filtered data
       if (serverFilteredRef.current || newKeywords.length === 0) {
-        const baseStories = newKeywords.length === 0 ? allStories : filteredStories;
-        setFilteredStories(applyClientSideFiltering(baseStories, newKeywords));
+        const baseContent = newKeywords.length === 0 ? allContent : filteredContent;
+        setFilteredContent(applyClientSideFiltering(baseContent, newKeywords));
       } else {
         // Apply client-side filtering immediately for responsiveness
-        setFilteredStories(applyClientSideFiltering(allStories, newKeywords));
+        setFilteredContent(applyClientSideFiltering(allContent, newKeywords));
       }
 
       // Debounce server-side filtering
@@ -372,13 +449,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   const clearAllFilters = useCallback(() => {
     setSelectedKeywords([]);
-    setFilteredStories(allStories);
+    setFilteredContent(allContent);
     serverFilteredRef.current = false;
     
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-  }, [allStories]);
+  }, [allContent]);
 
   const removeKeyword = useCallback((keyword: string) => {
     toggleKeyword(keyword); // This will remove it since it's already selected
@@ -427,10 +504,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Update available keywords when stories change
   useEffect(() => {
-    if (allStories.length > 0 && topic?.keywords) {
-      updateAvailableKeywords(allStories, topic.keywords);
+    if (filteredStories.length > 0 && topic?.keywords) {
+      updateAvailableKeywords(filteredStories, topic.keywords);
     }
-  }, [allStories, topic?.keywords, updateAvailableKeywords]);
+  }, [filteredStories, topic?.keywords, updateAvailableKeywords]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
@@ -487,6 +564,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   return {
     // Story data
     stories: filteredStories,
+    content: filteredContent, // New: mixed content with chronological ordering
     topic,
     loading,
     loadingMore,

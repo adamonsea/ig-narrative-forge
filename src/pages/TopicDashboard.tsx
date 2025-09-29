@@ -22,6 +22,7 @@ import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { ParliamentaryTestPanel } from "@/components/ParliamentaryTestPanel";
+import { ParliamentaryTrackingPanel } from "@/components/ParliamentaryTrackingPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
@@ -704,7 +705,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+          <TabsList className={`grid w-full ${topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled ? 'grid-cols-4' : 'grid-cols-3'} mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content-flow" className="relative">
               Content Flow
               {needsAttention.contentFlow && (
@@ -721,6 +722,14 @@ const TopicDashboard = () => {
                 </Badge>
               )}
             </TabsTrigger>
+            {topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled && (
+              <TabsTrigger value="parliamentary" className="relative">
+                Parliamentary
+                <Badge className="ml-2 h-4 w-4 p-0 bg-blue-500 hover:bg-blue-600 text-xs">
+                  β
+                </Badge>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="advanced" className="relative">
               Advanced Tools
               {needsAttention.advanced && (
@@ -773,6 +782,19 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled && (
+            <TabsContent value="parliamentary" className="space-y-6">
+              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+                <CardContent className="p-6">
+                  <ParliamentaryTrackingPanel 
+                    topicId={topic.id}
+                    region={topic.region || ''}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="advanced" className="space-y-8">
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
