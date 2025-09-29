@@ -18,6 +18,9 @@ import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
+  
+  // Handle special case for /feed/eastbourne route
+  const actualSlug = window.location.pathname === '/feed/eastbourne' ? 'eastbourne' : slug;
   const { user } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -39,7 +42,7 @@ const TopicFeed = () => {
     removeKeyword,
     hasActiveFilters,
     isServerFiltering
-  } = useHybridTopicFeedWithKeywords(slug || '');
+  } = useHybridTopicFeedWithKeywords(actualSlug || '');
 
   const { sentimentCards } = useSentimentCards(topic?.id);
 

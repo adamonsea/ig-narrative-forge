@@ -49,7 +49,7 @@ const StoryPage = () => {
       if (isRegionalFeed) {
         // Handle regional feed story
         if (!storyId) {
-          navigate('/eastbourne-feed');
+          navigate('/feed/eastbourne');
           return;
         }
         await loadRegionalStory();
@@ -125,7 +125,7 @@ const StoryPage = () => {
           description: "Story not found",
           variant: "destructive",
         });
-        navigate('/eastbourne-feed');
+        navigate('/feed/eastbourne');
       } finally {
         setLoading(false);
       }
@@ -260,7 +260,7 @@ const StoryPage = () => {
         {/* Back Button and Topic Header */}
         <div className="mb-6">
             <Button variant="outline" asChild className="mb-4">
-              <Link to={isRegionalFeed ? '/eastbourne-feed' : `/feed/topic/${slug}`}>
+              <Link to={isRegionalFeed ? '/feed/eastbourne' : `/feed/topic/${slug}`}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to {topic.name}
               </Link>
