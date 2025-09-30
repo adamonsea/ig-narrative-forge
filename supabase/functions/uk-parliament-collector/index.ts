@@ -181,16 +181,22 @@ serve(async (req) => {
       if (insertedMentions && insertedMentions.length > 0) {
         for (const mention of insertedMentions) {
           try {
+            // Build comprehensive body content from import_metadata
+            const bodyContent = mention.import_metadata?.comprehensive_content === true
+              ? buildComprehensiveContent(mention)
+              : (mention.mention_type === 'vote' 
+                  ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
+                  : mention.debate_excerpt || '');
+            
             // Create a shared content entry for the parliamentary mention
             const { data: sharedContent, error: contentError } = await supabase
               .from('shared_article_content')
               .insert({
                 title: mention.mention_type === 'vote' ? mention.vote_title : mention.debate_title,
-                body: mention.mention_type === 'vote' 
-                  ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
-                  : mention.debate_excerpt || '',
+                body: bodyContent,
                 published_at: mention.mention_type === 'vote' ? mention.vote_date : mention.debate_date,
                 source_url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url,
+                word_count: mention.import_metadata?.word_count || bodyContent.split(/\s+/).length,
                 import_metadata: {
                   ...mention.import_metadata,
                   parliamentary_mention_id: mention.id,
@@ -312,7 +318,7 @@ serve(async (req) => {
   }
 });
 
-// Simulate MP voting records collection (would use real Parliament API)
+// Collect MP voting records using UK Parliament API
 async function collectMPVotingRecords(
   constituency: string, 
   region: string, 
@@ -320,33 +326,129 @@ async function collectMPVotingRecords(
 ): Promise<ParliamentaryMention[]> {
   console.log(`Collecting voting records for constituency: ${constituency}`);
   
-  // This would use the real UK Parliament API
-  // For MVP, we'll return simulated data based on the constituency
-  const simulatedVotes: ParliamentaryMention[] = [
-    {
-      mention_type: 'vote',
-      mp_name: `MP for ${constituency}`,
-      constituency: constituency,
-      party: 'Conservative', // Would be fetched from API
-      vote_title: `Infrastructure Development Bill - Amendment affecting ${region}`,
-      vote_date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      vote_direction: Math.random() > 0.5 ? 'aye' : 'no',
-      vote_url: `https://hansard.parliament.uk/commons/vote/${constituency.toLowerCase().replace(/\s+/g, '-')}`,
-      region_mentioned: region,
-      relevance_score: calculateRegionalRelevance(constituency, region, landmarks),
-      source_api: 'uk_parliament_votes',
-      import_metadata: {
-        api_version: '1.0',
-        collection_method: 'constituency_search',
-        simulated: true // Remove in production
-      }
+  const mentions: ParliamentaryMention[] = [];
+  
+  try {
+    // First, get the MP for this constituency using Members API
+    const membersResponse = await fetch(
+      `https://members-api.parliament.uk/api/Members/Search?House=1&IsCurrentMember=true&skip=0&take=20`
+    );
+    
+    if (!membersResponse.ok) {
+      console.error('Failed to fetch members:', membersResponse.status);
+      return mentions;
     }
-  ];
+    
+    const membersData = await membersResponse.json();
+    const mp = membersData.items?.find((m: any) => 
+      m.value?.latestHouseMembership?.membershipFrom?.toLowerCase().includes(constituency.toLowerCase())
+    );
+    
+    if (!mp) {
+      console.log(`No current MP found for constituency: ${constituency}`);
+      return mentions;
+    }
+    
+    const mpId = mp.value.id;
+    const mpName = mp.value.nameDisplayAs;
+    const party = mp.value.latestParty?.name;
+    
+    console.log(`Found MP: ${mpName} (${party}) for ${constituency}`);
+    
+    // Get recent divisions this MP voted in
+    const divisionsResponse = await fetch(
+      `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.memberId=${mpId}&queryParameters.take=5`
+    );
+    
+    if (!divisionsResponse.ok) {
+      console.error('Failed to fetch divisions:', divisionsResponse.status);
+      return mentions;
+    }
+    
+    const divisionsData = await divisionsResponse.json();
+    
+    for (const division of divisionsData || []) {
+      // Check if division is relevant to region/landmarks
+      const title = division.Title || '';
+      const isRelevant = title.toLowerCase().includes(region.toLowerCase()) ||
+                        landmarks.some(l => title.toLowerCase().includes(l.toLowerCase()));
+      
+      if (!isRelevant) continue;
+      
+      // Get detailed division info
+      const detailResponse = await fetch(
+        `https://commonsvotes-api.parliament.uk/data/division/${division.DivisionId}.json`
+      );
+      
+      if (!detailResponse.ok) continue;
+      
+      const detailData = await detailResponse.json();
+      
+      // Find how this MP voted
+      const ayeVote = detailData.Ayes?.find((v: any) => v.MemberId === mpId);
+      const noVote = detailData.Noes?.find((v: any) => v.MemberId === mpId);
+      const voteDirection = ayeVote ? 'aye' : noVote ? 'no' : 'abstain';
+      
+      // Build comprehensive content (200-300 words)
+      const voteDate = new Date(division.Date).toISOString().split('T')[0];
+      const ayeCount = detailData.AyeCount || 0;
+      const noCount = detailData.NoCount || 0;
+      const outcome = ayeCount > noCount ? 'passed' : 'rejected';
+      
+      const comprehensiveBody = `
+**Parliamentary Division: ${title}**
 
-  return simulatedVotes;
+On ${new Date(division.Date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}, the House of Commons voted on ${title.toLowerCase()}, a matter with direct implications for ${region} and the surrounding constituency.
+
+**The Vote:**
+${mpName}, Member of Parliament for ${constituency} (${party}), voted **${voteDirection.toUpperCase()}** on this division. The final count was ${ayeCount} Ayes to ${noCount} Noes, resulting in the motion being ${outcome}.
+
+**Regional Impact:**
+This parliamentary decision affects ${region} as ${title.toLowerCase().includes('infrastructure') ? 'it concerns local infrastructure development and planning' : title.toLowerCase().includes('funding') ? 'it relates to funding allocation for local services' : title.toLowerCase().includes('transport') ? 'it impacts local transport and connectivity' : 'it has significant implications for the local community'}.
+
+${landmarks.length > 0 ? `Areas of particular concern include ${landmarks.slice(0, 2).join(' and ')}, where residents and businesses will see the effects of this parliamentary action.` : ''}
+
+**Your MP's Position:**
+${mpName}'s ${voteDirection} vote represents their stance on this matter affecting their constituents in ${constituency}. This vote was recorded in the official House of Commons division record and forms part of the parliamentary record.
+
+For full debate context and the complete division list, see the official Hansard record and Commons Voting Records.
+`.trim();
+      
+      mentions.push({
+        mention_type: 'vote',
+        mp_name: mpName,
+        constituency: constituency,
+        party: party,
+        vote_title: title,
+        vote_date: voteDate,
+        vote_direction: voteDirection as 'aye' | 'no' | 'abstain',
+        vote_url: `https://commonsvotes.digiminster.com/Divisions/Details/${division.DivisionId}`,
+        region_mentioned: region,
+        relevance_score: calculateRegionalRelevance(constituency, region, landmarks),
+        source_api: 'uk_parliament_commons_votes',
+        import_metadata: {
+          api_version: '1.0',
+          collection_method: 'mp_voting_records',
+          division_id: division.DivisionId,
+          mp_id: mpId,
+          vote_counts: { ayes: ayeCount, noes: noCount },
+          outcome: outcome,
+          comprehensive_content: true,
+          word_count: comprehensiveBody.split(/\s+/).length
+        }
+      });
+    }
+    
+    console.log(`Collected ${mentions.length} voting records for ${constituency}`);
+    
+  } catch (error) {
+    console.error('Error collecting MP voting records:', error);
+  }
+  
+  return mentions;
 }
 
-// Simulate Hansard debate mentions collection
+// Collect Hansard debate mentions using UK Parliament API
 async function collectHansardMentions(
   region: string, 
   landmarks: string[], 
@@ -354,32 +456,120 @@ async function collectHansardMentions(
 ): Promise<ParliamentaryMention[]> {
   console.log(`Collecting Hansard mentions for region: ${region}`);
   
-  // This would use the real Hansard search API
-  // For MVP, we'll return simulated data
-  const searchTerms = [region, ...landmarks, ...keywords].filter(Boolean);
-  const simulatedMentions: ParliamentaryMention[] = [];
-
-  for (const term of searchTerms.slice(0, 3)) { // Limit to prevent too much simulated data
-    simulatedMentions.push({
-      mention_type: 'debate_mention',
-      debate_title: `House of Commons Debate - Local Development`,
-      debate_date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      debate_excerpt: `...concerns were raised about the impact on ${term} and the surrounding area...`,
-      hansard_url: `https://hansard.parliament.uk/search?searchTerm=${encodeURIComponent(term)}`,
-      region_mentioned: region,
-      landmark_mentioned: landmarks.includes(term) ? term : undefined,
-      relevance_score: calculateMentionRelevance(term, region, landmarks, keywords),
-      source_api: 'uk_parliament_hansard',
-      import_metadata: {
-        api_version: '1.0',
-        search_term: term,
-        collection_method: 'hansard_search',
-        simulated: true // Remove in production
+  const mentions: ParliamentaryMention[] = [];
+  const searchTerms = [region, ...landmarks].filter(Boolean).slice(0, 3); // Limit searches
+  
+  try {
+    for (const searchTerm of searchTerms) {
+      // Search Hansard debates using the search API
+      const searchResponse = await fetch(
+        `https://hansard-api.parliament.uk/search.json?filter=commons&searchTerm=${encodeURIComponent(searchTerm)}&startDate=2024-01-01&take=5`
+      );
+      
+      if (!searchResponse.ok) {
+        console.error(`Failed to search Hansard for "${searchTerm}":`, searchResponse.status);
+        continue;
       }
-    });
-  }
+      
+      const searchData = await searchResponse.json();
+      
+      for (const result of searchData.results || []) {
+        try {
+          // Get the full debate details
+          const debateUrl = result.url;
+          const debateResponse = await fetch(debateUrl);
+          
+          if (!debateResponse.ok) continue;
+          
+          const debateHtml = await debateResponse.text();
+          
+          // Extract context around the mention (aim for 300-500 words)
+          // Parse the HTML to get the actual debate text
+          const contextMatch = debateHtml.match(new RegExp(
+            `(.{0,500}${searchTerm}.{0,500})`,
+            'is'
+          ));
+          
+          if (!contextMatch) continue;
+          
+          const rawContext = contextMatch[0];
+          
+          // Clean HTML and extract meaningful content
+          const textContent = rawContext
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          // Get speaker information
+          const speakerMatch = result.highlight?.match(/(\w+\s+\w+)\s*\(([^)]+)\)/);
+          const speakerName = speakerMatch?.[1] || 'Member of Parliament';
+          const speakerConstituency = speakerMatch?.[2] || '';
+          
+          // Build comprehensive debate excerpt (300-500 words)
+          const debateDate = result.date ? new Date(result.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          
+          const comprehensiveBody = `
+**House of Commons Debate - ${result.title || 'Regional Discussion'}**
 
-  return simulatedMentions;
+**Date:** ${new Date(debateDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+
+**Context:**
+During parliamentary proceedings, ${region} was specifically mentioned in debates concerning ${result.title?.toLowerCase() || 'matters of local importance'}. This parliamentary discussion provides important insight into how regional concerns are being addressed at the national level.
+
+**Parliamentary Record:**
+"${textContent.substring(0, 400)}${textContent.length > 400 ? '...' : ''}"
+
+**Significance for ${region}:**
+This mention in the House of Commons demonstrates that ${region}'s concerns are being raised at the highest level of government. ${landmarks.length > 0 ? `Specific references to ${landmarks[0]} indicate that local landmarks and infrastructure are part of the parliamentary conversation.` : 'The discussion encompasses matters directly affecting local residents and businesses.'}
+
+**Speaker:**
+${speakerName}${speakerConstituency ? ` representing ${speakerConstituency}` : ''} raised these points during the debate, ensuring that ${region}'s interests are represented in parliamentary discourse.
+
+**Parliamentary Procedure:**
+These statements form part of the official Hansard record, which is the transcription of all parliamentary debates. This ensures transparency and allows constituents to see exactly what is being said about their region in Parliament.
+
+${keywords.length > 0 ? `**Related Topics:** This debate also touched on ${keywords.slice(0, 3).join(', ')}, showing the breadth of issues affecting the region.` : ''}
+
+**Full Record:**
+The complete debate transcript, including all contributions and responses, is available in the official Hansard archive.
+`.trim();
+          
+          mentions.push({
+            mention_type: 'debate_mention',
+            mp_name: speakerName,
+            constituency: speakerConstituency || undefined,
+            debate_title: result.title || `Parliamentary Debate mentioning ${searchTerm}`,
+            debate_date: debateDate,
+            debate_excerpt: textContent.substring(0, 200),
+            hansard_url: result.url || `https://hansard.parliament.uk/search?searchTerm=${encodeURIComponent(searchTerm)}`,
+            region_mentioned: region,
+            landmark_mentioned: landmarks.includes(searchTerm) ? searchTerm : undefined,
+            relevance_score: calculateMentionRelevance(searchTerm, region, landmarks, keywords),
+            source_api: 'uk_parliament_hansard',
+            import_metadata: {
+              api_version: '1.0',
+              search_term: searchTerm,
+              collection_method: 'hansard_search',
+              debate_id: result.id,
+              comprehensive_content: true,
+              word_count: comprehensiveBody.split(/\s+/).length,
+              context_extracted: textContent.length
+            }
+          });
+          
+        } catch (error) {
+          console.error('Error processing debate result:', error);
+        }
+      }
+    }
+    
+    console.log(`Collected ${mentions.length} Hansard mentions for ${region}`);
+    
+  } catch (error) {
+    console.error('Error collecting Hansard mentions:', error);
+  }
+  
+  return mentions;
 }
 
 // Calculate relevance score for regional content
@@ -428,10 +618,60 @@ function calculateMentionRelevance(
   return Math.min(100, Math.max(0, score));
 }
 
+// Build comprehensive content for story creation
+function buildComprehensiveContent(mention: any): string {
+  if (mention.mention_type === 'vote') {
+    const metadata = mention.import_metadata || {};
+    return `
+**Parliamentary Division: ${mention.vote_title}**
+
+On ${new Date(mention.vote_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}, the House of Commons voted on ${mention.vote_title?.toLowerCase()}, a matter with direct implications for ${mention.region_mentioned} and the surrounding constituency.
+
+**The Vote:**
+${mention.mp_name}, Member of Parliament for ${mention.constituency} (${mention.party}), voted **${mention.vote_direction?.toUpperCase()}** on this division. ${metadata.vote_counts ? `The final count was ${metadata.vote_counts.ayes} Ayes to ${metadata.vote_counts.noes} Noes, resulting in the motion being ${metadata.outcome}.` : ''}
+
+**Regional Impact:**
+This parliamentary decision affects ${mention.region_mentioned} and represents important legislative action at the national level that will have local consequences.
+
+**Your MP's Position:**
+${mention.mp_name}'s ${mention.vote_direction} vote represents their stance on this matter affecting their constituents in ${mention.constituency}. This vote was recorded in the official House of Commons division record.
+
+For full debate context and the complete division list, see the official Hansard record and Commons Voting Records.
+`.trim();
+  } else {
+    return `
+**House of Commons Debate - ${mention.debate_title}**
+
+**Date:** ${new Date(mention.debate_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+
+**Context:**
+During parliamentary proceedings, ${mention.region_mentioned} was specifically mentioned in debates. This parliamentary discussion provides important insight into how regional concerns are being addressed at the national level.
+
+**Parliamentary Record:**
+"${mention.debate_excerpt}"
+
+**Significance:**
+This mention in the House of Commons demonstrates that ${mention.region_mentioned}'s concerns are being raised at the highest level of government.${mention.landmark_mentioned ? ` Specific references to ${mention.landmark_mentioned} indicate that local landmarks are part of the parliamentary conversation.` : ''}
+
+${mention.mp_name ? `**Speaker:** ${mention.mp_name}${mention.constituency ? ` representing ${mention.constituency}` : ''} raised these points during the debate.` : ''}
+
+**Full Record:**
+The complete debate transcript is available in the official Hansard archive.
+`.trim();
+  }
+}
+
 // Helper function to create stories for parliamentary mentions
 async function createStoriesForMentions(supabase: any, mentions: any[], topicId: string) {
   for (const mention of mentions) {
     try {
+      // Build comprehensive body content
+      const bodyContent = mention.import_metadata?.comprehensive_content === true
+        ? buildComprehensiveContent(mention)
+        : (mention.mention_type === 'vote' 
+            ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
+            : mention.debate_excerpt || '');
+      
       // Create a shared content entry for the parliamentary mention
       const { data: sharedContent, error: contentError } = await supabase
         .from('shared_article_content')
@@ -439,11 +679,9 @@ async function createStoriesForMentions(supabase: any, mentions: any[], topicId:
           url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url,
           normalized_url: (mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url)?.toLowerCase(),
           title: mention.mention_type === 'vote' ? mention.vote_title : mention.debate_title,
-          body: mention.mention_type === 'vote' 
-            ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
-            : mention.debate_excerpt || '',
+          body: bodyContent,
           published_at: mention.mention_type === 'vote' ? mention.vote_date : mention.debate_date,
-          word_count: 100,
+          word_count: mention.import_metadata?.word_count || bodyContent.split(/\s+/).length,
           language: 'en'
         })
         .select()
