@@ -87,6 +87,8 @@ serve(async (req) => {
     // Determine credit cost based on model - streamlined to working models only
     const getModelConfig = (modelName: string) => {
       switch (modelName) {
+        case 'gemini-image':
+          return { credits: 1, cost: 0.039, provider: 'gemini' };
         case 'gpt-image-1':
           return { credits: 8, cost: 0.06, provider: 'openai' };
         case 'ideogram':
@@ -210,7 +212,49 @@ Avoid: Cross-hatching, dense pen work, intricate detail, mechanical precision, o
     let imageBase64: string
     let generationTime: number
 
-    if (modelConfig.provider === 'openai') {
+    if (modelConfig.provider === 'gemini') {
+      // Use Lovable AI Gateway for Gemini image generation
+      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
+      
+      if (!lovableApiKey) {
+        throw new Error('Lovable AI not configured. Please enable Lovable AI in your project settings.')
+      }
+
+      const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image-preview',
+          messages: [
+            {
+              role: 'user',
+              content: illustrationPrompt
+            }
+          ],
+          modalities: ['image', 'text']
+        }),
+      })
+
+      if (!geminiResponse.ok) {
+        const errorData = await geminiResponse.text()
+        console.error('Gemini API error:', errorData)
+        throw new Error(`Gemini API error: ${geminiResponse.statusText}`)
+      }
+
+      const geminiData = await geminiResponse.json()
+      const imageDataUrl = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url
+      
+      if (!imageDataUrl) {
+        console.error('No image data received from Gemini:', geminiData)
+        throw new Error('No image data received from Gemini API')
+      }
+
+      // Extract base64 from data URL (format: data:image/png;base64,...)
+      imageBase64 = imageDataUrl.split(',')[1]
+    } else if (modelConfig.provider === 'openai') {
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {

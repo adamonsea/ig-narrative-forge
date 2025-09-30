@@ -15,6 +15,14 @@ export interface ImageModel {
 
 export const imageModels: ImageModel[] = [
   {
+    id: 'gemini-image',
+    name: 'Gemini Image (FREE)',
+    description: 'Google Gemini 2.5 Flash - Free until Oct 6, then $0.039',
+    costUsd: 0.039,
+    credits: 1,
+    provider: 'gemini'
+  },
+  {
     id: 'gpt-image-1',
     name: 'Premium Quality',
     description: 'OpenAI GPT-Image-1 - Highest quality editorial illustrations',
