@@ -99,6 +99,18 @@ serve(async (req) => {
       );
     }
 
+    // Check if we have mentions without stories and backfill them
+    const { data: mentionsWithoutStories } = await supabase
+      .from('parliamentary_mentions')
+      .select('*')
+      .eq('topic_id', topicId)
+      .is('story_id', null);
+
+    if (mentionsWithoutStories && mentionsWithoutStories.length > 0) {
+      console.log(`Found ${mentionsWithoutStories.length} parliamentary mentions without stories, creating them now`);
+      await createStoriesForMentions(supabase, mentionsWithoutStories, topicId);
+    }
+
     // Check if we have recent data (unless forced refresh)
     if (!forceRefresh) {
       const { data: recentMentions } = await supabase
@@ -114,7 +126,8 @@ serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             message: 'Recent data available, collection skipped',
-            dataAge: 'recent'
+            dataAge: 'recent',
+            backfilledStories: mentionsWithoutStories?.length || 0
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -413,4 +426,113 @@ function calculateMentionRelevance(
   }
   
   return Math.min(100, Math.max(0, score));
+}
+
+// Helper function to create stories for parliamentary mentions
+async function createStoriesForMentions(supabase: any, mentions: any[], topicId: string) {
+  for (const mention of mentions) {
+    try {
+      // Create a shared content entry for the parliamentary mention
+      const { data: sharedContent, error: contentError } = await supabase
+        .from('shared_article_content')
+        .insert({
+          url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url,
+          normalized_url: (mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url)?.toLowerCase(),
+          title: mention.mention_type === 'vote' ? mention.vote_title : mention.debate_title,
+          body: mention.mention_type === 'vote' 
+            ? `${mention.mp_name} from ${mention.constituency} (${mention.party}) voted ${mention.vote_direction} on this matter affecting ${mention.region_mentioned}.`
+            : mention.debate_excerpt || '',
+          published_at: mention.mention_type === 'vote' ? mention.vote_date : mention.debate_date,
+          word_count: 100,
+          language: 'en'
+        })
+        .select()
+        .single();
+
+      if (contentError) {
+        console.error('Error creating shared content for backfill:', contentError);
+        continue;
+      }
+
+      // Create topic_article link for proper topic association
+      const { data: topicArticle, error: topicArticleError } = await supabase
+        .from('topic_articles')
+        .insert({
+          topic_id: topicId,
+          shared_content_id: sharedContent.id,
+          processing_status: 'processed',
+          regional_relevance_score: mention.relevance_score || 50,
+          content_quality_score: 70,
+          import_metadata: {
+            source: 'parliamentary_mention',
+            mention_id: mention.id,
+            backfilled: true
+          }
+        })
+        .select()
+        .single();
+
+      if (topicArticleError) {
+        console.error('Error creating topic article for backfill:', topicArticleError);
+        continue;
+      }
+
+      // Create a story from the shared content
+      const { data: story, error: storyError } = await supabase
+        .from('stories')
+        .insert({
+          topic_article_id: topicArticle.id,
+          shared_content_id: sharedContent.id,
+          title: sharedContent.title,
+          status: 'ready',
+          is_published: true,
+          audience_expertise: 'intermediate',
+          tone: 'conversational',
+          writing_style: 'journalistic',
+          slide_type: 'tabloid'
+        })
+        .select()
+        .single();
+
+      if (storyError) {
+        console.error('Error creating story for backfill:', storyError);
+        continue;
+      }
+
+      // Create a slide for the story with parliamentary card styling
+      const slideContent = mention.mention_type === 'vote'
+        ? `**${mention.mp_name}** from **${mention.constituency}** (${mention.party}) voted **${mention.vote_direction}** on:\n\n${mention.vote_title}\n\nRegion mentioned: ${mention.region_mentioned}\n\nRelevance: ${mention.relevance_score}%`
+        : `**House of Commons Debate**\n\n${mention.debate_title}\n\n*"${mention.debate_excerpt}"*\n\n**${mention.mp_name}** • ${mention.constituency} • ${mention.party}\n\n${mention.region_mentioned ? `Region: ${mention.region_mentioned}` : ''}${mention.landmark_mentioned ? `\nLandmark: ${mention.landmark_mentioned}` : ''}\n\nRelevance: ${mention.relevance_score}%`;
+
+      const { error: slideError } = await supabase
+        .from('slides')
+        .insert({
+          story_id: story.id,
+          slide_number: 1,
+          content: slideContent,
+          word_count: slideContent.split(' ').length,
+          links: [{
+            start: 0,
+            end: 0,
+            text: mention.mention_type === 'vote' ? 'View on Parliament.uk' : 'View Hansard',
+            url: mention.mention_type === 'vote' ? mention.vote_url : mention.hansard_url
+          }]
+        });
+
+      if (slideError) {
+        console.error('Error creating slide for backfill:', slideError);
+        continue;
+      }
+
+      // Update the parliamentary mention with the story_id
+      await supabase
+        .from('parliamentary_mentions')
+        .update({ story_id: story.id })
+        .eq('id', mention.id);
+
+      console.log(`Created story ${story.id} for parliamentary mention ${mention.id}`);
+    } catch (error) {
+      console.error(`Error creating story for mention ${mention.id}:`, error);
+    }
+  }
 }
