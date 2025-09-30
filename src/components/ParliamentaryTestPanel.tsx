@@ -147,8 +147,8 @@ export const ParliamentaryTestPanel = ({
         )}
 
         <div className="text-xs text-muted-foreground">
-          <p><strong>Note:</strong> This test uses simulated data for the beta.</p>
-          <p>Real parliamentary data will be integrated in the production version.</p>
+          <p><strong>Note:</strong> This test fetches real data from UK Parliament APIs.</p>
+          <p>Data includes MP voting records and Hansard debate mentions for {region}.</p>
         </div>
       </CardContent>
     </Card>
