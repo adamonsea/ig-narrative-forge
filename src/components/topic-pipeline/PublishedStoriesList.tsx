@@ -49,6 +49,7 @@ interface PublishedStory {
   cover_illustration_url?: string | null;
   cover_illustration_prompt?: string | null;
   illustration_generated_at?: string | null;
+  is_parliamentary?: boolean;
 }
 
 interface PublishedStoriesListProps {
@@ -59,6 +60,7 @@ interface PublishedStoriesListProps {
   onViewStory: (story: PublishedStory) => void;
   onRefresh: () => void;
   loading?: boolean;
+  topicSlug?: string;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -68,7 +70,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onDelete,
   onViewStory,
   onRefresh,
-  loading = false
+  loading = false,
+  topicSlug
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -86,15 +89,22 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   }>({ isOpen: false });
   const [linkEditorSlide, setLinkEditorSlide] = useState<Slide | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
   const pageSize = 10;
+
+  const filteredStories = useMemo(() => {
+    if (storyFilter === 'all') return stories;
+    if (storyFilter === 'parliamentary') return stories.filter(s => s.is_parliamentary);
+    return stories.filter(s => !s.is_parliamentary);
+  }, [stories, storyFilter]);
 
   const paginatedStories = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    return stories.slice(startIndex, endIndex);
-  }, [stories, currentPage, pageSize]);
+    return filteredStories.slice(startIndex, endIndex);
+  }, [filteredStories, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(stories.length / pageSize);
+  const totalPages = Math.ceil(filteredStories.length / pageSize);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -331,6 +341,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     );
   }
 
+  const parliamentaryCount = stories.filter(s => s.is_parliamentary).length;
+  const regularCount = stories.length - parliamentaryCount;
+
   const getStatusColor = (story: PublishedStory) => {
     if (story.is_published && story.status === 'published') return 'default';
     if (story.status === 'ready') return 'secondary';
@@ -357,9 +370,35 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b pb-2">
+        <Button
+          variant={storyFilter === 'all' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => { setStoryFilter('all'); setCurrentPage(1); }}
+        >
+          All Stories ({stories.length})
+        </Button>
+        <Button
+          variant={storyFilter === 'regular' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => { setStoryFilter('regular'); setCurrentPage(1); }}
+        >
+          Regular ({regularCount})
+        </Button>
+        <Button
+          variant={storyFilter === 'parliamentary' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => { setStoryFilter('parliamentary'); setCurrentPage(1); }}
+        >
+          Parliamentary ({parliamentaryCount})
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {stories.length} published {stories.length === 1 ? 'story' : 'stories'}
+          {filteredStories.length} {storyFilter !== 'all' ? storyFilter + ' ' : ''}
+          {filteredStories.length === 1 ? 'story' : 'stories'}
           {totalPages > 1 && (
             <span className="ml-2">
               • Page {currentPage} of {totalPages}
@@ -384,6 +423,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <Badge variant={getStatusColor(story)} className="text-xs">
                     {getStatusLabel(story)}
                   </Badge>
+                  {story.is_parliamentary && (
+                    <Badge variant="default" className="text-xs bg-blue-600">
+                      Parliamentary
+                    </Badge>
+                  )}
                   {story.author && (
                     <>
                       <span>•</span>
@@ -456,7 +500,21 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 Delete
               </Button>
 
-              {story.is_published && (
+              {topicSlug && story.is_published && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="h-8"
+                >
+                  <a href={`/@${topicSlug}/${story.id}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    View Story
+                  </a>
+                </Button>
+              )}
+
+              {!topicSlug && story.is_published && (
                 <Button
                   variant="ghost"
                   size="sm"

@@ -722,14 +722,6 @@ const TopicDashboard = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            {topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled && (
-              <TabsTrigger value="parliamentary" className="relative">
-                Parliamentary
-                <Badge className="ml-2 h-4 w-4 p-0 bg-blue-500 hover:bg-blue-600 text-xs">
-                  β
-                </Badge>
-              </TabsTrigger>
-            )}
             <TabsTrigger value="advanced" className="relative">
               Advanced Tools
               {needsAttention.advanced && (
@@ -782,20 +774,6 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled && (
-            <TabsContent value="parliamentary" className="space-y-6">
-              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                <CardContent className="p-6">
-                  <ParliamentaryTrackingPanel 
-                    topicId={topic.id}
-                    region={topic.region || ''}
-                    topicSlug={topic.slug || ''}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
 
           <TabsContent value="advanced" className="space-y-8">
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>

@@ -38,6 +38,7 @@ interface UnifiedContentPipelineProps {
 export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ selectedTopicId: propTopicId }) => {
   const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicSlug, setTopicSlug] = useState<string>('');
   const [slideQuantities, setSlideQuantities] = useState<Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>>({});
   const [toneOverrides, setToneOverrides] = useState<Record<string, 'formal' | 'conversational' | 'engaging' | undefined>>({});
   const [writingStyleOverrides, setWritingStyleOverrides] = useState<Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven' | undefined>>({});
@@ -121,6 +122,28 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   }, [propTopicId]);
 
   const currentTopic = topics.find(t => t.id === selectedTopicId);
+
+  // Load topic slug when selectedTopicId changes
+  useEffect(() => {
+    const loadTopicSlug = async () => {
+      if (!selectedTopicId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('topics')
+          .select('slug')
+          .eq('id', selectedTopicId)
+          .single();
+        
+        if (error) throw error;
+        if (data) setTopicSlug(data.slug);
+      } catch (error) {
+        console.error('Error loading topic slug:', error);
+      }
+    };
+    
+    loadTopicSlug();
+  }, [selectedTopicId]);
 
   // Unified data counts
   const totalArticles = articles.length;
@@ -472,6 +495,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   onViewStory={handleViewStory}
                   onRefresh={refreshContent}
                   loading={loading}
+                  topicSlug={topicSlug}
                 />
               </CardContent>
             </Card>

@@ -81,6 +81,7 @@ export interface MultiTenantStory {
   writing_style?: string;
   audience_expertise?: string;
   is_teaser?: boolean;
+  is_parliamentary?: boolean;
 }
 
 export interface MultiTenantStats {
@@ -379,6 +380,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       // Load slides for stories to enable edit functionality
       const storyIds = sortedStories.map((story: any) => story.id);
       let slidesData: any[] = [];
+      let parliamentaryData: any[] = [];
       
       if (storyIds.length > 0) {
         const { data: slidesResult, error: slidesError } = await supabase
@@ -392,17 +394,33 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         } else {
           slidesData = slidesResult || [];
         }
+
+        // Load parliamentary mentions to identify parliamentary stories
+        const { data: parliamentaryResult, error: parliamentaryError } = await supabase
+          .from('parliamentary_mentions')
+          .select('story_id')
+          .in('story_id', storyIds);
+        
+        if (parliamentaryError) {
+          console.error('Error loading parliamentary mentions:', parliamentaryError);
+        } else {
+          parliamentaryData = parliamentaryResult || [];
+        }
       }
+
+      const parliamentaryStoryIds = new Set(parliamentaryData.map(p => p.story_id));
 
       // Map to MultiTenantStory shape - the RPC already provides clean data structure
       const storiesData = sortedStories.map((story: any) => {        
         const storySlides = slidesData.filter(slide => slide.story_id === story.id);
+        const isParliamentary = parliamentaryStoryIds.has(story.id);
         
         console.log('🔍 Story mapping debug:', {
           storyId: story.id,
           storyTitle: story.article_title || story.title,
           slideCount: story.slide_count || 0,
-          actualSlides: storySlides.length
+          actualSlides: storySlides.length,
+          isParliamentary
         });
         
         return {
@@ -428,7 +446,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           tone: story.tone || '',
           writing_style: story.writing_style || '',
           audience_expertise: story.audience_expertise || '',
-          is_teaser: story.is_teaser || false
+          is_teaser: story.is_teaser || false,
+          is_parliamentary: isParliamentary
         };
       });
 
