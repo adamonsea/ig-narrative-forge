@@ -330,8 +330,9 @@ async function collectMPVotingRecords(
   
   try {
     // First, get the MP for this constituency using Members API
+    // Search by constituency name in the membershipFromMemberId field
     const membersResponse = await fetch(
-      `https://members-api.parliament.uk/api/Members/Search?House=1&IsCurrentMember=true&skip=0&take=20`
+      `https://members-api.parliament.uk/api/Members/Search?House=1&IsCurrentMember=true&skip=0&take=100`
     );
     
     if (!membersResponse.ok) {
@@ -340,12 +341,19 @@ async function collectMPVotingRecords(
     }
     
     const membersData = await membersResponse.json();
-    const mp = membersData.items?.find((m: any) => 
-      m.value?.latestHouseMembership?.membershipFrom?.toLowerCase().includes(constituency.toLowerCase())
-    );
+    
+    // Search through all members to find the one representing this constituency
+    const mp = membersData.items?.find((m: any) => {
+      const membershipFrom = m.value?.latestHouseMembership?.membershipFromMemberName || '';
+      return membershipFrom.toLowerCase().includes(constituency.toLowerCase()) ||
+             constituency.toLowerCase().includes(membershipFrom.toLowerCase());
+    });
     
     if (!mp) {
       console.log(`No current MP found for constituency: ${constituency}`);
+      console.log('Available constituencies:', membersData.items?.slice(0, 5).map((m: any) => 
+        m.value?.latestHouseMembership?.membershipFromMemberName
+      ));
       return mentions;
     }
     
@@ -461,60 +469,55 @@ async function collectHansardMentions(
   
   try {
     for (const searchTerm of searchTerms) {
-      // Search Hansard debates using the search API
+      // Use Parliament's Search API (which powers hansard.parliament.uk)
+      // Search back 12 months to find mentions
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 12);
+      
       const searchResponse = await fetch(
-        `https://hansard-api.parliament.uk/search.json?filter=commons&searchTerm=${encodeURIComponent(searchTerm)}&startDate=2024-01-01&take=5`
+        `https://search-material.parliament.uk/search?q=${encodeURIComponent(searchTerm)}&house=commons&type=debates&start-date=${startDate.toISOString().split('T')[0]}&rows=5`
       );
       
       if (!searchResponse.ok) {
-        console.error(`Failed to search Hansard for "${searchTerm}":`, searchResponse.status);
+        console.error(`Failed to search Parliament for "${searchTerm}":`, searchResponse.status, await searchResponse.text());
         continue;
       }
       
       const searchData = await searchResponse.json();
       
-      for (const result of searchData.results || []) {
+      for (const result of searchData.response?.docs || []) {
         try {
-          // Get the full debate details
-          const debateUrl = result.url;
-          const debateResponse = await fetch(debateUrl);
+          // Extract relevant fields from Parliament Search API response
+          const title = result.title || result.summary || `Parliamentary Debate mentioning ${searchTerm}`;
+          const snippet = result.content || result.summary || '';
+          const debateUrl = result.url || `https://hansard.parliament.uk/search?searchTerm=${encodeURIComponent(searchTerm)}`;
+          const date = result.date || new Date().toISOString().split('T')[0];
           
-          if (!debateResponse.ok) continue;
+          // Extract speaker information if available
+          const speakerMatch = snippet.match(/(\w+\s+\w+)\s*\(([^)]+)\)/);
+          const speakerName = speakerMatch?.[1] || result.member_name || 'Member of Parliament';
+          const speakerConstituency = speakerMatch?.[2] || result.constituency_name || '';
           
-          const debateHtml = await debateResponse.text();
-          
-          // Extract context around the mention (aim for 300-500 words)
-          // Parse the HTML to get the actual debate text
-          const contextMatch = debateHtml.match(new RegExp(
-            `(.{0,500}${searchTerm}.{0,500})`,
-            'is'
-          ));
-          
-          if (!contextMatch) continue;
-          
-          const rawContext = contextMatch[0];
-          
-          // Clean HTML and extract meaningful content
-          const textContent = rawContext
+          // Clean and extract meaningful content (aim for 300-500 words)
+          const textContent = snippet
             .replace(/<[^>]*>/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
           
-          // Get speaker information
-          const speakerMatch = result.highlight?.match(/(\w+\s+\w+)\s*\(([^)]+)\)/);
-          const speakerName = speakerMatch?.[1] || 'Member of Parliament';
-          const speakerConstituency = speakerMatch?.[2] || '';
+          if (textContent.length < 50) {
+            console.log(`Skipping result with insufficient content: ${title}`);
+            continue;
+          }
           
-          // Build comprehensive debate excerpt (300-500 words)
-          const debateDate = result.date ? new Date(result.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          const debateDate = new Date(date).toISOString().split('T')[0];
           
           const comprehensiveBody = `
-**House of Commons Debate - ${result.title || 'Regional Discussion'}**
+**House of Commons Debate - ${title}**
 
 **Date:** ${new Date(debateDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 
 **Context:**
-During parliamentary proceedings, ${region} was specifically mentioned in debates concerning ${result.title?.toLowerCase() || 'matters of local importance'}. This parliamentary discussion provides important insight into how regional concerns are being addressed at the national level.
+During parliamentary proceedings, ${region} was specifically mentioned in debates concerning ${title.toLowerCase()}. This parliamentary discussion provides important insight into how regional concerns are being addressed at the national level.
 
 **Parliamentary Record:**
 "${textContent.substring(0, 400)}${textContent.length > 400 ? '...' : ''}"
@@ -538,24 +541,27 @@ The complete debate transcript, including all contributions and responses, is av
             mention_type: 'debate_mention',
             mp_name: speakerName,
             constituency: speakerConstituency || undefined,
-            debate_title: result.title || `Parliamentary Debate mentioning ${searchTerm}`,
+            debate_title: title,
             debate_date: debateDate,
             debate_excerpt: textContent.substring(0, 200),
-            hansard_url: result.url || `https://hansard.parliament.uk/search?searchTerm=${encodeURIComponent(searchTerm)}`,
+            hansard_url: debateUrl,
             region_mentioned: region,
             landmark_mentioned: landmarks.includes(searchTerm) ? searchTerm : undefined,
             relevance_score: calculateMentionRelevance(searchTerm, region, landmarks, keywords),
-            source_api: 'uk_parliament_hansard',
+            source_api: 'uk_parliament_search',
             import_metadata: {
-              api_version: '1.0',
+              api_version: '2.0',
               search_term: searchTerm,
-              collection_method: 'hansard_search',
+              collection_method: 'parliament_search_api',
               debate_id: result.id,
               comprehensive_content: true,
               word_count: comprehensiveBody.split(/\s+/).length,
-              context_extracted: textContent.length
+              context_extracted: textContent.length,
+              search_result_type: result.type || 'debate'
             }
           });
+          
+          console.log(`✓ Found debate mention: "${title.substring(0, 50)}..." (${textContent.length} chars extracted)`);
           
         } catch (error) {
           console.error('Error processing debate result:', error);

@@ -18,12 +18,40 @@ export const ParliamentaryTestPanel = ({
   parliamentaryTrackingEnabled 
 }: ParliamentaryTestPanelProps) => {
   const [testing, setTesting] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
     data?: any;
   } | null>(null);
   const { toast } = useToast();
+
+  const cleanupSimulatedData = async () => {
+    setCleaning(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('cleanup-parliamentary-test-data');
+
+      if (error) throw error;
+
+      toast({
+        title: "Cleanup completed",
+        description: `Removed ${data.deleted?.mentions || 0} simulated mentions`
+      });
+      
+      // Wait a moment then run a real test
+      setTimeout(() => runParliamentaryTest(), 1000);
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      toast({
+        title: "Cleanup failed",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive"
+      });
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   const runParliamentaryTest = async () => {
     setTesting(true);
@@ -102,20 +130,38 @@ export const ParliamentaryTestPanel = ({
               This will fetch MP voting records and parliamentary debates
             </p>
           </div>
-          <Button 
-            onClick={runParliamentaryTest}
-            disabled={testing}
-            size="sm"
-          >
-            {testing ? (
-              <>
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                Testing...
-              </>
-            ) : (
-              'Run Test'
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={cleanupSimulatedData}
+              disabled={cleaning || testing}
+              size="sm"
+              variant="outline"
+            >
+              {cleaning ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  Cleaning...
+                </>
+              ) : (
+                'Clear Old Data'
+              )}
+            </Button>
+            
+            <Button 
+              onClick={runParliamentaryTest}
+              disabled={testing || cleaning}
+              size="sm"
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Run Test'
+              )}
+            </Button>
+          </div>
         </div>
 
         {testResult && (
