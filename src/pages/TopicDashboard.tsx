@@ -14,6 +14,7 @@ import { ManualContentStaging } from "@/components/ManualContentStaging";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
+import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -765,6 +766,11 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
+            <UniversalTopicScraper 
+              topicId={topic.id}
+              topicName={topic.name}
+            />
+            
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <TopicScheduleMonitor 
