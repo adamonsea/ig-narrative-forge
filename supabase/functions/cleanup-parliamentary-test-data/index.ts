@@ -21,19 +21,18 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('🧹 Cleaning up simulated parliamentary data...');
+    console.log('🧹 Cleaning up ALL parliamentary test data...');
 
-    // Get all parliamentary mentions with fake URLs
+    // Get all parliamentary mentions (delete everything - it's all test data)
     const { data: fakeMentions, error: fetchError } = await supabase
       .from('parliamentary_mentions')
-      .select('id, story_id, vote_url, hansard_url')
-      .or('vote_url.like.%hansard.parliament.uk/commons/vote/%,hansard_url.like.%hansard.parliament.uk/search%');
+      .select('id, story_id, vote_url, hansard_url, topic_id');
 
     if (fetchError) {
       throw fetchError;
     }
 
-    console.log(`Found ${fakeMentions?.length || 0} simulated mentions to clean`);
+    console.log(`Found ${fakeMentions?.length || 0} parliamentary mentions to clean (all test data)`);
 
     let deletedStories = 0;
     let deletedSharedContent = 0;
@@ -83,14 +82,22 @@ serve(async (req) => {
       }
 
       // Delete the mention itself
-      const { error: deleteError } = await supabase
+      await supabase
         .from('parliamentary_mentions')
         .delete()
         .eq('id', mention.id);
-
-      if (!deleteError) {
-        deletedMentions++;
-      }
+      
+      deletedMentions++;
+    }
+    
+    // Also delete any orphaned mentions without stories
+    const { error: orphanDeleteError } = await supabase
+      .from('parliamentary_mentions')
+      .delete()
+      .is('story_id', null);
+    
+    if (!orphanDeleteError) {
+      console.log('Deleted orphaned parliamentary mentions');
     }
 
     console.log(`✅ Cleanup complete: ${deletedMentions} mentions, ${deletedStories} stories, ${deletedSharedContent} shared content`);

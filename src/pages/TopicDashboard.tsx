@@ -705,7 +705,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full ${topic.topic_type === 'regional' && topic.parliamentary_tracking_enabled ? 'grid-cols-4' : 'grid-cols-3'} mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content-flow" className="relative">
               Content Flow
               {needsAttention.contentFlow && (

@@ -45,7 +45,10 @@ export const TopicSettings = ({
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
-  const [parliamentaryTrackingEnabled, setParliamentaryTrackingEnabled] = useState<boolean>(currentParliamentaryTrackingEnabled || false);
+  // Parliamentary tracking only available for regional topics
+  const [parliamentaryTrackingEnabled, setParliamentaryTrackingEnabled] = useState<boolean>(
+    topicType === 'regional' ? (currentParliamentaryTrackingEnabled || false) : false
+  );
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const { isSuperAdmin, user } = useAuth();
@@ -60,7 +63,10 @@ export const TopicSettings = ({
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
-    if (currentParliamentaryTrackingEnabled !== undefined) setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
+    // Only allow parliamentary tracking for regional topics
+    if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
+      setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
+    }
   }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
@@ -75,7 +81,8 @@ export const TopicSettings = ({
           community_intelligence_enabled: communityEnabled,
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
-          parliamentary_tracking_enabled: parliamentaryTrackingEnabled,
+          // Only save parliamentary tracking for regional topics
+          parliamentary_tracking_enabled: topicType === 'regional' ? parliamentaryTrackingEnabled : false,
           updated_at: new Date().toISOString()
         })
         .eq('id', topicId);
