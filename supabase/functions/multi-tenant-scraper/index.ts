@@ -27,10 +27,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { feedUrl, topicId, sourceId, articles } = await req.json();
+    const { feedUrl, topicId, sourceId, articles, maxAgeDays = 7 } = await req.json();
 
     console.log('🧪 Multi-tenant scraper test started:', {
-      topicId, sourceId, articlesCount: articles?.length || 0
+      topicId, sourceId, articlesCount: articles?.length || 0, maxAgeDays
     });
 
     if (!topicId || !articles || !Array.isArray(articles)) {
@@ -64,11 +64,11 @@ serve(async (req) => {
           continue;
         }
 
-        // Skip articles older than 1 week
-        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        // Skip articles older than configured threshold
+        const ageThresholdDate = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
         const articleDate = article.published_at ? new Date(article.published_at) : new Date();
-        if (articleDate < oneWeekAgo) {
-          console.log(`⏰ Skipping article older than 1 week: ${article.title} (${articleDate.toISOString()})`);
+        if (articleDate < ageThresholdDate) {
+          console.log(`⏰ Skipping article older than ${maxAgeDays} days: ${article.title} (${articleDate.toISOString()})`);
           continue;
         }
 

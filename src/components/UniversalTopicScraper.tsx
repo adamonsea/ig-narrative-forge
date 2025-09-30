@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, Play, Clock, Zap } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { CheckCircle, XCircle, Play, Clock, Zap, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -15,6 +17,9 @@ interface ScrapeResult {
   articlesFound?: number;
   articlesScraped?: number;
   multiTenantStored?: number;
+  rejectedTooOld?: number;
+  rejectedLowQuality?: number;
+  rejectedDuplicate?: number;
   method?: string;
   error?: string;
 }
@@ -40,6 +45,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
   const [isAutomating, setIsAutomating] = useState(false);
   const [results, setResults] = useState<UniversalScrapeResponse | null>(null);
   const [progress, setProgress] = useState(0);
+  const [includeLast30Days, setIncludeLast30Days] = useState(false);
   const { toast } = useToast();
 
   const startUniversalScraping = async (forceRescrape = false) => {
@@ -50,13 +56,14 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
     try {
       toast({
         title: "Universal Scraping Started",
-        description: `Scraping all sources for ${topicName}...`,
+        description: `Scraping all sources for ${topicName}${includeLast30Days ? ' (30-day seed mode)' : ''}...`,
       });
 
       const { data, error } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
           topicId,
-          forceRescrape
+          forceRescrape,
+          maxAgeDays: includeLast30Days ? 30 : undefined
         }
       });
 
@@ -138,6 +145,18 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+            <Checkbox 
+              id="include-30-days" 
+              checked={includeLast30Days}
+              onCheckedChange={(checked) => setIncludeLast30Days(checked === true)}
+            />
+            <Label htmlFor="include-30-days" className="text-sm cursor-pointer flex items-center gap-2">
+              Include last 30 days (seed mode)
+              <Info className="h-3 w-3 text-muted-foreground" />
+            </Label>
+          </div>
+          
           <div className="flex gap-3">
             <Button
               onClick={() => startUniversalScraping(false)}
@@ -238,6 +257,21 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                         <Badge variant="outline">
                           {result.multiTenantStored} stored
                         </Badge>
+                        {(result.rejectedTooOld || 0) > 0 && (
+                          <Badge variant="destructive">
+                            {result.rejectedTooOld} too old
+                          </Badge>
+                        )}
+                        {(result.rejectedLowQuality || 0) > 0 && (
+                          <Badge variant="outline" className="text-yellow-600">
+                            {result.rejectedLowQuality} low quality
+                          </Badge>
+                        )}
+                        {(result.rejectedDuplicate || 0) > 0 && (
+                          <Badge variant="outline" className="text-blue-600">
+                            {result.rejectedDuplicate} duplicate
+                          </Badge>
+                        )}
                         {result.method && (
                           <Badge variant="outline">
                             {result.method}

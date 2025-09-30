@@ -15,6 +15,7 @@ interface UniversalScrapeRequest {
   forceRescrape?: boolean;
   testMode?: boolean;
   maxSources?: number;
+  maxAgeDays?: number;
   // Phase 1: Support single source filtering
   singleSourceMode?: boolean;
 }
@@ -88,10 +89,11 @@ serve(async (req) => {
       forceRescrape = false, 
       testMode = false, 
       maxSources = testMode ? 1 : undefined,  // Ultra-aggressive: only 1 source in test mode
-      singleSourceMode = false
+      singleSourceMode = false,
+      maxAgeDays = 7  // Default to 7 days, can be overridden to 30 for seed mode
     } = await req.json() as UniversalScrapeRequest;
 
-    console.log('Universal Topic Scraper - Starting for topic:', topicId);
+    console.log('Universal Topic Scraper - Starting for topic:', topicId, 'maxAgeDays:', maxAgeDays);
 
     // Initialize standardized response handler
     const standardResponse = new StandardizedScraperResponse();
@@ -266,11 +268,12 @@ serve(async (req) => {
           );
 
           if (scrapeResult.success && scrapeResult.articles.length > 0) {
-            // Store articles using multi-tenant approach
+            // Store articles using multi-tenant approach with configurable age filter
             const storeResult = await dbOps.storeArticles(
               scrapeResult.articles,
               topicId,
-              source.source_id
+              source.source_id,
+              maxAgeDays  // Pass the maxAgeDays parameter
             );
 
             // Background update of source metrics (don't wait for it)

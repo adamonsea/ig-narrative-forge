@@ -31,7 +31,8 @@ export class MultiTenantDatabaseOperations {
   async storeArticles(
     articles: ArticleData[],
     topicId: string,
-    sourceId?: string
+    sourceId?: string,
+    maxAgeDays: number = 7  // Configurable age filter, default 7 days
   ): Promise<MultiTenantResult> {
     const result: MultiTenantResult = {
       success: false,
@@ -64,10 +65,10 @@ export class MultiTenantDatabaseOperations {
       return true; // Will be checked per article
     };
 
-    // Phase 2: Pre-filter articles for 7-day recency BEFORE processing
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    console.log(`🗓️ Phase 2: Strict 7-day filter - articles must be newer than ${sevenDaysAgo.toISOString()}`)
+    // Phase 2: Pre-filter articles for configurable recency BEFORE processing
+    const ageThreshold = new Date();
+    ageThreshold.setDate(ageThreshold.getDate() - maxAgeDays);
+    console.log(`🗓️ Phase 2: Strict ${maxAgeDays}-day filter - articles must be newer than ${ageThreshold.toISOString()}`)
 
     const recentArticles = articles.filter(article => {
       // Phase 1: Check if article is from whitelisted domain
@@ -101,7 +102,7 @@ export class MultiTenantDatabaseOperations {
 
         // Recalculate pubDate after potential fix
         const finalPubDate = new Date(article.published_at);
-        const isRecent = finalPubDate >= sevenDaysAgo
+        const isRecent = finalPubDate >= ageThreshold
         if (!isRecent) {
           const daysOld = Math.floor((Date.now() - finalPubDate.getTime()) / (1000 * 60 * 60 * 24))
           console.log(`🚫 REJECTED (too old): "${article.title?.substring(0, 50)}..." - ${daysOld} days old`)
@@ -119,7 +120,7 @@ export class MultiTenantDatabaseOperations {
       }
     })
 
-    console.log(`📅 Phase 2 filtering: ${recentArticles.length}/${articles.length} articles passed 7-day recency check`)
+    console.log(`📅 Phase 2 filtering: ${recentArticles.length}/${articles.length} articles passed ${maxAgeDays}-day recency check`)
 
     // Phase 3: Filter out suppressed articles
     const allowedArticles = []
