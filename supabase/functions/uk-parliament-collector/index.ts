@@ -183,7 +183,7 @@ serve(async (req) => {
           try {
             // Create a shared content entry for the parliamentary mention
             const { data: sharedContent, error: contentError } = await supabase
-              .from('shared_content')
+              .from('shared_article_content')
               .insert({
                 title: mention.mention_type === 'vote' ? mention.vote_title : mention.debate_title,
                 body: mention.mention_type === 'vote' 
