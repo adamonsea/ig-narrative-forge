@@ -217,8 +217,11 @@ Avoid: Cross-hatching, dense pen work, intricate detail, mechanical precision, o
       const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
       
       if (!lovableApiKey) {
-        throw new Error('Lovable AI not configured. Please enable Lovable AI in your project settings.')
+        console.error('LOVABLE_API_KEY not found in environment')
+        throw new Error('Lovable AI is not enabled. Please contact support to enable Lovable AI Gateway for your project.')
       }
+
+      console.log('Attempting Gemini image generation via Lovable AI Gateway')
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -240,20 +243,34 @@ Avoid: Cross-hatching, dense pen work, intricate detail, mechanical precision, o
 
       if (!geminiResponse.ok) {
         const errorData = await geminiResponse.text()
-        console.error('Gemini API error:', errorData)
-        throw new Error(`Gemini API error: ${geminiResponse.statusText}`)
+        console.error('Gemini API error response:', geminiResponse.status, errorData)
+        
+        // Parse error for better messaging
+        try {
+          const errorJson = JSON.parse(errorData)
+          if (errorJson.message?.includes('API key')) {
+            throw new Error('Lovable AI authentication failed. Please verify your project has Lovable AI enabled.')
+          }
+        } catch (e) {
+          // Continue with generic error
+        }
+        
+        throw new Error(`Gemini API error (${geminiResponse.status}): ${errorData}`)
       }
 
       const geminiData = await geminiResponse.json()
+      console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2))
+      
       const imageDataUrl = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url
       
       if (!imageDataUrl) {
-        console.error('No image data received from Gemini:', geminiData)
-        throw new Error('No image data received from Gemini API')
+        console.error('No image data in Gemini response:', geminiData)
+        throw new Error('No image data received from Gemini API - response format unexpected')
       }
 
       // Extract base64 from data URL (format: data:image/png;base64,...)
       imageBase64 = imageDataUrl.split(',')[1]
+      console.log('Successfully extracted base64 image data from Gemini')
     } else if (modelConfig.provider === 'openai') {
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
