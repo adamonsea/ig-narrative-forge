@@ -94,7 +94,7 @@ export function QueueManager() {
           error_message: null 
         })
         .gte('attempts', 3)
-        .eq('status', 'pending');
+        .eq('status', 'failed');
 
       if (error) throw error;
 
