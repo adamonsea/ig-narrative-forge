@@ -14,15 +14,38 @@ export class EnhancedScrapingStrategies {
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
     console.log(`🚀 Starting enhanced scraping for ${this.sourceInfo?.source_name || this.baseUrl}`);
-    
-    // Try RSS first, then HTML parsing with enhanced extraction
-    const rssResult = await this.tryRSSStrategy();
-    if (rssResult.success && rssResult.articles.length > 0) {
-      return rssResult;
+
+    const aggregatedErrors: string[] = [];
+    const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [
+      { name: 'rss', executor: () => this.tryRSSStrategy() },
+      { name: 'sitemap', executor: () => this.trySitemapStrategy() },
+      { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
+      { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
+    ];
+
+    for (const strategy of strategies) {
+      const result = await strategy.executor();
+
+      if (result.success && result.articles.length > 0) {
+        console.log(`✅ Strategy ${strategy.name} succeeded with ${result.articles.length} articles`);
+        return result;
+      }
+
+      if (result.errors?.length) {
+        aggregatedErrors.push(...result.errors.map(error => `${strategy.name}: ${error}`));
+      }
+
+      console.log(`⚠️ Strategy ${strategy.name} did not yield content, moving to next fallback`);
     }
-    
-    console.log('📄 RSS failed or no articles found, trying enhanced HTML parsing...');
-    return await this.tryEnhancedHTMLStrategy();
+
+    return {
+      success: false,
+      articles: [],
+      articlesFound: 0,
+      articlesScraped: 0,
+      errors: aggregatedErrors.length ? aggregatedErrors : ['No articles found via available strategies'],
+      method: 'fallback'
+    };
   }
 
   private async tryRSSStrategy(): Promise<ScrapingResult> {
@@ -91,9 +114,113 @@ export class EnhancedScrapingStrategies {
     }
   }
 
+  private async trySitemapStrategy(): Promise<ScrapingResult> {
+    console.log('🗺️ Attempting sitemap-based discovery...');
+
+    const errors: string[] = [];
+
+    try {
+      const sitemapUrls = await this.discoverSitemaps(this.baseUrl);
+
+      if (sitemapUrls.length === 0) {
+        console.log('⚠️ No sitemap candidates discovered');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No sitemap candidates discovered'],
+          method: 'sitemap'
+        };
+      }
+
+      const visited = new Set<string>();
+      const queue = [...sitemapUrls];
+      const articleCandidates = new Set<string>();
+      const maxSitemapsToProcess = 6;
+
+      while (queue.length > 0 && visited.size < maxSitemapsToProcess) {
+        const sitemapUrl = queue.shift()!;
+
+        if (visited.has(sitemapUrl)) {
+          continue;
+        }
+
+        visited.add(sitemapUrl);
+
+        try {
+          console.log(`🧭 Fetching sitemap: ${sitemapUrl}`);
+          const sitemapContent = await this.retryStrategy.fetchWithEnhancedRetry(sitemapUrl, {
+            maxRetries: 1,
+            baseDelay: 500,
+            maxDelay: 4000,
+            exponentialBackoff: false
+          });
+
+          const { articleUrls, nestedSitemaps } = this.parseSitemapContent(sitemapContent, sitemapUrl);
+
+          for (const nested of nestedSitemaps) {
+            if (!visited.has(nested) && queue.length < 12) {
+              queue.push(nested);
+            }
+          }
+
+          articleUrls.forEach(url => articleCandidates.add(url));
+
+        } catch (sitemapError) {
+          const sitemapErrorMessage = sitemapError instanceof Error ? sitemapError.message : String(sitemapError);
+          console.log(`⚠️ Failed to process sitemap ${sitemapUrl}: ${sitemapErrorMessage}`);
+          errors.push(`Sitemap error (${sitemapUrl}): ${sitemapErrorMessage}`);
+        }
+      }
+
+      if (articleCandidates.size === 0) {
+        errors.push('No article URLs discovered via sitemaps');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors,
+          method: 'sitemap'
+        };
+      }
+
+      const candidateList = Array.from(articleCandidates);
+      const { articles, errors: articleErrors } = await this.scrapeArticleUrls(candidateList, 'sitemap', {
+        discovery: 'sitemap',
+        sitemaps: Array.from(visited)
+      });
+
+      errors.push(...articleErrors);
+
+      return {
+        success: articles.length > 0,
+        articles,
+        articlesFound: candidateList.length,
+        articlesScraped: articles.length,
+        errors,
+        method: 'sitemap'
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      errors.push(errorMessage);
+
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors,
+        method: 'sitemap'
+      };
+    }
+  }
+
   private async tryEnhancedHTMLStrategy(): Promise<ScrapingResult> {
     console.log('🔄 Attempting enhanced HTML parsing...');
-    
+
     try {
       const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
       
@@ -126,6 +253,51 @@ export class EnhancedScrapingStrategies {
         articlesScraped: 0,
         errors: [errorMessage],
         method: 'html'
+      };
+    }
+  }
+
+  private async tryHeuristicDiscovery(): Promise<ScrapingResult> {
+    console.log('🧭 Attempting heuristic article discovery...');
+
+    try {
+      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
+      const candidateUrls = this.extractCandidateLinksFromHeuristics(html, this.baseUrl);
+
+      if (candidateUrls.length === 0) {
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No candidate links discovered via heuristics'],
+          method: 'discovery'
+        };
+      }
+
+      const { articles, errors } = await this.scrapeArticleUrls(candidateUrls, 'discovery', {
+        discovery: 'heuristic',
+        selectors: 'article-link,news-link,post-title,entry-title'
+      });
+
+      return {
+        success: articles.length > 0,
+        articles,
+        articlesFound: candidateUrls.length,
+        articlesScraped: articles.length,
+        errors,
+        method: 'discovery'
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'discovery'
       };
     }
   }
@@ -489,6 +661,250 @@ export class EnhancedScrapingStrategies {
     
     console.log(`✅ Enhanced content qualified: "${content.title?.substring(0, 50)}..."`);
     return true;
+  }
+
+  private async scrapeArticleUrls(
+    articleUrls: string[],
+    method: ScrapingResult['method'],
+    metadata: Record<string, any> = {}
+  ): Promise<{ articles: ArticleData[]; errors: string[] }> {
+    const articles: ArticleData[] = [];
+    const errors: string[] = [];
+    const uniqueUrls = Array.from(new Set(articleUrls));
+    const limit = method === 'sitemap' ? 30 : 15;
+
+    for (const candidateUrl of uniqueUrls.slice(0, limit)) {
+      const articleUrl = this.resolveUrl(candidateUrl, this.baseUrl);
+
+      if (!this.extractor.isLikelyArticleUrl(articleUrl)) {
+        continue;
+      }
+
+      try {
+        const extractor = new UniversalContentExtractor(articleUrl);
+        const articleHtml = await extractor.fetchWithRetry(articleUrl);
+        const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
+
+        if (extractedContent.body && this.isContentQualified(extractedContent)) {
+          const regionalRelevance = this.calculateEnhancedRegionalRelevance(
+            extractedContent.body,
+            extractedContent.title,
+            articleUrl
+          );
+
+          articles.push({
+            title: extractedContent.title,
+            body: extractedContent.body,
+            author: extractedContent.author,
+            published_at: extractedContent.published_at,
+            source_url: articleUrl,
+            canonical_url: articleUrl,
+            word_count: extractedContent.word_count,
+            regional_relevance_score: regionalRelevance,
+            content_quality_score: extractedContent.content_quality_score,
+            processing_status: 'new',
+            import_metadata: {
+              extraction_method: method,
+              discovery_metadata: metadata,
+              source_domain: this.sourceInfo?.canonical_domain,
+              scrape_timestamp: new Date().toISOString(),
+              extractor_version: '2.0'
+            }
+          });
+        }
+
+      } catch (error) {
+        const articleErrorMessage = error instanceof Error ? error.message : String(error);
+        errors.push(`Article extraction error (${articleUrl}): ${articleErrorMessage}`);
+      }
+    }
+
+    return { articles, errors };
+  }
+
+  private async discoverSitemaps(baseUrl: string): Promise<string[]> {
+    try {
+      const parsedUrl = new URL(baseUrl);
+      const origin = `${parsedUrl.protocol}//${parsedUrl.host}`;
+      const sitemapCandidates = new Set<string>();
+
+      const commonPaths = [
+        '/sitemap.xml',
+        '/sitemap_index.xml',
+        '/sitemap-news.xml',
+        '/news-sitemap.xml',
+        '/sitemap1.xml',
+        '/sitemap-index.xml',
+        '/sitemap/news.xml'
+      ];
+
+      for (const path of commonPaths) {
+        try {
+          sitemapCandidates.add(new URL(path, origin).href);
+        } catch {
+          // Ignore malformed URLs
+        }
+      }
+
+      try {
+        const robotsUrl = new URL('/robots.txt', origin).href;
+        console.log(`🤖 Checking robots.txt for sitemap hints: ${robotsUrl}`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(robotsUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SitemapDiscovery/1.0)',
+            'Accept': 'text/plain'
+          }
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const robotsText = await response.text();
+          const sitemapMatches = robotsText.match(/Sitemap:\s*(.+)/gi) || [];
+
+          for (const match of sitemapMatches) {
+            const extracted = /Sitemap:\s*(.+)/i.exec(match);
+            const sitemapUrl = extracted?.[1]?.trim();
+            if (sitemapUrl) {
+              try {
+                sitemapCandidates.add(new URL(sitemapUrl, origin).href);
+              } catch {
+                sitemapCandidates.add(sitemapUrl);
+              }
+            }
+          }
+        }
+
+      } catch (robotsError) {
+        const robotsMessage = robotsError instanceof Error ? robotsError.message : String(robotsError);
+        console.log(`⚠️ Unable to read robots.txt: ${robotsMessage}`);
+      }
+
+      return Array.from(sitemapCandidates);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ Failed to derive sitemap origin: ${errorMessage}`);
+      return [];
+    }
+  }
+
+  private parseSitemapContent(sitemapContent: string, sitemapUrl: string): { articleUrls: string[]; nestedSitemaps: string[] } {
+    const articleUrls = new Set<string>();
+    const nestedSitemaps = new Set<string>();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+    if (sitemapContent.includes('<sitemapindex')) {
+      const sitemapEntries = sitemapContent.match(/<sitemap>[\s\S]*?<\/sitemap>/gi) || [];
+      for (const entry of sitemapEntries) {
+        const loc = this.extractXMLContent(entry, 'loc');
+        if (loc) {
+          nestedSitemaps.add(this.resolveUrl(loc, sitemapUrl));
+        }
+      }
+    }
+
+    const urlEntries = sitemapContent.match(/<url>[\s\S]*?<\/url>/gi) || [];
+
+    if (urlEntries.length > 0) {
+      for (const entry of urlEntries) {
+        const loc = this.extractXMLContent(entry, 'loc');
+        if (!loc) continue;
+
+        const resolvedUrl = this.resolveUrl(loc, sitemapUrl);
+        if (!this.extractor.isLikelyArticleUrl(resolvedUrl)) continue;
+
+        const lastMod = this.extractXMLContent(entry, 'lastmod');
+        if (lastMod) {
+          const parsedDate = new Date(lastMod);
+          if (!isNaN(parsedDate.getTime()) && parsedDate < cutoffDate) {
+            continue;
+          }
+        }
+
+        articleUrls.add(resolvedUrl);
+      }
+    } else {
+      const locMatches = sitemapContent.match(/<loc>([\s\S]*?)<\/loc>/gi) || [];
+      for (const match of locMatches) {
+        const loc = this.extractXMLContent(match, 'loc');
+        if (!loc) continue;
+
+        const resolvedUrl = this.resolveUrl(loc, sitemapUrl);
+
+        if (resolvedUrl.toLowerCase().includes('sitemap')) {
+          nestedSitemaps.add(resolvedUrl);
+        } else if (this.extractor.isLikelyArticleUrl(resolvedUrl)) {
+          articleUrls.add(resolvedUrl);
+        }
+      }
+    }
+
+    return {
+      articleUrls: Array.from(articleUrls),
+      nestedSitemaps: Array.from(nestedSitemaps)
+    };
+  }
+
+  private extractCandidateLinksFromHeuristics(html: string, baseUrl: string): string[] {
+    const candidates = new Set<string>(this.extractor.extractArticleLinks(html, baseUrl));
+
+    const sectionRegex = /<(article|section|div)[^>]+(?:class|id)=["'][^"']*(article|news|post|story|entry)[^"']*["'][^>]*>[\s\S]*?<\/\1>/gi;
+    let sectionMatch: RegExpExecArray | null;
+
+    while ((sectionMatch = sectionRegex.exec(html)) !== null) {
+      const sectionHtml = sectionMatch[0];
+      const linkMatches = sectionHtml.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/gi) || [];
+
+      for (const link of linkMatches) {
+        const hrefMatch = /href=["']([^"']+)["']/i.exec(link);
+        if (hrefMatch) {
+          const resolved = this.resolveUrl(hrefMatch[1], baseUrl);
+          if (this.extractor.isLikelyArticleUrl(resolved)) {
+            candidates.add(resolved);
+          }
+        }
+      }
+    }
+
+    const headlineRegex = /<(h1|h2|h3)[^>]*>[\s\S]*?<a[^>]+href=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>[\s\S]*?<\/\1>/gi;
+    let headlineMatch: RegExpExecArray | null;
+
+    while ((headlineMatch = headlineRegex.exec(html)) !== null) {
+      const resolved = this.resolveUrl(headlineMatch[2], baseUrl);
+      if (this.extractor.isLikelyArticleUrl(resolved)) {
+        candidates.add(resolved);
+      }
+    }
+
+    const selectorKeywords = [
+      'article-link',
+      'news-link',
+      'story-link',
+      'post-title',
+      'entry-title',
+      'article-title',
+      'headline'
+    ];
+
+    const selectorRegex = new RegExp(
+      `<a[^>]+(?:class|id)=["'][^"']*(?:${selectorKeywords.join('|')})[^"']*["'][^>]*href=["']([^"']+)["']`,
+      'gi'
+    );
+
+    let selectorMatch: RegExpExecArray | null;
+    while ((selectorMatch = selectorRegex.exec(html)) !== null) {
+      const resolved = this.resolveUrl(selectorMatch[1], baseUrl);
+      if (this.extractor.isLikelyArticleUrl(resolved)) {
+        candidates.add(resolved);
+      }
+    }
+
+    return Array.from(candidates).slice(0, 20);
   }
 
   // Helper methods
