@@ -18,6 +18,7 @@ import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 import { useParliamentaryMentions } from "@/hooks/useParliamentaryMentions";
 import { ParliamentaryVoteCard } from "@/components/ParliamentaryVoteCard";
 import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
+import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -134,6 +135,16 @@ const TopicFeed = () => {
 
   return (
     <div className="min-h-screen feed-background">
+      {/* SEO Meta Tags */}
+      <TopicFeedSEO
+        topicName={topic.name}
+        topicDescription={topic.branding_config?.subheader || topic.description}
+        topicSlug={actualSlug || ''}
+        topicType={topic.topic_type}
+        region={topic.region}
+        logoUrl={topic.branding_config?.logo_url}
+      />
+
       {/* Sticky header for scrollers */}
       {isScrolled && topic && (
         <div className="fixed top-0 left-0 right-0 z-50 feed-header backdrop-blur-sm border-b border-border">

@@ -12,3 +12,7 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: https://curatr.pro/sitemap.xml
+Sitemap: https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml
