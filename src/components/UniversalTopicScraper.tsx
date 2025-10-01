@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, XCircle, Play, Clock, Zap, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,7 +45,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
   const [isAutomating, setIsAutomating] = useState(false);
   const [results, setResults] = useState<UniversalScrapeResponse | null>(null);
   const [progress, setProgress] = useState(0);
-  const [includeLast30Days, setIncludeLast30Days] = useState(false);
+  const [maxAgeDays, setMaxAgeDays] = useState(7);
   const { toast } = useToast();
 
   const startUniversalScraping = async (forceRescrape = false) => {
@@ -54,16 +54,17 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
     setProgress(0);
 
     try {
+      const ageWindowLabel = maxAgeDays === 7 ? 'default' : maxAgeDays === 30 ? 'seed mode' : 'full archive';
       toast({
         title: "Universal Scraping Started",
-        description: `Scraping all sources for ${topicName}${includeLast30Days ? ' (30-day seed mode)' : ''}...`,
+        description: `Scraping all sources for ${topicName} (${ageWindowLabel})...`,
       });
 
       const { data, error } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
           topicId,
           forceRescrape,
-          maxAgeDays: includeLast30Days ? 30 : undefined
+          maxAgeDays
         }
       });
 
@@ -145,16 +146,24 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-            <Checkbox 
-              id="include-30-days" 
-              checked={includeLast30Days}
-              onCheckedChange={(checked) => setIncludeLast30Days(checked === true)}
-            />
-            <Label htmlFor="include-30-days" className="text-sm cursor-pointer flex items-center gap-2">
-              Include last 30 days (seed mode)
-              <Info className="h-3 w-3 text-muted-foreground" />
+          <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+            <Label htmlFor="maxAgeDays" className="text-sm font-medium whitespace-nowrap">
+              Content Age Window:
             </Label>
+            <Select
+              value={maxAgeDays.toString()}
+              onValueChange={(value) => setMaxAgeDays(parseInt(value))}
+            >
+              <SelectTrigger id="maxAgeDays" className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days (default)</SelectItem>
+                <SelectItem value="30">Last 30 days (seed mode)</SelectItem>
+                <SelectItem value="100">Last 100 days (full archive)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Info className="h-4 w-4 text-muted-foreground" />
           </div>
           
           <div className="flex gap-3">

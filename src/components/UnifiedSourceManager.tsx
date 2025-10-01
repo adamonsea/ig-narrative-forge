@@ -32,6 +32,7 @@ import { StatusIndicator } from '@/components/StatusIndicator';
 import { EnhancedSourceStatusBadge } from '@/components/EnhancedSourceStatusBadge';
 import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
+import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -55,6 +56,10 @@ interface ContentSource {
   success_count?: number;
   failure_count?: number;
   last_error?: string | null;
+  consecutive_failures?: number;
+  total_failures?: number;
+  last_failure_at?: string | null;
+  last_failure_reason?: string | null;
 }
 
 interface Topic {
@@ -110,8 +115,9 @@ export const UnifiedSourceManager = ({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [gatheringSource, setGatheringSource] = useState<string | null>(null);
-    const [gatheringAll, setGatheringAll] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  const [gatheringAll, setGatheringAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [testingSource, setTestingSource] = useState<string | null>(null);
   
   // Daily content availability for topic mode
   const { 
@@ -202,35 +208,37 @@ export const UnifiedSourceManager = ({
       setLoading(true);
 
       if (mode === 'topic' && topicId) {
-        // For topic mode, use the new junction table function
-        const { data, error } = await supabase.rpc('get_topic_sources', {
+        // For topic mode, get sources with failure data
+        const { data: junctionData, error: junctionError } = await supabase.rpc('get_topic_sources', {
           p_topic_id: topicId
         });
 
-        if (error) throw error;
+        if (junctionError) throw junctionError;
         
-        // Transform the RPC result to match ContentSource interface
-        const transformedSources = (data || []).map((source: any) => ({
-          id: source.source_id,
-          source_name: source.source_name,
-          feed_url: source.feed_url,
-          canonical_domain: source.canonical_domain,
-          credibility_score: source.credibility_score,
-          is_active: source.is_active,
-          articles_scraped: source.articles_scraped,
-          last_scraped_at: source.last_scraped_at,
-          // Add additional fields that might be needed
-          region: null,
-          content_type: null,
-          is_whitelisted: null,
-          is_blacklisted: null,
-          scrape_frequency_hours: null,
-          topic_id: topicId, // For compatibility
-          scraping_method: null,
-          success_rate: null,
-          avg_response_time_ms: null,
-          source_config: source.source_config
-        }));
+        // Fetch full source details including failure counts
+        const sourceIds = (junctionData || []).map((s: any) => s.source_id);
+        
+        if (sourceIds.length === 0) {
+          setSources([]);
+          return;
+        }
+
+        const { data: fullSources, error: sourcesError } = await supabase
+          .from('content_sources')
+          .select('*')
+          .in('id', sourceIds);
+
+        if (sourcesError) throw sourcesError;
+
+        // Merge junction data with full source data
+        const transformedSources = (fullSources || []).map((source: any) => {
+          const junctionInfo = junctionData.find((j: any) => j.source_id === source.id);
+          return {
+            ...source,
+            topic_id: topicId,
+            source_config: junctionInfo?.source_config
+          };
+        });
         
         setSources(transformedSources);
       } else {
@@ -872,8 +880,71 @@ export const UnifiedSourceManager = ({
     return (source.last_error && successRate < 30) || daysSinceLastScrape > 30;
   };
 
+  const handleTestSource = async (source: ContentSource) => {
+    if (!source.feed_url) return;
+    
+    try {
+      setTestingSource(source.id);
+      await validateSource(source.feed_url);
+      
+      if (validationResult?.success) {
+        // Reset failure counters on successful test
+        const { error } = await supabase
+          .from('content_sources')
+          .update({
+            consecutive_failures: 0,
+            last_failure_at: null,
+            last_failure_reason: null
+          })
+          .eq('id', source.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: 'Source Test Successful',
+          description: `${source.source_name} is now responding correctly`,
+        });
+        
+        loadSources();
+      }
+    } catch (error) {
+      console.error('Source test failed:', error);
+    } finally {
+      setTestingSource(null);
+    }
+  };
+
+  const handleReactivateSource = async (source: ContentSource) => {
+    try {
+      const { error } = await supabase
+        .from('content_sources')
+        .update({
+          is_active: true,
+          consecutive_failures: 0,
+          last_failure_at: null,
+          last_failure_reason: null
+        })
+        .eq('id', source.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Source Reactivated',
+        description: `${source.source_name} has been reactivated`,
+      });
+      
+      loadSources();
+    } catch (error) {
+      console.error('Failed to reactivate source:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reactivate source',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleCheckNewContent = async () => {
-    if (mode !== 'topic' || !topicId) return;
     
     try {
       const success = await runContentMonitor();
@@ -1233,9 +1304,27 @@ export const UnifiedSourceManager = ({
                 </div>
               </div>
 
-              {source.last_error && (
-                <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                  <p className="text-sm text-red-700">
+              {/* Source Health Indicator */}
+              {(source.consecutive_failures || 0) > 0 || !source.is_active && (
+                source.consecutive_failures && source.consecutive_failures >= 3
+              ) && (
+                <div className="mt-3">
+                  <SourceHealthIndicator
+                    consecutiveFailures={source.consecutive_failures || 0}
+                    totalFailures={source.total_failures || 0}
+                    lastFailureAt={source.last_failure_at}
+                    lastFailureReason={source.last_failure_reason}
+                    isActive={source.is_active || false}
+                    onTest={() => handleTestSource(source)}
+                    onReactivate={() => handleReactivateSource(source)}
+                    testing={testingSource === source.id}
+                  />
+                </div>
+              )}
+
+              {source.last_error && (source.consecutive_failures || 0) < 3 && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                  <p className="text-sm text-red-700 dark:text-red-400">
                     <strong>Last Error:</strong> {source.last_error}
                   </p>
                 </div>
