@@ -40,7 +40,7 @@ const Index = () => {
         <div className="text-center space-y-12 max-w-2xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-8xl font-light tracking-tight text-foreground">
-              curatr
+              breef
             </h1>
             <div className="text-sm text-muted-foreground font-medium tracking-wider uppercase">
               Beta

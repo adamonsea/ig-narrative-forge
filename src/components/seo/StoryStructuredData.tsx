@@ -37,10 +37,10 @@ export const StoryStructuredData = ({
     },
     "publisher": {
       "@type": "Organization",
-      "name": "curatr",
+      "name": "breef",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://curatr.pro/placeholder.svg"
+        "url": "https://breef.pro/placeholder.svg"
       }
     },
     "position": position,
