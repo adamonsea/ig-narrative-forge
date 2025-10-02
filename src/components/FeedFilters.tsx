@@ -9,6 +9,9 @@ interface FeedFiltersProps {
   onFilterClick?: () => void;
   selectedKeywords?: string[];
   onRemoveKeyword?: (keyword: string) => void;
+  // Source filtering props
+  selectedSources?: string[];
+  onRemoveSource?: (source: string) => void;
   hasActiveFilters?: boolean;
 }
 
@@ -17,8 +20,11 @@ export function FeedFilters({
   onFilterClick,
   selectedKeywords = [],
   onRemoveKeyword,
+  selectedSources = [],
+  onRemoveSource,
   hasActiveFilters = false
 }: FeedFiltersProps) {
+  const totalFilterCount = selectedKeywords.length + selectedSources.length;
   return (
     <div className="space-y-4">
       {/* Main filter controls */}
@@ -37,20 +43,20 @@ export function FeedFilters({
             <Filter className="w-4 h-4" />
             {hasActiveFilters && (
               <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs">
-                {selectedKeywords.length}
+                {totalFilterCount}
               </Badge>
             )}
           </Button>
         )}
       </div>
 
-      {/* Selected keywords */}
-      {selectedKeywords.length > 0 && (
+      {/* Selected filters */}
+      {(selectedKeywords.length > 0 || selectedSources.length > 0) && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="text-xs text-muted-foreground">Filtering by:</span>
           {selectedKeywords.map((keyword) => (
             <Badge
-              key={keyword}
+              key={`keyword-${keyword}`}
               variant="secondary"
               className="flex items-center gap-1 pr-1"
             >
@@ -58,6 +64,23 @@ export function FeedFilters({
               {onRemoveKeyword && (
                 <button
                   onClick={() => onRemoveKeyword(keyword)}
+                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+          {selectedSources.map((source) => (
+            <Badge
+              key={`source-${source}`}
+              variant="outline"
+              className="flex items-center gap-1 pr-1"
+            >
+              <span className="capitalize">{source.split('.')[0]}</span>
+              {onRemoveSource && (
+                <button
+                  onClick={() => onRemoveSource(source)}
                   className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
                 >
                   <X className="w-3 h-3" />

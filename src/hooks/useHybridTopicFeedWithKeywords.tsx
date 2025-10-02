@@ -55,6 +55,12 @@ interface KeywordCount {
   count: number;
 }
 
+interface SourceCount {
+  source_name: string;
+  source_domain: string;
+  count: number;
+}
+
 const STORIES_PER_PAGE = 10;
 const DEBOUNCE_DELAY_MS = 500;
 
@@ -102,6 +108,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServerFiltering, setIsServerFiltering] = useState(false);
   const [availableKeywords, setAvailableKeywords] = useState<KeywordCount[]>([]);
+  
+  // Source filtering state
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [availableSources, setAvailableSources] = useState<SourceCount[]>([]);
   
   // Refs for debouncing
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -159,7 +169,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     topicData: any, 
     pageNum: number = 0, 
     append: boolean = false,
-    keywords: string[] | null = null
+    keywords: string[] | null = null,
+    sources: string[] | null = null
   ) => {
     try {
       if (pageNum === 0) setLoading(true);
@@ -432,9 +443,41 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setAvailableKeywords(keywords);
   }, []);
 
-  // Client-side filtering for immediate feedback - now handles mixed content and preserves chronology
-  const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[]) => {
-    if (keywords.length === 0) {
+  // Calculate available sources from all loaded stories
+  const updateAvailableSources = useCallback((stories: Story[]) => {
+    const sourceCounts = new Map<string, { domain: string; count: number }>();
+    
+    stories.forEach(story => {
+      if (story.article?.source_url) {
+        try {
+          const url = new URL(story.article.source_url);
+          const domain = url.hostname.replace(/^www\./, '');
+          const existing = sourceCounts.get(domain);
+          if (existing) {
+            existing.count++;
+          } else {
+            sourceCounts.set(domain, { domain, count: 1 });
+          }
+        } catch (e) {
+          // Invalid URL, skip
+        }
+      }
+    });
+
+    const sources = Array.from(sourceCounts.entries())
+      .map(([domain, { count }]) => ({
+        source_name: domain.split('.')[0],
+        source_domain: domain,
+        count
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    setAvailableSources(sources);
+  }, []);
+
+  // Client-side filtering for immediate feedback - now handles mixed content, keywords, and sources
+  const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[]) => {
+    if (keywords.length === 0 && sources.length === 0) {
       // Ensure content is sorted when no filters too
       return [...content].sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
     }
@@ -442,11 +485,29 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const filtered = content.filter(item => {
       if (item.type === 'story') {
         const story = item.data as Story;
-        const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
-        return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+        
+        // Check keyword filter
+        const keywordMatch = keywords.length === 0 || (() => {
+          const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
+          return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+        })();
+        
+        // Check source filter
+        const sourceMatch = sources.length === 0 || (() => {
+          if (!story.article?.source_url) return false;
+          try {
+            const url = new URL(story.article.source_url);
+            const domain = url.hostname.replace(/^www\./, '');
+            return sources.includes(domain);
+          } catch (e) {
+            return false;
+          }
+        })();
+        
+        return keywordMatch && sourceMatch;
       }
-      // Parliamentary mentions are not keyword-filtered for now
-      return false;
+      // Parliamentary mentions are not filtered
+      return keywords.length === 0 && sources.length === 0;
     });
 
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
@@ -484,10 +545,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       // Apply immediate client-side filtering if we have server-filtered data
       if (serverFilteredRef.current || newKeywords.length === 0) {
         const baseContent = newKeywords.length === 0 ? allContent : filteredContent;
-        setFilteredContent(applyClientSideFiltering(baseContent, newKeywords));
+        setFilteredContent(applyClientSideFiltering(baseContent, newKeywords, selectedSources));
       } else {
         // Apply client-side filtering immediately for responsiveness
-        setFilteredContent(applyClientSideFiltering(allContent, newKeywords));
+        setFilteredContent(applyClientSideFiltering(allContent, newKeywords, selectedSources));
       }
 
       // Debounce server-side filtering
@@ -497,10 +558,25 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       return newKeywords;
     });
-  }, [allStories, filteredStories, applyClientSideFiltering, triggerServerFiltering]);
+  }, [allContent, filteredContent, selectedSources, applyClientSideFiltering, triggerServerFiltering]);
+
+  // Handle source selection
+  const toggleSource = useCallback((sourceDomain: string) => {
+    setSelectedSources(prev => {
+      const newSources = prev.includes(sourceDomain)
+        ? prev.filter(s => s !== sourceDomain)
+        : [...prev, sourceDomain];
+
+      // Apply client-side filtering immediately
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, newSources));
+
+      return newSources;
+    });
+  }, [allContent, selectedKeywords, applyClientSideFiltering]);
 
   const clearAllFilters = useCallback(() => {
     setSelectedKeywords([]);
+    setSelectedSources([]);
     setFilteredContent(allContent);
     serverFilteredRef.current = false;
     
@@ -512,6 +588,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const removeKeyword = useCallback((keyword: string) => {
     toggleKeyword(keyword); // This will remove it since it's already selected
   }, [toggleKeyword]);
+
+  const removeSource = useCallback((sourceDomain: string) => {
+    toggleSource(sourceDomain); // This will remove it since it's already selected
+  }, [toggleSource]);
 
   const loadMore = useCallback(async () => {
     if (!topic || loadingMore || !hasMore) return;
@@ -554,12 +634,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [slug, loadTopic, loadStories]);
 
-  // Update available keywords when stories change
+  // Update available keywords and sources when stories change
   useEffect(() => {
-    if (filteredStories.length > 0 && topic?.keywords) {
-      updateAvailableKeywords(filteredStories, topic.keywords);
+    if (filteredStories.length > 0) {
+      if (topic?.keywords) {
+        updateAvailableKeywords(filteredStories, topic.keywords);
+      }
+      updateAvailableSources(filteredStories);
     }
-  }, [filteredStories, topic?.keywords, updateAvailableKeywords]);
+  }, [filteredStories, topic?.keywords, updateAvailableKeywords, updateAvailableSources]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
@@ -632,7 +715,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     toggleKeyword,
     clearAllFilters,
     removeKeyword,
-    hasActiveFilters: selectedKeywords.length > 0,
-    isServerFiltering
+    hasActiveFilters: selectedKeywords.length > 0 || selectedSources.length > 0,
+    isServerFiltering,
+    
+    // Source filtering
+    selectedSources,
+    availableSources,
+    toggleSource,
+    removeSource
   };
 };

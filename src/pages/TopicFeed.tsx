@@ -8,7 +8,7 @@ import { useSentimentCards } from "@/hooks/useSentimentCards";
 import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKeywords";
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
-import { KeywordFilterModal } from "@/components/KeywordFilterModal";
+import { FilterModal } from "@/components/FilterModal";
 import { Hash, MapPin, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -46,7 +46,11 @@ const TopicFeed = () => {
     clearAllFilters,
     removeKeyword,
     hasActiveFilters,
-    isServerFiltering
+    isServerFiltering,
+    selectedSources,
+    availableSources,
+    toggleSource,
+    removeSource
   } = useHybridTopicFeedWithKeywords(actualSlug || '');
 
   const { sentimentCards } = useSentimentCards(topic?.id);
@@ -260,18 +264,20 @@ const TopicFeed = () => {
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={removeKeyword}
+            selectedSources={selectedSources}
+            onRemoveSource={removeSource}
             hasActiveFilters={hasActiveFilters}
           />
         </div>
 
-        {/* Mobile-only selected keywords display */}
-        {selectedKeywords.length > 0 && (
+        {/* Mobile-only selected filters display */}
+        {(selectedKeywords.length > 0 || selectedSources.length > 0) && (
           <div className="mb-6 sm:hidden">
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="text-xs text-muted-foreground mb-2 w-full text-center">Filtering by:</span>
               {selectedKeywords.map((keyword) => (
                 <Badge
-                  key={keyword}
+                  key={`keyword-${keyword}`}
                   variant="secondary"
                   className="flex items-center gap-1 pr-1"
                 >
@@ -284,17 +290,35 @@ const TopicFeed = () => {
                   </button>
                 </Badge>
               ))}
+              {selectedSources.map((source) => (
+                <Badge
+                  key={`source-${source}`}
+                  variant="outline"
+                  className="flex items-center gap-1 pr-1"
+                >
+                  <span className="capitalize">{source.split('.')[0]}</span>
+                  <button
+                    onClick={() => removeSource(source)}
+                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Keyword Filter Modal */}
-        <KeywordFilterModal
+        {/* Filter Modal */}
+        <FilterModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           availableKeywords={availableKeywords}
           selectedKeywords={selectedKeywords}
           onKeywordToggle={toggleKeyword}
+          availableSources={availableSources}
+          selectedSources={selectedSources}
+          onSourceToggle={toggleSource}
           onClearAll={clearAllFilters}
         />
 
