@@ -85,6 +85,9 @@ verify_jwt = false
 [functions.nebius-image-generator]
 verify_jwt = false
 
+[functions.gemini-image-generator]
+verify_jwt = false
+
 [functions.midjourney-image-generator]
 verify_jwt = false
 

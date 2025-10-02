@@ -17,10 +17,10 @@ export const imageModels: ImageModel[] = [
   {
     id: 'gemini-image',
     name: 'Gemini Image (FREE)',
-    description: 'Google Gemini 2.5 Flash - Free until Oct 6, then $0.039',
-    costUsd: 0.039,
+    description: 'Google Gemini 2.5 Flash via Lovable AI - Free until Oct 6',
+    costUsd: 0.00,
     credits: 1,
-    provider: 'gemini'
+    provider: 'lovable-gemini'
   },
   {
     id: 'gpt-image-1',
