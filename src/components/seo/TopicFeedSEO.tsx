@@ -20,7 +20,7 @@ export const TopicFeedSEO = ({
   const feedUrl = `https://breef.pro/feed/topic/${topicSlug}`;
   const defaultDescription = `Stay updated with ${topicName}. Curated stories, insights, and analysis delivered in an engaging feed format.`;
   const description = topicDescription || defaultDescription;
-  const title = `${topicName} | breef`;
+  const title = `${topicName} | Breefly`;
   const imageUrl = logoUrl || 'https://breef.pro/placeholder.svg';
 
   // Generate structured data for the feed
@@ -47,7 +47,7 @@ export const TopicFeedSEO = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={imageUrl} />
-      <meta property="og:site_name" content="breef" />
+      <meta property="og:site_name" content="Breefly" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

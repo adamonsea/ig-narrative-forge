@@ -49,7 +49,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Welcome to the waitlist!",
-          description: "We'll notify you when breef is ready for you.",
+          description: "We'll notify you when Breefly is ready for you.",
         });
         setWaitlistEmail('');
       }
@@ -131,7 +131,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
-          <CardTitle className="text-3xl font-bold">breef</CardTitle>
+          <CardTitle className="text-3xl font-bold">Breefly</CardTitle>
           <div className="text-xs text-muted-foreground font-medium tracking-wider uppercase">
             Beta
           </div>
@@ -193,7 +193,7 @@ const Auth = () => {
                   {waitlistLoading ? 'Joining waitlist...' : 'Join Waitlist'}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  Be the first to know when breef opens up
+                  Be the first to know when Breefly opens up
                 </p>
               </form>
             </TabsContent>
