@@ -20,6 +20,7 @@ import { ParliamentaryVoteCard } from "@/components/ParliamentaryVoteCard";
 import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -31,11 +32,47 @@ const TopicFeed = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showFilterTip, setShowFilterTip] = useState(false);
+  const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed') === '1'
     setShowFilterTip(!dismissed)
   }, [])
+
+  useEffect(() => {
+    let active = true
+    const fetchMonthlyCount = async () => {
+      try {
+        const start = new Date()
+        start.setDate(1)
+        start.setHours(0,0,0,0)
+        const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
+          p_topic_slug: actualSlug,
+          p_keywords: null,
+          p_sources: null,
+          p_limit: 500,
+          p_offset: 0,
+        })
+        if (error) {
+          console.warn('Tooltip count RPC error:', error)
+          return
+        }
+        const storyMap = new Map<string, any>()
+        ;(data || []).forEach((row: any) => {
+          if (!storyMap.has(row.story_id)) storyMap.set(row.story_id, row)
+        })
+        const count = Array.from(storyMap.values()).filter((row: any) => {
+          const d = row.article_published_at ? new Date(row.article_published_at) : null
+          return d && d >= start
+        }).length
+        if (active) setMonthlyCount(count)
+      } catch (e) {
+        console.warn('Tooltip count fetch failed:', e)
+      }
+    }
+    if (actualSlug) fetchMonthlyCount()
+    return () => { active = false }
+  }, [actualSlug])
 
   const openFilterAndDismissTip = () => {
     localStorage.setItem('eezee_filter_tip_dismissed', '1')
@@ -201,7 +238,7 @@ const TopicFeed = () => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">### this month, pick a topic</div>
+                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -270,7 +307,7 @@ const TopicFeed = () => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="left" align="center" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">### this month, pick a topic</div>
+                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface FeedFiltersProps {
   slideCount: number;
+  monthlyCount?: number;
   // Keyword filtering props
   onFilterClick?: () => void;
   selectedKeywords?: string[];

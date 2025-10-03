@@ -177,13 +177,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       if (pageNum === 0) setLoading(true);
       else setLoadingMore(true);
 
-      const from = pageNum * STORIES_PER_PAGE;
+      // Use a larger raw rows limit to account for multiple slides per story
+      const rawLimit = STORIES_PER_PAGE * 8;
+      const from = pageNum * rawLimit;
       
       console.log('🔍 Phase 2: Loading stories with filters', { 
         topicId: topicData.id, 
         page: pageNum, 
         keywords: keywords?.length || 0,
-        sources: sources?.length || 0
+        sources: sources?.length || 0,
+        rawLimit,
+        from
       });
 
       // PHASE 2: Circuit breaker - 5 second timeout with AbortController
@@ -202,7 +206,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             p_topic_slug: slug,
             p_keywords: keywords,
             p_sources: sources, // PHASE 2: New source filtering parameter
-            p_limit: STORIES_PER_PAGE,
+            p_limit: rawLimit,
             p_offset: from
           })
           .abortSignal(controller.signal);
@@ -283,6 +287,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       });
       
       const uniqueStories = Array.from(storyMap.values());
+      const pageUniqueStories = uniqueStories.slice(0, STORIES_PER_PAGE);
 
       // Fetch popularity data for all stories
       const storyIds = Array.from(storyMap.keys());
@@ -309,7 +314,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Transform stories with slides data and popularity
-      const transformedStories = uniqueStories.map((story: any) => {
+      const transformedStories = pageUniqueStories.map((story: any) => {
         // Sort slides by slide_number
         const sortedSlides = story.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
           
@@ -439,9 +444,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
       
-      // Keep loading if we got a full page of results
-      // Only stop when we get LESS than a full page
-      setHasMore(uniqueStories.length === STORIES_PER_PAGE);
+      // Determine if there might be more data based on raw batch size
+      setHasMore((storiesData?.length || 0) === rawLimit);
       
     } catch (error) {
       console.error('Error loading stories:', error);
