@@ -3439,6 +3439,13 @@ export type Database = {
               p_keywords?: string[]
               p_limit?: number
               p_offset?: number
+              p_sources?: string[]
+              p_topic_slug: string
+            }
+          | {
+              p_keywords?: string[]
+              p_limit?: number
+              p_offset?: number
               p_topic_id: string
             }
           | {

@@ -178,23 +178,77 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       const from = pageNum * STORIES_PER_PAGE;
       
-      console.log('🔍 Hybrid Feed: Loading stories', { 
+      console.log('🔍 Phase 2: Loading stories with filters', { 
         topicId: topicData.id, 
         page: pageNum, 
-        keywords: keywords?.length || 0 
+        keywords: keywords?.length || 0,
+        sources: sources?.length || 0
       });
 
-      const { data: storiesData, error } = await supabase
-        .rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: slug,
-          p_keywords: keywords,
-          p_limit: STORIES_PER_PAGE,
-          p_offset: from
-        });
+      // PHASE 2: Circuit breaker - 5 second timeout with AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Phase 2: RPC timeout after 5 seconds, aborting...');
+        controller.abort();
+      }, 5000);
 
-      if (error) {
-        console.error('🚨 Hybrid feed error:', error);
-        throw error;
+      let storiesData: any[] | null = null;
+      let rpcError: any = null;
+
+      try {
+        const { data, error } = await supabase
+          .rpc('get_topic_stories_with_keywords', {
+            p_topic_slug: slug,
+            p_keywords: keywords,
+            p_sources: sources, // PHASE 2: New source filtering parameter
+            p_limit: STORIES_PER_PAGE,
+            p_offset: from
+          })
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
+        storiesData = data;
+        rpcError = error;
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          console.warn('⚠️ Phase 2: RPC aborted due to timeout');
+          rpcError = new Error('RPC timeout after 5 seconds');
+        } else {
+          rpcError = err;
+        }
+      }
+
+      // PHASE 2: If RPC failed, fall back to client-side filtering
+      if (rpcError) {
+        console.error('🚨 Phase 2: RPC failed, falling back to client-side filtering:', rpcError);
+        
+        if (!append && allContent.length > 0) {
+          // Apply client-side filtering to existing loaded content
+          console.log('🔄 Phase 2: Using client-side filtering on existing content');
+          const filtered = applyClientSideFiltering(
+            allContent, 
+            keywords || [], 
+            sources || []
+          );
+          setFilteredContent(filtered);
+          setHasMore(false); // Can't paginate with client-side filtering
+          return;
+        } else {
+          // No content to filter, throw error
+          throw rpcError;
+        }
+      }
+
+      if (!storiesData || storiesData.length === 0) {
+        console.log('📄 Phase 2: No stories found');
+        if (!append) {
+          setAllStories([]);
+          setAllContent([]);
+          setFilteredContent([]);
+        }
+        setHasMore(false);
+        return;
       }
 
       if (!storiesData || storiesData.length === 0) {
@@ -574,8 +628,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
   }, []);
 
-  // Debounced server-side filtering
-  const triggerServerFiltering = useCallback(async (keywords: string[]) => {
+  // Debounced server-side filtering with sources (Phase 2)
+  const triggerServerFiltering = useCallback(async (keywords: string[], sources: string[]) => {
     if (!topic) return;
 
     setIsServerFiltering(true);
@@ -584,14 +638,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     serverFilteredRef.current = false;
 
     try {
-      await loadStories(topic, 0, false, keywords.length > 0 ? keywords : null);
+      await loadStories(
+        topic, 
+        0, 
+        false, 
+        keywords.length > 0 ? keywords : null,
+        sources.length > 0 ? sources : null // PHASE 2: Pass sources to RPC
+      );
     } catch (error) {
-      console.error('Server filtering failed:', error);
+      console.error('Phase 2: Server filtering failed:', error);
       setIsServerFiltering(false);
     }
   }, [topic, loadStories]);
 
-  // Handle keyword selection with hybrid filtering
+  // Handle keyword selection with hybrid filtering (Phase 2: includes sources)
   const toggleKeyword = useCallback((keyword: string) => {
     setSelectedKeywords(prev => {
       const newKeywords = prev.includes(keyword)
@@ -612,28 +672,38 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         setFilteredContent(applyClientSideFiltering(allContent, newKeywords, selectedSources));
       }
 
-      // Debounce server-side filtering
+      // Debounce server-side filtering (PHASE 2: now includes sources)
       debounceRef.current = setTimeout(() => {
-        triggerServerFiltering(newKeywords);
+        triggerServerFiltering(newKeywords, selectedSources);
       }, DEBOUNCE_DELAY_MS);
 
       return newKeywords;
     });
   }, [allContent, filteredContent, selectedSources, applyClientSideFiltering, triggerServerFiltering]);
 
-  // Handle source selection
+  // Handle source selection (Phase 2: with server-side filtering)
   const toggleSource = useCallback((sourceDomain: string) => {
     setSelectedSources(prev => {
       const newSources = prev.includes(sourceDomain)
         ? prev.filter(s => s !== sourceDomain)
         : [...prev, sourceDomain];
 
-      // Apply client-side filtering immediately
+      // Clear existing debounce
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      // Apply client-side filtering immediately for responsiveness
       setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, newSources));
+
+      // PHASE 2: Debounce server-side filtering for sources too
+      debounceRef.current = setTimeout(() => {
+        triggerServerFiltering(selectedKeywords, newSources);
+      }, DEBOUNCE_DELAY_MS);
 
       return newSources;
     });
-  }, [allContent, selectedKeywords, applyClientSideFiltering]);
+  }, [allContent, selectedKeywords, applyClientSideFiltering, triggerServerFiltering]);
 
   const clearAllFilters = useCallback(() => {
     setSelectedKeywords([]);
@@ -660,12 +730,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     const nextPage = page + 1;
     setPage(nextPage);
     
+    // PHASE 2: Pass both keywords and sources when loading more filtered results
     const keywords = selectedKeywords.length > 0 && serverFilteredRef.current 
       ? selectedKeywords 
       : null;
+    
+    const sources = selectedSources.length > 0 && serverFilteredRef.current
+      ? selectedSources
+      : null;
       
-    await loadStories(topic, nextPage, true, keywords);
-  }, [topic, loadingMore, hasMore, page, selectedKeywords, loadStories]);
+    await loadStories(topic, nextPage, true, keywords, sources);
+  }, [topic, loadingMore, hasMore, page, selectedKeywords, selectedSources, loadStories]);
 
   const refresh = useCallback(async () => {
     if (!topic) return;
@@ -674,9 +749,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setHasMore(true);
     serverFilteredRef.current = false;
     
+    // PHASE 2: Refresh with both filters
     const keywords = selectedKeywords.length > 0 ? selectedKeywords : null;
-    await loadStories(topic, 0, false, keywords);
-  }, [topic, selectedKeywords, loadStories]);
+    const sources = selectedSources.length > 0 ? selectedSources : null;
+    await loadStories(topic, 0, false, keywords, sources);
+  }, [topic, selectedKeywords, selectedSources, loadStories]);
 
   // Initialize feed
   useEffect(() => {
