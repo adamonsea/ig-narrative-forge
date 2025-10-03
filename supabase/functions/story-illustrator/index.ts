@@ -214,7 +214,7 @@ Character representation: Ensure faces and figures reflect the diversity of cont
 
 CRITICAL: Match the emotional tone to the story content. ${expressionInstruction}
 
-Avoid: Dated aesthetics, retro styling (unless story-specific), defaulting to homogeneous demographics, overly complex hatching, mechanical precision.
+Avoid: Dated aesthetics, retro styling (unless story-specific), defaulting to homogeneous demographics, overly complex hatching, mechanical precision.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
