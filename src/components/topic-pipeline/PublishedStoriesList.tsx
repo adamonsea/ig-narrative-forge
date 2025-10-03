@@ -522,7 +522,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   className="h-8 ml-auto"
                 >
                   <a 
-                    href={`/story/${story.id}`} 
+                    href={topicSlug ? `/feed/topic/${topicSlug}/story/${story.id}` : `/story/${story.id}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                   >

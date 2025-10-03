@@ -280,7 +280,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   };
 
   const handleViewStory = (story: any) => {
-    if (story.id) {
+    if (story.id && topicSlug) {
+      window.open(`/feed/topic/${topicSlug}/story/${story.id}`, '_blank');
+    } else if (story.id) {
+      // Fallback if topicSlug not available
       window.open(`/story/${story.id}`, '_blank');
     }
   };

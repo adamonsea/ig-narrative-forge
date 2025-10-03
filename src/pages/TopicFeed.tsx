@@ -449,6 +449,11 @@ const TopicFeed = () => {
               
               if (contentItem.type === 'story') {
                 const story = contentItem.data as any;
+                // Generate proper story URL based on feed type
+                const storyShareUrl = window.location.pathname === '/feed/eastbourne' 
+                  ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
+                  : `${window.location.origin}/feed/topic/${actualSlug}/story/${story.id}`;
+                
                 items.push(
                   <div
                     key={`story-${story.id}`}
@@ -456,7 +461,7 @@ const TopicFeed = () => {
                   >
                     <StoryCarousel 
                       story={story} 
-                      storyUrl={`${window.location.origin}/feed/topic/${slug}/story/${story.id}`}
+                      storyUrl={storyShareUrl}
                       topicId={topic?.id}
                       storyIndex={index}
                     />
