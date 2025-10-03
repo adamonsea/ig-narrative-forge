@@ -251,41 +251,40 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         return;
       }
 
-      if (!storiesData || storiesData.length === 0) {
-        console.log('📄 No stories found');
-        if (!append) {
-          setAllStories([]);
-          setAllContent([]);
-          setFilteredContent([]);
-        }
-        setHasMore(false);
-        return;
-      }
-
-      // Load slides for each story
-      const storyIds = storiesData.map((story: any) => story.id);
-      let slidesData: any[] = [];
-      
-      if (storyIds.length > 0) {
-        const { data: slides, error: slidesError } = await supabase
-          .rpc('get_public_slides_for_stories', {
-            p_story_ids: storyIds
+      // Group RPC results by story_id since it returns one row per slide
+      const storyMap = new Map();
+      storiesData.forEach((row: any) => {
+        if (!storyMap.has(row.story_id)) {
+          storyMap.set(row.story_id, {
+            id: row.story_id,
+            title: row.story_title,
+            status: row.story_status,
+            is_published: row.story_is_published,
+            created_at: row.story_created_at,
+            cover_illustration_url: row.story_cover_url,
+            article_source_url: row.article_source_url,
+            article_published_at: row.article_published_at,
+            article_id: row.article_id,
+            shared_content_id: row.shared_content_id,
+            slides: []
           });
-        
-        if (slidesError) {
-          console.warn('⚠️ Failed to load slides via RPC:', slidesError);
-          const { data: fallbackSlides } = await supabase
-            .from('slides')
-            .select('*')
-            .in('story_id', storyIds)
-            .order('slide_number', { ascending: true });
-          slidesData = fallbackSlides || [];
-        } else {
-          slidesData = slides || [];
         }
-      }
+        
+        // Add slide if it exists
+        if (row.slide_id) {
+          storyMap.get(row.story_id).slides.push({
+            id: row.slide_id,
+            slide_number: row.slide_number,
+            content: row.slide_content,
+            word_count: 0
+          });
+        }
+      });
+      
+      const uniqueStories = Array.from(storyMap.values());
 
       // Fetch popularity data for all stories
+      const storyIds = Array.from(storyMap.keys());
       let popularityMap = new Map();
       if (storyIds.length > 0) {
         try {
@@ -309,31 +308,21 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Transform stories with slides data and popularity
-      const transformedStories = storiesData.map((story: any) => {
-        const storySlides = slidesData
-          .filter((slide: any) => slide.story_id === story.id)
-          .map((slide: any) => ({
-            id: slide.id,
-            slide_number: slide.slide_number,
-            content: slide.content,
-            word_count: slide.word_count || 0,
-            visual: slide.visuals && slide.visuals[0] ? {
-              image_url: slide.visuals[0].image_url,
-              alt_text: slide.visuals[0].alt_text || ''
-            } : undefined
-          }));
+      const transformedStories = uniqueStories.map((story: any) => {
+        // Sort slides by slide_number
+        const sortedSlides = story.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
           
         return {
           id: story.id,
           title: story.title,
-          author: story.author || 'Unknown',
+          author: 'Unknown',
           publication_name: '',
           created_at: story.created_at,
-          updated_at: story.updated_at,
+          updated_at: story.created_at,
           cover_illustration_url: story.cover_illustration_url,
-          cover_illustration_prompt: story.cover_illustration_prompt,
+          cover_illustration_prompt: '',
           popularity_data: popularityMap.get(story.id),
-          slides: storySlides,
+          slides: sortedSlides,
           article: {
             source_url: story.article_source_url || '#',
             published_at: story.article_published_at,
@@ -379,10 +368,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       // Defensive deduplication: use Map to ensure each ID appears exactly once
       const contentMap = new Map<string, FeedContent>();
       [...storyContent, ...parliamentaryContent].forEach(item => {
-        if (!contentMap.has(item.id)) {
-          contentMap.set(item.id, item);
-        } else {
-          console.warn(`⚠️ Duplicate content ID detected and removed: ${item.id.substring(0, 8)}...`);
+        if (item?.id) {
+          if (!contentMap.has(item.id)) {
+            contentMap.set(item.id, item);
+          } else {
+            console.warn(`⚠️ Duplicate content ID detected and removed: ${item.id.substring(0, 8)}...`);
+          }
         }
       });
 

@@ -331,10 +331,12 @@ const TopicFeed = () => {
               const duplicates: string[] = [];
               
               filteredContent.forEach(item => {
-                if (seenIds.has(item.id)) {
-                  duplicates.push(item.id.substring(0, 8));
-                } else {
-                  seenIds.add(item.id);
+                if (item?.id) {
+                  if (seenIds.has(item.id)) {
+                    duplicates.push(item.id.substring(0, 8));
+                  } else {
+                    seenIds.add(item.id);
+                  }
                 }
               });
               
