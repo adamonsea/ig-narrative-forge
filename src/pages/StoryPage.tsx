@@ -54,7 +54,7 @@ const StoryPage = () => {
         const { data: topicData, error: topicError } = await supabase
           .from('topics')
           .select('id, name, slug, topic_type')
-          .eq('slug', slug)
+          .ilike('slug', slug)
           .eq('is_active', true)
           .single();
 
