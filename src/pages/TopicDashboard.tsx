@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { ManualContentStaging } from "@/components/ManualContentStaging";
+import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
 import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
@@ -169,10 +170,12 @@ const TopicDashboard = () => {
         .select('id', { count: 'exact' })
         .in('article_id', articleIds) : { count: 0 };
 
-      const sourcesRes = await supabase
-        .from('content_sources')
-        .select('id', { count: 'exact' })
-        .eq('topic_id', topicData.id);
+      // Use topic_sources junction table for accurate source count
+      const { data: topicSources, count: sourcesCount } = await supabase
+        .from('topic_sources')
+        .select('source_id', { count: 'exact' })
+        .eq('topic_id', topicData.id)
+        .eq('is_active', true);
 
       const pendingArticlesRes = await supabase
         .from('articles')
@@ -218,7 +221,7 @@ const TopicDashboard = () => {
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
-        sources: sourcesRes.count || 0,
+        sources: sourcesCount || 0,
         pending_articles: pendingArticlesRes.count || 0,
         processing_queue: queueRes.count || 0,
         ready_stories: readyStoriesRes.count || 0,
@@ -239,34 +242,56 @@ const TopicDashboard = () => {
     }
   };
 
+  const [jobRunId, setJobRunId] = useState<string | null>(null);
+  const [showGatheringProgress, setShowGatheringProgress] = useState(false);
+
   const handleGatherAll = async () => {
     if (!topic) return;
     
     setGatheringAll(true);
+    setShowGatheringProgress(true);
     try {
-      // Call the universal scraper for this topic
-      const response = await supabase.functions.invoke('universal-topic-scraper', {
-        body: { topicId: topic.id }
+      // Call universal-topic-automation with force=true for comprehensive gathering
+      const response = await supabase.functions.invoke('universal-topic-automation', {
+        body: { 
+          topicIds: [topic.id],
+          force: true,
+          dryRun: false,
+          maxAgeDays: 30 // Scrape articles from last 30 days
+        }
       });
 
       if (response.error) throw response.error;
       
+      const jobId = response.data?.jobRunId;
+      if (jobId) {
+        setJobRunId(jobId);
+      }
+      
       toast({
         title: "Gathering Started",
-        description: "Content gathering initiated for all sources",
+        description: "Comprehensive content gathering initiated across all sources",
       });
       
-      // Refresh stats after a short delay
-      setTimeout(loadTopicAndStats, 2000);
+      // Refresh stats periodically
+      const refreshInterval = setInterval(() => {
+        loadTopicAndStats();
+      }, 5000);
+      
+      setTimeout(() => {
+        clearInterval(refreshInterval);
+        setGatheringAll(false);
+      }, 60000); // Stop polling after 1 minute
+      
     } catch (error) {
       console.error('Error gathering content:', error);
       toast({
         title: "Error",
-        description: "Failed to start content gathering",
+        description: error instanceof Error ? error.message : "Failed to start content gathering",
         variant: "destructive"
       });
-    } finally {
       setGatheringAll(false);
+      setShowGatheringProgress(false);
     }
   };
 
@@ -749,6 +774,25 @@ const TopicDashboard = () => {
                       sentimentSection.scrollIntoView({ behavior: 'smooth' });
                     }
                   }, 100);
+                }}
+              />
+            )}
+            
+            {/* Gathering Progress Indicator */}
+            {showGatheringProgress && (
+              <GatheringProgressIndicator 
+                topicId={topic.id}
+                jobRunId={jobRunId}
+                isVisible={showGatheringProgress}
+                onComplete={() => {
+                  setShowGatheringProgress(false);
+                  setGatheringAll(false);
+                  setJobRunId(null);
+                  loadTopicAndStats();
+                  toast({
+                    title: "Gathering Complete",
+                    description: "All sources have been processed",
+                  });
                 }}
               />
             )}

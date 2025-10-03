@@ -10,6 +10,7 @@ interface AutomationRequest {
   topicIds?: string[];
   dryRun?: boolean;
   force?: boolean;
+  maxAgeDays?: number;
 }
 
 serve(async (req) => {
@@ -17,18 +18,42 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let jobRunId: string | null = null;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Missing Supabase environment variables' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { topicIds, dryRun = false, force = false } = await req.json() as AutomationRequest;
+    const { topicIds, dryRun = false, force = false, maxAgeDays = 7 } = await req.json() as AutomationRequest;
 
     console.log('Universal Topic Automation - Starting automation check');
+
+    // Create job run for tracking
+    const { data: jobRun, error: jobError } = await supabase
+      .from('job_runs')
+      .insert({
+        job_type: 'topic_automation',
+        status: 'pending',
+        input_data: { topicIds, dryRun, force, maxAgeDays },
+        scheduled_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (jobError) {
+      console.error('Failed to create job run:', jobError);
+    } else {
+      jobRunId = jobRun.id;
+      console.log('Created job run:', jobRunId);
+    }
 
     // Get topics that need scraping
     let topicsQuery = supabase
@@ -91,6 +116,7 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           dryRun: true,
+          jobRunId,
           topicsToScrape: topicsToScrape.map(t => ({
             id: t.id,
             name: t.name,
@@ -101,6 +127,17 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Update job to processing
+    if (jobRunId) {
+      await supabase
+        .from('job_runs')
+        .update({
+          status: 'processing',
+          started_at: new Date().toISOString()
+        })
+        .eq('id', jobRunId);
     }
 
     const results = [];
@@ -182,9 +219,27 @@ serve(async (req) => {
     const successfulTopics = results.filter(r => r.success).length;
     const totalArticles = results.reduce((sum, r) => sum + (r.articlesScraped || 0), 0);
 
+    // Update job run to completed
+    if (jobRunId) {
+      await supabase
+        .from('job_runs')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          output_data: {
+            topicsProcessed: topicsToScrape.length,
+            successfulTopics,
+            totalArticles,
+            results
+          }
+        })
+        .eq('id', jobRunId);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
+        jobRunId,
         topicsProcessed: topicsToScrape.length,
         successfulTopics,
         totalArticles,
@@ -201,6 +256,22 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Universal Topic Automation Error:', error);
+    
+    // Update job run to failed if it exists
+    if (jobRunId) {
+      try {
+        await supabase
+          .from('job_runs')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : String(error),
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', jobRunId);
+      } catch (updateError) {
+        console.error('Failed to update job run:', updateError);
+      }
+    }
     
     return new Response(
       JSON.stringify({

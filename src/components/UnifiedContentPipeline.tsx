@@ -401,8 +401,13 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No articles available</p>
-                <p className="text-sm mt-2">Articles will appear here when scraped</p>
+                <p className="font-semibold">No new arrivals</p>
+                <p className="text-sm mt-2">
+                  New articles appear here when scraped. Already processed articles are moved to Published.
+                </p>
+                <p className="text-xs mt-3 text-muted-foreground/70">
+                  💡 Tip: Use "Gather All" to fetch fresh content from all sources
+                </p>
               </CardContent>
             </Card>
           ) : (

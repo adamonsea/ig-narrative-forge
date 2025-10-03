@@ -18,35 +18,68 @@ interface GatheringStatus {
 interface GatheringProgressIndicatorProps {
   topicId: string;
   isVisible: boolean;
+  jobRunId?: string | null;
   onComplete?: () => void;
 }
 
 export const GatheringProgressIndicator = ({ 
   topicId, 
-  isVisible, 
+  isVisible,
+  jobRunId,
   onComplete 
 }: GatheringProgressIndicatorProps) => {
   const [gatheringStatuses, setGatheringStatuses] = useState<GatheringStatus[]>([]);
   const [totalProgress, setTotalProgress] = useState(0);
+  const [jobStatus, setJobStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
 
   useEffect(() => {
     if (!isVisible || !topicId) return;
 
     const fetchGatheringStatus = async () => {
       try {
-        // Get all active sources for this topic
-        const { data: sources, error } = await supabase
-          .from('content_sources')
-          .select('id, source_name, last_scraped_at, success_rate, articles_scraped')
+        // Check job run status if available
+        if (jobRunId) {
+          const { data: jobRun } = await supabase
+            .from('job_runs')
+            .select('status, output_data')
+            .eq('id', jobRunId)
+            .single();
+          
+          if (jobRun) {
+            setJobStatus(jobRun.status as any);
+            
+            if (jobRun.status === 'completed' && onComplete) {
+              onComplete();
+              return;
+            }
+          }
+        }
+
+        // Get all sources for this topic via junction table
+        const { data: topicSources, error: sourcesError } = await supabase
+          .from('topic_sources')
+          .select(`
+            source_id,
+            content_sources:source_id (
+              id,
+              source_name,
+              last_scraped_at,
+              success_rate,
+              articles_scraped
+            )
+          `)
           .eq('topic_id', topicId)
           .eq('is_active', true);
 
-        if (error) throw error;
+        if (sourcesError) throw sourcesError;
 
-        const statuses: GatheringStatus[] = sources?.map(source => {
+        const statuses: GatheringStatus[] = topicSources?.map(ts => {
+          const source = ts.content_sources as any;
+          if (!source) return null;
+          
           // Determine status based on recent activity and success rate
           const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
-          const isRecent = lastScraped && (Date.now() - lastScraped.getTime()) < 60000; // Within last minute
+          const isRecent = lastScraped && (Date.now() - lastScraped.getTime()) < 300000; // Within last 5 minutes
           
           let status: GatheringStatus['status'] = 'pending';
           let progress = 0;
@@ -57,18 +90,12 @@ export const GatheringProgressIndicator = ({
               status = 'completed';
               progress = 100;
             } else {
-              status = 'failed';
-              progress = 100;
+              status = 'processing';
+              progress = 50;
             }
-          } else if (source.success_rate === 0 && source.articles_scraped > 0) {
-            status = 'failed';
-            progress = 100;
-          } else if (source.success_rate > 0) {
+          } else if (source.articles_scraped > 0) {
             status = 'completed';
             progress = 100;
-          } else {
-            status = 'pending';
-            progress = 0;
           }
 
           return {
@@ -78,21 +105,25 @@ export const GatheringProgressIndicator = ({
             articlesFound,
             progress,
             lastUpdate: source.last_scraped_at || new Date().toISOString(),
-            error: source.success_rate === 0 && source.articles_scraped > 0 ? 'Content gathering failed' : undefined
+            error: source.success_rate === 0 && isRecent ? 'Gathering in progress' : undefined
           };
-        }) || [];
+        }).filter(Boolean) as GatheringStatus[] || [];
 
         setGatheringStatuses(statuses);
 
         // Calculate overall progress
-        const completedSources = statuses.filter(s => s.status === 'completed' || s.status === 'failed').length;
+        const completedSources = statuses.filter(s => s.status === 'completed').length;
+        const processingSources = statuses.filter(s => s.status === 'processing').length;
         const totalSources = statuses.length;
-        const overallProgress = totalSources > 0 ? (completedSources / totalSources) * 100 : 0;
-        setTotalProgress(overallProgress);
+        
+        if (totalSources > 0) {
+          const overallProgress = ((completedSources + (processingSources * 0.5)) / totalSources) * 100;
+          setTotalProgress(overallProgress);
+        }
 
-        // Call onComplete if all sources are done
-        if (overallProgress === 100 && onComplete) {
-          onComplete();
+        // Auto-complete if job is done or all sources completed
+        if ((jobStatus === 'completed' || totalProgress >= 100) && onComplete) {
+          setTimeout(() => onComplete(), 2000);
         }
 
       } catch (error) {
@@ -103,11 +134,11 @@ export const GatheringProgressIndicator = ({
     // Initial fetch
     fetchGatheringStatus();
 
-    // Set up polling every 3 seconds
-    const interval = setInterval(fetchGatheringStatus, 3000);
+    // Set up polling every 5 seconds
+    const interval = setInterval(fetchGatheringStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [topicId, isVisible, onComplete]);
+  }, [topicId, isVisible, jobRunId, jobStatus, totalProgress, onComplete]);
 
   if (!isVisible || gatheringStatuses.length === 0) {
     return null;
@@ -140,15 +171,22 @@ export const GatheringProgressIndicator = ({
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
+          {jobStatus === 'completed' ? (
+            <CheckCircle className="w-5 h-5 text-green-500" />
+          ) : (
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          )}
           Content Gathering Progress
+          {jobStatus === 'completed' && (
+            <Badge variant="default" className="ml-2 bg-green-500">Complete</Badge>
+          )}
         </CardTitle>
-        <Progress value={totalProgress} className="w-full" />
-        <p className="text-sm text-muted-foreground">
-          {Math.round(totalProgress)}% complete ({gatheringStatuses.filter(s => s.status === 'completed' || s.status === 'failed').length} of {gatheringStatuses.length} sources)
+        <Progress value={totalProgress} className="w-full mt-2" />
+        <p className="text-sm text-muted-foreground mt-1">
+          {Math.round(totalProgress)}% complete ({gatheringStatuses.filter(s => s.status === 'completed').length} of {gatheringStatuses.length} sources)
         </p>
       </CardHeader>
       <CardContent>
