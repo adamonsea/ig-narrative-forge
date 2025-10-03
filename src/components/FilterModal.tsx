@@ -2,8 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Hash, Globe } from "lucide-react";
+import { Hash, Globe, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useMemo } from "react";
 
 interface KeywordCount {
   keyword: string;
@@ -40,6 +41,27 @@ export const FilterModal = ({
   onClearAll
 }: FilterModalProps) => {
   const totalSelected = selectedKeywords.length + selectedSources.length;
+
+  const [showAllKeywords, setShowAllKeywords] = useState(false);
+  const [showAllSources, setShowAllSources] = useState(false);
+
+  const sortedKeywords = useMemo(
+    () => [...availableKeywords].sort((a, b) => b.count - a.count),
+    [availableKeywords]
+  );
+  const filteredKeywords = useMemo(
+    () => sortedKeywords.filter(({ keyword }) => keyword.length > 2),
+    [sortedKeywords]
+  );
+  const displayedKeywords = showAllKeywords ? filteredKeywords : filteredKeywords.slice(0, 10);
+  const hasMoreKeywords = filteredKeywords.length > 10;
+
+  const sortedSources = useMemo(
+    () => [...availableSources].sort((a, b) => b.count - a.count),
+    [availableSources]
+  );
+  const displayedSources = showAllSources ? sortedSources : sortedSources.slice(0, 10);
+  const hasMoreSources = sortedSources.length > 10;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -78,12 +100,10 @@ export const FilterModal = ({
           </TabsList>
 
           <TabsContent value="keywords" className="mt-4 space-y-4">
-            {availableKeywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto">
-                {availableKeywords
-                  .filter(({ keyword }) => keyword.length > 2)
-                  .slice(0, 30)
-                  .map(({ keyword, count }) => {
+            {filteredKeywords.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {displayedKeywords.map(({ keyword, count }) => {
                     const isSelected = selectedKeywords.includes(keyword);
                     return (
                       <button
@@ -101,9 +121,31 @@ export const FilterModal = ({
                         <span className="text-xs opacity-70">({count})</span>
                       </button>
                     );
-                  })
-                }
-              </div>
+                  })}
+                </div>
+                {hasMoreKeywords && (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllKeywords(!showAllKeywords)}
+                      className="text-xs"
+                    >
+                      {showAllKeywords ? (
+                        <>
+                          <ChevronUp className="w-3 h-3 mr-1" />
+                          Show less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3 h-3 mr-1" />
+                          Show {filteredKeywords.length - 10} more keywords
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -116,28 +158,52 @@ export const FilterModal = ({
           </TabsContent>
 
           <TabsContent value="sources" className="mt-4 space-y-4">
-            {availableSources.length > 0 ? (
-              <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto">
-                {availableSources.map(({ source_name, source_domain, count }) => {
-                  const isSelected = selectedSources.includes(source_domain);
-                  return (
-                    <button
-                      key={source_domain}
-                      onClick={() => onSourceToggle(source_domain)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                        "hover:scale-105 active:scale-95",
-                        isSelected 
-                          ? "bg-primary text-primary-foreground shadow-sm" 
-                          : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-                      )}
+            {sortedSources.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {displayedSources.map(({ source_name, source_domain, count }) => {
+                    const isSelected = selectedSources.includes(source_domain);
+                    return (
+                      <button
+                        key={source_domain}
+                        onClick={() => onSourceToggle(source_domain)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                          "hover:scale-105 active:scale-95",
+                          isSelected 
+                            ? "bg-primary text-primary-foreground shadow-sm" 
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <span className="capitalize">{source_name}</span>
+                        <span className="text-xs opacity-70">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {hasMoreSources && (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllSources(!showAllSources)}
+                      className="text-xs"
                     >
-                      <span className="capitalize">{source_name}</span>
-                      <span className="text-xs opacity-70">({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
+                      {showAllSources ? (
+                        <>
+                          <ChevronUp className="w-3 h-3 mr-1" />
+                          Show less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3 h-3 mr-1" />
+                          Show {sortedSources.length - 10} more sources
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />

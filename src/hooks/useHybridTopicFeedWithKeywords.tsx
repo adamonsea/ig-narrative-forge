@@ -116,6 +116,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Refs for debouncing
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const serverFilteredRef = useRef(false);
+  const preferGlobalFiltersRef = useRef(false);
   
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
@@ -556,11 +557,27 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         count: Number(item.count)
       }));
 
+      // Enrich source names using content_sources table for full names
+      const domains = sourceData.map(item => item.filter_value);
+      let domainToName: Record<string, string> = {};
+      if (domains.length > 0) {
+        const { data: srcRows, error: srcErr } = await supabase
+          .from('content_sources')
+          .select('canonical_domain, source_name')
+          .in('canonical_domain', domains);
+        if (!srcErr && srcRows) {
+          srcRows.forEach((row: any) => {
+            domainToName[row.canonical_domain] = row.source_name || row.canonical_domain;
+          });
+        }
+      }
+
       const globalSources: SourceCount[] = sourceData.map(item => {
         const domain = item.filter_value;
-        const displayName = domain.split('.')[0];
+        const name = domainToName[domain] || domain.replace(/^www\./, '').split('.')[0];
+        const pretty = name.charAt(0).toUpperCase() + name.slice(1);
         return {
-          source_name: displayName.charAt(0).toUpperCase() + displayName.slice(1),
+          source_name: pretty,
           source_domain: domain,
           count: Number(item.count)
         };
@@ -573,6 +590,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       setAvailableKeywords(globalKeywords);
       setAvailableSources(globalSources);
+      preferGlobalFiltersRef.current = true;
       
       return true; // Signal success
     } catch (error: any) {
@@ -779,10 +797,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Update available keywords and sources when stories change
   useEffect(() => {
     if (filteredStories.length > 0) {
-      if (topic?.keywords) {
-        updateAvailableKeywords(filteredStories, topic.keywords);
+      // Do not override global DB-driven options if we have them
+      if (!preferGlobalFiltersRef.current) {
+        if (topic?.keywords) {
+          updateAvailableKeywords(filteredStories, topic.keywords);
+        }
+        updateAvailableSources(filteredStories);
       }
-      updateAvailableSources(filteredStories);
     }
   }, [filteredStories, topic?.keywords, updateAvailableKeywords, updateAvailableSources]);
 
