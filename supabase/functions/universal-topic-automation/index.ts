@@ -94,17 +94,19 @@ serve(async (req) => {
 
     const now = new Date();
     const topicsToScrape = topics.filter(topic => {
+      // When force=true, include all active topics regardless of automation settings
+      if (force) {
+        return true;
+      }
+
+      // Otherwise, only include topics with active automation settings
       if (!topic.topic_automation_settings?.[0]?.is_active) {
         return false;
       }
 
       const settings = topic.topic_automation_settings[0];
       
-      if (force) {
-        return true;
-      }
-
-      // Check if it's time to scrape
+      // Check if it's time to scrape based on schedule
       const nextRunAt = new Date(settings.next_run_at);
       return now >= nextRunAt;
     });
@@ -162,18 +164,20 @@ serve(async (req) => {
           throw new Error(`Scraping failed: ${scrapeError.message}`);
         }
 
-        // Update automation settings
-        const settings = topic.topic_automation_settings[0];
-        const nextRunAt = new Date(now.getTime() + (settings.scrape_frequency_hours * 60 * 60 * 1000));
+        // Update automation settings if they exist
+        if (topic.topic_automation_settings?.[0]) {
+          const settings = topic.topic_automation_settings[0];
+          const nextRunAt = new Date(now.getTime() + (settings.scrape_frequency_hours * 60 * 60 * 1000));
 
-        await supabase
-          .from('topic_automation_settings')
-          .update({
-            last_run_at: now.toISOString(),
-            next_run_at: nextRunAt.toISOString(),
-            updated_at: now.toISOString()
-          })
-          .eq('topic_id', topic.id);
+          await supabase
+            .from('topic_automation_settings')
+            .update({
+              last_run_at: now.toISOString(),
+              next_run_at: nextRunAt.toISOString(),
+              updated_at: now.toISOString()
+            })
+            .eq('topic_id', topic.id);
+        }
 
         results.push({
           topicId: topic.id,
