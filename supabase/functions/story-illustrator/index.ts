@@ -190,22 +190,31 @@ Respond with ONE word only from: serious, lighthearted, playful, contentious, so
 
     const expressionInstruction = toneGuidance[storyTone] || toneGuidance['balanced'];
 
-    // Generate optimized illustration prompt with Private Eye satirical editorial cartoon style
-    const illustrationPrompt = `Create a satirical editorial cartoon in the style of Private Eye magazine. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    // Generate optimized illustration prompt with modern, diverse editorial cartoon style
+    const illustrationPrompt = `Create a contemporary editorial cartoon illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 Visual concept: "${story.title}"
 
 Tone: ${storyTone.toUpperCase()} - ${expressionInstruction}
 
-Style: PEN AND INK ONLY - hand-drawn quality, confident but slightly imperfect lines. Think Private Eye magazine covers - clarity and simplicity above all. 
+Style: Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated.
 
-Line work: Drawn by an experienced editorial cartoonist - lines should feel certain and authoritative but NOT mechanically perfect. Hand-drawn confidence with natural variation - not sketchy, but not geometrically precise either. The authority of a practiced hand.
+DIVERSITY & REPRESENTATION: 
+- Depict people of varied ethnicities, ages, genders, and backgrounds that reflect modern diverse society
+- Avoid defaulting to middle-aged white men unless specifically relevant to the story
+- Show vibrant, contemporary settings and fashion unless the story specifically requires historical context
+- Represent places and topics as dynamic, colorful, and modern rather than dour or dated
+- When depicting groups, ensure visual diversity in skin tones, hairstyles, ages, and styles
 
-Composition: Solid black ink on pure white (#FFFFFF) background. NO gray tones, NO shading, NO cross-hatching. Clean, economical linework with maximum clarity. Witty and satirical but intelligent. Simple shapes, immediately readable. British satirical cartoon aesthetic - sharp, clear, unfussy.
+Line work: Drawn with skilled confidence - lines that feel certain and expressive but naturally hand-drawn. Contemporary illustration style, not geometric or mechanical. Fresh and current aesthetic.
+
+Composition: Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition.
+
+Character representation: Ensure faces and figures reflect the diversity of contemporary society. Mix of ages, ethnicities, body types, and styles unless the story specifically calls for particular demographics.
 
 CRITICAL: Match the emotional tone to the story content. ${expressionInstruction}
 
-Avoid: Cross-hatching, dense pen work, intricate detail, mechanical precision, overly geometric shapes.`;
+Avoid: Dated aesthetics, retro styling (unless story-specific), defaulting to homogeneous demographics, overly complex hatching, mechanical precision.
 
     // Generate image based on selected model
     const startTime = Date.now()
