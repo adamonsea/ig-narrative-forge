@@ -131,7 +131,7 @@ const TopicDashboard = () => {
 
       if (!hasAdminAccess) {
         // Redirect non-owners to the public feed view instead of throwing error
-        window.location.href = `/feed/topic/${slug}`;
+        window.location.href = `/feed/${slug}`;
         return;
       }
 
@@ -454,7 +454,7 @@ const TopicDashboard = () => {
           <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
             <CardContent className="p-6 relative">
               <Button variant="outline" asChild className="absolute top-4 right-4 z-10">
-                <Link to={`/feed/topic/${topic.slug}`} target="_blank">
+                <Link to={`/feed/${topic.slug}`} target="_blank">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   View Feed
                 </Link>
@@ -720,7 +720,7 @@ const TopicDashboard = () => {
               </div>
               
               <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
-                <Link to={`/feed/topic/${topic.slug}`} target="_blank">
+                <Link to={`/feed/${topic.slug}`} target="_blank">
                   <Globe className="w-4 h-4 mr-2" />
                   Preview Feed
                 </Link>

@@ -515,14 +515,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               )}
 
               {!topicSlug && story.is_published && (
-                <Button
+                <Button 
                   variant="ghost"
                   size="sm"
                   asChild
                   className="h-8 ml-auto"
                 >
                   <a 
-                    href={topicSlug ? `/feed/topic/${topicSlug}/story/${story.id}` : `/story/${story.id}`} 
+                    href={topicSlug ? `/feed/${topicSlug}/story/${story.id}` : `/story/${story.id}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                   >

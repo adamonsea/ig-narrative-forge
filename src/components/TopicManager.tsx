@@ -484,7 +484,7 @@ export const TopicManager = () => {
                           className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
                           onClick={(e) => e.preventDefault()}
                         >
-                          <Link to={`/feed/topic/${topic.slug}`}>
+                          <Link to={`/feed/${topic.slug}`}>
                             Feed
                           </Link>
                         </Button>

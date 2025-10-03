@@ -17,7 +17,7 @@ export const TopicFeedSEO = ({
   region,
   logoUrl
 }: TopicFeedSEOProps) => {
-  const feedUrl = `https://breef.pro/feed/topic/${topicSlug}`;
+  const feedUrl = `https://breef.pro/feed/${topicSlug}`;
   const defaultDescription = `Stay updated with ${topicName}. Curated stories, insights, and analysis delivered in an engaging feed format.`;
   const description = topicDescription || defaultDescription;
   const title = `${topicName} | Breefly`;

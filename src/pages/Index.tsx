@@ -67,7 +67,7 @@ const Index = () => {
               </Button>
             )}
             <Button size="lg" variant="ghost" asChild>
-              <Link to="/feed/topic/ai-for-agency">
+              <Link to="/feed/ai-for-agency">
                 View Demo
               </Link>
             </Button>
