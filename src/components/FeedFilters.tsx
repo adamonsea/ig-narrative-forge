@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FeedFiltersProps {
   slideCount: number;
@@ -25,28 +27,51 @@ export function FeedFilters({
   hasActiveFilters = false
 }: FeedFiltersProps) {
   const totalFilterCount = selectedKeywords.length + selectedSources.length;
+  const [showTip, setShowTip] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed') === '1'
+    setShowTip(!dismissed)
+  }, [])
+
+  const handleFilterClick = () => {
+    localStorage.setItem('eezee_filter_tip_dismissed', '1')
+    setShowTip(false)
+    onFilterClick?.()
+  }
+
   return (
     <div className="space-y-4">
       {/* Main filter controls */}
       <div className="flex items-center justify-center gap-4">
         {/* Filter button */}
         {onFilterClick && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onFilterClick}
-            className={cn(
-              "relative",
-              hasActiveFilters && "border-primary text-primary"
-            )}
-          >
-            <Filter className="w-4 h-4" />
-            {hasActiveFilters && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs">
-                {totalFilterCount}
-              </Badge>
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip open={showTip}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFilterClick}
+                  className={cn(
+                    "relative",
+                    hasActiveFilters && "border-primary text-primary"
+                  )}
+                >
+                  <Filter className="w-4 h-4" />
+                  {hasActiveFilters && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs">
+                      {totalFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="center" className="z-[60] max-w-xs text-center">
+                <div className="font-semibold">### this month, pick a topic</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
         )}
       </div>
 

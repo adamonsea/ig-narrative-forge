@@ -19,6 +19,7 @@ import { useParliamentaryMentions } from "@/hooks/useParliamentaryMentions";
 import { ParliamentaryVoteCard } from "@/components/ParliamentaryVoteCard";
 import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,6 +30,19 @@ const TopicFeed = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showFilterTip, setShowFilterTip] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed') === '1'
+    setShowFilterTip(!dismissed)
+  }, [])
+
+  const openFilterAndDismissTip = () => {
+    localStorage.setItem('eezee_filter_tip_dismissed', '1')
+    setShowFilterTip(false)
+    setIsModalOpen(true)
+  }
+
 
   const {
     stories: filteredStories,
@@ -172,16 +186,26 @@ const TopicFeed = () => {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-              >
-                <Filter className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm font-medium">Filters</span>
-                {hasActiveFilters && (
-                  <span className="w-2 h-2 bg-primary rounded-full" />
-                )}
-              </button>
+              <TooltipProvider>
+                <Tooltip open={showFilterTip}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={openFilterAndDismissTip}
+                      className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                    >
+                      <Filter className="w-4 h-4" />
+                      <span className="hidden sm:inline text-sm font-medium">Filters</span>
+                      {hasActiveFilters && (
+                        <span className="w-2 h-2 bg-primary rounded-full" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
+                    <div className="font-semibold">### this month, pick a topic</div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
             </div>
           </div>
         </div>
@@ -231,16 +255,26 @@ const TopicFeed = () => {
               </span>
 
               {/* Mobile filter button - positioned in top right */}
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                aria-label="Open filters"
-              >
-                <Filter className="w-4 h-4" />
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                )}
-              </button>
+              <TooltipProvider>
+                <Tooltip open={showFilterTip}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={openFilterAndDismissTip}
+                      className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                      aria-label="Open filters"
+                    >
+                      <Filter className="w-4 h-4" />
+                      {hasActiveFilters && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" align="center" className="z-[60] max-w-xs text-center">
+                    <div className="font-semibold">### this month, pick a topic</div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
             </div>
             {topic.branding_config?.subheader ? (
               <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
