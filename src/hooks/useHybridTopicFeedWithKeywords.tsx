@@ -123,12 +123,17 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   const loadTopic = useCallback(async () => {
     try {
+      console.log('🔍 loadTopic: Starting topic load for slug:', slug);
       const { data: topics, error: topicError } = await supabase
         .rpc('get_safe_public_topic_info');
+
+      console.log('🔍 loadTopic: RPC response:', { topics, error: topicError });
 
       if (topicError) throw topicError;
 
       const topicData = topics?.find(t => t.slug === slug);
+      console.log('🔍 loadTopic: Found topic data:', topicData);
+      
       if (!topicData) throw new Error('Topic not found');
 
       const { data: fullTopicData, error: keywordError } = await supabase
@@ -158,10 +163,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         branding_config: brandingConfig as any
       };
 
+      console.log('🔍 loadTopic: Setting topic object:', topicObject);
       setTopic(topicObject);
       return topicObject;
     } catch (error) {
-      console.error('Error loading topic:', error);
+      console.error('❌ Error loading topic:', error);
       throw error;
     }
   }, [slug]);
@@ -886,7 +892,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log('🚀 Initializing feed for slug:', slug);
         const topicData = await loadTopic();
+        console.log('✅ Topic loaded:', topicData?.name);
         setPage(0);
         
         // PHASE 1: Try to load global filter options from database
@@ -897,7 +905,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           // Fallback is handled by the existing useEffect below (lines 638-645)
         }
         
+        console.log('📚 Loading stories for topic:', topicData?.id);
         await loadStories(topicData, 0, false, null);
+        console.log('✅ Stories loaded successfully');
       } catch (error) {
         console.error('Error initializing hybrid feed:', error);
       }
