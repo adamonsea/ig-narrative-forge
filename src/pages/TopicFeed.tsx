@@ -79,7 +79,7 @@ const TopicFeed = () => {
         
         // Use simpler RPC call to avoid TypeScript inference issues
         const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: slug,
+          p_topic_slug: (slug)?.toLowerCase(),
           p_keywords: null,
           p_sources: null,
           p_limit: 500,

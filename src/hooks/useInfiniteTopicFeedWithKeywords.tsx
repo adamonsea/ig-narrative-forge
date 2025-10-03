@@ -129,7 +129,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
       // Use the new keyword-aware function
       const { data: storiesData, error } = await supabase
         .rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: slug,
+          p_topic_slug: (topicData?.slug ?? slug)?.toLowerCase(),
           p_keywords: null,
           p_limit: STORIES_PER_PAGE,
           p_offset: from

@@ -211,7 +211,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       try {
         const { data, error } = await supabase
           .rpc('get_topic_stories_with_keywords', {
-            p_topic_slug: slug,
+            p_topic_slug: (topicData?.slug ?? slug)?.toLowerCase(),
             p_keywords: keywords,
             p_sources: sources, // PHASE 2: New source filtering parameter
             p_limit: rawLimit,
