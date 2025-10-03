@@ -306,6 +306,39 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       });
       
+      // If filters are active, fetch full slide sets for matched stories to avoid slide reductions
+      if (keywords || sources) {
+        const storyIds = Array.from(storyMap.keys());
+        const chunkSize = 50;
+        const slideMap = new Map<string, any[]>();
+        for (let i = 0; i < storyIds.length; i += chunkSize) {
+          const chunk = storyIds.slice(i, i + chunkSize);
+          const { data: slidesData, error: slidesError } = await supabase
+            .from('slides')
+            .select('id,story_id,slide_number,content')
+            .in('story_id', chunk)
+            .order('slide_number', { ascending: true });
+          if (slidesError) {
+            console.warn('⚠️ Failed to fetch full slides for stories chunk:', slidesError);
+            continue;
+          }
+          (slidesData || []).forEach((s: any) => {
+            const arr = slideMap.get(s.story_id) || [];
+            if (!arr.some((t: any) => t.id === s.id)) {
+              arr.push({ id: s.id, slide_number: s.slide_number, content: s.content, word_count: 0 });
+            }
+            slideMap.set(s.story_id, arr);
+          });
+        }
+        // Replace slides with the complete sets when available
+        slideMap.forEach((slides, sid) => {
+          const storyData = storyMap.get(sid);
+          if (storyData) {
+            storyData.slides = slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+          }
+        });
+      }
+      
       // Log slide counts when filtering to detect incomplete stories
       if (keywords || sources) {
         const slideCounts = Array.from(storySlideCountMap.entries()).map(([storyId, count]) => ({
