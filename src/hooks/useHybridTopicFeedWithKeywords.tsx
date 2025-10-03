@@ -214,6 +214,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         clearTimeout(timeoutId);
         storiesData = data;
         rpcError = error;
+        
+        // Log filtering info for debugging
+        if (keywords || sources) {
+          console.log('🔍 Filtering active:', {
+            keywords: keywords?.length || 0,
+            sources: sources?.length || 0,
+            rowsReturned: data?.length || 0
+          });
+        }
       } catch (err: any) {
         clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
@@ -258,6 +267,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Group RPC results by story_id since it returns one row per slide
       const storyMap = new Map();
+      const storySlideCountMap = new Map(); // Track how many slides we got per story
+      
       storiesData.forEach((row: any) => {
         if (!storyMap.has(row.story_id)) {
           storyMap.set(row.story_id, {
@@ -274,6 +285,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             slides: [],
             slideIds: new Set() // Track slide IDs to prevent duplicates
           });
+          storySlideCountMap.set(row.story_id, 0);
         }
         
         // Add slide if it exists and hasn't been added yet
@@ -287,11 +299,28 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
               content: row.slide_content,
               word_count: 0
             });
+            storySlideCountMap.set(row.story_id, storySlideCountMap.get(row.story_id) + 1);
           } else {
             console.warn(`⚠️ Duplicate slide prevented: ${row.slide_id.substring(0, 8)} in story ${row.story_id.substring(0, 8)}`);
           }
         }
       });
+      
+      // Log slide counts when filtering to detect incomplete stories
+      if (keywords || sources) {
+        const slideCounts = Array.from(storySlideCountMap.entries()).map(([storyId, count]) => ({
+          storyId: storyId.substring(0, 8),
+          slideCount: count
+        }));
+        console.log('📊 Stories with slide counts:', slideCounts.slice(0, 5));
+        
+        // Warn if any story has very few slides (might indicate missing slides)
+        slideCounts.forEach(({ storyId, slideCount }) => {
+          if (slideCount < 3) {
+            console.warn(`⚠️ Story ${storyId} has only ${slideCount} slide(s) - might be incomplete due to filtering`);
+          }
+        });
+      }
       
       const uniqueStories = Array.from(storyMap.values());
       const pageUniqueStories = uniqueStories;
