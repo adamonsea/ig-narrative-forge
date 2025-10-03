@@ -132,7 +132,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       if (topicError) throw topicError;
 
-      const topicData = topics?.find(t => t.slug === slug);
+      // Case-insensitive slug matching
+      const topicData = topics?.find(t => t.slug?.toLowerCase() === slug.toLowerCase());
       console.log('🔍 loadTopic: Found topic data:', topicData);
       
       if (!topicData) throw new Error('Topic not found');
@@ -140,7 +141,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const { data: fullTopicData, error: keywordError } = await supabase
         .from('topics')
         .select('keywords, landmarks, organizations, branding_config')
-        .eq('slug', slug)
+        .ilike('slug', slug)
         .eq('is_public', true)
         .single();
       
