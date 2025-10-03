@@ -40,7 +40,7 @@ export const StoryStructuredData = ({
       "name": "Breefly",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://breef.pro/placeholder.svg"
+        "url": "https://curatr.pro/placeholder.svg"
       }
     },
     "position": position,

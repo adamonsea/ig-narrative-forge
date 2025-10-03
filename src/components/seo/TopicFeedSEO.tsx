@@ -17,11 +17,11 @@ export const TopicFeedSEO = ({
   region,
   logoUrl
 }: TopicFeedSEOProps) => {
-  const feedUrl = `https://breef.pro/feed/${topicSlug}`;
+  const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
   const defaultDescription = `Stay updated with ${topicName}. Curated stories, insights, and analysis delivered in an engaging feed format.`;
   const description = topicDescription || defaultDescription;
   const title = `${topicName} | Breefly`;
-  const imageUrl = logoUrl || 'https://breef.pro/placeholder.svg';
+  const imageUrl = logoUrl || 'https://curatr.pro/placeholder.svg';
 
   // Generate structured data for the feed
   const structuredData = {
