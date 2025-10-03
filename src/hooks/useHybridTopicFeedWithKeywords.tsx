@@ -439,7 +439,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
       
-      setHasMore(storiesData.length === STORIES_PER_PAGE);
+      // Determine if there are more pages based on unique stories, not raw rows
+      setHasMore(uniqueStories.length >= STORIES_PER_PAGE);
       
     } catch (error) {
       console.error('Error loading stories:', error);
