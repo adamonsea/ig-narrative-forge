@@ -248,7 +248,7 @@ const TopicFeed = () => {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
+                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -343,6 +343,8 @@ const TopicFeed = () => {
           <FeedFilters 
             slideCount={filteredStories.reduce((total, story) => total + story.slides.length, 0)}
             monthlyCount={monthlyCount ?? undefined}
+            topicName={topic.name}
+            filteredStoryCount={filteredStories.length}
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={removeKeyword}

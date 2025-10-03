@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface FeedFiltersProps {
   slideCount: number;
   monthlyCount?: number;
+  topicName?: string;
+  filteredStoryCount?: number;
   // Keyword filtering props
   onFilterClick?: () => void;
   selectedKeywords?: string[];
@@ -21,6 +23,8 @@ interface FeedFiltersProps {
 export function FeedFilters({ 
   slideCount,
   monthlyCount,
+  topicName,
+  filteredStoryCount,
   onFilterClick,
   selectedKeywords = [],
   onRemoveKeyword,
@@ -29,6 +33,7 @@ export function FeedFilters({
   hasActiveFilters = false
 }: FeedFiltersProps) {
   const totalFilterCount = selectedKeywords.length + selectedSources.length;
+  const displayCount = hasActiveFilters && filteredStoryCount !== undefined ? filteredStoryCount : totalFilterCount;
   const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
@@ -61,15 +66,15 @@ export function FeedFilters({
                   )}
                 >
                   <Filter className="w-4 h-4" />
-                  {hasActiveFilters && (
+                  {hasActiveFilters && filteredStoryCount !== undefined && (
                     <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs">
-                      {totalFilterCount}
+                      {filteredStoryCount}
                     </Badge>
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="center" className="z-[60] max-w-xs text-center">
-                <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
+                <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month{topicName ? `, ${topicName}` : ''}</div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
