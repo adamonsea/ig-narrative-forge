@@ -274,7 +274,7 @@ const TopicFeed = () => {
 
           {/* Topic Header - Clean and minimal with branding support */}
           <div className="text-center">
-            <div className="relative flex items-center justify-center mb-6">
+            <div className="relative flex items-center justify-center mb-4">
               {/* Centered logo or title */}
               {topic.branding_config?.logo_url ? (
                 <div className="flex justify-center">
@@ -300,28 +300,30 @@ const TopicFeed = () => {
               <span className="absolute right-0 top-0 text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
                 beta
               </span>
+            </div>
 
-              {/* Mobile filter button - positioned in top right */}
+            {/* Mobile filter button - centered below logo */}
+            <div className="sm:hidden flex justify-center mb-4">
               <TooltipProvider>
                 <Tooltip open={showFilterTip}>
                   <TooltipTrigger asChild>
                     <button
                       onClick={openFilterAndDismissTip}
-                      className="absolute right-0 top-8 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
                       aria-label="Open filters"
                     >
                       <Filter className="w-4 h-4" />
+                      <span className="text-sm font-medium">Filter</span>
                       {hasActiveFilters && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                        <span className="w-2 h-2 bg-primary rounded-full" />
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="left" align="center" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
+                  <TooltipContent side="bottom" align="center" className="z-[60] max-w-xs text-center">
+                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-
             </div>
             {topic.branding_config?.subheader ? (
               <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
