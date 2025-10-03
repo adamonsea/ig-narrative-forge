@@ -287,7 +287,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       });
       
       const uniqueStories = Array.from(storyMap.values());
-      const pageUniqueStories = uniqueStories.slice(0, STORIES_PER_PAGE);
+      const pageUniqueStories = uniqueStories;
 
       // Fetch popularity data for all stories
       const storyIds = Array.from(storyMap.keys());

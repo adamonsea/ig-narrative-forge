@@ -35,8 +35,7 @@ const TopicFeed = () => {
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed') === '1'
-    setShowFilterTip(!dismissed)
+    setShowFilterTip(true)
   }, [])
 
   useEffect(() => {
@@ -75,7 +74,6 @@ const TopicFeed = () => {
   }, [actualSlug])
 
   const openFilterAndDismissTip = () => {
-    localStorage.setItem('eezee_filter_tip_dismissed', '1')
     setShowFilterTip(false)
     setIsModalOpen(true)
   }
@@ -332,6 +330,7 @@ const TopicFeed = () => {
         <div className="mb-8 hidden sm:block">
           <FeedFilters 
             slideCount={filteredStories.reduce((total, story) => total + story.slides.length, 0)}
+            monthlyCount={monthlyCount ?? undefined}
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={removeKeyword}

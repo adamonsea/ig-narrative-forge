@@ -20,6 +20,7 @@ interface FeedFiltersProps {
 
 export function FeedFilters({ 
   slideCount,
+  monthlyCount,
   onFilterClick,
   selectedKeywords = [],
   onRemoveKeyword,
@@ -31,12 +32,10 @@ export function FeedFilters({
   const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed') === '1'
-    setShowTip(!dismissed)
+    setShowTip(true)
   }, [])
 
   const handleFilterClick = () => {
-    localStorage.setItem('eezee_filter_tip_dismissed', '1')
     setShowTip(false)
     onFilterClick?.()
   }
@@ -68,7 +67,7 @@ export function FeedFilters({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="center" className="z-[60] max-w-xs text-center">
-                <div className="font-semibold">### this month, pick a topic</div>
+                <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, pick a topic</div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
