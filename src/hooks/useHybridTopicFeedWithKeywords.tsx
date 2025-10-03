@@ -271,18 +271,25 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             article_published_at: row.article_published_at,
             article_id: row.article_id,
             shared_content_id: row.shared_content_id,
-            slides: []
+            slides: [],
+            slideIds: new Set() // Track slide IDs to prevent duplicates
           });
         }
         
-        // Add slide if it exists
+        // Add slide if it exists and hasn't been added yet
         if (row.slide_id) {
-          storyMap.get(row.story_id).slides.push({
-            id: row.slide_id,
-            slide_number: row.slide_number,
-            content: row.slide_content,
-            word_count: 0
-          });
+          const storyData = storyMap.get(row.story_id);
+          if (!storyData.slideIds.has(row.slide_id)) {
+            storyData.slideIds.add(row.slide_id);
+            storyData.slides.push({
+              id: row.slide_id,
+              slide_number: row.slide_number,
+              content: row.slide_content,
+              word_count: 0
+            });
+          } else {
+            console.warn(`⚠️ Duplicate slide prevented: ${row.slide_id.substring(0, 8)} in story ${row.story_id.substring(0, 8)}`);
+          }
         }
       });
       
@@ -315,8 +322,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // Transform stories with slides data and popularity
       const transformedStories = pageUniqueStories.map((story: any) => {
-        // Sort slides by slide_number
+        // Sort slides by slide_number and remove slideIds tracking property
         const sortedSlides = story.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+        
+        // Log if we have duplicate slide numbers (shouldn't happen after deduplication)
+        const slideNumbers = sortedSlides.map((s: any) => s.slide_number);
+        const uniqueSlideNumbers = new Set(slideNumbers);
+        if (slideNumbers.length !== uniqueSlideNumbers.size) {
+          console.warn(`⚠️ Story ${story.id.substring(0, 8)} has duplicate slide_numbers:`, slideNumbers);
+        }
           
         return {
           id: story.id,
