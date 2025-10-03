@@ -35,48 +35,15 @@ const TopicFeed = () => {
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
 
   useEffect(() => {
-    setShowFilterTip(true)
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    const fetchMonthlyCount = async () => {
-      try {
-        const start = new Date()
-        start.setDate(1)
-        start.setHours(0,0,0,0)
-        const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: actualSlug,
-          p_keywords: null,
-          p_sources: null,
-          p_limit: 500,
-          p_offset: 0,
-        })
-        if (error) {
-          console.warn('Tooltip count RPC error:', error)
-          return
-        }
-        const storyMap = new Map<string, any>()
-        ;(data || []).forEach((row: any) => {
-          if (!storyMap.has(row.story_id)) storyMap.set(row.story_id, row)
-        })
-        const count = Array.from(storyMap.values()).filter((row: any) => {
-          const d = row.article_published_at ? new Date(row.article_published_at) : null
-          return d && d >= start
-        }).length
-        if (active) setMonthlyCount(count)
-      } catch (e) {
-        console.warn('Tooltip count fetch failed:', e)
-      }
-    }
-    if (actualSlug) fetchMonthlyCount()
-    return () => { active = false }
-  }, [actualSlug])
+    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
+    setShowFilterTip(!dismissed);
+  }, []);
 
   const openFilterAndDismissTip = () => {
-    setShowFilterTip(false)
-    setIsModalOpen(true)
-  }
+    localStorage.setItem('eezee_filter_tip_dismissed', '1');
+    setShowFilterTip(false);
+    setIsModalOpen(true);
+  };
 
 
   const {
@@ -101,6 +68,54 @@ const TopicFeed = () => {
     toggleSource,
     removeSource
   } = useHybridTopicFeedWithKeywords(actualSlug || '');
+
+  // Fetch monthly count after we have topic
+  useEffect(() => {
+    let active = true;
+    const fetchMonthlyCount = async () => {
+      if (!topic?.id || !actualSlug) return;
+      
+      try {
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        
+        // Use simpler RPC call to avoid TypeScript inference issues
+        const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
+          p_topic_slug: actualSlug,
+          p_keywords: null,
+          p_sources: null,
+          p_limit: 500,
+          p_offset: 0
+        });
+        
+        if (error) {
+          console.warn('Monthly count error:', error);
+          return;
+        }
+        
+        // Count unique stories published this month
+        const storyMap = new Map<string, any>();
+        (data || []).forEach((row: any) => {
+          if (!storyMap.has(row.story_id)) {
+            storyMap.set(row.story_id, row);
+          }
+        });
+        
+        const count = Array.from(storyMap.values()).filter((row: any) => {
+          const d = row.story_created_at ? new Date(row.story_created_at) : null;
+          return d && d >= start;
+        }).length;
+        
+        if (active) setMonthlyCount(count);
+      } catch (e) {
+        console.warn('Monthly count fetch failed:', e);
+      }
+    };
+    
+    fetchMonthlyCount();
+    return () => { active = false };
+  }, [topic?.id, actualSlug]);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
 
@@ -393,7 +408,21 @@ const TopicFeed = () => {
         />
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
-        {filteredContent.length > 0 ? (
+        {!loading && !loadingMore && !isServerFiltering && filteredContent.length === 0 ? (
+          <div className="text-center py-12 space-y-4">
+            {hasActiveFilters ? (
+              <>
+                <p className="text-lg text-muted-foreground">No stories match your selected filters</p>
+                <p className="text-sm text-muted-foreground">Try adjusting your keyword or source selections</p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-muted-foreground">No stories available yet</p>
+                <p className="text-sm text-muted-foreground">Check back soon for new content</p>
+              </>
+            )}
+          </div>
+        ) : filteredContent.length > 0 ? (
           <div className="space-y-6 md:space-y-8 flex flex-col items-center">
             {(() => {
               // Defensive duplicate detection with console warning

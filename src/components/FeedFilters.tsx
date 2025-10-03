@@ -32,13 +32,15 @@ export function FeedFilters({
   const [showTip, setShowTip] = useState(false);
 
   useEffect(() => {
-    setShowTip(true)
-  }, [])
+    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
+    setShowTip(!dismissed);
+  }, []);
 
   const handleFilterClick = () => {
-    setShowTip(false)
-    onFilterClick?.()
-  }
+    localStorage.setItem('eezee_filter_tip_dismissed', '1');
+    setShowTip(false);
+    onFilterClick?.();
+  };
 
   return (
     <div className="space-y-4">

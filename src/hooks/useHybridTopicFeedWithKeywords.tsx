@@ -177,8 +177,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       if (pageNum === 0) setLoading(true);
       else setLoadingMore(true);
 
-      // Use a larger raw rows limit to account for multiple slides per story
-      const rawLimit = STORIES_PER_PAGE * 8;
+      // Use a larger raw rows limit - increase when filters active to improve matching
+      const rawLimit = (keywords || sources) ? STORIES_PER_PAGE * 15 : STORIES_PER_PAGE * 8;
       const from = pageNum * rawLimit;
       
       console.log('🔍 Phase 2: Loading stories with filters', { 
@@ -444,8 +444,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
       
-      // Determine if there might be more data based on raw batch size
-      setHasMore((storiesData?.length || 0) === rawLimit);
+      // Determine if there might be more data
+      // When filters are active, check if we got enough unique stories
+      // When no filters, check if we got a full batch of raw rows
+      if (keywords || sources) {
+        // With filters: assume more if we got exactly STORIES_PER_PAGE unique stories
+        setHasMore(pageUniqueStories.length >= STORIES_PER_PAGE);
+      } else {
+        // No filters: check raw batch size
+        setHasMore((storiesData?.length || 0) === rawLimit);
+      }
       
     } catch (error) {
       console.error('Error loading stories:', error);
@@ -462,7 +470,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [slug]);
 
   // Calculate available keywords from all loaded stories
-  const updateAvailableKeywords = useCallback((stories: Story[], topicKeywords: string[]) => {
+  // When source filter is active, only count keywords in stories from that source
+  const updateAvailableKeywords = useCallback((stories: Story[], topicKeywords: string[], activeSources: string[]) => {
     if (topicKeywords.length === 0) {
       setAvailableKeywords([]);
       return;
@@ -474,7 +483,21 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       keywordCounts.set(keyword.toLowerCase(), 0);
     });
 
-    stories.forEach(story => {
+    // Filter stories by active sources first if applicable
+    const storiesToCount = activeSources.length > 0 
+      ? stories.filter(story => {
+          if (!story.article?.source_url) return false;
+          try {
+            const url = new URL(story.article.source_url);
+            const domain = url.hostname.replace(/^www\./, '');
+            return activeSources.includes(domain);
+          } catch (e) {
+            return false;
+          }
+        })
+      : stories;
+
+    storiesToCount.forEach(story => {
       const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
       
       topicKeywords.forEach(keyword => {
@@ -496,10 +519,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, []);
 
   // Calculate available sources from all loaded stories
-  const updateAvailableSources = useCallback((stories: Story[]) => {
+  // When keyword filter is active, only count sources that have those keywords
+  const updateAvailableSources = useCallback((stories: Story[], activeKeywords: string[]) => {
+    // Filter stories by active keywords first if applicable
+    const storiesToCount = activeKeywords.length > 0
+      ? stories.filter(story => {
+          const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
+          return activeKeywords.some(keyword => text.includes(keyword.toLowerCase()));
+        })
+      : stories;
+
     const sourceCounts = new Map<string, { domain: string; count: number }>();
     
-    stories.forEach(story => {
+    storiesToCount.forEach(story => {
       if (story.article?.source_url) {
         try {
           const url = new URL(story.article.source_url);
@@ -801,17 +833,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [slug, loadTopic, loadStories, loadGlobalFilterOptions]);
 
   // Update available keywords and sources when stories change
+  // Pass active filters to calculations for combined filtering context
   useEffect(() => {
     if (filteredStories.length > 0) {
       // Do not override global DB-driven options if we have them
       if (!preferGlobalFiltersRef.current) {
         if (topic?.keywords) {
-          updateAvailableKeywords(filteredStories, topic.keywords);
+          updateAvailableKeywords(filteredStories, topic.keywords, selectedSources);
         }
-        updateAvailableSources(filteredStories);
+        updateAvailableSources(filteredStories, selectedKeywords);
       }
     }
-  }, [filteredStories, topic?.keywords, updateAvailableKeywords, updateAvailableSources]);
+  }, [filteredStories, topic?.keywords, selectedKeywords, selectedSources, updateAvailableKeywords, updateAvailableSources]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
