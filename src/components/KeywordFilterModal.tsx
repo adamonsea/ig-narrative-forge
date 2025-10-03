@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Hash } from "lucide-react";
+import { X, Hash, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface KeywordCount {
   keyword: string;
@@ -26,6 +27,12 @@ export const KeywordFilterModal = ({
   onKeywordToggle,
   onClearAll
 }: KeywordFilterModalProps) => {
+  const [showAllKeywords, setShowAllKeywords] = useState(false);
+  
+  const filteredKeywords = availableKeywords.filter(({ keyword }) => keyword.length > 2);
+  const displayedKeywords = showAllKeywords ? filteredKeywords : filteredKeywords.slice(0, 10);
+  const hasMoreKeywords = filteredKeywords.length > 10;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -51,11 +58,9 @@ export const KeywordFilterModal = ({
 
           {/* Keywords as minimalist pill-shaped tabs */}
           {availableKeywords.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {availableKeywords
-                .filter(({ keyword }) => keyword.length > 2) // Filter out very short keywords
-                .slice(0, 20) // Show top 20 keywords
-                .map(({ keyword, count }) => {
+            <>
+              <div className="flex flex-wrap gap-2">
+                {displayedKeywords.map(({ keyword, count }) => {
                   const isSelected = selectedKeywords.includes(keyword);
                   return (
                     <button
@@ -73,9 +78,33 @@ export const KeywordFilterModal = ({
                       <span className="text-xs opacity-70">({count})</span>
                     </button>
                   );
-                })
-              }
-            </div>
+                })}
+              </div>
+              
+              {/* Show more/less button */}
+              {hasMoreKeywords && (
+                <div className="flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllKeywords(!showAllKeywords)}
+                    className="text-xs"
+                  >
+                    {showAllKeywords ? (
+                      <>
+                        <ChevronUp className="w-3 h-3 mr-1" />
+                        Show less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3 h-3 mr-1" />
+                        Show {filteredKeywords.length - 10} more keywords
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
