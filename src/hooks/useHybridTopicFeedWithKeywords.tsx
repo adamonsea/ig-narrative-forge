@@ -125,7 +125,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     try {
       console.log('🔍 loadTopic: Starting topic load for slug:', slug);
       const { data: topics, error: topicError } = await supabase
-        .rpc('get_safe_public_topic_info');
+        .from('safe_public_topics')
+        .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at');
 
       console.log('🔍 loadTopic: RPC response:', { topics, error: topicError });
 
@@ -910,6 +911,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         console.log('✅ Stories loaded successfully');
       } catch (error) {
         console.error('Error initializing hybrid feed:', error);
+        setLoading(false);
       }
     };
 
