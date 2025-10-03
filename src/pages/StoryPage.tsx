@@ -67,8 +67,8 @@ const StoryPage = () => {
           topic_type: topicData.topic_type as 'regional' | 'keyword'
         });
 
-        // Load story
-        const { data: storyData, error: storyError } = await supabase
+        // Try loading story with multi-tenant join first
+        let { data: storyData, error: storyError } = await supabase
           .from('stories')
           .select(`
             id,
@@ -78,16 +78,18 @@ const StoryPage = () => {
             cover_illustration_url,
             created_at,
             updated_at,
+            topic_article_id,
             slides (
               id,
               slide_number,
               content
             ),
-            articles!inner (
-              source_url,
-              region,
-              published_at,
-              topic_id
+            topic_articles!inner (
+              topic_id,
+              shared_article_content!inner (
+                url,
+                published_at
+              )
             )
           `)
           .eq('id', storyId)
@@ -95,15 +97,51 @@ const StoryPage = () => {
           .eq('status', 'ready')
           .single();
 
+        // Fallback to legacy articles join if multi-tenant fails
         if (storyError) {
+          const legacyResult = await supabase
+            .from('stories')
+            .select(`
+              id,
+              title,
+              author,
+              publication_name,
+              cover_illustration_url,
+              created_at,
+              updated_at,
+              article_id,
+              slides (
+                id,
+                slide_number,
+                content
+              ),
+              articles!inner (
+                source_url,
+                region,
+                published_at,
+                topic_id
+              )
+            `)
+            .eq('id', storyId)
+            .eq('is_published', true)
+            .eq('status', 'ready')
+            .single();
+          
+          storyData = legacyResult.data as any;
+          storyError = legacyResult.error;
+        }
+
+        if (storyError || !storyData) {
           throw new Error('Story not found');
         }
 
-        // Verify story belongs to this topic
-        if (storyData.articles.topic_id !== topicData.id) {
+        // Extract topic_id from whichever join succeeded
+        const storyTopicId = (storyData as any).topic_articles?.topic_id || (storyData as any).articles?.topic_id;
+        if (storyTopicId !== topicData.id) {
           throw new Error('Story does not belong to this topic');
         }
 
+        // Transform the data
         const transformedStory = {
           id: storyData.id,
           title: storyData.title,
@@ -113,16 +151,16 @@ const StoryPage = () => {
           created_at: storyData.created_at,
           updated_at: storyData.updated_at,
           slides: storyData.slides
-            .sort((a, b) => a.slide_number - b.slide_number)
-            .map(slide => ({
+            .sort((a: any, b: any) => a.slide_number - b.slide_number)
+            .map((slide: any) => ({
               id: slide.id,
               slide_number: slide.slide_number,
               content: slide.content,
             })),
           article: {
-            source_url: storyData.articles.source_url,
-            region: storyData.articles.region,
-            published_at: storyData.articles.published_at
+            source_url: (storyData as any).topic_articles?.shared_article_content?.url || (storyData as any).articles?.source_url || '',
+            region: (storyData as any).articles?.region || '',
+            published_at: (storyData as any).topic_articles?.shared_article_content?.published_at || (storyData as any).articles?.published_at
           }
         };
 
