@@ -3382,6 +3382,14 @@ export type Database = {
           title: string
         }[]
       }
+      get_topic_filter_options: {
+        Args: { p_topic_slug: string }
+        Returns: {
+          count: number
+          filter_type: string
+          filter_value: string
+        }[]
+      }
       get_topic_interaction_stats: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {

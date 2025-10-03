@@ -475,6 +475,67 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setAvailableSources(sources);
   }, []);
 
+  // PHASE 1: Load global filter options from entire database (with full fallback)
+  const loadGlobalFilterOptions = useCallback(async (topicSlug: string) => {
+    console.log('🔍 Phase 1: Attempting to load global filter options from database...');
+    
+    try {
+      // Create abort controller for 5-second timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const { data, error } = await supabase
+        .rpc('get_topic_filter_options', {
+          p_topic_slug: topicSlug
+        })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.warn('⚠️ Phase 1: RPC failed, will fallback to client-side filtering:', error);
+        return false; // Signal failure, caller will use fallback
+      }
+
+      if (!data || data.length === 0) {
+        console.log('📄 Phase 1: No filter options found in database');
+        return false;
+      }
+
+      // Separate keywords and sources
+      const keywordData = data.filter(item => item.filter_type === 'keyword');
+      const sourceData = data.filter(item => item.filter_type === 'source');
+
+      const globalKeywords: KeywordCount[] = keywordData.map(item => ({
+        keyword: item.filter_value,
+        count: Number(item.count)
+      }));
+
+      const globalSources: SourceCount[] = sourceData.map(item => ({
+        source_name: item.filter_value.split('.')[0],
+        source_domain: item.filter_value,
+        count: Number(item.count)
+      }));
+
+      console.log('✅ Phase 1: Successfully loaded global filters', {
+        keywords: globalKeywords.length,
+        sources: globalSources.length
+      });
+
+      setAvailableKeywords(globalKeywords);
+      setAvailableSources(globalSources);
+      
+      return true; // Signal success
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Phase 1: RPC timed out after 5 seconds, using client-side fallback');
+      } else {
+        console.warn('⚠️ Phase 1: RPC error, using client-side fallback:', error);
+      }
+      return false; // Signal failure
+    }
+  }, []);
+
   // Client-side filtering for immediate feedback - now handles mixed content, keywords, and sources
   const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[]) => {
     if (keywords.length === 0 && sources.length === 0) {
@@ -623,6 +684,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       try {
         const topicData = await loadTopic();
         setPage(0);
+        
+        // PHASE 1: Try to load global filter options from database
+        const globalFiltersLoaded = await loadGlobalFilterOptions(slug);
+        
+        if (!globalFiltersLoaded) {
+          console.log('🔄 Phase 1: Falling back to client-side filter calculation');
+          // Fallback is handled by the existing useEffect below (lines 638-645)
+        }
+        
         await loadStories(topicData, 0, false, null);
       } catch (error) {
         console.error('Error initializing hybrid feed:', error);
@@ -632,7 +702,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (slug) {
       initialize();
     }
-  }, [slug, loadTopic, loadStories]);
+  }, [slug, loadTopic, loadStories, loadGlobalFilterOptions]);
 
   // Update available keywords and sources when stories change
   useEffect(() => {
