@@ -41,101 +41,16 @@ const StoryPage = () => {
   const [story, setStory] = useState<Story | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Check if this is a regional feed story URL
-  const isRegionalFeed = window.location.pathname.includes('/eastbourne-feed/story/');
 
   useEffect(() => {
     const loadStoryAndTopic = async () => {
-      if (isRegionalFeed) {
-        // Handle regional feed story
-        if (!storyId) {
-          navigate('/feed/eastbourne');
-          return;
-        }
-        await loadRegionalStory();
-      } else {
-        // Handle topic feed story
-        if (!slug || !storyId) {
-          navigate('/');
-          return;
-        }
-        await loadTopicStory();
+      if (!slug || !storyId) {
+        navigate('/');
+        return;
       }
-    };
-
-    const loadRegionalStory = async () => {
+      
       try {
-        // Load story for regional feed
-        const { data: storyData, error: storyError } = await supabase
-          .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            cover_illustration_url,
-            created_at,
-            updated_at,
-            slides (
-              id,
-              slide_number,
-              content
-            ),
-            articles!inner (
-              source_url,
-              region,
-              published_at
-            )
-          `)
-          .eq('id', storyId)
-          .eq('status', 'published')
-          .ilike('articles.region', '%eastbourne%')
-          .single();
-
-        if (storyError) {
-          throw new Error('Story not found in Eastbourne region');
-        }
-
-        const transformedStory = {
-          id: storyData.id,
-          title: storyData.title,
-          author: storyData.author,
-          publication_name: storyData.publication_name,
-          cover_illustration_url: storyData.cover_illustration_url,
-          created_at: storyData.created_at,
-          updated_at: storyData.updated_at,
-          slides: storyData.slides.sort((a, b) => a.slide_number - b.slide_number),
-          article: {
-            source_url: storyData.articles.source_url,
-            region: storyData.articles.region,
-            published_at: storyData.articles.published_at
-          }
-        };
-
-        setStory(transformedStory);
-        // Set a mock topic for regional feeds
-        setTopic({
-          id: 'eastbourne',
-          name: 'Eastbourne',
-          slug: 'eastbourne',
-          topic_type: 'regional'
-        });
-      } catch (error) {
-        console.error('Error loading regional story:', error);
-        toast({
-          title: "Error",
-          description: "Story not found",
-          variant: "destructive",
-        });
-        navigate('/feed/eastbourne');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const loadTopicStory = async () => {
-      try {
+        // Load topic first
         const { data: topicData, error: topicError } = await supabase
           .from('topics')
           .select('id, name, slug, topic_type')
@@ -171,16 +86,22 @@ const StoryPage = () => {
             articles!inner (
               source_url,
               region,
-              published_at
+              published_at,
+              topic_id
             )
           `)
           .eq('id', storyId)
-          .eq('status', 'published')
-          .eq('articles.topic_id', topicData.id)
+          .eq('is_published', true)
+          .eq('status', 'ready')
           .single();
 
         if (storyError) {
           throw new Error('Story not found');
+        }
+
+        // Verify story belongs to this topic
+        if (storyData.articles.topic_id !== topicData.id) {
+          throw new Error('Story does not belong to this topic');
         }
 
         const transformedStory = {
@@ -213,7 +134,7 @@ const StoryPage = () => {
           description: error instanceof Error ? error.message : "Failed to load story",
           variant: "destructive"
         });
-        navigate(`/feed/topic/${slug}`);
+        navigate(`/feed/${slug}`);
       } finally {
         setLoading(false);
       }
@@ -248,7 +169,7 @@ const StoryPage = () => {
               The story you're looking for doesn't exist or is no longer available.
             </p>
             <Button asChild>
-              <Link to={`/feed/topic/${slug}`}>
+              <Link to={`/feed/${slug || ''}`}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to {topic?.name || 'Feed'}
               </Link>
@@ -265,7 +186,7 @@ const StoryPage = () => {
         {/* Back Button */}
         <div className="p-4">
           <Button variant="outline" asChild>
-            <Link to={isRegionalFeed ? '/feed/eastbourne' : `/feed/topic/${slug}`}>
+            <Link to={`/feed/${slug}`}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to {topic.name}
             </Link>
@@ -274,10 +195,7 @@ const StoryPage = () => {
         
         <StoryCarousel 
           story={story} 
-          storyUrl={isRegionalFeed 
-            ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
-            : `${window.location.origin}/feed/topic/${slug}/story/${story.id}`
-          }
+          storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
           topicId={topic?.id}
           storyIndex={0}
         />

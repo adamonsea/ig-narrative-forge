@@ -24,9 +24,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
-  
-  // Handle special case for /feed/eastbourne route
-  const actualSlug = window.location.pathname === '/feed/eastbourne' ? 'eastbourne' : slug;
   const { user } = useAuth();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -67,13 +64,13 @@ const TopicFeed = () => {
     availableSources,
     toggleSource,
     removeSource
-  } = useHybridTopicFeedWithKeywords(actualSlug || '');
+  } = useHybridTopicFeedWithKeywords(slug || '');
 
   // Fetch monthly count after we have topic
   useEffect(() => {
     let active = true;
     const fetchMonthlyCount = async () => {
-      if (!topic?.id || !actualSlug) return;
+      if (!topic?.id || !slug) return;
       
       try {
         const start = new Date();
@@ -82,7 +79,7 @@ const TopicFeed = () => {
         
         // Use simpler RPC call to avoid TypeScript inference issues
         const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: actualSlug,
+          p_topic_slug: slug,
           p_keywords: null,
           p_sources: null,
           p_limit: 500,
@@ -115,7 +112,7 @@ const TopicFeed = () => {
     
     fetchMonthlyCount();
     return () => { active = false };
-  }, [topic?.id, actualSlug]);
+  }, [topic?.id, slug]);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
 
@@ -207,7 +204,7 @@ const TopicFeed = () => {
       <TopicFeedSEO
         topicName={topic.name}
         topicDescription={topic.branding_config?.subheader || topic.description}
-        topicSlug={actualSlug || ''}
+        topicSlug={slug || ''}
         topicType={topic.topic_type}
         region={topic.region}
         logoUrl={topic.branding_config?.logo_url}
@@ -449,10 +446,8 @@ const TopicFeed = () => {
               
               if (contentItem.type === 'story') {
                 const story = contentItem.data as any;
-                // Generate proper story URL based on feed type
-                const storyShareUrl = window.location.pathname === '/feed/eastbourne' 
-                  ? `${window.location.origin}/eastbourne-feed/story/${story.id}`
-                  : `${window.location.origin}/feed/topic/${actualSlug}/story/${story.id}`;
+                // Generate universal story URL
+                const storyShareUrl = `${window.location.origin}/feed/${slug}/story/${story.id}`;
                 
                 items.push(
                   <div
