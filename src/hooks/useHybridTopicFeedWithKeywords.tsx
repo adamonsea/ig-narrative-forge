@@ -439,8 +439,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
       
-      // Determine if there are more pages based on unique stories, not raw rows
-      setHasMore(uniqueStories.length >= STORIES_PER_PAGE);
+      // Keep loading if we got a full page of results
+      // Only stop when we get LESS than a full page
+      setHasMore(uniqueStories.length === STORIES_PER_PAGE);
       
     } catch (error) {
       console.error('Error loading stories:', error);
