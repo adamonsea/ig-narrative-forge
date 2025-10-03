@@ -556,11 +556,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         count: Number(item.count)
       }));
 
-      const globalSources: SourceCount[] = sourceData.map(item => ({
-        source_name: item.filter_value.split('.')[0],
-        source_domain: item.filter_value,
-        count: Number(item.count)
-      }));
+      const globalSources: SourceCount[] = sourceData.map(item => {
+        const domain = item.filter_value;
+        const displayName = domain.split('.')[0];
+        return {
+          source_name: displayName.charAt(0).toUpperCase() + displayName.slice(1),
+          source_domain: domain,
+          count: Number(item.count)
+        };
+      });
 
       console.log('✅ Phase 1: Successfully loaded global filters', {
         keywords: globalKeywords.length,
