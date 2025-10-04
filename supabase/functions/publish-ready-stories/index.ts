@@ -24,14 +24,105 @@ serve(async (req) => {
 
     console.log('📢 Converting ready stories to published status...');
 
-    // Update all stories with status 'ready' to be published
+    // First, check for stories with future publication dates
+    const { data: readyStories, error: fetchError } = await supabase
+      .from('stories')
+      .select(`
+        id, 
+        title,
+        article_id,
+        topic_article_id
+      `)
+      .eq('status', 'ready');
+
+    if (fetchError) {
+      console.error('Error fetching ready stories:', fetchError);
+      throw new Error(`Failed to fetch stories: ${fetchError.message}`);
+    }
+
+    if (!readyStories || readyStories.length === 0) {
+      console.log('No ready stories to publish');
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'No ready stories to publish',
+          updatedStories: []
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check publication dates for each story
+    const storiesToPublish: string[] = [];
+    const futureStories: Array<{id: string; title: string; date: string}> = [];
+
+    for (const story of readyStories) {
+      if (story.article_id) {
+        // Legacy article
+        const { data: article } = await supabase
+          .from('articles')
+          .select('published_at')
+          .eq('id', story.article_id)
+          .single();
+        
+        if (article?.published_at) {
+          const pubDate = new Date(article.published_at);
+          if (pubDate > new Date()) {
+            futureStories.push({ id: story.id, title: story.title, date: article.published_at });
+            continue;
+          }
+        }
+      } else if (story.topic_article_id) {
+        // Multi-tenant article
+        const { data: topicArticle } = await supabase
+          .from('topic_articles')
+          .select('shared_content_id')
+          .eq('id', story.topic_article_id)
+          .single();
+        
+        if (topicArticle?.shared_content_id) {
+          const { data: content } = await supabase
+            .from('shared_article_content')
+            .select('published_at')
+            .eq('id', topicArticle.shared_content_id)
+            .single();
+          
+          if (content?.published_at) {
+            const pubDate = new Date(content.published_at);
+            if (pubDate > new Date()) {
+              futureStories.push({ id: story.id, title: story.title, date: content.published_at });
+              continue;
+            }
+          }
+        }
+      }
+      
+      storiesToPublish.push(story.id);
+    }
+
+    if (futureStories.length > 0) {
+      console.warn('⚠️ Skipping future-dated stories:', futureStories);
+    }
+
+    if (storiesToPublish.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'No stories to publish (all have future dates)',
+          skippedStories: futureStories
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update only stories without future dates
     const { data: updatedStories, error: updateError } = await supabase
       .from('stories')
       .update({
         status: 'published',
         is_published: true
       })
-      .eq('status', 'ready')
+      .in('id', storiesToPublish)
       .select('id, title');
 
     if (updateError) {
@@ -45,8 +136,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Published ${updatedCount} ready stories`,
-        updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || []
+        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}`,
+        updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
+        skippedStories: futureStories.length > 0 ? futureStories : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
