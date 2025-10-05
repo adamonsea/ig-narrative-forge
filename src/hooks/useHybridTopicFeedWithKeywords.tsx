@@ -467,7 +467,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       });
 
+      const now = new Date().getTime();
       const mixedContent = Array.from(contentMap.values())
+        .filter(item => {
+          // Filter out stories with future published dates
+          const itemDate = new Date(item.content_date).getTime();
+          if (isNaN(itemDate)) return true; // Keep items with invalid dates
+          return itemDate <= now; // Only keep items with dates in the past or present
+        })
         .sort((a, b) => {
           const dateA = new Date(a.content_date).getTime();
           const dateB = new Date(b.content_date).getTime();
