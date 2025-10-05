@@ -21,6 +21,7 @@ import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -118,6 +119,9 @@ const TopicFeed = () => {
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
+
+  // Enable browser notifications for new stories
+  useStoryNotifications(topic?.id, topic?.name || '');
 
   // Scroll detection for sticky header
   useEffect(() => {
