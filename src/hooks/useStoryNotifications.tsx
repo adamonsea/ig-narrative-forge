@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useStoryNotifications = (topicId: string | undefined, topicName: string) => {
+export const useStoryNotifications = (topicId: string | undefined, topicName: string, topicSlug?: string) => {
   const lastNotifiedStoryId = useRef<string | null>(null);
   const permissionGranted = useRef(false);
 
@@ -38,14 +38,23 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           if (newStory.id !== lastNotifiedStoryId.current && permissionGranted.current) {
             lastNotifiedStoryId.current = newStory.id;
             
-            // Send browser notification
-            new Notification(`New story in ${topicName}`, {
+            // Send browser notification with click handler
+            const notification = new Notification(`New story in ${topicName}`, {
               body: newStory.title || 'A new story has been published',
               icon: '/favicon.ico',
               badge: '/favicon.ico',
               tag: newStory.id,
               requireInteraction: false,
             });
+
+            // Open story link when notification is clicked
+            notification.onclick = () => {
+              const storyUrl = topicSlug 
+                ? `/feed/${topicSlug}/story/${newStory.id}`
+                : window.location.href;
+              window.open(storyUrl, '_blank');
+              notification.close();
+            };
           }
         }
       )
@@ -70,13 +79,22 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           ) {
             lastNotifiedStoryId.current = updatedStory.id;
             
-            new Notification(`New story in ${topicName}`, {
+            const notification = new Notification(`New story in ${topicName}`, {
               body: updatedStory.title || 'A new story has been published',
               icon: '/favicon.ico',
               badge: '/favicon.ico',
               tag: updatedStory.id,
               requireInteraction: false,
             });
+
+            // Open story link when notification is clicked
+            notification.onclick = () => {
+              const storyUrl = topicSlug 
+                ? `/feed/${topicSlug}/story/${updatedStory.id}`
+                : window.location.href;
+              window.open(storyUrl, '_blank');
+              notification.close();
+            };
           }
         }
       )

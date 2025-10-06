@@ -121,7 +121,7 @@ const TopicFeed = () => {
   useVisitorTracking(topic?.id);
 
   // Enable browser notifications for new stories
-  useStoryNotifications(topic?.id, topic?.name || '');
+  useStoryNotifications(topic?.id, topic?.name || '', slug);
 
   // Scroll detection for sticky header
   useEffect(() => {
