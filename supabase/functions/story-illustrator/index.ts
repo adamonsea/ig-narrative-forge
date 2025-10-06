@@ -190,31 +190,76 @@ Respond with ONE word only from: serious, lighthearted, playful, contentious, so
 
     const expressionInstruction = toneGuidance[storyTone] || toneGuidance['balanced'];
 
-    // Generate optimized illustration prompt with modern, diverse editorial cartoon style
+    // Second, analyze the story subject matter to extract key visual elements
+    const subjectAnalysisPrompt = `Analyze this news headline and extract key visual elements for an editorial illustration:
+
+"${story.title}"
+
+Identify and list in 3-4 concise sentences:
+1. Primary subject matter (e.g., food/dining, construction, sports, politics, culture)
+2. Specific visual elements that make this story unique (objects, activities, settings)
+3. Setting details and atmosphere (indoor/outdoor, time, location characteristics)
+
+Focus on concrete visual details that would make an illustration immediately recognizable as THIS specific story.`;
+
+    let subjectMatter = 'contemporary scene related to the story'; // fallback
+    
+    // Extract subject matter using OpenAI
+    if (Deno.env.get('OPENAI_API_KEY')) {
+      try {
+        const subjectResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are an expert at identifying visual elements in news stories for illustration purposes.' },
+              { role: 'user', content: subjectAnalysisPrompt }
+            ],
+            max_tokens: 150,
+            temperature: 0.4
+          }),
+        });
+        
+        if (subjectResponse.ok) {
+          const subjectData = await subjectResponse.json();
+          subjectMatter = subjectData.choices[0]?.message?.content?.trim() || subjectMatter;
+          console.log('Subject matter extracted:', subjectMatter);
+        }
+      } catch (error) {
+        console.error('Subject analysis failed, using generic fallback:', error);
+      }
+    }
+
+    // Generate optimized illustration prompt with subject-first structure
     const illustrationPrompt = `Create a contemporary editorial cartoon illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
-Visual concept: "${story.title}"
+SUBJECT MATTER - PRIMARY FOCUS:
+${subjectMatter}
 
-Tone: ${storyTone.toUpperCase()} - ${expressionInstruction}
+Story headline for context: "${story.title}"
 
-Style: Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated.
+VISUAL CONCEPT:
+Illustrate the core subject identified above. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
-DIVERSITY & REPRESENTATION: 
-- Depict people of varied ethnicities, ages, genders, and backgrounds that reflect modern diverse society
-- Avoid defaulting to middle-aged white men unless specifically relevant to the story
-- Show vibrant, contemporary settings and fashion unless the story specifically requires historical context
-- Represent places and topics as dynamic, colorful, and modern rather than dour or dated
-- When depicting groups, ensure visual diversity in skin tones, hairstyles, ages, and styles
+STYLE & COMPOSITION:
+Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated. Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition.
+
+TONE GUIDANCE:
+${storyTone.toUpperCase()} - ${expressionInstruction}
+
+DIVERSITY PRINCIPLES:
+- Ensure representation reflects contemporary diverse society naturally within the scene context
+- Avoid defaulting to homogeneous demographics; include varied ages, ethnicities, and styles when depicting people
 
 Line work: Drawn with skilled confidence - lines that feel certain and expressive but naturally hand-drawn. Contemporary illustration style, not geometric or mechanical. Fresh and current aesthetic.
 
-Composition: Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition.
+CRITICAL: The illustration must be immediately recognizable as being about THIS specific story's subject matter. Prioritize subject-specific visual elements over generic scene-setting.
 
-Character representation: Ensure faces and figures reflect the diversity of contemporary society. Mix of ages, ethnicities, body types, and styles unless the story specifically calls for particular demographics.
-
-CRITICAL: Match the emotional tone to the story content. ${expressionInstruction}
-
-Avoid: Dated aesthetics, retro styling (unless story-specific), defaulting to homogeneous demographics, overly complex hatching, mechanical precision.`;
+Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, overly complex hatching, mechanical precision.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
