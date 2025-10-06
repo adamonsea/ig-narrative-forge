@@ -3219,6 +3219,10 @@ export type Database = {
           word_count: number
         }[]
       }
+      get_public_story_by_slug_and_id: {
+        Args: { p_slug: string; p_story_id: string }
+        Returns: Json
+      }
       get_public_topic_feed: {
         Args:
           | {

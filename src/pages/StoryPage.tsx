@@ -50,16 +50,18 @@ const StoryPage = () => {
       }
       
       try {
-        // Load topic first
+        // Load topic from safe_public_topics (accessible to anonymous users)
         const { data: topicData, error: topicError } = await supabase
-          .from('topics')
+          .from('safe_public_topics')
           .select('id, name, slug, topic_type')
-          .ilike('slug', slug)
-          .eq('is_active', true)
-          .single();
+          .eq('slug', slug.toLowerCase())
+          .maybeSingle();
 
-        if (topicError) {
-          throw new Error('Topic not found');
+        if (topicError || !topicData) {
+          console.error('Topic error:', topicError);
+          setTopic(null);
+          setLoading(false);
+          return;
         }
 
         setTopic({
@@ -67,119 +69,49 @@ const StoryPage = () => {
           topic_type: topicData.topic_type as 'regional' | 'keyword'
         });
 
-        // Try loading story with multi-tenant join first
-        let { data: storyData, error: storyError } = await supabase
-          .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            publication_name,
-            cover_illustration_url,
-            created_at,
-            updated_at,
-            topic_article_id,
-            slides (
-              id,
-              slide_number,
-              content
-            ),
-            topic_articles!inner (
-              topic_id,
-              shared_article_content!inner (
-                url,
-                published_at
-              )
-            )
-          `)
-          .eq('id', storyId)
-          .eq('is_published', true)
-          .eq('status', 'ready')
-          .single();
-
-        // Fallback to legacy articles join if multi-tenant fails
-        if (storyError) {
-          const legacyResult = await supabase
-            .from('stories')
-            .select(`
-              id,
-              title,
-              author,
-              publication_name,
-              cover_illustration_url,
-              created_at,
-              updated_at,
-              article_id,
-              slides (
-                id,
-                slide_number,
-                content
-              ),
-              articles!inner (
-                source_url,
-                region,
-                published_at,
-                topic_id
-              )
-            `)
-            .eq('id', storyId)
-            .eq('is_published', true)
-            .eq('status', 'ready')
-            .single();
-          
-          storyData = legacyResult.data as any;
-          storyError = legacyResult.error;
-        }
+        // Use the secure RPC function to fetch story data
+        const { data: storyData, error: storyError } = await supabase
+          .rpc('get_public_story_by_slug_and_id', {
+            p_slug: slug,
+            p_story_id: storyId
+          });
 
         if (storyError || !storyData) {
-          throw new Error('Story not found');
+          console.error('Story error:', storyError);
+          setStory(null);
+          setLoading(false);
+          return;
         }
 
-        // Extract topic_id from whichever join succeeded
-        const storyTopicId = (storyData as any).topic_articles?.topic_id || (storyData as any).articles?.topic_id;
-        if (storyTopicId !== topicData.id) {
-          throw new Error('Story does not belong to this topic');
-        }
-
-        // Transform the data
-        const transformedStory = {
-          id: storyData.id,
-          title: storyData.title,
-          author: storyData.author,
-          publication_name: storyData.publication_name,
-          cover_illustration_url: storyData.cover_illustration_url,
-          created_at: storyData.created_at,
-          updated_at: storyData.updated_at,
-          slides: storyData.slides
-            .sort((a: any, b: any) => a.slide_number - b.slide_number)
-            .map((slide: any) => ({
-              id: slide.id,
-              slide_number: slide.slide_number,
-              content: slide.content,
-            })),
-          article: {
-            source_url: (storyData as any).topic_articles?.shared_article_content?.url || (storyData as any).articles?.source_url || '',
-            region: (storyData as any).articles?.region || '',
-            published_at: (storyData as any).topic_articles?.shared_article_content?.published_at || (storyData as any).articles?.published_at
+        // Parse the JSONB result
+        const data = storyData as any;
+        const parsedStory: Story = {
+          id: data.id,
+          title: data.title,
+          author: data.author,
+          publication_name: data.publication_name,
+          cover_illustration_url: data.cover_illustration_url,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          slides: data.slides || [],
+          article: data.article || {
+            source_url: '',
+            region: '',
+            published_at: null
           }
         };
 
-        setStory(transformedStory);
+        setStory(parsedStory);
       } catch (error) {
         console.error('Error loading story:', error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load story",
-          variant: "destructive"
-        });
-        navigate(`/feed/${slug}`);
+        setStory(null);
       } finally {
         setLoading(false);
       }
     };
 
     loadStoryAndTopic();
-  }, [slug, storyId, navigate, toast]);
+  }, [slug, storyId, navigate]);
 
   if (loading) {
     return (
