@@ -50,9 +50,10 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
             // Open story link when notification is clicked
             notification.onclick = () => {
               const storyUrl = topicSlug 
-                ? `/feed/${topicSlug}/story/${newStory.id}`
+                ? `${window.location.origin}/feed/${topicSlug}/story/${newStory.id}`
                 : window.location.href;
-              window.open(storyUrl, '_blank');
+              window.focus();
+              window.location.href = storyUrl;
               notification.close();
             };
           }
@@ -90,9 +91,10 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
             // Open story link when notification is clicked
             notification.onclick = () => {
               const storyUrl = topicSlug 
-                ? `/feed/${topicSlug}/story/${updatedStory.id}`
+                ? `${window.location.origin}/feed/${topicSlug}/story/${updatedStory.id}`
                 : window.location.href;
-              window.open(storyUrl, '_blank');
+              window.focus();
+              window.location.href = storyUrl;
               notification.close();
             };
           }
