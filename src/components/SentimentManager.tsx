@@ -129,9 +129,15 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         console.log('📈 Keyword suggestions received:', data.keyword_suggestions);
       }
 
+      const cardsGenerated = data?.cards_generated || 0;
+      const suggestionsFound = data?.keyword_suggestions?.length || 0;
+      
       toast({
-        title: "Analysis Complete",
-        description: `Analysis complete! ${data?.cards_generated || 0} cards generated, ${data?.keyword_suggestions?.length || 0} keyword suggestions found.`
+        title: cardsGenerated > 0 ? "New Cards Created!" : "Analysis Complete",
+        description: cardsGenerated > 0 
+          ? `${cardsGenerated} new sentiment card${cardsGenerated > 1 ? 's' : ''} created! ${suggestionsFound} keyword suggestions found.`
+          : `No new trending topics found in recent content. ${suggestionsFound} keyword suggestions available.`,
+        variant: cardsGenerated > 0 ? "default" : "default"
       });
 
       console.log('✅ Analysis triggered successfully');

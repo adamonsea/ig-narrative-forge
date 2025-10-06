@@ -633,13 +633,21 @@ const TopicDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card 
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => {
+                  setActiveTab("content-flow");
+                  setTimeout(() => {
+                    document.getElementById('sentiment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
+                }}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
                     <MessageCircle className="h-5 w-5 text-purple-500" />
                     <div>
                       <div className="text-2xl font-bold text-purple-500">{stats.sentiment_cards}</div>
-                      <p className="text-sm text-muted-foreground">Sentiment Cards</p>
+                      <p className="text-sm text-muted-foreground">Sentiment Cards (click to view)</p>
                     </div>
                   </div>
                 </CardContent>
