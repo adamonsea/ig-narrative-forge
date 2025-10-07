@@ -855,6 +855,7 @@ const TopicDashboard = () => {
                   currentAutomationQualityThreshold={topic.automation_quality_threshold}
                   currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
                   topicType={topic.topic_type}
+                  region={topic.region}
                   onUpdate={() => loadTopicAndStats()}
                 />
                 

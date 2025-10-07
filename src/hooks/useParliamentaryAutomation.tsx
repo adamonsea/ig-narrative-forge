@@ -11,34 +11,76 @@ export const useParliamentaryAutomation = ({ topicId, enabled, region }: UseParl
   useEffect(() => {
     if (!enabled || !topicId || !region) return;
 
-    const triggerParliamentaryCollection = async () => {
+    const triggerDailyCollection = async () => {
       try {
-        console.log('Triggering parliamentary data collection for topic:', topicId);
+        console.log('Triggering daily parliamentary votes collection for topic:', topicId);
         
         const { data, error } = await supabase.functions.invoke('uk-parliament-collector', {
           body: {
             topicId,
-            region
+            region,
+            mode: 'daily'
           }
         });
 
         if (error) {
-          console.error('Error triggering parliamentary collection:', error);
+          console.error('Error triggering daily collection:', error);
           return;
         }
 
-        console.log('Parliamentary collection triggered successfully:', data);
+        console.log('Daily collection triggered successfully:', data);
       } catch (error) {
-        console.error('Failed to trigger parliamentary collection:', error);
+        console.error('Failed to trigger daily collection:', error);
       }
     };
 
-    // Trigger collection when enabled (will be rate-limited on the backend)
-    triggerParliamentaryCollection();
+    const triggerWeeklyRoundup = async () => {
+      try {
+        console.log('Triggering weekly parliamentary roundup for topic:', topicId);
+        
+        const { data, error } = await supabase.functions.invoke('uk-parliament-collector', {
+          body: {
+            topicId,
+            region,
+            mode: 'weekly'
+          }
+        });
 
-    // Set up a timer to check periodically (every 4 hours)
-    const interval = setInterval(triggerParliamentaryCollection, 4 * 60 * 60 * 1000);
+        if (error) {
+          console.error('Error triggering weekly roundup:', error);
+          return;
+        }
 
-    return () => clearInterval(interval);
+        console.log('Weekly roundup triggered successfully:', data);
+      } catch (error) {
+        console.error('Failed to trigger weekly roundup:', error);
+      }
+    };
+
+    // Trigger daily collection immediately when enabled
+    triggerDailyCollection();
+
+    // Set up daily collection timer (every 6 hours)
+    const dailyInterval = setInterval(triggerDailyCollection, 6 * 60 * 60 * 1000);
+
+    // Set up weekly roundup timer (every Monday at 9am)
+    const checkWeeklyRoundup = () => {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const hour = now.getHours();
+      
+      // If it's Monday (1) and between 9-10am
+      if (dayOfWeek === 1 && hour === 9) {
+        triggerWeeklyRoundup();
+      }
+    };
+
+    // Check weekly roundup every hour
+    const weeklyInterval = setInterval(checkWeeklyRoundup, 60 * 60 * 1000);
+
+    return () => {
+      clearInterval(dailyInterval);
+      clearInterval(weeklyInterval);
+    };
   }, [topicId, enabled, region]);
 };

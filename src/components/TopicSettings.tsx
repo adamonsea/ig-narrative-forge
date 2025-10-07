@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
+import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 
 interface TopicSettingsProps {
   topicId: string;
@@ -24,6 +25,7 @@ interface TopicSettingsProps {
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
   topicType?: string;
+  region?: string;
   onUpdate?: () => void;
 }
 
@@ -37,6 +39,7 @@ export const TopicSettings = ({
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
   topicType,
+  region,
   onUpdate 
 }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
@@ -269,37 +272,12 @@ export const TopicSettings = ({
 
         {/* Parliamentary Tracking - Only show for regional topics */}
         {topicType === 'regional' && (
-          <div className="border-t pt-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Parliamentary Tracking
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Parliamentary Tracking:</strong> Monitor MP voting records and parliamentary debates mentioning your region</p>
-                          <p>Displays voting cards and debate references in your feed when MPs discuss local issues</p>
-                          <p className="text-muted-foreground">Beta feature</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {parliamentaryTrackingEnabled ? "Monitoring parliamentary activity for your region" : "Track MP votes and debates about your area"}
-                </p>
-              </div>
-              <Switch
-                checked={parliamentaryTrackingEnabled}
-                onCheckedChange={setParliamentaryTrackingEnabled}
-              />
-            </div>
-          </div>
+          <ParliamentaryAutomationSettings
+            topicId={topicId}
+            region={region}
+            enabled={parliamentaryTrackingEnabled}
+            onToggle={setParliamentaryTrackingEnabled}
+          />
         )}
 
         <Separator />
