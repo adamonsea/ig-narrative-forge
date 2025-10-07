@@ -20,6 +20,36 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
 
     requestPermission();
 
+    // Helper: show notification via Service Worker when available
+    const showStoryNotification = async (title: string, body: string, url: string, tag: string) => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) {
+            await reg.showNotification(title, {
+              body,
+              icon: '/favicon.ico',
+              badge: '/favicon.ico',
+              tag,
+              
+              data: { url }
+            });
+            return;
+          }
+        }
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const n = new Notification(title, { body, icon: '/favicon.ico', badge: '/favicon.ico', tag, requireInteraction: false });
+          n.onclick = () => {
+            window.focus();
+            window.location.href = url;
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.error('Failed to show notification', err);
+      }
+    };
+
     // Subscribe to new story publications
     const channel = supabase
       .channel(`story-notifications-${topicId}`)
@@ -38,24 +68,15 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           if (newStory.id !== lastNotifiedStoryId.current && permissionGranted.current) {
             lastNotifiedStoryId.current = newStory.id;
             
-            // Send browser notification with click handler
-            const notification = new Notification(`New story in ${topicName}`, {
-              body: newStory.title || 'A new story has been published',
-              icon: '/favicon.ico',
-              badge: '/favicon.ico',
-              tag: newStory.id,
-              requireInteraction: false,
-            });
-
-            // Open story link when notification is clicked
-            notification.onclick = () => {
-              const storyUrl = topicSlug 
-                ? `${window.location.origin}/feed/${topicSlug}/story/${newStory.id}`
-                : window.location.href;
-              window.focus();
-              window.location.href = storyUrl;
-              notification.close();
-            };
+            const storyUrl = topicSlug 
+              ? `${window.location.origin}/feed/${topicSlug}/story/${newStory.id}`
+              : window.location.href;
+            showStoryNotification(
+              `New story in ${topicName}`,
+              newStory.title || 'A new story has been published',
+              storyUrl,
+              newStory.id
+            );
           }
         }
       )
@@ -80,23 +101,15 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           ) {
             lastNotifiedStoryId.current = updatedStory.id;
             
-            const notification = new Notification(`New story in ${topicName}`, {
-              body: updatedStory.title || 'A new story has been published',
-              icon: '/favicon.ico',
-              badge: '/favicon.ico',
-              tag: updatedStory.id,
-              requireInteraction: false,
-            });
-
-            // Open story link when notification is clicked
-            notification.onclick = () => {
-              const storyUrl = topicSlug 
-                ? `${window.location.origin}/feed/${topicSlug}/story/${updatedStory.id}`
-                : window.location.href;
-              window.focus();
-              window.location.href = storyUrl;
-              notification.close();
-            };
+            const storyUrl = topicSlug 
+              ? `${window.location.origin}/feed/${topicSlug}/story/${updatedStory.id}`
+              : window.location.href;
+            showStoryNotification(
+              `New story in ${topicName}`,
+              updatedStory.title || 'A new story has been published',
+              storyUrl,
+              updatedStory.id
+            );
           }
         }
       )
