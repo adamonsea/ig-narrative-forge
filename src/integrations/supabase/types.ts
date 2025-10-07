@@ -3459,15 +3459,20 @@ export type Database = {
               p_topic_slug: string
             }
         Returns: {
+          article_id: string
           article_published_at: string
           article_source_url: string
-          author: string
-          cover_illustration_prompt: string
-          cover_illustration_url: string
-          created_at: string
-          id: string
-          title: string
-          updated_at: string
+          content_type: string
+          shared_content_id: string
+          slide_content: string
+          slide_id: string
+          slide_number: number
+          story_cover_url: string
+          story_created_at: string
+          story_id: string
+          story_is_published: boolean
+          story_status: string
+          story_title: string
         }[]
       }
       get_topic_visitor_stats: {
