@@ -951,6 +951,36 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       .on(
         'postgres_changes',
         {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'stories',
+          filter: `is_published=eq.true`
+        },
+        (payload) => {
+          console.log('🔄 New published story detected:', payload);
+          setTimeout(() => {
+            refresh();
+          }, 1000);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stories',
+          filter: `is_published=eq.true`
+        },
+        (payload) => {
+          console.log('🔄 Story published/updated in real-time:', payload);
+          setTimeout(() => {
+            refresh();
+          }, 1000);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'slides'
