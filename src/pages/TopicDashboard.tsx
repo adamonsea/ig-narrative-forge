@@ -23,7 +23,7 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
-import { ParliamentaryTrackingPanel } from "@/components/ParliamentaryTrackingPanel";
+import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
@@ -889,6 +889,16 @@ const TopicDashboard = () => {
                     }} 
                   />
                 </div>
+
+                {/* Parliamentary Backfill - Only for regional topics with tracking enabled */}
+                {topic.topic_type === 'regional' && topic.region && topic.parliamentary_tracking_enabled && (
+                  <div className="border-t pt-8">
+                    <ParliamentaryBackfillTrigger
+                      topicId={topic.id}
+                      region={topic.region}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
