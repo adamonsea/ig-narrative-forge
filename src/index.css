@@ -76,6 +76,15 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
   }
+  
+  /* Parliamentary vote banner styling */
+  .parliamentary-card {
+    @apply border-l-4 border-l-blue-500;
+  }
+  
+  .parliamentary-card .feed-card-header {
+    @apply bg-blue-50 dark:bg-blue-950/30;
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 

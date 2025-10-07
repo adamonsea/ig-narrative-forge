@@ -61,6 +61,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
+  // Detect parliamentary stories for banner styling
+  const isParliamentaryStory = (story as any).is_parliamentary === true;
+  
   // Remove fit-to-height scaling functionality
   
   // Defensive checks for slides data
@@ -452,8 +455,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
   return (
     <div className="flex justify-center px-1 md:px-4">
-      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card" data-story-card data-story-id={story.id}>
-        <div className="relative min-h-[600px] flex flex-col">
+      <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? 'parliamentary-card' : ''}`} data-story-card data-story-id={story.id}>
+        <div className={`relative ${isParliamentaryStory ? 'min-h-[300px]' : 'min-h-[600px]'} flex flex-col`}>
           {/* Header with subtle grey background */}
           <div className="flex items-center justify-between p-4 border-b feed-card-header">
             <div className="flex items-center gap-2">
