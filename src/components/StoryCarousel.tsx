@@ -312,8 +312,32 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
   };
 
+  // Defensive sort: ensure slides are always in correct order
+  const sortedSlides = [...validSlides].sort((a, b) => a.slide_number - b.slide_number);
+  
+  // Validation: check if slides are in sequential order
+  useEffect(() => {
+    const slideNumbers = sortedSlides.map(s => s.slide_number);
+    const isSequential = slideNumbers.every((num, idx) => num === idx + 1);
+    
+    if (!isSequential) {
+      console.warn('⚠️ StoryCarousel: Slides not in sequential order!', {
+        storyId: story.id.substring(0, 8),
+        slideNumbers,
+        expected: sortedSlides.map((_, idx) => idx + 1)
+      });
+    }
+    
+    if (sortedSlides[0]?.slide_number !== 1) {
+      console.error('🚨 StoryCarousel: First slide is not slide_number 1!', {
+        storyId: story.id.substring(0, 8),
+        firstSlideNumber: sortedSlides[0]?.slide_number
+      });
+    }
+  }, [sortedSlides, story.id]);
+  
   // Create slide components for SwipeCarousel
-  const slideComponents = validSlides.map((slide, index) => {
+  const slideComponents = sortedSlides.map((slide, index) => {
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;

@@ -307,6 +307,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
               content: row.slide_content,
               word_count: 0
             });
+            // Defensive sort immediately after adding
+            storyData.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
             storySlideCountMap.set(row.story_id, storySlideCountMap.get(row.story_id) + 1);
           } else {
             console.warn(`⚠️ Duplicate slide prevented: ${row.slide_id.substring(0, 8)} in story ${row.story_id.substring(0, 8)}`);
@@ -395,11 +397,30 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // Sort slides by slide_number and remove slideIds tracking property
         const sortedSlides = story.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
         
-        // Log if we have duplicate slide numbers (shouldn't happen after deduplication)
+        // Validation: check for duplicate slide numbers
         const slideNumbers = sortedSlides.map((s: any) => s.slide_number);
         const uniqueSlideNumbers = new Set(slideNumbers);
         if (slideNumbers.length !== uniqueSlideNumbers.size) {
           console.warn(`⚠️ Story ${story.id.substring(0, 8)} has duplicate slide_numbers:`, slideNumbers);
+        }
+        
+        // Validation: check if slides are sequential starting from 1
+        const isSequential = slideNumbers.every((num, idx) => num === idx + 1);
+        if (!isSequential) {
+          console.error('🚨 Slide ordering bug detected!', {
+            storyId: story.id.substring(0, 8),
+            slideNumbers,
+            expected: sortedSlides.map((_, idx) => idx + 1)
+          });
+        }
+        
+        // Validation: ensure first slide is slide_number 1
+        if (sortedSlides.length > 0 && sortedSlides[0].slide_number !== 1) {
+          console.error('🚨 First slide is not slide_number 1!', {
+            storyId: story.id.substring(0, 8),
+            firstSlideNumber: sortedSlides[0].slide_number,
+            allSlideNumbers: slideNumbers
+          });
         }
           
         return {
