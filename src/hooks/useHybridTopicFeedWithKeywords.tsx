@@ -39,6 +39,7 @@ interface Topic {
   description: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
+  slug?: string;
   region?: string;
   is_public: boolean;
   created_by: string;
@@ -59,6 +60,12 @@ interface SourceCount {
   source_name: string;
   source_domain: string;
   count: number;
+}
+
+interface FilterStoryIndexEntry {
+  id: string;
+  sourceDomain: string | null;
+  keywordMatches: string[];
 }
 
 const STORIES_PER_PAGE = 10;
@@ -116,7 +123,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Refs for debouncing
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const serverFilteredRef = useRef(false);
-  const preferGlobalFiltersRef = useRef(false);
+  const filterIndexLoadingRef = useRef(false);
+  const domainNameCacheRef = useRef<Record<string, string>>({});
+  const refreshIndexDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
   
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
@@ -528,29 +538,36 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
           });
         });
-        if (!keywords || keywords.length === 0) {
-          setFilteredContent(prev => {
-            const contentMap = new Map<string, FeedContent>();
-            [...prev, ...storyContent].forEach(item => {
-              if (!contentMap.has(item.id)) {
-                contentMap.set(item.id, item);
-              }
-            });
-            return Array.from(contentMap.values()).sort((a, b) => {
-              const aTime = new Date(a.content_date).getTime();
-              const bTime = new Date(b.content_date).getTime();
-              return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
-            });
+
+        setFilteredContent(prev => {
+          const contentMap = new Map<string, FeedContent>();
+          const base = keywords || sources ? [...prev.filter(item => item.type === 'story')] : prev;
+          [...base, ...storyContent].forEach(item => {
+            if (!contentMap.has(item.id)) {
+              contentMap.set(item.id, item);
+            }
           });
-        }
+
+          const merged = Array.from(contentMap.values()).sort((a, b) => {
+            const aTime = new Date(a.content_date).getTime();
+            const bTime = new Date(b.content_date).getTime();
+            return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+          });
+
+          if (keywords || sources) {
+            return merged.filter(item => item.type === 'story');
+          }
+
+          return merged;
+        });
       } else {
         setAllStories(transformedStories);
         // For initial load, use the mixed content with proper chronological order
         setAllContent(mixedContent);
-        if (!keywords || keywords.length === 0) {
+        if (!keywords && !sources) {
           setFilteredContent(mixedContent);
         } else {
-          // For keyword filtering, only include stories for now
+          // For filtering, only include stories for now
           setFilteredContent(storyContent);
           serverFilteredRef.current = true;
         }
@@ -581,177 +598,235 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [slug]);
 
-  // Calculate available keywords from all loaded stories
-  // When source filter is active, only count keywords in stories from that source
-  const updateAvailableKeywords = useCallback((stories: Story[], topicKeywords: string[], activeSources: string[]) => {
-    if (topicKeywords.length === 0) {
-      setAvailableKeywords([]);
+  const extractDomain = useCallback((url?: string | null) => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname.replace(/^www\./, '');
+    } catch (error) {
+      return null;
+    }
+  }, []);
+
+  const formatSourceName = useCallback((domain: string) => {
+    if (!domain || domain === 'unknown') {
+      return 'Unknown';
+    }
+
+    const cleaned = domain.replace(/^www\./, '');
+    const base = cleaned.split('.')[0];
+    if (!base) return cleaned;
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  }, []);
+
+  const resolveSourceNames = useCallback(async (domains: string[]) => {
+    const unresolved = domains.filter(domain => !!domain && !domainNameCacheRef.current[domain]);
+    if (unresolved.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('content_sources')
+      .select('canonical_domain, source_name')
+      .in('canonical_domain', unresolved);
+
+    if (error) {
+      console.warn('⚠️ Failed to resolve source names:', error);
+      unresolved.forEach(domain => {
+        if (!domainNameCacheRef.current[domain]) {
+          domainNameCacheRef.current[domain] = formatSourceName(domain);
+        }
+      });
       return;
     }
 
-    const keywordCounts = new Map<string, number>();
-    
-    topicKeywords.forEach(keyword => {
-      keywordCounts.set(keyword.toLowerCase(), 0);
-    });
-
-    // Filter stories by active sources first if applicable
-    const storiesToCount = activeSources.length > 0 
-      ? stories.filter(story => {
-          if (!story.article?.source_url) return false;
-          try {
-            const url = new URL(story.article.source_url);
-            const domain = url.hostname.replace(/^www\./, '');
-            return activeSources.includes(domain);
-          } catch (e) {
-            return false;
-          }
-        })
-      : stories;
-
-    storiesToCount.forEach(story => {
-      const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
-      
-      topicKeywords.forEach(keyword => {
-        const keywordLower = keyword.toLowerCase();
-        const regex = new RegExp(keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-        const matches = text.match(regex);
-        if (matches) {
-          keywordCounts.set(keywordLower, (keywordCounts.get(keywordLower) || 0) + matches.length);
-        }
-      });
-    });
-
-    const keywords = Array.from(keywordCounts.entries())
-      .filter(([_, count]) => count > 0)
-      .map(([keyword, count]) => ({ keyword, count }))
-      .sort((a, b) => b.count - a.count);
-
-    setAvailableKeywords(keywords);
-  }, []);
-
-  // Calculate available sources from all loaded stories
-  // When keyword filter is active, only count sources that have those keywords
-  const updateAvailableSources = useCallback((stories: Story[], activeKeywords: string[]) => {
-    // Filter stories by active keywords first if applicable
-    const storiesToCount = activeKeywords.length > 0
-      ? stories.filter(story => {
-          const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
-          return activeKeywords.some(keyword => text.includes(keyword.toLowerCase()));
-        })
-      : stories;
-
-    const sourceCounts = new Map<string, { domain: string; count: number }>();
-    
-    storiesToCount.forEach(story => {
-      if (story.article?.source_url) {
-        try {
-          const url = new URL(story.article.source_url);
-          const domain = url.hostname.replace(/^www\./, '');
-          const existing = sourceCounts.get(domain);
-          if (existing) {
-            existing.count++;
-          } else {
-            sourceCounts.set(domain, { domain, count: 1 });
-          }
-        } catch (e) {
-          // Invalid URL, skip
-        }
+    (data || []).forEach(row => {
+      if (row.canonical_domain) {
+        domainNameCacheRef.current[row.canonical_domain] = row.source_name || formatSourceName(row.canonical_domain);
       }
     });
+  }, [formatSourceName]);
 
-    const sources = Array.from(sourceCounts.entries())
-      .map(([domain, { count }]) => ({
-        source_name: domain.split('.')[0],
-        source_domain: domain,
-        count
-      }))
-      .sort((a, b) => b.count - a.count);
+  const loadFilterStoryIndex = useCallback(async (topicData: Topic | null) => {
+    if (!topicData?.id || filterIndexLoadingRef.current) return;
 
-    setAvailableSources(sources);
-  }, []);
+    filterIndexLoadingRef.current = true;
 
-  // PHASE 1: Load global filter options from entire database (with full fallback)
-  const loadGlobalFilterOptions = useCallback(async (topicSlug: string) => {
-    console.log('🔍 Phase 1: Attempting to load global filter options from database...');
-    
     try {
-      // Create abort controller for 5-second timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const keywords = topicData.keywords || [];
+      const keywordsLower = keywords.map(keyword => keyword.toLowerCase());
 
-      const { data, error } = await supabase
-        .rpc('get_topic_filter_options', {
-          p_topic_slug: topicSlug
-        })
-        .abortSignal(controller.signal);
+      const limit = 400;
+      let offset = 0;
+      const slugToUse = (topicData.slug || slug || '').toLowerCase();
+      if (!slugToUse) {
+        setFilterStoryIndex([]);
+        return;
+      }
+      const storyMap = new Map<string, { title: string; sourceUrl: string | null; slideContents: Set<string> }>();
 
-      clearTimeout(timeoutId);
+      while (true) {
+        const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
+          p_topic_slug: slugToUse,
+          p_keywords: null,
+          p_sources: null,
+          p_limit: limit,
+          p_offset: offset
+        });
 
-      if (error) {
-        console.warn('⚠️ Phase 1: RPC failed, will fallback to client-side filtering:', error);
-        return false; // Signal failure, caller will use fallback
+        if (error) {
+          console.warn('⚠️ Failed to load filter index batch:', error);
+          break;
+        }
+
+        const rows = data || [];
+        rows.forEach((row: any) => {
+          if (!row?.story_id) return;
+          const existing = storyMap.get(row.story_id) || {
+            title: row.story_title || '',
+            sourceUrl: row.article_source_url || null,
+            slideContents: new Set<string>()
+          };
+
+          if (row.story_title && !existing.title) {
+            existing.title = row.story_title;
+          }
+
+          if (row.article_source_url && !existing.sourceUrl) {
+            existing.sourceUrl = row.article_source_url;
+          }
+
+          if (row.slide_content) {
+            existing.slideContents.add(row.slide_content);
+          }
+
+          storyMap.set(row.story_id, existing);
+        });
+
+        if (rows.length < limit) {
+          break;
+        }
+
+        offset += limit;
       }
 
-      if (!data || data.length === 0) {
-        console.log('📄 Phase 1: No filter options found in database');
-        return false;
-      }
+      const indexEntries: FilterStoryIndexEntry[] = [];
 
-      // Separate keywords and sources
-      const keywordData = data.filter(item => item.filter_type === 'keyword');
-      const sourceData = data.filter(item => item.filter_type === 'source');
+      storyMap.forEach((value, key) => {
+        const combinedText = `${value.title || ''} ${Array.from(value.slideContents).join(' ')}`.toLowerCase();
+        const matches = new Set<string>();
 
-      const globalKeywords: KeywordCount[] = keywordData.map(item => ({
-        keyword: item.filter_value,
-        count: Number(item.count)
-      }));
-
-      // Enrich source names using content_sources table for full names
-      const domains = sourceData.map(item => item.filter_value);
-      let domainToName: Record<string, string> = {};
-      if (domains.length > 0) {
-        const { data: srcRows, error: srcErr } = await supabase
-          .from('content_sources')
-          .select('canonical_domain, source_name')
-          .in('canonical_domain', domains);
-        if (!srcErr && srcRows) {
-          srcRows.forEach((row: any) => {
-            domainToName[row.canonical_domain] = row.source_name || row.canonical_domain;
+        if (keywordsLower.length > 0) {
+          keywordsLower.forEach(keyword => {
+            if (keyword && combinedText.includes(keyword)) {
+              matches.add(keyword);
+            }
           });
         }
-      }
 
-      const globalSources: SourceCount[] = sourceData.map(item => {
-        const domain = item.filter_value;
-        const name = domainToName[domain] || domain.replace(/^www\./, '').split('.')[0];
-        const pretty = name.charAt(0).toUpperCase() + name.slice(1);
-        return {
-          source_name: pretty,
-          source_domain: domain,
-          count: Number(item.count)
-        };
+        indexEntries.push({
+          id: key,
+          sourceDomain: extractDomain(value.sourceUrl),
+          keywordMatches: Array.from(matches)
+        });
       });
 
-      console.log('✅ Phase 1: Successfully loaded global filters', {
-        keywords: globalKeywords.length,
-        sources: globalSources.length
-      });
-
-      setAvailableKeywords(globalKeywords);
-      setAvailableSources(globalSources);
-      preferGlobalFiltersRef.current = true;
-      
-      return true; // Signal success
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Phase 1: RPC timed out after 5 seconds, using client-side fallback');
-      } else {
-        console.warn('⚠️ Phase 1: RPC error, using client-side fallback:', error);
-      }
-      return false; // Signal failure
+      setFilterStoryIndex(indexEntries);
+    } catch (error) {
+      console.warn('⚠️ Failed to build filter story index:', error);
+    } finally {
+      filterIndexLoadingRef.current = false;
     }
-  }, []);
+  }, [extractDomain, slug]);
+
+  const computeFilterOptionsFromIndex = useCallback(async (
+    index: FilterStoryIndexEntry[],
+    topicKeywords: string[],
+    activeKeywords: string[],
+    activeSources: string[]
+  ) => {
+    if (index.length === 0 && activeKeywords.length === 0 && activeSources.length === 0) {
+      return { keywords: [] as KeywordCount[], sources: [] as SourceCount[] };
+    }
+
+    const keywordLookup = new Map<string, string>();
+    const topicKeywordsLower = (topicKeywords || []).map(keyword => keyword.toLowerCase());
+    topicKeywordsLower.forEach((keyword, idx) => {
+      keywordLookup.set(keyword, topicKeywords[idx]);
+    });
+
+    const activeKeywordSet = new Set(activeKeywords.map(keyword => keyword.toLowerCase()));
+    const activeSourceSet = new Set(activeSources);
+
+    const matchingStories = index.filter(story => {
+      const matchesKeywords = activeKeywordSet.size === 0 || Array.from(activeKeywordSet).every(keyword => story.keywordMatches.includes(keyword));
+      const matchesSources = activeSourceSet.size === 0 || (story.sourceDomain && activeSourceSet.has(story.sourceDomain));
+      return matchesKeywords && matchesSources;
+    });
+
+    const keywordCounts = new Map<string, number>();
+    topicKeywordsLower.forEach(keyword => {
+      keywordCounts.set(keyword, 0);
+    });
+
+    matchingStories.forEach(story => {
+      story.keywordMatches.forEach(match => {
+        if (keywordCounts.has(match)) {
+          keywordCounts.set(match, (keywordCounts.get(match) || 0) + 1);
+        }
+      });
+    });
+
+    activeKeywordSet.forEach(keyword => {
+      if (!keywordCounts.has(keyword)) {
+        keywordCounts.set(keyword, 0);
+      }
+    });
+
+    const keywordResults: KeywordCount[] = Array.from(keywordCounts.entries())
+      .filter(([keyword, count]) => count > 0 || activeKeywordSet.has(keyword))
+      .map(([keyword, count]) => ({
+        keyword: keywordLookup.get(keyword) || keyword,
+        count
+      }))
+      .sort((a, b) => {
+        if (b.count === a.count) {
+          return a.keyword.localeCompare(b.keyword);
+        }
+        return b.count - a.count;
+      });
+
+    const sourceCounts = new Map<string, number>();
+    matchingStories.forEach(story => {
+      const domain = story.sourceDomain || 'unknown';
+      sourceCounts.set(domain, (sourceCounts.get(domain) || 0) + 1);
+    });
+
+    activeSourceSet.forEach(domain => {
+      if (!sourceCounts.has(domain)) {
+        sourceCounts.set(domain, 0);
+      }
+    });
+
+    const domains = Array.from(sourceCounts.keys()).filter(Boolean);
+    await resolveSourceNames(domains);
+
+    const sourceResults: SourceCount[] = domains
+      .map(domain => {
+        const resolvedName = domainNameCacheRef.current[domain];
+        return {
+          source_domain: domain,
+          source_name: resolvedName || formatSourceName(domain),
+          count: sourceCounts.get(domain) || 0
+        };
+      })
+      .sort((a, b) => {
+        if (b.count === a.count) {
+          return a.source_name.localeCompare(b.source_name);
+        }
+        return b.count - a.count;
+      });
+
+    return { keywords: keywordResults, sources: sourceResults };
+  }, [formatSourceName, resolveSourceNames]);
 
   // Client-side filtering for immediate feedback - now handles mixed content, keywords, and sources
   const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[]) => {
@@ -907,16 +982,55 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   const refresh = useCallback(async () => {
     if (!topic) return;
-    
+
     setPage(0);
     setHasMore(true);
     serverFilteredRef.current = false;
-    
+
     // PHASE 2: Refresh with both filters
     const keywords = selectedKeywords.length > 0 ? selectedKeywords : null;
     const sources = selectedSources.length > 0 ? selectedSources : null;
     await loadStories(topic, 0, false, keywords, sources);
-  }, [topic, selectedKeywords, selectedSources, loadStories]);
+    
+    // Debounced filter index rebuild
+    if (refreshIndexDebounceRef.current) {
+      clearTimeout(refreshIndexDebounceRef.current);
+    }
+    refreshIndexDebounceRef.current = setTimeout(() => {
+      loadFilterStoryIndex(topic);
+    }, 2000);
+  }, [topic, selectedKeywords, selectedSources, loadStories, loadFilterStoryIndex]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const updateFilterOptions = async () => {
+      const topicKeywords = topic?.keywords || [];
+      const result = await computeFilterOptionsFromIndex(
+        filterStoryIndex,
+        topicKeywords,
+        selectedKeywords,
+        selectedSources
+      );
+
+      if (!cancelled) {
+        setAvailableKeywords(result.keywords);
+        setAvailableSources(result.sources);
+      }
+    };
+
+    updateFilterOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filterStoryIndex, selectedKeywords, selectedSources, topic?.keywords, computeFilterOptionsFromIndex]);
+
+  useEffect(() => {
+    if (topic) {
+      loadFilterStoryIndex(topic);
+    }
+  }, [topic?.id, topic?.keywords, loadFilterStoryIndex]);
 
   // Initialize feed
   useEffect(() => {
@@ -926,17 +1040,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         const topicData = await loadTopic();
         console.log('✅ Topic loaded:', topicData?.name);
         setPage(0);
-        
-        // PHASE 1: Try to load global filter options from database
-        const globalFiltersLoaded = await loadGlobalFilterOptions(slug);
-        
-        if (!globalFiltersLoaded) {
-          console.log('🔄 Phase 1: Falling back to client-side filter calculation');
-          // Fallback is handled by the existing useEffect below (lines 638-645)
-        }
-        
         console.log('📚 Loading stories for topic:', topicData?.id);
-        await loadStories(topicData, 0, false, null);
+        await loadStories(topicData, 0, false, null, null);
         console.log('✅ Stories loaded successfully');
       } catch (error) {
         console.error('Error initializing hybrid feed:', error);
@@ -947,21 +1052,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (slug) {
       initialize();
     }
-  }, [slug, loadTopic, loadStories, loadGlobalFilterOptions]);
-
-  // Update available keywords and sources when stories change
-  // Pass active filters to calculations for combined filtering context
-  useEffect(() => {
-    if (filteredStories.length > 0) {
-      // Do not override global DB-driven options if we have them
-      if (!preferGlobalFiltersRef.current) {
-        if (topic?.keywords) {
-          updateAvailableKeywords(filteredStories, topic.keywords, selectedSources);
-        }
-        updateAvailableSources(filteredStories, selectedKeywords);
-      }
-    }
-  }, [filteredStories, topic?.keywords, selectedKeywords, selectedSources, updateAvailableKeywords, updateAvailableSources]);
+  }, [slug, loadTopic, loadStories]);
 
   // Real-time subscription for slide updates
   useEffect(() => {
