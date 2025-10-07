@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { topicId, region } = await req.json();
+    const { topicId, region, days = 7 } = await req.json();
 
     if (!topicId || !region) {
       return new Response(
@@ -25,13 +25,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Creating weekly backfill roundup for topic ${topicId}, region ${region}`);
+    console.log(`Creating backfill roundup for topic ${topicId}, region ${region}, last ${days} days`);
 
-    // Get last week's date range (7 days ago to today)
+    // Get date range based on days parameter
     const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    const weekStartDate = sevenDaysAgo.toISOString().split('T')[0];
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - days);
+    const weekStartDate = startDate.toISOString().split('T')[0];
 
     // Fetch all votes from the last 7 days that haven't been rounded up
     const { data: votesData, error: votesError } = await supabase
@@ -61,8 +61,9 @@ serve(async (req) => {
 
     console.log(`Found ${votesData.length} votes to include in backfill roundup`);
 
-    // Create shared article content for the weekly roundup
-    const roundupTitle = `Your MPs' Voting Week: ${new Date(weekStartDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+    // Create shared article content for the roundup
+    const periodLabel = days === 7 ? 'Week' : `${days} Days`;
+    const roundupTitle = `Your MPs' Voting ${periodLabel}: ${new Date(weekStartDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
     
     const { data: sharedContent, error: contentError } = await supabase
       .from('shared_article_content')
