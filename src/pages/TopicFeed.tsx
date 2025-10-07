@@ -15,9 +15,6 @@ import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
-import { useParliamentaryMentions } from "@/hooks/useParliamentaryMentions";
-import { ParliamentaryVoteCard } from "@/components/ParliamentaryVoteCard";
-import { ParliamentaryDebateCard } from "@/components/ParliamentaryDebateCard";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -470,48 +467,6 @@ const TopicFeed = () => {
                     />
                   </div>
                 );
-              } else if (contentItem.type === 'parliamentary_mention') {
-                const mention = contentItem.data as any;
-                
-                if ((mention.mention_type === 'vote' || mention.mention_type === 'parliamentary_vote') && mention.vote_title && mention.mp_name) {
-                  items.push(
-                    <div key={`parliamentary-vote-${mention.id}`}>
-                      <ParliamentaryVoteCard
-                        mpName={mention.mp_name}
-                        constituency={mention.constituency || ''}
-                        party={mention.party || ''}
-                        voteTitle={mention.vote_title}
-                        voteDirection={mention.vote_direction as 'aye' | 'no' | 'abstain'}
-                        voteDate={mention.vote_date || ''}
-                        voteUrl={mention.vote_url || undefined}
-                        regionMentioned={mention.region_mentioned || undefined}
-                        relevanceScore={mention.relevance_score}
-                        storyId={mention.story_id || undefined}
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                } else if ((mention.mention_type === 'debate' || mention.mention_type === 'debate_mention') && mention.debate_title) {
-                  // Show debate card even if mp_name is missing, but use fallback
-                  items.push(
-                    <div key={`parliamentary-debate-${mention.id}`}>
-                      <ParliamentaryDebateCard
-                        mpName={mention.mp_name || 'Parliament'}
-                        constituency={mention.constituency || ''}
-                        party={mention.party || ''}
-                        debateTitle={mention.debate_title}
-                        debateExcerpt={mention.debate_excerpt || 'Parliamentary discussion mentioning this region.'}
-                        debateDate={mention.debate_date || ''}
-                        hansardUrl={mention.hansard_url || undefined}
-                        regionMentioned={mention.region_mentioned || undefined}
-                        landmarkMentioned={mention.landmark_mentioned || undefined}
-                        relevanceScore={mention.relevance_score}
-                        storyId={mention.story_id || undefined}
-                        topicSlug={slug}
-                      />
-                    </div>
-                  );
-                }
               }
 
               // Add sentiment card every 6 stories (count stories only)

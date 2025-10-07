@@ -23,7 +23,6 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
-import { ParliamentaryTestPanel } from "@/components/ParliamentaryTestPanel";
 import { ParliamentaryTrackingPanel } from "@/components/ParliamentaryTrackingPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -907,15 +906,6 @@ const TopicDashboard = () => {
                   onUpdate={setCompetingRegions}
                 />
               </div>
-            )}
-
-            {/* Parliamentary Integration Test - Only for regional topics */}
-            {topic.topic_type === 'regional' && topic.region && (
-              <ParliamentaryTestPanel
-                topicId={topic.id}
-                region={topic.region}
-                parliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled || false}
-              />
             )}
 
             <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
