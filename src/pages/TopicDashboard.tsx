@@ -149,52 +149,51 @@ const TopicDashboard = () => {
       setNegativeKeywords(topicData.negative_keywords || []);
       setCompetingRegions(topicData.competing_regions || []);
 
-      // Load stats with sequential queries to avoid nested async issues
-      // First get article IDs for this topic
+      // Load stats using multi-tenant architecture (topic_articles)
+      const articlesRes = await supabase
+        .from('topic_articles')
+        .select('id', { count: 'exact' })
+        .eq('topic_id', topicData.id);
+
+      // Get topic article IDs for related queries
       const { data: topicArticles } = await supabase
-        .from('articles')
+        .from('topic_articles')
         .select('id')
         .eq('topic_id', topicData.id);
 
-      const articleIds = topicArticles?.map(a => a.id) || [];
+      const topicArticleIds = topicArticles?.map(a => a.id) || [];
 
-      // Load stats sequentially
-      const articlesRes = await supabase
-        .from('articles')
-        .select('id', { count: 'exact' })
-        .eq('topic_id', topicData.id);
-
-      const storiesRes = articleIds.length > 0 ? await supabase
+      const storiesRes = topicArticleIds.length > 0 ? await supabase
         .from('stories')
         .select('id', { count: 'exact' })
-        .in('article_id', articleIds) : { count: 0 };
+        .in('topic_article_id', topicArticleIds) : { count: 0 };
 
       // Use topic_sources junction table for accurate source count
-      const { data: topicSources, count: sourcesCount } = await supabase
+      const { count: sourcesCount } = await supabase
         .from('topic_sources')
         .select('source_id', { count: 'exact' })
         .eq('topic_id', topicData.id)
         .eq('is_active', true);
 
       const pendingArticlesRes = await supabase
-        .from('articles')
+        .from('topic_articles')
         .select('id', { count: 'exact' })
         .eq('topic_id', topicData.id)
         .eq('processing_status', 'new');
 
-      const queueRes = articleIds.length > 0 ? await supabase
+      const queueRes = topicArticleIds.length > 0 ? await supabase
         .from('content_generation_queue')
         .select('id', { count: 'exact' })
-        .in('article_id', articleIds)
+        .in('topic_article_id', topicArticleIds)
         .neq('status', 'completed') : { count: 0 };
 
-      const readyStoriesRes = articleIds.length > 0 ? await supabase
+      const readyStoriesRes = topicArticleIds.length > 0 ? await supabase
         .from('stories')
         .select('id', { count: 'exact' })
-        .in('article_id', articleIds)
-        .eq('status', 'published') : { count: 0 };
+        .in('topic_article_id', topicArticleIds)
+        .in('status', ['ready', 'published']) : { count: 0 };
 
-      // Get arrivals count (articles + topic_articles)
+      // Get arrivals count (new topic_articles)
       const arrivalsRes = await supabase
         .from('topic_articles')
         .select('id', { count: 'exact' })
@@ -205,10 +204,10 @@ const TopicDashboard = () => {
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
-      const simplifiedRes = articleIds.length > 0 ? await supabase
+      const simplifiedRes = topicArticleIds.length > 0 ? await supabase
         .from('stories')
         .select('id', { count: 'exact' })
-        .in('article_id', articleIds)
+        .in('topic_article_id', topicArticleIds)
         .gte('created_at', yesterday.toISOString()) : { count: 0 };
 
       // Get sentiment cards count
