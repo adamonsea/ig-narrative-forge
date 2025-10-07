@@ -1191,6 +1191,7 @@ export type Database = {
       }
       parliamentary_mentions: {
         Row: {
+          aye_count: number | null
           constituency: string | null
           created_at: string | null
           debate_date: string | null
@@ -1199,22 +1200,32 @@ export type Database = {
           hansard_url: string | null
           id: string
           import_metadata: Json | null
+          is_rebellion: boolean | null
+          is_weekly_roundup: boolean | null
           landmark_mentioned: string | null
+          local_impact_summary: string | null
           mention_type: string
           mp_name: string | null
+          national_relevance_score: number | null
+          no_count: number | null
           party: string | null
+          party_whip_vote: string | null
           region_mentioned: string | null
           relevance_score: number | null
           source_api: string | null
           story_id: string | null
           topic_id: string
           updated_at: string | null
+          vote_category: string | null
           vote_date: string | null
           vote_direction: string | null
+          vote_outcome: string | null
           vote_title: string | null
           vote_url: string | null
+          week_start_date: string | null
         }
         Insert: {
+          aye_count?: number | null
           constituency?: string | null
           created_at?: string | null
           debate_date?: string | null
@@ -1223,22 +1234,32 @@ export type Database = {
           hansard_url?: string | null
           id?: string
           import_metadata?: Json | null
+          is_rebellion?: boolean | null
+          is_weekly_roundup?: boolean | null
           landmark_mentioned?: string | null
+          local_impact_summary?: string | null
           mention_type: string
           mp_name?: string | null
+          national_relevance_score?: number | null
+          no_count?: number | null
           party?: string | null
+          party_whip_vote?: string | null
           region_mentioned?: string | null
           relevance_score?: number | null
           source_api?: string | null
           story_id?: string | null
           topic_id: string
           updated_at?: string | null
+          vote_category?: string | null
           vote_date?: string | null
           vote_direction?: string | null
+          vote_outcome?: string | null
           vote_title?: string | null
           vote_url?: string | null
+          week_start_date?: string | null
         }
         Update: {
+          aye_count?: number | null
           constituency?: string | null
           created_at?: string | null
           debate_date?: string | null
@@ -1247,20 +1268,29 @@ export type Database = {
           hansard_url?: string | null
           id?: string
           import_metadata?: Json | null
+          is_rebellion?: boolean | null
+          is_weekly_roundup?: boolean | null
           landmark_mentioned?: string | null
+          local_impact_summary?: string | null
           mention_type?: string
           mp_name?: string | null
+          national_relevance_score?: number | null
+          no_count?: number | null
           party?: string | null
+          party_whip_vote?: string | null
           region_mentioned?: string | null
           relevance_score?: number | null
           source_api?: string | null
           story_id?: string | null
           topic_id?: string
           updated_at?: string | null
+          vote_category?: string | null
           vote_date?: string | null
           vote_direction?: string | null
+          vote_outcome?: string | null
           vote_title?: string | null
           vote_url?: string | null
+          week_start_date?: string | null
         }
         Relationships: [
           {
