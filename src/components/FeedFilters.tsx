@@ -91,57 +91,79 @@ export function FeedFilters({
       {(selectedKeywords.length > 0 || selectedSources.length > 0 || selectedLocations.length > 0) && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="text-xs text-muted-foreground">Filtering by:</span>
-          {selectedKeywords.map((keyword) => (
-            <Badge
-              key={`keyword-${keyword}`}
-              className="flex items-center gap-1 pr-1 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60"
-            >
-              <Hash className="w-3 h-3" />
-              <span className="capitalize">{keyword}</span>
-              {onRemoveKeyword && (
-                <button
-                  onClick={() => onRemoveKeyword(keyword)}
-                  className="ml-1 hover:bg-blue-200/50 dark:hover:bg-blue-800/50 rounded-full p-0.5 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </Badge>
-          ))}
-          {selectedLocations.map((location) => (
-            <Badge
-              key={`location-${location}`}
-              className="flex items-center gap-1 pr-1 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
-            >
-              <MapPin className="w-3 h-3" />
-              <span>{location}</span>
-              {onRemoveLocation && (
-                <button
-                  onClick={() => onRemoveLocation(location)}
-                  className="ml-1 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded-full p-0.5 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </Badge>
-          ))}
-          {selectedSources.map((source) => (
-            <Badge
-              key={`source-${source}`}
-              className="flex items-center gap-1 pr-1 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60"
-            >
-              <Globe className="w-3 h-3" />
-              <span className="capitalize">{source.split('.')[0]}</span>
-              {onRemoveSource && (
-                <button
-                  onClick={() => onRemoveSource(source)}
-                  className="ml-1 hover:bg-amber-200/50 dark:hover:bg-amber-800/50 rounded-full p-0.5 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </Badge>
-          ))}
+          {selectedKeywords.map((keyword) => {
+            // Smart sentence case: capitalize first letter only if word is all lowercase
+            const displayText = keyword === keyword.toLowerCase() 
+              ? keyword.charAt(0).toUpperCase() + keyword.slice(1)
+              : keyword;
+            
+            return (
+              <Badge
+                key={`keyword-${keyword}`}
+                className="flex items-center gap-1 pr-1 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60"
+              >
+                <Hash className="w-3 h-3" />
+                <span>{displayText}</span>
+                {onRemoveKeyword && (
+                  <button
+                    onClick={() => onRemoveKeyword(keyword)}
+                    className="ml-1 hover:bg-blue-200/50 dark:hover:bg-blue-800/50 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </Badge>
+            );
+          })}
+          {selectedLocations.map((location) => {
+            // Smart sentence case: capitalize first letter only if word is all lowercase
+            const displayText = location === location.toLowerCase() 
+              ? location.charAt(0).toUpperCase() + location.slice(1)
+              : location;
+            
+            return (
+              <Badge
+                key={`location-${location}`}
+                className="flex items-center gap-1 pr-1 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
+              >
+                <MapPin className="w-3 h-3" />
+                <span>{displayText}</span>
+                {onRemoveLocation && (
+                  <button
+                    onClick={() => onRemoveLocation(location)}
+                    className="ml-1 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </Badge>
+            );
+          })}
+          {selectedSources.map((source) => {
+            // Title case for source display
+            const displayName = source.split('.')[0]
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+            
+            return (
+              <Badge
+                key={`source-${source}`}
+                className="flex items-center gap-1 pr-1 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60"
+              >
+                <Globe className="w-3 h-3" />
+                <span>{displayName}</span>
+                {onRemoveSource && (
+                  <button
+                    onClick={() => onRemoveSource(source)}
+                    className="ml-1 hover:bg-amber-200/50 dark:hover:bg-amber-800/50 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </Badge>
+            );
+          })}
         </div>
       )}
     </div>

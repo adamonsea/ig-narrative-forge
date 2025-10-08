@@ -3,9 +3,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Hash, Globe, MapPin, Building, ChevronDown, ChevronUp } from "lucide-react";
+import { Hash, Globe, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
+
+// Helper: Smart sentence case - only capitalize if word is all lowercase
+const toSentenceCase = (text: string): string => {
+  if (text === text.toLowerCase()) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  return text; // Preserve existing capitals (e.g., "NHS", "East Sussex")
+};
+
+// Helper: Title case for proper nouns
+const toTitleCase = (text: string): string => {
+  return text
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 interface KeywordCount {
   keyword: string;
@@ -56,37 +72,29 @@ export const FilterModal = ({
   const totalSelected = selectedKeywords.length + selectedLandmarks.length + selectedOrganizations.length + selectedSources.length;
 
   const [showAllKeywords, setShowAllKeywords] = useState(false);
-  const [showAllLandmarks, setShowAllLandmarks] = useState(false);
-  const [showAllOrganizations, setShowAllOrganizations] = useState(false);
   const [showAllSources, setShowAllSources] = useState(false);
 
-  // Keywords processing
-  const sortedKeywords = useMemo(
-    () => [...availableKeywords].sort((a, b) => b.count - a.count),
-    [availableKeywords]
-  );
-  const filteredKeywords = useMemo(
-    () => sortedKeywords.filter(({ keyword }) => keyword.length > 2),
-    [sortedKeywords]
-  );
-  const displayedKeywords = showAllKeywords ? filteredKeywords : filteredKeywords.slice(0, 10);
-  const hasMoreKeywords = filteredKeywords.length > 10;
+  // Merge keywords, organizations, and landmarks into one list
+  const combinedKeywords = useMemo(() => {
+    const items = [
+      ...availableKeywords.filter(({ keyword }) => keyword.length > 2).map(item => ({ 
+        ...item, 
+        type: 'keyword' as const 
+      })),
+      ...availableOrganizations.map(item => ({ 
+        ...item, 
+        type: 'organization' as const 
+      })),
+      ...availableLandmarks.map(item => ({ 
+        ...item, 
+        type: 'landmark' as const 
+      }))
+    ];
+    return items.sort((a, b) => b.count - a.count);
+  }, [availableKeywords, availableOrganizations, availableLandmarks]);
 
-  // Landmarks processing
-  const sortedLandmarks = useMemo(
-    () => [...availableLandmarks].sort((a, b) => b.count - a.count),
-    [availableLandmarks]
-  );
-  const displayedLandmarks = showAllLandmarks ? sortedLandmarks : sortedLandmarks.slice(0, 10);
-  const hasMoreLandmarks = sortedLandmarks.length > 10;
-
-  // Organizations processing
-  const sortedOrganizations = useMemo(
-    () => [...availableOrganizations].sort((a, b) => b.count - a.count),
-    [availableOrganizations]
-  );
-  const displayedOrganizations = showAllOrganizations ? sortedOrganizations : sortedOrganizations.slice(0, 10);
-  const hasMoreOrganizations = sortedOrganizations.length > 10;
+  const displayedKeywords = showAllKeywords ? combinedKeywords : combinedKeywords.slice(0, 10);
+  const hasMoreKeywords = combinedKeywords.length > 10;
 
   // Sources processing
   const sortedSources = useMemo(
@@ -95,8 +103,6 @@ export const FilterModal = ({
   );
   const displayedSources = showAllSources ? sortedSources : sortedSources.slice(0, 10);
   const hasMoreSources = sortedSources.length > 10;
-
-  const numTabs = 2 + (availableLandmarks.length > 0 ? 1 : 0) + (availableOrganizations.length > 0 ? 1 : 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -113,43 +119,16 @@ export const FilterModal = ({
         </DialogHeader>
         
         <Tabs defaultValue="keywords" className="w-full">
-          <TabsList className={cn(
-            "grid w-full",
-            numTabs === 2 && "grid-cols-2",
-            numTabs === 3 && "grid-cols-3",
-            numTabs === 4 && "grid-cols-4"
-          )}>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="keywords" className="flex items-center gap-2">
               <Hash className="w-4 h-4" />
               <span className="hidden sm:inline">Keywords</span>
-              {selectedKeywords.length > 0 && (
+              {(selectedKeywords.length + selectedLandmarks.length + selectedOrganizations.length) > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {selectedKeywords.length}
+                  {selectedKeywords.length + selectedLandmarks.length + selectedOrganizations.length}
                 </Badge>
               )}
             </TabsTrigger>
-            {availableLandmarks.length > 0 && (
-              <TabsTrigger value="landmarks" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span className="hidden sm:inline">Locations</span>
-                {selectedLandmarks.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {selectedLandmarks.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {availableOrganizations.length > 0 && onOrganizationToggle && (
-              <TabsTrigger value="organizations" className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                <span className="hidden sm:inline">Orgs</span>
-                {selectedOrganizations.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {selectedOrganizations.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
             <TabsTrigger value="sources" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
               <span className="hidden sm:inline">Sources</span>
@@ -164,24 +143,42 @@ export const FilterModal = ({
           <TabsContent value="keywords" className="mt-4">
             <ScrollArea className="h-[60vh]">
               <div className="space-y-4 pr-4">
-                {filteredKeywords.length > 0 ? (
+                {combinedKeywords.length > 0 ? (
                   <>
                     <div className="flex flex-wrap gap-2">
-                      {displayedKeywords.map(({ keyword, count }) => {
-                        const isSelected = selectedKeywords.includes(keyword);
+                      {displayedKeywords.map((item) => {
+                        const { keyword, count, type } = item;
+                        const isSelected = 
+                          type === 'keyword' ? selectedKeywords.includes(keyword) :
+                          type === 'landmark' ? selectedLandmarks.includes(keyword) :
+                          selectedOrganizations.includes(keyword);
+                        
+                        const handleClick = () => {
+                          if (type === 'keyword') onKeywordToggle(keyword);
+                          else if (type === 'landmark') onLandmarkToggle?.(keyword);
+                          else onOrganizationToggle?.(keyword);
+                        };
+
+                        // Use blue for keywords and organizations, emerald for landmarks
+                        const colorClass = type === 'landmark'
+                          ? isSelected 
+                            ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500" 
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
+                          : isSelected 
+                            ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500" 
+                            : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60";
+
                         return (
                           <button
-                            key={keyword}
-                            onClick={() => onKeywordToggle(keyword)}
+                            key={`${type}-${keyword}`}
+                            onClick={handleClick}
                             className={cn(
                               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
                               "hover:scale-105 active:scale-95",
-                              isSelected 
-                                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500" 
-                                : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60"
+                              colorClass
                             )}
                           >
-                            <span className="capitalize">{keyword}</span>
+                            <span>{toSentenceCase(keyword)}</span>
                             <span className="text-xs opacity-70">({count})</span>
                           </button>
                         );
@@ -203,7 +200,7 @@ export const FilterModal = ({
                           ) : (
                             <>
                               <ChevronDown className="w-3 h-3 mr-1" />
-                              Show {filteredKeywords.length - 10} more keywords
+                              Show {combinedKeywords.length - 10} more
                             </>
                           )}
                         </Button>
@@ -217,137 +214,11 @@ export const FilterModal = ({
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground text-center">
-                  Click keywords to filter stories. Numbers show story count.
+                  Click to filter stories. Blue = keywords/organizations, Green = places.
                 </p>
               </div>
             </ScrollArea>
           </TabsContent>
-
-          <TabsContent value="landmarks" className="mt-4">
-            <ScrollArea className="h-[60vh]">
-              <div className="space-y-4 pr-4">
-                {sortedLandmarks.length > 0 ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {displayedLandmarks.map(({ keyword, count }) => {
-                        const isSelected = selectedLandmarks.includes(keyword);
-                        return (
-                          <button
-                            key={keyword}
-                            onClick={() => onLandmarkToggle?.(keyword)}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                              "hover:scale-105 active:scale-95",
-                              isSelected 
-                                ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500" 
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
-                            )}
-                          >
-                            <span>{keyword}</span>
-                            <span className="text-xs opacity-70">({count})</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {hasMoreLandmarks && (
-                      <div className="flex justify-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowAllLandmarks(!showAllLandmarks)}
-                          className="text-xs"
-                        >
-                          {showAllLandmarks ? (
-                            <>
-                              <ChevronUp className="w-3 h-3 mr-1" />
-                              Show less
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-3 h-3 mr-1" />
-                              Show {sortedLandmarks.length - 10} more locations
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No locations found</p>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground text-center">
-                  Click locations to filter stories. Numbers show story count.
-                </p>
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {availableOrganizations.length > 0 && onOrganizationToggle && (
-            <TabsContent value="organizations" className="mt-4">
-              <ScrollArea className="h-[60vh]">
-                <div className="space-y-4 pr-4">
-                  {sortedOrganizations.length > 0 ? (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        {displayedOrganizations.map(({ keyword, count }) => {
-                          const isSelected = selectedOrganizations.includes(keyword);
-                          return (
-                            <button
-                              key={keyword}
-                              onClick={() => onOrganizationToggle(keyword)}
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                                "hover:scale-105 active:scale-95",
-                                isSelected 
-                                  ? "bg-purple-600 text-white shadow-sm dark:bg-purple-500" 
-                                  : "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/60"
-                              )}
-                            >
-                              <span>{keyword}</span>
-                              <span className="text-xs opacity-70">({count})</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {hasMoreOrganizations && (
-                        <div className="flex justify-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowAllOrganizations(!showAllOrganizations)}
-                            className="text-xs"
-                          >
-                            {showAllOrganizations ? (
-                              <>
-                                <ChevronUp className="w-3 h-3 mr-1" />
-                                Show less
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-3 h-3 mr-1" />
-                                Show {sortedOrganizations.length - 10} more organizations
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Building className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No organizations found</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground text-center">
-                    Click organizations to filter stories. Numbers show story count.
-                  </p>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          )}
 
           <TabsContent value="sources" className="mt-4">
             <ScrollArea className="h-[60vh]">
@@ -369,7 +240,7 @@ export const FilterModal = ({
                                 : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60"
                             )}
                           >
-                            <span className="capitalize">{source_name}</span>
+                            <span>{toTitleCase(source_name)}</span>
                             <span className="text-xs opacity-70">({count})</span>
                           </button>
                         );
