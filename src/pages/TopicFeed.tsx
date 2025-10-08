@@ -223,6 +223,7 @@ const TopicFeed = () => {
       {/* Add to Home Screen Prompt */}
       <AddToHomeScreen
         topicName={topic.name}
+        topicSlug={slug || ''}
         topicLogo={topic.branding_config?.logo_url}
       />
 

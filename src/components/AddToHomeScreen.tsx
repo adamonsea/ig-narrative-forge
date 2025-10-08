@@ -5,6 +5,7 @@ import { Card } from './ui/card';
 
 interface AddToHomeScreenProps {
   topicName: string;
+  topicSlug: string;
   topicLogo?: string;
 }
 
@@ -13,7 +14,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export const AddToHomeScreen = ({ topicName, topicLogo }: AddToHomeScreenProps) => {
+export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeScreenProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -38,6 +39,44 @@ export const AddToHomeScreen = ({ topicName, topicLogo }: AddToHomeScreenProps) 
       }
     }
 
+    // Create dynamic manifest with correct start_url
+    const manifestData = {
+      name: topicName,
+      short_name: topicName,
+      description: `Stay updated with the latest ${topicName} news`,
+      start_url: `/topic/${topicSlug}`,
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#000000",
+      orientation: "portrait-primary",
+      icons: [
+        {
+          src: topicLogo || "/placeholder.svg",
+          sizes: "192x192",
+          type: "image/svg+xml",
+          purpose: "any maskable"
+        },
+        {
+          src: topicLogo || "/placeholder.svg",
+          sizes: "512x512",
+          type: "image/svg+xml",
+          purpose: "any maskable"
+        }
+      ]
+    };
+
+    const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    
+    // Update or create manifest link
+    let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (!manifestLink) {
+      manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = manifestURL;
+
     // Listen for the beforeinstallprompt event (Android/Desktop)
     const handler = (e: Event) => {
       e.preventDefault();
@@ -55,8 +94,9 @@ export const AddToHomeScreen = ({ topicName, topicLogo }: AddToHomeScreenProps) 
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      URL.revokeObjectURL(manifestURL);
     };
-  }, []);
+  }, [topicName, topicSlug, topicLogo]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
