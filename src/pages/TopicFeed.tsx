@@ -19,6 +19,7 @@ import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
+import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -217,6 +218,12 @@ const TopicFeed = () => {
         topicType={topic.topic_type}
         region={topic.region}
         logoUrl={topic.branding_config?.logo_url}
+      />
+
+      {/* Add to Home Screen Prompt */}
+      <AddToHomeScreen
+        topicName={topic.name}
+        topicLogo={topic.branding_config?.logo_url}
       />
 
       {/* Sticky header for scrollers */}
