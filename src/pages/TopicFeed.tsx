@@ -58,6 +58,14 @@ const TopicFeed = () => {
     removeKeyword,
     hasActiveFilters,
     isServerFiltering,
+    selectedLandmarks,
+    availableLandmarks,
+    toggleLandmark,
+    removeLandmark,
+    selectedOrganizations,
+    availableOrganizations,
+    toggleOrganization,
+    removeOrganization,
     selectedSources,
     availableSources,
     toggleSource,
@@ -351,6 +359,8 @@ const TopicFeed = () => {
             onFilterClick={() => setIsModalOpen(true)}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={removeKeyword}
+            selectedLocations={selectedLandmarks}
+            onRemoveLocation={removeLandmark}
             selectedSources={selectedSources}
             onRemoveSource={removeSource}
             hasActiveFilters={hasActiveFilters}
@@ -403,6 +413,12 @@ const TopicFeed = () => {
           availableKeywords={availableKeywords}
           selectedKeywords={selectedKeywords}
           onKeywordToggle={toggleKeyword}
+          availableLandmarks={availableLandmarks}
+          selectedLandmarks={selectedLandmarks}
+          onLandmarkToggle={toggleLandmark}
+          availableOrganizations={availableOrganizations}
+          selectedOrganizations={selectedOrganizations}
+          onOrganizationToggle={toggleOrganization}
           availableSources={availableSources}
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}

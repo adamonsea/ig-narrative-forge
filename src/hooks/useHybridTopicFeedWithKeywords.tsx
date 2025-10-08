@@ -39,6 +39,8 @@ interface Topic {
   description: string;
   topic_type: 'regional' | 'keyword';
   keywords: string[];
+  landmarks: string[];
+  organizations: string[];
   slug?: string;
   region?: string;
   is_public: boolean;
@@ -116,6 +118,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [isServerFiltering, setIsServerFiltering] = useState(false);
   const [availableKeywords, setAvailableKeywords] = useState<KeywordCount[]>([]);
   
+  // Landmark filtering state
+  const [selectedLandmarks, setSelectedLandmarks] = useState<string[]>([]);
+  const [availableLandmarks, setAvailableLandmarks] = useState<KeywordCount[]>([]);
+  
+  // Organization filtering state
+  const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
+  const [availableOrganizations, setAvailableOrganizations] = useState<KeywordCount[]>([]);
+  
   // Source filtering state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [availableSources, setAvailableSources] = useState<SourceCount[]>([]);
@@ -156,13 +166,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         .single();
       
       let topicKeywords: string[] = [];
+      let topicLandmarks: string[] = [];
+      let topicOrganizations: string[] = [];
       let brandingConfig = {};
       if (!keywordError && fullTopicData) {
-        topicKeywords = [
-          ...(fullTopicData.keywords || []),
-          ...(fullTopicData.landmarks || []),
-          ...(fullTopicData.organizations || [])
-        ];
+        topicKeywords = fullTopicData.keywords || [];
+        topicLandmarks = fullTopicData.landmarks || [];
+        topicOrganizations = fullTopicData.organizations || [];
         brandingConfig = fullTopicData.branding_config || {};
       }
 
@@ -170,6 +180,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         ...topicData,
         topic_type: topicData.topic_type as 'regional' | 'keyword',
         keywords: topicKeywords,
+        landmarks: topicLandmarks,
+        organizations: topicOrganizations,
         is_public: topicData.is_public,
         created_by: '',
         branding_config: brandingConfig as any
@@ -652,7 +664,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
     try {
       const keywords = topicData.keywords || [];
-      const keywordsLower = keywords.map(keyword => keyword.toLowerCase());
+      const landmarks = topicData.landmarks || [];
+      const organizations = topicData.organizations || [];
+      const allTerms = [...keywords, ...landmarks, ...organizations];
+      const keywordsLower = allTerms.map(keyword => keyword.toLowerCase());
 
       const limit = 400;
       let offset = 0;
@@ -740,37 +755,77 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const computeFilterOptionsFromIndex = useCallback(async (
     index: FilterStoryIndexEntry[],
     topicKeywords: string[],
+    topicLandmarks: string[],
+    topicOrganizations: string[],
     activeKeywords: string[],
+    activeLandmarks: string[],
+    activeOrganizations: string[],
     activeSources: string[]
   ) => {
-    if (index.length === 0 && activeKeywords.length === 0 && activeSources.length === 0) {
-      return { keywords: [] as KeywordCount[], sources: [] as SourceCount[] };
+    if (index.length === 0 && activeKeywords.length === 0 && activeLandmarks.length === 0 && activeOrganizations.length === 0 && activeSources.length === 0) {
+      return { 
+        keywords: [] as KeywordCount[], 
+        landmarks: [] as KeywordCount[], 
+        organizations: [] as KeywordCount[], 
+        sources: [] as SourceCount[] 
+      };
     }
 
     const keywordLookup = new Map<string, string>();
-    const topicKeywordsLower = (topicKeywords || []).map(keyword => keyword.toLowerCase());
+    const landmarkLookup = new Map<string, string>();
+    const organizationLookup = new Map<string, string>();
+    
+    const topicKeywordsLower = (topicKeywords || []).map(k => k.toLowerCase());
+    const topicLandmarksLower = (topicLandmarks || []).map(l => l.toLowerCase());
+    const topicOrganizationsLower = (topicOrganizations || []).map(o => o.toLowerCase());
+    
     topicKeywordsLower.forEach((keyword, idx) => {
       keywordLookup.set(keyword, topicKeywords[idx]);
     });
+    topicLandmarksLower.forEach((landmark, idx) => {
+      landmarkLookup.set(landmark, topicLandmarks[idx]);
+    });
+    topicOrganizationsLower.forEach((org, idx) => {
+      organizationLookup.set(org, topicOrganizations[idx]);
+    });
 
-    const activeKeywordSet = new Set(activeKeywords.map(keyword => keyword.toLowerCase()));
+    const activeKeywordSet = new Set(activeKeywords.map(k => k.toLowerCase()));
+    const activeLandmarkSet = new Set(activeLandmarks.map(l => l.toLowerCase()));
+    const activeOrganizationSet = new Set(activeOrganizations.map(o => o.toLowerCase()));
     const activeSourceSet = new Set(activeSources);
 
     const matchingStories = index.filter(story => {
       const matchesKeywords = activeKeywordSet.size === 0 || Array.from(activeKeywordSet).every(keyword => story.keywordMatches.includes(keyword));
+      const matchesLandmarks = activeLandmarkSet.size === 0 || Array.from(activeLandmarkSet).every(landmark => story.keywordMatches.includes(landmark));
+      const matchesOrganizations = activeOrganizationSet.size === 0 || Array.from(activeOrganizationSet).every(org => story.keywordMatches.includes(org));
       const matchesSources = activeSourceSet.size === 0 || (story.sourceDomain && activeSourceSet.has(story.sourceDomain));
-      return matchesKeywords && matchesSources;
+      return matchesKeywords && matchesLandmarks && matchesOrganizations && matchesSources;
     });
 
     const keywordCounts = new Map<string, number>();
+    const landmarkCounts = new Map<string, number>();
+    const organizationCounts = new Map<string, number>();
+    
     topicKeywordsLower.forEach(keyword => {
       keywordCounts.set(keyword, 0);
+    });
+    topicLandmarksLower.forEach(landmark => {
+      landmarkCounts.set(landmark, 0);
+    });
+    topicOrganizationsLower.forEach(org => {
+      organizationCounts.set(org, 0);
     });
 
     matchingStories.forEach(story => {
       story.keywordMatches.forEach(match => {
         if (keywordCounts.has(match)) {
           keywordCounts.set(match, (keywordCounts.get(match) || 0) + 1);
+        }
+        if (landmarkCounts.has(match)) {
+          landmarkCounts.set(match, (landmarkCounts.get(match) || 0) + 1);
+        }
+        if (organizationCounts.has(match)) {
+          organizationCounts.set(match, (organizationCounts.get(match) || 0) + 1);
         }
       });
     });
@@ -780,11 +835,47 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         keywordCounts.set(keyword, 0);
       }
     });
+    activeLandmarkSet.forEach(landmark => {
+      if (!landmarkCounts.has(landmark)) {
+        landmarkCounts.set(landmark, 0);
+      }
+    });
+    activeOrganizationSet.forEach(org => {
+      if (!organizationCounts.has(org)) {
+        organizationCounts.set(org, 0);
+      }
+    });
 
     const keywordResults: KeywordCount[] = Array.from(keywordCounts.entries())
       .filter(([keyword, count]) => count > 0 || activeKeywordSet.has(keyword))
       .map(([keyword, count]) => ({
         keyword: keywordLookup.get(keyword) || keyword,
+        count
+      }))
+      .sort((a, b) => {
+        if (b.count === a.count) {
+          return a.keyword.localeCompare(b.keyword);
+        }
+        return b.count - a.count;
+      });
+
+    const landmarkResults: KeywordCount[] = Array.from(landmarkCounts.entries())
+      .filter(([landmark, count]) => count > 0 || activeLandmarkSet.has(landmark))
+      .map(([landmark, count]) => ({
+        keyword: landmarkLookup.get(landmark) || landmark,
+        count
+      }))
+      .sort((a, b) => {
+        if (b.count === a.count) {
+          return a.keyword.localeCompare(b.keyword);
+        }
+        return b.count - a.count;
+      });
+
+    const organizationResults: KeywordCount[] = Array.from(organizationCounts.entries())
+      .filter(([org, count]) => count > 0 || activeOrganizationSet.has(org))
+      .map(([org, count]) => ({
+        keyword: organizationLookup.get(org) || org,
         count
       }))
       .sort((a, b) => {
@@ -945,6 +1036,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   const clearAllFilters = useCallback(() => {
     setSelectedKeywords([]);
+    setSelectedLandmarks([]);
+    setSelectedOrganizations([]);
     setSelectedSources([]);
     setFilteredContent(allContent);
     serverFilteredRef.current = false;
@@ -961,6 +1054,62 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const removeSource = useCallback((sourceDomain: string) => {
     toggleSource(sourceDomain); // This will remove it since it's already selected
   }, [toggleSource]);
+
+  const toggleLandmark = useCallback((landmark: string) => {
+    setSelectedLandmarks(prev => {
+      const newLandmarks = prev.includes(landmark)
+        ? prev.filter(l => l !== landmark)
+        : [...prev, landmark];
+
+      // Clear existing debounce
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      // Apply client-side filtering immediately for responsiveness
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources));
+
+      // Debounce server-side filtering (combine all filters)
+      debounceRef.current = setTimeout(() => {
+        const allKeywords = [...selectedKeywords, ...newLandmarks, ...selectedOrganizations];
+        triggerServerFiltering(allKeywords, selectedSources);
+      }, DEBOUNCE_DELAY_MS);
+
+      return newLandmarks;
+    });
+  }, [allContent, selectedKeywords, selectedOrganizations, selectedSources, applyClientSideFiltering, triggerServerFiltering]);
+
+  const removeLandmark = useCallback((landmark: string) => {
+    toggleLandmark(landmark);
+  }, [toggleLandmark]);
+
+  const toggleOrganization = useCallback((organization: string) => {
+    setSelectedOrganizations(prev => {
+      const newOrganizations = prev.includes(organization)
+        ? prev.filter(o => o !== organization)
+        : [...prev, organization];
+
+      // Clear existing debounce
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+
+      // Apply client-side filtering immediately for responsiveness
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources));
+
+      // Debounce server-side filtering (combine all filters)
+      debounceRef.current = setTimeout(() => {
+        const allKeywords = [...selectedKeywords, ...selectedLandmarks, ...newOrganizations];
+        triggerServerFiltering(allKeywords, selectedSources);
+      }, DEBOUNCE_DELAY_MS);
+
+      return newOrganizations;
+    });
+  }, [allContent, selectedKeywords, selectedLandmarks, selectedSources, applyClientSideFiltering, triggerServerFiltering]);
+
+  const removeOrganization = useCallback((organization: string) => {
+    toggleOrganization(organization);
+  }, [toggleOrganization]);
 
   const loadMore = useCallback(async () => {
     if (!topic || loadingMore || !hasMore) return;
@@ -1006,15 +1155,23 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
     const updateFilterOptions = async () => {
       const topicKeywords = topic?.keywords || [];
+      const topicLandmarks = topic?.landmarks || [];
+      const topicOrganizations = topic?.organizations || [];
       const result = await computeFilterOptionsFromIndex(
         filterStoryIndex,
         topicKeywords,
+        topicLandmarks,
+        topicOrganizations,
         selectedKeywords,
+        selectedLandmarks,
+        selectedOrganizations,
         selectedSources
       );
 
       if (!cancelled) {
         setAvailableKeywords(result.keywords);
+        setAvailableLandmarks(result.landmarks);
+        setAvailableOrganizations(result.organizations);
         setAvailableSources(result.sources);
       }
     };
@@ -1024,13 +1181,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     return () => {
       cancelled = true;
     };
-  }, [filterStoryIndex, selectedKeywords, selectedSources, topic?.keywords, computeFilterOptionsFromIndex]);
+  }, [filterStoryIndex, selectedKeywords, selectedLandmarks, selectedOrganizations, selectedSources, topic?.keywords, topic?.landmarks, topic?.organizations, computeFilterOptionsFromIndex]);
 
   useEffect(() => {
     if (topic) {
       loadFilterStoryIndex(topic);
     }
-  }, [topic?.id, topic?.keywords, loadFilterStoryIndex]);
+  }, [topic?.id, topic?.keywords, topic?.landmarks, topic?.organizations, loadFilterStoryIndex]);
 
   // Initialize feed
   useEffect(() => {
@@ -1139,7 +1296,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   return {
     // Story data
     stories: filteredStories,
-    content: filteredContent, // New: mixed content with chronological ordering
+    content: filteredContent,
     topic,
     loading,
     loadingMore,
@@ -1155,8 +1312,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     toggleKeyword,
     clearAllFilters,
     removeKeyword,
-    hasActiveFilters: selectedKeywords.length > 0 || selectedSources.length > 0,
+    hasActiveFilters: selectedKeywords.length > 0 || selectedLandmarks.length > 0 || selectedOrganizations.length > 0 || selectedSources.length > 0,
     isServerFiltering,
+    
+    // Landmark filtering
+    selectedLandmarks,
+    availableLandmarks,
+    toggleLandmark,
+    removeLandmark,
+    
+    // Organization filtering
+    selectedOrganizations,
+    availableOrganizations,
+    toggleOrganization,
+    removeOrganization,
     
     // Source filtering
     selectedSources,
