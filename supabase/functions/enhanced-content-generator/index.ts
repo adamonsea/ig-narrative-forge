@@ -506,26 +506,6 @@ Return in JSON format:
       );
 
       console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
-      } else if (aiProvider === 'openai' && openaiApiKey) {
-        console.log('🤖 Using OpenAI for slide generation...');
-        slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
-      } else {
-        // Fallback logic
-        console.log('🔄 Primary provider not available, trying fallback...');
-        if (openaiApiKey) {
-          console.log('📝 Falling back to OpenAI...');
-          slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
-          actualProvider = 'openai';
-        } else if (deepseekApiKey) {
-          console.log('��� Falling back to DeepSeek...');
-          slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
-          actualProvider = 'deepseek';
-        } else {
-          throw new Error('No AI provider available - both OpenAI and DeepSeek API keys missing');
-        }
-      }
-
-      console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
     } catch (error) {
       console.error('❌ Error during slide generation:', error);
       
