@@ -170,9 +170,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       let topicOrganizations: string[] = [];
       let brandingConfig = {};
       if (!keywordError && fullTopicData) {
-        topicKeywords = fullTopicData.keywords || [];
-        topicLandmarks = fullTopicData.landmarks || [];
-        topicOrganizations = fullTopicData.organizations || [];
+        topicKeywords = Array.isArray(fullTopicData.keywords) ? fullTopicData.keywords : [];
+        topicLandmarks = Array.isArray(fullTopicData.landmarks) ? fullTopicData.landmarks : [];
+        topicOrganizations = Array.isArray(fullTopicData.organizations) ? fullTopicData.organizations : [];
         brandingConfig = fullTopicData.branding_config || {};
       }
 
