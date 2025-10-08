@@ -162,7 +162,7 @@ export const FilterModal = ({
           </TabsList>
 
           <TabsContent value="keywords" className="mt-4">
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="h-[60vh]">
               <div className="space-y-4 pr-4">
                 {filteredKeywords.length > 0 ? (
                   <>
@@ -224,7 +224,7 @@ export const FilterModal = ({
           </TabsContent>
 
           <TabsContent value="landmarks" className="mt-4">
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="h-[60vh]">
               <div className="space-y-4 pr-4">
                 {sortedLandmarks.length > 0 ? (
                   <>
@@ -287,7 +287,7 @@ export const FilterModal = ({
 
           {availableOrganizations.length > 0 && onOrganizationToggle && (
             <TabsContent value="organizations" className="mt-4">
-              <ScrollArea className="max-h-[60vh]">
+              <ScrollArea className="h-[60vh]">
                 <div className="space-y-4 pr-4">
                   {sortedOrganizations.length > 0 ? (
                     <>
@@ -350,7 +350,7 @@ export const FilterModal = ({
           )}
 
           <TabsContent value="sources" className="mt-4">
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="h-[60vh]">
               <div className="space-y-4 pr-4">
                 {sortedSources.length > 0 ? (
                   <>
