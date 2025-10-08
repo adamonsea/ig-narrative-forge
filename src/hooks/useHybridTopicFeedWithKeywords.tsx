@@ -916,7 +916,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         return b.count - a.count;
       });
 
-    return { keywords: keywordResults, sources: sourceResults };
+    return { 
+      keywords: keywordResults, 
+      landmarks: landmarkResults, 
+      organizations: organizationResults, 
+      sources: sourceResults 
+    };
   }, [formatSourceName, resolveSourceNames]);
 
   // Client-side filtering for immediate feedback - now handles mixed content, keywords, and sources
@@ -1169,10 +1174,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       );
 
       if (!cancelled) {
-        setAvailableKeywords(result.keywords);
-        setAvailableLandmarks(result.landmarks);
-        setAvailableOrganizations(result.organizations);
-        setAvailableSources(result.sources);
+        setAvailableKeywords(result.keywords ?? []);
+        setAvailableLandmarks(result.landmarks ?? []);
+        setAvailableOrganizations(result.organizations ?? []);
+        setAvailableSources(result.sources ?? []);
       }
     };
 

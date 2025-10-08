@@ -23,9 +23,9 @@ interface FilterModalProps {
   availableKeywords: KeywordCount[];
   selectedKeywords: string[];
   onKeywordToggle: (keyword: string) => void;
-  availableLandmarks: KeywordCount[];
-  selectedLandmarks: string[];
-  onLandmarkToggle: (landmark: string) => void;
+  availableLandmarks?: KeywordCount[];
+  selectedLandmarks?: string[];
+  onLandmarkToggle?: (landmark: string) => void;
   availableOrganizations?: KeywordCount[];
   selectedOrganizations?: string[];
   onOrganizationToggle?: (organization: string) => void;
@@ -41,8 +41,8 @@ export const FilterModal = ({
   availableKeywords,
   selectedKeywords,
   onKeywordToggle,
-  availableLandmarks,
-  selectedLandmarks,
+  availableLandmarks = [],
+  selectedLandmarks = [],
   onLandmarkToggle,
   availableOrganizations = [],
   selectedOrganizations = [],
