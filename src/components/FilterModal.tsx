@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hash, Globe, MapPin, Building, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
@@ -160,238 +161,254 @@ export const FilterModal = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="keywords" className="mt-4 space-y-4">
-            {filteredKeywords.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {displayedKeywords.map(({ keyword, count }) => {
-                    const isSelected = selectedKeywords.includes(keyword);
-                    return (
-                      <button
-                        key={keyword}
-                        onClick={() => onKeywordToggle(keyword)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                          "hover:scale-105 active:scale-95",
-                          isSelected 
-                            ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500" 
-                            : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60"
-                        )}
-                      >
-                        <span className="capitalize">{keyword}</span>
-                        <span className="text-xs opacity-70">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {hasMoreKeywords && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllKeywords(!showAllKeywords)}
-                      className="text-xs"
-                    >
-                      {showAllKeywords ? (
-                        <>
-                          <ChevronUp className="w-3 h-3 mr-1" />
-                          Show less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3 mr-1" />
-                          Show {filteredKeywords.length - 10} more keywords
-                        </>
-                      )}
-                    </Button>
+          <TabsContent value="keywords" className="mt-4">
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 pr-4">
+                {filteredKeywords.length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {displayedKeywords.map(({ keyword, count }) => {
+                        const isSelected = selectedKeywords.includes(keyword);
+                        return (
+                          <button
+                            key={keyword}
+                            onClick={() => onKeywordToggle(keyword)}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                              "hover:scale-105 active:scale-95",
+                              isSelected 
+                                ? "bg-blue-600 text-white shadow-sm dark:bg-blue-500" 
+                                : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/60"
+                            )}
+                          >
+                            <span className="capitalize">{keyword}</span>
+                            <span className="text-xs opacity-70">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {hasMoreKeywords && (
+                      <div className="flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAllKeywords(!showAllKeywords)}
+                          className="text-xs"
+                        >
+                          {showAllKeywords ? (
+                            <>
+                              <ChevronUp className="w-3 h-3 mr-1" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-3 h-3 mr-1" />
+                              Show {filteredKeywords.length - 10} more keywords
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No keywords found</p>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No keywords found</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Click keywords to filter stories. Numbers show story count.
+                </p>
               </div>
-            )}
-            <p className="text-xs text-muted-foreground text-center">
-              Click keywords to filter stories. Numbers show story count.
-            </p>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="landmarks" className="mt-4 space-y-4">
-            {sortedLandmarks.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {displayedLandmarks.map(({ keyword, count }) => {
-                    const isSelected = selectedLandmarks.includes(keyword);
-                    return (
-                      <button
-                        key={keyword}
-                        onClick={() => onLandmarkToggle(keyword)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                          "hover:scale-105 active:scale-95",
-                          isSelected 
-                            ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500" 
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
-                        )}
-                      >
-                        <span>{keyword}</span>
-                        <span className="text-xs opacity-70">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {hasMoreLandmarks && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllLandmarks(!showAllLandmarks)}
-                      className="text-xs"
-                    >
-                      {showAllLandmarks ? (
-                        <>
-                          <ChevronUp className="w-3 h-3 mr-1" />
-                          Show less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3 mr-1" />
-                          Show {sortedLandmarks.length - 10} more locations
-                        </>
-                      )}
-                    </Button>
+          <TabsContent value="landmarks" className="mt-4">
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 pr-4">
+                {sortedLandmarks.length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {displayedLandmarks.map(({ keyword, count }) => {
+                        const isSelected = selectedLandmarks.includes(keyword);
+                        return (
+                          <button
+                            key={keyword}
+                            onClick={() => onLandmarkToggle?.(keyword)}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                              "hover:scale-105 active:scale-95",
+                              isSelected 
+                                ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500" 
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/60"
+                            )}
+                          >
+                            <span>{keyword}</span>
+                            <span className="text-xs opacity-70">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {hasMoreLandmarks && (
+                      <div className="flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAllLandmarks(!showAllLandmarks)}
+                          className="text-xs"
+                        >
+                          {showAllLandmarks ? (
+                            <>
+                              <ChevronUp className="w-3 h-3 mr-1" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-3 h-3 mr-1" />
+                              Show {sortedLandmarks.length - 10} more locations
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No locations found</p>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No locations found</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Click locations to filter stories. Numbers show story count.
+                </p>
               </div>
-            )}
-            <p className="text-xs text-muted-foreground text-center">
-              Click locations to filter stories. Numbers show story count.
-            </p>
+            </ScrollArea>
           </TabsContent>
 
           {availableOrganizations.length > 0 && onOrganizationToggle && (
-            <TabsContent value="organizations" className="mt-4 space-y-4">
-              {sortedOrganizations.length > 0 ? (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    {displayedOrganizations.map(({ keyword, count }) => {
-                      const isSelected = selectedOrganizations.includes(keyword);
-                      return (
-                        <button
-                          key={keyword}
-                          onClick={() => onOrganizationToggle(keyword)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                            "hover:scale-105 active:scale-95",
-                            isSelected 
-                              ? "bg-purple-600 text-white shadow-sm dark:bg-purple-500" 
-                              : "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/60"
-                          )}
-                        >
-                          <span>{keyword}</span>
-                          <span className="text-xs opacity-70">({count})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {hasMoreOrganizations && (
-                    <div className="flex justify-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAllOrganizations(!showAllOrganizations)}
-                        className="text-xs"
-                      >
-                        {showAllOrganizations ? (
-                          <>
-                            <ChevronUp className="w-3 h-3 mr-1" />
-                            Show less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-3 h-3 mr-1" />
-                            Show {sortedOrganizations.length - 10} more organizations
-                          </>
-                        )}
-                      </Button>
+            <TabsContent value="organizations" className="mt-4">
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-4 pr-4">
+                  {sortedOrganizations.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {displayedOrganizations.map(({ keyword, count }) => {
+                          const isSelected = selectedOrganizations.includes(keyword);
+                          return (
+                            <button
+                              key={keyword}
+                              onClick={() => onOrganizationToggle(keyword)}
+                              className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                                "hover:scale-105 active:scale-95",
+                                isSelected 
+                                  ? "bg-purple-600 text-white shadow-sm dark:bg-purple-500" 
+                                  : "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/60"
+                              )}
+                            >
+                              <span>{keyword}</span>
+                              <span className="text-xs opacity-70">({count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {hasMoreOrganizations && (
+                        <div className="flex justify-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowAllOrganizations(!showAllOrganizations)}
+                            className="text-xs"
+                          >
+                            {showAllOrganizations ? (
+                              <>
+                                <ChevronUp className="w-3 h-3 mr-1" />
+                                Show less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3 mr-1" />
+                                Show {sortedOrganizations.length - 10} more organizations
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Building className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No organizations found</p>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Building className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No organizations found</p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Click organizations to filter stories. Numbers show story count.
+                  </p>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground text-center">
-                Click organizations to filter stories. Numbers show story count.
-              </p>
+              </ScrollArea>
             </TabsContent>
           )}
 
-          <TabsContent value="sources" className="mt-4 space-y-4">
-            {sortedSources.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {displayedSources.map(({ source_name, source_domain, count }) => {
-                    const isSelected = selectedSources.includes(source_domain);
-                    return (
-                      <button
-                        key={source_domain}
-                        onClick={() => onSourceToggle(source_domain)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                          "hover:scale-105 active:scale-95",
-                          isSelected 
-                            ? "bg-amber-600 text-white shadow-sm dark:bg-amber-500" 
-                            : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60"
-                        )}
-                      >
-                        <span className="capitalize">{source_name}</span>
-                        <span className="text-xs opacity-70">({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {hasMoreSources && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllSources(!showAllSources)}
-                      className="text-xs"
-                    >
-                      {showAllSources ? (
-                        <>
-                          <ChevronUp className="w-3 h-3 mr-1" />
-                          Show less
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3 mr-1" />
-                          Show {sortedSources.length - 10} more sources
-                        </>
-                      )}
-                    </Button>
+          <TabsContent value="sources" className="mt-4">
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-4 pr-4">
+                {sortedSources.length > 0 ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {displayedSources.map(({ source_name, source_domain, count }) => {
+                        const isSelected = selectedSources.includes(source_domain);
+                        return (
+                          <button
+                            key={source_domain}
+                            onClick={() => onSourceToggle(source_domain)}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                              "hover:scale-105 active:scale-95",
+                              isSelected 
+                                ? "bg-amber-600 text-white shadow-sm dark:bg-amber-500" 
+                                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/60"
+                            )}
+                          >
+                            <span className="capitalize">{source_name}</span>
+                            <span className="text-xs opacity-70">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {hasMoreSources && (
+                      <div className="flex justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAllSources(!showAllSources)}
+                          className="text-xs"
+                        >
+                          {showAllSources ? (
+                            <>
+                              <ChevronUp className="w-3 h-3 mr-1" />
+                              Show less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="w-3 h-3 mr-1" />
+                              Show {sortedSources.length - 10} more sources
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No sources found</p>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No sources found</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Click sources to filter stories. Numbers show story count.
+                </p>
               </div>
-            )}
-            <p className="text-xs text-muted-foreground text-center">
-              Click sources to filter stories. Numbers show story count.
-            </p>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </DialogContent>
