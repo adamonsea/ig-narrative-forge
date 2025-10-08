@@ -30,6 +30,27 @@ interface SlideContent {
   altText: string;
 }
 
+const toneGuidance: Record<string, string> = {
+  formal: 'Use precise, objective language with strong sourcing and avoid colloquialisms.',
+  conversational: 'Use approachable, plain-language explanations that still respect the facts.',
+  engaging: 'Use vivid, energetic language while keeping statements grounded in verified facts.'
+};
+
+const writingStyleGuidance: Record<string, string> = {
+  journalistic: 'Follow the inverted pyramid: lead with the verified headline fact, then key supporting context, and close with impact.',
+  educational: 'Teach the reader progressively. Break complex developments into clear, explanatory steps tied to the evidence.',
+  listicle: 'Structure each slide around a crisp, scannable takeaway that derives directly from the article.',
+  story_driven: 'Lean into narrative pacing with setup, escalation, and resolution while grounding every beat in reported facts.'
+};
+
+const expertiseGuidance: Record<string, string> = {
+  beginner: 'Assume no prior knowledge—define specialised terms and spell out why each fact matters locally.',
+  intermediate: 'Assume general awareness—move quickly to implications while clarifying any advanced terminology.',
+  expert: 'Assume deep familiarity—focus on nuanced analysis, data points, and downstream impact without rehashing basics.'
+};
+
+const getGuidance = (map: Record<string, string>, key: string, fallback: string) => map[key] || fallback;
+
 interface PromptTemplate {
   id: string;
   template_name: string;
@@ -94,11 +115,13 @@ serve(async (req) => {
   async function generateSlidesWithDeepSeek(
     article: Article, 
     apiKey: string, 
-    tone: string, 
+    tone: string,
+    writingStyle: string,
     expertise: string, 
     slideType: string,
     slideCount: number,
-    publicationName: string
+    publicationName: string,
+    templateGuidance?: string
   ): Promise<SlideContent[]> {
     try {
       const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
@@ -110,8 +133,9 @@ Publication: ${publicationName}
 Author: ${article.author || 'Staff Reporter'}
 
 REQUIREMENTS:
-- Tone: ${tone}
-- Audience expertise: ${expertise}
+- Tone guidance: ${getGuidance(toneGuidance, tone, `Maintain a consistent ${tone} tone.`)}
+- Writing style: ${getGuidance(writingStyleGuidance, writingStyle, `Match the ${writingStyle} style.`)}
+- Audience expertise: ${getGuidance(expertiseGuidance, expertise, `Write for a ${expertise} reader.`)}
 - Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
 - CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 8 words ideal, 15 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
 - Include visual prompts for each slide
@@ -121,12 +145,19 @@ REQUIREMENTS:
 - CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
+${templateGuidance ? `TEMPLATE DIRECTIVES:\n${templateGuidance}` : ''}
+
 FACT vs OPINION HANDLING:
 - FACTUAL STATEMENTS: Present verifiable actions, events, dates, locations without attribution (e.g., "Planning meeting scheduled for Tuesday")
 - OPINIONS/CLAIMS: ALWAYS attribute to speaker using "says", "claims", "according to" (e.g., "Councillor Smith says it will boost tourism")
 - PARAPHRASED OPINIONS: Use attribution without quotes (e.g., "The mayor claims the policy will reduce traffic")
 - DIRECT QUOTES: Use attribution with quotation marks (e.g., 'Mayor calls it "a game-changer for residents"')
 - NEVER present subjective claims, predictions, or opinions as if they are established facts
+
+ACCURACY SAFEGUARDS:
+- Only use information that appears in the ARTICLE DETAILS section—never invent facts, figures, quotes, or outcomes.
+- If the source text lacks a required detail, state "Not specified in source" instead of speculating.
+- Flag any contradictions or uncertainties explicitly rather than smoothing them over.
 
 ATTRIBUTION REQUIREMENTS:
 - Any statement involving judgment, evaluation, or prediction MUST be attributed
@@ -168,7 +199,7 @@ OUTPUT FORMAT (JSON):
           messages: [
             {
               role: 'system',
-              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
+              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content using a ${writingStyle} structure that is appropriate for ${expertise} audiences. Maintain strict journalistic accuracy and never fabricate information. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
             },
             {
               role: 'user',
@@ -226,151 +257,6 @@ OUTPUT FORMAT (JSON):
       
     } catch (error) {
       console.error('Error generating slides with DeepSeek:', error);
-      throw error;
-    }
-  }
-
-  // Generate slides using OpenAI
-  async function generateSlidesWithOpenAI(
-    article: Article, 
-    apiKey: string, 
-    tone: string, 
-    expertise: string, 
-    slideType: string,
-    slideCount: number,
-    publicationName: string
-  ): Promise<SlideContent[]> {
-    try {
-      // Determine slide count based on slide type
-      const slideCount = slideType === 'short' ? 4 : 
-                        slideType === 'tabloid' ? 6 : 
-                        slideType === 'indepth' ? 8 : 12;
-      
-      const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
-
-ARTICLE DETAILS:
-Title: ${article.title}
-Content: ${article.body}
-Publication: ${publicationName}
-Author: ${article.author || 'Staff Reporter'}
-
-REQUIREMENTS:
-- Tone: ${tone}
-- Audience expertise: ${expertise}
-- Create exactly ${slideCount} slides (${slideType}: 4=short, 6=tabloid, 8=indepth, 12=extensive)
-- CRITICAL WORD LIMITS: Slide 1 (headline) MUST be 8 words ideal, 15 words maximum, all other slides MUST be maximum 30-40 words each. This is non-negotiable.
-- Include visual prompts for each slide
-- Make it shareable and engaging for web readers
-- Include alt text for accessibility
-- Final slide should include source attribution
-- CTAs should be web-appropriate (e.g., "share with friends", "discuss with others", "read more", "explore further")
-- Avoid social media specific language like "tag", "follow", or platform-specific terms
-
-FACT vs OPINION HANDLING:
-- FACTUAL STATEMENTS: Present verifiable actions, events, dates, locations without attribution (e.g., "Planning meeting scheduled for Tuesday")
-- OPINIONS/CLAIMS: ALWAYS attribute to speaker using "says", "claims", "according to" (e.g., "Councillor Smith says it will boost tourism")
-- PARAPHRASED OPINIONS: Use attribution without quotes (e.g., "The mayor claims the policy will reduce traffic")
-- DIRECT QUOTES: Use attribution with quotation marks (e.g., 'Mayor calls it "a game-changer for residents"')
-- NEVER present subjective claims, predictions, or opinions as if they are established facts
-
-ATTRIBUTION REQUIREMENTS:
-- Any statement involving judgment, evaluation, or prediction MUST be attributed
-- Use specific titles and names when available (e.g., "Councillor Sarah Brown says" not "officials say")
-- Avoid presenting causation claims as facts unless explicitly proven in the article
-- When uncertain if something is fact or opinion, err on the side of attribution
-
-SLIDE 1 REQUIREMENTS (FIRST SLIDE ONLY - THE HEADLINE):
-- Extract the single most compelling TRUE fact/angle from the article content
-- IDEAL: 8 words, MAXIMUM: 15 words, single sentence
-- Focus on what makes this genuinely matter to local readers
-- Use the strongest claim that the article content fully supports
-- Prioritize: local impact > surprising facts > genuine consequences > human interest
-- When formal: Lead with authoritative findings ("Council reveals...", "Data shows...")  
-- When conversational: Lead with local relevance ("Local residents face...", "New changes mean...")
-- NEVER oversell - the content must fully deliver on the hook's promise
-- Test: "Does this accurately represent the most important aspect of this story?"
-
-OUTPUT FORMAT (JSON):
-{
-  "slides": [
-    {
-      "slideNumber": 1,
-      "content": "Extract most compelling TRUE local angle (IDEAL: 8 words, MAX: 15 words, single sentence)",
-      "visualPrompt": "Description for visual/image",
-      "altText": "Accessibility description"
-    }
-  ]
-}`;
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert content creator specializing in ${slideType} web feed carousels. Create engaging, ${tone} content appropriate for ${expertise} audiences. Focus on web-appropriate sharing language and avoid social media platform-specific terms.`
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      // Enhanced JSON parsing with multiple attempts
-      let slides;
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          slides = parsed.slides || parsed;
-        }
-      } catch (error) {
-        console.log('Initial JSON parsing failed, trying alternative methods...');
-        
-        // Try extracting just the slides array
-        const slidesMatch = content.match(/\[[\s\S]*\]/);
-        if (slidesMatch) {
-          try {
-            slides = JSON.parse(slidesMatch[0]);
-          } catch (error) {
-            console.log('Array parsing also failed, using fallback...');
-            // Final fallback - create basic slides from content
-            throw new Error('Could not parse JSON from OpenAI response after multiple attempts');
-          }
-        }
-      }
-      
-      if (!slides) {
-        console.error('Failed to extract slides from OpenAI response:', content);
-        throw new Error('Could not parse JSON from OpenAI response');
-      }
-      
-      // Validate and normalize slide structure with enhanced error handling
-      return slides.map((slide: any, index: number) => ({
-        slideNumber: slide.slideNumber || (index + 1),
-        content: slide.content || slide.text || `Generated slide ${index + 1}`,
-        visualPrompt: slide.visualPrompt || slide.visual || slide.imagePrompt || `Visual representation for "${article.title}" - slide ${index + 1}`,
-        altText: slide.altText || slide.alt || slide.description || `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`
-      }));
-      
-    } catch (error) {
-      console.error('Error generating slides with OpenAI:', error);
       throw error;
     }
   }
@@ -454,85 +340,6 @@ Return in JSON format:
     }
   }
 
-  async function generatePostCopyWithOpenAI(
-    article: Article, 
-    slides: SlideContent[], 
-    apiKey: string, 
-    publicationName: string
-  ): Promise<{ caption: string; hashtags: string[] }> {
-    const prompt = `Create engaging web content copy for this news carousel about: ${article.title}
-
-SLIDES PREVIEW:
-${slides.map((slide, i) => `Slide ${i + 1}: ${slide.content.substring(0, 100)}...`).join('\n')}
-
-Create:
-1. An engaging caption for web readers (max 2200 characters) 
-2. Relevant hashtags for web sharing (10-15 hashtags)
-
-Make it engaging and shareable for ${publicationName} web readers.
-Use web-appropriate language like "share with friends", "discuss this story", "read more".
-Avoid social media platform-specific terms.
-
-Return in JSON format:
-{
-  "caption": "Your engaging caption here...",
-  "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
-}`;
-
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a web content expert. Create engaging captions and hashtags appropriate for web feed sharing.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1000
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return {
-          caption: `Check out this story about ${article.title}`,
-          hashtags: ['news', 'update', 'story']
-        };
-      }
-      
-      const result = JSON.parse(jsonMatch[0]);
-      return {
-        caption: result.caption || `Check out this story about ${article.title}`,
-        hashtags: result.hashtags || ['news', 'update', 'story']
-      };
-      
-    } catch (error) {
-      console.error('Error generating post copy with OpenAI:', error);
-      return {
-        caption: `Check out this story about ${article.title}`,
-        hashtags: ['news', 'update', 'story']
-      };
-    }
-  }
-
   try {
     const { 
       articleId, 
@@ -541,13 +348,14 @@ Return in JSON format:
       slideType = 'tabloid', 
       aiProvider = 'deepseek',
       tone = 'conversational',
+      writingStyle = 'journalistic',
       audienceExpertise = 'intermediate'
     } = await req.json();
     
     // Log multi-tenant context
     const isMultiTenant = !!(topicArticleId || sharedContentId);
     console.log(`Processing ${isMultiTenant ? 'multi-tenant' : 'legacy'} article. ArticleId: ${articleId}, TopicArticleId: ${topicArticleId}, SharedContentId: ${sharedContentId}`);
-    console.log(`AI provider: ${aiProvider}, tone: ${tone}, expertise: ${audienceExpertise}`);
+    console.log(`AI provider: ${aiProvider}, tone: ${tone}, style: ${writingStyle}, expertise: ${audienceExpertise}`);
 
     // Get article data - prioritize shared content for multi-tenant
     let article: Article;
@@ -616,23 +424,30 @@ Return in JSON format:
     // Get topic details for audience expertise and default tone if available
     let topicExpertise = audienceExpertise;
     let effectiveTone = tone;
+    let effectiveWritingStyle = writingStyle;
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone')
+        .select('audience_expertise, default_tone, default_writing_style')
         .eq('id', article.topic_id)
         .maybeSingle();
       
       if (topicData) {
         topicExpertise = topicData.audience_expertise || audienceExpertise;
         effectiveTone = topicData.default_tone || tone;
-        console.log(`Using topic defaults: expertise=${topicExpertise}, tone=${effectiveTone}`);
+        effectiveWritingStyle = topicData.default_writing_style || writingStyle;
+        console.log(`Using topic defaults: expertise=${topicExpertise}, tone=${effectiveTone}, style=${effectiveWritingStyle}`);
       }
     }
 
     // Build enhanced prompt system
     const promptSystem = await buildPromptSystem(supabase, effectiveTone, topicExpertise, slideType);
+    const templateGuidance = [
+      ...(promptSystem?.systemPrompts || []).map((prompt: PromptTemplate) => prompt.prompt_content?.trim()).filter(Boolean),
+      ...(promptSystem?.contentPrompts || []).map((prompt: PromptTemplate) => prompt.prompt_content?.trim()).filter(Boolean)
+    ].join('\n\n');
+    
     console.log(`Built prompt system with ${promptSystem?.systemPrompts?.length || 0} system prompts and ${promptSystem?.contentPrompts?.length || 0} content prompts`);
     
     // Determine publication name
@@ -668,14 +483,29 @@ Return in JSON format:
     
     const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
     
-    // Generate slides with the selected AI provider
+    // Generate slides with DeepSeek only
     let slides: SlideContent[];
-    let actualProvider = aiProvider;
+    const actualProvider = 'deepseek';
 
     try {
-      if (aiProvider === 'deepseek' && deepseekApiKey) {
-        console.log('🤖 Using DeepSeek for slide generation...');
-        slides = await generateSlidesWithDeepSeek(article, deepseekApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
+      if (!deepseekApiKey) {
+        throw new Error('DeepSeek API key not configured');
+      }
+      
+      console.log('🤖 Using DeepSeek for slide generation...');
+      slides = await generateSlidesWithDeepSeek(
+        article,
+        deepseekApiKey,
+        effectiveTone,
+        effectiveWritingStyle,
+        topicExpertise,
+        finalSlideType,
+        targetSlideCount,
+        publicationName,
+        templateGuidance
+      );
+
+      console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
       } else if (aiProvider === 'openai' && openaiApiKey) {
         console.log('🤖 Using OpenAI for slide generation...');
         slides = await generateSlidesWithOpenAI(article, openaiApiKey, effectiveTone, topicExpertise, finalSlideType, targetSlideCount, publicationName);
@@ -707,24 +537,16 @@ Return in JSON format:
       throw error;
     }
 
-    // Generate post copy using appropriate provider
+    // Generate post copy with DeepSeek
     let postCopy: { caption: string; hashtags: string[] };
     
     try {
-      if (actualProvider === 'deepseek' && deepseekApiKey) {
-        console.log('📱 Generating post copy with DeepSeek...');
-        postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, publicationName);
-      } else if (openaiApiKey) {
-        console.log('📱 Generating post copy with OpenAI...');
-        postCopy = await generatePostCopyWithOpenAI(article, slides, openaiApiKey, publicationName);
-      } else {
-        console.log('📱 Using fallback post copy...');
-        postCopy = {
-          caption: `Check out this story about ${article.title}`,
-          hashtags: ['news', 'update', 'story']
-        };
+      if (!deepseekApiKey) {
+        throw new Error('DeepSeek API key not configured');
       }
       
+      console.log('📱 Generating post copy with DeepSeek...');
+      postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, publicationName);
       console.log(`✅ Generated post copy: ${postCopy.caption.length} characters, ${postCopy.hashtags.length} hashtags`);
     } catch (error) {
       console.error('❌ Error generating post copy:', error);
