@@ -36,6 +36,12 @@ interface VotingRecord {
   import_metadata: Record<string, any>;
 }
 
+type MPInfo = {
+  id: number;
+  name: string;
+  party: string;
+};
+
 // UK Regional Constituency Mapping
 const REGIONAL_CONSTITUENCIES: Record<string, string[]> = {
   'Eastbourne': ['Eastbourne'],
@@ -48,6 +54,64 @@ const REGIONAL_CONSTITUENCIES: Record<string, string[]> = {
   'Newhaven': ['Lewes'],
   'East Sussex': ['Eastbourne', 'Hastings and Rye', 'Lewes', 'Wealden', 'Bexhill and Battle'],
 };
+
+const MP_CACHE = new Map<string, MPInfo | null>();
+
+async function fetchCurrentMpForConstituency(constituency: string): Promise<MPInfo | null> {
+  const cacheKey = constituency.toLowerCase();
+  if (MP_CACHE.has(cacheKey)) {
+    const cached = MP_CACHE.get(cacheKey) || null;
+    if (cached) {
+      return cached;
+    }
+    return null;
+  }
+
+  const pageSize = 100;
+  let skip = 0;
+
+  while (true) {
+    const searchUrl = `https://members-api.parliament.uk/api/Members/Search?House=1&IsCurrentMember=true&skip=${skip}&take=${pageSize}`;
+    const membersResponse = await fetch(searchUrl);
+
+    if (!membersResponse.ok) {
+      console.error('Failed to fetch members:', membersResponse.status, membersResponse.statusText);
+      break;
+    }
+
+    const membersData = await membersResponse.json();
+    const items = membersData.items || [];
+
+    const mp = items.find((m: any) => {
+      const membershipFrom = m.value?.latestHouseMembership?.membershipFromMemberName || '';
+      return membershipFrom.toLowerCase().includes(constituency.toLowerCase()) ||
+             constituency.toLowerCase().includes(membershipFrom.toLowerCase());
+    });
+
+    if (mp) {
+      const mpInfo: MPInfo = {
+        id: mp.value.id,
+        name: mp.value.nameDisplayAs,
+        party: mp.value.latestParty?.name || 'Unknown'
+      };
+      MP_CACHE.set(cacheKey, mpInfo);
+      return mpInfo;
+    }
+
+    const totalResults = typeof membersData.totalResults === 'number' ? membersData.totalResults : 0;
+    const reachedEnd = items.length < pageSize || skip + pageSize >= totalResults;
+
+    if (reachedEnd) {
+      break;
+    }
+
+    skip += pageSize;
+  }
+
+  console.warn(`No current MP found for constituency after full search: ${constituency}`);
+  MP_CACHE.set(cacheKey, null);
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -180,37 +244,22 @@ async function collectAllVotesForConstituency(
   region: string
 ): Promise<VotingRecord[]> {
   console.log(`Collecting ALL votes for constituency: ${constituency}`);
-  
+
   const votes: VotingRecord[] = [];
-  
+
   try {
     // Get the MP for this constituency
-    const membersResponse = await fetch(
-      `https://members-api.parliament.uk/api/Members/Search?House=1&IsCurrentMember=true&skip=0&take=100`
-    );
-    
-    if (!membersResponse.ok) {
-      console.error('Failed to fetch members:', membersResponse.status);
-      return votes;
-    }
-    
-    const membersData = await membersResponse.json();
-    
-    const mp = membersData.items?.find((m: any) => {
-      const membershipFrom = m.value?.latestHouseMembership?.membershipFromMemberName || '';
-      return membershipFrom.toLowerCase().includes(constituency.toLowerCase()) ||
-             constituency.toLowerCase().includes(membershipFrom.toLowerCase());
-    });
-    
-    if (!mp) {
+    const mpInfo = await fetchCurrentMpForConstituency(constituency);
+
+    if (!mpInfo) {
       console.log(`No current MP found for constituency: ${constituency}`);
       return votes;
     }
-    
-    const mpId = mp.value.id;
-    const mpName = mp.value.nameDisplayAs;
-    const party = mp.value.latestParty?.name;
-    
+
+    const mpId = mpInfo.id;
+    const mpName = mpInfo.name;
+    const party = mpInfo.party;
+
     console.log(`Found MP: ${mpName} (${party}) for ${constituency}`);
     
     // Get recent divisions (last 7 days for daily, or more for catch-up)
@@ -414,36 +463,83 @@ function generateLocalImpact(title: string, region: string, category: string): s
 // Store daily votes as individual stories
 async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: string) {
   console.log(`Storing ${votes.length} daily votes`);
-  
+
   for (const vote of votes) {
     try {
+      const existingVoteQuery = supabase
+        .from('parliamentary_mentions')
+        .select('id, story_id')
+        .eq('topic_id', topicId)
+        .eq('mention_type', 'vote')
+        .eq('vote_url', vote.vote_url)
+        .eq('mp_name', vote.mp_name)
+        .limit(1);
+
+      const { data: existingVote, error: existingVoteError } = await existingVoteQuery.maybeSingle();
+
+      if (existingVoteError) {
+        console.error('Error checking for existing vote:', existingVoteError);
+      }
+
+      const voteRecord = {
+        topic_id: topicId,
+        mention_type: 'vote',
+        mp_name: vote.mp_name,
+        constituency: vote.constituency,
+        party: vote.party,
+        vote_title: vote.vote_title,
+        vote_date: vote.vote_date,
+        vote_direction: vote.vote_direction,
+        vote_url: vote.vote_url,
+        region_mentioned: vote.region_mentioned,
+        relevance_score: vote.relevance_score,
+        source_api: vote.source_api,
+        party_whip_vote: vote.party_whip_vote,
+        is_rebellion: vote.is_rebellion,
+        vote_category: vote.vote_category,
+        national_relevance_score: vote.national_relevance_score,
+        local_impact_summary: vote.local_impact_summary,
+        vote_outcome: vote.vote_outcome,
+        aye_count: vote.aye_count,
+        no_count: vote.no_count,
+        is_weekly_roundup: false,
+        week_start_date: null,
+        import_metadata: vote.import_metadata
+      };
+
+      if (existingVote) {
+        const { error: updateError } = await supabase
+          .from('parliamentary_mentions')
+          .update(voteRecord)
+          .eq('id', existingVote.id);
+
+        if (updateError) {
+          console.error('Error updating existing vote:', updateError);
+          continue;
+        }
+
+        if (!existingVote.story_id) {
+          const { data: refreshedVote, error: refreshedError } = await supabase
+            .from('parliamentary_mentions')
+            .select('*')
+            .eq('id', existingVote.id)
+            .single();
+
+          if (refreshedError) {
+            console.error('Error loading refreshed vote for story creation:', refreshedError);
+            continue;
+          }
+
+          await createDailyVoteStory(supabase, refreshedVote, topicId);
+        }
+
+        continue;
+      }
+
       // Insert the voting record
       const { data: insertedVote, error: insertError } = await supabase
         .from('parliamentary_mentions')
-        .insert({
-          topic_id: topicId,
-          mention_type: 'vote',
-          mp_name: vote.mp_name,
-          constituency: vote.constituency,
-          party: vote.party,
-          vote_title: vote.vote_title,
-          vote_date: vote.vote_date,
-          vote_direction: vote.vote_direction,
-          vote_url: vote.vote_url,
-          region_mentioned: vote.region_mentioned,
-          relevance_score: vote.relevance_score,
-          source_api: vote.source_api,
-          party_whip_vote: vote.party_whip_vote,
-          is_rebellion: vote.is_rebellion,
-          vote_category: vote.vote_category,
-          national_relevance_score: vote.national_relevance_score,
-          local_impact_summary: vote.local_impact_summary,
-          vote_outcome: vote.vote_outcome,
-          aye_count: vote.aye_count,
-          no_count: vote.no_count,
-          is_weekly_roundup: false,
-          import_metadata: vote.import_metadata
-        })
+        .insert(voteRecord)
         .select()
         .single();
       

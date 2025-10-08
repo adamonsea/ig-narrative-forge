@@ -38,8 +38,17 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   const [votes, setVotes] = useState<VotingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category' | 'mp'>('date');
   const { toast } = useToast();
+
+  // Check if we're in summer recess (typically July 25 - September 2)
+  const isInSummerRecess = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const recessStart = new Date(year, 6, 25); // July 25
+    const recessEnd = new Date(year, 8, 2); // September 2
+    return now >= recessStart && now <= recessEnd;
+  };
 
   const loadVotes = async () => {
     try {
@@ -79,6 +88,12 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
           if (catCompare !== 0) return catCompare;
           return new Date(b.vote_date).getTime() - new Date(a.vote_date).getTime();
         });
+      } else if (sortBy === 'mp') {
+        sortedData = [...sortedData].sort((a, b) => {
+          const mpCompare = a.mp_name.localeCompare(b.mp_name);
+          if (mpCompare !== 0) return mpCompare;
+          return new Date(b.vote_date).getTime() - new Date(a.vote_date).getTime();
+        });
       }
 
       setVotes(sortedData as VotingRecord[]);
@@ -101,6 +116,7 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   const rebellionCount = votes.filter(v => v.is_rebellion && !v.is_weekly_roundup).length;
   const weeklyRoundupCount = votes.filter(v => v.is_weekly_roundup).length;
   const totalVotes = votes.filter(v => !v.is_weekly_roundup).length;
+  const uniqueMps = [...new Set(votes.map(v => v.mp_name))].length;
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
@@ -227,12 +243,38 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
         </div>
       </div>
 
+      {/* Summer Recess Banner */}
+      {isInSummerRecess() && votes.length === 0 && (
+        <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                  Parliament in Summer Recess
+                </h4>
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  UK Parliament is currently in summer recess (July 25 - September 2). 
+                  Voting will resume when Parliament returns in early September.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-blue-500">{totalVotes}</div>
             <div className="text-xs text-muted-foreground">Total Votes</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-500">{uniqueMps}</div>
+            <div className="text-xs text-muted-foreground">MPs Tracked</div>
           </CardContent>
         </Card>
         <Card>
@@ -269,6 +311,7 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="date">Date (Newest)</SelectItem>
+            <SelectItem value="mp">By MP</SelectItem>
             <SelectItem value="rebellion">Rebellions First</SelectItem>
             <SelectItem value="category">By Category</SelectItem>
           </SelectContent>
