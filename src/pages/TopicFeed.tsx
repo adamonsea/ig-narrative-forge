@@ -20,6 +20,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
+import { CommunityPulseCard } from "@/components/CommunityPulseCard";
+import { useCommunityInsights } from "@/hooks/useCommunityInsights";
+import type { CommunityInsight } from "@/hooks/useCommunityInsights";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -122,6 +125,66 @@ const TopicFeed = () => {
   }, [topic?.id, slug]);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
+  const { insights: communityInsights, lastUpdated: communityLastUpdated, error: communityError } = useCommunityInsights(topic?.id);
+  const [mockCommunityInsights, setMockCommunityInsights] = useState<CommunityInsight[] | null>(null);
+
+  useEffect(() => {
+    if (!topic?.id) return;
+    if (typeof window === 'undefined') return;
+    if (!import.meta.env.DEV) {
+      setMockCommunityInsights(null);
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('mockCommunity')) {
+      setMockCommunityInsights(null);
+      return;
+    }
+
+    const baseTime = Date.now();
+    const minutesAgo = (minutes: number) => new Date(baseTime - minutes * 60 * 1000).toISOString();
+    const topicLabel = topic.name || 'Community';
+
+    setMockCommunityInsights([
+      {
+        id: 'mock-community-1',
+        topic_id: topic.id,
+        insight_type: 'sentiment',
+        content: `${topicLabel} locals are praising the refreshed seafront plan and how it could bring more independent traders in.`,
+        confidence_score: 78,
+        source_type: 'reddit',
+        source_identifier: 'eastbourne',
+        metadata: { mock: true },
+        created_at: minutesAgo(30),
+      },
+      {
+        id: 'mock-community-2',
+        topic_id: topic.id,
+        insight_type: 'concern',
+        content: `Residents remain worried about late-night safety around the station and want clearer policing commitments in ${topicLabel}.`,
+        confidence_score: 64,
+        source_type: 'reddit',
+        source_identifier: 'casualuk',
+        metadata: { mock: true },
+        created_at: minutesAgo(85),
+      },
+      {
+        id: 'mock-community-3',
+        topic_id: topic.id,
+        insight_type: 'validation',
+        content: `There is strong backing for more affordable co-working hubs so remote workers can stay in ${topicLabel} rather than commute.`,
+        confidence_score: 72,
+        source_type: 'reddit',
+        source_identifier: 'unitedkingdom',
+        metadata: { mock: true },
+        created_at: minutesAgo(150),
+      },
+    ]);
+  }, [topic?.id, topic?.name]);
+
+  const effectiveCommunityInsights = mockCommunityInsights ?? communityInsights;
+  const communityCardLastUpdated = mockCommunityInsights?.[0]?.created_at ?? communityLastUpdated;
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
@@ -493,8 +556,21 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add sentiment card every 6 stories (count stories only)
+              // Add community pulse card every 8 stories (offset by 2 to prevent clustering)
               const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
+              if ((storyIndex - 2) % 8 === 0 && storyIndex > 2 && effectiveCommunityInsights.length > 0 && topic) {
+                items.push(
+                  <div key={`community-pulse-${index}`} className="w-full flex justify-center">
+                    <CommunityPulseCard
+                      topicName={topic.name}
+                      insights={effectiveCommunityInsights}
+                      lastUpdated={communityCardLastUpdated}
+                    />
+                  </div>
+                );
+              }
+
+              // Add sentiment card every 6 stories (count stories only)
               if (storyIndex % 6 === 0 && storyIndex > 0 && sentimentCards.length > 0) {
                 const sentimentIndex = Math.floor((storyIndex - 1) / 6) % sentimentCards.length;
                 const sentimentCard = sentimentCards[sentimentIndex];

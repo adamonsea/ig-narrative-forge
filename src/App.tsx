@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 import StoryPage from "./pages/StoryPage";
+import DevCommunityPulse from "./pages/DevCommunityPulse";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -64,7 +65,11 @@ const App = () => {
                 {/* New universal routes */}
                 <Route path="/feed/:slug" element={<TopicFeed />} />
                 <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
-                
+
+                {import.meta.env.DEV && (
+                  <Route path="/dev/community-pulse" element={<DevCommunityPulse />} />
+                )}
+
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
