@@ -556,9 +556,10 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add community pulse card every 8 stories (offset by 2 to prevent clustering)
+              // Add community pulse card based on topic setting
               const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
-              if ((storyIndex - 2) % 8 === 0 && storyIndex > 2 && effectiveCommunityInsights.length > 0 && topic) {
+              const pulseFrequency = (topic as any)?.community_pulse_frequency || 8;
+              if ((storyIndex - 2) % pulseFrequency === 0 && storyIndex > 2 && effectiveCommunityInsights.length > 0 && topic) {
                 items.push(
                   <div key={`community-pulse-${index}`} className="w-full flex justify-center">
                     <CommunityPulseCard

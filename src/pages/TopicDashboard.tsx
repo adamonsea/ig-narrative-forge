@@ -849,6 +849,7 @@ const TopicDashboard = () => {
                   currentTone={topic.default_tone}
                   currentWritingStyle={topic.default_writing_style}
                   currentCommunityEnabled={topic.community_intelligence_enabled}
+                  currentCommunityPulseFrequency={(topic as any).community_pulse_frequency}
                   currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
                   currentAutomationQualityThreshold={topic.automation_quality_threshold}
                   currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}

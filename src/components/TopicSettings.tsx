@@ -21,6 +21,7 @@ interface TopicSettingsProps {
   currentTone?: 'formal' | 'conversational' | 'engaging';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentCommunityEnabled?: boolean;
+  currentCommunityPulseFrequency?: number;
   currentAutoSimplifyEnabled?: boolean;
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
@@ -34,7 +35,8 @@ export const TopicSettings = ({
   currentExpertise, 
   currentTone, 
   currentWritingStyle, 
-  currentCommunityEnabled, 
+  currentCommunityEnabled,
+  currentCommunityPulseFrequency,
   currentAutoSimplifyEnabled,
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
@@ -46,6 +48,7 @@ export const TopicSettings = ({
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
+  const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
   // Parliamentary tracking only available for regional topics
@@ -64,13 +67,14 @@ export const TopicSettings = ({
     if (currentTone) setTone(currentTone);
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
+    if (currentCommunityPulseFrequency !== undefined) setCommunityPulseFrequency(currentCommunityPulseFrequency);
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
     // Only allow parliamentary tracking for regional topics
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -82,6 +86,7 @@ export const TopicSettings = ({
           default_tone: tone,
           default_writing_style: writingStyle,
           community_intelligence_enabled: communityEnabled,
+          community_pulse_frequency: communityPulseFrequency,
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
           // Only save parliamentary tracking for regional topics
@@ -266,6 +271,25 @@ export const TopicSettings = ({
               onCheckedChange={setCommunityEnabled}
             />
           </div>
+
+          {communityEnabled && (
+            <div className="mt-4 space-y-3">
+              <Label>
+                Community Pulse Frequency: Every {communityPulseFrequency} stories
+              </Label>
+              <Slider
+                value={[communityPulseFrequency]}
+                onValueChange={([value]) => setCommunityPulseFrequency(value)}
+                max={20}
+                min={4}
+                step={2}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                How often to show Community Pulse cards in your feed
+              </p>
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -356,6 +380,7 @@ export const TopicSettings = ({
               tone === currentTone && 
               writingStyle === currentWritingStyle && 
               communityEnabled === currentCommunityEnabled &&
+              communityPulseFrequency === (currentCommunityPulseFrequency || 8) &&
               autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
               automationQualityThreshold === (currentAutomationQualityThreshold || 60) &&
               parliamentaryTrackingEnabled === (currentParliamentaryTrackingEnabled === true)

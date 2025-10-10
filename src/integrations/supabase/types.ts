@@ -2699,6 +2699,7 @@ export type Database = {
           branding_config: Json | null
           community_config: Json | null
           community_intelligence_enabled: boolean | null
+          community_pulse_frequency: number | null
           competing_regions: string[] | null
           created_at: string | null
           created_by: string
@@ -2733,6 +2734,7 @@ export type Database = {
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
+          community_pulse_frequency?: number | null
           competing_regions?: string[] | null
           created_at?: string | null
           created_by: string
@@ -2767,6 +2769,7 @@ export type Database = {
           branding_config?: Json | null
           community_config?: Json | null
           community_intelligence_enabled?: boolean | null
+          community_pulse_frequency?: number | null
           competing_regions?: string[] | null
           created_at?: string | null
           created_by?: string
