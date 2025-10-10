@@ -68,17 +68,61 @@ serve(async (req) => {
     }
 
     const imageData = await imageResponse.json();
-    
-    // Extract base64 image from Lovable AI Gateway response
-    const base64ImageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
+
+    const extractImageDataUrl = (data: any): string | null => {
+      const choice = data?.choices?.[0];
+      const message = choice?.message ?? {};
+
+      const legacyUrl = message?.images?.[0]?.image_url?.url;
+      if (legacyUrl) return legacyUrl;
+
+      const possibleContent = Array.isArray(message?.content)
+        ? message.content
+        : Array.isArray(choice?.content)
+          ? choice.content
+          : [];
+
+      for (const part of possibleContent) {
+        if (!part) continue;
+
+        if (typeof part === 'string' && part.startsWith('data:image')) {
+          return part;
+        }
+
+        if (typeof part === 'object') {
+          if (part?.type === 'output_image' && part?.image_base64) {
+            return `data:image/png;base64,${part.image_base64}`;
+          }
+
+          if (part?.image_base64) {
+            return `data:image/png;base64,${part.image_base64}`;
+          }
+
+          const partUrl = part?.image_url?.url ?? part?.url;
+          if (typeof partUrl === 'string') {
+            return partUrl;
+          }
+        }
+      }
+
+      const dataArray = Array.isArray(data?.data) ? data.data : [];
+      const b64Json = dataArray?.[0]?.b64_json;
+      if (typeof b64Json === 'string') {
+        return `data:image/png;base64,${b64Json}`;
+      }
+
+      return null;
+    };
+
+    const base64ImageUrl = extractImageDataUrl(imageData);
+
     if (!base64ImageUrl) {
       throw new Error('No image data received from Lovable AI Gateway');
     }
 
     // Extract just the base64 data (remove the data:image prefix if present)
-    const base64Image = base64ImageUrl.includes('base64,') 
-      ? base64ImageUrl.split('base64,')[1] 
+    const base64Image = base64ImageUrl.includes('base64,')
+      ? base64ImageUrl.split('base64,')[1]
       : base64ImageUrl;
 
     // Get slide details for alt text

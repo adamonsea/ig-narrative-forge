@@ -314,16 +314,62 @@ Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people 
 
       const geminiData = await geminiResponse.json()
       console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2))
-      
-      const imageDataUrl = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url
-      
+
+      const extractImageDataUrl = (data: any): string | null => {
+        const choice = data?.choices?.[0]
+        const message = choice?.message ?? {}
+
+        // Original Lovable gateway format
+        const legacyUrl = message?.images?.[0]?.image_url?.url
+        if (legacyUrl) return legacyUrl
+
+        const possibleContent = Array.isArray(message?.content)
+          ? message.content
+          : Array.isArray(choice?.content)
+            ? choice.content
+            : []
+
+        for (const part of possibleContent) {
+          if (!part) continue
+
+          if (typeof part === 'string' && part.startsWith('data:image')) {
+            return part
+          }
+
+          if (typeof part === 'object') {
+            if (part?.type === 'output_image' && part?.image_base64) {
+              return `data:image/png;base64,${part.image_base64}`
+            }
+
+            if (part?.image_base64) {
+              return `data:image/png;base64,${part.image_base64}`
+            }
+
+            const partUrl = part?.image_url?.url ?? part?.url
+            if (typeof partUrl === 'string') {
+              return partUrl
+            }
+          }
+        }
+
+        const dataArray = Array.isArray(data?.data) ? data.data : []
+        const b64Json = dataArray?.[0]?.b64_json
+        if (typeof b64Json === 'string') {
+          return `data:image/png;base64,${b64Json}`
+        }
+
+        return null
+      }
+
+      const imageDataUrl = extractImageDataUrl(geminiData)
+
       if (!imageDataUrl) {
         console.error('No image data in Gemini response:', geminiData)
         throw new Error('No image data received from Gemini API - response format unexpected')
       }
 
       // Extract base64 from data URL (format: data:image/png;base64,...)
-      imageBase64 = imageDataUrl.split(',')[1]
+      imageBase64 = imageDataUrl.includes('base64,') ? imageDataUrl.split(',')[1] : imageDataUrl
       console.log('Successfully extracted base64 image data from Gemini')
     } else if (modelConfig.provider === 'openai') {
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
