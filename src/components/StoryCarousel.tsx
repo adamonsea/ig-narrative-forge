@@ -498,9 +498,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     );
                   }
                   
-                  // Show time-based badge (Today, Yesterday, This week, This month)
-                  const storyPublishDate = story.updated_at;
-                  const timeLabel = getRelativeTimeLabel(storyPublishDate);
+                  // Show time-based badge (prefers article published_at, falls back to story created_at)
+                  const storyPublishDate = story.article?.published_at || story.created_at;
+                  const timeLabel = storyPublishDate ? getRelativeTimeLabel(storyPublishDate) : null;
                   if (timeLabel) {
                     badges.push(
                       <Badge 
