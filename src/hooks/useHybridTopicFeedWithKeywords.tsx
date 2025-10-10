@@ -296,6 +296,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Group RPC results by story_id since it returns one row per slide
+      console.log('🔍 [GROUPING] Starting story grouping from', storiesData.length, 'rows');
       const storyMap = new Map();
       const storySlideCountMap = new Map(); // Track how many slides we got per story
       
@@ -316,6 +317,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             slideIds: new Set() // Track slide IDs to prevent duplicates
           });
           storySlideCountMap.set(row.story_id, 0);
+          console.log('🔍 [GROUPING] New story detected:', {
+            id: row.story_id.substring(0, 8),
+            title: row.story_title?.substring(0, 50)
+          });
         }
         
         // Add slide if it exists and hasn't been added yet
@@ -337,6 +342,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         }
       });
+      
+      console.log('🔍 [GROUPING] Grouped into', storyMap.size, 'unique stories');
       
       // If filters are active, fetch full slide sets for matched stories to avoid slide reductions
       if (keywords || sources) {
@@ -499,16 +506,25 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }));
 
       // Defensive deduplication: use Map to ensure each ID appears exactly once
+      console.log('🔍 [DEDUP] Before dedup:', storyContent.length, 'stories', parliamentaryContent.length, 'parliamentary');
       const contentMap = new Map<string, FeedContent>();
       [...storyContent, ...parliamentaryContent].forEach(item => {
         if (item?.id) {
           if (!contentMap.has(item.id)) {
             contentMap.set(item.id, item);
           } else {
-            console.warn(`⚠️ Duplicate content ID detected and removed: ${item.id.substring(0, 8)}...`);
+            const existing = contentMap.get(item.id);
+            console.warn(`⚠️ [DEDUP] Duplicate content detected:`, {
+              id: item.id.substring(0, 8),
+              type: item.type,
+              title: item.type === 'story' ? (item.data as any).title?.substring(0, 50) : '',
+              existingSlides: item.type === 'story' ? (existing?.data as any).slides?.length : 0,
+              newSlides: item.type === 'story' ? (item.data as any).slides?.length : 0
+            });
           }
         }
       });
+      console.log('🔍 [DEDUP] After dedup:', contentMap.size, 'unique items');
 
       const now = new Date().getTime();
       const mixedContent = Array.from(contentMap.values())
@@ -535,28 +551,42 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       })));
 
       if (append) {
-        setAllStories(prev => [...prev, ...transformedStories]);
+        console.log('🔍 [APPEND] Appending', transformedStories.length, 'new stories to existing content');
+        setAllStories(prev => {
+          const combined = [...prev, ...transformedStories];
+          console.log('🔍 [APPEND] AllStories now has', combined.length, 'stories');
+          return combined;
+        });
+        
         // Merge new stories with existing mixed content and re-sort chronologically with deduplication
         setAllContent(prev => {
+          console.log('🔍 [APPEND] Merging into allContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
           [...prev, ...storyContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
+            } else {
+              console.warn('🔍 [APPEND] Skipping duplicate in allContent:', item.id.substring(0, 8));
             }
           });
-          return Array.from(contentMap.values()).sort((a, b) => {
+          const merged = Array.from(contentMap.values()).sort((a, b) => {
             const aTime = new Date(a.content_date).getTime();
             const bTime = new Date(b.content_date).getTime();
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
           });
+          console.log('🔍 [APPEND] AllContent now has', merged.length, 'items');
+          return merged;
         });
 
         setFilteredContent(prev => {
+          console.log('🔍 [APPEND] Merging into filteredContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
           const base = keywords || sources ? [...prev.filter(item => item.type === 'story')] : prev;
           [...base, ...storyContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
+            } else {
+              console.warn('🔍 [APPEND] Skipping duplicate in filteredContent:', item.id.substring(0, 8));
             }
           });
 
@@ -567,22 +597,36 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
 
           if (keywords || sources) {
-            return merged.filter(item => item.type === 'story');
+            const filtered = merged.filter(item => item.type === 'story');
+            console.log('🔍 [APPEND] FilteredContent now has', filtered.length, 'stories (filtered)');
+            return filtered;
           }
 
+          console.log('🔍 [APPEND] FilteredContent now has', merged.length, 'items');
           return merged;
         });
       } else {
+        console.log('🔍 [INITIAL] Setting initial content:', transformedStories.length, 'stories', mixedContent.length, 'mixed items');
         setAllStories(transformedStories);
         // For initial load, use the mixed content with proper chronological order
         setAllContent(mixedContent);
         if (!keywords && !sources) {
           setFilteredContent(mixedContent);
+          console.log('🔍 [INITIAL] FilteredContent set to', mixedContent.length, 'mixed items (no filters)');
         } else {
           // For filtering, only include stories for now
           setFilteredContent(storyContent);
           serverFilteredRef.current = true;
+          console.log('🔍 [INITIAL] FilteredContent set to', storyContent.length, 'stories (with filters)');
         }
+        
+        // Log the first few stories for debugging
+        console.log('🔍 [INITIAL] First 3 stories:', transformedStories.slice(0, 3).map(s => ({
+          id: s.id.substring(0, 8),
+          title: s.title?.substring(0, 50),
+          slides: s.slides.length,
+          published_at: s.article.published_at
+        })));
       }
       
       // Determine if there might be more data
