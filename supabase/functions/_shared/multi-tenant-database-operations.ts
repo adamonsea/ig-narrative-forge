@@ -55,30 +55,18 @@ export class MultiTenantDatabaseOperations {
       return result
     }
 
-    // Phase 1: Whitelisted domains for date handling
-    const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
+    // Keyword Topic Profile: Lenient date handling for keyword-based topics
+    const isKeywordTopic = topic.topic_type === 'keyword';
     
-    const isWhitelistedSource = (sourceId: string): boolean => {
-      // Check if this source is from a whitelisted domain
-      if (!sourceId) return false;
-      // We'll get source domain info during processing
-      return true; // Will be checked per article
-    };
-
     // Phase 2: Pre-filter articles for configurable recency BEFORE processing
     const ageThreshold = new Date();
     ageThreshold.setDate(ageThreshold.getDate() - maxAgeDays);
-    console.log(`🗓️ Phase 2: Strict ${maxAgeDays}-day filter - articles must be newer than ${ageThreshold.toISOString()}`)
+    console.log(`🗓️ Phase 2: ${isKeywordTopic ? 'Lenient' : 'Strict'} ${maxAgeDays}-day filter - articles must be newer than ${ageThreshold.toISOString()}`)
 
     const recentArticles = articles.filter(article => {
-      // Phase 1: Check if article is from whitelisted domain
-      const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
-        article.source_url && article.source_url.includes(domain)
-      );
-
       if (!article.published_at) {
-        if (isWhitelisted) {
-          console.log(`🟡 Whitelisted domain: Substituting missing date for "${article.title?.substring(0, 50)}..."`);
+        if (isKeywordTopic) {
+          console.log(`🔑 Keyword topic: Substituting missing date for "${article.title?.substring(0, 50)}..."`);
           article.published_at = new Date().toISOString();
         } else {
           console.log(`🚫 REJECTED (no date): "${article.title?.substring(0, 50)}..."`)
@@ -89,10 +77,10 @@ export class MultiTenantDatabaseOperations {
       try {
         const pubDate = new Date(article.published_at)
         
-        // Phase 1: Handle invalid dates for whitelisted domains
+        // Handle invalid dates
         if (isNaN(pubDate.getTime())) {
-          if (isWhitelisted) {
-            console.log(`🟡 Whitelisted domain: Fixing invalid date for "${article.title?.substring(0, 50)}..."`);
+          if (isKeywordTopic) {
+            console.log(`🔑 Keyword topic: Fixing invalid date for "${article.title?.substring(0, 50)}..."`);
             article.published_at = new Date().toISOString();
           } else {
             console.log(`🚫 REJECTED (invalid date): "${article.title?.substring(0, 50)}..." - date: "${article.published_at}"`)
@@ -109,8 +97,8 @@ export class MultiTenantDatabaseOperations {
         }
         return isRecent
       } catch (error) {
-        if (isWhitelisted) {
-          console.log(`🟡 Whitelisted domain: Fixing date parse error for "${article.title?.substring(0, 50)}..."`);
+        if (isKeywordTopic) {
+          console.log(`🔑 Keyword topic: Fixing date parse error for "${article.title?.substring(0, 50)}..."`);
           article.published_at = new Date().toISOString();
           return true;
         } else {
@@ -161,8 +149,10 @@ export class MultiTenantDatabaseOperations {
           .single()
         
         const credibilityScore = sourceData?.credibility_score || 50
+        
+        // Keyword Topic Profile: Conservative thresholds (40% reduction from regional)
         const qualityThreshold = credibilityScore >= 90 ? 15 : 30
-        const relevanceThreshold = topic.topic_type === 'regional' ? 3 : 5
+        const relevanceThreshold = isKeywordTopic ? 2 : (topic.topic_type === 'regional' ? 3 : 5)
         
         if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
           console.log(`🚫 Skipping article: "${article.title}"`)
@@ -400,7 +390,7 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Calculate relevance score based on topic configuration
-   * Generic for all regional topics - no hardcoded region names
+   * Generic for all regional and keyword topics
    */
   private calculateRelevanceScore(article: ArticleData, topic: any): number {
     let score = 0
@@ -416,11 +406,16 @@ export class MultiTenantDatabaseOperations {
       }
     }
     
+    // Keyword Topic Profile: Higher keyword weight for keyword topics
+    const isKeywordTopic = topic.topic_type === 'keyword'
+    const keywordTitleWeight = isKeywordTopic ? 30 : 20
+    const keywordBodyWeight = isKeywordTopic ? 15 : 10
+    
     // Check positive keywords
     for (const keyword of keywords) {
       const keywordLower = keyword.toLowerCase()
-      if (title.includes(keywordLower)) score += 20
-      if (body.includes(keywordLower)) score += 10
+      if (title.includes(keywordLower)) score += keywordTitleWeight
+      if (body.includes(keywordLower)) score += keywordBodyWeight
     }
     
     // Regional relevance for regional topics
