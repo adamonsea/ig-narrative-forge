@@ -430,19 +430,37 @@ export class ScrapingStrategies {
     return hasSnippetIndicators || (isClearlyTruncated && wordCount < 75);
   }
 
+  /**
+   * Check if a domain should be whitelisted for snippet tolerance
+   * Generic: checks if domain contains region name or is in configured whitelist
+   */
   private isWhitelistedDomain(url: string): boolean {
-    const whitelistedDomains = [
-      'theargus.co.uk',
-      'sussexexpress.co.uk',
-      'brightonandhovenews.org',
-      'sussexlive.co.uk',
-      'eastsussexnews.co.uk',
-      'brightonjournal.co.uk'
-    ];
-    
     try {
       const domain = new URL(url).hostname.toLowerCase();
-      return whitelistedDomains.some(whitelist => domain.includes(whitelist));
+      
+      // Check if domain contains the region name
+      if (this.region) {
+        const regionLower = this.region.toLowerCase();
+        if (domain.includes(regionLower)) {
+          return true;
+        }
+      }
+      
+      // Check source-specific whitelist if configured
+      const sourceWhitelist = this.sourceInfo?.snippet_tolerant_domains || [];
+      if (sourceWhitelist.length > 0) {
+        return sourceWhitelist.some((d: string) => domain.includes(d.toLowerCase()));
+      }
+      
+      // Fallback: common regional news domains (Sussex/South East England)
+      // These are technical workarounds for sites that commonly publish snippets
+      const technicalWhitelist = [
+        'theargus.co.uk',      // Sussex-wide news
+        'sussexexpress.co.uk', // Sussex-wide
+        'sussexlive.co.uk',    // Sussex-wide
+      ];
+      
+      return technicalWhitelist.some(whitelist => domain.includes(whitelist));
     } catch {
       return false;
     }

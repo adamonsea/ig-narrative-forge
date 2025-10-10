@@ -414,20 +414,39 @@ export class FastTrackScraper {
     }
   }
 
-  // Enhanced whitelisted domains for regional sources that commonly use snippets
-  private WHITELISTED_DOMAINS = [
-    'theargus.co.uk',
-    'sussexexpress.co.uk',
-    'brightonandhovenews.org',
-    'sussexlive.co.uk',
-    'eastsussexnews.co.uk',
-    'brightonjournal.co.uk'
-  ];
-
+  /**
+   * Check if a domain should be whitelisted for snippet/date tolerance
+   * Generic: checks if domain contains region name or is in topic's configured domains
+   */
   private isWhitelistedDomain(url: string): boolean {
     try {
       const domain = new URL(url).hostname.toLowerCase();
-      return this.WHITELISTED_DOMAINS.some(whitelist => domain.includes(whitelist));
+      
+      // Check if domain contains the region name (e.g., "eastbourne" in domain)
+      if (this.region) {
+        const regionLower = this.region.toLowerCase();
+        if (domain.includes(regionLower)) {
+          console.log(`✅ Domain whitelisted: contains region "${this.region}"`);
+          return true;
+        }
+      }
+      
+      // Check source-specific whitelist if configured
+      const sourceWhitelist = this.sourceInfo?.snippet_tolerant_domains || [];
+      if (sourceWhitelist.some((d: string) => domain.includes(d.toLowerCase()))) {
+        console.log(`✅ Domain whitelisted: in source config`);
+        return true;
+      }
+      
+      // Fallback: common regional news domains (Sussex/South East England)
+      // These are technical workarounds for sites with poor date/RSS handling
+      const technicalWhitelist = [
+        'theargus.co.uk',      // Sussex-wide news
+        'sussexexpress.co.uk', // Sussex-wide
+        'sussexlive.co.uk',    // Sussex-wide
+      ];
+      
+      return technicalWhitelist.some(whitelist => domain.includes(whitelist));
     } catch {
       return false;
     }
