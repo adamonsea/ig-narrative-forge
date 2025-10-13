@@ -14,7 +14,7 @@ import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArti
 import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
-import EventsListing from "@/components/EventsListing";
+import { SentimentCardsReview } from "@/components/SentimentCardsReview";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 
 interface Topic {
@@ -49,7 +49,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
-  const [eventsCount, setEventsCount] = useState(0);
+  const [sentimentCount, setSentimentCount] = useState(0);
   const { toast } = useToast();
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
@@ -113,6 +113,27 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
     loadTopics();
   }, []);
+
+  // Load sentiment card count for Insights tab
+  useEffect(() => {
+    const loadSentimentCount = async () => {
+      if (!selectedTopicId) return;
+      
+      try {
+        const { count, error } = await supabase
+          .from('sentiment_cards')
+          .select('*', { count: 'exact', head: true })
+          .eq('topic_id', selectedTopicId);
+
+        if (error) throw error;
+        setSentimentCount(count || 0);
+      } catch (error) {
+        console.error('Error loading sentiment count:', error);
+      }
+    };
+
+    loadSentimentCount();
+  }, [selectedTopicId]);
 
   // Update selectedTopicId if propTopicId changes
   useEffect(() => {
@@ -381,8 +402,8 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <TabsTrigger value="published">
             Published
           </TabsTrigger>
-          <TabsTrigger value="events">
-            Events ({eventsCount})
+          <TabsTrigger value="insights">
+            Insights ({sentimentCount})
           </TabsTrigger>
         </TabsList>
 
@@ -510,11 +531,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
 
-        {/* Events Tab */}
-        <TabsContent value="events" className="space-y-4">
+        {/* Insights Tab */}
+        <TabsContent value="insights" className="space-y-4">
           <Card>
-            <CardContent>
-              <EventsListing topicId={selectedTopicId} onEventsCountChange={setEventsCount} />
+            <CardContent className="pt-6">
+              <SentimentCardsReview topicId={selectedTopicId} />
             </CardContent>
           </Card>
         </TabsContent>
