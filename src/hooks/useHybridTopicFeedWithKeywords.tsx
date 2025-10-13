@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Story {
   id: string;
@@ -111,6 +112,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const queryClient = useQueryClient();
   
   // Keyword filtering state
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -1305,9 +1307,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         },
         (payload) => {
           console.log('🔄 Slide updated in real-time:', payload);
+          
+          // Invalidate React Query cache to force refetch
+          queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
+          queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
+          
+          // Also refresh the hook's internal state
           setTimeout(() => {
             refresh();
-          }, 1000);
+          }, 500);
         }
       )
       .on(
@@ -1331,7 +1339,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [topic, refresh]);
+  }, [topic, refresh, queryClient]);
 
   // Cleanup debounce on unmount
   useEffect(() => {

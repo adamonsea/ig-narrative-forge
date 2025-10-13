@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Story {
   id: string;
@@ -60,6 +61,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
   const [page, setPage] = useState(0);
   const [lastError, setLastError] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const loadTopic = useCallback(async () => {
     try {
@@ -302,9 +304,15 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
         },
         (payload) => {
           console.log('🔄 Slide updated in real-time:', payload);
+          
+          // Invalidate React Query cache to force refetch
+          queryClient.invalidateQueries({ queryKey: ['topic-feed'] });
+          queryClient.invalidateQueries({ queryKey: ['hybrid-topic-feed'] });
+          
+          // Also refresh the hook's internal state
           setTimeout(() => {
             refresh();
-          }, 1000);
+          }, 500);
         }
       )
       .subscribe();
@@ -312,7 +320,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [topic, refresh]);
+  }, [topic, refresh, queryClient]);
 
   return {
     stories,
