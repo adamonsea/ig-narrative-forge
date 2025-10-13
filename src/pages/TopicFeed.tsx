@@ -356,26 +356,25 @@ const TopicFeed = () => {
       {/* White banner header */}
       <div className="bg-background border-b border-border">
         <div className="container mx-auto px-1 md:px-4 py-12">
-          {/* User Avatar and Live Pill for logged in users */}
-          {user && (
-            <div className="absolute left-4 top-4 flex items-center gap-2">
+          {/* Top left: Avatar (if logged in) and Live pill (if active) */}
+          <div className="absolute left-4 top-4 flex items-center gap-2">
+            {user && (
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                {user.email?.charAt(0).toUpperCase() || 'U'}
-              </AvatarFallback>
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
               </Avatar>
-              {/* Show Live pill next to avatar if user is topic owner */}
-              {isLive && topic.created_by === user.id && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                  </span>
-                  Live
+            )}
+            {isLive && (
+              <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-              )}
-            </div>
-          )}
+                Live
+              </span>
+            )}
+          </div>
 
           {/* Topic Header - Clean and minimal with branding support */}
           <div className="text-center">
@@ -403,16 +402,6 @@ const TopicFeed = () => {
               )}
               
               <div className="absolute right-0 top-0 flex items-center gap-2">
-                {/* Show Live pill on right if user is NOT topic owner but is authenticated */}
-                {isLive && user && topic.created_by !== user.id && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    Live
-                  </span>
-                )}
                 <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
                   beta
                 </span>
