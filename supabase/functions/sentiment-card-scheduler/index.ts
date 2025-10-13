@@ -18,12 +18,19 @@ serve(async (req) => {
 
     console.log('🔄 Starting sentiment card scheduler...');
 
-    // Find keywords due for card generation
+    // Find keywords due for card generation (only from enabled topics)
     const now = new Date();
     const { data: dueKeywords, error: queryError } = await supabase
       .from('sentiment_keyword_tracking')
-      .select('id, topic_id, keyword_phrase, total_cards_generated')
+      .select(`
+        id, 
+        topic_id, 
+        keyword_phrase, 
+        total_cards_generated,
+        topic_sentiment_settings!inner(enabled)
+      `)
       .eq('tracked_for_cards', true)
+      .eq('topic_sentiment_settings.enabled', true)
       .in('current_trend', ['emerging', 'sustained'])
       .or(`next_card_due_at.is.null,next_card_due_at.lte.${now.toISOString()}`)
       .limit(20);

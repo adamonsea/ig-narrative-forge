@@ -130,12 +130,31 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         )
       );
 
-      toast({
-        title: !currentlyTracked ? "Tracking Enabled" : "Tracking Disabled",
-        description: !currentlyTracked 
-          ? `"${keywordPhrase}" will auto-generate cards weekly`
-          : `Stopped tracking "${keywordPhrase}"`
-      });
+      // If tracking was just enabled and sentiment is enabled, generate card immediately
+      if (!currentlyTracked && enabled) {
+        toast({
+          title: "Generating Card",
+          description: `Creating sentiment card for "${keywordPhrase}"...`
+        });
+
+        // Trigger immediate analysis to generate the card
+        await supabase.functions.invoke('sentiment-detector', {
+          body: { 
+            topic_id: topicId, 
+            mode: 'targeted',
+            force_analysis: true 
+          }
+        });
+
+        setTimeout(loadData, 3000); // Reload data after generation
+      } else {
+        toast({
+          title: !currentlyTracked ? "Tracking Enabled" : "Tracking Disabled",
+          description: !currentlyTracked 
+            ? `"${keywordPhrase}" will auto-generate cards weekly`
+            : `Stopped tracking "${keywordPhrase}"`
+        });
+      }
     } catch (error) {
       console.error('Error toggling tracking:', error);
       toast({
