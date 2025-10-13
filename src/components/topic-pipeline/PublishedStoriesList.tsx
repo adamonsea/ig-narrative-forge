@@ -119,13 +119,35 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     if (content === undefined) return;
     setSaving(prev => new Set([...prev, slideId]));
     try {
+      // Calculate word count
+      const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+      
       const { error } = await supabase
         .from('slides')
-        .update({ content })
+        .update({ 
+          content,
+          word_count: wordCount,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', slideId);
+      
       if (error) throw error;
-      toast({ title: 'Slide saved', description: 'Changes have been saved.' });
+      
+      toast({ title: 'Slide saved', description: 'Changes have been saved and will appear in feeds shortly.' });
+      
+      // Clear edit state after successful save
+      setEdits(prev => {
+        const next = { ...prev };
+        delete next[slideId];
+        return next;
+      });
+      
       setSaving(prev => { const n = new Set(prev); n.delete(slideId); return n; });
+      
+      // Trigger a refresh after a short delay to show updated content
+      setTimeout(() => {
+        onRefresh();
+      }, 500);
     } catch (e) {
       console.error('Error saving slide', e);
       toast({ title: 'Save failed', description: 'Could not save slide', variant: 'destructive' });
@@ -133,21 +155,6 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     }
   };
 
-  const saveAllForStory = async (storyId: string, slides: Slide[]) => {
-    const toSave = slides.filter(s => edits[s.id] !== undefined);
-    if (toSave.length === 0) return;
-    try {
-      await Promise.all(
-        toSave.map(s =>
-          supabase.from('slides').update({ content: edits[s.id] as string }).eq('id', s.id)
-        )
-      );
-      toast({ title: 'Slides saved', description: `${toSave.length} slide(s) updated.` });
-    } catch (e) {
-      console.error('Error saving slides', e);
-      toast({ title: 'Save failed', description: 'Could not save slides', variant: 'destructive' });
-    }
-  };
 
   const handleGenerateIllustration = async (story: PublishedStory, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
@@ -656,19 +663,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                         </div>
                       </div>
                     </div>
-                  ))}
+                   ))}
                 </div>
-                {story.slides.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => saveAllForStory(story.id, story.slides)}
-                    className="mt-3"
-                  >
-                    <Save className="mr-1 h-3 w-3" />
-                    Save All Changes
-                  </Button>
-                 )}
                </div>
              )}
 
