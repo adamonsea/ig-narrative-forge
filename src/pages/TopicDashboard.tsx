@@ -13,7 +13,6 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { ManualContentStaging } from "@/components/ManualContentStaging";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
-import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
@@ -28,7 +27,7 @@ import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfill
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Megaphone, Target, Sparkles } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -946,27 +945,6 @@ const TopicDashboard = () => {
                           branding_config: topic.branding_config
                         }}
                         onUpdate={() => loadTopicAndStats()}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="engagement" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
-                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                      <div className="flex w-full items-start justify-between gap-3 text-left">
-                        <div className="flex items-center gap-3">
-                          <Megaphone className="h-4 w-4" />
-                          <div>
-                            <p className="text-sm font-medium">Engagement & call-to-action</p>
-                            <p className="text-xs text-muted-foreground">Configure feed prompts and attribution messaging</p>
-                          </div>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-4 pb-4">
-                      <TopicCTAManager
-                        topicId={topic.id}
-                        topicName={topic.name}
-                        onClose={() => loadTopicAndStats()}
                       />
                     </AccordionContent>
                   </AccordionItem>

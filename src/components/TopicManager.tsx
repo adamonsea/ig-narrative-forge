@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
-import TopicCTAManager from "@/components/topic/TopicCTAManager";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
 
 interface Topic {
@@ -46,7 +45,6 @@ export const TopicManager = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [managingCTAForTopic, setManagingCTAForTopic] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -263,24 +261,6 @@ export const TopicManager = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // If managing CTA for a topic, show the CTA manager
-  if (managingCTAForTopic) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setManagingCTAForTopic(null)}>
-            ← Back to Topics
-          </Button>
-        </div>
-        <TopicCTAManager 
-          topicId={managingCTAForTopic.id}
-          topicName={managingCTAForTopic.name}
-          onClose={() => setManagingCTAForTopic(null)}
-        />
       </div>
     );
   }

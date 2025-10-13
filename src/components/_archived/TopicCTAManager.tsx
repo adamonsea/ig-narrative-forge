@@ -1,3 +1,20 @@
+/**
+ * ARCHIVED: 2025-10-13
+ * 
+ * This component was retired because AI content generation is already producing
+ * high-quality CTAs organically without manual configuration. The added complexity
+ * of manual CTA management was deemed premature for current user needs.
+ * 
+ * See RETIRED_FEATURES.md for:
+ * - Why this was built
+ * - Why it was retired
+ * - How to re-enable if needed
+ * - Database schema (feed_cta_configs table still exists)
+ * 
+ * This code is preserved for potential future use when multi-curator workflows
+ * or advanced personalization features might warrant manual CTA control.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
