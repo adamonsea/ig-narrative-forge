@@ -15,7 +15,7 @@ export const DonationButton = ({ onClick, buttonText }: DonationButtonProps) => 
       className="gap-2"
     >
       <Heart className="h-4 w-4" />
-      <span className="hidden sm:inline">{buttonText}</span>
+      <span>{buttonText}</span>
     </Button>
   );
 };

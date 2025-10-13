@@ -401,11 +401,14 @@ const TopicFeed = () => {
                 </div>
               )}
               
-              <div className="absolute right-0 top-0 flex items-center gap-2">
-                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                  beta
-                </span>
-              </div>
+              {/* Beta pill top right - only show if no branding logo */}
+              {!topic.branding_config?.logo_url && (
+                <div className="absolute right-0 top-0">
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                    beta
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Mobile filter button - centered below logo */}
