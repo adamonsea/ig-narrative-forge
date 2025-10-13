@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Pin, TrendingDown, Sparkles } from "lucide-react";
+import { Pin, TrendingDown, Sparkles, Clock, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
 
 interface TrendingKeyword {
   keyword_phrase: string;
@@ -13,6 +14,9 @@ interface TrendingKeyword {
   source_count: number;
   current_trend: 'emerging' | 'sustained' | 'fading';
   tracked_for_cards: boolean;
+  last_card_generated_at: string | null;
+  next_card_due_at: string | null;
+  total_cards_generated: number;
 }
 
 interface SentimentManagerProps {
@@ -44,10 +48,10 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         setExcludedKeywords(settings.excluded_keywords || []);
       }
 
-      // Load trending keywords
+      // Load trending keywords with tracking info
       const { data: keywords } = await supabase
         .from('sentiment_keyword_tracking')
-        .select('keyword_phrase, total_mentions, source_count, current_trend, tracked_for_cards')
+        .select('keyword_phrase, total_mentions, source_count, current_trend, tracked_for_cards, last_card_generated_at, next_card_due_at, total_cards_generated')
         .eq('topic_id', topicId)
         .in('current_trend', ['emerging', 'sustained', 'fading'])
         .order('total_mentions', { ascending: false });
@@ -183,6 +187,8 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   const trackedCount = trendingKeywords.filter(k => k.tracked_for_cards).length;
+  const activeKeywords = trendingKeywords.filter(k => k.tracked_for_cards);
+  const inactiveKeywords = trendingKeywords.filter(k => !k.tracked_for_cards);
 
   return (
     <div className="space-y-3">
@@ -191,8 +197,14 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         <div className="flex items-center gap-2">
           <Switch checked={enabled} onCheckedChange={toggleEnabled} />
           <Label className="text-sm font-normal cursor-pointer" onClick={() => toggleEnabled(!enabled)}>
-            Enabled
+            {enabled ? 'Enabled' : 'Paused'}
           </Label>
+          {enabled && trackedCount > 0 && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Radio className="h-3 w-3 animate-pulse text-green-500" />
+              {trackedCount} live
+            </Badge>
+          )}
         </div>
         <Button onClick={triggerAnalysis} size="sm" variant="outline">
           <Sparkles className="h-4 w-4 mr-1" />
@@ -200,19 +212,72 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         </Button>
       </div>
 
-      {/* Auto-discovered trending keywords */}
-      {trendingKeywords.length > 0 && (
+      {/* Active tracked keywords */}
+      {activeKeywords.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-sm">Trending Now</Label>
-          <div className="flex flex-wrap gap-2">
-            {trendingKeywords.map(kw => (
-              <Badge
+          <Label className="text-sm flex items-center gap-2">
+            <Radio className="h-3 w-3 text-green-500" />
+            Actively Tracked ({activeKeywords.length})
+          </Label>
+          <div className="space-y-2">
+            {activeKeywords.map(kw => (
+              <div
                 key={kw.keyword_phrase}
-                variant={kw.tracked_for_cards ? "default" : "outline"}
-                className="cursor-pointer transition-colors hover:bg-primary/80"
+                className="border rounded-lg p-2 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
                 onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
               >
-                {kw.tracked_for_cards && <Pin className="h-3 w-3 mr-1" />}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="default" className="text-xs">
+                        <Pin className="h-3 w-3 mr-1" />
+                        {kw.keyword_phrase}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {kw.total_mentions} mentions
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {kw.last_card_generated_at ? (
+                        <>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Last: {formatDistanceToNow(new Date(kw.last_card_generated_at), { addSuffix: true })}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {kw.total_cards_generated} {kw.total_cards_generated === 1 ? 'card' : 'cards'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-orange-600 font-medium">
+                          Generating first card...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {enabled ? '✓ Auto-generating cards weekly' : '⏸ Paused - no new cards'}
+          </p>
+        </div>
+      )}
+
+      {/* Inactive discovered keywords */}
+      {inactiveKeywords.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm">Discovered Trends ({inactiveKeywords.length})</Label>
+          <div className="flex flex-wrap gap-2">
+            {inactiveKeywords.map(kw => (
+              <Badge
+                key={kw.keyword_phrase}
+                variant="outline"
+                className="cursor-pointer transition-colors hover:bg-primary/10"
+                onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
+              >
                 {kw.keyword_phrase} ({kw.total_mentions})
                 {kw.current_trend === 'fading' && (
                   <TrendingDown className="h-3 w-3 ml-1 text-orange-500" />
@@ -221,10 +286,7 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            {trackedCount > 0 
-              ? `${trackedCount} tracked • Auto-generates weekly`
-              : "Tap to track • Auto-generates cards weekly"
-            }
+            Tap to start tracking and auto-generate cards
           </p>
         </div>
       )}
