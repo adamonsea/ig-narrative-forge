@@ -23,7 +23,6 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
-import { CommunityInsightsManager } from "@/components/CommunityInsightsManager";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -787,8 +786,8 @@ const TopicDashboard = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="insights" className="relative">
-              Insights
+            <TabsTrigger value="advanced" className="relative">
+              Advanced Tools
               {needsAttention.advanced && (
                 <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
                   <AlertCircle className="h-2 w-2" />
@@ -805,7 +804,7 @@ const TopicDashboard = () => {
                 topicId={topic.id} 
                 isExpanded={false} 
                 onNavigateToSentiment={() => {
-                  setActiveTab("insights");
+                  setActiveTab("advanced");
                   // Scroll to sentiment section after tab change
                   setTimeout(() => {
                     const sentimentSection = document.getElementById('sentiment-section');
@@ -864,7 +863,7 @@ const TopicDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="insights" className="space-y-8">
+          <TabsContent value="advanced" className="space-y-8">
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1048,39 +1047,24 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5" />
-                  Sentiment Analysis
-                </CardTitle>
-                <CardDescription>
-                  Monitor community sentiment and trends from your published content
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <SentimentManager topicId={topic.id} />
-              </CardContent>
-            </Card>
-
             {topic.community_intelligence_enabled && (
-              <>
-                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      Community Intelligence Trigger
-                    </CardTitle>
-                    <CardDescription>
-                      Analyze Reddit communities for insights
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Community Intelligence
+                  </CardTitle>
+                  <CardDescription>
+                    Discover trending conversations and sentiment from Reddit communities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Reddit Community Analysis</p>
                         <p className="text-xs text-muted-foreground">
-                          Extract insights, concerns, and validation points from relevant subreddits
+                          Analyze relevant subreddits to extract insights, concerns, and validation points
                         </p>
                       </div>
                       <Button 
@@ -1101,16 +1085,28 @@ const TopicDashboard = () => {
                         )}
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                  <CardContent className="pt-6">
-                    <CommunityInsightsManager topicId={topic.id} />
-                  </CardContent>
-                </Card>
-              </>
+                    <div className="text-xs text-muted-foreground">
+                      <p>Community insights appear in the public feed every 8 stories, showing real-time sentiment and trending topics from relevant Reddit communities.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
+
+            <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5" />
+                  Sentiment Analysis
+                </CardTitle>
+                <CardDescription>
+                  Monitor community sentiment and trends from your published content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <SentimentManager topicId={topic.id} />
+              </CardContent>
+            </Card>
 
             <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>
               <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
