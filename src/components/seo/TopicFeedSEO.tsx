@@ -18,10 +18,24 @@ export const TopicFeedSEO = ({
   logoUrl
 }: TopicFeedSEOProps) => {
   const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
-  const defaultDescription = `Stay updated with ${topicName}. Curated stories, insights, and analysis delivered in an engaging feed format.`;
-  const description = topicDescription || defaultDescription;
-  const title = `${topicName} | Breefly`;
+  
+  // Personalized title: "Curated {TopicName}"
+  const title = `Curated ${topicName}`;
+  
+  // Smart description based on topic type
+  const getSmartDescription = () => {
+    if (topicDescription) return topicDescription;
+    
+    if (topicType === 'regional') {
+      return `Local news, events, and community updates for ${topicName}. Stay informed about what matters in your area.`;
+    }
+    
+    return `The latest ${topicName} news and insights, curated from trusted sources. Stay ahead of the conversation.`;
+  };
+  
+  const description = getSmartDescription();
   const imageUrl = logoUrl || 'https://curatr.pro/placeholder.svg';
+  const siteName = `Curated ${topicName}`;
 
   // Generate structured data for the feed
   const structuredData = {
@@ -47,7 +61,7 @@ export const TopicFeedSEO = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={imageUrl} />
-      <meta property="og:site_name" content="Breefly" />
+      <meta property="og:site_name" content={siteName} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

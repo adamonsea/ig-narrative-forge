@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StoryCarousel from "@/components/StoryCarousel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
 
 interface Story {
   id: string;
@@ -152,6 +153,14 @@ const StoryPage = () => {
 
   return (
     <div className="min-h-screen feed-background">
+      {/* SEO Meta Tags */}
+      <StoryPageSEO
+        story={story}
+        topicName={topic.name}
+        topicSlug={slug}
+        topicType={topic.topic_type}
+      />
+
       <div className="max-w-lg mx-auto">
         {/* Back Button */}
         <div className="p-4">
