@@ -622,6 +622,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                           {edits[slide.id] !== undefined ? (
                             <>
                               <Button
+                                type="button"
                                 size="sm"
                                 onClick={() => saveSlide(slide.id)}
                                 disabled={saving.has(slide.id)}
