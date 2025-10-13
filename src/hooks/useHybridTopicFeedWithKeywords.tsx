@@ -124,6 +124,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [page, setPage] = useState(0);
   const queryClient = useQueryClient();
   const [isLive, setIsLive] = useState(false);
+  const hasSetupRealtimeRef = useRef(false);
   
   // Keyword filtering state
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -1281,10 +1282,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Real-time subscription for new stories and slide updates
   useEffect(() => {
-    if (!topic) return;
+    if (!topic || hasSetupRealtimeRef.current) return;
+    
+    hasSetupRealtimeRef.current = true;
+    console.log('📡 Setting up realtime subscription for topic:', topic.id);
 
     const channel = supabase
-      .channel('slide-updates-hybrid')
+      .channel(`topic-feed-realtime-${topic.id}`)
       .on(
         'postgres_changes',
         {
@@ -1316,77 +1320,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
           
           if (belongsToTopic) {
-            // Fetch full story with slides
-            const { data: fullStory } = await supabase
-              .rpc('get_topic_stories_with_keywords', {
-                p_topic_slug: slug,
-                p_keywords: null,
-                p_sources: null,
-                p_limit: 10,
-                p_offset: 0
-              });
+            console.log('✅ Story belongs to current topic, refreshing feed...');
+            toast({
+              title: "New story published",
+              description: newStory.title || "A new story is now available"
+            });
             
-            if (fullStory?.[0]) {
-              // Group story data
-              const storyMap = new Map();
-              fullStory.forEach((row: any) => {
-                if (row.story_id === newStory.id) {
-                  if (!storyMap.has(row.story_id)) {
-                    storyMap.set(row.story_id, {
-                      id: row.story_id,
-                      title: row.story_title,
-                      status: row.story_status,
-                      is_published: row.story_is_published,
-                      created_at: row.story_created_at,
-                      cover_illustration_url: row.story_cover_url,
-                      author: '',
-                      publication_name: '',
-                      updated_at: row.story_created_at,
-                      slides: [],
-                      article: {
-                        source_url: row.article_source_url || '',
-                        published_at: row.article_published_at,
-                        region: ''
-                      }
-                    });
-                  }
-                  
-                  if (row.slide_id) {
-                    const storyData = storyMap.get(row.story_id);
-                    storyData.slides.push({
-                      id: row.slide_id,
-                      slide_number: row.slide_number,
-                      content: row.slide_content,
-                      word_count: 0
-                    });
-                    storyData.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
-                  }
-                }
-              });
-              
-              const preparedStory = Array.from(storyMap.values())[0];
-              if (preparedStory) {
-                // Prepend to stories
-                setAllStories(prev => [preparedStory as Story, ...prev]);
-                setAllContent(prev => [{
-                  type: 'story',
-                  id: preparedStory.id,
-                  content_date: preparedStory.created_at,
-                  data: preparedStory as Story
-                }, ...prev]);
-                setFilteredContent(prev => [{
-                  type: 'story',
-                  id: preparedStory.id,
-                  content_date: preparedStory.created_at,
-                  data: preparedStory as Story
-                }, ...prev]);
-                
-                toast({
-                  title: "New story published",
-                  description: preparedStory.title
-                });
-              }
-            }
+            // Refresh the feed to include the new story
+            setTimeout(() => {
+              refresh();
+            }, 1000);
           }
         }
       )
@@ -1424,6 +1367,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             }
             
             if (belongsToTopic) {
+              console.log('✅ Story was published, refreshing feed...');
+              toast({
+                title: "New story published",
+                description: updatedStory.title || "A new story is now available"
+              });
+              
               setTimeout(() => {
                 refresh();
               }, 1000);
@@ -1470,13 +1419,22 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       .subscribe((status) => {
         console.log('📡 Realtime connection status:', status);
         setIsLive(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime subscription active for topic:', topic.id);
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Realtime connection closed');
+          hasSetupRealtimeRef.current = false;
+        }
       });
 
     return () => {
+      console.log('🔌 Cleaning up realtime subscription');
       setIsLive(false);
+      hasSetupRealtimeRef.current = false;
       supabase.removeChannel(channel);
     };
-  }, [topic, refresh, queryClient, slug]);
+  }, [topic?.id, refresh, queryClient, slug]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
