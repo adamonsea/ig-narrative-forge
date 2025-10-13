@@ -861,6 +861,21 @@ const TopicDashboard = () => {
                 />
               </CardContent>
             </Card>
+
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Sentiment Tracking
+                </CardTitle>
+                <CardDescription>
+                  Auto-discover trending keywords and generate insight cards weekly
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SentimentManager topicId={topic.id} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-8">
@@ -1093,20 +1108,6 @@ const TopicDashboard = () => {
               </Card>
             )}
 
-            <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5" />
-                  Sentiment Analysis
-                </CardTitle>
-                <CardDescription>
-                  Monitor community sentiment and trends from your published content
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <SentimentManager topicId={topic.id} />
-              </CardContent>
-            </Card>
 
             <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>
               <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>

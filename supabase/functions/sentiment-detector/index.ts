@@ -176,6 +176,38 @@ serve(async (req) => {
 
     console.log(`Found ${keywordAnalysis.length} trending keywords`);
 
+    // Update keyword tracking table
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    for (const keyword of keywordAnalysis) {
+      // Calculate trend status
+      const currentTrend = keyword.frequency >= 5 ? 'sustained' : 'emerging';
+      
+      // Upsert keyword tracking
+      await supabase
+        .from('sentiment_keyword_tracking')
+        .upsert({
+          topic_id: topicId,
+          keyword_phrase: keyword.phrase,
+          last_seen_at: now.toISOString(),
+          total_mentions: keyword.frequency,
+          source_count: keyword.sources.length,
+          current_trend: currentTrend,
+        }, {
+          onConflict: 'topic_id,keyword_phrase',
+          ignoreDuplicates: false
+        });
+    }
+
+    // Mark keywords not seen recently as fading
+    await supabase
+      .from('sentiment_keyword_tracking')
+      .update({ current_trend: 'fading' })
+      .eq('topic_id', topicId)
+      .lt('last_seen_at', thirtyDaysAgo.toISOString());
+
     let generatedCards = 0;
 
     // Generate sentiment cards for keywords with frequency >= 3 and at least 4 sources

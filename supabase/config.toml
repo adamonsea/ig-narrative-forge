@@ -162,3 +162,9 @@ verify_jwt = true
 
 [functions.delete-cover-option]
 verify_jwt = true
+
+[functions.sentiment-detector]
+verify_jwt = false
+
+[functions.sentiment-card-scheduler]
+verify_jwt = false

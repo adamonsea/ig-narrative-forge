@@ -1917,6 +1917,72 @@ export type Database = {
           },
         ]
       }
+      sentiment_keyword_tracking: {
+        Row: {
+          created_at: string | null
+          current_trend: string | null
+          first_seen_at: string | null
+          id: string
+          keyword_phrase: string
+          last_card_generated_at: string | null
+          last_seen_at: string | null
+          next_card_due_at: string | null
+          source_count: number | null
+          topic_id: string
+          total_cards_generated: number | null
+          total_mentions: number | null
+          tracked_for_cards: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_trend?: string | null
+          first_seen_at?: string | null
+          id?: string
+          keyword_phrase: string
+          last_card_generated_at?: string | null
+          last_seen_at?: string | null
+          next_card_due_at?: string | null
+          source_count?: number | null
+          topic_id: string
+          total_cards_generated?: number | null
+          total_mentions?: number | null
+          tracked_for_cards?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_trend?: string | null
+          first_seen_at?: string | null
+          id?: string
+          keyword_phrase?: string
+          last_card_generated_at?: string | null
+          last_seen_at?: string | null
+          next_card_due_at?: string | null
+          source_count?: number | null
+          topic_id?: string
+          total_cards_generated?: number | null
+          total_mentions?: number | null
+          tracked_for_cards?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_keyword_tracking_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentiment_keyword_tracking_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_article_content: {
         Row: {
           author: string | null
