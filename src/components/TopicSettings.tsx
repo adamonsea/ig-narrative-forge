@@ -56,6 +56,7 @@ export const TopicSettings = ({
     topicType === 'regional' ? (currentParliamentaryTrackingEnabled || false) : false
   );
   const [saving, setSaving] = useState(false);
+  const [processingCommunity, setProcessingCommunity] = useState(false);
   const { toast } = useToast();
   const { isSuperAdmin, user } = useAuth();
   
@@ -112,6 +113,29 @@ export const TopicSettings = ({
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleProcessCommunity = async () => {
+    setProcessingCommunity(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reddit-community-processor');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Community Processing Started",
+        description: "Reddit insights are being gathered in the background. Check back in a few minutes."
+      });
+    } catch (error) {
+      console.error('Error processing community insights:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start community processing",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingCommunity(false);
     }
   };
 
@@ -273,21 +297,46 @@ export const TopicSettings = ({
           </div>
 
           {communityEnabled && (
-            <div className="mt-4 space-y-3">
-              <Label>
-                Community Pulse Frequency: Every {communityPulseFrequency} stories
-              </Label>
-              <Slider
-                value={[communityPulseFrequency]}
-                onValueChange={([value]) => setCommunityPulseFrequency(value)}
-                max={20}
-                min={4}
-                step={2}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                How often to show Community Pulse cards in your feed
-              </p>
+            <div className="mt-4 space-y-4">
+              <div className="space-y-3">
+                <Label>
+                  Community Pulse Frequency: Every {communityPulseFrequency} stories
+                </Label>
+                <Slider
+                  value={[communityPulseFrequency]}
+                  onValueChange={([value]) => setCommunityPulseFrequency(value)}
+                  max={20}
+                  min={4}
+                  step={2}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  How often to show Community Pulse cards in your feed
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleProcessCommunity}
+                  disabled={processingCommunity}
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  {processingCommunity ? 'Processing...' : 'Process Community Insights Now'}
+                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p className="text-sm">Manually trigger Reddit community analysis. This will fetch and analyze recent discussions from relevant subreddits.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           )}
         </div>
