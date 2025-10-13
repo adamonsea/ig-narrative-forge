@@ -24,6 +24,7 @@ import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
+import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
@@ -68,6 +69,8 @@ interface Topic {
   automation_quality_threshold?: number;
   parliamentary_tracking_enabled?: boolean;
   branding_config?: any; // Use any to handle Json type from Supabase
+  donation_enabled?: boolean;
+  donation_config?: any;
 }
 
 const TopicDashboard = () => {
@@ -115,7 +118,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config')
         .eq('slug', slug)
         .single();
 
@@ -769,7 +772,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full grid-cols-3 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
             <TabsTrigger value="content-flow" className="relative">
               Content Flow
               {needsAttention.contentFlow && (
@@ -779,7 +782,7 @@ const TopicDashboard = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="automation" className="relative">
-              Automation & Sources
+              Automation
               {needsAttention.automation && (
                 <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
                   <AlertCircle className="h-2 w-2" />
@@ -793,6 +796,9 @@ const TopicDashboard = () => {
                   <AlertCircle className="h-2 w-2" />
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="donations">
+              Donations
             </TabsTrigger>
           </TabsList>
 
@@ -1133,6 +1139,15 @@ const TopicDashboard = () => {
               </Card>
             </Collapsible>
             </TabsContent>
+
+          <TabsContent value="donations" className="space-y-6">
+            <TopicDonationSettings
+              topicId={topic.id}
+              donationEnabled={topic.donation_enabled || false}
+              donationConfig={topic.donation_config || { button_text: "Support this feed", tiers: [] }}
+              onUpdate={loadTopicAndStats}
+            />
+          </TabsContent>
         </Tabs>
       </div>
 

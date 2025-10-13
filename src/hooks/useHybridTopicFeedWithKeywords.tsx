@@ -52,6 +52,16 @@ interface Topic {
     subheader?: string;
     show_topic_name?: boolean;
   };
+  donation_enabled?: boolean;
+  donation_config?: {
+    button_text: string;
+    tiers: Array<{
+      name: string;
+      amount: string;
+      stripe_payment_link: string;
+      description?: string;
+    }>;
+  };
 }
 
 interface KeywordCount {
@@ -163,7 +173,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       const { data: fullTopicData, error: keywordError } = await supabase
         .from('topics')
-        .select('keywords, landmarks, organizations, branding_config')
+        .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config')
         .ilike('slug', slug)
         .eq('is_public', true)
         .single();
@@ -172,11 +182,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       let topicLandmarks: string[] = [];
       let topicOrganizations: string[] = [];
       let brandingConfig = {};
+      let donationEnabled = false;
+      let donationConfig: any = { button_text: "Support this feed", tiers: [] };
       if (!keywordError && fullTopicData) {
         topicKeywords = Array.isArray(fullTopicData.keywords) ? fullTopicData.keywords : [];
         topicLandmarks = Array.isArray(fullTopicData.landmarks) ? fullTopicData.landmarks : [];
         topicOrganizations = Array.isArray(fullTopicData.organizations) ? fullTopicData.organizations : [];
         brandingConfig = fullTopicData.branding_config || {};
+        donationEnabled = fullTopicData.donation_enabled || false;
+        donationConfig = (fullTopicData.donation_config as any) || { button_text: "Support this feed", tiers: [] };
       }
 
       const topicObject = {
@@ -187,7 +201,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         organizations: topicOrganizations,
         is_public: topicData.is_public,
         created_by: '',
-        branding_config: brandingConfig as any
+        branding_config: brandingConfig as any,
+        donation_enabled: donationEnabled,
+        donation_config: donationConfig as any
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);

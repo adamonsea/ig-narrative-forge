@@ -2773,6 +2773,8 @@ export type Database = {
           default_tone: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style: string | null
           description: string | null
+          donation_config: Json | null
+          donation_enabled: boolean | null
           id: string
           is_active: boolean | null
           is_archived: boolean | null
@@ -2808,6 +2810,8 @@ export type Database = {
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style?: string | null
           description?: string | null
+          donation_config?: Json | null
+          donation_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_archived?: boolean | null
@@ -2843,6 +2847,8 @@ export type Database = {
           default_tone?: Database["public"]["Enums"]["tone_type"] | null
           default_writing_style?: string | null
           description?: string | null
+          donation_config?: Json | null
+          donation_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_archived?: boolean | null

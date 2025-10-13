@@ -9,6 +9,8 @@ import { useHybridTopicFeedWithKeywords } from "@/hooks/useHybridTopicFeedWithKe
 import { SentimentCard } from "@/components/SentimentCard";
 import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
+import { DonationButton } from "@/components/DonationButton";
+import { DonationModal } from "@/components/DonationModal";
 import { Hash, MapPin, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -32,6 +34,7 @@ const TopicFeed = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showFilterTip, setShowFilterTip] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
@@ -76,6 +79,9 @@ const TopicFeed = () => {
     removeSource,
     isLive
   } = useHybridTopicFeedWithKeywords(slug || '');
+
+  // Track visitor for analytics
+  useVisitorTracking(topic?.id);
 
   // Fetch monthly count after we have topic
   useEffect(() => {
@@ -334,6 +340,14 @@ const TopicFeed = () => {
                 </Tooltip>
               </TooltipProvider>
 
+              {/* Donation Button */}
+              {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
+                <DonationButton
+                  onClick={() => setShowDonationModal(true)}
+                  buttonText={topic.donation_config.button_text || "Support"}
+                />
+              )}
+
             </div>
           </div>
         </div>
@@ -507,6 +521,19 @@ const TopicFeed = () => {
           onSourceToggle={toggleSource}
           onClearAll={clearAllFilters}
         />
+
+        {/* Donation Modal */}
+        {topic && topic.donation_enabled && (
+          <DonationModal
+            isOpen={showDonationModal}
+            onClose={() => setShowDonationModal(false)}
+            topicName={topic.name}
+            topicId={topic.id}
+            buttonText={topic.donation_config?.button_text || "Support this feed"}
+            tiers={topic.donation_config?.tiers || []}
+            visitorId={`visitor_${Date.now()}`}
+          />
+        )}
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
         {!loading && !loadingMore && !isServerFiltering && filteredContent.length === 0 ? (
