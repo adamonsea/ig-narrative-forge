@@ -88,7 +88,7 @@ const TopicDashboard = () => {
     sentiment_cards: 0
   });
   const [loading, setLoading] = useState(true);
-  const [dashboardExpanded, setDashboardExpanded] = useState(false);
+  const [dashboardExpanded, setDashboardExpanded] = useState(true);
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState("content-flow");
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
