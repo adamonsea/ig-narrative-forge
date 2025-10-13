@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -27,7 +28,7 @@ import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfill
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Megaphone, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -843,80 +844,198 @@ const TopicDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-8">
-                <TopicSettings
-                  topicId={topic.id}
-                  currentExpertise={topic.audience_expertise}
-                  currentTone={topic.default_tone}
-                  currentWritingStyle={topic.default_writing_style}
-                  currentCommunityEnabled={topic.community_intelligence_enabled}
-                  currentCommunityPulseFrequency={(topic as any).community_pulse_frequency}
-                  currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
-                  currentAutomationQualityThreshold={topic.automation_quality_threshold}
-                  currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
-                  topicType={topic.topic_type}
-                  region={topic.region}
-                  onUpdate={() => loadTopicAndStats()}
-                />
-                
-                <div className="border-t pt-8">
-                  <TopicBrandingSettings
-                    topic={{
-                      id: topic.id,
-                      name: topic.name,
-                      branding_config: topic.branding_config
-                    }}
-                    onUpdate={() => loadTopicAndStats()}
-                  />
-                </div>
-                
-                <div className="border-t pt-8">
-                  <TopicCTAManager 
-                    topicId={topic.id} 
-                    topicName={topic.name}
-                    onClose={() => {}} 
-                  />
-                </div>
-                
-                <div className="border-t pt-8">
-                  <KeywordManager 
-                    topic={topic} 
-                    onTopicUpdate={(updatedTopic: Topic) => {
-                      setTopic((prevTopic) => ({
-                        ...prevTopic!,
-                        ...updatedTopic
-                      }));
-                      loadTopicAndStats();
-                    }} 
-                  />
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      Audience
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <div className="mt-2 text-lg font-semibold capitalize">
+                      {topic.audience_expertise || 'Not set'}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Tailor reading level and expertise expectations for this topic.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      Voice & Tone
+                      <MessageCircle className="h-4 w-4" />
+                    </div>
+                    <div className="mt-2 text-lg font-semibold capitalize">
+                      {topic.default_tone || 'Not set'}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Writing style: <span className="font-medium capitalize">{topic.default_writing_style || 'Not set'}</span>
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      Automation
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div className="mt-2 text-lg font-semibold">
+                      {topic.auto_simplify_enabled ? 'Smart summaries on' : 'Manual review'}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Quality threshold: <span className="font-medium">{topic.automation_quality_threshold ?? 'Default'}</span>
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      Keyword Coverage
+                      <Target className="h-4 w-4" />
+                    </div>
+                    <div className="mt-2 text-lg font-semibold">
+                      {(topic.keywords?.length || 0)} keywords
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Optimise sourcing and ranking with focused keyword sets.
+                    </p>
+                  </div>
                 </div>
 
-                {/* Parliamentary Backfill - Only for regional topics with tracking enabled */}
-                {topic.topic_type === 'regional' && topic.region && topic.parliamentary_tracking_enabled && (
-                  <div className="border-t pt-8">
-                    <ParliamentaryBackfillTrigger
-                      topicId={topic.id}
-                      region={topic.region}
-                    />
-                  </div>
-                )}
+                <Accordion type="multiple" defaultValue={["core-settings", "engagement"]} className="space-y-3">
+                  <AccordionItem value="core-settings" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Settings className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Core topic preferences</p>
+                            <p className="text-xs text-muted-foreground">Audience expertise, tone, automation and community controls</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <TopicSettings
+                        topicId={topic.id}
+                        currentExpertise={topic.audience_expertise}
+                        currentTone={topic.default_tone}
+                        currentWritingStyle={topic.default_writing_style}
+                        currentCommunityEnabled={topic.community_intelligence_enabled}
+                        currentCommunityPulseFrequency={(topic as any).community_pulse_frequency}
+                        currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
+                        currentAutomationQualityThreshold={topic.automation_quality_threshold}
+                        currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
+                        topicType={topic.topic_type}
+                        region={topic.region}
+                        onUpdate={() => loadTopicAndStats()}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="branding" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Palette className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Branding & presentation</p>
+                            <p className="text-xs text-muted-foreground">Logos, colours and story-level visuals</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <TopicBrandingSettings
+                        topic={{
+                          id: topic.id,
+                          name: topic.name,
+                          branding_config: topic.branding_config
+                        }}
+                        onUpdate={() => loadTopicAndStats()}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="engagement" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Megaphone className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Engagement & call-to-action</p>
+                            <p className="text-xs text-muted-foreground">Configure feed prompts and attribution messaging</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <TopicCTAManager
+                        topicId={topic.id}
+                        topicName={topic.name}
+                        onClose={() => loadTopicAndStats()}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="keywords" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Hash className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Keywords & discovery</p>
+                            <p className="text-xs text-muted-foreground">Primary keywords, exclusions and competitive regions</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-6 px-4 pb-4">
+                      <KeywordManager
+                        topic={topic}
+                        onTopicUpdate={(updatedTopic: Topic) => {
+                          setTopic((prevTopic) => ({
+                            ...prevTopic!,
+                            ...updatedTopic
+                          }));
+                          loadTopicAndStats();
+                        }}
+                      />
+
+                      {topic.topic_type === 'regional' && (
+                        <div className="grid gap-6 md:grid-cols-2">
+                          <TopicNegativeKeywords
+                            topicId={topic.id}
+                            negativeKeywords={negativeKeywords}
+                            onUpdate={setNegativeKeywords}
+                          />
+                          <TopicCompetingRegions
+                            topicId={topic.id}
+                            competingRegions={competingRegions}
+                            onUpdate={setCompetingRegions}
+                          />
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {topic.topic_type === 'regional' && topic.region && topic.parliamentary_tracking_enabled && (
+                    <AccordionItem value="parliamentary" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex w-full items-start justify-between gap-3 text-left">
+                          <div className="flex items-center gap-3">
+                            <MapPin className="h-4 w-4" />
+                            <div>
+                              <p className="text-sm font-medium">Parliamentary tracking</p>
+                              <p className="text-xs text-muted-foreground">Backfill local representatives and speeches</p>
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <ParliamentaryBackfillTrigger
+                          topicId={topic.id}
+                          region={topic.region}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+                </Accordion>
               </CardContent>
             </Card>
-
-            {/* Advanced Filtering for Regional Topics */}
-            {topic.topic_type === 'regional' && (
-              <div className="grid gap-6 md:grid-cols-2">
-                <TopicNegativeKeywords
-                  topicId={topic.id}
-                  negativeKeywords={negativeKeywords}
-                  onUpdate={setNegativeKeywords}
-                />
-                <TopicCompetingRegions
-                  topicId={topic.id}
-                  competingRegions={competingRegions}
-                  onUpdate={setCompetingRegions}
-                />
-              </div>
-            )}
 
             <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
