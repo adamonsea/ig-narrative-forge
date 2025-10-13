@@ -113,6 +113,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const queryClient = useQueryClient();
+  const [isLive, setIsLive] = useState(false);
   
   // Keyword filtering state
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -1262,7 +1263,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [slug, loadTopic, loadStories]);
 
-  // Real-time subscription for slide updates
+  // Real-time subscription for new stories and slide updates
   useEffect(() => {
     if (!topic) return;
 
@@ -1276,11 +1277,101 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           table: 'stories',
           filter: `is_published=eq.true`
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔄 New published story detected:', payload);
-          setTimeout(() => {
-            refresh();
-          }, 1000);
+          const newStory = payload.new as any;
+          
+          // Verify story belongs to this topic
+          let belongsToTopic = false;
+          if (newStory.topic_article_id) {
+            const { data: topicArticle } = await supabase
+              .from('topic_articles')
+              .select('topic_id')
+              .eq('id', newStory.topic_article_id)
+              .single();
+            belongsToTopic = topicArticle?.topic_id === topic.id;
+          } else if (newStory.article_id) {
+            const { data: article } = await supabase
+              .from('articles')
+              .select('topic_id')
+              .eq('id', newStory.article_id)
+              .single();
+            belongsToTopic = article?.topic_id === topic.id;
+          }
+          
+          if (belongsToTopic) {
+            // Fetch full story with slides
+            const { data: fullStory } = await supabase
+              .rpc('get_topic_stories_with_keywords', {
+                p_topic_slug: slug,
+                p_keywords: null,
+                p_sources: null,
+                p_limit: 10,
+                p_offset: 0
+              });
+            
+            if (fullStory?.[0]) {
+              // Group story data
+              const storyMap = new Map();
+              fullStory.forEach((row: any) => {
+                if (row.story_id === newStory.id) {
+                  if (!storyMap.has(row.story_id)) {
+                    storyMap.set(row.story_id, {
+                      id: row.story_id,
+                      title: row.story_title,
+                      status: row.story_status,
+                      is_published: row.story_is_published,
+                      created_at: row.story_created_at,
+                      cover_illustration_url: row.story_cover_url,
+                      author: '',
+                      publication_name: '',
+                      updated_at: row.story_created_at,
+                      slides: [],
+                      article: {
+                        source_url: row.article_source_url || '',
+                        published_at: row.article_published_at,
+                        region: ''
+                      }
+                    });
+                  }
+                  
+                  if (row.slide_id) {
+                    const storyData = storyMap.get(row.story_id);
+                    storyData.slides.push({
+                      id: row.slide_id,
+                      slide_number: row.slide_number,
+                      content: row.slide_content,
+                      word_count: 0
+                    });
+                    storyData.slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+                  }
+                }
+              });
+              
+              const preparedStory = Array.from(storyMap.values())[0];
+              if (preparedStory) {
+                // Prepend to stories
+                setAllStories(prev => [preparedStory as Story, ...prev]);
+                setAllContent(prev => [{
+                  type: 'story',
+                  id: preparedStory.id,
+                  content_date: preparedStory.created_at,
+                  data: preparedStory as Story
+                }, ...prev]);
+                setFilteredContent(prev => [{
+                  type: 'story',
+                  id: preparedStory.id,
+                  content_date: preparedStory.created_at,
+                  data: preparedStory as Story
+                }, ...prev]);
+                
+                toast({
+                  title: "New story published",
+                  description: preparedStory.title
+                });
+              }
+            }
+          }
         }
       )
       .on(
@@ -1291,11 +1382,37 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           table: 'stories',
           filter: `is_published=eq.true`
         },
-        (payload) => {
+        async (payload) => {
           console.log('🔄 Story published/updated in real-time:', payload);
-          setTimeout(() => {
-            refresh();
-          }, 1000);
+          const updatedStory = payload.new as any;
+          const oldStory = payload.old as any;
+          
+          // Only handle if story was just published
+          if (!oldStory.is_published && updatedStory.is_published) {
+            // Verify story belongs to this topic
+            let belongsToTopic = false;
+            if (updatedStory.topic_article_id) {
+              const { data: topicArticle } = await supabase
+                .from('topic_articles')
+                .select('topic_id')
+                .eq('id', updatedStory.topic_article_id)
+                .single();
+              belongsToTopic = topicArticle?.topic_id === topic.id;
+            } else if (updatedStory.article_id) {
+              const { data: article } = await supabase
+                .from('articles')
+                .select('topic_id')
+                .eq('id', updatedStory.article_id)
+                .single();
+              belongsToTopic = article?.topic_id === topic.id;
+            }
+            
+            if (belongsToTopic) {
+              setTimeout(() => {
+                refresh();
+              }, 1000);
+            }
+          }
         }
       )
       .on(
@@ -1334,12 +1451,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime connection status:', status);
+        setIsLive(status === 'SUBSCRIBED');
+      });
 
     return () => {
+      setIsLive(false);
       supabase.removeChannel(channel);
     };
-  }, [topic, refresh, queryClient]);
+  }, [topic, refresh, queryClient, slug]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -1360,6 +1481,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     hasMore,
     loadMore,
     refresh,
+    isLive,
     
     // Keyword filtering
     selectedKeywords,

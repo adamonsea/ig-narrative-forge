@@ -50,6 +50,27 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
       }
     };
 
+    // Helper: verify story belongs to current topic
+    const verifyStoryBelongsTopic = async (storyData: any): Promise<boolean> => {
+      if (!storyData.topic_article_id) {
+        // Legacy architecture - check via article
+        const { data: article } = await supabase
+          .from('articles')
+          .select('topic_id')
+          .eq('id', storyData.article_id)
+          .single();
+        return article?.topic_id === topicId;
+      } else {
+        // Multi-tenant architecture - check via topic_article
+        const { data: topicArticle } = await supabase
+          .from('topic_articles')
+          .select('topic_id')
+          .eq('id', storyData.topic_article_id)
+          .single();
+        return topicArticle?.topic_id === topicId;
+      }
+    };
+
     // Subscribe to new story publications
     const channel = supabase
       .channel(`story-notifications-${topicId}`)
@@ -61,11 +82,14 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           table: 'stories',
           filter: `is_published=eq.true`
         },
-        (payload) => {
+        async (payload) => {
           const newStory = payload.new as any;
           
+          // Verify story belongs to this topic
+          const belongsToTopic = await verifyStoryBelongsTopic(newStory);
+          
           // Check if this story belongs to this topic and we haven't notified about it
-          if (newStory.id !== lastNotifiedStoryId.current && permissionGranted.current) {
+          if (belongsToTopic && newStory.id !== lastNotifiedStoryId.current && permissionGranted.current) {
             lastNotifiedStoryId.current = newStory.id;
             
             const storyUrl = topicSlug 
@@ -88,12 +112,16 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           table: 'stories',
           filter: `is_published=eq.true`
         },
-        (payload) => {
+        async (payload) => {
           const updatedStory = payload.new as any;
           const oldStory = payload.old as any;
           
+          // Verify story belongs to this topic
+          const belongsToTopic = await verifyStoryBelongsTopic(updatedStory);
+          
           // Only notify if story was just published (status changed to published)
           if (
+            belongsToTopic &&
             !oldStory.is_published && 
             updatedStory.is_published && 
             updatedStory.id !== lastNotifiedStoryId.current &&
