@@ -123,7 +123,7 @@ serve(async (req) => {
       .in('status', ['ready', 'published']) // Accept both ready and published status
       .eq('articles.processing_status', 'processed')
       .gte('articles.regional_relevance_score', 0) // Lower threshold to be more inclusive
-      .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // Extended to 14 days
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Extended to 30 days (1 month)
       .order('created_at', { ascending: false });
 
     if (storiesError) {
@@ -210,9 +210,9 @@ serve(async (req) => {
 
     let generatedCards = 0;
 
-    // Generate sentiment cards for keywords with frequency >= 3 and at least 4 sources
+    // Generate sentiment cards for keywords with frequency >= 2 and at least 2 sources
     for (const keyword of keywordAnalysis) {
-      if (keyword.frequency >= 3 && keyword.sources.length >= 4) {
+      if (keyword.frequency >= 2 && keyword.sources.length >= 2) {
         console.log(`Checking if sentiment card needed for: ${keyword.phrase}`);
         
         // Check for existing cards in the last 7 days
