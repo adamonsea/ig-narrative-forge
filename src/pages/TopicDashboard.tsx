@@ -94,6 +94,7 @@ const TopicDashboard = () => {
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
+  const [refreshingInsights, setRefreshingInsights] = useState(false);
   const { toast } = useToast();
 
   // Set up parliamentary automation when enabled
@@ -366,6 +367,37 @@ const TopicDashboard = () => {
         description: "Failed to update publish status",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleRefreshCommunityInsights = async () => {
+    if (!topic) return;
+    
+    setRefreshingInsights(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reddit-community-processor', {
+        body: { topicId: topic.id }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Community Insights Refreshed",
+        description: data?.message || "Successfully analyzed Reddit communities for new insights",
+      });
+
+      // Refresh topic stats to update any relevant counts
+      await loadTopicAndStats();
+      
+    } catch (error) {
+      console.error('Error refreshing community insights:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to refresh community insights",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshingInsights(false);
     }
   };
 
@@ -1014,6 +1046,52 @@ const TopicDashboard = () => {
                 </Accordion>
               </CardContent>
             </Card>
+
+            {topic.community_intelligence_enabled && (
+              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Community Intelligence
+                  </CardTitle>
+                  <CardDescription>
+                    Discover trending conversations and sentiment from Reddit communities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Reddit Community Analysis</p>
+                        <p className="text-xs text-muted-foreground">
+                          Analyze relevant subreddits to extract insights, concerns, and validation points
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleRefreshCommunityInsights}
+                        disabled={refreshingInsights}
+                        size="sm"
+                      >
+                        {refreshingInsights ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Refresh Insights
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p>Community insights appear in the public feed every 8 stories, showing real-time sentiment and trending topics from relevant Reddit communities.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card id="sentiment-section" className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
