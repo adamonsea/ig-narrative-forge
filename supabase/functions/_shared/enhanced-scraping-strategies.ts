@@ -50,7 +50,7 @@ export class EnhancedScrapingStrategies {
 
   private async tryRSSStrategy(): Promise<ScrapingResult> {
     console.log('🔄 Attempting RSS/Atom parsing...');
-    
+
     try {
       const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
       
@@ -304,7 +304,7 @@ export class EnhancedScrapingStrategies {
 
   private async parseRSSContent(rssContent: string, feedUrl: string): Promise<ScrapingResult> {
     console.log('📊 Parsing RSS/Atom content with enhanced extraction...');
-    
+
     const articles: ArticleData[] = [];
     const errors: string[] = [];
 
