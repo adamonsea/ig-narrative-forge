@@ -292,9 +292,11 @@ serve(async (req) => {
     const title = `Manual Upload: ${file.name.replace(/\.[^/.]+$/, "")}`;
 
     // Check for existing shared content to prevent duplicates (idempotent by stableKey)
+    const uploadDate = new Date().toISOString();
+
     const { data: existingContent } = await supabase
       .from('shared_article_content')
-      .select('id')
+      .select('id, published_at')
       .eq('url', stableKey)
       .maybeSingle();
 
@@ -303,6 +305,21 @@ serve(async (req) => {
     if (existingContent) {
       sharedContentId = existingContent.id;
       console.log('📋 Using existing shared content (idempotent hit)');
+
+      // Ensure manually staged uploads always have a publish date and fresh last_seen marker
+      const updateData: Record<string, string> = { last_seen_at: uploadDate };
+      if (!existingContent.published_at) {
+        updateData.published_at = uploadDate;
+      }
+
+      const { error: publishUpdateError } = await supabase
+        .from('shared_article_content')
+        .update(updateData)
+        .eq('id', existingContent.id);
+
+      if (publishUpdateError) {
+        console.warn('⚠️ Failed to backfill publish metadata on existing shared content', publishUpdateError);
+      }
     } else {
       // Create new shared content
       const { data: sharedContent, error: sharedError } = await supabase
@@ -315,7 +332,9 @@ serve(async (req) => {
           author: 'Manual Upload',
           word_count: wordCount,
           language: 'en',
-          source_domain: 'manual-upload.local'
+          source_domain: 'manual-upload.local',
+          published_at: uploadDate,
+          last_seen_at: uploadDate,
         })
         .select()
         .single();
@@ -354,7 +373,7 @@ serve(async (req) => {
           import_metadata: {
             manual_upload: true,
             original_filename: file.name,
-            upload_date: new Date().toISOString(),
+            upload_date: uploadDate,
             extracted_via: extractionContentType
           }
         })

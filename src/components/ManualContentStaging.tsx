@@ -82,17 +82,25 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [processingFiles]);
+  }, [STORAGE_KEY, processingFiles]);
 
   // Process files one at a time with persistent storage
-const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
-  const currentQueue = queueOverride || processingFiles;
-  const nextFile = currentQueue.find(f => f.status === 'pending');
-  
-  if (!nextFile || isProcessingRef.current) return;
-  
-  isProcessingRef.current = true;
-  setIsProcessing(true);
+  const processNextFile = useCallback(async (queueOverride?: ProcessingFile[]) => {
+    const currentQueue = queueOverride || processingFiles;
+    const nextFile = currentQueue.find(f => f.status === 'pending');
+
+    if (!nextFile) {
+      isProcessingRef.current = false;
+      setIsProcessing(false);
+      return;
+    }
+
+    if (isProcessingRef.current) {
+      return;
+    }
+
+    isProcessingRef.current = true;
+    setIsProcessing(true);
 
     try {
       // Update status to extracting
@@ -127,6 +135,8 @@ const { data: extractResult, error: extractError } = await supabase.functions.in
 
       if (extractError) throw new Error(`Extraction failed: ${extractError.message}`);
       if (!extractResult?.success) throw new Error(extractResult?.error || 'Extraction failed');
+
+      updateStatus('rewriting', 60);
 
       if (!extractResult?.articleId) throw new Error('No article ID returned from processing');
 
@@ -188,7 +198,43 @@ try {
         processNextFile();
       }, 500);
     }
-  }, [processingFiles, topicId, onContentProcessed, toast, isProcessing]);
+  }, [processingFiles, topicId, onContentProcessed, toast]);
+
+  const processNextFileRef = useRef(processNextFile);
+  useEffect(() => {
+    processNextFileRef.current = processNextFile;
+  }, [processNextFile]);
+
+  // Load queue from localStorage on mount
+  useEffect(() => {
+    const savedQueue = localStorage.getItem(STORAGE_KEY);
+    if (savedQueue) {
+      try {
+        const parsed = JSON.parse(savedQueue);
+        setProcessingFiles(parsed);
+
+        // Auto-resume processing if there are pending files
+        const hasPendingFiles = parsed.some((f: ProcessingFile) =>
+          ['pending', 'extracting', 'rewriting', 'saving'].includes(f.status)
+        );
+        if (hasPendingFiles) {
+          console.log('🔄 Auto-resuming processing from saved queue');
+          setTimeout(() => processNextFileRef.current?.(parsed), 1000);
+        }
+      } catch (error) {
+        console.error('Failed to load saved queue:', error);
+      }
+    }
+  }, [STORAGE_KEY]);
+
+  // Save queue to localStorage whenever it changes
+  useEffect(() => {
+    if (processingFiles.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(processingFiles));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [STORAGE_KEY, processingFiles]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     // Validate file types and sizes
@@ -474,6 +520,11 @@ try {
                           {getStatusText(file.status)}
                         </span>
                       </div>
+                      {file.uploadedAt && (
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Uploaded {new Date(file.uploadedAt).toLocaleString()}
+                        </p>
+                      )}
                       {file.error && (
                         <Alert className="mt-2">
                           <AlertTriangle className="w-4 h-4" />
