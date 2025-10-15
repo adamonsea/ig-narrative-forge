@@ -1,83 +1,34 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { Bot, Clock, Zap, Activity, Users, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Bot, CheckCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { GlobalAutomationSettings } from "./GlobalAutomationSettings";
-
-interface AutomationStatus {
-  enabled: boolean;
-  next_run_at?: string;
-  last_run_at?: string;
-  topics_processing: number;
-  queue_size: number;
-  success_rate: number;
-}
 
 interface TopicAutomationInfo {
   id: string;
   name: string;
+  slug: string;
   is_active: boolean;
   auto_simplify_enabled: boolean;
-  last_articles_count: number;
   last_run_at?: string;
   next_run_at?: string;
-  success_status: 'success' | 'warning' | 'error';
 }
 
 export const AutomationDashboard = () => {
-  const [status, setStatus] = useState<AutomationStatus>({
-    enabled: false,
-    topics_processing: 0,
-    queue_size: 0,
-    success_rate: 100
-  });
   const [topicStatus, setTopicStatus] = useState<TopicAutomationInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [runningTest, setRunningTest] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    loadAutomationStatus();
     loadTopicStatus();
-    
-    // Refresh every 30 seconds
+
     const interval = setInterval(() => {
-      loadAutomationStatus();
       loadTopicStatus();
     }, 30000);
 
     return () => clearInterval(interval);
   }, []);
-
-  const loadAutomationStatus = async () => {
-    try {
-      const { data: globalSettings } = await supabase
-        .from('scheduler_settings')
-        .select('*')
-        .eq('setting_key', 'automation_enabled')
-        .single();
-
-      const { data: queueSize } = await supabase
-        .from('content_generation_queue')
-        .select('id', { count: 'exact' })
-        .eq('status', 'pending');
-
-      setStatus({
-        enabled: (globalSettings?.setting_value as any)?.enabled || false,
-        topics_processing: 0, // TODO: Get from system logs
-        queue_size: queueSize?.length || 0,
-        success_rate: 95 // TODO: Calculate from recent runs
-      });
-
-    } catch (error) {
-      console.error('Error loading automation status:', error);
-    }
-  };
 
   const loadTopicStatus = async () => {
     try {
@@ -86,7 +37,7 @@ export const AutomationDashboard = () => {
         .select(`
           id,
           name,
-          is_active,
+          slug,
           auto_simplify_enabled,
           topic_automation_settings (
             is_active,
@@ -94,7 +45,6 @@ export const AutomationDashboard = () => {
             next_run_at
           )
         `)
-        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
@@ -102,235 +52,99 @@ export const AutomationDashboard = () => {
       const topicInfo: TopicAutomationInfo[] = topics?.map(topic => ({
         id: topic.id,
         name: topic.name,
+        slug: topic.slug,
         is_active: topic.topic_automation_settings?.[0]?.is_active || false,
         auto_simplify_enabled: topic.auto_simplify_enabled || false,
-        last_articles_count: 0, // TODO: Get from recent scrape results
         last_run_at: topic.topic_automation_settings?.[0]?.last_run_at,
-        next_run_at: topic.topic_automation_settings?.[0]?.next_run_at,
-        success_status: 'success' // TODO: Determine from recent results
+        next_run_at: topic.topic_automation_settings?.[0]?.next_run_at
       })) || [];
 
       setTopicStatus(topicInfo);
     } catch (error) {
-      console.error('Error loading topic status:', error);
+      console.error('Error loading topic automation status:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const runTestAutomation = async () => {
-    setRunningTest(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('eezee-automation-service', {
-        body: {
-          userId: user.id,
-          dryRun: true,
-          forceRun: true
-        }
-      });
-
-      if (error) throw error;
-
-      const result = data.user_results?.[0];
-      const topicsToProcess = result?.topicsToScrape?.length || 0;
-
-      toast({
-        title: "Test Complete",
-        description: `${topicsToProcess} topics ready for automation. ${result?.articlesGathered || 0} articles would be processed.`
-      });
-
-    } catch (error) {
-      console.error('Error running test automation:', error);
-      toast({
-        title: "Test Failed", 
-        description: "Failed to run automation test",
-        variant: "destructive"
-      });
-    } finally {
-      setRunningTest(false);
-    }
-  };
-
-  const getStatusIcon = (successStatus: string) => {
-    switch (successStatus) {
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'warning':
-        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
-      case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              <div>
-                <p className="text-sm font-medium">Service Status</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={status.enabled ? "default" : "secondary"}>
-                    {status.enabled ? "Active" : "Paused"}
-                  </Badge>
-                </div>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Topic Automation Overview</CardTitle>
+          <CardDescription>
+            Automation is now managed per topic. Use each topic dashboard to trigger gathering runs and control auto-simplification.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-primary" />
+            <span>Run "Gather All" from inside a topic to fetch fresh content across its connected sources.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span>Enable auto-simplify from the topic settings panel when you want qualifying articles processed automatically.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-500" />
+            <span>Review automation activity and fine-tune quality thresholds directly within the topic configuration.</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Topic Status</CardTitle>
+          <CardDescription>Monitor automation signals for the topics you manage.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              <div>
-                <p className="text-sm font-medium">Processing Queue</p>
-                <p className="text-2xl font-bold">{status.queue_size}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              <div>
-                <p className="text-sm font-medium">Active Topics</p>
-                <p className="text-2xl font-bold">{topicStatus.filter(t => t.is_active).length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              <div>
-                <p className="text-sm font-medium">Success Rate</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Progress value={status.success_rate} className="flex-1" />
-                  <span className="text-sm font-medium">{status.success_rate}%</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Dashboard */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="topics">Topics</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <Button 
-            onClick={runTestAutomation}
-            disabled={runningTest}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Zap className="w-4 h-4" />
-            {runningTest ? "Testing..." : "Test Automation"}
-          </Button>
-        </div>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Next Automation Run</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {status.enabled ? (
+          ) : topicStatus.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No topics found. Create a topic to configure gathering and auto-simplification.
+            </p>
+          ) : (
+            topicStatus.map((topic) => (
+              <div
+                key={topic.id}
+                className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Automation runs every 12 hours automatically
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Check system logs for recent activity
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Automation is currently paused. Enable in settings to start automatic content gathering.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="topics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Topic Automation Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topicStatus.map((topic) => (
-                  <div key={topic.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(topic.success_status)}
-                      <div>
-                        <p className="font-medium">{topic.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {topic.is_active ? 'Active' : 'Paused'} • 
-                          {topic.auto_simplify_enabled ? ' Auto-simplify enabled' : ' Manual approval'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right text-sm text-muted-foreground">
-                      {topic.next_run_at && (
-                        <p>Next: {new Date(topic.next_run_at).toLocaleString()}</p>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    {topic.auto_simplify_enabled ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span className="font-medium">{topic.name}</span>
                   </div>
-                ))}
-                
-                {topicStatus.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No active topics found. Create topics to start automation.
-                  </p>
-                )}
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                    <Badge variant={topic.is_active ? "default" : "secondary"}>
+                      {topic.is_active ? "Automation Active" : "Automation Paused"}
+                    </Badge>
+                    <Badge variant={topic.auto_simplify_enabled ? "default" : "secondary"}>
+                      {topic.auto_simplify_enabled ? "Auto-simplify On" : "Auto-simplify Off"}
+                    </Badge>
+                    {topic.next_run_at ? (
+                      <span>Next run: {new Date(topic.next_run_at).toLocaleString()}</span>
+                    ) : topic.last_run_at ? (
+                      <span>Last run: {new Date(topic.last_run_at).toLocaleString()}</span>
+                    ) : null}
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/dashboard/topic/${topic.slug}`}>
+                    Manage Topic
+                  </Link>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <GlobalAutomationSettings />
-        </TabsContent>
-      </Tabs>
+            ))
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

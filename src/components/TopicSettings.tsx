@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Settings, HelpCircle, Users, Bot, Clock, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 
@@ -58,10 +57,6 @@ export const TopicSettings = ({
   const [saving, setSaving] = useState(false);
   const [processingCommunity, setProcessingCommunity] = useState(false);
   const { toast } = useToast();
-  const { isSuperAdmin, user } = useAuth();
-  
-  // Check if user has automation access
-  const hasAutomationAccess = user?.email === 'adamonsea@gmail.com';
 
   useEffect(() => {
     if (currentExpertise) setExpertise(currentExpertise);
@@ -360,12 +355,9 @@ export const TopicSettings = ({
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4" />
             <Label className="text-base font-medium">Automation Settings</Label>
-            {!hasAutomationAccess && (
-              <Badge variant="outline" className="text-xs">Limited Access</Badge>
-            )}
           </div>
           
-          <div className={`space-y-4 p-4 border rounded-lg ${!hasAutomationAccess ? 'opacity-60' : ''}`}>
+          <div className="space-y-4 p-4 border rounded-lg">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label className="flex items-center gap-2">
@@ -380,7 +372,7 @@ export const TopicSettings = ({
                         <div className="space-y-2 text-sm">
                           <p><strong>Auto-Simplification:</strong> Automatically processes new articles that meet quality thresholds</p>
                           <p>Articles are queued for story generation without manual approval</p>
-                          <p className="text-muted-foreground">Requires global automation to be enabled</p>
+                          <p className="text-muted-foreground">Configure automated gathering and simplification for this topic</p>
                         </div>
                       </TooltipContent>
                     </Tooltip>
@@ -393,7 +385,6 @@ export const TopicSettings = ({
               <Switch
                 checked={autoSimplifyEnabled}
                 onCheckedChange={setAutoSimplifyEnabled}
-                disabled={!hasAutomationAccess}
               />
             </div>
 
@@ -410,7 +401,6 @@ export const TopicSettings = ({
                     min={30}
                     step={5}
                     className="w-full"
-                    disabled={!hasAutomationAccess}
                   />
                   <p className="text-xs text-muted-foreground">
                     Only articles with quality scores above this threshold will be automatically processed

@@ -44,7 +44,7 @@ export default function AdminPanel() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
             <TabsTrigger value="queue">Queue Manager</TabsTrigger>
-            <TabsTrigger value="automation">Global Automation</TabsTrigger>
+            <TabsTrigger value="automation">Topic Automation</TabsTrigger>
           </TabsList>
           
           <TabsContent value="sources" className="mt-6">
