@@ -636,7 +636,7 @@ const TopicFeed = () => {
               }
 
               // Add events accordion every 10 stories (count stories only)
-              if (storyIndex % 10 === 0 && storyIndex > 0 && topic?.id) {
+              if (storyIndex % 10 === 0 && storyIndex > 0 && topic?.id && topic?.events_enabled) {
                 items.push(
                   <div key={`events-${index}`} className="w-full max-w-2xl">
                     <EventsAccordion 

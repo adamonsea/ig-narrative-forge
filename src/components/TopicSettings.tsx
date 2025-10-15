@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, HelpCircle, Users, Bot, Clock, Building2 } from "lucide-react";
+import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -24,6 +24,7 @@ interface TopicSettingsProps {
   currentAutoSimplifyEnabled?: boolean;
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
+  currentEventsEnabled?: boolean;
   topicType?: string;
   region?: string;
   onUpdate?: () => void;
@@ -39,6 +40,7 @@ export const TopicSettings = ({
   currentAutoSimplifyEnabled,
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
+  currentEventsEnabled,
   topicType,
   region,
   onUpdate 
@@ -48,6 +50,7 @@ export const TopicSettings = ({
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
+  const [eventsEnabled, setEventsEnabled] = useState<boolean>(currentEventsEnabled || false);
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
   // Parliamentary tracking only available for regional topics
@@ -66,11 +69,12 @@ export const TopicSettings = ({
     if (currentCommunityPulseFrequency !== undefined) setCommunityPulseFrequency(currentCommunityPulseFrequency);
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
+    if (currentEventsEnabled !== undefined) setEventsEnabled(currentEventsEnabled);
     // Only allow parliamentary tracking for regional topics
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -85,6 +89,7 @@ export const TopicSettings = ({
           community_pulse_frequency: communityPulseFrequency,
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
+          events_enabled: eventsEnabled,
           // Only save parliamentary tracking for regional topics
           parliamentary_tracking_enabled: topicType === 'regional' ? parliamentaryTrackingEnabled : false,
           updated_at: new Date().toISOString()
@@ -338,6 +343,27 @@ export const TopicSettings = ({
 
         <Separator />
 
+        {/* Events Toggle */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Show Events in Feed
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Display curated local events between news stories in the feed
+              </p>
+            </div>
+            <Switch
+              checked={eventsEnabled}
+              onCheckedChange={setEventsEnabled}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
         {/* Parliamentary Tracking - Only show for regional topics */}
         {topicType === 'regional' && (
           <ParliamentaryAutomationSettings
@@ -422,6 +448,7 @@ export const TopicSettings = ({
               communityPulseFrequency === (currentCommunityPulseFrequency || 8) &&
               autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
               automationQualityThreshold === (currentAutomationQualityThreshold || 60) &&
+              eventsEnabled === (currentEventsEnabled === true) &&
               parliamentaryTrackingEnabled === (currentParliamentaryTrackingEnabled === true)
             )}
           >

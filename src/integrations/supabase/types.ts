@@ -2817,6 +2817,7 @@ export type Database = {
           description: string | null
           donation_config: Json | null
           donation_enabled: boolean | null
+          events_enabled: boolean | null
           id: string
           is_active: boolean | null
           is_archived: boolean | null
@@ -2854,6 +2855,7 @@ export type Database = {
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
+          events_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_archived?: boolean | null
@@ -2891,6 +2893,7 @@ export type Database = {
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
+          events_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_archived?: boolean | null

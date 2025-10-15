@@ -47,6 +47,7 @@ interface Topic {
   is_public: boolean;
   created_by: string;
   parliamentary_tracking_enabled?: boolean;
+  events_enabled?: boolean;
   branding_config?: {
     logo_url?: string;
     subheader?: string;
