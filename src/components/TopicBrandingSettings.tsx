@@ -76,6 +76,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
     const fileExt = file.name.split('.').pop();
     const fileName = `${topic.id}/logo.${fileExt}`;
 
+    console.log('Uploading logo:', { fileName, fileSize: file.size, fileType: file.type, topicId: topic.id });
+
     const { data, error } = await supabase.storage
       .from('topic-logos')
       .upload(fileName, file, {
@@ -84,29 +86,45 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
       });
 
     if (error) {
-      throw error;
+      console.error('Storage upload error:', error);
+      throw new Error(`Storage upload failed: ${error.message} (Path: ${fileName})`);
     }
+
+    console.log('Upload successful:', data);
 
     const { data: { publicUrl } } = supabase.storage
       .from('topic-logos')
       .getPublicUrl(fileName);
 
+    console.log('Generated public URL:', publicUrl);
     return publicUrl;
   };
 
   const handleSave = async () => {
     setSaving(true);
+    console.log('Starting branding save process for topic:', topic.id);
+    
     try {
       let logoUrl = topic.branding_config?.logo_url;
 
       // Upload new logo if selected
       if (logoFile) {
+        console.log('Uploading new logo file:', logoFile.name);
         setUploading(true);
-        logoUrl = await uploadLogo(logoFile);
-        setUploading(false);
+        try {
+          logoUrl = await uploadLogo(logoFile);
+          console.log('Logo upload completed, URL:', logoUrl);
+          setUploading(false);
+        } catch (uploadError) {
+          setUploading(false);
+          throw new Error(`Logo upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
+        }
       } else if (!logoPreview) {
         // Remove logo if cleared
+        console.log('Removing logo from branding config');
         logoUrl = undefined;
+      } else {
+        console.log('Keeping existing logo URL:', logoUrl);
       }
 
       // Update topic branding config with cache-busting timestamp
@@ -118,7 +136,9 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         updated_at: new Date().toISOString() // Force cache refresh
       };
 
-      const { error } = await supabase
+      console.log('Updating topic with branding config:', brandingConfig);
+
+      const { error: updateError } = await supabase
         .from('topics')
         .update({ 
           branding_config: brandingConfig,
@@ -126,10 +146,12 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         })
         .eq('id', topic.id);
 
-      if (error) {
-        throw error;
+      if (updateError) {
+        console.error('Topic update error:', updateError);
+        throw new Error(`Database update failed: ${updateError.message} (Topic ID: ${topic.id})`);
       }
 
+      console.log('Branding save completed successfully');
       toast({
         title: "Branding updated",
         description: "Your topic branding has been saved successfully"
@@ -138,9 +160,10 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
       onUpdate();
     } catch (error) {
       console.error('Error saving branding:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save branding";
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save branding",
+        title: "Branding Save Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
