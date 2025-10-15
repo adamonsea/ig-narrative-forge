@@ -8,11 +8,35 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
   useEffect(() => {
     if (!topicId) return;
 
+    // Track notification enabled
+    const trackNotificationEnabled = async () => {
+      const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
+      if (!localStorage.getItem('visitor_id')) {
+        localStorage.setItem('visitor_id', visitorId);
+      }
+
+      try {
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId,
+            visitorId,
+            metricType: 'notification_enabled',
+            userAgent: navigator.userAgent,
+          }
+        });
+      } catch (error) {
+        console.error('Error tracking notification metric:', error);
+      }
+    };
+
     // Request notification permission
     const requestPermission = async () => {
       if ('Notification' in window && Notification.permission === 'default') {
         const permission = await Notification.requestPermission();
         permissionGranted.current = permission === 'granted';
+        if (permission === 'granted') {
+          await trackNotificationEnabled();
+        }
       } else if (Notification.permission === 'granted') {
         permissionGranted.current = true;
       }

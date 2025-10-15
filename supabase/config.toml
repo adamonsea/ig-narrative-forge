@@ -168,3 +168,6 @@ verify_jwt = false
 
 [functions.sentiment-card-scheduler]
 verify_jwt = false
+
+[functions.track-engagement-metric]
+verify_jwt = false

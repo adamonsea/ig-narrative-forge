@@ -2517,6 +2517,48 @@ export type Database = {
           },
         ]
       }
+      topic_engagement_metrics: {
+        Row: {
+          created_at: string
+          id: string
+          metric_type: string
+          topic_id: string
+          user_agent: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric_type: string
+          topic_id: string
+          user_agent?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric_type?: string
+          topic_id?: string
+          user_agent?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_engagement_metrics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_engagement_metrics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_event_preferences: {
         Row: {
           created_at: string
@@ -3461,6 +3503,13 @@ export type Database = {
           updated_at: string
           url: string
           word_count: number
+        }[]
+      }
+      get_topic_engagement_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          notifications_enabled: number
+          pwa_installs: number
         }[]
       }
       get_topic_events: {

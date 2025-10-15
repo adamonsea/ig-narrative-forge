@@ -42,6 +42,8 @@ interface TopicDashboardStats {
   arrivals_count: number;
   simplified_stories_24h: number;
   sentiment_cards: number;
+  notifications_enabled?: number;
+  pwa_installs?: number;
 }
 
 interface Topic {
@@ -220,6 +222,12 @@ const TopicDashboard = () => {
         .select('id', { count: 'exact' })
         .eq('topic_id', topicData.id);
 
+      // Get engagement stats
+      const { data: engagementStats } = await supabase.rpc(
+        'get_topic_engagement_stats',
+        { p_topic_id: topicData.id }
+      );
+
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
@@ -229,7 +237,9 @@ const TopicDashboard = () => {
         ready_stories: readyStoriesRes.count || 0,
         arrivals_count: arrivalsRes.count || 0,
         simplified_stories_24h: simplifiedRes.count || 0,
-        sentiment_cards: sentimentRes.count || 0
+        sentiment_cards: sentimentRes.count || 0,
+        notifications_enabled: Number(engagementStats?.[0]?.notifications_enabled || 0),
+        pwa_installs: Number(engagementStats?.[0]?.pwa_installs || 0),
       });
 
     } catch (error) {
@@ -722,6 +732,25 @@ const TopicDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* User Engagement Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">User Engagement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-2xl font-bold">{stats.notifications_enabled || 0}</div>
+                    <p className="text-xs text-muted-foreground">Notifications Enabled</p>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{stats.pwa_installs || 0}</div>
+                    <p className="text-xs text-muted-foreground">App Installs</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </CollapsibleContent>
         </Collapsible>
 
