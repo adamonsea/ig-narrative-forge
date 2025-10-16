@@ -28,7 +28,7 @@ import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 
@@ -75,12 +75,23 @@ interface Topic {
   donation_config?: any;
 }
 
+interface TopicAutomationSettings {
+  id: string;
+  is_active: boolean;
+  auto_simplify_enabled?: boolean | null;
+  scrape_frequency_hours?: number | null;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  quality_threshold?: number | null;
+}
+
 const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAdmin } = useAuth();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
   const [competingRegions, setCompetingRegions] = useState<string[]>([]);
+  const [automationSettings, setAutomationSettings] = useState<TopicAutomationSettings | null>(null);
   const [stats, setStats] = useState<TopicDashboardStats>({
     articles: 0,
     stories: 0,
@@ -100,7 +111,21 @@ const TopicDashboard = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const [refreshingInsights, setRefreshingInsights] = useState(false);
+  const [updatingAutomation, setUpdatingAutomation] = useState(false);
   const { toast } = useToast();
+
+  const fullyAutomatedEnabled = Boolean(topic?.auto_simplify_enabled && automationSettings?.is_active);
+
+  const formatAutomationTimestamp = (value?: string | null) => {
+    if (!value) return 'Not scheduled';
+
+    try {
+      return new Date(value).toLocaleString();
+    } catch (error) {
+      console.error('Failed to format automation timestamp:', error);
+      return 'Not scheduled';
+    }
+  };
 
   // Set up parliamentary automation when enabled
   useParliamentaryAutomation({
@@ -117,6 +142,8 @@ const TopicDashboard = () => {
 
   const loadTopicAndStats = async () => {
     try {
+      setAutomationSettings(null);
+
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
@@ -154,6 +181,18 @@ const TopicDashboard = () => {
 
       setNegativeKeywords(topicData.negative_keywords || []);
       setCompetingRegions(topicData.competing_regions || []);
+
+      const { data: automationSettingsRow, error: automationSettingsError } = await supabase
+        .from('topic_automation_settings')
+        .select('*')
+        .eq('topic_id', topicData.id)
+        .maybeSingle();
+
+      if (automationSettingsError && automationSettingsError.code !== 'PGRST116') {
+        throw automationSettingsError;
+      }
+
+      setAutomationSettings(automationSettingsRow ?? null);
 
       // Load stats using multi-tenant architecture (topic_articles)
       const articlesRes = await supabase
@@ -309,7 +348,7 @@ const TopicDashboard = () => {
 
   const handleAutoSimplifyToggle = async () => {
     if (!topic) return;
-    
+
     try {
       const newValue = !topic.auto_simplify_enabled;
       
@@ -336,9 +375,86 @@ const TopicDashboard = () => {
     }
   };
 
+  const handleFullyAutomatedToggle = async (newState: boolean) => {
+    if (!topic) return;
+
+    try {
+      setUpdatingAutomation(true);
+
+      let updatedSettings = automationSettings;
+      const nowIso = new Date().toISOString();
+
+      if (automationSettings?.id) {
+        const updatePayload: Record<string, any> = {
+          is_active: newState,
+          auto_simplify_enabled: newState,
+          updated_at: nowIso
+        };
+
+        if (newState) {
+          updatePayload.next_run_at = nowIso;
+        }
+
+        const { data, error } = await supabase
+          .from('topic_automation_settings')
+          .update(updatePayload)
+          .eq('topic_id', topic.id)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        updatedSettings = data as TopicAutomationSettings;
+      } else {
+        const insertPayload: Record<string, any> = {
+          topic_id: topic.id,
+          is_active: newState,
+          auto_simplify_enabled: newState,
+          scrape_frequency_hours: automationSettings?.scrape_frequency_hours ?? 12,
+          quality_threshold: automationSettings?.quality_threshold ?? topic.automation_quality_threshold ?? 60,
+          next_run_at: nowIso
+        };
+
+        const { data, error } = await supabase
+          .from('topic_automation_settings')
+          .insert(insertPayload)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        updatedSettings = data as TopicAutomationSettings;
+      }
+
+      const { error: topicUpdateError } = await supabase
+        .from('topics')
+        .update({ auto_simplify_enabled: newState })
+        .eq('id', topic.id);
+
+      if (topicUpdateError) throw topicUpdateError;
+
+      setAutomationSettings(updatedSettings ?? null);
+      setTopic(prev => prev ? { ...prev, auto_simplify_enabled: newState } : prev);
+
+      toast({
+        title: newState ? 'Fully automated mode enabled' : 'Fully automated mode disabled',
+        description: newState
+          ? 'This topic will now gather, simplify, and illustrate qualifying stories automatically.'
+          : 'Automation is paused. You can re-enable it anytime from this tab.',
+      });
+    } catch (error) {
+      console.error('Error updating automation mode:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update fully automated mode. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setUpdatingAutomation(false);
+    }
+  };
+
   const handlePublishToggle = (newState: boolean) => {
     if (!topic) return;
-    
+
     if (!newState) {
       // Unpublishing - show confirmation dialog
       setPendingPublishState(newState);
@@ -883,7 +999,57 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            <UniversalTopicScraper 
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  Fully automated mode
+                </CardTitle>
+                <CardDescription>
+                  Keep this topic gathering, simplifying, and illustrating itself whenever new high-quality stories arrive.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold">
+                      {fullyAutomatedEnabled ? 'Automation active' : 'Automation paused'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {fullyAutomatedEnabled
+                        ? 'New qualifying articles will be simplified and illustrated automatically.'
+                        : 'Automation is disabled. Trigger gathering and simplification manually as needed.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {updatingAutomation && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    <Switch
+                      checked={fullyAutomatedEnabled}
+                      onCheckedChange={handleFullyAutomatedToggle}
+                      disabled={updatingAutomation || loading}
+                      aria-label="Toggle fully automated mode"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Next run: {formatAutomationTimestamp(automationSettings?.next_run_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    <span>Quality threshold: {topic?.automation_quality_threshold ?? 60}%</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Automated runs use DeepSeek credits for simplification and OpenAI for cover art. Usage is tracked in the credit monitor.
+                </p>
+              </CardContent>
+            </Card>
+
+            <UniversalTopicScraper
               topicId={topic.id}
               topicName={topic.name}
             />

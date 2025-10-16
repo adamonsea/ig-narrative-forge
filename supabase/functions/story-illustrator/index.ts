@@ -13,42 +13,85 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const automationSecretEnv = Deno.env.get('AUTOMATION_STORY_ILLUSTRATION_SECRET') ?? ''
 
-    const { storyId, model = 'gpt-image-1' } = await req.json()
+    const requestBody = await req.json()
+    const {
+      storyId,
+      model = 'gpt-image-1',
+      automationSecret,
+      autoSelectCover: autoSelectCoverRaw,
+    } = requestBody
+
+    const autoSelectCover = autoSelectCoverRaw !== false
+    const isAutomationCall = Boolean(automationSecret)
+
+    if (isAutomationCall && automationSecret !== automationSecretEnv) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid automation secret' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    const authHeader = req.headers.get('Authorization')
+
+    if (!isAutomationCall && !authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    const supabase = createClient(
+      supabaseUrl,
+      isAutomationCall ? serviceRoleKey : anonKey,
+      isAutomationCall
+        ? undefined
+        : {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+            },
+            global: {
+              headers: { Authorization: authHeader! },
+            },
+          }
+    )
 
     if (!storyId) {
       return new Response(
         JSON.stringify({ error: 'Story ID is required' }),
-        { 
+        {
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
     }
 
-    // Get the authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    let user: { id: string } | null = null
+
+    if (!isAutomationCall) {
+      // Get the authenticated user when operating in interactive mode
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError || !authUser) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+      user = authUser
     }
 
     // Get story details
@@ -106,37 +149,44 @@ serve(async (req) => {
 
     const modelConfig = getModelConfig(model);
 
-    // Check if user is super admin (bypass credit deduction)
-    const { data: hasAdminRole } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'superadmin'
-    })
-    
-    const isSuperAdmin = hasAdminRole === true
+    let isSuperAdmin = false
     let creditResult = null
 
-    // Deduct credits based on model - skip for super admin
-    if (!isSuperAdmin) {
-      const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
-        p_user_id: user.id,
-        p_credits_amount: modelConfig.credits,
-        p_description: `Story illustration generation (${model})`,
-        p_story_id: storyId
+    if (isAutomationCall) {
+      // Automation runs use service credits and bypass user billing
+      isSuperAdmin = true
+    } else if (user) {
+      // Check if user is super admin (bypass credit deduction)
+      const { data: hasAdminRole } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'superadmin'
       })
 
-      creditResult = result
+      isSuperAdmin = hasAdminRole === true
 
-      if (creditError || !creditResult?.success) {
-        return new Response(
-          JSON.stringify({ 
-            error: creditResult?.error || 'Failed to deduct credits',
-            credits_required: modelConfig.credits
-          }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
+      // Deduct credits based on model - skip for super admin
+      if (!isSuperAdmin) {
+        const { data: result, error: creditError } = await supabase.rpc('deduct_user_credits', {
+          p_user_id: user.id,
+          p_credits_amount: modelConfig.credits,
+          p_description: `Story illustration generation (${model})`,
+          p_story_id: storyId
+        })
+
+        creditResult = result
+
+        if (creditError || !creditResult?.success) {
+          return new Response(
+            JSON.stringify({
+              error: creditResult?.error || 'Failed to deduct credits',
+              credits_required: modelConfig.credits
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          )
+        }
       }
     }
 
@@ -598,18 +648,53 @@ Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people 
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
 
-    // Update story with illustration
-    const { error: updateError } = await supabase
-      .from('stories')
-      .update({
-        cover_illustration_url: imageUrl,
-        cover_illustration_prompt: illustrationPrompt,
-        illustration_generated_at: new Date().toISOString()
-      })
-      .eq('id', storyId)
+    // Persist generated cover as an option for future selection
+    let coverOptionId: string | null = null
+    try {
+      const { data: coverOption, error: coverOptionError } = await supabase
+        .from('story_cover_options')
+        .insert({
+          story_id: storyId,
+          cover_url: imageUrl,
+          generation_prompt: illustrationPrompt,
+          model_used: model
+        })
+        .select('id')
+        .single()
 
-    if (updateError) {
-      throw new Error(`Update error: ${updateError.message}`)
+      if (coverOptionError) {
+        console.error('Failed to store cover option:', coverOptionError)
+      } else {
+        coverOptionId = coverOption?.id ?? null
+      }
+    } catch (coverOptionError) {
+      console.error('Unexpected error while storing cover option:', coverOptionError)
+    }
+
+    const shouldSelectCover = Boolean(coverOptionId && (autoSelectCover || !story.selected_cover_id))
+
+    const updatePayload: Record<string, any> = {
+      illustration_generated_at: new Date().toISOString()
+    }
+
+    if (shouldSelectCover || !story.cover_illustration_url) {
+      updatePayload.cover_illustration_url = imageUrl
+      updatePayload.cover_illustration_prompt = illustrationPrompt
+    }
+
+    if (shouldSelectCover && coverOptionId) {
+      updatePayload.selected_cover_id = coverOptionId
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
+      const { error: updateError } = await supabase
+        .from('stories')
+        .update(updatePayload)
+        .eq('id', storyId)
+
+      if (updateError) {
+        throw new Error(`Update error: ${updateError.message}`)
+      }
     }
 
     return new Response(
@@ -617,6 +702,7 @@ Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people 
         success: true,
         illustration_url: imageUrl,
         model: model,
+        cover_option_id: coverOptionId,
         credits_used: isSuperAdmin ? 0 : modelConfig.credits,
         new_balance: creditResult?.new_balance || null
       }),

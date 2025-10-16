@@ -14,6 +14,13 @@ interface AutomationRequest {
   targetTopics?: string[];
 }
 
+interface CoverCandidate {
+  topicId: string;
+  topicName: string;
+  topicArticleId: string;
+  qualityScore: number;
+}
+
 // Function to check if user is superadmin
 async function isSuperAdmin(supabase: any, userId: string): Promise<boolean> {
   try {
@@ -68,7 +75,22 @@ serve(async (req) => {
       });
     }
 
-    const automationConfig = settingsData?.setting_value as any;
+    const defaultAutomationConfig = {
+      enabled: false,
+      scrape_frequency_hours: 12,
+      auto_simplify_enabled: true,
+      auto_simplify_quality_threshold: 60,
+      auto_cover_enabled: false,
+      auto_cover_quality_threshold: 75,
+      auto_cover_generation_rate: 0.4,
+      auto_cover_daily_cap: 6,
+      auto_cover_model: 'gpt-image-1'
+    };
+
+    const automationConfig = {
+      ...defaultAutomationConfig,
+      ...(settingsData?.setting_value as Record<string, unknown> ?? {})
+    } as typeof defaultAutomationConfig & Record<string, unknown>;
     if (!automationConfig?.enabled) {
       // Check if requester is superadmin - allow bypass for superadmins
       const isSuperAdminUser = userId ? await isSuperAdmin(supabase, userId) : false;
@@ -94,7 +116,11 @@ serve(async (req) => {
     let totalArticlesGathered = 0;
     let totalStoriesGenerated = 0;
     let processedUsers = 0;
+    let totalCoverCandidates = 0;
+    let totalCoverAttempts = 0;
+    let totalCoversGenerated = 0;
     const userResults: any[] = [];
+    const automationIllustrationSecret = Deno.env.get('AUTOMATION_STORY_ILLUSTRATION_SECRET') || '';
 
     // Phase 2: Process User's Automation (or target user if specified)
     const targetUserId = userId || null;
@@ -195,6 +221,9 @@ serve(async (req) => {
 
       let userArticlesGathered = 0;
       let userStoriesGenerated = 0;
+      let userCoverAttempts = 0;
+      let userCoversGenerated = 0;
+      const coverCandidates: CoverCandidate[] = [];
 
       // Phase 3: Scrape Topics
       for (const topic of topicsToScrape) {
@@ -242,6 +271,10 @@ serve(async (req) => {
               console.log(`🎨 Starting auto-simplification for topic: ${topic.name}`);
 
               const qualityThreshold = topic.automation_quality_threshold || automationConfig.auto_simplify_quality_threshold || 60;
+              const coverQualityThreshold = Math.max(
+                qualityThreshold,
+                Number(automationConfig.auto_cover_quality_threshold ?? qualityThreshold)
+              );
 
               // Get new articles that meet quality threshold and aren't already processed
               const { data: eligibleArticles, error: articlesError } = await supabase
@@ -305,10 +338,22 @@ serve(async (req) => {
                     continue;
                   }
 
+                  if (automationConfig.auto_cover_enabled) {
+                    const articleQuality = article.content_quality_score ?? 0;
+                    if (articleQuality >= coverQualityThreshold) {
+                      coverCandidates.push({
+                        topicId: topic.id,
+                        topicName: topic.name,
+                        topicArticleId: article.id,
+                        qualityScore: articleQuality
+                      });
+                    }
+                  }
+
                   // Mark article as processed
                   await supabase
                     .from('topic_articles')
-                    .update({ 
+                    .update({
                       processing_status: 'processed',
                       updated_at: now.toISOString()
                     })
@@ -337,6 +382,9 @@ serve(async (req) => {
         topicsProcessed: topicsToScrape.length,
         articlesGathered: userArticlesGathered,
         storiesGenerated: userStoriesGenerated,
+        coverCandidates: coverCandidates.length,
+        coverAttempts: userCoverAttempts,
+        coversGenerated: userCoversGenerated,
         success: true
       });
 
@@ -368,6 +416,85 @@ serve(async (req) => {
       }
     }
 
+    // Phase 6: Auto-generate covers for high quality stories
+    totalCoverCandidates += coverCandidates.length;
+
+    if (!dryRun && automationConfig.auto_cover_enabled && coverCandidates.length > 0) {
+      if (!automationIllustrationSecret) {
+        console.warn('⚠️ Skipping automated cover generation - automation secret not configured');
+      } else {
+        const sortedCandidates = [...coverCandidates].sort((a, b) => b.qualityScore - a.qualityScore);
+        const coverRate = Math.min(Math.max(Number(automationConfig.auto_cover_generation_rate ?? 0.4), 0), 1);
+        let plannedCount = Math.round(sortedCandidates.length * coverRate);
+
+        if (plannedCount === 0 && coverRate > 0 && sortedCandidates.length > 0) {
+          plannedCount = 1;
+        }
+
+        const dailyCapRaw = Number(automationConfig.auto_cover_daily_cap ?? sortedCandidates.length);
+        if (Number.isFinite(dailyCapRaw) && dailyCapRaw > 0) {
+          plannedCount = Math.min(plannedCount, dailyCapRaw);
+        }
+
+        plannedCount = Math.min(plannedCount, sortedCandidates.length);
+
+        if (plannedCount > 0) {
+          console.log(`🎨 Attempting automated cover generation for ${plannedCount} of ${coverCandidates.length} candidates`);
+        }
+
+        const selectedCandidates = sortedCandidates.slice(0, plannedCount);
+
+        for (const candidate of selectedCandidates) {
+          userCoverAttempts++;
+          totalCoverAttempts++;
+
+          try {
+            const { data: storyRecord, error: storyError } = await supabase
+              .from('stories')
+              .select('id, cover_illustration_url, selected_cover_id, status, title')
+              .eq('topic_article_id', candidate.topicArticleId)
+              .order('created_at', { ascending: false })
+              .maybeSingle();
+
+            if (storyError) {
+              console.error(`❌ Failed to load story for cover automation (${candidate.topicArticleId}):`, storyError);
+              continue;
+            }
+
+            if (!storyRecord) {
+              console.warn(`⚠️ No story found for topic_article ${candidate.topicArticleId}, skipping cover generation`);
+              continue;
+            }
+
+            if (storyRecord.cover_illustration_url) {
+              console.log(`⏭️ Story ${storyRecord.id} already has a cover, skipping automation`);
+              continue;
+            }
+
+            const { data: illustrationResult, error: illustrationError } = await supabase.functions.invoke('story-illustrator', {
+              body: {
+                storyId: storyRecord.id,
+                model: String(automationConfig.auto_cover_model || 'gpt-image-1'),
+                automationSecret: automationIllustrationSecret,
+                autoSelectCover: true
+              }
+            });
+
+            if (illustrationError || !illustrationResult?.success) {
+              console.error('❌ Automated cover generation failed:', illustrationError || illustrationResult?.error);
+              continue;
+            }
+
+            userCoversGenerated++;
+            totalCoversGenerated++;
+            console.log(`🖼️ Automated cover generated for story ${storyRecord.id}`);
+          } catch (coverError) {
+            console.error('❌ Unexpected error during automated cover generation:', coverError);
+          }
+        }
+      }
+    }
+
     const duration = Date.now() - startTime;
     const summary = {
       success: true,
@@ -376,6 +503,9 @@ serve(async (req) => {
       processed_users: processedUsers,
       total_articles_gathered: totalArticlesGathered,
       total_stories_generated: totalStoriesGenerated,
+      total_cover_candidates: totalCoverCandidates,
+      total_cover_attempts: totalCoverAttempts,
+      total_covers_generated: totalCoversGenerated,
       user_results: userResults,
       next_automation_run: new Date(Date.now() + (12 * 60 * 60 * 1000)).toISOString(), // 12 hours from now
       timestamp: new Date().toISOString()
@@ -388,7 +518,7 @@ serve(async (req) => {
       .from('system_logs')
       .insert({
         level: 'info',
-        message: `eezee News Automation Service completed: ${processedUsers} users processed, ${totalArticlesGathered} articles gathered, ${totalStoriesGenerated} stories queued`,
+        message: `eezee News Automation Service completed: ${processedUsers} users processed, ${totalArticlesGathered} articles gathered, ${totalStoriesGenerated} stories queued, ${totalCoversGenerated} covers generated`,
         context: summary,
         function_name: 'eezee-automation-service'
       });
@@ -407,6 +537,9 @@ serve(async (req) => {
       processed_users: 0,
       total_articles_gathered: 0,
       total_stories_generated: 0,
+      total_cover_candidates: 0,
+      total_cover_attempts: 0,
+      total_covers_generated: 0,
       timestamp: new Date().toISOString()
     };
 
