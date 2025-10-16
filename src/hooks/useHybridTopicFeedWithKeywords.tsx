@@ -883,14 +883,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
     matchingStories.forEach(story => {
       story.keywordMatches.forEach(match => {
-        if (keywordCounts.has(match)) {
-          keywordCounts.set(match, (keywordCounts.get(match) || 0) + 1);
-        }
+        // Prioritize: landmarks > organizations > keywords
+        // Only count in the highest priority category to avoid duplicates
         if (landmarkCounts.has(match)) {
           landmarkCounts.set(match, (landmarkCounts.get(match) || 0) + 1);
-        }
-        if (organizationCounts.has(match)) {
+        } else if (organizationCounts.has(match)) {
           organizationCounts.set(match, (organizationCounts.get(match) || 0) + 1);
+        } else if (keywordCounts.has(match)) {
+          keywordCounts.set(match, (keywordCounts.get(match) || 0) + 1);
         }
       });
     });
