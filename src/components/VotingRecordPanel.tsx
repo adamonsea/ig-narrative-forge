@@ -29,6 +29,15 @@ interface VotingRecord {
   created_at: string;
 }
 
+interface TrackedMP {
+  mp_id: number;
+  mp_name: string;
+  mp_party: string;
+  constituency: string;
+  is_primary: boolean;
+  tracking_enabled: boolean;
+}
+
 interface VotingRecordPanelProps {
   topicId: string;
   topicSlug: string;
@@ -36,6 +45,7 @@ interface VotingRecordPanelProps {
 
 export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps) => {
   const [votes, setVotes] = useState<VotingRecord[]>([]);
+  const [trackedMPs, setTrackedMPs] = useState<TrackedMP[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category' | 'mp'>('date');
@@ -48,6 +58,22 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     const recessStart = new Date(year, 6, 25); // July 25
     const recessEnd = new Date(year, 8, 2); // September 2
     return now >= recessStart && now <= recessEnd;
+  };
+
+  const loadTrackedMPs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('topic_tracked_mps')
+        .select('*')
+        .eq('topic_id', topicId)
+        .eq('tracking_enabled', true)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+      setTrackedMPs(data || []);
+    } catch (error) {
+      console.error('Error loading tracked MPs:', error);
+    }
   };
 
   const loadVotes = async () => {
@@ -110,6 +136,7 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   };
 
   useEffect(() => {
+    loadTrackedMPs();
     loadVotes();
   }, [topicId, filterType, sortBy]);
 
@@ -242,6 +269,29 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
           </p>
         </div>
       </div>
+
+      {/* Tracked MPs Banner */}
+      {trackedMPs.length > 0 && (
+        <div className="p-4 bg-muted/50 rounded-lg border">
+          <h3 className="font-medium mb-2 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5">
+              👥 Tracking {trackedMPs.length} MP{trackedMPs.length > 1 ? 's' : ''}
+            </span>
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {trackedMPs.map(mp => (
+              <Badge 
+                key={mp.mp_id} 
+                variant={mp.is_primary ? "default" : "secondary"}
+                className="flex items-center gap-1"
+              >
+                {mp.is_primary && <span className="text-xs">⭐</span>}
+                {mp.mp_name} ({mp.constituency})
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summer Recess Banner */}
       {isInSummerRecess() && votes.length === 0 && (

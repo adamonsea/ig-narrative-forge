@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Vote, Calendar, Play, RefreshCw } from 'lucide-react';
+import { TrackedMPsManager } from './TrackedMPsManager';
 
 interface ParliamentaryAutomationSettingsProps {
   topicId: string;
@@ -181,6 +182,13 @@ export const ParliamentaryAutomationSettings = ({
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* MP Tracking Manager */}
+        {enabled && region && (
+          <div className="mt-6">
+            <TrackedMPsManager topicId={topicId} region={region} />
           </div>
         )}
       </CardContent>

@@ -173,8 +173,8 @@ serve(async (req) => {
     const constituencies = REGIONAL_CONSTITUENCIES[region] || [region];
     
     if (mode === 'daily') {
-      // Daily collection: get votes from the last 2 days
-      const votes = await collectDailyVotes(constituencies, region, topic);
+      // Daily collection: get votes from tracked MPs
+      const votes = await collectDailyVotes(topicId, region, supabase);
       
       if (votes.length > 0) {
         await storeDailyVotes(supabase, votes, topicId);
@@ -184,8 +184,7 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           mode: 'daily',
-          votesCollected: votes.length,
-          constituencies: constituencies
+          votesCollected: votes.length
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -218,51 +217,82 @@ serve(async (req) => {
 
 // Collect votes from the last 2 days for daily posts
 async function collectDailyVotes(
-  constituencies: string[],
+  topicId: string,
   region: string,
-  topic: any
+  supabase: any
 ): Promise<VotingRecord[]> {
-  console.log('Collecting daily votes for:', constituencies);
+  console.log('🔍 Collecting daily votes for topic:', topicId);
+  
+  // Fetch tracked MPs from database
+  const { data: trackedMPs, error: mpError } = await supabase
+    .from('topic_tracked_mps')
+    .select('*')
+    .eq('topic_id', topicId)
+    .eq('tracking_enabled', true);
+
+  if (mpError) {
+    console.error('❌ Error fetching tracked MPs:', mpError);
+    throw mpError;
+  }
+
+  if (!trackedMPs || trackedMPs.length === 0) {
+    console.log('⚠️ No tracked MPs found. Running auto-detection...');
+    
+    // Auto-detect MPs for this region
+    const { error: autoDetectError } = await supabase.functions.invoke('auto-detect-regional-mps', {
+      body: { topicId, region }
+    });
+    
+    if (autoDetectError) {
+      console.error('❌ Auto-detection failed:', autoDetectError);
+      throw new Error('No MPs tracked and auto-detection failed');
+    }
+    
+    // Retry fetching after auto-detection
+    const { data: retryMPs } = await supabase
+      .from('topic_tracked_mps')
+      .select('*')
+      .eq('topic_id', topicId)
+      .eq('tracking_enabled', true);
+    
+    if (!retryMPs || retryMPs.length === 0) {
+      throw new Error('No MPs could be detected for this region');
+    }
+    
+    trackedMPs.push(...retryMPs);
+  }
+
+  console.log(`📋 Tracking ${trackedMPs.length} MPs`);
   
   const allVotes: VotingRecord[] = [];
   
-  for (const constituency of constituencies) {
+  for (const mp of trackedMPs) {
+    console.log(`Collecting votes for ${mp.mp_name} (${mp.constituency})...`);
+    
     try {
-      const votes = await collectAllVotesForConstituency(constituency, region);
+      const votes = await collectVotesForMP(mp.mp_id, mp.mp_name, mp.mp_party, mp.constituency, region);
       allVotes.push(...votes);
+      console.log(`✅ Found ${votes.length} votes for ${mp.mp_name}`);
     } catch (error) {
-      console.error(`Error collecting votes for ${constituency}:`, error);
+      console.error(`❌ Error collecting votes for ${mp.mp_name}:`, error);
     }
   }
   
   return allVotes;
 }
 
-// Collect ALL votes by the constituency MP (no region filtering)
-async function collectAllVotesForConstituency(
+// Collect ALL votes by a specific MP
+async function collectVotesForMP(
+  mpId: number,
+  mpName: string,
+  party: string,
   constituency: string,
   region: string
 ): Promise<VotingRecord[]> {
-  console.log(`Collecting ALL votes for constituency: ${constituency}`);
+  console.log(`Collecting votes for MP: ${mpName} (${constituency})`);
 
   const votes: VotingRecord[] = [];
-
   try {
-    // Get the MP for this constituency
-    const mpInfo = await fetchCurrentMpForConstituency(constituency);
-
-    if (!mpInfo) {
-      console.log(`No current MP found for constituency: ${constituency}`);
-      return votes;
-    }
-
-    const mpId = mpInfo.id;
-    const mpName = mpInfo.name;
-    const party = mpInfo.party;
-
-    console.log(`Found MP: ${mpName} (${party}) for ${constituency}`);
-    
-    // Get recent divisions (last 7 days for daily, or more for catch-up)
     const divisionsResponse = await fetch(
       `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.memberId=${mpId}&queryParameters.take=10`
     );

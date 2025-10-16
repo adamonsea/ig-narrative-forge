@@ -2795,6 +2795,72 @@ export type Database = {
           },
         ]
       }
+      topic_tracked_mps: {
+        Row: {
+          constituency: string
+          created_at: string | null
+          detection_confidence:
+            | Database["public"]["Enums"]["mp_detection_confidence"]
+            | null
+          id: string
+          is_auto_detected: boolean | null
+          is_primary: boolean | null
+          mp_id: number
+          mp_name: string
+          mp_party: string
+          topic_id: string
+          tracking_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          constituency: string
+          created_at?: string | null
+          detection_confidence?:
+            | Database["public"]["Enums"]["mp_detection_confidence"]
+            | null
+          id?: string
+          is_auto_detected?: boolean | null
+          is_primary?: boolean | null
+          mp_id: number
+          mp_name: string
+          mp_party: string
+          topic_id: string
+          tracking_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          constituency?: string
+          created_at?: string | null
+          detection_confidence?:
+            | Database["public"]["Enums"]["mp_detection_confidence"]
+            | null
+          id?: string
+          is_auto_detected?: boolean | null
+          is_primary?: boolean | null
+          mp_id?: number
+          mp_name?: string
+          mp_party?: string
+          topic_id?: string
+          tracking_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_tracked_mps_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_tracked_mps_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           archived_at: string | null
@@ -3820,6 +3886,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "superadmin"
       audience_expertise: "beginner" | "intermediate" | "expert"
+      mp_detection_confidence: "high" | "medium" | "low"
       tone_type: "formal" | "conversational" | "engaging"
     }
     CompositeTypes: {
@@ -3950,6 +4017,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "superadmin"],
       audience_expertise: ["beginner", "intermediate", "expert"],
+      mp_detection_confidence: ["high", "medium", "low"],
       tone_type: ["formal", "conversational", "engaging"],
     },
   },
