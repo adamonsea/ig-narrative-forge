@@ -68,40 +68,42 @@ export const DonationModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {tiers.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No donation tiers available yet.
-            </p>
-          ) : (
-            tiers.map((tier, index) => (
-              <Card key={index} className="cursor-pointer hover:border-primary transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg">{tier.name}</CardTitle>
-                  <CardDescription className="text-2xl font-bold text-foreground">
-                    {tier.amount}
-                  </CardDescription>
-                </CardHeader>
-                {tier.description && (
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">{tier.description}</p>
-                    <Button onClick={() => handleTierClick(tier)} className="w-full">
-                      <Check className="h-4 w-4 mr-2" />
-                      Select
-                    </Button>
-                  </CardContent>
-                )}
-                {!tier.description && (
-                  <CardContent>
-                    <Button onClick={() => handleTierClick(tier)} className="w-full">
-                      <Check className="h-4 w-4 mr-2" />
-                      Select
-                    </Button>
-                  </CardContent>
-                )}
-              </Card>
-            ))
-          )}
+        <div className="max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1">
+          <div className="grid gap-4 py-4">
+            {tiers.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No donation tiers available yet.
+              </p>
+            ) : (
+              tiers.map((tier, index) => (
+                <Card key={index} className="cursor-pointer hover:border-primary transition-colors">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{tier.name}</CardTitle>
+                    <CardDescription className="text-2xl font-bold text-foreground">
+                      {tier.amount}
+                    </CardDescription>
+                  </CardHeader>
+                  {tier.description && (
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">{tier.description}</p>
+                      <Button onClick={() => handleTierClick(tier)} className="w-full">
+                        <Check className="h-4 w-4 mr-2" />
+                        Select
+                      </Button>
+                    </CardContent>
+                  )}
+                  {!tier.description && (
+                    <CardContent>
+                      <Button onClick={() => handleTierClick(tier)} className="w-full">
+                        <Check className="h-4 w-4 mr-2" />
+                        Select
+                      </Button>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
