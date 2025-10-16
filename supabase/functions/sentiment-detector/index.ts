@@ -508,7 +508,7 @@ Return as JSON:
   },
   "sentiment_score": 0-100,
   "confidence_score": 0-100,
-  "card_type": "trend|controversy|development|community"
+  "card_type": "trend|quote|comparison|timeline"
 }`;
 
   try {
