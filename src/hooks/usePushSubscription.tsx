@@ -159,26 +159,54 @@ export const usePushSubscription = (topicId?: string) => {
     }
   };
 
-  const unsubscribe = async (): Promise<boolean> => {
+  const unsubscribe = async (
+    notificationType: 'instant' | 'daily' | 'weekly'
+  ): Promise<boolean> => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       
-      if (subscription) {
-        await subscription.unsubscribe();
+      if (!subscription) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return false;
       }
 
-      setState(prev => ({
-        ...prev,
-        isSubscribed: false,
-        isLoading: false
-      }));
+      // Get the subscription endpoint to find the matching database record
+      const subscriptionData = JSON.parse(JSON.stringify(subscription));
+      const endpoint = subscriptionData.endpoint;
+
+      // Deactivate the specific notification type subscription
+      const { error } = await supabase
+        .from('topic_newsletter_signups')
+        .update({ is_active: false })
+        .eq('topic_id', topicId)
+        .eq('notification_type', notificationType)
+        .filter('push_subscription', 'cs', JSON.stringify({ endpoint }));
+
+      if (error) {
+        console.error('Error unsubscribing:', error);
+        toast({
+          title: "Unsubscribe Failed",
+          description: "Could not remove your subscription. Please try again.",
+          variant: "destructive"
+        });
+        setState(prev => ({ ...prev, isLoading: false }));
+        return false;
+      }
+
+      setState(prev => ({ ...prev, isLoading: false }));
+
+      const messages = {
+        instant: "You'll no longer get instant notifications",
+        daily: "You'll no longer receive daily summaries",
+        weekly: "You'll no longer receive weekly roundups"
+      };
 
       toast({
         title: "Unsubscribed",
-        description: "You will no longer receive push notifications"
+        description: messages[notificationType]
       });
 
       return true;

@@ -28,7 +28,7 @@ export const NotificationPreferencesModal = ({
   topicId 
 }: NotificationPreferencesModalProps) => {
   const { toast } = useToast();
-  const { isSupported, subscribeToPush } = usePushSubscription(topicId);
+  const { isSupported, subscribeToPush, unsubscribe } = usePushSubscription(topicId);
   const { subscriptions, isLoading: checkingSubscriptions, refresh } = useNotificationSubscriptions(topicId);
   const [subscribingType, setSubscribingType] = useState<NotificationType | null>(null);
 
@@ -52,6 +52,22 @@ export const NotificationPreferencesModal = ({
       }
     } catch (error) {
       console.error('Error subscribing:', error);
+    } finally {
+      setSubscribingType(null);
+    }
+  };
+
+  const handleUnsubscribe = async (type: NotificationType) => {
+    setSubscribingType(type);
+
+    try {
+      const success = await unsubscribe(type);
+      
+      if (success) {
+        await refresh();
+      }
+    } catch (error) {
+      console.error('Error unsubscribing:', error);
     } finally {
       setSubscribingType(null);
     }
@@ -119,15 +135,13 @@ export const NotificationPreferencesModal = ({
             const isSubscribing = subscribingType === option.type;
             
             return (
-              <button
+              <div
                 key={option.type}
-                onClick={() => !isSubscribed && handleSubscribe(option.type)}
-                disabled={isSubscribed || isSubscribing || checkingSubscriptions}
                 className={`
-                  w-full p-6 rounded-xl border transition-all text-left
+                  w-full p-6 rounded-xl border transition-all
                   ${isSubscribed 
-                    ? 'bg-muted/50 border-border cursor-default' 
-                    : 'bg-card border-border/50 hover:bg-muted/30 hover:border-border cursor-pointer'
+                    ? 'bg-muted/50 border-border' 
+                    : 'bg-card border-border/50'
                   }
                   ${isSubscribing ? 'opacity-50' : ''}
                 `}
@@ -140,14 +154,31 @@ export const NotificationPreferencesModal = ({
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-semibold text-base">{option.title}</h3>
-                      {isSubscribed && (
-                        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                          <Check className="w-3 h-3" />
-                          Subscribed
-                        </div>
-                      )}
-                      {isSubscribing && (
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      {isSubscribed ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleUnsubscribe(option.type)}
+                          disabled={isSubscribing || checkingSubscriptions}
+                          className="text-xs h-7"
+                        >
+                          {isSubscribing ? (
+                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                          ) : (
+                            <Check className="w-3 h-3 mr-1 text-green-600 dark:text-green-400" />
+                          )}
+                          Unsubscribe
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSubscribe(option.type)}
+                          disabled={isSubscribing || checkingSubscriptions}
+                          className="text-xs h-7"
+                        >
+                          {isSubscribing && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+                          Subscribe
+                        </Button>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -155,7 +186,7 @@ export const NotificationPreferencesModal = ({
                     </p>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
