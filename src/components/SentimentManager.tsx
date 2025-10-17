@@ -91,23 +91,30 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
 
   const triggerAnalysis = async () => {
     try {
+      console.log('🚀 Triggering sentiment analysis...', { topicId });
+      
       const { data, error } = await supabase.functions.invoke('sentiment-detector', {
         body: { topic_id: topicId, force_analysis: true }
       });
 
-      if (error) throw error;
+      console.log('📊 Analysis response:', { data, error });
+
+      if (error) {
+        console.error('❌ Analysis failed:', error);
+        throw error;
+      }
 
       toast({
         title: "Analysis Complete",
-        description: `Found ${data?.keywords_identified || 0} trending keywords`
+        description: `Found ${data?.keywords_identified || 0} trending keywords, generated ${data?.cards_generated || 0} cards`
       });
 
       setTimeout(loadData, 2000);
     } catch (error) {
-      console.error('Error triggering analysis:', error);
+      console.error('💥 Error triggering analysis:', error);
       toast({
-        title: "Error",
-        description: "Failed to trigger analysis",
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to trigger analysis. Check console for details.",
         variant: "destructive"
       });
     }
@@ -115,6 +122,8 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
 
   const toggleTracking = async (keywordPhrase: string, currentlyTracked: boolean) => {
     try {
+      console.log('🔄 Toggling tracking for:', keywordPhrase);
+      
       const { error } = await supabase
         .from('sentiment_keyword_tracking')
         .update({ 
@@ -124,7 +133,10 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         .eq('topic_id', topicId)
         .eq('keyword_phrase', keywordPhrase);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Failed to toggle tracking:', error);
+        throw error;
+      }
 
       setTrendingKeywords(prev => 
         prev.map(kw => 
@@ -136,19 +148,32 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
 
       // If tracking was just enabled and sentiment is enabled, generate card immediately
       if (!currentlyTracked && enabled) {
+        console.log('🎨 Triggering immediate card generation...');
+        
         toast({
           title: "Generating Card",
           description: `Creating sentiment card for "${keywordPhrase}"...`
         });
 
         // Trigger immediate analysis to generate the card
-        await supabase.functions.invoke('sentiment-detector', {
+        const { data, error: invokeError } = await supabase.functions.invoke('sentiment-detector', {
           body: { 
             topic_id: topicId, 
             mode: 'targeted',
             force_analysis: true 
           }
         });
+
+        console.log('📊 Card generation response:', { data, error: invokeError });
+
+        if (invokeError) {
+          console.error('❌ Card generation failed:', invokeError);
+          toast({
+            title: "Generation Failed",
+            description: invokeError.message || "Check console for details",
+            variant: "destructive"
+          });
+        }
 
         setTimeout(loadData, 3000); // Reload data after generation
       } else {
@@ -160,10 +185,10 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         });
       }
     } catch (error) {
-      console.error('Error toggling tracking:', error);
+      console.error('💥 Error toggling tracking:', error);
       toast({
         title: "Error",
-        description: "Failed to update tracking",
+        description: error instanceof Error ? error.message : "Failed to update tracking. Check console for details.",
         variant: "destructive"
       });
     }

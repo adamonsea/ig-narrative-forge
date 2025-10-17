@@ -42,20 +42,30 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 
+    console.log('🚀 Sentiment Detector Invoked', {
+      timestamp: new Date().toISOString(),
+      hasDeepSeekKey: !!deepSeekApiKey
+    });
+
     if (!deepSeekApiKey) {
-      throw new Error('DEEPSEEK_API_KEY not configured');
+      const error = 'DEEPSEEK_API_KEY not configured - cannot proceed with sentiment analysis';
+      console.error('❌', error);
+      throw new Error(error);
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { topic_id: topicId, force_analysis = false } = await req.json();
+    const { topic_id: topicId, force_analysis = false, mode } = await req.json();
 
     if (!topicId) {
       throw new Error('topic_id is required');
     }
 
-    console.log('Starting sentiment analysis for topic:', topicId);
-    console.log('Enhanced version: supports both ready and published status');
+    console.log('📊 Starting sentiment analysis', {
+      topicId,
+      force_analysis,
+      mode: mode || 'full'
+    });
 
     // Get topic settings and configuration
     const { data: topicSettings, error: settingsError } = await supabase
@@ -96,7 +106,10 @@ serve(async (req) => {
     const topicKeywords = topic.keywords || [];
     const excludedKeywords = topicSettings?.excluded_keywords || [];
 
-    console.log('Fetching published stories for topic:', topicId);
+    console.log('🔍 Fetching published stories...', {
+      topicId,
+      lookback: '30 days'
+    });
     
     // Get published stories using the existing legacy structure that we know works for Eastbourne
     const { data: stories, error: storiesError } = await supabase
@@ -127,11 +140,15 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
 
     if (storiesError) {
-      console.error('Error fetching published stories:', storiesError);
+      console.error('❌ Error fetching published stories:', storiesError);
       throw storiesError;
     }
 
-    console.log(`Found ${stories?.length || 0} published stories for analysis`);
+    console.log(`✅ Found ${stories?.length || 0} published stories`, {
+      storyIds: stories?.map(s => s.id).slice(0, 5),
+      hasArticles: stories?.every(s => s.articles),
+      hasSlides: stories?.every(s => s.slides?.length > 0)
+    });
 
     // Use published story content for analysis
     const contentForAnalysis = stories.map(story => ({
@@ -145,18 +162,32 @@ serve(async (req) => {
     }));
 
     if (contentForAnalysis.length === 0) {
-      console.log('No published content found for analysis');
+      console.warn('⚠️ No published content found for analysis', {
+        topicId,
+        totalStoriesQueried: stories?.length || 0,
+        possibleReasons: [
+          'No stories with status "ready" or "published"',
+          'No articles with processing_status "processed"',
+          'All stories older than 30 days'
+        ]
+      });
       return new Response(
         JSON.stringify({ 
           success: false, 
           message: 'No published content available for sentiment analysis',
-          topicId 
+          topicId,
+          debug: {
+            storiesQueried: stories?.length || 0,
+            reason: 'No matching stories found with required status'
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Analyzing ${contentForAnalysis.length} published stories`);
+    console.log(`📝 Analyzing ${contentForAnalysis.length} published stories`, {
+      titles: contentForAnalysis.slice(0, 3).map(c => c.title)
+    });
 
     // Create content fingerprint for duplicate detection
     const contentFingerprint = contentForAnalysis
@@ -165,6 +196,7 @@ serve(async (req) => {
       .join('|');
 
     // Analyze keywords and sentiment with enhanced regional focus
+    console.log('🤖 Calling DeepSeek API for keyword analysis...');
     const keywordAnalysis = await analyzeKeywordsAndSentiment(
       contentForAnalysis,
       topicKeywords,
@@ -174,7 +206,9 @@ serve(async (req) => {
       topic
     );
 
-    console.log(`Found ${keywordAnalysis.length} trending keywords`);
+    console.log(`✨ Found ${keywordAnalysis.length} trending keywords`, {
+      keywords: keywordAnalysis.map(k => k.phrase).slice(0, 5)
+    });
 
     // Update keyword tracking table
     const now = new Date();
@@ -213,7 +247,11 @@ serve(async (req) => {
     // Generate sentiment cards for keywords with frequency >= 2 and at least 2 sources
     for (const keyword of keywordAnalysis) {
       if (keyword.frequency >= 2 && keyword.sources.length >= 2) {
-        console.log(`Checking if sentiment card needed for: ${keyword.phrase}`);
+        console.log(`🎯 Evaluating keyword for card: "${keyword.phrase}"`, {
+          frequency: keyword.frequency,
+          sources: keyword.sources.length,
+          sentiment: keyword.sentiment_context
+        });
         
         // Check for existing cards in the last 7 days
         const { data: existingCards, error: checkError } = await supabase
@@ -252,45 +290,62 @@ serve(async (req) => {
         }
 
         if (shouldCreateCard) {
-          console.log(`Generating sentiment card for: ${keyword.phrase} (${updateReason})`);
+          console.log(`🎨 Generating sentiment card`, {
+            keyword: keyword.phrase,
+            reason: updateReason
+          });
           
-          const sentimentCard = await generateSentimentCard(
-            keyword,
-            topicName,
-            deepSeekApiKey,
-            topic
-          );
+          try {
+            const sentimentCard = await generateSentimentCard(
+              keyword,
+              topicName,
+              deepSeekApiKey,
+              topic
+            );
 
-          if (sentimentCard) {
-            // Insert the sentiment card with duplicate prevention
-            const { error: insertError } = await supabase
-              .from('sentiment_cards')
-              .insert({
-                topic_id: topicId,
-                keyword_phrase: keyword.phrase,
-                content: sentimentCard.content,
-                sources: keyword.sources,
+            if (sentimentCard) {
+              console.log(`✅ Card generated successfully for "${keyword.phrase}"`, {
                 sentiment_score: sentimentCard.sentiment_score,
                 confidence_score: sentimentCard.confidence_score,
-                card_type: sentimentCard.card_type,
-                slides: sentimentCard.slides || [],
-                analysis_date: new Date().toISOString().split('T')[0],
-                content_fingerprint: contentFingerprint,
-                previous_sentiment_score: existingCards?.[0]?.sentiment_score || 0,
-                update_reason: updateReason
+                card_type: sentimentCard.card_type
               });
 
-            if (insertError) {
-              if (insertError.code === '23505') { // Unique constraint violation
-                console.log(`Sentiment card already exists for ${keyword.phrase} today`);
+              // Insert the sentiment card with duplicate prevention
+              const { error: insertError } = await supabase
+                .from('sentiment_cards')
+                .insert({
+                  topic_id: topicId,
+                  keyword_phrase: keyword.phrase,
+                  content: sentimentCard.content,
+                  sources: keyword.sources,
+                  sentiment_score: sentimentCard.sentiment_score,
+                  confidence_score: sentimentCard.confidence_score,
+                  card_type: sentimentCard.card_type,
+                  slides: sentimentCard.slides || [],
+                  analysis_date: new Date().toISOString().split('T')[0],
+                  content_fingerprint: contentFingerprint,
+                  previous_sentiment_score: existingCards?.[0]?.sentiment_score || 0,
+                  update_reason: updateReason
+                });
+
+              if (insertError) {
+                if (insertError.code === '23505') { // Unique constraint violation
+                  console.warn(`⚠️ Duplicate card prevented for "${keyword.phrase}" (already exists today)`);
+                } else {
+                  console.error('❌ Error inserting sentiment card:', insertError);
+                }
               } else {
-                console.error('Error inserting sentiment card:', insertError);
+                generatedCards++;
+                console.log(`💾 Card saved to database for "${keyword.phrase}"`);
               }
             } else {
-              generatedCards++;
-              console.log(`Successfully created sentiment card for: ${keyword.phrase}`);
+              console.warn(`⚠️ Card generation returned null for "${keyword.phrase}"`);
             }
+          } catch (cardError) {
+            console.error(`❌ Error during card generation for "${keyword.phrase}":`, cardError);
           }
+        } else {
+          console.log(`⏭️ Skipping card generation for "${keyword.phrase}" (no significant changes)`);
         }
       }
     }
@@ -321,6 +376,13 @@ serve(async (req) => {
         sentiment_context: k.sentiment_context
       }));
 
+    console.log('🎉 Analysis complete!', {
+      stories_analyzed: contentForAnalysis.length,
+      keywords_identified: keywordAnalysis.length,
+      cards_generated: generatedCards,
+      keyword_suggestions: keywordSuggestions.length
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -334,9 +396,15 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in sentiment analysis:', error);
+    console.error('💥 Critical Error in sentiment analysis:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.stack : undefined
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -409,6 +477,7 @@ Return as JSON array with this structure:
 REJECT any phrases about other locations outside ${topicName}. Only include locally relevant terms.`;
 
   try {
+    console.log('📡 Calling DeepSeek for keyword analysis...');
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
@@ -426,11 +495,24 @@ REJECT any phrases about other locations outside ${topicName}. Only include loca
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ DeepSeek API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`DeepSeek API failed: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
     
     if (!data.choices?.[0]?.message?.content) {
+      console.error('❌ Invalid DeepSeek response structure:', data);
       throw new Error('No response from DeepSeek API');
     }
+
+    console.log('✅ DeepSeek keyword analysis successful');
 
     // Clean the response content to remove markdown code blocks
     let content = data.choices[0].message.content.trim();
@@ -458,7 +540,10 @@ REJECT any phrases about other locations outside ${topicName}. Only include loca
     }));
     
   } catch (parseError) {
-    console.error('Failed to analyze keywords:', parseError);
+    console.error('💥 Failed to analyze keywords:', {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      stack: parseError instanceof Error ? parseError.stack : undefined
+    });
     return [];
   }
 }
@@ -512,6 +597,7 @@ Return as JSON:
 }`;
 
   try {
+    console.log('📡 Calling DeepSeek for card generation...');
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
@@ -529,11 +615,24 @@ Return as JSON:
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ DeepSeek API error during card generation:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      return null;
+    }
+
     const data = await response.json();
     
     if (!data.choices?.[0]?.message?.content) {
+      console.error('❌ Invalid DeepSeek card response structure:', data);
       return null;
     }
+
+    console.log('✅ DeepSeek card generation successful');
 
     // Clean the response content to remove markdown code blocks
     let content = data.choices[0].message.content.trim();
@@ -550,7 +649,10 @@ Return as JSON:
     };
     
   } catch (parseError) {
-    console.error('Failed to generate sentiment card:', parseError);
+    console.error('💥 Failed to generate sentiment card:', {
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+      stack: parseError instanceof Error ? parseError.stack : undefined
+    });
     return null;
   }
 }
