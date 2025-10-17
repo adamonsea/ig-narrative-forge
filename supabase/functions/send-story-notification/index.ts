@@ -54,11 +54,12 @@ serve(async (req: Request) => {
       throw new Error('Topic not found');
     }
 
-    // Fetch all active push subscriptions for this topic
+    // Fetch all active push subscriptions for this topic - only 'instant' notifications
     const { data: signups, error: signupsError } = await supabase
       .from('topic_newsletter_signups')
       .select('push_subscription, email')
       .eq('topic_id', topicId)
+      .eq('notification_type', 'instant')
       .eq('is_active', true)
       .not('push_subscription', 'is', null);
 

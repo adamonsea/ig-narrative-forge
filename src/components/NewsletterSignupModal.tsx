@@ -58,7 +58,7 @@ export const NewsletterSignupModal = ({ isOpen, onClose, topicName, topicId }: N
     try {
       // Handle push notification subscription first if enabled
       if (enablePushNotifications && isPushSupported) {
-        const pushSuccess = await subscribeToPush(email.trim(), name.trim() || undefined);
+        const pushSuccess = await subscribeToPush('weekly');
         if (!pushSuccess) {
           setIsSubmitting(false);
           return;

@@ -303,15 +303,16 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const getTextSize = (content: string, isTitle: boolean, isLaterSlide: boolean = false) => {
     const length = content.length;
     if (isTitle) {
-      if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
-      if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
-      return "text-xl md:text-2xl lg:text-3xl";
+      // Increased by one size point for better readability
+      if (length < 50) return "text-4xl md:text-5xl lg:text-6xl";
+      if (length < 100) return "text-3xl md:text-4xl lg:text-5xl";
+      return "text-2xl md:text-3xl lg:text-4xl";
     } else {
-      // Much bigger text for slides after the first
-      if (length < 80) return isLaterSlide ? "text-3xl md:text-4xl lg:text-5xl" : "text-xl md:text-2xl lg:text-3xl";
-      if (length < 150) return isLaterSlide ? "text-2xl md:text-3xl lg:text-4xl" : "text-lg md:text-xl lg:text-2xl";
-      if (length < 250) return isLaterSlide ? "text-xl md:text-2xl lg:text-3xl" : "text-base md:text-lg lg:text-xl";
-      return isLaterSlide ? "text-lg md:text-xl lg:text-2xl" : "text-sm md:text-base lg:text-lg";
+      // Increased by one size point for better readability and card fill
+      if (length < 80) return isLaterSlide ? "text-4xl md:text-5xl lg:text-6xl" : "text-2xl md:text-3xl lg:text-4xl";
+      if (length < 150) return isLaterSlide ? "text-3xl md:text-4xl lg:text-5xl" : "text-xl md:text-2xl lg:text-3xl";
+      if (length < 250) return isLaterSlide ? "text-2xl md:text-3xl lg:text-4xl" : "text-lg md:text-xl lg:text-2xl";
+      return isLaterSlide ? "text-xl md:text-2xl lg:text-3xl" : "text-base md:text-lg lg:text-xl";
     }
   };
 

@@ -45,24 +45,10 @@ export const NotificationPreferencesModal = ({
     setSubscribingType(type);
 
     try {
-      // Use a temporary email format that includes the type
-      // This will be replaced in Phase 1 when we update the hook
-      const tempEmail = `${type}@notification.local`;
-      const success = await subscribeToPush(tempEmail, type);
+      const success = await subscribeToPush(type);
       
       if (success) {
         await refresh();
-        
-        const messages = {
-          instant: "You'll get notified as soon as new stories are published",
-          daily: "You'll receive a daily summary every evening at 6 PM",
-          weekly: "You'll receive a weekly roundup every Friday at 10 AM"
-        };
-        
-        toast({
-          title: "Subscribed!",
-          description: messages[type]
-        });
       }
     } catch (error) {
       console.error('Error subscribing:', error);

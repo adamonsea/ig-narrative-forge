@@ -38,7 +38,7 @@ export const useNotificationSubscriptions = (topicId: string) => {
       // Query for subscriptions with this push endpoint
       const { data, error } = await supabase
         .from('topic_newsletter_signups')
-        .select('email, frequency')
+        .select('notification_type, push_subscription')
         .eq('topic_id', topicId)
         .eq('is_active', true)
         .not('push_subscription', 'is', null);
@@ -50,11 +50,18 @@ export const useNotificationSubscriptions = (topicId: string) => {
       }
 
       if (data) {
-        // Parse email field which contains notification type temporarily
-        // Format: "instant@notification.local", "daily@notification.local", etc.
+        // Check which notification types match this browser's push endpoint
         const activeTypes = data
-          .map(sub => sub.email?.split('@')[0])
-          .filter((type): type is string => type !== undefined);
+          .filter(sub => {
+            try {
+              const subData = sub.push_subscription as any;
+              return subData?.endpoint === endpoint;
+            } catch {
+              return false;
+            }
+          })
+          .map(sub => sub.notification_type)
+          .filter((type): type is string => type !== null);
 
         setSubscriptions({
           instant: activeTypes.includes('instant'),

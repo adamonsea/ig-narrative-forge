@@ -2643,11 +2643,12 @@ export type Database = {
       topic_newsletter_signups: {
         Row: {
           created_at: string
-          email: string
+          email: string | null
           frequency: string
           id: string
           is_active: boolean
           name: string | null
+          notification_type: string | null
           push_subscription: Json | null
           topic_id: string | null
           updated_at: string
@@ -2656,11 +2657,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          email: string
+          email?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
           name?: string | null
+          notification_type?: string | null
           push_subscription?: Json | null
           topic_id?: string | null
           updated_at?: string
@@ -2669,11 +2671,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          email?: string
+          email?: string | null
           frequency?: string
           id?: string
           is_active?: boolean
           name?: string | null
+          notification_type?: string | null
           push_subscription?: Json | null
           topic_id?: string | null
           updated_at?: string

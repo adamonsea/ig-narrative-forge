@@ -56,7 +56,9 @@ export const usePushSubscription = (topicId?: string) => {
     return outputArray;
   };
 
-  const subscribeToPush = async (email: string, name?: string): Promise<boolean> => {
+  const subscribeToPush = async (
+    notificationType: 'instant' | 'daily' | 'weekly'
+  ): Promise<boolean> => {
     if (!state.isSupported) {
       toast({
         title: "Not Supported",
@@ -108,10 +110,9 @@ export const usePushSubscription = (topicId?: string) => {
         .from('topic_newsletter_signups')
         .insert({
           topic_id: topicId,
-          email,
-          name,
           push_subscription: subscriptionData,
-          frequency: 'weekly',
+          notification_type: notificationType,
+          frequency: notificationType, // Keep for compatibility
           is_active: true
         });
 
@@ -133,9 +134,15 @@ export const usePushSubscription = (topicId?: string) => {
         isLoading: false
       }));
 
+      const messages = {
+        instant: "You'll get notified as soon as new stories are published",
+        daily: "You'll receive a daily summary every evening at 6 PM",
+        weekly: "You'll receive a weekly roundup every Friday at 10 AM"
+      };
+
       toast({
         title: "Subscribed!",
-        description: "You'll receive weekly updates every Friday at 10 AM"
+        description: messages[notificationType]
       });
 
       return true;

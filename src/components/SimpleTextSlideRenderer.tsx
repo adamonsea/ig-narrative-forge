@@ -26,18 +26,20 @@ export const SimpleTextSlideRenderer: React.FC<SimpleTextSlideRendererProps> = (
   const currentSlide = story.slides[slideIndex];
   const isFirstSlide = slideIndex === 0;
 
-  // Dynamic text sizing based on content length
+  // Dynamic text sizing based on content length - increased for better readability
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
     if (isTitle) {
-      if (length < 50) return "text-5xl";
-      if (length < 100) return "text-4xl";
-      return "text-3xl";
+      // Increased by one size point
+      if (length < 50) return "text-6xl";
+      if (length < 100) return "text-5xl";
+      return "text-4xl";
     } else {
-      if (length < 80) return "text-3xl";
-      if (length < 150) return "text-2xl";
-      if (length < 250) return "text-xl";
-      return "text-lg";
+      // Increased by one size point
+      if (length < 80) return "text-4xl";
+      if (length < 150) return "text-3xl";
+      if (length < 250) return "text-2xl";
+      return "text-xl";
     }
   };
 

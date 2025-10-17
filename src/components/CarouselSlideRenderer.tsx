@@ -103,14 +103,16 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
     if (isTitle) {
-      if (length < 50) return "text-6xl";
-      if (length < 100) return "text-5xl";
-      return "text-4xl";
+      // Increased by one size point
+      if (length < 50) return "text-7xl";
+      if (length < 100) return "text-6xl";
+      return "text-5xl";
     } else {
-      if (length < 80) return "text-4xl";
-      if (length < 150) return "text-3xl";
-      if (length < 250) return "text-2xl";
-      return "text-xl";
+      // Increased by one size point
+      if (length < 80) return "text-5xl";
+      if (length < 150) return "text-4xl";
+      if (length < 250) return "text-3xl";
+      return "text-2xl";
     }
   };
 

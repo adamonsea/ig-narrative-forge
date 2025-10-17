@@ -128,13 +128,15 @@ export const SentimentCard = ({
   const getTextSize = (content: string, isHero: boolean) => {
     const length = content.length;
     if (isHero) {
-      if (length < 50) return "text-2xl md:text-3xl lg:text-4xl";
-      if (length < 100) return "text-xl md:text-2xl lg:text-3xl";
-      return "text-lg md:text-xl lg:text-2xl";
+      // Increased by one size point for better readability
+      if (length < 50) return "text-3xl md:text-4xl lg:text-5xl";
+      if (length < 100) return "text-2xl md:text-3xl lg:text-4xl";
+      return "text-xl md:text-2xl lg:text-3xl";
     } else {
-      if (length < 80) return "text-lg md:text-xl lg:text-2xl";
-      if (length < 150) return "text-base md:text-lg lg:text-xl";
-      return "text-sm md:text-base lg:text-lg";
+      // Increased by one size point for better readability
+      if (length < 80) return "text-xl md:text-2xl lg:text-3xl";
+      if (length < 150) return "text-lg md:text-xl lg:text-2xl";
+      return "text-base md:text-lg lg:text-xl";
     }
   };
 
