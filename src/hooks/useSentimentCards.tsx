@@ -74,9 +74,9 @@ export const useSentimentCards = (topicId?: string) => {
 
       setSentimentCards((data || [])
         .filter(card => {
-          // Only show cards with at least 4 sources
+          // Only show cards with at least 2 sources
           const sources = Array.isArray(card.sources) ? card.sources : [];
-          return sources.length >= 4;
+          return sources.length >= 2;
         })
         .map(card => ({
         ...card,
