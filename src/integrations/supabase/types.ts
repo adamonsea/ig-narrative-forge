@@ -2644,44 +2644,41 @@ export type Database = {
         Row: {
           created_at: string
           email: string
-          email_verified: boolean | null
+          frequency: string
           id: string
-          last_push_sent_at: string | null
+          is_active: boolean
           name: string | null
-          push_enabled: boolean | null
-          push_failure_count: number | null
           push_subscription: Json | null
-          topic_id: string
-          verification_sent_at: string | null
+          topic_id: string | null
+          updated_at: string
           verification_token: string | null
+          verified_at: string | null
         }
         Insert: {
           created_at?: string
           email: string
-          email_verified?: boolean | null
+          frequency?: string
           id?: string
-          last_push_sent_at?: string | null
+          is_active?: boolean
           name?: string | null
-          push_enabled?: boolean | null
-          push_failure_count?: number | null
           push_subscription?: Json | null
-          topic_id: string
-          verification_sent_at?: string | null
+          topic_id?: string | null
+          updated_at?: string
           verification_token?: string | null
+          verified_at?: string | null
         }
         Update: {
           created_at?: string
           email?: string
-          email_verified?: boolean | null
+          frequency?: string
           id?: string
-          last_push_sent_at?: string | null
+          is_active?: boolean
           name?: string | null
-          push_enabled?: boolean | null
-          push_failure_count?: number | null
           push_subscription?: Json | null
-          topic_id?: string
-          verification_sent_at?: string | null
+          topic_id?: string | null
+          updated_at?: string
           verification_token?: string | null
+          verified_at?: string | null
         }
         Relationships: [
           {
