@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter } from "lucide-react";
+import { Hash, MapPin, Filter, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
+import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
+import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
 import { CommunityPulseCard } from "@/components/CommunityPulseCard";
 import { useCommunityInsights } from "@/hooks/useCommunityInsights";
 import type { CommunityInsight } from "@/hooks/useCommunityInsights";
@@ -35,6 +37,7 @@ const TopicFeed = () => {
   const [showFilterTip, setShowFilterTip] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
@@ -320,25 +323,36 @@ const TopicFeed = () => {
                   </div>
                 )}
               </div>
-              <TooltipProvider>
-                <Tooltip open={showFilterTip}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={openFilterAndDismissTip}
-                      className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                    >
-                      <Filter className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm font-medium">Filters</span>
-                      {hasActiveFilters && (
-                        <span className="w-2 h-2 bg-primary rounded-full" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowNotificationModal(true)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                  aria-label="Manage notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm font-medium">Notify Me</span>
+                </button>
+
+                <TooltipProvider>
+                  <Tooltip open={showFilterTip}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={openFilterAndDismissTip}
+                        className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                      >
+                        <Filter className="w-4 h-4" />
+                        <span className="hidden sm:inline text-sm font-medium">Filters</span>
+                        {hasActiveFilters && (
+                          <span className="w-2 h-2 bg-primary rounded-full" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
+                      <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
               {/* Donation Button */}
               {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
@@ -699,6 +713,14 @@ const TopicFeed = () => {
           </div>
         ) : null}
       </div>
+
+      {/* Notification Preferences Modal */}
+      <NotificationPreferencesModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        topicName={topic?.name || ''}
+        topicId={topic?.id || ''}
+      />
     </div>
   );
 };
