@@ -2646,7 +2646,11 @@ export type Database = {
           email: string
           email_verified: boolean | null
           id: string
+          last_push_sent_at: string | null
           name: string | null
+          push_enabled: boolean | null
+          push_failure_count: number | null
+          push_subscription: Json | null
           topic_id: string
           verification_sent_at: string | null
           verification_token: string | null
@@ -2656,7 +2660,11 @@ export type Database = {
           email: string
           email_verified?: boolean | null
           id?: string
+          last_push_sent_at?: string | null
           name?: string | null
+          push_enabled?: boolean | null
+          push_failure_count?: number | null
+          push_subscription?: Json | null
           topic_id: string
           verification_sent_at?: string | null
           verification_token?: string | null
@@ -2666,7 +2674,11 @@ export type Database = {
           email?: string
           email_verified?: boolean | null
           id?: string
+          last_push_sent_at?: string | null
           name?: string | null
+          push_enabled?: boolean | null
+          push_failure_count?: number | null
+          push_subscription?: Json | null
           topic_id?: string
           verification_sent_at?: string | null
           verification_token?: string | null
@@ -3114,6 +3126,60 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      weekly_digest_history: {
+        Row: {
+          created_at: string | null
+          delivery_method: string | null
+          failure_count: number | null
+          id: string
+          metadata: Json | null
+          recipient_count: number
+          sent_at: string
+          stories_included: Json
+          success_count: number | null
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_method?: string | null
+          failure_count?: number | null
+          id?: string
+          metadata?: Json | null
+          recipient_count: number
+          sent_at?: string
+          stories_included: Json
+          success_count?: number | null
+          topic_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delivery_method?: string | null
+          failure_count?: number | null
+          id?: string
+          metadata?: Json | null
+          recipient_count?: number
+          sent_at?: string
+          stories_included?: Json
+          success_count?: number | null
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_digest_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_digest_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
