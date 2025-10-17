@@ -3456,6 +3456,15 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_published_stories_for_sitemap: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          story_id: string
+          title: string
+          topic_slug: string
+          updated_at: string
+        }[]
+      }
       get_queue_items_unified: {
         Args: { p_topic_id?: string }
         Returns: {
