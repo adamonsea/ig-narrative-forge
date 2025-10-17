@@ -431,7 +431,7 @@ export const useMultiTenantActions = () => {
   /**
    * Approve a multi-tenant story
    */
-  const approveMultiTenantStory = async (storyId: string) => {
+  const approveMultiTenantStory = async (storyId: string, topicId?: string) => {
     try {
       console.log('✅ Approving multi-tenant story:', storyId);
 
@@ -451,6 +451,26 @@ export const useMultiTenantActions = () => {
       }
 
       console.log('✅ Multi-tenant story approved successfully');
+
+      // Send push notifications to subscribers if topic is provided
+      if (topicId) {
+        try {
+          console.log('📤 Sending push notifications for story:', { storyId, topicId });
+          const { data, error: notificationError } = await supabase.functions.invoke('send-story-notification', {
+            body: { storyId, topicId }
+          });
+
+          if (notificationError) {
+            console.error('Error sending push notifications:', notificationError);
+            // Don't throw - notifications failing shouldn't block story publishing
+          } else {
+            console.log('✅ Push notifications sent:', data);
+          }
+        } catch (notifError) {
+          console.error('Error sending push notifications:', notifError);
+          // Silent fail for notifications
+        }
+      }
 
       toast({
         title: "Story Approved",

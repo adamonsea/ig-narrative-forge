@@ -615,9 +615,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   }, [cancelMultiTenantQueueItem, loadTopicContent]);
 
   const handleMultiTenantApproveStory = useCallback(async (storyId: string) => {
-    await approveMultiTenantStory(storyId);
+    await approveMultiTenantStory(storyId, selectedTopicId);
     await loadTopicContent();
-  }, [approveMultiTenantStory, loadTopicContent]);
+  }, [approveMultiTenantStory, selectedTopicId, loadTopicContent]);
 
   const handleMultiTenantRejectStory = useCallback(async (storyId: string) => {
     await rejectMultiTenantStory(storyId);
