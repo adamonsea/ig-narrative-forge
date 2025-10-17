@@ -13,6 +13,7 @@ interface Story {
     content: string;
   }>;
   article?: {
+    source_url?: string;
     published_at?: string;
   };
 }
@@ -50,13 +51,24 @@ export const StoryPageSEO = ({
   };
   
   const description = getDescription();
+  
+  // Generate full article body from all slides for structured data
+  const getArticleBody = () => {
+    if (!story.slides || story.slides.length === 0) return story.title;
+    return story.slides
+      .sort((a, b) => a.slide_number - b.slide_number)
+      .map(slide => slide.content.replace(/<[^>]*>/g, '').trim())
+      .join('\n\n');
+  };
+  
+  const articleBody = getArticleBody();
   const imageUrl = story.cover_illustration_url || 'https://curatr.pro/placeholder.svg';
   const siteName = `Curated ${topicName}`;
   
   // Published date
   const publishedTime = story.article?.published_at || story.created_at;
   
-  // Article structured data
+  // Article structured data with full content
   const articleData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -77,6 +89,8 @@ export const StoryPageSEO = ({
         "url": "https://curatr.pro/placeholder.svg"
       }
     },
+    "articleBody": articleBody,
+    "wordCount": articleBody.split(/\s+/).length,
     ...(story.cover_illustration_url && {
       "image": {
         "@type": "ImageObject",
@@ -122,6 +136,24 @@ export const StoryPageSEO = ({
       <script type="application/ld+json">
         {JSON.stringify(articleData)}
       </script>
+      
+      {/* Hidden HTML content for non-JS crawlers */}
+      <noscript>
+        {`
+          <article itemScope itemType="https://schema.org/Article">
+            <h1 itemProp="headline">${story.title}</h1>
+            <meta itemProp="author" content="${story.author || story.publication_name || topicName}" />
+            <meta itemProp="datePublished" content="${publishedTime}" />
+            ${story.cover_illustration_url ? `<img itemProp="image" src="${story.cover_illustration_url}" alt="${story.title}" />` : ''}
+            <div itemProp="articleBody">
+              ${story.slides?.sort((a, b) => a.slide_number - b.slide_number)
+                .map(slide => `<section>${slide.content}</section>`)
+                .join('\n') || ''}
+            </div>
+            ${story.article?.source_url ? `<a itemProp="url" href="${story.article.source_url}">Original Source</a>` : ''}
+          </article>
+        `}
+      </noscript>
     </Helmet>
   );
 };

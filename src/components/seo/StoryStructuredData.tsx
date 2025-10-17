@@ -22,7 +22,21 @@ export const StoryStructuredData = ({
   topicName,
   position
 }: StoryStructuredDataProps) => {
-  // Generate Article structured data
+  // Generate full article body from all slides
+  const getArticleBody = () => {
+    if (!story.slides || story.slides.length === 0) return story.title;
+    return story.slides
+      .sort((a, b) => a.slide_number - b.slide_number)
+      .map(slide => {
+        // Remove HTML tags and trim
+        return slide.content.replace(/<[^>]*>/g, '').trim();
+      })
+      .join('\n\n');
+  };
+  
+  const articleBody = getArticleBody();
+  
+  // Generate Article structured data with full content
   const articleData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -43,6 +57,8 @@ export const StoryStructuredData = ({
         "url": "https://curatr.pro/placeholder.svg"
       }
     },
+    "articleBody": articleBody,
+    "wordCount": articleBody.split(/\s+/).length,
     "position": position,
     ...(story.cover_illustration_url && {
       "image": {
