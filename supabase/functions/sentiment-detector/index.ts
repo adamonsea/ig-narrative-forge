@@ -277,7 +277,10 @@ serve(async (req) => {
                 analysis_date: new Date().toISOString().split('T')[0],
                 content_fingerprint: contentFingerprint,
                 previous_sentiment_score: existingCards?.[0]?.sentiment_score || 0,
-                update_reason: updateReason
+                update_reason: updateReason,
+                needs_review: true,
+                is_published: false,
+                is_visible: true
               });
 
             if (insertError) {

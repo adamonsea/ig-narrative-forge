@@ -23,6 +23,7 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
+import { SentimentCardsReview } from "@/components/SentimentCardsReview";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { useAuth } from "@/hooks/useAuth";
@@ -850,6 +851,9 @@ const TopicDashboard = () => {
                 }}
               />
             )}
+
+            {/* Sentiment Cards Review - Show cards that need review */}
+            <SentimentCardsReview topicId={topic.id} />
             
             {/* Gathering Progress Indicator */}
             {showGatheringProgress && (
