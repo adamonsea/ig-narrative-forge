@@ -239,6 +239,123 @@ serve(async (req) => {
       errors.push(`Queue processor error: ${queueErrorMessage}`);
     }
 
+    // 4. Check for roundup generation
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay(); // 0 = Sunday
+
+    // Daily Roundup: 8 PM (20:00) every day
+    if (hour === 20) {
+      console.log('🗓️ Triggering daily roundup generation...');
+      try {
+        const { data: topics } = await supabase
+          .from('topics')
+          .select('id, slug')
+          .eq('is_active', true);
+
+        if (topics && topics.length > 0) {
+          for (const topic of topics) {
+            const today = now.toISOString().split('T')[0];
+            
+            // Check if roundup already exists for today
+            const { data: existing } = await supabase
+              .from('topic_roundups')
+              .select('id')
+              .eq('topic_id', topic.id)
+              .eq('roundup_type', 'daily')
+              .gte('period_start', `${today}T00:00:00`)
+              .lte('period_start', `${today}T23:59:59`)
+              .maybeSingle();
+
+            if (!existing) {
+              const roundupResponse = await supabase.functions.invoke('generate-daily-roundup', {
+                body: { topic_id: topic.id, date: today }
+              });
+
+              if (roundupResponse.data?.success) {
+                console.log(`✅ Daily roundup generated for ${topic.slug}`);
+                
+                // Send notification
+                await supabase.functions.invoke('send-story-notification', {
+                  body: {
+                    topicId: topic.id,
+                    notificationType: 'daily',
+                    roundupDate: today
+                  }
+                });
+              } else {
+                console.error(`❌ Daily roundup failed for ${topic.slug}:`, roundupResponse.error);
+              }
+            } else {
+              console.log(`⏭️ Daily roundup already exists for ${topic.slug}`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } catch (roundupError) {
+        console.error('❌ Daily roundup generation error:', roundupError);
+        errors.push(`Daily roundup error: ${roundupError instanceof Error ? roundupError.message : String(roundupError)}`);
+      }
+    }
+
+    // Weekly Roundup: 9 AM (09:00) on Sunday
+    if (hour === 9 && dayOfWeek === 0) {
+      console.log('📅 Triggering weekly roundup generation...');
+      try {
+        const { data: topics } = await supabase
+          .from('topics')
+          .select('id, slug')
+          .eq('is_active', true);
+
+        if (topics && topics.length > 0) {
+          for (const topic of topics) {
+            // Get Monday of current week
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - 6); // Go back to Monday
+            const weekStartStr = weekStart.toISOString().split('T')[0];
+            
+            // Check if roundup already exists for this week
+            const { data: existing } = await supabase
+              .from('topic_roundups')
+              .select('id')
+              .eq('topic_id', topic.id)
+              .eq('roundup_type', 'weekly')
+              .gte('period_start', `${weekStartStr}T00:00:00`)
+              .maybeSingle();
+
+            if (!existing) {
+              const roundupResponse = await supabase.functions.invoke('generate-weekly-roundup', {
+                body: { topic_id: topic.id, week_start: weekStartStr }
+              });
+
+              if (roundupResponse.data?.success) {
+                console.log(`✅ Weekly roundup generated for ${topic.slug}`);
+                
+                // Send notification
+                await supabase.functions.invoke('send-story-notification', {
+                  body: {
+                    topicId: topic.id,
+                    notificationType: 'weekly',
+                    weekStart: weekStartStr
+                  }
+                });
+              } else {
+                console.error(`❌ Weekly roundup failed for ${topic.slug}:`, roundupResponse.error);
+              }
+            } else {
+              console.log(`⏭️ Weekly roundup already exists for ${topic.slug}`);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } catch (roundupError) {
+        console.error('❌ Weekly roundup generation error:', roundupError);
+        errors.push(`Weekly roundup error: ${roundupError instanceof Error ? roundupError.message : String(roundupError)}`);
+      }
+    }
+
     const duration = Date.now() - startTime;
     const summary = {
       success: true,

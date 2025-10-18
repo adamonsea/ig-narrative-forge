@@ -14,6 +14,7 @@ interface TopicBrandingSettingsProps {
     name: string;
     branding_config?: {
       logo_url?: string;
+      icon_url?: string;
       subheader?: string;
       show_topic_name?: boolean;
     };
@@ -25,9 +26,12 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   const [subheader, setSubheader] = useState(topic.branding_config?.subheader || '');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>(topic.branding_config?.logo_url || '');
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string>(topic.branding_config?.icon_url || '');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleLogoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,11 +68,53 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
     reader.readAsDataURL(file);
   };
 
+  const handleIconSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (1MB max for icons)
+    if (file.size > 1 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Icon must be less than 1MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file type (prefer square images for icons)
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file (PNG, JPG, WebP, SVG)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIconFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setIconPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
+  const removeIcon = () => {
+    setIconFile(null);
+    setIconPreview('');
+    if (iconInputRef.current) {
+      iconInputRef.current.value = '';
     }
   };
 
@@ -100,40 +146,84 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
     return publicUrl;
   };
 
+  const uploadIcon = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${topic.id}/icon.${fileExt}`;
+
+    console.log('Uploading icon:', { fileName, fileSize: file.size, fileType: file.type, topicId: topic.id });
+
+    const { data, error } = await supabase.storage
+      .from('topic-icons')
+      .upload(fileName, file, {
+        upsert: true,
+        contentType: file.type
+      });
+
+    if (error) {
+      console.error('Icon upload error:', error);
+      throw new Error(`Icon upload failed: ${error.message} (Path: ${fileName})`);
+    }
+
+    console.log('Icon upload successful:', data);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('topic-icons')
+      .getPublicUrl(fileName);
+
+    console.log('Generated icon public URL:', publicUrl);
+    return publicUrl;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     console.log('Starting branding save process for topic:', topic.id);
     
     try {
       let logoUrl = topic.branding_config?.logo_url;
+      let iconUrl = topic.branding_config?.icon_url;
+
+      setUploading(true);
 
       // Upload new logo if selected
       if (logoFile) {
         console.log('Uploading new logo file:', logoFile.name);
-        setUploading(true);
         try {
           logoUrl = await uploadLogo(logoFile);
           console.log('Logo upload completed, URL:', logoUrl);
-          setUploading(false);
         } catch (uploadError) {
           setUploading(false);
           throw new Error(`Logo upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
         }
       } else if (!logoPreview) {
-        // Remove logo if cleared
         console.log('Removing logo from branding config');
         logoUrl = undefined;
-      } else {
-        console.log('Keeping existing logo URL:', logoUrl);
       }
+
+      // Upload new icon if selected
+      if (iconFile) {
+        console.log('Uploading new icon file:', iconFile.name);
+        try {
+          iconUrl = await uploadIcon(iconFile);
+          console.log('Icon upload completed, URL:', iconUrl);
+        } catch (uploadError) {
+          setUploading(false);
+          throw new Error(`Icon upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
+        }
+      } else if (!iconPreview) {
+        console.log('Removing icon from branding config');
+        iconUrl = undefined;
+      }
+
+      setUploading(false);
 
       // Update topic branding config with cache-busting timestamp
       const brandingConfig = {
         ...topic.branding_config,
         logo_url: logoUrl,
+        icon_url: iconUrl,
         subheader: subheader.trim() || undefined,
-        show_topic_name: !logoUrl, // Hide topic name when logo exists
-        updated_at: new Date().toISOString() // Force cache refresh
+        show_topic_name: !logoUrl,
+        updated_at: new Date().toISOString()
       };
 
       console.log('Updating topic with branding config:', brandingConfig);
@@ -184,7 +274,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         <CardContent className="space-y-6">
           {/* Logo Upload */}
           <div>
-            <Label className="text-base font-medium">Logo</Label>
+            <Label className="text-base font-medium">Logo (Header Branding)</Label>
             <p className="text-sm text-muted-foreground mb-3">
               Upload a logo to replace your topic name. Recommended size: 200x60px, max 2MB
             </p>
@@ -208,7 +298,7 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
             ) : (
               <div
                 className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => logoInputRef.current?.click()}
               >
                 <ImageIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
@@ -221,10 +311,57 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
             )}
             
             <input
-              ref={fileInputRef}
+              ref={logoInputRef}
               type="file"
               accept="image/*"
               onChange={handleLogoSelect}
+              className="hidden"
+            />
+          </div>
+
+          {/* Icon Upload */}
+          <div>
+            <Label className="text-base font-medium">App Icon (PWA/Favicon)</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              Upload an icon for browser favicon and mobile home screen. Recommended: 512x512px square, max 1MB
+            </p>
+            
+            {iconPreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={iconPreview}
+                  alt="Icon preview"
+                  className="w-24 h-24 object-cover border rounded-lg"
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                  onClick={removeIcon}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                onClick={() => iconInputRef.current?.click()}
+              >
+                <ImageIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Click to upload app icon
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Square PNG, JPG, WebP up to 1MB
+                </p>
+              </div>
+            )}
+            
+            <input
+              ref={iconInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleIconSelect}
               className="hidden"
             />
           </div>

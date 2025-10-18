@@ -171,3 +171,15 @@ verify_jwt = false
 
 [functions.track-engagement-metric]
 verify_jwt = false
+
+[functions.generate-daily-roundup]
+verify_jwt = false
+
+[functions.generate-weekly-roundup]
+verify_jwt = false
+
+[functions.send-story-notification]
+verify_jwt = false
+
+[functions.topic-manifest]
+verify_jwt = false

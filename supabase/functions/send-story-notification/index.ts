@@ -7,8 +7,11 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  storyId: string;
+  storyId?: string;
   topicId: string;
+  notificationType?: 'story' | 'daily' | 'weekly';
+  roundupDate?: string;
+  weekStart?: string;
 }
 
 interface PushSubscription {
@@ -30,23 +33,24 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { storyId, topicId }: NotificationRequest = await req.json();
+    const { 
+      storyId, 
+      topicId, 
+      notificationType = 'story',
+      roundupDate,
+      weekStart 
+    }: NotificationRequest = await req.json();
 
-    // Fetch story details
-    const { data: story, error: storyError } = await supabase
-      .from('stories')
-      .select('title, id')
-      .eq('id', storyId)
-      .single();
+    console.log(`📬 Sending ${notificationType} notification for topic ${topicId}`);
 
-    if (storyError || !story) {
-      throw new Error('Story not found');
-    }
+    let title = '';
+    let body = '';
+    let url = '';
 
-    // Fetch topic details for branding
+    // Fetch topic details with branding
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('name, slug, logo_url, primary_color')
+      .select('name, slug, branding_config')
       .eq('id', topicId)
       .single();
 
@@ -54,12 +58,47 @@ serve(async (req: Request) => {
       throw new Error('Topic not found');
     }
 
-    // Fetch all active push subscriptions for this topic - only 'instant' notifications
+    // Build notification based on type
+    if (notificationType === 'story' && storyId) {
+      // Story notification
+      const { data: story, error: storyError } = await supabase
+        .from('stories')
+        .select('title')
+        .eq('id', storyId)
+        .single();
+
+      if (storyError || !story) {
+        throw new Error('Story not found');
+      }
+
+      title = `New from ${topic.name}`;
+      body = story.title;
+      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/story/${storyId}`;
+    } else if (notificationType === 'daily' && roundupDate) {
+      // Daily roundup notification
+      title = `Today in ${topic.name}`;
+      body = `Check out today's roundup`;
+      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/daily/${roundupDate}`;
+    } else if (notificationType === 'weekly' && weekStart) {
+      // Weekly roundup notification
+      title = `This Week in ${topic.name}`;
+      body = `Your weekly roundup is ready`;
+      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/weekly/${weekStart}`;
+    } else {
+      throw new Error('Invalid notification type or missing required parameters');
+    }
+
+    // Get subscriptions based on notification type
+    let notificationFilter = 'instant';
+    if (notificationType === 'daily') notificationFilter = 'daily';
+    if (notificationType === 'weekly') notificationFilter = 'weekly';
+
+    // Fetch all active push subscriptions for this topic - filter by notification type
     const { data: signups, error: signupsError } = await supabase
       .from('topic_newsletter_signups')
       .select('push_subscription, email')
       .eq('topic_id', topicId)
-      .eq('notification_type', 'instant')
+      .eq('notification_type', notificationFilter)
       .eq('is_active', true)
       .not('push_subscription', 'is', null);
 
@@ -85,15 +124,14 @@ serve(async (req: Request) => {
       throw new Error('VAPID keys not configured');
     }
 
-    // Prepare notification payload with topic branding
+    // Prepare notification payload with icon/badge from branding
     const notificationPayload = {
-      title: `New story in ${topic.name}`,
-      body: story.title,
-      icon: topic.logo_url || '/favicon.ico',
-      badge: topic.logo_url || '/favicon.ico',
-      url: `https://fpoywkjgdapgjtdeooak.supabase.co/feed/${topic.slug}/story/${story.id}`,
+      title,
+      body,
+      icon: topic.branding_config?.icon_url || topic.branding_config?.logo_url || '/placeholder.svg',
+      badge: topic.branding_config?.icon_url || '/placeholder.svg',
+      url,
       topic: topic.name,
-      color: topic.primary_color || '#000000',
       timestamp: Date.now(),
       actions: [
         {
@@ -149,10 +187,13 @@ serve(async (req: Request) => {
     // Log notification send
     await supabase.from('system_logs').insert({
       level: 'info',
-      message: 'Story notifications sent',
+      message: `${notificationType} notifications sent`,
       context: {
         story_id: storyId,
         topic_id: topicId,
+        notification_type: notificationType,
+        roundup_date: roundupDate,
+        week_start: weekStart,
         success_count: successCount,
         failure_count: failureCount
       },

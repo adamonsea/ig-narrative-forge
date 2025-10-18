@@ -86,6 +86,60 @@ const TopicFeed = () => {
   // Track visitor for analytics
   useVisitorTracking(topic?.id);
 
+  // Update favicon and manifest dynamically based on topic branding
+  useEffect(() => {
+    if (!topic?.branding_config) return;
+
+    const branding = topic.branding_config as any;
+    const iconUrl = branding.icon_url;
+    const logoUrl = branding.logo_url;
+    const displayIcon = iconUrl || logoUrl;
+
+    if (displayIcon) {
+      // Update favicon
+      let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.head.appendChild(favicon);
+      }
+      favicon.href = displayIcon;
+
+      // Update apple touch icon
+      let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+      if (!appleTouchIcon) {
+        appleTouchIcon = document.createElement('link');
+        appleTouchIcon.rel = 'apple-touch-icon';
+        document.head.appendChild(appleTouchIcon);
+      }
+      appleTouchIcon.href = displayIcon;
+    }
+
+    // Update manifest link for PWA
+    if (slug) {
+      let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+      if (!manifestLink) {
+        manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/topic-manifest?slug=${slug}`;
+    }
+
+    // Cleanup - restore default on unmount
+    return () => {
+      const defaultFavicon = '/placeholder.svg';
+      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (favicon) favicon.href = defaultFavicon;
+      
+      const appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+      if (appleTouchIcon) appleTouchIcon.href = defaultFavicon;
+      
+      const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+      if (manifestLink) manifestLink.href = '/manifest.json';
+    };
+  }, [topic, slug]);
+
   // Fetch monthly count after we have topic
   useEffect(() => {
     let active = true;
