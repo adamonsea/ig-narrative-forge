@@ -396,7 +396,7 @@ const TopicDashboard = () => {
     setRefreshingInsights(true);
     try {
       const { data, error } = await supabase.functions.invoke('reddit-community-processor', {
-        body: { topicId: topic.id }
+        body: { topic_ids: [topic.id] }
       });
 
       if (error) throw error;
