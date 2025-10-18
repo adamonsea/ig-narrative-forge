@@ -192,72 +192,279 @@ serve(async (req) => {
 
 // Legacy function removed - now using tenant-configured subreddits from community_config
 
-// Fetch Reddit RSS with conservative rate limiting
+// PHASE 1-4: Robust RSS Fetching with Multiple Strategies
 async function fetchRedditRSS(subreddit: string): Promise<RedditPost[]> {
+  console.log(`🔄 Starting multi-strategy RSS fetch for r/${subreddit}`);
+  
+  // Strategy 1: Standard RSS with new sort
+  let posts = await tryRSSEndpoint(subreddit, '.rss?sort=new&limit=25');
+  if (posts.length > 0) {
+    console.log(`✅ Strategy 1 (RSS new) succeeded: ${posts.length} posts`);
+    return posts;
+  }
+  
+  // Strategy 2: Standard RSS without params
+  posts = await tryRSSEndpoint(subreddit, '.rss?limit=25');
+  if (posts.length > 0) {
+    console.log(`✅ Strategy 2 (RSS default) succeeded: ${posts.length} posts`);
+    return posts;
+  }
+  
+  // Strategy 3: Hot sort RSS
+  posts = await tryRSSEndpoint(subreddit, '.rss?sort=hot&limit=25');
+  if (posts.length > 0) {
+    console.log(`✅ Strategy 3 (RSS hot) succeeded: ${posts.length} posts`);
+    return posts;
+  }
+  
+  // Strategy 4: Fallback to HTML scraping (old.reddit.com)
+  console.log(`⚠️ All RSS strategies failed, trying HTML scraping fallback...`);
+  posts = await scrapeRedditHTML(subreddit);
+  if (posts.length > 0) {
+    console.log(`✅ Strategy 4 (HTML scrape) succeeded: ${posts.length} posts`);
+    return posts;
+  }
+  
+  console.warn(`❌ All strategies failed for r/${subreddit}`);
+  return [];
+}
+
+// Try a specific RSS endpoint with enhanced parsing
+async function tryRSSEndpoint(subreddit: string, endpoint: string): Promise<RedditPost[]> {
   try {
-    const rssUrl = `https://www.reddit.com/r/${subreddit}.rss?limit=10`;
+    const rssUrl = `https://www.reddit.com/r/${subreddit}${endpoint}`;
     
-    // Use various user agents to appear more natural
+    // Enhanced User-Agent rotation (more realistic)
     const userAgents = [
-      'Mozilla/5.0 (compatible; RSS Reader Bot)',
-      'Mozilla/5.0 (compatible; NewsBot/1.0)',
-      'RSS/Atom Reader'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
     ];
     
     const randomAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
     
+    console.log(`📡 Fetching: ${rssUrl}`);
+    
     const response = await fetch(rssUrl, {
       headers: {
         'User-Agent': randomAgent,
-        'Accept': 'application/rss+xml, application/xml, text/xml'
+        'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
       },
-      // Add timeout to prevent hanging
       signal: AbortSignal.timeout(30000)
     });
     
+    console.log(`📊 Response: ${response.status} ${response.statusText}`);
+    console.log(`📋 Content-Type: ${response.headers.get('content-type')}`);
+    
     if (!response.ok) {
-      console.warn(`RSS fetch failed for r/${subreddit}: ${response.status}`);
+      console.warn(`❌ HTTP ${response.status} for ${rssUrl}`);
       return [];
     }
     
     const xmlText = await response.text();
+    console.log(`📄 Response length: ${xmlText.length} chars`);
     
-    // Basic XML parsing for RSS - handle both CDATA and plain text
-    const posts: RedditPost[] = [];
-    const itemRegex = /<item>(.*?)<\/item>/gs;
-    // Tolerant regex: matches CDATA or plain text
-    const titleRegex = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/s;
-    const linkRegex = /<link>(.*?)<\/link>/s;
-    const descRegex = /<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/description>/s;
+    // DIAGNOSTIC: Log XML structure when no posts found
+    if (xmlText.length < 500) {
+      console.log(`⚠️ Small response detected. First 500 chars:\n${xmlText.substring(0, 500)}`);
+    } else {
+      console.log(`📝 XML preview (first 1000 chars):\n${xmlText.substring(0, 1000)}`);
+    }
     
-    console.log(`📄 RSS response status: ${response.status}, content length: ${xmlText.length}`);
+    // PHASE 2: Multi-format parsing with fallbacks
+    let posts = parseRSSFormat(xmlText, subreddit);
+    if (posts.length > 0) return posts;
     
-    let match;
-    while ((match = itemRegex.exec(xmlText)) !== null && posts.length < 5) {
-      const itemContent = match[1];
+    posts = parseAtomFormat(xmlText, subreddit);
+    if (posts.length > 0) return posts;
+    
+    console.log(`⚠️ No posts extracted from ${xmlText.length} chars of XML`);
+    return [];
+    
+  } catch (error) {
+    console.warn(`❌ Error fetching ${endpoint}:`, error instanceof Error ? error.message : String(error));
+    return [];
+  }
+}
+
+// Parse RSS 2.0 format with namespace handling
+function parseRSSFormat(xmlText: string, subreddit: string): RedditPost[] {
+  const posts: RedditPost[] = [];
+  
+  // Match <item> tags, ignoring namespaces
+  const itemRegex = /<(?:\w+:)?item[^>]*>(.*?)<\/(?:\w+:)?item>/gis;
+  
+  // Enhanced regex patterns - handle namespaces, CDATA, and attributes
+  const titleRegex = /<(?:\w+:)?title[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/(?:\w+:)?title>/is;
+  const linkRegex = /<(?:\w+:)?link[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/(?:\w+:)?link>/is;
+  const descRegex = /<(?:\w+:)?(?:description|summary|content)[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/(?:\w+:)?(?:description|summary|content)>/is;
+  const pubDateRegex = /<(?:\w+:)?(?:pubDate|published|updated)[^>]*>(.*?)<\/(?:\w+:)?(?:pubDate|published|updated)>/is;
+  
+  let match;
+  let matchCount = 0;
+  
+  while ((match = itemRegex.exec(xmlText)) !== null && posts.length < 10) {
+    matchCount++;
+    const itemContent = match[1];
+    
+    const titleMatch = titleRegex.exec(itemContent);
+    const linkMatch = linkRegex.exec(itemContent);
+    const descMatch = descRegex.exec(itemContent);
+    const dateMatch = pubDateRegex.exec(itemContent);
+    
+    if (titleMatch && linkMatch) {
+      // Clean HTML entities and tags from content
+      const cleanTitle = decodeHTMLEntities(titleMatch[1]).trim();
+      const cleanContent = descMatch ? stripHTMLTags(decodeHTMLEntities(descMatch[1])).substring(0, 500) : '';
+      const cleanLink = linkMatch[1].trim();
       
-      const titleMatch = titleRegex.exec(itemContent);
-      const linkMatch = linkRegex.exec(itemContent);
-      const descMatch = descRegex.exec(itemContent);
-      
-      if (titleMatch && linkMatch) {
+      if (cleanTitle && cleanLink) {
         posts.push({
-          title: titleMatch[1],
-          content: descMatch ? descMatch[1].substring(0, 500) : '',
-          url: linkMatch[1],
-          created: new Date().toISOString(),
+          title: cleanTitle,
+          content: cleanContent,
+          url: cleanLink,
+          created: dateMatch ? dateMatch[1] : new Date().toISOString(),
           subreddit
         });
       }
     }
+  }
+  
+  console.log(`📊 RSS parse: Found ${matchCount} items, extracted ${posts.length} valid posts`);
+  return posts;
+}
+
+// Parse Atom format
+function parseAtomFormat(xmlText: string, subreddit: string): RedditPost[] {
+  const posts: RedditPost[] = [];
+  
+  // Match <entry> tags (Atom format)
+  const entryRegex = /<(?:\w+:)?entry[^>]*>(.*?)<\/(?:\w+:)?entry>/gis;
+  
+  const titleRegex = /<(?:\w+:)?title[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/(?:\w+:)?title>/is;
+  // Atom uses <link href="..."/> format
+  const linkRegex = /<(?:\w+:)?link[^>]*href=["'](.*?)["'][^>]*\/?>/is;
+  const contentRegex = /<(?:\w+:)?(?:content|summary)[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/(?:\w+:)?(?:content|summary)>/is;
+  const updatedRegex = /<(?:\w+:)?updated[^>]*>(.*?)<\/(?:\w+:)?updated>/is;
+  
+  let match;
+  let matchCount = 0;
+  
+  while ((match = entryRegex.exec(xmlText)) !== null && posts.length < 10) {
+    matchCount++;
+    const entryContent = match[1];
     
-    console.log(`✅ Fetched ${posts.length} posts from r/${subreddit}`);
+    const titleMatch = titleRegex.exec(entryContent);
+    const linkMatch = linkRegex.exec(entryContent);
+    const contentMatch = contentRegex.exec(entryContent);
+    const dateMatch = updatedRegex.exec(entryContent);
+    
+    if (titleMatch && linkMatch) {
+      const cleanTitle = decodeHTMLEntities(titleMatch[1]).trim();
+      const cleanContent = contentMatch ? stripHTMLTags(decodeHTMLEntities(contentMatch[1])).substring(0, 500) : '';
+      const cleanLink = linkMatch[1].trim();
+      
+      if (cleanTitle && cleanLink) {
+        posts.push({
+          title: cleanTitle,
+          content: cleanContent,
+          url: cleanLink,
+          created: dateMatch ? dateMatch[1] : new Date().toISOString(),
+          subreddit
+        });
+      }
+    }
+  }
+  
+  console.log(`📊 Atom parse: Found ${matchCount} entries, extracted ${posts.length} valid posts`);
+  return posts;
+}
+
+// PHASE 7: Fallback HTML scraping (old.reddit.com mobile)
+async function scrapeRedditHTML(subreddit: string): Promise<RedditPost[]> {
+  try {
+    const url = `https://old.reddit.com/r/${subreddit}/new/.compact`;
+    
+    console.log(`🕷️ Scraping HTML from: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
+      },
+      signal: AbortSignal.timeout(30000)
+    });
+    
+    if (!response.ok) {
+      console.warn(`❌ HTML scrape failed: ${response.status}`);
+      return [];
+    }
+    
+    const html = await response.text();
+    const posts: RedditPost[] = [];
+    
+    // Parse compact mobile HTML - simpler structure
+    const postRegex = /<div class="thing[^"]*"[^>]*>(.*?)<\/div>/gis;
+    const titleLinkRegex = /<a[^>]*class="[^"]*title[^"]*"[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/is;
+    
+    let match;
+    let matchCount = 0;
+    
+    while ((match = postRegex.exec(html)) !== null && posts.length < 10) {
+      matchCount++;
+      const postContent = match[1];
+      
+      const linkMatch = titleLinkRegex.exec(postContent);
+      
+      if (linkMatch) {
+        const url = linkMatch[1].startsWith('http') ? linkMatch[1] : `https://reddit.com${linkMatch[1]}`;
+        const title = stripHTMLTags(decodeHTMLEntities(linkMatch[2])).trim();
+        
+        if (title && url) {
+          posts.push({
+            title,
+            content: '',
+            url,
+            created: new Date().toISOString(),
+            subreddit
+          });
+        }
+      }
+    }
+    
+    console.log(`🕷️ HTML scrape: Found ${matchCount} posts, extracted ${posts.length} valid posts`);
     return posts;
     
   } catch (error) {
-    console.warn(`Failed to fetch RSS for r/${subreddit}:`, error instanceof Error ? error.message : String(error));
+    console.warn(`❌ HTML scraping failed:`, error instanceof Error ? error.message : String(error));
     return [];
   }
+}
+
+// PHASE 6: Content extraction helpers
+function decodeHTMLEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+}
+
+function stripHTMLTags(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Analyze posts with DeepSeek for community insights
