@@ -2700,6 +2700,63 @@ export type Database = {
           },
         ]
       }
+      topic_roundups: {
+        Row: {
+          created_at: string
+          id: string
+          is_published: boolean
+          period_end: string
+          period_start: string
+          roundup_type: string
+          slide_data: Json
+          stats: Json
+          story_ids: string[]
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          period_end: string
+          period_start: string
+          roundup_type: string
+          slide_data?: Json
+          stats?: Json
+          story_ids?: string[]
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          period_end?: string
+          period_start?: string
+          roundup_type?: string
+          slide_data?: Json
+          stats?: Json
+          story_ids?: string[]
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_roundups_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_roundups_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_sentiment_settings: {
         Row: {
           analysis_frequency_hours: number | null
