@@ -636,7 +636,6 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
         title: sharedContent.title,
         status: 'ready',
         is_published: true,
-        is_parliamentary: true,
         audience_expertise: 'general',
         tone: 'formal',
         writing_style: 'journalistic'
