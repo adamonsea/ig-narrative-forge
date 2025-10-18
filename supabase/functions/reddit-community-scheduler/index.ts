@@ -19,15 +19,35 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Check if any topics need community processing (every 24 hours)
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    // Parse request body to check for manual trigger
+    const { manual_test, force_topic_id } = await req.json().catch(() => ({}));
     
-    const { data: topics } = await supabase
-      .from('topics')
-      .select('id, name, community_config, community_intelligence_enabled')
-      .eq('community_intelligence_enabled', true)
-      .or(`community_config->last_processed.is.null,community_config->last_processed.lt.${twentyFourHoursAgo.toISOString()}`);
+    let topics;
+    
+    if (manual_test && force_topic_id) {
+      // Manual trigger for specific topic - bypass time check
+      console.log(`🔧 Manual trigger for topic: ${force_topic_id}`);
+      const { data } = await supabase
+        .from('topics')
+        .select('id, name, community_config, community_intelligence_enabled')
+        .eq('id', force_topic_id)
+        .eq('community_intelligence_enabled', true)
+        .single();
+      
+      topics = data ? [data] : [];
+    } else {
+      // Regular scheduled run - check if any topics need processing (every 24 hours)
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      
+      const { data } = await supabase
+        .from('topics')
+        .select('id, name, community_config, community_intelligence_enabled')
+        .eq('community_intelligence_enabled', true)
+        .or(`community_config->last_processed.is.null,community_config->last_processed.lt.${twentyFourHoursAgo.toISOString()}`);
+      
+      topics = data;
+    }
     
     if (!topics || topics.length === 0) {
       console.log('✅ No topics need community processing yet');

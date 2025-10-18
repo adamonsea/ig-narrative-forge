@@ -48,10 +48,13 @@ interface Topic {
   created_by: string;
   parliamentary_tracking_enabled?: boolean;
   events_enabled?: boolean;
+  community_intelligence_enabled?: boolean;
+  community_pulse_frequency?: number;
   branding_config?: {
     logo_url?: string;
     subheader?: string;
     show_topic_name?: boolean;
+    icon_url?: string;
   };
   donation_enabled?: boolean;
   donation_config?: {
