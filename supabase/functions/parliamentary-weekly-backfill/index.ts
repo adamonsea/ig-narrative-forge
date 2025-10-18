@@ -102,12 +102,15 @@ serve(async (req) => {
       .from('stories')
       .insert({
         topic_article_id: topicArticle.id,
+        shared_content_id: sharedContent.id,
         title: roundupTitle,
         author: 'UK Parliament',
         publication_name: 'Parliament Weekly Roundup',
         is_published: true,
         status: 'ready',
-        is_parliamentary: true
+        audience_expertise: 'general',
+        tone: 'formal',
+        writing_style: 'journalistic'
       })
       .select()
       .single();

@@ -824,7 +824,6 @@ async function createWeeklyRoundup(
         title: sharedContent.title,
         status: 'ready',
         is_published: true,
-        is_parliamentary: true,
         audience_expertise: 'general',
         tone: 'formal',
         writing_style: 'journalistic'
