@@ -377,6 +377,66 @@ export type Database = {
           },
         ]
       }
+      community_pulse_keywords: {
+        Row: {
+          analysis_date: string | null
+          created_at: string | null
+          id: string
+          keyword: string
+          most_active_thread_title: string | null
+          most_active_thread_url: string | null
+          negative_mentions: number | null
+          positive_mentions: number | null
+          representative_quote: string | null
+          topic_id: string
+          total_mentions: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_date?: string | null
+          created_at?: string | null
+          id?: string
+          keyword: string
+          most_active_thread_title?: string | null
+          most_active_thread_url?: string | null
+          negative_mentions?: number | null
+          positive_mentions?: number | null
+          representative_quote?: string | null
+          topic_id: string
+          total_mentions?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_date?: string | null
+          created_at?: string | null
+          id?: string
+          keyword?: string
+          most_active_thread_title?: string | null
+          most_active_thread_url?: string | null
+          negative_mentions?: number | null
+          positive_mentions?: number | null
+          representative_quote?: string | null
+          topic_id?: string
+          total_mentions?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_pulse_keywords_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_pulse_keywords_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_generation_queue: {
         Row: {
           ai_provider: string | null

@@ -17,6 +17,8 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
+import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
+import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
@@ -107,6 +109,9 @@ const TopicDashboard = () => {
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const [refreshingInsights, setRefreshingInsights] = useState(false);
   const { toast } = useToast();
+
+  // Community pulse keywords hook
+  const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
 
   // Set up parliamentary automation when enabled
   useParliamentaryAutomation({
@@ -1164,6 +1169,18 @@ const TopicDashboard = () => {
                             <li>Configure subreddits in Topic Settings → Community Intelligence</li>
                           </ul>
                         </div>
+
+                        {/* Community Pulse Slides */}
+                        {pulseData.keywords.length > 0 && (
+                          <div className="mt-6">
+                            <CommunityPulseSlides 
+                              keywords={pulseData.keywords}
+                              timeframe="48h"
+                              mostActiveThreadUrl={pulseData.mostActiveThread?.url}
+                              mostActiveThreadTitle={pulseData.mostActiveThread?.title}
+                            />
+                          </div>
+                        )}
                       </AccordionContent>
                     </AccordionItem>
                   )}

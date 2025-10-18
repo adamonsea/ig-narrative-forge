@@ -111,7 +111,7 @@ serve(async (req) => {
               
               // Analyze with DeepSeek (if available)
               if (deepseekApiKey) {
-                const insights = await analyzeWithDeepSeek(posts, topic);
+                const insights = await analyzeWithDeepSeek(posts, topic, supabase);
                 
                 // Store insights in database
                 if (insights.length > 0) {
@@ -467,8 +467,8 @@ function stripHTMLTags(text: string): string {
     .trim();
 }
 
-// Analyze posts with DeepSeek for community insights
-async function analyzeWithDeepSeek(posts: RedditPost[], topic: any): Promise<CommunityInsight[]> {
+// Analyze posts with DeepSeek for community insights and keyword extraction
+async function analyzeWithDeepSeek(posts: RedditPost[], topic: any, supabase: any): Promise<CommunityInsight[]> {
   if (!deepseekApiKey || posts.length === 0) {
     return [];
   }
@@ -476,7 +476,39 @@ async function analyzeWithDeepSeek(posts: RedditPost[], topic: any): Promise<Com
   try {
     const postsText = posts.map(p => `${p.title}: ${p.content}`).join('\n\n');
     
-    const prompt = `Analyze these Reddit discussions for community insights about ${topic.name}:
+    // First prompt: Extract keyword pulse data
+    const keywordPrompt = `Analyze these Reddit discussions for ${topic.name} and extract the top 3 keywords being discussed.
+
+${postsText}
+
+For EACH keyword provide:
+1. The keyword/topic name (single word or 2-word phrase)
+2. Total mention count
+3. Number of positive mentions
+4. Number of negative mentions
+5. A representative 3-10 word quote from the discussions
+
+Also identify the most active Reddit thread (URL and title).
+
+Return JSON:
+{
+  "keywords": [
+    {
+      "keyword": "parking",
+      "total_mentions": 23,
+      "positive_mentions": 15,
+      "negative_mentions": 8,
+      "quote": "new parking zones work well"
+    }
+  ],
+  "most_active_thread": {
+    "title": "Discussion about parking changes",
+    "url": "https://reddit.com/r/eastbourne/..."
+  }
+}`;
+    
+    // Second prompt: Generate insights
+    const insightsPrompt = `Analyze these Reddit discussions for community insights about ${topic.name}:
 
 ${postsText}
 
@@ -493,21 +525,72 @@ Provide 2-3 brief insights in JSON format:
 
 Focus on: local sentiment, emerging concerns, and validation of news stories. Keep language simple and clear.`;
 
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${deepseekApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 500,
-        temperature: 0.3
+    // Call both analyses
+    const [keywordResponse, insightsResponse] = await Promise.all([
+      fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${deepseekApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: keywordPrompt }],
+          max_tokens: 700,
+          temperature: 0.3
+        })
+      }),
+      fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${deepseekApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: insightsPrompt }],
+          max_tokens: 500,
+          temperature: 0.3
+        })
       })
-    });
+    ]);
+
+    // Process keyword data
+    if (keywordResponse.ok) {
+      const keywordData = await keywordResponse.json();
+      const keywordContent = keywordData.choices?.[0]?.message?.content;
+      
+      if (keywordContent) {
+        try {
+          const cleanContent = keywordContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+          const parsed = JSON.parse(cleanContent);
+          
+          // Store keyword data in new table
+          if (parsed.keywords && Array.isArray(parsed.keywords)) {
+            for (const kw of parsed.keywords.slice(0, 3)) {
+              await supabase
+                .from('community_pulse_keywords')
+                .insert({
+                  topic_id: topic.id,
+                  keyword: kw.keyword,
+                  total_mentions: kw.total_mentions || 0,
+                  positive_mentions: kw.positive_mentions || 0,
+                  negative_mentions: kw.negative_mentions || 0,
+                  representative_quote: kw.quote,
+                  most_active_thread_url: parsed.most_active_thread?.url,
+                  most_active_thread_title: parsed.most_active_thread?.title,
+                  analysis_date: new Date().toISOString().split('T')[0]
+                });
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse keyword data:', e);
+        }
+      }
+    }
+
+    // Process insights (existing logic)
+    const response = insightsResponse;
 
     if (!response.ok) {
       console.warn('DeepSeek API error:', response.status);
