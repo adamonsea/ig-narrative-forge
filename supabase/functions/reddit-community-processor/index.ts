@@ -513,14 +513,14 @@ ${feedContext}
 
 ${postsText}
 
-Extract the top 3 keywords being discussed. PRIORITIZE keywords that:
+Extract the top 9 keywords being discussed. PRIORITIZE keywords that:
 1. Relate to the published content keywords above (validates your coverage)
 2. Have high discussion volume on Reddit
 3. Show clear sentiment patterns
 
 If Reddit keywords align with published content, prioritize those. Otherwise, extract the most discussed topics.
 
-For EACH of the 3 keywords provide:
+For EACH of the 9 keywords provide:
 - keyword: the topic/keyword name (2-3 words max)
 - total_mentions: count of how many times discussed
 - positive_mentions: count with positive sentiment
@@ -531,7 +531,7 @@ Also identify the most active Reddit thread:
 - title: thread title
 - url: full Reddit URL
 
-Return JSON only:
+Return JSON only with exactly 9 keywords:
 {
   "keywords": [
     {
@@ -606,9 +606,15 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
           const cleanContent = keywordContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
           const parsed = JSON.parse(cleanContent);
           
-          // Store keyword data in new table
+          // Store keyword data in new table - 9 keywords split into 3 sets
           if (parsed.keywords && Array.isArray(parsed.keywords)) {
-            for (const kw of parsed.keywords.slice(0, 3)) {
+            const keywordsToStore = parsed.keywords.slice(0, 9);
+            
+            for (let i = 0; i < keywordsToStore.length; i++) {
+              const kw = keywordsToStore[i];
+              // Assign set_number: 1-3 for first 3, 4-6 for second 3, 7-9 for third 3
+              const setNumber = Math.floor(i / 3) + 1;
+              
               await supabase
                 .from('community_pulse_keywords')
                 .insert({
@@ -620,6 +626,7 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
                   representative_quote: kw.quote,
                   most_active_thread_url: parsed.most_active_thread?.url,
                   most_active_thread_title: parsed.most_active_thread?.title,
+                  set_number: setNumber,
                   analysis_date: new Date().toISOString().split('T')[0]
                 });
             }

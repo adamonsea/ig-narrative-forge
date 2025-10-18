@@ -10,6 +10,7 @@ export interface PulseKeyword {
   quote: string;
   threadUrl?: string;
   threadTitle?: string;
+  setNumber: number;
 }
 
 export interface CommunityPulseData {
@@ -21,7 +22,7 @@ export interface CommunityPulseData {
   lastUpdated?: string;
 }
 
-export function useCommunityPulseKeywords(topicId: string) {
+export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1) {
   const [data, setData] = useState<CommunityPulseData>({ keywords: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -37,6 +38,7 @@ export function useCommunityPulseKeywords(topicId: string) {
           .from('community_pulse_keywords')
           .select('*')
           .eq('topic_id', topicId)
+          .eq('set_number', setNumber)
           .order('created_at', { ascending: false })
           .limit(3);
 
@@ -53,7 +55,8 @@ export function useCommunityPulseKeywords(topicId: string) {
             negativeMentions: kw.negative_mentions || 0,
             quote: kw.representative_quote || '',
             threadUrl: kw.most_active_thread_url,
-            threadTitle: kw.most_active_thread_title
+            threadTitle: kw.most_active_thread_title,
+            setNumber: kw.set_number || 1
           }));
 
           setData({
@@ -100,7 +103,7 @@ export function useCommunityPulseKeywords(topicId: string) {
       mounted = false;
       channel.unsubscribe();
     };
-  }, [topicId]);
+  }, [topicId, setNumber]);
 
   return { data, loading, error };
 }
