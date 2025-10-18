@@ -17,6 +17,7 @@ interface NotificationPreferencesModalProps {
   onClose: () => void;
   topicName: string;
   topicId: string;
+  isFirstTimePrompt?: boolean; // Flag to show special messaging for new users
 }
 
 type NotificationType = 'instant' | 'daily' | 'weekly';
@@ -25,7 +26,8 @@ export const NotificationPreferencesModal = ({
   isOpen, 
   onClose, 
   topicName, 
-  topicId 
+  topicId,
+  isFirstTimePrompt = false
 }: NotificationPreferencesModalProps) => {
   const { toast } = useToast();
   const { isSupported, subscribeToPush, unsubscribe } = usePushSubscription(topicId);
@@ -84,15 +86,15 @@ export const NotificationPreferencesModal = ({
     {
       type: 'daily' as NotificationType,
       icon: Calendar,
-      title: 'Daily Summary',
-      description: 'One notification per day at 6 PM',
+      title: 'Daily Roundup',
+      description: 'One notification per day at 8 PM',
       color: 'text-blue-500'
     },
     {
       type: 'weekly' as NotificationType,
       icon: Mail,
-      title: 'Weekly Roundup',
-      description: 'Fridays at 10 AM with highlights',
+      title: 'Weekly Summary',
+      description: 'Sunday mornings at 9 AM',
       color: 'text-purple-500'
     }
   ];
@@ -121,10 +123,13 @@ export const NotificationPreferencesModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-primary" />
-            Get Notified
+            {isFirstTimePrompt ? "Stay in the loop?" : "Get Notified"}
           </DialogTitle>
           <DialogDescription>
-            Choose how often you want updates for <strong>{topicName}</strong>
+            {isFirstTimePrompt 
+              ? `You've been reading ${topicName} stories. Want to stay updated with new content?`
+              : `Choose how often you want updates for ${topicName}`
+            }
           </DialogDescription>
         </DialogHeader>
 

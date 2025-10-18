@@ -38,6 +38,9 @@ const TopicFeed = () => {
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [storiesViewed, setStoriesViewed] = useState(0);
+  const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
+  const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
@@ -85,6 +88,55 @@ const TopicFeed = () => {
 
   // Track visitor for analytics
   useVisitorTracking(topic?.id);
+
+  // Check if user already has notifications enabled for this topic
+  useEffect(() => {
+    if (!topic?.id || hasCheckedNotificationStatus) return;
+    
+    const checkNotificationStatus = async () => {
+      // Check localStorage first to see if they've been prompted this session
+      const promptKey = `notification_prompt_shown_${topic.id}`;
+      const hasBeenPrompted = localStorage.getItem(promptKey);
+      
+      if (hasBeenPrompted) {
+        setHasCheckedNotificationStatus(true);
+        return;
+      }
+
+      // Check if they have any active subscriptions
+      const { data: subscriptions } = await supabase
+        .from('topic_newsletter_signups')
+        .select('id')
+        .eq('topic_id', topic.id)
+        .eq('is_active', true)
+        .limit(1);
+
+      // If no subscriptions, mark them as eligible for prompt
+      if (!subscriptions || subscriptions.length === 0) {
+        setShouldShowNotificationPrompt(true);
+      }
+      
+      setHasCheckedNotificationStatus(true);
+    };
+
+    checkNotificationStatus();
+  }, [topic?.id, hasCheckedNotificationStatus]);
+
+  // Track story views and show notification modal after 2 stories
+  const handleStoryView = useCallback(() => {
+    if (!shouldShowNotificationPrompt || !topic?.id) return;
+
+    const newCount = storiesViewed + 1;
+    setStoriesViewed(newCount);
+
+    // Show modal after viewing 2+ stories
+    if (newCount >= 2) {
+      setShowNotificationModal(true);
+      // Mark as prompted so we don't show again this session
+      localStorage.setItem(`notification_prompt_shown_${topic.id}`, 'true');
+      setShouldShowNotificationPrompt(false);
+    }
+  }, [storiesViewed, shouldShowNotificationPrompt, topic?.id]);
 
   // Update favicon and manifest dynamically based on topic branding
   useEffect(() => {
@@ -661,6 +713,7 @@ const TopicFeed = () => {
                       storyUrl={storyShareUrl}
                       topicId={topic?.id}
                       storyIndex={index}
+                      onStoryView={handleStoryView}
                     />
                   </div>
                 );
@@ -774,6 +827,7 @@ const TopicFeed = () => {
         onClose={() => setShowNotificationModal(false)}
         topicName={topic?.name || ''}
         topicId={topic?.id || ''}
+        isFirstTimePrompt={shouldShowNotificationPrompt}
       />
     </div>
   );
