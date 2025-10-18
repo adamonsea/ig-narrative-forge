@@ -520,7 +520,7 @@ CRITICAL REGIONAL FILTERING:
 - Keywords MUST relate to: local issues, local places, local services, local events, or regional concerns
 - Reject keywords like: "Prince Andrew", "chocolate biscuits", "living standards" unless they specifically mention ${regionName}
 
-Extract the top 9 keywords being discussed. PRIORITIZE keywords that:
+Extract the top 3 keywords being discussed. PRIORITIZE keywords that:
 1. Are SPECIFICALLY about ${regionName} (local places, issues, events)
 2. Relate to the published content keywords above (validates your coverage)
 3. Have high discussion volume on Reddit about ${regionName}
@@ -528,7 +528,7 @@ Extract the top 9 keywords being discussed. PRIORITIZE keywords that:
 
 If Reddit keywords align with published content AND are locally relevant, prioritize those. Otherwise, extract the most discussed LOCAL topics.
 
-For EACH of the 9 keywords provide:
+For EACH of the 3 keywords provide:
 - keyword: the topic/keyword name (2-3 words max, MUST be locally relevant)
 - total_mentions: count of how many times discussed in relation to ${regionName}
 - positive_mentions: count with positive sentiment
@@ -539,7 +539,7 @@ Also identify the most active Reddit thread ABOUT ${regionName}:
 - title: thread title (must be about ${regionName})
 - url: full Reddit URL
 
-Return JSON only with exactly 9 locally-relevant keywords:
+Return JSON only with exactly 3 locally-relevant keywords:
 {
   "keywords": [
     {
@@ -616,12 +616,12 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
           
           // Store keyword data in new table - 9 keywords split into 3 sets
           if (parsed.keywords && Array.isArray(parsed.keywords)) {
-            const keywordsToStore = parsed.keywords.slice(0, 9);
+            const keywordsToStore = parsed.keywords.slice(0, 3); // Only take first 3
             
             for (let i = 0; i < keywordsToStore.length; i++) {
               const kw = keywordsToStore[i];
-              // Assign set_number: 1-3 for first 3, 4-6 for second 3, 7-9 for third 3
-              const setNumber = Math.floor(i / 3) + 1;
+              // All keywords go to set_number 1 (only one set of 3)
+              const setNumber = 1;
               
               await supabase
                 .from('community_pulse_keywords')
@@ -635,6 +635,8 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
                   most_active_thread_url: parsed.most_active_thread?.url,
                   most_active_thread_title: parsed.most_active_thread?.title,
                   set_number: setNumber,
+                  subreddit: subreddit, // Store subreddit name for linking
+                  is_visible: true,
                   analysis_date: new Date().toISOString().split('T')[0]
                 });
             }
