@@ -3475,6 +3475,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      cleanup_parliamentary_stories_for_topic: {
+        Args: { p_topic_id: string }
+        Returns: Json
+      }
       cleanup_stuck_scrape_jobs: {
         Args: Record<PropertyKey, never>
         Returns: number
