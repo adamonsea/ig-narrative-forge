@@ -476,29 +476,70 @@ async function analyzeWithDeepSeek(posts: RedditPost[], topic: any, supabase: an
   try {
     const postsText = posts.map(p => `${p.title}: ${p.content}`).join('\n\n');
     
-    // First prompt: Extract keyword pulse data
-    const keywordPrompt = `Analyze these Reddit discussions for ${topic.name} and extract the top 3 keywords being discussed.
+    // Fetch recent published stories to cross-reference keywords
+    const { data: recentStories } = await supabase
+      .from('stories')
+      .select(`
+        id,
+        title,
+        slides(content)
+      `)
+      .eq('is_published', true)
+      .or(`article_id.in.(select id from articles where topic_id=${topic.id}),topic_article_id.in.(select id from topic_articles where topic_id=${topic.id})`)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    // Extract keywords from published content
+    const feedKeywords = recentStories
+      ?.flatMap((story: any) => [
+        story.title,
+        ...(story.slides?.map((s: any) => s.content) || [])
+      ])
+      .join(' ')
+      .toLowerCase()
+      .split(/\W+/)
+      .filter((word: string) => word.length > 4)
+      .slice(0, 50) // Top 50 words from feed
+      || [];
+    
+    const feedContext = feedKeywords.length > 0 
+      ? `CONTEXT: Recent published content contains these keywords: ${feedKeywords.slice(0, 20).join(', ')}`
+      : '';
+    
+    // First prompt: Extract keyword pulse data with feed context
+    const keywordPrompt = `Analyze these Reddit discussions for ${topic.name}.
+
+${feedContext}
 
 ${postsText}
 
-For EACH keyword provide:
-1. The keyword/topic name (single word or 2-word phrase)
-2. Total mention count
-3. Number of positive mentions
-4. Number of negative mentions
-5. A representative 3-10 word quote from the discussions
+Extract the top 3 keywords being discussed. PRIORITIZE keywords that:
+1. Relate to the published content keywords above (validates your coverage)
+2. Have high discussion volume on Reddit
+3. Show clear sentiment patterns
 
-Also identify the most active Reddit thread (URL and title).
+If Reddit keywords align with published content, prioritize those. Otherwise, extract the most discussed topics.
 
-Return JSON:
+For EACH of the 3 keywords provide:
+- keyword: the topic/keyword name (2-3 words max)
+- total_mentions: count of how many times discussed
+- positive_mentions: count with positive sentiment
+- negative_mentions: count with negative sentiment
+- quote: a representative 3-10 word quote from discussions
+
+Also identify the most active Reddit thread:
+- title: thread title
+- url: full Reddit URL
+
+Return JSON only:
 {
   "keywords": [
     {
-      "keyword": "parking",
+      "keyword": "parking zones",
       "total_mentions": 23,
       "positive_mentions": 15,
       "negative_mentions": 8,
-      "quote": "new parking zones work well"
+      "quote": "new zones work well"
     }
   ],
   "most_active_thread": {

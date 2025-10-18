@@ -1103,82 +1103,50 @@ const TopicDashboard = () => {
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="px-4 pb-4 space-y-4">
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">Last Processed</p>
-                              <p className="font-medium">
-                                {topic.community_config?.last_processed 
-                                  ? new Date(topic.community_config.last_processed).toLocaleString()
-                                  : 'Never'}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Frequency</p>
-                              <p className="font-medium">
-                                Every {topic.community_config?.processing_frequency_hours || 24} hours
-                              </p>
-                            </div>
+                        {/* Subreddit badges */}
+                        {topic.community_config?.subreddits && topic.community_config.subreddits.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {topic.community_config.subreddits.map((subreddit: string) => (
+                              <Badge key={subreddit} variant="outline">
+                                r/{subreddit}
+                              </Badge>
+                            ))}
                           </div>
-                          
-                          {topic.community_config?.subreddits && topic.community_config.subreddits.length > 0 && (
-                            <div>
-                              <p className="text-sm text-muted-foreground mb-2">Monitored Subreddits</p>
-                              <div className="flex flex-wrap gap-2">
-                                {topic.community_config.subreddits.map((subreddit: string) => (
-                                  <Badge key={subreddit} variant="outline">
-                                    r/{subreddit}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
+                        )}
+
+                        {/* Refresh button */}
+                        <Button 
+                          onClick={handleRefreshCommunityInsights}
+                          disabled={refreshingInsights}
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                        >
+                          {refreshingInsights ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing Reddit...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Refresh Community Pulse
+                            </>
                           )}
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">Manual Refresh</p>
-                            <p className="text-xs text-muted-foreground">
-                              Trigger immediate Reddit analysis
-                            </p>
-                          </div>
-                          <Button 
-                            onClick={handleRefreshCommunityInsights}
-                            disabled={refreshingInsights}
-                            size="sm"
-                          >
-                            {refreshingInsights ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Analyzing...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                Refresh Now
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        <div className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-md">
-                          <p className="mb-1"><strong>How it works:</strong></p>
-                          <ul className="list-disc list-inside space-y-1">
-                            <li>Daily cron job analyzes relevant subreddits automatically</li>
-                            <li>Insights appear every {topic.community_pulse_frequency || 8} stories in your feed</li>
-                            <li>Configure subreddits in Topic Settings → Community Intelligence</li>
-                          </ul>
-                        </div>
+                        </Button>
 
                         {/* Community Pulse Slides */}
-                        {pulseData.keywords.length > 0 && (
-                          <div className="mt-6">
-                            <CommunityPulseSlides 
-                              keywords={pulseData.keywords}
-                              timeframe="48h"
-                              mostActiveThreadUrl={pulseData.mostActiveThread?.url}
-                              mostActiveThreadTitle={pulseData.mostActiveThread?.title}
-                            />
+                        {pulseData.keywords.length > 0 ? (
+                          <CommunityPulseSlides 
+                            keywords={pulseData.keywords}
+                            timeframe="48h"
+                            mostActiveThreadUrl={pulseData.mostActiveThread?.url}
+                            mostActiveThreadTitle={pulseData.mostActiveThread?.title}
+                          />
+                        ) : (
+                          <div className="text-center py-8 text-sm text-muted-foreground">
+                            <p>No community pulse data yet.</p>
+                            <p className="mt-1">Click "Refresh" to analyze Reddit discussions.</p>
                           </div>
                         )}
                       </AccordionContent>

@@ -15,7 +15,6 @@ import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 import StoryPage from "./pages/StoryPage";
-import DevCommunityPulse from "./pages/DevCommunityPulse";
 import DailyRoundup from "./pages/DailyRoundup";
 import WeeklyRoundup from "./pages/WeeklyRoundup";
 
@@ -69,10 +68,6 @@ const App = () => {
                 <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
                 <Route path="/feed/:slug/daily/:date" element={<DailyRoundup />} />
                 <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundup />} />
-
-                {import.meta.env.DEV && (
-                  <Route path="/dev/community-pulse" element={<DevCommunityPulse />} />
-                )}
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

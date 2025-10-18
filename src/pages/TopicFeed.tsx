@@ -24,9 +24,8 @@ import { useStoryNotifications } from "@/hooks/useStoryNotifications";
 import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
-import { CommunityPulseCard } from "@/components/CommunityPulseCard";
-import { useCommunityInsights } from "@/hooks/useCommunityInsights";
-import type { CommunityInsight } from "@/hooks/useCommunityInsights";
+import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
+import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -252,10 +251,10 @@ const TopicFeed = () => {
   }, [topic?.id, slug]);
 
   const { sentimentCards } = useSentimentCards(topic?.id);
-  const { insights: communityInsights, lastUpdated: communityLastUpdated, error: communityError } = useCommunityInsights(topic?.id);
+  const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
   
-  // Show community pulse card only if topic has community intelligence enabled and has insights
-  const shouldShowCommunityPulse = topic?.community_intelligence_enabled && communityInsights.length > 0;
+  // Show community pulse slides only if topic has community intelligence enabled and has keywords
+  const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
@@ -678,13 +677,14 @@ const TopicFeed = () => {
               // Add community pulse card based on topic setting
               const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
               const pulseFrequency = topic?.community_pulse_frequency || 8;
-              if ((storyIndex - 2) % pulseFrequency === 0 && storyIndex > 2 && shouldShowCommunityPulse && topic) {
+              if ((storyIndex - 2) % pulseFrequency === 0 && storyIndex > 2 && shouldShowCommunityPulse && topic && pulseData) {
                 items.push(
                   <div key={`community-pulse-${index}`} className="w-full flex justify-center">
-                    <CommunityPulseCard
-                      topicName={topic.name}
-                      insights={communityInsights}
-                      lastUpdated={communityLastUpdated}
+                    <CommunityPulseSlides
+                      keywords={pulseData.keywords}
+                      timeframe="48h"
+                      mostActiveThreadUrl={pulseData.mostActiveThread?.url}
+                      mostActiveThreadTitle={pulseData.mostActiveThread?.title}
                     />
                   </div>
                 );
