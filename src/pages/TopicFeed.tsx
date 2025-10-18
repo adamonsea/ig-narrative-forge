@@ -38,9 +38,10 @@ const TopicFeed = () => {
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [storiesViewed, setStoriesViewed] = useState(0);
+  const [storiesWithSwipes, setStoriesWithSwipes] = useState<Set<string>>(new Set());
   const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
   const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
+  const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
@@ -122,21 +123,31 @@ const TopicFeed = () => {
     checkNotificationStatus();
   }, [topic?.id, hasCheckedNotificationStatus]);
 
-  // Track story views and show notification modal after 2 stories
-  const handleStoryView = useCallback(() => {
+  // Track story swipes - only count stories where user has swiped at least once
+  const handleStorySwipe = useCallback((storyId: string) => {
     if (!shouldShowNotificationPrompt || !topic?.id) return;
 
-    const newCount = storiesViewed + 1;
-    setStoriesViewed(newCount);
+    setStoriesWithSwipes(prev => {
+      const newSet = new Set(prev);
+      newSet.add(storyId);
+      return newSet;
+    });
+  }, [shouldShowNotificationPrompt, topic?.id]);
 
-    // Show modal after viewing 2+ stories
-    if (newCount >= 2) {
+  // Track when user scrolls past stories they've engaged with
+  const handleStoryScrolledPast = useCallback(() => {
+    if (!shouldShowNotificationPrompt || !topic?.id) return;
+    if (storiesWithSwipes.size < 2) return;
+    
+    // User has swiped on 2+ stories and is now scrolling past them
+    if (!scrollPastStoriesWithSwipes) {
+      setScrollPastStoriesWithSwipes(true);
       setShowNotificationModal(true);
       // Mark as prompted so we don't show again this session
       localStorage.setItem(`notification_prompt_shown_${topic.id}`, 'true');
       setShouldShowNotificationPrompt(false);
     }
-  }, [storiesViewed, shouldShowNotificationPrompt, topic?.id]);
+  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id]);
 
   // Update favicon and manifest dynamically based on topic branding
   useEffect(() => {
@@ -704,7 +715,7 @@ const TopicFeed = () => {
                 const storyShareUrl = `${window.location.origin}/feed/${slug}/story/${story.id}`;
                 
                 items.push(
-                  <div
+                <div
                     key={`story-${story.id}`}
                     ref={index === filteredContent.length - 1 ? lastStoryElementRef : null}
                   >
@@ -713,7 +724,8 @@ const TopicFeed = () => {
                       storyUrl={storyShareUrl}
                       topicId={topic?.id}
                       storyIndex={index}
-                      onStoryView={handleStoryView}
+                      onStorySwipe={handleStorySwipe}
+                      onStoryScrolledPast={handleStoryScrolledPast}
                     />
                   </div>
                 );

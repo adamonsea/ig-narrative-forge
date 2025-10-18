@@ -51,15 +51,16 @@ interface StoryCarouselProps {
   storyUrl?: string;
   topicId?: string; // Add topicId for tracking
   storyIndex?: number; // Add story index for "New" flag logic
-  onStoryView?: () => void; // Callback when user views/swipes a story
+  onStorySwipe?: (storyId: string) => void; // Callback when user swipes on a story
+  onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
 }
 
-export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, onStoryView }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, onStorySwipe, onStoryScrolledPast }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const { trackShareClick } = useStoryInteractionTracking();
-  const [hasTrackedView, setHasTrackedView] = useState(false);
+  const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
@@ -93,10 +94,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const nextSlide = () => {
     if (!isLastSlide && validSlides.length > 0) {
       setCurrentSlideIndex(Math.min(currentSlideIndex + 1, validSlides.length - 1));
-      // Track view when user swipes to next slide on first story view
-      if (!hasTrackedView && onStoryView) {
-        setHasTrackedView(true);
-        onStoryView();
+      // Track swipe when user swipes to next slide
+      if (!hasTrackedSwipe && onStorySwipe) {
+        setHasTrackedSwipe(true);
+        onStorySwipe(story.id);
       }
     }
   };
@@ -110,10 +111,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const goToSlide = (index: number) => {
     if (validSlides.length > 0) {
       setCurrentSlideIndex(Math.max(0, Math.min(index, validSlides.length - 1)));
-      // Track view on any slide navigation
-      if (!hasTrackedView && onStoryView && index > 0) {
-        setHasTrackedView(true);
-        onStoryView();
+      // Track swipe on any slide navigation
+      if (!hasTrackedSwipe && onStorySwipe && index > 0) {
+        setHasTrackedSwipe(true);
+        onStorySwipe(story.id);
       }
     }
   };
@@ -214,9 +215,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     return () => observer.disconnect();
   }, [story.id]);
 
-  // Track when story comes into view (for scrolling users)
+  // Track when story scrolls out of view after being interacted with
   useEffect(() => {
-    if (hasTrackedView || !onStoryView) return;
+    if (!hasTrackedSwipe || !onStoryScrolledPast) return;
 
     const element = document.querySelector(`[data-story-card][data-story-id="${story.id}"]`);
     if (!element) return;
@@ -224,20 +225,20 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          // Track when story is 50% visible
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            setHasTrackedView(true);
-            onStoryView();
+          // When story exits viewport (scrolled past)
+          if (!entry.isIntersecting && entry.boundingClientRect.top < 0) {
+            onStoryScrolledPast();
+            observer.disconnect(); // Only trigger once
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0 }
     );
 
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [story.id, hasTrackedView, onStoryView]);
+  }, [story.id, hasTrackedSwipe, onStoryScrolledPast]);
 
   // Remove auto-fit scaling logic
 
