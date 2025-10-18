@@ -75,6 +75,10 @@ serve(async (req) => {
       .eq('story_id', storyId)
       .order('slide_number', { ascending: true })
 
+    if (slidesError) {
+      console.error('Error fetching slides:', slidesError)
+    }
+
     const slideContent = slides?.map(s => s.content).join('\n\n') || ''
     console.log('Fetched slide content for cover generation:', slideContent ? `${slideContent.length} chars` : 'No slides found')
 
