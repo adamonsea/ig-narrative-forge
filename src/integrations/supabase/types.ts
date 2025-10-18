@@ -3451,6 +3451,10 @@ export type Database = {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
       }
+      cleanup_diane_abbott_stories_eastbourne: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_duplicate_articles: {
         Args: Record<PropertyKey, never>
         Returns: Json
