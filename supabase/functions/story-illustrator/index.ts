@@ -68,6 +68,16 @@ serve(async (req) => {
       )
     }
 
+    // Fetch all slides for the story to analyze full narrative
+    const { data: slides, error: slidesError } = await supabase
+      .from('slides')
+      .select('content, slide_number')
+      .eq('story_id', storyId)
+      .order('slide_number', { ascending: true })
+
+    const slideContent = slides?.map(s => s.content).join('\n\n') || ''
+    console.log('Fetched slide content for cover generation:', slideContent ? `${slideContent.length} chars` : 'No slides found')
+
     // Allow regeneration - don't check if illustration already exists
     // This enables the regenerate functionality
 
@@ -141,11 +151,14 @@ serve(async (req) => {
     }
 
     // First, analyze the story tone to determine appropriate visual mood
-    const toneAnalysisPrompt = `Analyze this headline and determine the appropriate emotional tone for an editorial cartoon:
+    const toneAnalysisPrompt = `Analyze this news story and determine the appropriate emotional tone for an editorial cartoon:
 
-"${story.title}"
+HEADLINE: "${story.title}"
 
-Respond with ONE word only from: serious, lighthearted, playful, contentious, somber`;
+STORY NARRATIVE:
+${slideContent || 'No additional context available'}
+
+Based on both the headline and the full narrative, respond with ONE word only from: serious, lighthearted, playful, contentious, somber`;
 
     let storyTone = 'balanced'; // fallback
     
@@ -191,16 +204,20 @@ Respond with ONE word only from: serious, lighthearted, playful, contentious, so
     const expressionInstruction = toneGuidance[storyTone] || toneGuidance['balanced'];
 
     // Second, analyze the story subject matter to extract key visual elements
-    const subjectAnalysisPrompt = `Analyze this news headline and extract key visual elements for an editorial illustration:
+    const subjectAnalysisPrompt = `Analyze this news story and extract key visual elements for an editorial illustration:
 
-"${story.title}"
+HEADLINE: "${story.title}"
 
-Identify and list in 3-4 concise sentences:
-1. Primary subject matter (e.g., food/dining, construction, sports, politics, culture)
-2. Specific visual elements that make this story unique (objects, activities, settings)
-3. Setting details and atmosphere (indoor/outdoor, time, location characteristics)
+FULL STORY NARRATIVE:
+${slideContent || 'No additional context available'}
 
-Focus on concrete visual details that would make an illustration immediately recognizable as THIS specific story.`;
+Based on the complete story (not just the headline), identify and list in 3-4 concise sentences:
+1. Primary subject matter and specific angle taken in the narrative
+2. Unique visual elements emphasized in the story (objects, activities, settings, people)
+3. Setting details, atmosphere, and regional context
+4. Any specific details or moments that make THIS story distinctive
+
+Focus on concrete visual details from the FULL narrative that would make an illustration immediately recognizable as THIS specific story with THIS particular angle.`;
 
     let subjectMatter = 'contemporary scene related to the story'; // fallback
     
@@ -237,10 +254,11 @@ Focus on concrete visual details that would make an illustration immediately rec
     // Generate optimized illustration prompt with subject-first structure
     const illustrationPrompt = `Create a contemporary editorial cartoon illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
-SUBJECT MATTER - PRIMARY FOCUS:
+SUBJECT MATTER - PRIMARY FOCUS (analyzed from full story):
 ${subjectMatter}
 
-Story headline for context: "${story.title}"
+Story headline: "${story.title}"
+(Note: This illustration is based on analysis of the complete story narrative, not just the headline)
 
 VISUAL CONCEPT:
 Illustrate the core subject identified above. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings) rather than generic representations. Focus on the unique aspects that distinguish this story.
