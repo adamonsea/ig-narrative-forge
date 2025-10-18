@@ -429,7 +429,7 @@ const TopicFeed = () => {
 
       {/* White banner header */}
       <div className="bg-background border-b border-border">
-        <div className="container mx-auto px-1 md:px-4 py-12">
+        <div className="container mx-auto px-1 md:px-4 py-16">
           {/* Top left: Avatar (if logged in) and Live pill (if active) */}
           <div className="absolute left-4 top-4 flex items-center gap-2">
             {user && (
@@ -451,15 +451,15 @@ const TopicFeed = () => {
           </div>
 
           {/* Topic Header - Clean and minimal with branding support */}
-          <div className="text-center">
-            <div className="relative flex items-center justify-center mb-4">
+          <div className="text-center space-y-4">
+            <div className="relative flex items-center justify-center mb-6">
               {/* Centered logo or title */}
               {topic.branding_config?.logo_url ? (
                 <div className="flex justify-center">
                   <img
                     src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
                     alt={`${topic.name} logo`}
-                    className="h-12 sm:h-16 max-w-[280px] sm:max-w-xs object-contain"
+                    className="h-16 sm:h-24 max-w-sm sm:max-w-lg object-contain"
                   />
                 </div>
               ) : (
@@ -485,8 +485,18 @@ const TopicFeed = () => {
               )}
             </div>
 
-            {/* Mobile filter button - centered below logo */}
-            <div className="sm:hidden flex justify-center mb-4">
+            {topic.branding_config?.subheader ? (
+              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4 mb-6">
+                {topic.branding_config.subheader}
+              </p>
+            ) : topic.description ? (
+              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4 mb-6">
+                {topic.description}
+              </p>
+            ) : null}
+
+            {/* Filter button - below subheader, centered */}
+            <div className="flex justify-center pt-2">
               <TooltipProvider>
                 <Tooltip open={showFilterTip}>
                   <TooltipTrigger asChild>
@@ -496,7 +506,7 @@ const TopicFeed = () => {
                       aria-label="Open filters"
                     >
                       <Filter className="w-4 h-4" />
-                      <span className="text-sm font-medium">Filter</span>
+                      <span className="text-sm font-medium">Filters</span>
                       {hasActiveFilters && (
                         <span className="w-2 h-2 bg-primary rounded-full" />
                       )}
@@ -508,38 +518,11 @@ const TopicFeed = () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            {topic.branding_config?.subheader ? (
-              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
-                {topic.branding_config.subheader}
-              </p>
-            ) : topic.description ? (
-              <p className="text-muted-foreground max-w-2xl mx-auto text-center px-1 md:px-4">
-                {topic.description}
-              </p>
-            ) : null}
           </div>
         </div>
       </div>
 
       <div className={`container mx-auto px-1 md:px-4 py-8 ${isScrolled ? 'pt-16' : ''}`}>
-
-        {/* Filters - Hidden on mobile when filter button is in header */}
-        <div className="mb-8 hidden sm:block">
-          <FeedFilters 
-            slideCount={filteredStories.reduce((total, story) => total + story.slides.length, 0)}
-            monthlyCount={monthlyCount ?? undefined}
-            topicName={topic.name}
-            filteredStoryCount={filteredStories.length}
-            onFilterClick={() => setIsModalOpen(true)}
-            selectedKeywords={selectedKeywords}
-            onRemoveKeyword={removeKeyword}
-            selectedLocations={selectedLandmarks}
-            onRemoveLocation={removeLandmark}
-            selectedSources={selectedSources}
-            onRemoveSource={removeSource}
-            hasActiveFilters={hasActiveFilters}
-          />
-        </div>
 
         {/* Mobile-only selected filters display */}
         {(selectedKeywords.length > 0 || selectedSources.length > 0) && (
