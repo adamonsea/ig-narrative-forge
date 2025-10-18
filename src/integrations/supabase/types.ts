@@ -390,6 +390,7 @@ export type Database = {
           positive_mentions: number | null
           representative_quote: string | null
           set_number: number | null
+          subreddit: string | null
           topic_id: string
           total_mentions: number | null
           updated_at: string | null
@@ -406,6 +407,7 @@ export type Database = {
           positive_mentions?: number | null
           representative_quote?: string | null
           set_number?: number | null
+          subreddit?: string | null
           topic_id: string
           total_mentions?: number | null
           updated_at?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           positive_mentions?: number | null
           representative_quote?: string | null
           set_number?: number | null
+          subreddit?: string | null
           topic_id?: string
           total_mentions?: number | null
           updated_at?: string | null

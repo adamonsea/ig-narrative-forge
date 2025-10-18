@@ -11,6 +11,7 @@ export interface PulseKeyword {
   threadUrl?: string;
   threadTitle?: string;
   setNumber: number;
+  subreddit?: string; // Added subreddit field
 }
 
 export interface CommunityPulseData {
@@ -41,7 +42,7 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
           .eq('topic_id', topicId)
           .eq('is_visible', true) // Only fetch visible keywords
           .order('created_at', { ascending: false })
-          .limit(9) as { data: any[] | null; error: any };
+          .limit(3) as { data: any[] | null; error: any }; // Max 3 keywords
 
         if (fetchError) throw fetchError;
 
@@ -60,7 +61,8 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
             quote: kw.representative_quote || '',
             threadUrl: kw.most_active_thread_url,
             threadTitle: kw.most_active_thread_title,
-            setNumber: kw.set_number || 1
+            setNumber: kw.set_number || 1,
+            subreddit: kw.subreddit // Include subreddit
           }));
 
           setData({

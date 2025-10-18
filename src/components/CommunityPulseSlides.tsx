@@ -19,13 +19,15 @@ interface CommunityPulseSlidesProps {
   timeframe?: string;
   mostActiveThreadUrl?: string;
   mostActiveThreadTitle?: string;
+  subreddit?: string; // Add subreddit prop
 }
 
 export const CommunityPulseSlides = ({
   keywords,
   timeframe = '48h',
   mostActiveThreadUrl,
-  mostActiveThreadTitle
+  mostActiveThreadTitle,
+  subreddit
 }: CommunityPulseSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -38,6 +40,12 @@ export const CommunityPulseSlides = ({
       </Card>
     );
   }
+
+  // Limit to max 3 keywords
+  const limitedKeywords = keywords.slice(0, 3);
+  
+  // Get subreddit from first keyword if not provided as prop
+  const subredditName = subreddit || limitedKeywords[0]?.subreddit || 'eastbourne';
 
   // Get sentiment color based on positive vs negative ratio
   const getSentimentColor = (keyword: PulseKeyword) => {
@@ -55,9 +63,9 @@ export const CommunityPulseSlides = ({
 
   // Generate 5 slides: hero + 3 keyword details + CTA
   const slides: PulseSlide[] = [
-    { type: 'hero', keywords },
-    ...keywords.map(kw => ({ type: 'keyword-detail' as const, keyword: kw })),
-    { type: 'cta', threadUrl: mostActiveThreadUrl, threadTitle: mostActiveThreadTitle }
+    { type: 'hero', keywords: limitedKeywords },
+    ...limitedKeywords.map(kw => ({ type: 'keyword-detail' as const, keyword: kw })),
+    { type: 'cta', threadUrl: mostActiveThreadUrl || `https://reddit.com/r/${subredditName}`, threadTitle: mostActiveThreadTitle }
   ];
 
   const renderSlideContent = (slide: PulseSlide) => {
@@ -156,30 +164,24 @@ export const CommunityPulseSlides = ({
                 <MessageSquare className="h-16 w-16 mx-auto text-primary/70" />
                 <h3 className="text-2xl font-bold text-foreground">Join the Debate</h3>
                 
-                {slide.threadUrl && (
-                  <>
-                    {slide.threadTitle && (
-                      <p className="text-base text-muted-foreground px-4">
-                        "{slide.threadTitle}"
-                      </p>
-                    )}
-                    <Button 
-                      asChild 
-                      size="lg"
-                      className="mx-auto"
-                    >
-                      <a 
-                        href={slide.threadUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2"
-                      >
-                        <span>Visit Reddit Thread</span>
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </>
-                )}
+                <p className="text-base text-muted-foreground px-4">
+                  Discuss these topics with your community on Reddit
+                </p>
+                <Button 
+                  asChild 
+                  size="lg"
+                  className="mx-auto"
+                >
+                  <a 
+                    href={slide.threadUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2"
+                  >
+                    <span>Visit r/{subredditName}</span>
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
               </div>
             </div>
             
