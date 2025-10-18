@@ -148,13 +148,19 @@ export const TopicSettings = ({
   const handleProcessCommunity = async () => {
     setProcessingCommunity(true);
     try {
-      const { data, error } = await supabase.functions.invoke('reddit-community-processor');
+      // Call scheduler with manual trigger for THIS specific topic
+      const { data, error } = await supabase.functions.invoke('reddit-community-scheduler', {
+        body: { 
+          manual_test: true, 
+          force_topic_id: topicId 
+        }
+      });
       
       if (error) throw error;
       
       toast({
-        title: "Community Processing Started",
-        description: "Reddit insights are being gathered in the background. Check back in a few minutes."
+        title: "Community Analysis Triggered",
+        description: `Processing Reddit insights specifically for this topic. Check back in a few minutes.`
       });
     } catch (error) {
       console.error('Error processing community insights:', error);

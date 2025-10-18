@@ -65,9 +65,12 @@ serve(async (req) => {
     
     console.log(`📊 Found ${topics.length} topics ready for community processing`);
     
-    // Call the Reddit community processor
+    // Call the Reddit community processor with specific topic IDs
     const processorResponse = await supabase.functions.invoke('reddit-community-processor', {
-      body: { scheduled: true, topics: topics.length }
+      body: { 
+        topic_ids: topics.map(t => t.id),
+        manual_test: !!manual_test
+      }
     });
     
     if (processorResponse.error) {
@@ -77,8 +80,12 @@ serve(async (req) => {
     
     console.log('✅ Community processing scheduled successfully');
     
-    // Clean up expired insights (older than 7 days)
-    await supabase.rpc('cleanup_expired_community_insights');
+    // Clean up expired insights (older than 7 days) - optional RPC
+    try {
+      await supabase.rpc('cleanup_expired_community_insights');
+    } catch (cleanupError) {
+      console.warn('Cleanup RPC not available or failed:', cleanupError);
+    }
     
     return new Response(
       JSON.stringify({

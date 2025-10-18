@@ -38,12 +38,21 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Get topics with community intelligence enabled (process max 3 at a time)
+    // Parse request body to get specific topic IDs
+    const { topic_ids } = await req.json().catch(() => ({}));
+    
+    if (!topic_ids || !Array.isArray(topic_ids) || topic_ids.length === 0) {
+      throw new Error('topic_ids array required - processor must be told which topics to process');
+    }
+    
+    console.log(`📋 Processing ${topic_ids.length} specific topics:`, topic_ids);
+    
+    // Get ONLY the topics passed in the request
     const { data: topics, error: topicsError } = await supabase
       .from('topics')
       .select('id, name, region, topic_type, community_config, community_intelligence_enabled')
-      .eq('community_intelligence_enabled', true)
-      .limit(3);
+      .in('id', topic_ids)
+      .eq('community_intelligence_enabled', true);
 
     if (topicsError) {
       console.error('Error fetching topics:', topicsError);
@@ -67,9 +76,25 @@ serve(async (req) => {
       try {
         console.log(`🔍 Processing topic: ${topic.name} (${topic.topic_type})`);
         
-        // Discover relevant subreddits based on topic type
-        const subreddits = await discoverSubreddits(topic);
-        console.log(`📡 Found ${subreddits.length} subreddits for ${topic.name}`);
+        // Use tenant-configured subreddits from community_config
+        const configuredSubreddits = topic.community_config?.subreddits || [];
+        const subreddits = configuredSubreddits
+          .map((s: string) => s.trim().toLowerCase().replace(/^r\//, ''))
+          .filter((s: string) => s.length > 0)
+          .slice(0, 2); // Limit to 2 for respectful rate limiting
+        
+        if (subreddits.length === 0) {
+          console.log(`⚠️ No subreddits configured for ${topic.name}, skipping topic`);
+          results.push({
+            topic_id: topic.id,
+            topic_name: topic.name,
+            status: 'skipped',
+            reason: 'No subreddits configured'
+          });
+          continue;
+        }
+        
+        console.log(`📡 Using ${subreddits.length} configured subreddits for ${topic.name}:`, subreddits);
         
         // Process each subreddit carefully (max 2 per topic)
         const limitedSubreddits = subreddits.slice(0, 2);
@@ -165,43 +190,7 @@ serve(async (req) => {
   }
 });
 
-// Discover relevant subreddits based on topic type and content
-async function discoverSubreddits(topic: any): Promise<string[]> {
-  const subreddits: string[] = [];
-  
-  if (topic.topic_type === 'regional' && topic.region) {
-    // Regional topics - look for local subreddits
-    const region = topic.region.toLowerCase();
-    
-    // Common UK local subreddit patterns
-    if (region.includes('eastbourne')) subreddits.push('eastbourne');
-    if (region.includes('brighton')) subreddits.push('brighton', 'brightonandhove');
-    if (region.includes('london')) subreddits.push('london');
-    if (region.includes('manchester')) subreddits.push('manchester');
-    if (region.includes('birmingham')) subreddits.push('birmingham');
-    
-    // Generic UK subreddits for local context
-    subreddits.push('unitedkingdom', 'casualuk');
-  } else {
-    // Keyword/niche topics - look for relevant professional subreddits
-    const topicName = topic.name.toLowerCase();
-    
-    if (topicName.includes('ai') || topicName.includes('artificial intelligence')) {
-      subreddits.push('artificial', 'MachineLearning');
-    }
-    if (topicName.includes('marketing')) {
-      subreddits.push('marketing', 'digitalmarketing');
-    }
-    if (topicName.includes('technology') || topicName.includes('tech')) {
-      subreddits.push('technology', 'TechNews');
-    }
-    if (topicName.includes('business')) {
-      subreddits.push('business', 'entrepreneur');
-    }
-  }
-  
-  return subreddits.slice(0, 3); // Limit to 3 subreddits max
-}
+// Legacy function removed - now using tenant-configured subreddits from community_config
 
 // Fetch Reddit RSS with conservative rate limiting
 async function fetchRedditRSS(subreddit: string): Promise<RedditPost[]> {
@@ -233,12 +222,15 @@ async function fetchRedditRSS(subreddit: string): Promise<RedditPost[]> {
     
     const xmlText = await response.text();
     
-    // Basic XML parsing for RSS (simplified)
+    // Basic XML parsing for RSS - handle both CDATA and plain text
     const posts: RedditPost[] = [];
     const itemRegex = /<item>(.*?)<\/item>/gs;
-    const titleRegex = /<title><!\[CDATA\[(.*?)\]\]><\/title>/s;
+    // Tolerant regex: matches CDATA or plain text
+    const titleRegex = /<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/s;
     const linkRegex = /<link>(.*?)<\/link>/s;
-    const descRegex = /<description><!\[CDATA\[(.*?)\]\]><\/description>/s;
+    const descRegex = /<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/description>/s;
+    
+    console.log(`📄 RSS response status: ${response.status}, content length: ${xmlText.length}`);
     
     let match;
     while ((match = itemRegex.exec(xmlText)) !== null && posts.length < 5) {
@@ -318,17 +310,65 @@ Focus on: local sentiment, emerging concerns, and validation of news stories. Ke
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     
-    if (!content) return [];
+    if (!content) {
+      // Fallback if no content
+      return [{
+        type: 'validation',
+        content: `Community activity analyzed for ${topic.name}: ${posts.length} recent discussions reviewed.`,
+        confidence: 50,
+        metadata: { source: 'fallback', posts_analyzed: posts.length }
+      }];
+    }
     
-    // Parse JSON response
-    const parsed = JSON.parse(content);
-    
-    return parsed.insights?.map((insight: any) => ({
-      type: insight.type,
-      content: insight.content,
-      confidence: insight.confidence || 0,
-      metadata: { source: 'deepseek', posts_analyzed: posts.length }
-    })) || [];
+    // Parse JSON response with robust handling
+    try {
+      // Strip code fences if present
+      const cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+      
+      // Try parsing cleaned content
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanContent);
+      } catch (firstParseError) {
+        // Fallback: try to extract JSON object with regex
+        const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          throw firstParseError;
+        }
+      }
+      
+      const insights = parsed.insights?.map((insight: any) => ({
+        type: insight.type,
+        content: insight.content,
+        confidence: insight.confidence || 0,
+        metadata: { source: 'deepseek', posts_analyzed: posts.length }
+      })) || [];
+      
+      // If no insights parsed, return fallback
+      if (insights.length === 0) {
+        return [{
+          type: 'validation',
+          content: `Community discussions about ${topic.name}: ${posts.length} posts analyzed.`,
+          confidence: 50,
+          metadata: { source: 'fallback', posts_analyzed: posts.length }
+        }];
+      }
+      
+      return insights;
+      
+    } catch (parseError) {
+      console.warn('DeepSeek JSON parsing failed, using fallback:', parseError);
+      // Generate simple fallback insight from post titles
+      const titleSummary = posts.slice(0, 3).map(p => p.title).join('; ');
+      return [{
+        type: 'validation',
+        content: `Recent community discussions: ${titleSummary.substring(0, 150)}...`,
+        confidence: 40,
+        metadata: { source: 'fallback', posts_analyzed: posts.length, parse_error: true }
+      }];
+    }
     
   } catch (error) {
     console.warn('DeepSeek analysis failed:', error instanceof Error ? error.message : String(error));
