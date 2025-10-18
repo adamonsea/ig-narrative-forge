@@ -65,11 +65,12 @@ serve(async (req) => {
     const periodLabel = days === 7 ? 'Week' : `${days} Days`;
     const roundupTitle = `Your MPs' Voting ${periodLabel}: ${new Date(weekStartDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
     
+    // Use topic_id in URL to make each topic's roundup unique
     const { data: sharedContent, error: contentError } = await supabase
       .from('shared_article_content')
       .insert({
-        url: `weekly-roundup-${weekStartDate}`,
-        normalized_url: `weekly-roundup-${weekStartDate}`,
+        url: `weekly-roundup-${weekStartDate}-${topicId}`,
+        normalized_url: `weekly-roundup-${weekStartDate}-${topicId}`,
         title: roundupTitle,
         body: `Weekly summary of parliamentary voting records for ${region}`,
         published_at: today.toISOString(),

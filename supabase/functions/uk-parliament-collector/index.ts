@@ -610,24 +610,25 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
 // Create a single-slide banner story for a daily vote
 async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
   try {
-    // Check if shared content already exists (for backfill)
+    // Check if shared content already exists (with MP-specific URL)
+    const mpSpecificUrl = `${vote.vote_url}?mp=${vote.mp_id || 'unknown'}`;
     let sharedContent;
     const { data: existingContent } = await supabase
       .from('shared_article_content')
       .select('id, title')
-      .eq('url', vote.vote_url)
+      .eq('url', mpSpecificUrl)
       .maybeSingle();
     
     if (existingContent) {
       console.log(`♻️ Reusing existing shared content for vote ${vote.id}`);
       sharedContent = existingContent;
     } else {
-      // Create new shared content
+      // Create new shared content with MP-specific URL
       const { data: newContent, error: contentError } = await supabase
         .from('shared_article_content')
         .insert({
-          url: vote.vote_url,
-          normalized_url: vote.vote_url?.toLowerCase(),
+          url: mpSpecificUrl,
+          normalized_url: mpSpecificUrl.toLowerCase(),
           title: `${vote.mp_name} voted ${vote.vote_direction} on ${vote.vote_title}`,
           body: vote.local_impact_summary,
           published_at: vote.vote_date,
@@ -707,30 +708,65 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
       if (storyError) throw storyError;
       story = newStory;
       
-      // Create single slide (banner style)
-      const slideContent = `**${new Date(vote.vote_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}** – ${vote.mp_name} (${vote.party}) voted **${vote.vote_direction.toUpperCase()}** on ${vote.vote_title}
+      // Format vote date
+      const voteDate = new Date(vote.vote_date).toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
 
-${vote.local_impact_summary}
+      // Slide 1: Header with voting icon, MP name, date, and vote title
+      const slide1Content = `🗳️
 
-Vote outcome: **${vote.vote_outcome.toUpperCase()}** (${vote.aye_count} Ayes, ${vote.no_count} Noes)
-${vote.is_rebellion ? '\n⚠️ **Voted against ' + vote.party + ' party line**' : ''}
+**${vote.mp_name}**
+${voteDate}
 
-📊 Category: ${vote.vote_category}`;
-      
-      const { error: slideError } = await supabase
-        .from('slides')
-        .insert({
-          story_id: story.id,
-          slide_number: 1,
-          content: slideContent,
-          word_count: slideContent.split(' ').length,
-          links: [{
-            text: 'View on Parliament.uk',
-            url: vote.vote_url
-          }]
-        });
-      
-      if (slideError) throw slideError;
+${vote.vote_title}`;
+
+      // Slide 2: Their vote with rebellion indicator and local impact
+      const rebellionNote = vote.is_rebellion 
+        ? `\n\n⚠️ **Voted against ${vote.party} party line**` 
+        : '';
+      const slide2Content = `**${vote.mp_name}** voted **${vote.vote_direction.toUpperCase()}**${rebellionNote}
+
+${vote.local_impact_summary || ''}`;
+
+      // Slide 3: Vote totals and outcome
+      const slide3Content = `Vote Outcome: **${vote.vote_outcome.toUpperCase()}**
+
+📊 ${vote.aye_count} Ayes, ${vote.no_count} Noes
+
+Category: ${vote.vote_category}`;
+
+      // Slide 4: Attribution and link
+      const slide4Content = `READ THE FULL STORY AT
+COMMONSVOTES.DIGIMINSTER.COM
+
+(Originally published ${voteDate})
+
+from commonsvotes.digiminster.com`;
+
+      // Insert all 4 slides
+      const slides = [
+        { slide_number: 1, content: slide1Content, links: [] },
+        { slide_number: 2, content: slide2Content, links: [] },
+        { slide_number: 3, content: slide3Content, links: [] },
+        { slide_number: 4, content: slide4Content, links: [{ text: 'View on Parliament.uk', url: vote.vote_url }] }
+      ];
+
+      for (const slideData of slides) {
+        const { error: slideError } = await supabase
+          .from('slides')
+          .insert({
+            story_id: story.id,
+            slide_number: slideData.slide_number,
+            content: slideData.content,
+            word_count: slideData.content.split(' ').length,
+            links: slideData.links
+          });
+        
+        if (slideError) throw slideError;
+      }
       
       console.log(`✓ Created daily vote story: ${story.title}`);
     }
