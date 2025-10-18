@@ -136,6 +136,22 @@ export const TopicSettings = ({
   const handleAddSubreddit = () => {
     const cleaned = newSubreddit.trim().toLowerCase().replace(/^r\//, '');
     if (cleaned && !subreddits.includes(cleaned)) {
+      // List of generic national subreddits that should trigger a warning
+      const nationalSubreddits = [
+        'unitedkingdom', 'uk', 'ukpolitics', 'england', 'britishproblems', 
+        'casualuk', 'scotland', 'wales', 'northernireland', 'london'
+      ];
+      
+      const isNationalSubreddit = nationalSubreddits.includes(cleaned);
+      
+      if (isNationalSubreddit && topicType === 'regional') {
+        toast({
+          title: "⚠️ National Subreddit Detected",
+          description: `r/${cleaned} is a national community. This may result in generic keywords instead of local ${region || 'regional'} insights. Consider using local subreddits instead.`,
+          variant: "default",
+        });
+      }
+      
       setSubreddits([...subreddits, cleaned]);
       setNewSubreddit('');
     }
@@ -353,21 +369,39 @@ export const TopicSettings = ({
                 </div>
                 {subreddits.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {subreddits.map((subreddit) => (
-                      <Badge key={subreddit} variant="secondary" className="gap-1">
-                        r/{subreddit}
-                        <button
-                          onClick={() => handleRemoveSubreddit(subreddit)}
-                          className="ml-1 hover:text-destructive"
+                    {subreddits.map((subreddit) => {
+                      const nationalSubreddits = [
+                        'unitedkingdom', 'uk', 'ukpolitics', 'england', 'britishproblems', 
+                        'casualuk', 'scotland', 'wales', 'northernireland', 'london'
+                      ];
+                      const isNational = nationalSubreddits.includes(subreddit);
+                      
+                      return (
+                        <Badge 
+                          key={subreddit} 
+                          variant={isNational && topicType === 'regional' ? "destructive" : "secondary"} 
+                          className="gap-1"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                          {isNational && topicType === 'regional' && "⚠️ "}
+                          r/{subreddit}
+                          <button
+                            onClick={() => handleRemoveSubreddit(subreddit)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
                   Add subreddits to monitor for community insights. Daily automation will analyze these communities.
+                  {topicType === 'regional' && (
+                    <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                      ⚠️ National subreddits (like r/unitedkingdom) may generate generic keywords. Use local subreddits for better regional relevance.
+                    </span>
+                  )}
                 </p>
               </div>
 

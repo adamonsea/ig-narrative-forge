@@ -506,45 +506,53 @@ async function analyzeWithDeepSeek(posts: RedditPost[], topic: any, supabase: an
       ? `CONTEXT: Recent published content contains these keywords: ${feedKeywords.slice(0, 20).join(', ')}`
       : '';
     
-    // First prompt: Extract keyword pulse data with feed context
-    const keywordPrompt = `Analyze these Reddit discussions for ${topic.name}.
+    // First prompt: Extract keyword pulse data with feed context and regional filtering
+    const regionName = topic.region || topic.name;
+    const keywordPrompt = `Analyze these Reddit discussions for ${topic.name}${topic.region ? ` in ${topic.region}` : ''}.
 
 ${feedContext}
 
 ${postsText}
 
-Extract the top 9 keywords being discussed. PRIORITIZE keywords that:
-1. Relate to the published content keywords above (validates your coverage)
-2. Have high discussion volume on Reddit
-3. Show clear sentiment patterns
+CRITICAL REGIONAL FILTERING:
+- ONLY extract keywords that are SPECIFICALLY relevant to ${regionName}
+- IGNORE national UK politics, celebrities, or generic issues UNLESS they directly impact ${regionName}
+- Keywords MUST relate to: local issues, local places, local services, local events, or regional concerns
+- Reject keywords like: "Prince Andrew", "chocolate biscuits", "living standards" unless they specifically mention ${regionName}
 
-If Reddit keywords align with published content, prioritize those. Otherwise, extract the most discussed topics.
+Extract the top 9 keywords being discussed. PRIORITIZE keywords that:
+1. Are SPECIFICALLY about ${regionName} (local places, issues, events)
+2. Relate to the published content keywords above (validates your coverage)
+3. Have high discussion volume on Reddit about ${regionName}
+4. Show clear sentiment patterns in the LOCAL community
+
+If Reddit keywords align with published content AND are locally relevant, prioritize those. Otherwise, extract the most discussed LOCAL topics.
 
 For EACH of the 9 keywords provide:
-- keyword: the topic/keyword name (2-3 words max)
-- total_mentions: count of how many times discussed
+- keyword: the topic/keyword name (2-3 words max, MUST be locally relevant)
+- total_mentions: count of how many times discussed in relation to ${regionName}
 - positive_mentions: count with positive sentiment
 - negative_mentions: count with negative sentiment
-- quote: a representative 3-10 word quote from discussions
+- quote: a representative 3-10 word quote from discussions (must mention or relate to ${regionName})
 
-Also identify the most active Reddit thread:
-- title: thread title
+Also identify the most active Reddit thread ABOUT ${regionName}:
+- title: thread title (must be about ${regionName})
 - url: full Reddit URL
 
-Return JSON only with exactly 9 keywords:
+Return JSON only with exactly 9 locally-relevant keywords:
 {
   "keywords": [
     {
-      "keyword": "parking zones",
+      "keyword": "pier renovations",
       "total_mentions": 23,
       "positive_mentions": 15,
       "negative_mentions": 8,
-      "quote": "new zones work well"
+      "quote": "pier work looks promising"
     }
   ],
   "most_active_thread": {
-    "title": "Discussion about parking changes",
-    "url": "https://reddit.com/r/eastbourne/..."
+    "title": "Discussion about pier changes in ${regionName}",
+    "url": "https://reddit.com/r/..."
   }
 }`;
     
