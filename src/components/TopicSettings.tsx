@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar } from "lucide-react";
+import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -21,6 +22,11 @@ interface TopicSettingsProps {
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentCommunityEnabled?: boolean;
   currentCommunityPulseFrequency?: number;
+  currentCommunityConfig?: {
+    subreddits?: string[];
+    last_processed?: string;
+    processing_frequency_hours?: number;
+  };
   currentAutoSimplifyEnabled?: boolean;
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
@@ -37,6 +43,7 @@ export const TopicSettings = ({
   currentWritingStyle, 
   currentCommunityEnabled,
   currentCommunityPulseFrequency,
+  currentCommunityConfig,
   currentAutoSimplifyEnabled,
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
@@ -50,6 +57,9 @@ export const TopicSettings = ({
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
+  const [subreddits, setSubreddits] = useState<string[]>(currentCommunityConfig?.subreddits || []);
+  const [newSubreddit, setNewSubreddit] = useState<string>('');
+  const [processingFrequency, setProcessingFrequency] = useState<number>(currentCommunityConfig?.processing_frequency_hours || 24);
   const [eventsEnabled, setEventsEnabled] = useState<boolean>(currentEventsEnabled || false);
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
@@ -67,6 +77,8 @@ export const TopicSettings = ({
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
     if (currentCommunityPulseFrequency !== undefined) setCommunityPulseFrequency(currentCommunityPulseFrequency);
+    if (currentCommunityConfig?.subreddits) setSubreddits(currentCommunityConfig.subreddits);
+    if (currentCommunityConfig?.processing_frequency_hours) setProcessingFrequency(currentCommunityConfig.processing_frequency_hours);
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
     if (currentEventsEnabled !== undefined) setEventsEnabled(currentEventsEnabled);
@@ -74,7 +86,7 @@ export const TopicSettings = ({
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -87,6 +99,11 @@ export const TopicSettings = ({
           default_writing_style: writingStyle,
           community_intelligence_enabled: communityEnabled,
           community_pulse_frequency: communityPulseFrequency,
+          community_config: {
+            subreddits,
+            processing_frequency_hours: processingFrequency,
+            last_processed: currentCommunityConfig?.last_processed || null
+          },
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
           events_enabled: eventsEnabled,
@@ -114,6 +131,18 @@ export const TopicSettings = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddSubreddit = () => {
+    const cleaned = newSubreddit.trim().toLowerCase().replace(/^r\//, '');
+    if (cleaned && !subreddits.includes(cleaned)) {
+      setSubreddits([...subreddits, cleaned]);
+      setNewSubreddit('');
+    }
+  };
+
+  const handleRemoveSubreddit = (subreddit: string) => {
+    setSubreddits(subreddits.filter(s => s !== subreddit));
   };
 
   const handleProcessCommunity = async () => {
@@ -297,7 +326,65 @@ export const TopicSettings = ({
           </div>
 
           {communityEnabled && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 p-4 border rounded-lg bg-muted/20">
+              <div className="space-y-3">
+                <Label>Subreddits to Monitor</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. eastbourne or r/eastbourne"
+                    value={newSubreddit}
+                    onChange={(e) => setNewSubreddit(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubreddit())}
+                  />
+                  <Button
+                    onClick={handleAddSubreddit}
+                    disabled={!newSubreddit.trim()}
+                    size="icon"
+                    variant="secondary"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                {subreddits.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {subreddits.map((subreddit) => (
+                      <Badge key={subreddit} variant="secondary" className="gap-1">
+                        r/{subreddit}
+                        <button
+                          onClick={() => handleRemoveSubreddit(subreddit)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Add subreddits to monitor for community insights. Daily automation will analyze these communities.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Processing Frequency</Label>
+                <Select 
+                  value={processingFrequency.toString()} 
+                  onValueChange={(value) => setProcessingFrequency(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">Every 12 hours</SelectItem>
+                    <SelectItem value="24">Every 24 hours</SelectItem>
+                    <SelectItem value="48">Every 48 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  How often the automated job checks for new Reddit insights
+                </p>
+              </div>
+
               <div className="space-y-3">
                 <Label>
                   Community Pulse Frequency: Every {communityPulseFrequency} stories
@@ -332,7 +419,7 @@ export const TopicSettings = ({
                       <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
-                      <p className="text-sm">Manually trigger Reddit community analysis. This will fetch and analyze recent discussions from relevant subreddits.</p>
+                      <p className="text-sm">Manually trigger Reddit community analysis. This will fetch and analyze recent discussions from configured subreddits.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

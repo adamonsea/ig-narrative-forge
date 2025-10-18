@@ -67,6 +67,12 @@ interface Topic {
   default_tone?: 'formal' | 'conversational' | 'engaging';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   community_intelligence_enabled?: boolean;
+  community_pulse_frequency?: number;
+  community_config?: {
+    subreddits?: string[];
+    last_processed?: string;
+    processing_frequency_hours?: number;
+  };
   auto_simplify_enabled?: boolean;
   automation_quality_threshold?: number;
   parliamentary_tracking_enabled?: boolean;
@@ -120,7 +126,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency')
         .eq('slug', slug)
         .single();
 
@@ -149,7 +155,8 @@ const TopicDashboard = () => {
         organizations: topicData.organizations || [],
         negative_keywords: topicData.negative_keywords || [],
         competing_regions: topicData.competing_regions || [],
-        default_writing_style: (topicData.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven') || 'journalistic'
+        default_writing_style: (topicData.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven') || 'journalistic',
+        community_config: topicData.community_config as any || { subreddits: [], processing_frequency_hours: 24 }
       });
 
       setNegativeKeywords(topicData.negative_keywords || []);
@@ -996,7 +1003,8 @@ const TopicDashboard = () => {
                         currentTone={topic.default_tone}
                         currentWritingStyle={topic.default_writing_style}
                         currentCommunityEnabled={topic.community_intelligence_enabled}
-                        currentCommunityPulseFrequency={(topic as any).community_pulse_frequency}
+                        currentCommunityPulseFrequency={topic.community_pulse_frequency}
+                        currentCommunityConfig={topic.community_config}
                         currentAutoSimplifyEnabled={topic.auto_simplify_enabled}
                         currentAutomationQualityThreshold={topic.automation_quality_threshold}
                         currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
@@ -1073,6 +1081,93 @@ const TopicDashboard = () => {
                     </AccordionContent>
                   </AccordionItem>
 
+                  {topic.community_intelligence_enabled && (
+                    <AccordionItem value="community" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex w-full items-start justify-between gap-3 text-left">
+                          <div className="flex items-center gap-3">
+                            <Activity className="h-4 w-4" />
+                            <div>
+                              <p className="text-sm font-medium">Community Intelligence</p>
+                              <p className="text-xs text-muted-foreground">Reddit insights and community sentiment</p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {topic.community_config?.subreddits?.length || 0} subreddits
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4 space-y-4">
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Last Processed</p>
+                              <p className="font-medium">
+                                {topic.community_config?.last_processed 
+                                  ? new Date(topic.community_config.last_processed).toLocaleString()
+                                  : 'Never'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Frequency</p>
+                              <p className="font-medium">
+                                Every {topic.community_config?.processing_frequency_hours || 24} hours
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {topic.community_config?.subreddits && topic.community_config.subreddits.length > 0 && (
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Monitored Subreddits</p>
+                              <div className="flex flex-wrap gap-2">
+                                {topic.community_config.subreddits.map((subreddit: string) => (
+                                  <Badge key={subreddit} variant="outline">
+                                    r/{subreddit}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Manual Refresh</p>
+                            <p className="text-xs text-muted-foreground">
+                              Trigger immediate Reddit analysis
+                            </p>
+                          </div>
+                          <Button 
+                            onClick={handleRefreshCommunityInsights}
+                            disabled={refreshingInsights}
+                            size="sm"
+                          >
+                            {refreshingInsights ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Refresh Now
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-md">
+                          <p className="mb-1"><strong>How it works:</strong></p>
+                          <ul className="list-disc list-inside space-y-1">
+                            <li>Daily cron job analyzes relevant subreddits automatically</li>
+                            <li>Insights appear every {topic.community_pulse_frequency || 8} stories in your feed</li>
+                            <li>Configure subreddits in Topic Settings → Community Intelligence</li>
+                          </ul>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+
                   {topic.topic_type === 'regional' && topic.region && topic.parliamentary_tracking_enabled && (
                     <AccordionItem value="parliamentary" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
                       <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -1098,51 +1193,6 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
 
-            {topic.community_intelligence_enabled && (
-              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Community Intelligence
-                  </CardTitle>
-                  <CardDescription>
-                    Discover trending conversations and sentiment from Reddit communities
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Reddit Community Analysis</p>
-                        <p className="text-xs text-muted-foreground">
-                          Analyze relevant subreddits to extract insights, concerns, and validation points
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={handleRefreshCommunityInsights}
-                        disabled={refreshingInsights}
-                        size="sm"
-                      >
-                        {refreshingInsights ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh Insights
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p>Community insights appear in the public feed every 8 stories, showing real-time sentiment and trending topics from relevant Reddit communities.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
 
             <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>
