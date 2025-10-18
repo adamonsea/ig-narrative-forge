@@ -610,63 +610,105 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
 // Create a single-slide banner story for a daily vote
 async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
   try {
-    // Create shared content
-    const { data: sharedContent, error: contentError } = await supabase
+    // Check if shared content already exists (for backfill)
+    let sharedContent;
+    const { data: existingContent } = await supabase
       .from('shared_article_content')
-      .insert({
-        url: vote.vote_url,
-        normalized_url: vote.vote_url?.toLowerCase(),
-        title: `${vote.mp_name} voted ${vote.vote_direction} on ${vote.vote_title}`,
-        body: vote.local_impact_summary,
-        published_at: vote.vote_date,
-        word_count: 50,
-        language: 'en'
-      })
-      .select()
-      .single();
+      .select('id, title')
+      .eq('url', vote.vote_url)
+      .maybeSingle();
     
-    if (contentError) throw contentError;
+    if (existingContent) {
+      console.log(`♻️ Reusing existing shared content for vote ${vote.id}`);
+      sharedContent = existingContent;
+    } else {
+      // Create new shared content
+      const { data: newContent, error: contentError } = await supabase
+        .from('shared_article_content')
+        .insert({
+          url: vote.vote_url,
+          normalized_url: vote.vote_url?.toLowerCase(),
+          title: `${vote.mp_name} voted ${vote.vote_direction} on ${vote.vote_title}`,
+          body: vote.local_impact_summary,
+          published_at: vote.vote_date,
+          word_count: 50,
+          language: 'en'
+        })
+        .select()
+        .single();
+      
+      if (contentError) throw contentError;
+      sharedContent = newContent;
+    }
     
-    // Create topic article
-    const { data: topicArticle, error: topicArticleError } = await supabase
+    // Check if topic article already exists
+    let topicArticle;
+    const { data: existingTopicArticle } = await supabase
       .from('topic_articles')
-      .insert({
-        topic_id: topicId,
-        shared_content_id: sharedContent.id,
-        processing_status: 'processed',
-        regional_relevance_score: vote.relevance_score,
-        content_quality_score: 80,
-        import_metadata: {
-          source: 'parliamentary_vote',
-          mention_id: vote.id,
-          is_rebellion: vote.is_rebellion
-        }
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('shared_content_id', sharedContent.id)
+      .eq('topic_id', topicId)
+      .maybeSingle();
     
-    if (topicArticleError) throw topicArticleError;
+    if (existingTopicArticle) {
+      console.log(`♻️ Reusing existing topic article for vote ${vote.id}`);
+      topicArticle = existingTopicArticle;
+    } else {
+      // Create new topic article
+      const { data: newTopicArticle, error: topicArticleError } = await supabase
+        .from('topic_articles')
+        .insert({
+          topic_id: topicId,
+          shared_content_id: sharedContent.id,
+          processing_status: 'processed',
+          regional_relevance_score: vote.relevance_score,
+          content_quality_score: 80,
+          import_metadata: {
+            source: 'parliamentary_vote',
+            mention_id: vote.id,
+            is_rebellion: vote.is_rebellion
+          }
+        })
+        .select()
+        .single();
+      
+      if (topicArticleError) throw topicArticleError;
+      topicArticle = newTopicArticle;
+    }
     
-    // Create story
-    const { data: story, error: storyError } = await supabase
+    // Check if story already exists
+    const { data: existingStory } = await supabase
       .from('stories')
-      .insert({
-        topic_article_id: topicArticle.id,
-        shared_content_id: sharedContent.id,
-        title: sharedContent.title,
-        status: 'ready',
-        is_published: true,
-        audience_expertise: 'general',
-        tone: 'formal',
-        writing_style: 'journalistic'
-      })
-      .select()
-      .single();
+      .select('id, title')
+      .eq('shared_content_id', sharedContent.id)
+      .maybeSingle();
     
-    if (storyError) throw storyError;
-    
-    // Create single slide (banner style)
-    const slideContent = `**${new Date(vote.vote_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}** – ${vote.mp_name} (${vote.party}) voted **${vote.vote_direction.toUpperCase()}** on ${vote.vote_title}
+    let story;
+    if (existingStory) {
+      console.log(`✓ Story already exists for vote ${vote.id}`);
+      story = existingStory;
+    } else {
+      // Create new story
+      const { data: newStory, error: storyError } = await supabase
+        .from('stories')
+        .insert({
+          topic_article_id: topicArticle.id,
+          shared_content_id: sharedContent.id,
+          title: sharedContent.title,
+          status: 'ready',
+          is_published: true,
+          audience_expertise: 'general',
+          tone: 'formal',
+          writing_style: 'journalistic'
+        })
+        .select()
+        .single();
+      
+      if (storyError) throw storyError;
+      story = newStory;
+      
+      // Create single slide (banner style)
+      const slideContent = `**${new Date(vote.vote_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}** – ${vote.mp_name} (${vote.party}) voted **${vote.vote_direction.toUpperCase()}** on ${vote.vote_title}
 
 ${vote.local_impact_summary}
 
@@ -674,29 +716,30 @@ Vote outcome: **${vote.vote_outcome.toUpperCase()}** (${vote.aye_count} Ayes, ${
 ${vote.is_rebellion ? '\n⚠️ **Voted against ' + vote.party + ' party line**' : ''}
 
 📊 Category: ${vote.vote_category}`;
-    
-    const { error: slideError } = await supabase
-      .from('slides')
-      .insert({
-        story_id: story.id,
-        slide_number: 1,
-        content: slideContent,
-        word_count: slideContent.split(' ').length,
-        links: [{
-          text: 'View on Parliament.uk',
-          url: vote.vote_url
-        }]
-      });
-    
-    if (slideError) throw slideError;
+      
+      const { error: slideError } = await supabase
+        .from('slides')
+        .insert({
+          story_id: story.id,
+          slide_number: 1,
+          content: slideContent,
+          word_count: slideContent.split(' ').length,
+          links: [{
+            text: 'View on Parliament.uk',
+            url: vote.vote_url
+          }]
+        });
+      
+      if (slideError) throw slideError;
+      
+      console.log(`✓ Created daily vote story: ${story.title}`);
+    }
     
     // Update parliamentary mention with story_id
     await supabase
       .from('parliamentary_mentions')
       .update({ story_id: story.id })
       .eq('id', vote.id);
-    
-    console.log(`✓ Created daily vote story: ${story.title}`);
     
   } catch (error) {
     console.error('Error creating daily vote story:', error);
