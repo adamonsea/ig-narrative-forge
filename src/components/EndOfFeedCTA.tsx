@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { NewsletterSignupModal } from './NewsletterSignupModal';
+import { NotificationPreferencesModal } from './NotificationPreferencesModal';
 import { Bell, Sparkles } from 'lucide-react';
 
 interface EndOfFeedCTAProps {
@@ -45,11 +45,12 @@ export const EndOfFeedCTA = ({ topicName, topicId }: EndOfFeedCTAProps) => {
         </div>
       </Card>
 
-      <NewsletterSignupModal
+      <NotificationPreferencesModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
         topicName={topicName}
         topicId={topicId}
+        isFirstTimePrompt={false}
       />
     </>
   );
