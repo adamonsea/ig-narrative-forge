@@ -173,6 +173,26 @@ serve(async (req) => {
     const constituencies = REGIONAL_CONSTITUENCIES[region] || [region];
     
     if (mode === 'daily') {
+      // First, backfill any existing votes that don't have stories
+      console.log('🔄 Checking for existing votes without stories...');
+      const { data: orphanedVotes, error: orphanedError } = await supabase
+        .from('parliamentary_mentions')
+        .select('*')
+        .eq('topic_id', topicId)
+        .is('story_id', null)
+        .eq('is_weekly_roundup', false);
+      
+      if (!orphanedError && orphanedVotes && orphanedVotes.length > 0) {
+        console.log(`📝 Found ${orphanedVotes.length} votes without stories - creating stories...`);
+        for (const vote of orphanedVotes) {
+          try {
+            await createDailyVoteStory(supabase, vote, topicId);
+          } catch (error) {
+            console.error(`Error creating story for vote ${vote.id}:`, error);
+          }
+        }
+      }
+      
       // Daily collection: get votes from tracked MPs
       const votes = await collectDailyVotes(topicId, region, supabase);
       
