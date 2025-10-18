@@ -83,6 +83,28 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const recordApiUsage = async (
+    operation: string,
+    tokensUsed: number | null | undefined,
+    costUsd: number = 0
+  ) => {
+    try {
+      const normalizedTokens = Number.isFinite(tokensUsed as number)
+        ? Math.max(0, Math.round((tokensUsed as number) ?? 0))
+        : 0;
+
+      await supabase.from('api_usage').insert({
+        service_name: 'deepseek',
+        operation,
+        tokens_used: normalizedTokens,
+        cost_usd: costUsd,
+        region: 'global'
+      });
+    } catch (error) {
+      console.error('Failed to record DeepSeek usage:', error);
+    }
+  };
+
   // Enhanced Prompt System Builder
   async function buildPromptSystem(supabase: any, tone: string, expertise: string, slideType: string) {
     const { data: templates, error } = await supabase
@@ -113,16 +135,19 @@ serve(async (req) => {
 
   // Generate slides using DeepSeek
   async function generateSlidesWithDeepSeek(
-    article: Article, 
-    apiKey: string, 
+    article: Article,
+    apiKey: string,
     tone: string,
     writingStyle: string,
-    expertise: string, 
+    expertise: string,
     slideType: string,
     slideCount: number,
     publicationName: string,
     templateGuidance?: string
-  ): Promise<SlideContent[]> {
+  ): Promise<{
+    slides: SlideContent[];
+    usage?: { total_tokens?: number; prompt_tokens?: number; completion_tokens?: number };
+  }> {
     try {
       const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
 
@@ -217,7 +242,8 @@ OUTPUT FORMAT (JSON):
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      
+      const usage = data.usage || null;
+
       // Enhanced JSON parsing with multiple attempts
       let slides;
       try {
@@ -248,13 +274,15 @@ OUTPUT FORMAT (JSON):
       }
       
       // Validate and normalize slide structure
-      return slides.map((slide: any, index: number) => ({
+      const normalizedSlides = slides.map((slide: any, index: number) => ({
         slideNumber: slide.slideNumber || (index + 1),
         content: slide.content || slide.text || `Generated slide ${index + 1}`,
         visualPrompt: slide.visualPrompt || slide.visual || slide.imagePrompt || `Visual representation for "${article.title}" - slide ${index + 1}`,
         altText: slide.altText || slide.alt || slide.description || `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`
       }));
-      
+
+      return { slides: normalizedSlides, usage };
+
     } catch (error) {
       console.error('Error generating slides with DeepSeek:', error);
       throw error;
@@ -262,11 +290,15 @@ OUTPUT FORMAT (JSON):
   }
 
   async function generatePostCopyWithDeepSeek(
-    article: Article, 
-    slides: SlideContent[], 
-    apiKey: string, 
+    article: Article,
+    slides: SlideContent[],
+    apiKey: string,
     publicationName: string
-  ): Promise<{ caption: string; hashtags: string[] }> {
+  ): Promise<{
+    caption: string;
+    hashtags: string[];
+    usage?: { total_tokens?: number; prompt_tokens?: number; completion_tokens?: number };
+  }> {
     const prompt = `Create engaging web content copy for this news carousel about: ${article.title}
 
 SLIDES PREVIEW:
@@ -316,21 +348,24 @@ Return in JSON format:
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      
+      const usage = data.usage || null;
+
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return {
           caption: `Check out this story about ${article.title}`,
-          hashtags: ['news', 'update', 'story']
+          hashtags: ['news', 'update', 'story'],
+          usage
         };
       }
-      
+
       const result = JSON.parse(jsonMatch[0]);
       return {
         caption: result.caption || `Check out this story about ${article.title}`,
-        hashtags: result.hashtags || ['news', 'update', 'story']
+        hashtags: result.hashtags || ['news', 'update', 'story'],
+        usage
       };
-      
+
     } catch (error) {
       console.error('Error generating post copy with DeepSeek:', error);
       return {
@@ -484,7 +519,7 @@ Return in JSON format:
     const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
     
     // Generate slides with DeepSeek only
-    let slides: SlideContent[];
+    let slides: SlideContent[] = [];
     const actualProvider = 'deepseek';
 
     try {
@@ -493,7 +528,7 @@ Return in JSON format:
       }
       
       console.log('🤖 Using DeepSeek for slide generation...');
-      slides = await generateSlidesWithDeepSeek(
+      const slideResult = await generateSlidesWithDeepSeek(
         article,
         deepseekApiKey,
         effectiveTone,
@@ -504,6 +539,9 @@ Return in JSON format:
         publicationName,
         templateGuidance
       );
+
+      slides = slideResult.slides;
+      await recordApiUsage('auto_simplify_slides', slideResult.usage?.total_tokens ?? 0);
 
       console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
     } catch (error) {
@@ -526,7 +564,9 @@ Return in JSON format:
       }
       
       console.log('📱 Generating post copy with DeepSeek...');
-      postCopy = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, publicationName);
+      const copyResult = await generatePostCopyWithDeepSeek(article, slides, deepseekApiKey, publicationName);
+      postCopy = { caption: copyResult.caption, hashtags: copyResult.hashtags };
+      await recordApiUsage('auto_simplify_copy', copyResult.usage?.total_tokens ?? 0);
       console.log(`✅ Generated post copy: ${postCopy.caption.length} characters, ${postCopy.hashtags.length} hashtags`);
     } catch (error) {
       console.error('❌ Error generating post copy:', error);
