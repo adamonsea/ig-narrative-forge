@@ -3392,7 +3392,7 @@ export type Database = {
       }
       cleanup_expired_community_insights: {
         Args: Record<PropertyKey, never>
-        Returns: number
+        Returns: undefined
       }
       cleanup_old_rate_limits: {
         Args: Record<PropertyKey, never>
