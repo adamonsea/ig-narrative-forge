@@ -1,8 +1,9 @@
 {
-  "name": "curatr",
-  "short_name": "curatr",
-  "description": "AI-powered content curation platform",
+  "name": "News Feed",
+  "short_name": "News",
+  "description": "Curated news and updates",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
@@ -12,13 +13,13 @@
       "src": "/placeholder.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/placeholder.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

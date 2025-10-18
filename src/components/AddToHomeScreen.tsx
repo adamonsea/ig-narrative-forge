@@ -30,7 +30,7 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
     setIsIOS(isIOSDevice);
 
     // Check if already dismissed
-    const dismissed = localStorage.getItem('a2hs-dismissed');
+    const dismissed = localStorage.getItem(`a2hs-dismissed-${topicSlug}`);
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
       const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
@@ -39,43 +39,37 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
       }
     }
 
-    // Create dynamic manifest with correct start_url
-    const manifestData = {
-      name: topicName,
-      short_name: topicName,
-      description: `Stay updated with the latest ${topicName} news`,
-      start_url: `/topic/${topicSlug}`,
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#000000",
-      orientation: "portrait-primary",
-      icons: [
-        {
-          src: topicLogo || "/placeholder.svg",
-          sizes: "192x192",
-          type: "image/svg+xml",
-          purpose: "any maskable"
-        },
-        {
-          src: topicLogo || "/placeholder.svg",
-          sizes: "512x512",
-          type: "image/svg+xml",
-          purpose: "any maskable"
-        }
-      ]
-    };
-
-    const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
-    const manifestURL = URL.createObjectURL(manifestBlob);
-    
-    // Update or create manifest link
+    // Update manifest link to point to edge function
     let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
     if (!manifestLink) {
       manifestLink = document.createElement('link');
       manifestLink.rel = 'manifest';
       document.head.appendChild(manifestLink);
     }
-    manifestLink.href = manifestURL;
+    manifestLink.href = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/topic-manifest?slug=${topicSlug}`;
+
+    // Update apple-touch-icon
+    let appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
+    if (!appleTouchIcon) {
+      appleTouchIcon = document.createElement('link');
+      appleTouchIcon.rel = 'apple-touch-icon';
+      document.head.appendChild(appleTouchIcon);
+    }
+    if (topicLogo) {
+      appleTouchIcon.href = topicLogo;
+    }
+
+    // Update apple-mobile-web-app-title
+    let appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement;
+    if (!appTitle) {
+      appTitle = document.createElement('meta');
+      appTitle.name = 'apple-mobile-web-app-title';
+      document.head.appendChild(appTitle);
+    }
+    appTitle.content = topicName;
+
+    // Update document title
+    document.title = topicName;
 
     // Listen for the beforeinstallprompt event (Android/Desktop)
     const handler = (e: Event) => {
@@ -94,7 +88,6 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
-      URL.revokeObjectURL(manifestURL);
     };
   }, [topicName, topicSlug, topicLogo]);
 
@@ -144,7 +137,7 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('a2hs-dismissed', Date.now().toString());
+    localStorage.setItem(`a2hs-dismissed-${topicSlug}`, Date.now().toString());
   };
 
   if (!showPrompt) return null;
