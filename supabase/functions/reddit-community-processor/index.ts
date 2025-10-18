@@ -26,12 +26,15 @@ interface CommunityInsight {
 }
 
 serve(async (req) => {
+  console.log('🚀 reddit-community-processor INITIALIZED - Function started');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     console.log('🏘️ Starting CAREFUL Reddit community processing...');
+    console.log('🔑 DeepSeek API Key present:', !!deepseekApiKey);
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
