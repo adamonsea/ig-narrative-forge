@@ -47,7 +47,7 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
         if (!mounted) return;
 
         if (keywords && keywords.length > 0) {
-          const formattedKeywords: PulseKeyword[] = keywords.map(kw => ({
+          const formattedKeywords: PulseKeyword[] = keywords.map((kw: any) => ({
             id: kw.id,
             keyword: kw.keyword,
             totalMentions: kw.total_mentions || 0,

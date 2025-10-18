@@ -388,6 +388,7 @@ export type Database = {
           negative_mentions: number | null
           positive_mentions: number | null
           representative_quote: string | null
+          set_number: number | null
           topic_id: string
           total_mentions: number | null
           updated_at: string | null
@@ -402,6 +403,7 @@ export type Database = {
           negative_mentions?: number | null
           positive_mentions?: number | null
           representative_quote?: string | null
+          set_number?: number | null
           topic_id: string
           total_mentions?: number | null
           updated_at?: string | null
@@ -416,6 +418,7 @@ export type Database = {
           negative_mentions?: number | null
           positive_mentions?: number | null
           representative_quote?: string | null
+          set_number?: number | null
           topic_id?: string
           total_mentions?: number | null
           updated_at?: string | null
