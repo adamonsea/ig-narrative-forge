@@ -34,20 +34,23 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
       try {
         setLoading(true);
         
+        // Use type assertion to handle new set_number column
         const { data: keywords, error: fetchError } = await supabase
           .from('community_pulse_keywords')
           .select('*')
           .eq('topic_id', topicId)
-          .eq('set_number', setNumber)
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(9) as { data: any[] | null; error: any };
 
         if (fetchError) throw fetchError;
 
         if (!mounted) return;
 
         if (keywords && keywords.length > 0) {
-          const formattedKeywords: PulseKeyword[] = keywords.map((kw: any) => ({
+          // Filter by set_number after fetching
+          const filteredKeywords = keywords.filter(kw => (kw.set_number || 1) === setNumber);
+          
+          const formattedKeywords: PulseKeyword[] = filteredKeywords.slice(0, 3).map((kw: any) => ({
             id: kw.id,
             keyword: kw.keyword,
             totalMentions: kw.total_mentions || 0,
