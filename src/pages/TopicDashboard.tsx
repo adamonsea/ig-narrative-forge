@@ -17,8 +17,6 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
-import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
-import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
@@ -107,11 +105,7 @@ const TopicDashboard = () => {
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
-  const [refreshingInsights, setRefreshingInsights] = useState(false);
   const { toast } = useToast();
-
-  // Community pulse keywords hook
-  const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
 
   // Set up parliamentary automation when enabled
   useParliamentaryAutomation({
@@ -394,38 +388,6 @@ const TopicDashboard = () => {
       });
     }
   };
-
-  const handleRefreshCommunityInsights = async () => {
-    if (!topic) return;
-    
-    setRefreshingInsights(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('reddit-community-processor', {
-        body: { topic_ids: [topic.id] }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Community Insights Refreshed",
-        description: data?.message || "Successfully analyzed Reddit communities for new insights",
-      });
-
-      // Refresh topic stats to update any relevant counts
-      await loadTopicAndStats();
-      
-    } catch (error) {
-      console.error('Error refreshing community insights:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to refresh community insights",
-        variant: "destructive"
-      });
-    } finally {
-      setRefreshingInsights(false);
-    }
-  };
-
 
   if (!user) {
     return (
@@ -1086,72 +1048,6 @@ const TopicDashboard = () => {
                     </AccordionContent>
                   </AccordionItem>
 
-                  {topic.community_intelligence_enabled && (
-                    <AccordionItem value="community" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex w-full items-start justify-between gap-3 text-left">
-                          <div className="flex items-center gap-3">
-                            <Activity className="h-4 w-4" />
-                            <div>
-                              <p className="text-sm font-medium">Community Intelligence</p>
-                              <p className="text-xs text-muted-foreground">Reddit insights and community sentiment</p>
-                            </div>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {topic.community_config?.subreddits?.length || 0} subreddits
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4 space-y-4">
-                        {/* Subreddit badges */}
-                        {topic.community_config?.subreddits && topic.community_config.subreddits.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {topic.community_config.subreddits.map((subreddit: string) => (
-                              <Badge key={subreddit} variant="outline">
-                                r/{subreddit}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Refresh button */}
-                        <Button 
-                          onClick={handleRefreshCommunityInsights}
-                          disabled={refreshingInsights}
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                        >
-                          {refreshingInsights ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Analyzing Reddit...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Refresh Community Pulse
-                            </>
-                          )}
-                        </Button>
-
-                        {/* Community Pulse Slides */}
-                        {pulseData.keywords.length > 0 ? (
-                          <CommunityPulseSlides 
-                            keywords={pulseData.keywords}
-                            timeframe="48h"
-                            mostActiveThreadUrl={pulseData.mostActiveThread?.url}
-                            mostActiveThreadTitle={pulseData.mostActiveThread?.title}
-                          />
-                        ) : (
-                          <div className="text-center py-8 text-sm text-muted-foreground">
-                            <p>No community pulse data yet.</p>
-                            <p className="mt-1">Click "Refresh" to analyze Reddit discussions.</p>
-                          </div>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
 
                   {topic.topic_type === 'regional' && topic.region && topic.parliamentary_tracking_enabled && (
                     <AccordionItem value="parliamentary" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">

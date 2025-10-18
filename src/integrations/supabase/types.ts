@@ -382,6 +382,7 @@ export type Database = {
           analysis_date: string | null
           created_at: string | null
           id: string
+          is_visible: boolean | null
           keyword: string
           most_active_thread_title: string | null
           most_active_thread_url: string | null
@@ -397,6 +398,7 @@ export type Database = {
           analysis_date?: string | null
           created_at?: string | null
           id?: string
+          is_visible?: boolean | null
           keyword: string
           most_active_thread_title?: string | null
           most_active_thread_url?: string | null
@@ -412,6 +414,7 @@ export type Database = {
           analysis_date?: string | null
           created_at?: string | null
           id?: string
+          is_visible?: boolean | null
           keyword?: string
           most_active_thread_title?: string | null
           most_active_thread_url?: string | null

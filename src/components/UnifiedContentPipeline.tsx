@@ -15,6 +15,7 @@ import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQue
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
 import { SentimentCardsReview } from "@/components/SentimentCardsReview";
+import { CommunityPulseReview } from "@/components/CommunityPulseReview";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 
 interface Topic {
@@ -534,11 +535,19 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         {/* Insights Tab */}
         <TabsContent value="insights" className="space-y-6">
           {selectedTopicId && (
-            <Card>
-              <CardContent className="pt-6">
-                <SentimentCardsReview topicId={selectedTopicId} />
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardContent className="pt-6">
+                  <SentimentCardsReview topicId={selectedTopicId} />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="pt-6">
+                  <CommunityPulseReview topicId={selectedTopicId} />
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
       </Tabs>

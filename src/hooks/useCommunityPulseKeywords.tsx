@@ -34,11 +34,12 @@ export function useCommunityPulseKeywords(topicId: string, setNumber: number = 1
       try {
         setLoading(true);
         
-        // Use type assertion to handle new set_number column
+        // Use type assertion to handle new columns (set_number, is_visible)
         const { data: keywords, error: fetchError } = await supabase
           .from('community_pulse_keywords')
           .select('*')
           .eq('topic_id', topicId)
+          .eq('is_visible', true) // Only fetch visible keywords
           .order('created_at', { ascending: false })
           .limit(9) as { data: any[] | null; error: any };
 
