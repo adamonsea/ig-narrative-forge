@@ -467,6 +467,31 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
         {/* Processing Tab */}
         <TabsContent value="processing" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
+                  if (error) throw error;
+                  toast({
+                    title: "Recovery Triggered",
+                    description: `Recovered ${data?.totalRecovered || 0} stuck items`,
+                  });
+                  refreshContent();
+                } catch (error) {
+                  toast({
+                    title: "Recovery Failed",
+                    description: error instanceof Error ? error.message : "Failed to recover stuck items",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Recover stuck
+            </Button>
+          </div>
           <Card>
             <CardContent>
             {queueItems.length > 0 ? (

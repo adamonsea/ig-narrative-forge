@@ -104,6 +104,39 @@
   .vote-direction-abstain {
     @apply text-gray-500;
   }
+  
+  /* Parliamentary slide styling */
+  .parliamentary-card {
+    min-height: 300px;
+  }
+  
+  .parl-small {
+    font-size: 0.875rem;
+    opacity: 0.75;
+  }
+  
+  .parl-large {
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+  
+  .parl-xl {
+    font-size: 3.5rem;
+    font-weight: 800;
+  }
+  
+  .parl-aye {
+    color: hsl(142 76% 36%);
+  }
+  
+  .parl-no {
+    color: hsl(0 84% 60%);
+  }
+  
+  .parl-rebel {
+    color: hsl(0 84% 60%);
+    font-weight: 600;
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 

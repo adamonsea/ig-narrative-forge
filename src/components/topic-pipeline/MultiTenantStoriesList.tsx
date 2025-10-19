@@ -186,7 +186,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       const { error: queueError } = await supabase
         .from('content_generation_queue')
         .insert({
-          topic_article_id: story.topic_article_id,
+          article_id: story.topic_article_id || story.article_id || '',
           status: 'pending',
           created_at: new Date().toISOString()
         });

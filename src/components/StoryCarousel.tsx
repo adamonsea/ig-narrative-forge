@@ -337,6 +337,89 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     return parts.join('');
   };
 
+  // Parliamentary slide renderer with specific design/scale
+  const renderParliamentarySlide = (slide: any, slideIndex: number) => {
+    const lines = slide.content.split('\n').filter((line: string) => line.trim());
+    
+    // Slide 1: MP header + date + vote title
+    if (slideIndex === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center px-6 parliamentary-card">
+          <h1 className="text-4xl md:text-5xl font-bold mb-2">{lines[0]}</h1>
+          {lines[1] && <p className="parl-small mb-4">{lines[1]}</p>}
+          {lines[2] && <p className="text-xl md:text-2xl font-normal">{lines[2]}</p>}
+        </div>
+      );
+    }
+    
+    // Slide 2: Vote direction (AYE/NO) with rebellion badge
+    if (slideIndex === 1) {
+      const voteDirection = lines.find((l: string) => l === 'AYE' || l === 'NO');
+      const isRebellion = slide.content.includes('Against party whip');
+      const isAye = voteDirection === 'AYE';
+      
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center parliamentary-card">
+          <p className="parl-small mb-2">Voted</p>
+          <h2 className={`parl-xl ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</h2>
+          {isRebellion && (
+            <div className="mt-4 px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
+              <span className="parl-rebel text-sm">🔥 Against party whip</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Slide 3: Vote outcome
+    if (slideIndex === 2) {
+      const outcome = lines.find((l: string) => l === 'ACCEPTED' || l === 'REJECTED');
+      const counts = lines.find((l: string) => l.includes('Ayes'));
+      
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center parliamentary-card">
+          <p className="parl-small mb-2">Vote outcome</p>
+          <h2 className="parl-large mb-4">{outcome}</h2>
+          {counts && <p className="parl-small">{counts}</p>}
+        </div>
+      );
+    }
+    
+    // Slide 4: Category + Information
+    if (slideIndex === 3) {
+      const category = lines.find((l: string) => l.startsWith('Category:'));
+      const info = lines.find((l: string) => l.startsWith('Information:'));
+      
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center px-6 parliamentary-card">
+          {category && <p className="text-base md:text-lg font-medium mb-3">{category}</p>}
+          {info && <p className="text-base md:text-xl">{info}</p>}
+        </div>
+      );
+    }
+    
+    // Slide 5: CTA button only
+    if (slideIndex === 4 && slide.links && slide.links.length > 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full parliamentary-card">
+          <Button
+            size="lg"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(slide.links[0].url, '_blank', 'noopener,noreferrer');
+            }}
+            className="text-lg px-8 py-6"
+          >
+            View vote details
+          </Button>
+        </div>
+      );
+    }
+    
+    // Fallback to standard rendering
+    return null;
+  };
+
   // Dynamic text sizing based on content length
   const getTextSize = (content: string, isTitle: boolean, isLaterSlide: boolean = false) => {
     const length = content.length;
@@ -380,6 +463,15 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   
   // Create slide components for SwipeCarousel
   const slideComponents = sortedSlides.map((slide, index) => {
+    // Check if this is a parliamentary story and render accordingly
+    if (isParliamentaryStory) {
+      const parliamentaryContent = renderParliamentarySlide(slide, index);
+      if (parliamentaryContent) {
+        return <div key={slide.id} className="h-full w-full">{parliamentaryContent}</div>;
+      }
+    }
+    
+    // Standard slide rendering
     const { mainContent, ctaContent, sourceUrl, contentWithLinks } = parseContentForLastSlide(slide?.content || 'Content not available', slide?.links);
     const hasImage = story.cover_illustration_url && index === 0;
     const isLast = index === validSlides.length - 1;
