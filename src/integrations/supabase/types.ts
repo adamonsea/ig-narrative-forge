@@ -3866,11 +3866,11 @@ export type Database = {
       get_topic_stories_with_keywords: {
         Args:
           | {
-              p_keyword_filter?: string[]
+              p_keywords?: string[]
               p_limit?: number
               p_offset?: number
-              p_source_filter?: string[]
-              p_topic_id: string
+              p_sources?: string[]
+              p_topic_slug: string
             }
           | {
               p_keywords?: string[]
@@ -3894,18 +3894,25 @@ export type Database = {
         Returns: {
           article_id: string
           article_published_at: string
+          article_region: string
           article_source_url: string
-          content_type: string
+          constituency: string
+          mp_name: string
+          mp_party: string
           shared_content_id: string
           slide_content: string
           slide_id: string
           slide_number: number
+          story_author: string
           story_cover_url: string
           story_created_at: string
           story_id: string
+          story_is_parliamentary: boolean
           story_is_published: boolean
+          story_publication_name: string
           story_status: string
           story_title: string
+          story_updated_at: string
         }[]
       }
       get_topic_visitor_stats: {
