@@ -3037,6 +3037,8 @@ export type Database = {
           name: string
           negative_keywords: string[] | null
           organizations: string[] | null
+          parliamentary_last_collection_at: string | null
+          parliamentary_last_weekly_roundup_at: string | null
           parliamentary_tracking_enabled: boolean | null
           postcodes: string[] | null
           region: string | null
@@ -3075,6 +3077,8 @@ export type Database = {
           name: string
           negative_keywords?: string[] | null
           organizations?: string[] | null
+          parliamentary_last_collection_at?: string | null
+          parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null
@@ -3113,6 +3117,8 @@ export type Database = {
           name?: string
           negative_keywords?: string[] | null
           organizations?: string[] | null
+          parliamentary_last_collection_at?: string | null
+          parliamentary_last_weekly_roundup_at?: string | null
           parliamentary_tracking_enabled?: boolean | null
           postcodes?: string[] | null
           region?: string | null

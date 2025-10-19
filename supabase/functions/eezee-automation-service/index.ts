@@ -109,6 +109,10 @@ serve(async (req) => {
           name,
           created_by,
           is_active,
+          region,
+          parliamentary_tracking_enabled,
+          parliamentary_last_collection_at,
+          parliamentary_last_weekly_roundup_at,
           auto_simplify_enabled,
           automation_quality_threshold,
           topic_automation_settings (
@@ -365,6 +369,79 @@ serve(async (req) => {
         }
       } catch (queueError) {
         console.error('❌ Queue processor error:', queueError);
+      }
+    }
+
+    // Phase 6: Parliamentary Automation
+    if (!dryRun) {
+      console.log('🏛️ Processing parliamentary automation...');
+      for (const topic of topics || []) {
+        if (!topic.parliamentary_tracking_enabled || !topic.region) {
+          continue;
+        }
+        
+        try {
+          // Check if it's been 6+ hours since last collection
+          const lastCollection = topic.parliamentary_last_collection_at;
+          const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+          
+          if (!lastCollection || new Date(lastCollection) < sixHoursAgo || forceRun) {
+            console.log(`📊 Collecting parliamentary votes for ${topic.name}...`);
+            
+            const { error: collectionError } = await supabase.functions.invoke('uk-parliament-collector', {
+              body: {
+                topicId: topic.id,
+                region: topic.region,
+                mode: 'daily'
+              }
+            });
+            
+            if (collectionError) {
+              console.error(`❌ Error collecting votes for ${topic.name}:`, collectionError);
+            } else {
+              // Update last collection timestamp
+              await supabase
+                .from('topics')
+                .update({ parliamentary_last_collection_at: new Date().toISOString() })
+                .eq('id', topic.id);
+              
+              console.log(`✅ Parliamentary votes collected for ${topic.name}`);
+            }
+          }
+          
+          // Check if it's Monday 9am-10am for weekly roundup
+          const now = new Date();
+          const isMonday = now.getDay() === 1;
+          const isMorning = now.getHours() >= 9 && now.getHours() < 10;
+          const lastWeeklyRoundup = topic.parliamentary_last_weekly_roundup_at;
+          const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          
+          if ((isMonday && isMorning && (!lastWeeklyRoundup || new Date(lastWeeklyRoundup) < lastWeek)) || forceRun) {
+            console.log(`📅 Creating weekly parliamentary roundup for ${topic.name}...`);
+            
+            const { error: roundupError } = await supabase.functions.invoke('uk-parliament-collector', {
+              body: {
+                topicId: topic.id,
+                region: topic.region,
+                mode: 'weekly'
+              }
+            });
+            
+            if (roundupError) {
+              console.error(`❌ Error creating weekly roundup for ${topic.name}:`, roundupError);
+            } else {
+              // Update last weekly roundup timestamp
+              await supabase
+                .from('topics')
+                .update({ parliamentary_last_weekly_roundup_at: new Date().toISOString() })
+                .eq('id', topic.id);
+              
+              console.log(`✅ Weekly parliamentary roundup created for ${topic.name}`);
+            }
+          }
+        } catch (parlError) {
+          console.error(`❌ Parliamentary automation error for ${topic.name}:`, parlError);
+        }
       }
     }
 
