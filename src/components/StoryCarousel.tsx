@@ -376,10 +376,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     // Slide 1: MP header + date + vote title with ballot box icon
     if (slideIndex === 0) {
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-6 ${partyColors.border} ${partyColors.bg}`}>
-          <div className="text-4xl mb-2">🗳️</div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-2">{lines[0]}</h1>
-          {lines[1] && <p className="parl-small mb-4">{lines[1]}</p>}
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 ${partyColors.border} ${partyColors.bg}`}>
+          <div className="text-4xl mb-4">🗳️</div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">{lines[0]}</h1>
+          {lines[1] && <p className="parl-small mb-6">{lines[1]}</p>}
           {lines[2] && <p className="text-xl md:text-2xl font-normal">{lines[2]}</p>}
         </div>
       );
@@ -392,11 +392,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const isAye = voteDirection === 'AYE';
       
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center ${partyColors.border} ${partyColors.bg}`}>
-          <p className="parl-small mb-2">Voted</p>
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-16 ${partyColors.border} ${partyColors.bg}`}>
+          <p className="parl-small mb-4">Voted</p>
           <h2 className={`parl-xl ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</h2>
           {isRebellion && (
-            <div className="mt-4 px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
+            <div className="mt-6 px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
               <span className="parl-rebel text-sm">🔥 Against party whip</span>
             </div>
           )}
@@ -410,9 +410,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const counts = lines.find((l: string) => l.includes('Ayes'));
       
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center ${partyColors.border} ${partyColors.bg}`}>
-          <p className="parl-small mb-2">Vote outcome</p>
-          <h2 className="parl-large mb-4">{outcome}</h2>
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-16 ${partyColors.border} ${partyColors.bg}`}>
+          <p className="parl-small mb-4">Vote outcome</p>
+          <h2 className="parl-large mb-6">{outcome}</h2>
           {counts && <p className="parl-small">{counts}</p>}
         </div>
       );
@@ -424,8 +424,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const info = lines.find((l: string) => l.startsWith('Information:'));
       
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-6 ${partyColors.border} ${partyColors.bg}`}>
-          {category && <p className="text-base md:text-lg font-medium mb-3">{category}</p>}
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 ${partyColors.border} ${partyColors.bg}`}>
+          {category && <p className="text-base md:text-lg font-medium mb-6">{category}</p>}
           {info && <p className="text-base md:text-xl">{info}</p>}
         </div>
       );
@@ -434,7 +434,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     // Slide 5: CTA button only
     if (slideIndex === 4 && slide.links && slide.links.length > 0) {
       return (
-        <div className={`flex flex-col items-center justify-center h-full ${partyColors.border} ${partyColors.bg}`}>
+        <div className={`flex flex-col items-center justify-center h-full px-8 py-16 ${partyColors.border} ${partyColors.bg}`}>
           <Button
             size="lg"
             onClick={(e) => {
@@ -620,7 +620,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   return (
     <div className="flex justify-center px-1 md:px-4">
       <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? 'parliamentary-card' : ''}`} data-story-card data-story-id={story.id}>
-        <div className={`relative ${isParliamentaryStory ? 'min-h-[300px]' : 'min-h-[600px]'} flex flex-col`}>
+        <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
           <div className="flex items-center justify-between p-4 border-b feed-card-header">
             <div className="flex items-center gap-2">

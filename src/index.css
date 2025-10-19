@@ -80,7 +80,7 @@
   /* Parliamentary vote banner styling */
   .parliamentary-card {
     /* Border color is now dynamic - applied via Tailwind classes */
-    min-height: 300px;
+    /* Height now controlled in component */
   }
   
   .parliamentary-card .feed-card-header {
@@ -105,10 +105,7 @@
     @apply text-gray-500;
   }
   
-  /* Parliamentary slide styling */
-  .parliamentary-card {
-    min-height: 300px;
-  }
+  /* Parliamentary slide styling - height controlled in component */
   
   .parl-small {
     font-size: 0.875rem;
