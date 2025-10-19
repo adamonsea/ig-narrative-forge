@@ -34,6 +34,7 @@ interface Story {
   };
   is_parliamentary?: boolean;
   mp_name?: string;
+  mp_names?: string[]; // all MPs associated with this story (aggregated)
   mp_party?: string;
   constituency?: string;
 }
@@ -399,6 +400,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             mp_name: row.mp_name || undefined,
             mp_party: row.mp_party || undefined,
             constituency: row.constituency || undefined,
+            mp_names: new Set<string>(), // aggregate MPs across rows
             slides: [],
             slideIds: new Set() // Track slide IDs to prevent duplicates
           });
@@ -412,6 +414,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // Add slide if it exists and hasn't been added yet
         if (row.slide_id) {
           const storyData = storyMap.get(row.story_id);
+
+          // Aggregate MP names across rows
+          if (row.mp_name) {
+            try {
+              storyData.mp_names?.add(row.mp_name);
+              if (!storyData.mp_name) {
+                storyData.mp_name = row.mp_name;
+              }
+            } catch (e) {
+              // no-op
+            }
+          }
+
           if (!storyData.slideIds.has(row.slide_id)) {
             storyData.slideIds.add(row.slide_id);
             storyData.slides.push({
@@ -549,6 +564,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           cover_illustration_prompt: '',
           popularity_data: popularityMap.get(story.id),
           slides: sortedSlides,
+          is_parliamentary: !!story.is_parliamentary,
+          mp_name: story.mp_name,
+          mp_names: Array.from((((story as any).mp_names as Set<string> | undefined) ?? new Set<string>())) as string[],
+          mp_party: story.mp_party,
+          constituency: story.constituency,
           article: {
             source_url: story.article_source_url || '#',
             published_at: story.article_published_at,
@@ -1056,21 +1076,52 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   // Client-side filtering for immediate feedback - now handles mixed content, keywords, sources, and MPs
   const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[], mps: string[]) => {
+    // No filters: just sort by date desc
     if (keywords.length === 0 && sources.length === 0 && mps.length === 0) {
-      // Ensure content is sorted when no filters too
       return [...content].sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
     }
 
+    // Exclusive MP filter mode (ignores keyword/source filters)
+    if (mps.length > 0) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+
+      const candidates = content.filter(item => item.type === 'story');
+      const parliamentaryStories = candidates.filter(item => {
+        const story = item.data as Story;
+        return !!(story as any).is_parliamentary;
+      });
+
+      const filtered = parliamentaryStories.filter(item => {
+        const story = item.data as Story;
+        const dateOk = new Date(item.content_date) >= cutoff;
+        const names: string[] = (story as any).mp_names || ((story as any).mp_name ? [(story as any).mp_name] : []);
+        const match = names.some(n => n && mps.includes(n));
+        return dateOk && match;
+      });
+
+      console.debug('🗳️ MP filter active', {
+        mps,
+        candidates: candidates.length,
+        parliamentaryCandidates: parliamentaryStories.length,
+        matched: filtered.length,
+        sample: filtered.slice(0, 5).map(i => ({ id: i.id, date: i.content_date }))
+      });
+
+      return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
+    }
+
+    // Keyword/Source filtering for mixed content
     const filtered = content.filter(item => {
       if (item.type === 'story') {
         const story = item.data as Story;
-        
+
         // Check keyword filter
         const keywordMatch = keywords.length === 0 || (() => {
           const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
           return keywords.some(keyword => text.includes(keyword.toLowerCase()));
         })();
-        
+
         // Check source filter
         const sourceMatch = sources.length === 0 || (() => {
           if (!story.article?.source_url) return false;
@@ -1082,23 +1133,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             return false;
           }
         })();
-        
-        // Check MP filter - only applies to parliamentary stories
-        const mpMatch = mps.length === 0 || (() => {
-          if (!(story as any).is_parliamentary) return false;
-          return (story as any).mp_name && mps.includes((story as any).mp_name);
-        })();
-        
-        return keywordMatch && sourceMatch && mpMatch;
+
+        return keywordMatch && sourceMatch;
       }
-      // Parliamentary mentions filtering
+      // Parliamentary mentions: show only when no keyword/source filters active (already handled above when none)
       if (item.type === 'parliamentary_mention') {
-        if (mps.length > 0) {
-          const mention = item.data as ParliamentaryMention;
-          return mention.mp_name && mps.includes(mention.mp_name);
-        }
-        // Show parliamentary mentions only when no keyword/source filters active
-        return keywords.length === 0 && sources.length === 0;
+        return keywords.length === 0 && sources.length === 0; 
       }
       return false;
     });
