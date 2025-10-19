@@ -157,8 +157,42 @@ export const TopicSettings = ({
     }
   };
 
-  const handleRemoveSubreddit = (subreddit: string) => {
-    setSubreddits(subreddits.filter(s => s !== subreddit));
+  const handleRemoveSubreddit = async (subreddit: string) => {
+    const updatedSubreddits = subreddits.filter(s => s !== subreddit);
+    setSubreddits(updatedSubreddits);
+    
+    // Auto-save immediately
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({
+          community_config: {
+            subreddits: updatedSubreddits,
+            processing_frequency_hours: processingFrequency,
+            last_processed: currentCommunityConfig?.last_processed || null
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Subreddit Removed",
+        description: `r/${subreddit} has been removed from monitoring`
+      });
+      
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error removing subreddit:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove subreddit",
+        variant: "destructive"
+      });
+      // Revert local state on error
+      setSubreddits(subreddits);
+    }
   };
 
   const handleProcessCommunity = async () => {
@@ -343,7 +377,40 @@ export const TopicSettings = ({
             </div>
             <Switch
               checked={communityEnabled}
-              onCheckedChange={setCommunityEnabled}
+              onCheckedChange={async (checked) => {
+                setCommunityEnabled(checked);
+                
+                // Auto-save immediately
+                try {
+                  const { error } = await supabase
+                    .from('topics')
+                    .update({
+                      community_intelligence_enabled: checked,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', topicId);
+
+                  if (error) throw error;
+
+                  toast({
+                    title: checked ? "Community Voice Enabled" : "Community Voice Disabled",
+                    description: checked 
+                      ? "Now monitoring community discussions" 
+                      : "Stopped monitoring community discussions"
+                  });
+                  
+                  onUpdate?.();
+                } catch (error) {
+                  console.error('Error toggling community intelligence:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to update setting",
+                    variant: "destructive"
+                  });
+                  // Revert local state on error
+                  setCommunityEnabled(!checked);
+                }
+              }}
             />
           </div>
 
