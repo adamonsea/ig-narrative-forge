@@ -33,6 +33,11 @@ interface Topic {
   name: string;
   slug: string;
   topic_type: 'regional' | 'keyword';
+  branding_config?: {
+    logo_url?: string;
+    icon_url?: string;
+    subheader?: string;
+  };
 }
 
 const StoryPage = () => {
@@ -51,11 +56,13 @@ const StoryPage = () => {
       }
       
       try {
-        // Load topic from safe_public_topics (accessible to anonymous users)
+        // Load topic (branding_config is accessible for public topics)
         const { data: topicData, error: topicError } = await supabase
-          .from('safe_public_topics')
-          .select('id, name, slug, topic_type')
+          .from('topics')
+          .select('id, name, slug, topic_type, branding_config')
           .eq('slug', slug.toLowerCase())
+          .eq('is_public', true)
+          .eq('is_active', true)
           .maybeSingle();
 
         if (topicError || !topicData) {
@@ -67,7 +74,8 @@ const StoryPage = () => {
 
         setTopic({
           ...topicData,
-          topic_type: topicData.topic_type as 'regional' | 'keyword'
+          topic_type: topicData.topic_type as 'regional' | 'keyword',
+          branding_config: topicData.branding_config as Topic['branding_config']
         });
 
         // Use the secure RPC function to fetch story data
@@ -159,6 +167,7 @@ const StoryPage = () => {
         topicName={topic.name}
         topicSlug={slug}
         topicType={topic.topic_type}
+        topicLogoUrl={topic.branding_config?.logo_url}
       />
 
       <div className="max-w-lg mx-auto">

@@ -23,13 +23,15 @@ interface StoryPageSEOProps {
   topicName: string;
   topicSlug: string;
   topicType?: string;
+  topicLogoUrl?: string;
 }
 
 export const StoryPageSEO = ({
   story,
   topicName,
   topicSlug,
-  topicType
+  topicType,
+  topicLogoUrl
 }: StoryPageSEOProps) => {
   const storyUrl = `https://curatr.pro/feed/${topicSlug}/story/${story.id}`;
   const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
@@ -63,8 +65,9 @@ export const StoryPageSEO = ({
   
   const articleBody = getArticleBody();
   
-  // Use dynamic OG image if no cover illustration
-  const imageUrl = story.cover_illustration_url || 
+  // Prioritize topic logo for branding consistency, then cover illustration, then dynamic OG image
+  const imageUrl = topicLogoUrl || 
+    story.cover_illustration_url || 
     `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}`;
   
   const siteName = `Curated ${topicName}`;
