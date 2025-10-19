@@ -3864,21 +3864,13 @@ export type Database = {
         }[]
       }
       get_topic_stories_with_keywords: {
-        Args:
-          | {
-              p_keywords?: string[]
-              p_limit?: number
-              p_offset?: number
-              p_sources?: string[]
-              p_topic_slug: string
-            }
-          | {
-              p_keywords?: string[]
-              p_limit?: number
-              p_offset?: number
-              p_sources?: string[]
-              p_topic_slug: string
-            }
+        Args: {
+          p_keywords?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_sources?: string[]
+          p_topic_slug: string
+        }
         Returns: {
           article_id: string
           article_published_at: string
