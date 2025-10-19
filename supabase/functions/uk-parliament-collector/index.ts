@@ -220,41 +220,59 @@ serve(async (req) => {
         .is('story_id', null)
         .eq('is_weekly_roundup', false);
       
+      // Clean up ALL invalid votes, not just orphaned ones
+      console.log('🧹 Cleaning up all invalid parliamentary mentions...');
+      const { data: allVotes, error: allVotesError } = await supabase
+        .from('parliamentary_mentions')
+        .select('*')
+        .eq('topic_id', topicId);
+      
+      if (!allVotesError && allVotes) {
+        let deletedCount = 0;
+        let validCount = 0;
+        
+        for (const vote of allVotes) {
+          const mpId = vote.import_metadata?.mp_id;
+          const nameConstKey = `${normalizeName(vote.mp_name)}|${normalizeConstituency(vote.constituency)}`;
+          const isTracked = (mpId && trackedByMpId.has(mpId)) || trackedByNameConstituency.has(nameConstKey);
+          
+          if (!isTracked) {
+            console.log(`🗑️ Deleting vote from untracked MP: ${vote.mp_name} (${vote.constituency})`);
+            await supabase
+              .from('parliamentary_mentions')
+              .delete()
+              .eq('id', vote.id);
+            deletedCount++;
+          } else {
+            validCount++;
+          }
+        }
+        
+        console.log(`✅ Cleanup complete: ${validCount} valid votes kept, ${deletedCount} invalid votes deleted`);
+      }
+      
+      // Now process orphaned votes (votes without stories) from tracked MPs only
       if (!orphanedError && orphanedVotes && orphanedVotes.length > 0) {
-        console.log(`📝 Found ${orphanedVotes.length} votes without stories - filtering and creating stories...`);
+        console.log(`📝 Found ${orphanedVotes.length} votes without stories - creating stories...`);
         
         let processedCount = 0;
-        let skippedCount = 0;
         
         for (const vote of orphanedVotes) {
           try {
-            // Validate this vote is from a tracked MP
             const mpId = vote.import_metadata?.mp_id;
             const nameConstKey = `${normalizeName(vote.mp_name)}|${normalizeConstituency(vote.constituency)}`;
-            
             const isTracked = (mpId && trackedByMpId.has(mpId)) || trackedByNameConstituency.has(nameConstKey);
             
-            if (!isTracked) {
-              console.log(`⏭️ Skipping orphaned vote for ${vote.mp_name} (${vote.constituency}) - not tracked for this topic`);
-              skippedCount++;
-              
-              // Delete invalid mention to prevent future loops
-              await supabase
-                .from('parliamentary_mentions')
-                .delete()
-                .eq('id', vote.id);
-              
-              continue;
+            if (isTracked) {
+              await createDailyVoteStory(supabase, vote, topicId);
+              processedCount++;
             }
-            
-            await createDailyVoteStory(supabase, vote, topicId);
-            processedCount++;
           } catch (error) {
             console.error(`Error creating story for vote ${vote.id}:`, error);
           }
         }
         
-        console.log(`✅ Processed ${processedCount} valid votes, skipped ${skippedCount} invalid votes`);
+        console.log(`✅ Created ${processedCount} stories for tracked MPs`);
       }
       
       // Daily collection: get votes from tracked MPs
