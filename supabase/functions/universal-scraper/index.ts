@@ -179,9 +179,7 @@ serve(async (req) => {
       }
     );
 
-    let storedCount = 0;
-    let duplicateCount = 0;
-    let discardedCount = 0;
+    // Only track multi-tenant storage metrics (legacy removed)
     let multiTenantStoredCount = 0;
 
     // Check for "soft failures" - successful scraping but blocked content
@@ -251,21 +249,7 @@ serve(async (req) => {
     if (scrapingResult.success && scrapingResult.articles.length > 0) {
       console.log(`✅ Scraping successful: ${scrapingResult.articles.length} articles found`);
       
-      // Store articles in legacy system (existing functionality)
-        const storageResult = await dbOps.storeArticles(
-          scrapingResult.articles,
-          sourceId,
-          region,
-          topicId,
-          topicConfig,
-          otherRegionalTopics
-        );
-      
-      storedCount = storageResult.stored;
-      duplicateCount = storageResult.duplicates;
-      discardedCount = storageResult.discarded;
-
-      // Store articles in multi-tenant system if topic is available
+      // Store articles in multi-tenant system only (no legacy dual-write)
       if (topicId && topicConfig) {
         console.log(`🔄 Storing articles in multi-tenant system for topic: ${topicId}`);
         const multiTenantResult = await multiTenantDbOps.storeArticles(
@@ -292,7 +276,7 @@ serve(async (req) => {
       scrapingResult.success,
       scrapingResult.method,
       responseTime,
-      storedCount // Pass actual stored count
+      multiTenantStoredCount // Use multi-tenant count only
     );
 
     // Log system event
@@ -306,14 +290,10 @@ serve(async (req) => {
         method: scrapingResult.method,
         articlesFound: scrapingResult.articlesFound,
         articlesScraped: scrapingResult.articlesScraped,
-        stored: storedCount,
-        duplicates: duplicateCount,
-        discarded: discardedCount,
         multiTenantStored: multiTenantStoredCount,
         responseTime,
         errors: scrapingResult.errors,
-        topicAssigned: topicId ? true : false,
-        dualStorageEnabled: topicId ? true : false
+        topicAssigned: topicId ? true : false
       },
       'universal-scraper'
     );
@@ -324,13 +304,9 @@ serve(async (req) => {
         method: scrapingResult.method,
         articlesFound: scrapingResult.articlesFound,
         articlesScraped: scrapingResult.articlesScraped,
-        articlesStored: storedCount,
-        multiTenantArticlesStored: multiTenantStoredCount,
-        duplicatesSkipped: duplicateCount,
-        filteredForRelevance: discardedCount,
+        articlesStored: multiTenantStoredCount,
         responseTime,
         errors: scrapingResult.errors,
-        dualStorageEnabled: topicId ? true : false,
         message: scrapingResult.success 
           ? `Successfully scraped ${storedCount} articles (${multiTenantStoredCount} multi-tenant) using ${scrapingResult.method}`
           : `Scraping failed: ${scrapingResult.errors.join(', ')}`

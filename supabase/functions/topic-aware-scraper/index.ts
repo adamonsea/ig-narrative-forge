@@ -229,18 +229,7 @@ serve(async (req) => {
       }
     }
 
-    // Store using BOTH old and new systems for parallel testing
-    // 1. Store using legacy system (existing behavior)
-    const legacyResult = await dbOps.storeArticles(
-      filteredArticlesWithScores,
-      actualSourceId,
-      topicConfig.region || 'general',
-      topicId
-    );
-
-    console.log(`📊 LEGACY Storage - Stored: ${legacyResult.stored}, Duplicates: ${legacyResult.duplicates}, Discarded: ${legacyResult.discarded}`);
-
-    // 2. Store using new multi-tenant system (parallel testing)
+    // Store using multi-tenant system only (no legacy dual-write)
     let multiTenantResult = null;
     try {
       multiTenantResult = await multiTenantDbOps.storeArticles(
@@ -262,11 +251,17 @@ serve(async (req) => {
       };
     }
 
-    // Update source metrics with actual articles stored count  
-    await dbOps.updateSourceMetrics(actualSourceId, true, 'rss', Date.now() - startTime, legacyResult.stored);
+    // Update source metrics with multi-tenant articles count  
+    await dbOps.updateSourceMetrics(
+      actualSourceId, 
+      true, 
+      'rss', 
+      Date.now() - startTime, 
+      multiTenantResult?.articlesProcessed || 0
+    );
 
-    // Log the operation with both legacy and multi-tenant results
-    await dbOps.logSystemEvent('info', `PARALLEL Topic-aware scraping completed for ${topicData.name}`, {
+    // Log the operation with multi-tenant results only
+    await dbOps.logSystemEvent('info', `Topic-aware scraping completed for ${topicData.name}`, {
       topic_id: topicId,
       topic_type: topicConfig.topic_type,
       source_id: actualSourceId,
@@ -275,10 +270,6 @@ serve(async (req) => {
       articles_pre_filter: scrapingResult.articles.length,
       articles_filtered_out: discardedArticles.length,
       articles_passed_filter: filteredArticlesWithScores.length,
-      // Legacy results
-      legacy_stored: legacyResult.stored,
-      legacy_duplicates: legacyResult.duplicates,
-      legacy_discarded: legacyResult.discarded,
       // Multi-tenant results
       mt_success: multiTenantResult?.success || false,
       mt_processed: multiTenantResult?.articlesProcessed || 0,
@@ -287,10 +278,9 @@ serve(async (req) => {
       mt_duplicates: multiTenantResult?.duplicatesSkipped || 0,
       // Configuration
       scoring_method: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'parallel_migration_test',
       negative_keywords_applied: topicData.negative_keywords?.length || 0,
       competing_regions_applied: topicData.competing_regions?.length || 0
-    }, 'topic-aware-scraper-parallel');
+    }, 'topic-aware-scraper');
 
     return new Response(JSON.stringify({
       success: true,
@@ -300,21 +290,13 @@ serve(async (req) => {
       articlesPreFilter: scrapingResult.articles.length,
       articlesFilteredOut: discardedArticles.length,
       articlesPassedFilter: filteredArticlesWithScores.length,
-      // Legacy results
-      legacyStored: legacyResult.stored,
-      legacyDuplicates: legacyResult.duplicates,
-      legacyDiscarded: legacyResult.discarded,
       // Multi-tenant results
-      multiTenant: {
-        success: multiTenantResult?.success || false,
-        processed: multiTenantResult?.articlesProcessed || 0,
-        newContent: multiTenantResult?.newContentCreated || 0,
-        topicArticles: multiTenantResult?.topicArticlesCreated || 0,
-        duplicatesSkipped: multiTenantResult?.duplicatesSkipped || 0,
-        errors: multiTenantResult?.errors || []
-      },
+      articlesProcessed: multiTenantResult?.articlesProcessed || 0,
+      newContentCreated: multiTenantResult?.newContentCreated || 0,
+      topicArticlesCreated: multiTenantResult?.topicArticlesCreated || 0,
+      duplicatesSkipped: multiTenantResult?.duplicatesSkipped || 0,
+      errors: multiTenantResult?.errors || [],
       scoringMethod: topicConfig.topic_type === 'regional' ? 'regional_relevance' : 'keyword_matching',
-      approach: 'parallel_migration_test',
       negativeKeywordsApplied: topicData.negative_keywords?.length || 0,
       competingRegionsApplied: topicData.competing_regions?.length || 0,
       filteringDetails: {
