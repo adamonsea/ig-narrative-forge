@@ -275,6 +275,35 @@ serve(async (req) => {
         console.log(`✅ Created ${processedCount} stories for tracked MPs`);
       }
       
+      // Check for stories with mismatched MP names and delete them
+      console.log('🔍 Checking for stories with mismatched MP names...');
+      const { data: storiesWithMentions, error: mentionsError } = await supabase
+        .from('parliamentary_mentions')
+        .select('id, mp_name, story_id, stories(id, title)')
+        .eq('topic_id', topicId)
+        .not('story_id', 'is', null);
+      
+      if (!mentionsError && storiesWithMentions) {
+        let mismatchCount = 0;
+        for (const mention of storiesWithMentions) {
+          if (mention.stories && !mention.stories.title.includes(mention.mp_name)) {
+            console.log(`🗑️ Deleting story with mismatched MP name: "${mention.stories.title}" (should contain "${mention.mp_name}")`);
+            
+            // Delete the story via cascade function
+            const { error: deleteError } = await supabase.functions.invoke('delete-story-cascade', {
+              body: { story_id: mention.stories.id }
+            });
+            
+            if (deleteError) {
+              console.error(`Error deleting mismatched story ${mention.stories.id}:`, deleteError);
+            } else {
+              mismatchCount++;
+            }
+          }
+        }
+        console.log(`✅ Deleted ${mismatchCount} stories with mismatched MP names`);
+      }
+      
       // Daily collection: get votes from tracked MPs
       const votes = await collectDailyVotes(topicId, region, supabase);
       

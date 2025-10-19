@@ -617,11 +617,9 @@ Return in JSON format:
         audience_expertise: topicExpertise
       };
       
-      // Set appropriate IDs based on context
-      if (articleId) {
-        insertData.article_id = articleId;
-      }
+      // Set appropriate IDs based on context - mutually exclusive
       if (isMultiTenant) {
+        // Multi-tenant: use topic_article_id + shared_content_id
         if (topicArticleId) {
           insertData.topic_article_id = topicArticleId;
         }
@@ -629,6 +627,12 @@ Return in JSON format:
           insertData.shared_content_id = sharedContentId;
         }
         console.log(`📖 Creating new multi-tenant story with topic_article_id: ${topicArticleId}, shared_content_id: ${sharedContentId}`);
+      } else {
+        // Legacy: use article_id only
+        if (articleId) {
+          insertData.article_id = articleId;
+        }
+        console.log(`📖 Creating new legacy story with article_id: ${articleId}`);
       }
 
       const { data: newStory, error: storyError } = await supabase
