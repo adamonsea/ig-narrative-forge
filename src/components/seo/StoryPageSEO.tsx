@@ -62,7 +62,11 @@ export const StoryPageSEO = ({
   };
   
   const articleBody = getArticleBody();
-  const imageUrl = story.cover_illustration_url || 'https://curatr.pro/placeholder.svg';
+  
+  // Use dynamic OG image if no cover illustration
+  const imageUrl = story.cover_illustration_url || 
+    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}`;
+  
   const siteName = `Curated ${topicName}`;
   
   // Published date

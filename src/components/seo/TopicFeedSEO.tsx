@@ -34,7 +34,11 @@ export const TopicFeedSEO = ({
   };
   
   const description = getSmartDescription();
-  const imageUrl = logoUrl || 'https://curatr.pro/placeholder.svg';
+  
+  // Use dynamic OG image if no custom logo
+  const imageUrl = logoUrl || 
+    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(`Curated ${topicName}`)}&subtitle=${encodeURIComponent(topicName)}`;
+  
   const siteName = `Curated ${topicName}`;
 
   // Generate structured data for the feed

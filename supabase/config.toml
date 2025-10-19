@@ -189,3 +189,9 @@ verify_jwt = false
 
 [functions.cleanup-offtracking-parliamentary-votes]
 verify_jwt = false
+
+[functions.social-meta-handler]
+verify_jwt = false
+
+[functions.generate-og-image]
+verify_jwt = false
