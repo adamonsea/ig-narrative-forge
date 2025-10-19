@@ -3866,6 +3866,13 @@ export type Database = {
       get_topic_stories_with_keywords: {
         Args:
           | {
+              p_keyword_filter?: string[]
+              p_limit?: number
+              p_offset?: number
+              p_source_filter?: string[]
+              p_topic_id: string
+            }
+          | {
               p_keywords?: string[]
               p_limit?: number
               p_offset?: number

@@ -32,6 +32,10 @@ interface Story {
     published_at: string;
     region: string;
   };
+  is_parliamentary?: boolean;
+  mp_name?: string;
+  mp_party?: string;
+  constituency?: string;
 }
 
 interface Topic {
@@ -391,6 +395,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             article_published_at: row.article_published_at,
             article_id: row.article_id,
             shared_content_id: row.shared_content_id,
+            is_parliamentary: row.story_is_parliamentary || false,
+            mp_name: row.mp_name || undefined,
+            mp_party: row.mp_party || undefined,
+            constituency: row.constituency || undefined,
             slides: [],
             slideIds: new Set() // Track slide IDs to prevent duplicates
           });
