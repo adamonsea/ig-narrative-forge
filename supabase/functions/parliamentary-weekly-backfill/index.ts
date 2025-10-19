@@ -73,7 +73,7 @@ serve(async (req) => {
         normalized_url: `weekly-roundup-${weekStartDate}-${topicId}`,
         title: roundupTitle,
         body: `Weekly summary of parliamentary voting records for ${region}`,
-        published_at: today.toISOString(),
+        published_at: weekStartDate, // Use week start date so roundup appears on Monday
         word_count: 100,
         language: 'en',
         source_domain: 'parliament.uk'
