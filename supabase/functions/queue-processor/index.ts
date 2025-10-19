@@ -197,6 +197,75 @@ serve(async (req) => {
           throw new Error(generationError?.message || generationResult?.error || 'Content generation failed');
         }
 
+        const storyId = generationResult.storyId || generationResult.story_id;
+        
+        // Auto-approve high-quality stories
+        try {
+          // Get the story's quality score and topic threshold
+          const { data: story, error: storyError } = await supabase
+            .from('stories')
+            .select('quality_score, article_id, topic_article_id')
+            .eq('id', storyId)
+            .single();
+          
+          if (story && !storyError) {
+            // Get topic's quality threshold (default 60)
+            let qualityThreshold = 60;
+            let topicId = null;
+            
+            // Get topic_id from either legacy or multi-tenant path
+            if (story.article_id) {
+              const { data: article } = await supabase
+                .from('articles')
+                .select('topic_id')
+                .eq('id', story.article_id)
+                .single();
+              topicId = article?.topic_id;
+            } else if (story.topic_article_id) {
+              const { data: topicArticle } = await supabase
+                .from('topic_articles')
+                .select('topic_id')
+                .eq('id', story.topic_article_id)
+                .single();
+              topicId = topicArticle?.topic_id;
+            }
+            
+            // Get automation threshold if we have a topic
+            if (topicId) {
+              const { data: automation } = await supabase
+                .from('topic_automation_settings')
+                .select('quality_threshold')
+                .eq('topic_id', topicId)
+                .single();
+              if (automation?.quality_threshold) {
+                qualityThreshold = automation.quality_threshold;
+              }
+            }
+            
+            // Auto-approve if quality score meets or exceeds threshold
+            if (story.quality_score && story.quality_score >= qualityThreshold) {
+              const { error: approveError } = await supabase
+                .from('stories')
+                .update({ 
+                  status: 'ready',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', storyId);
+              
+              if (!approveError) {
+                console.log(`🎯 Auto-approved story ${storyId} - quality score ${story.quality_score} >= threshold ${qualityThreshold}`);
+              } else {
+                console.warn('⚠️ Failed to auto-approve story:', approveError);
+              }
+            } else {
+              console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
+            }
+          }
+        } catch (autoApproveError) {
+          console.warn('⚠️ Auto-approval check failed:', autoApproveError);
+          // Don't fail the job if auto-approval fails
+        }
+        
         // Mark job as completed with success data
         const { error: completeError } = await supabase
           .from('content_generation_queue')
@@ -205,7 +274,7 @@ serve(async (req) => {
             completed_at: new Date().toISOString(),
             result_data: {
               success: true,
-              storyId: generationResult.storyId || generationResult.story_id,
+              storyId: storyId,
               slideCount: generationResult.slideCount || generationResult.slides_count,
               sourceType: generationResult.source_type
             }
