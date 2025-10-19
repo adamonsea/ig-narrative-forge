@@ -830,43 +830,45 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
         year: 'numeric' 
       });
 
+      // Helper to map outcome
+      const mapOutcome = (outcome: string) => outcome.toLowerCase() === 'passed' ? 'ACCEPTED' : 'REJECTED';
+
       // Slide 1: Header with voting icon, MP name, date, and vote title
       const slide1Content = `🗳️
 
-**${vote.mp_name}**
+MP ${vote.mp_name}
+
 ${voteDate}
 
 ${vote.vote_title}`;
 
-      // Slide 2: Their vote with rebellion indicator and local impact
-      const rebellionNote = vote.is_rebellion 
-        ? `\n\n⚠️ **Voted against ${vote.party} party line**` 
-        : '';
-      const slide2Content = `**${vote.mp_name}** voted **${vote.vote_direction.toUpperCase()}**${rebellionNote}
+      // Slide 2: Vote direction only
+      const slide2Content = `Voted
 
-${vote.local_impact_summary || ''}`;
+${vote.vote_direction.toUpperCase()}`;
 
-      // Slide 3: Vote totals and outcome
-      const slide3Content = `Vote Outcome: **${vote.vote_outcome.toUpperCase()}**
+      // Slide 3: Vote outcome and totals
+      const slide3Content = `Vote outcome
 
-📊 ${vote.aye_count} Ayes, ${vote.no_count} Noes
+${mapOutcome(vote.vote_outcome)}
 
-Category: ${vote.vote_category}`;
+Ayes ${vote.aye_count}, Nos ${vote.no_count}`;
 
-      // Slide 4: Attribution and link
-      const slide4Content = `READ THE FULL STORY AT
-COMMONSVOTES.DIGIMINSTER.COM
+      // Slide 4: Category and information
+      const slide4Content = `Category: ${vote.vote_category}
 
-(Originally published ${voteDate})
+Information: ${vote.local_impact_summary || 'This legislative decision at Westminster affects local policy implementation'}`;
 
-from commonsvotes.digiminster.com`;
+      // Slide 5: Link to vote details
+      const slide5Content = `View full voting record`;
 
-      // Insert all 4 slides
+      // Insert all 5 slides
       const slides = [
         { slide_number: 1, content: slide1Content, links: [] },
         { slide_number: 2, content: slide2Content, links: [] },
         { slide_number: 3, content: slide3Content, links: [] },
-        { slide_number: 4, content: slide4Content, links: [{ text: 'View on Parliament.uk', url: vote.vote_url }] }
+        { slide_number: 4, content: slide4Content, links: [] },
+        { slide_number: 5, content: slide5Content, links: [{ text: 'View vote details', url: vote.vote_url }] }
       ];
 
       for (const slideData of slides) {
