@@ -446,62 +446,58 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
       console.log('🔍 [GROUPING] Grouped into', storyMap.size, 'unique stories');
       
-      // If filters are active, fetch full slide sets for matched stories to avoid slide reductions
-      if (keywords || sources) {
-        const storyIds = Array.from(storyMap.keys());
-        const chunkSize = 50;
-        const slideMap = new Map<string, any[]>();
-        for (let i = 0; i < storyIds.length; i += chunkSize) {
-          const chunk = storyIds.slice(i, i + chunkSize);
-          const { data: slidesData, error: slidesError } = await supabase
-            .from('slides')
-            .select('id,story_id,slide_number,content')
-            .in('story_id', chunk)
-            .order('slide_number', { ascending: true });
-          if (slidesError) {
-            console.warn('⚠️ Failed to fetch full slides for stories chunk:', slidesError);
-            continue;
-          }
-          (slidesData || []).forEach((s: any) => {
-            const arr = slideMap.get(s.story_id) || [];
-            if (!arr.some((t: any) => t.id === s.id)) {
-              arr.push({ id: s.id, slide_number: s.slide_number, content: s.content, word_count: 0 });
-            }
-            slideMap.set(s.story_id, arr);
-          });
+      // Fetch full slide sets for all matched stories to ensure complete slide data
+      const storyIds = Array.from(storyMap.keys());
+      const chunkSize = 50;
+      const slideMap = new Map<string, any[]>();
+      for (let i = 0; i < storyIds.length; i += chunkSize) {
+        const chunk = storyIds.slice(i, i + chunkSize);
+        const { data: slidesData, error: slidesError } = await supabase
+          .from('slides')
+          .select('id,story_id,slide_number,content')
+          .in('story_id', chunk)
+          .order('slide_number', { ascending: true });
+        if (slidesError) {
+          console.warn('⚠️ Failed to fetch full slides for stories chunk:', slidesError);
+          continue;
         }
-        // Replace slides with the complete sets when available
-        slideMap.forEach((slides, sid) => {
-          const storyData = storyMap.get(sid);
-          if (storyData) {
-            storyData.slides = slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+        (slidesData || []).forEach((s: any) => {
+          const arr = slideMap.get(s.story_id) || [];
+          if (!arr.some((t: any) => t.id === s.id)) {
+            arr.push({ id: s.id, slide_number: s.slide_number, content: s.content, word_count: 0 });
           }
+          slideMap.set(s.story_id, arr);
         });
       }
+      // Replace slides with the complete sets when available
+      slideMap.forEach((slides, sid) => {
+        const storyData = storyMap.get(sid);
+        if (storyData) {
+          storyData.slides = slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+        }
+      });
       
-      // Log slide counts when filtering to detect incomplete stories
-      if (keywords || sources) {
-        const slideCounts = Array.from(storySlideCountMap.entries()).map(([storyId, count]) => ({
-          storyId: storyId.substring(0, 8),
-          slideCount: count
-        }));
-        console.log('📊 Stories with slide counts:', slideCounts.slice(0, 5));
-        
-        // Warn if any story has very few slides (might indicate missing slides)
-        slideCounts.forEach(({ storyId, slideCount }) => {
-          if (slideCount < 3) {
-            console.warn(`⚠️ Story ${storyId} has only ${slideCount} slide(s) - might be incomplete due to filtering`);
-          }
-        });
-      }
+      // Log slide counts to detect incomplete stories
+      const slideCounts = Array.from(storySlideCountMap.entries()).map(([storyId, count]) => ({
+        storyId: storyId.substring(0, 8),
+        slideCount: count
+      }));
+      console.log('📊 Stories with slide counts:', slideCounts.slice(0, 5));
+      
+      // Warn if any story has very few slides (might indicate missing slides)
+      slideCounts.forEach(({ storyId, slideCount }) => {
+        if (slideCount < 3) {
+          console.warn(`⚠️ Story ${storyId} has only ${slideCount} slide(s) - might be incomplete`);
+        }
+      });
       
       const uniqueStories = Array.from(storyMap.values());
       const pageUniqueStories = uniqueStories;
 
       // Fetch popularity data for all stories
-      const storyIds = Array.from(storyMap.keys());
+      const storyIdsForPopularity = Array.from(storyMap.keys());
       let popularityMap = new Map();
-      if (storyIds.length > 0) {
+      if (storyIdsForPopularity.length > 0) {
         try {
           const { data: popularityData, error: popularityError } = await supabase
             .rpc('get_popular_stories_by_period', {
