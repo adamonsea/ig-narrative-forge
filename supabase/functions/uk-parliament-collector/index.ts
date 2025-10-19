@@ -57,6 +57,19 @@ const REGIONAL_CONSTITUENCIES: Record<string, string[]> = {
 
 const MP_CACHE = new Map<string, MPInfo | null>();
 
+// Helper functions for robust MP matching
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/^(mr|ms|mrs|dr|rt hon|sir|dame|lord|lady)\.?\s+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeConstituency(constituency: string): string {
+  return (constituency || '').toLowerCase().trim();
+}
+
 async function fetchCurrentMpForConstituency(constituency: string): Promise<MPInfo | null> {
   const cacheKey = constituency.toLowerCase();
   if (MP_CACHE.has(cacheKey)) {
@@ -173,7 +186,32 @@ serve(async (req) => {
     const constituencies = REGIONAL_CONSTITUENCIES[region] || [region];
     
     if (mode === 'daily') {
-      // First, backfill any existing votes that don't have stories
+      // First, fetch tracked MPs for validation
+      const { data: trackedMPs, error: trackedError } = await supabase
+        .from('topic_tracked_mps')
+        .select('mp_id, mp_name, constituency')
+        .eq('topic_id', topicId)
+        .eq('tracking_enabled', true);
+      
+      if (trackedError) {
+        console.error('Error fetching tracked MPs:', trackedError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to fetch tracked MPs' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Build lookup maps for tracked MPs
+      const trackedByMpId = new Set((trackedMPs || []).map(mp => mp.mp_id).filter(Boolean));
+      const trackedByNameConstituency = new Set(
+        (trackedMPs || []).map(mp => 
+          `${normalizeName(mp.mp_name)}|${normalizeConstituency(mp.constituency)}`
+        )
+      );
+      
+      console.log(`📋 Validated ${trackedMPs?.length || 0} tracked MPs for filtering`);
+      
+      // Backfill any existing votes that don't have stories, but ONLY for tracked MPs
       console.log('🔄 Checking for existing votes without stories...');
       const { data: orphanedVotes, error: orphanedError } = await supabase
         .from('parliamentary_mentions')
@@ -183,14 +221,40 @@ serve(async (req) => {
         .eq('is_weekly_roundup', false);
       
       if (!orphanedError && orphanedVotes && orphanedVotes.length > 0) {
-        console.log(`📝 Found ${orphanedVotes.length} votes without stories - creating stories...`);
+        console.log(`📝 Found ${orphanedVotes.length} votes without stories - filtering and creating stories...`);
+        
+        let processedCount = 0;
+        let skippedCount = 0;
+        
         for (const vote of orphanedVotes) {
           try {
+            // Validate this vote is from a tracked MP
+            const mpId = vote.import_metadata?.mp_id;
+            const nameConstKey = `${normalizeName(vote.mp_name)}|${normalizeConstituency(vote.constituency)}`;
+            
+            const isTracked = (mpId && trackedByMpId.has(mpId)) || trackedByNameConstituency.has(nameConstKey);
+            
+            if (!isTracked) {
+              console.log(`⏭️ Skipping orphaned vote for ${vote.mp_name} (${vote.constituency}) - not tracked for this topic`);
+              skippedCount++;
+              
+              // Delete invalid mention to prevent future loops
+              await supabase
+                .from('parliamentary_mentions')
+                .delete()
+                .eq('id', vote.id);
+              
+              continue;
+            }
+            
             await createDailyVoteStory(supabase, vote, topicId);
+            processedCount++;
           } catch (error) {
             console.error(`Error creating story for vote ${vote.id}:`, error);
           }
         }
+        
+        console.log(`✅ Processed ${processedCount} valid votes, skipped ${skippedCount} invalid votes`);
       }
       
       // Daily collection: get votes from tracked MPs
@@ -517,24 +581,52 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
   for (const vote of votes) {
     try {
       // Validate that this MP is actually tracked for this topic
-      const { data: trackedMp, error: trackedError } = await supabase
-        .from('topic_tracked_mps')
-        .select('mp_id, constituency')
-        .eq('topic_id', topicId)
-        .eq('mp_name', vote.mp_name)
-        .maybeSingle();
+      // Prefer mp_id lookup for robustness, fallback to name+constituency
+      const mpId = vote.import_metadata?.mp_id;
       
-      if (trackedError) {
-        console.error('Error checking tracked MPs:', trackedError);
+      let trackedMp;
+      if (mpId) {
+        // Primary: lookup by mp_id
+        const { data, error } = await supabase
+          .from('topic_tracked_mps')
+          .select('mp_id, mp_name, constituency')
+          .eq('topic_id', topicId)
+          .eq('mp_id', mpId)
+          .eq('tracking_enabled', true)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error checking tracked MPs by mp_id:', error);
+        }
+        trackedMp = data;
       }
       
-      // Skip if MP is not tracked for this topic or constituency doesn't match
       if (!trackedMp) {
-        console.log(`⏭️ Skipping vote for ${vote.mp_name} - not tracked for this topic`);
+        // Fallback: lookup by normalized name + constituency
+        const { data: allTracked, error: allError } = await supabase
+          .from('topic_tracked_mps')
+          .select('mp_id, mp_name, constituency')
+          .eq('topic_id', topicId)
+          .eq('tracking_enabled', true);
+        
+        if (allError) {
+          console.error('Error checking tracked MPs by name:', allError);
+        }
+        
+        trackedMp = (allTracked || []).find(mp => 
+          normalizeName(mp.mp_name) === normalizeName(vote.mp_name) &&
+          normalizeConstituency(mp.constituency) === normalizeConstituency(vote.constituency)
+        );
+      }
+      
+      // Skip if MP is not tracked for this topic
+      if (!trackedMp) {
+        console.log(`⏭️ Skipping vote for ${vote.mp_name} (${vote.constituency}) - not tracked for this topic`);
         continue;
       }
       
-      if (trackedMp.constituency !== vote.constituency) {
+      // Verify constituency matches (normalized comparison)
+      if (normalizeConstituency(trackedMp.constituency) !== normalizeConstituency(vote.constituency)) {
         console.log(`⏭️ Skipping vote for ${vote.mp_name} - constituency mismatch (expected: ${trackedMp.constituency}, got: ${vote.constituency})`);
         continue;
       }
