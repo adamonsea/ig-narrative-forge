@@ -183,6 +183,59 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     return colors[category] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
   };
 
+  const getPartyColors = (party: string): { border: string; bg: string } => {
+    const partyLower = party.toLowerCase();
+    
+    if (partyLower.includes('liberal democrat') || partyLower.includes('lib dem')) {
+      return { 
+        border: 'border-l-4 border-amber-400', 
+        bg: 'bg-amber-50/50 dark:bg-amber-950/20' 
+      };
+    }
+    if (partyLower.includes('conservative') || partyLower.includes('tory')) {
+      return { 
+        border: 'border-l-4 border-blue-500', 
+        bg: 'bg-blue-50/50 dark:bg-blue-950/20' 
+      };
+    }
+    if (partyLower.includes('labour')) {
+      return { 
+        border: 'border-l-4 border-red-500', 
+        bg: 'bg-red-50/50 dark:bg-red-950/20' 
+      };
+    }
+    if (partyLower.includes('green')) {
+      return { 
+        border: 'border-l-4 border-green-500', 
+        bg: 'bg-green-50/50 dark:bg-green-950/20' 
+      };
+    }
+    if (partyLower.includes('reform')) {
+      return { 
+        border: 'border-l-4 border-purple-500', 
+        bg: 'bg-purple-50/50 dark:bg-purple-950/20' 
+      };
+    }
+    if (partyLower.includes('snp')) {
+      return { 
+        border: 'border-l-4 border-yellow-500', 
+        bg: 'bg-yellow-50/50 dark:bg-yellow-950/20' 
+      };
+    }
+    if (partyLower.includes('plaid')) {
+      return { 
+        border: 'border-l-4 border-emerald-600', 
+        bg: 'bg-emerald-50/50 dark:bg-emerald-950/20' 
+      };
+    }
+    
+    // Default/Independent
+    return { 
+      border: 'border-l-4 border-gray-300', 
+      bg: 'bg-gray-50/50 dark:bg-gray-950/20' 
+    };
+  };
+
   const getVoteDirectionBadge = (direction: string) => {
     if (direction === 'aye') return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Aye</Badge>;
     if (direction === 'no') return <Badge variant="destructive">No</Badge>;
@@ -217,28 +270,31 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     }
   };
 
-  const renderVoteCard = (vote: VotingRecord) => (
-    <Card key={vote.id} className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-4">
-        <div className="space-y-3">
-          {/* Title with inline indicators */}
-          <CardTitle className="text-lg leading-tight flex items-start gap-2">
-            {vote.is_major_vote && (
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0 mt-0.5" />
-            )}
-            {vote.is_rebellion && <span className="text-base">🔥</span>}
-            <span className="flex-1">{vote.vote_title}</span>
-            {isTopicOwner && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 ml-auto flex-shrink-0"
-                onClick={() => toggleMajorVote(vote.id, vote.is_major_vote)}
-              >
-                <Star className={`w-3 h-3 ${vote.is_major_vote ? 'fill-amber-400 text-amber-400' : ''}`} />
-              </Button>
-            )}
-          </CardTitle>
+  const renderVoteCard = (vote: VotingRecord) => {
+    const partyColors = getPartyColors(vote.party);
+    
+    return (
+      <Card key={vote.id} className={`hover:shadow-md transition-shadow ${partyColors.border} ${partyColors.bg}`}>
+        <CardHeader className="pb-4">
+          <div className="space-y-3">
+            {/* Title with inline indicators */}
+            <CardTitle className="text-lg leading-tight flex items-start gap-2">
+              {vote.is_major_vote && (
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0 mt-0.5" />
+              )}
+              {vote.is_rebellion && <span className="text-base">🔥</span>}
+              <span className="flex-1">{vote.vote_title}</span>
+              {isTopicOwner && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 ml-auto flex-shrink-0"
+                  onClick={() => toggleMajorVote(vote.id, vote.is_major_vote)}
+                >
+                  <Star className={`w-3 h-3 ${vote.is_major_vote ? 'fill-amber-400 text-amber-400' : ''}`} />
+                </Button>
+              )}
+            </CardTitle>
           
           {/* MP Info - single clean line */}
           <div className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
@@ -287,7 +343,8 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   if (loading) {
     return (
