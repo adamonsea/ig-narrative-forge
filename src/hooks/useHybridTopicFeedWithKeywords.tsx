@@ -170,6 +170,48 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
 
+  const fetchAvailableParliamentaryFilters = useCallback(async (topicId: string) => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data, error } = await supabase
+      .from('parliamentary_mentions')
+      .select('mp_name, party, constituency, story_id')
+      .eq('topic_id', topicId)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching parliamentary filters:', error);
+      return [];
+    }
+
+    // Group by MP and count votes
+    const mpCounts = new Map<string, { 
+      mp_name: string; 
+      mp_party: string; 
+      constituency: string; 
+      count: number 
+    }>();
+
+    data?.forEach(record => {
+      const key = record.mp_name;
+      if (mpCounts.has(key)) {
+        mpCounts.get(key)!.count++;
+      } else {
+        mpCounts.set(key, {
+          mp_name: record.mp_name,
+          mp_party: record.party || 'Unknown',
+          constituency: record.constituency || 'Unknown',
+          count: 1
+        });
+      }
+    });
+
+    return Array.from(mpCounts.values())
+      .sort((a, b) => b.count - a.count);
+  }, []);
+
   const loadTopic = useCallback(async () => {
     try {
       console.log('🔍 loadTopic: Starting topic load for slug:', slug);
@@ -308,7 +350,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           const filtered = applyClientSideFiltering(
             allContent, 
             keywords || [], 
-            sources || []
+            sources || [],
+            []
           );
           setFilteredContent(filtered);
           setHasMore(false); // Can't paginate with client-side filtering
@@ -1003,9 +1046,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     };
   }, [formatSourceName, resolveSourceNames]);
 
-  // Client-side filtering for immediate feedback - now handles mixed content, keywords, and sources
-  const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[]) => {
-    if (keywords.length === 0 && sources.length === 0) {
+  // Client-side filtering for immediate feedback - now handles mixed content, keywords, sources, and MPs
+  const applyClientSideFiltering = useCallback((content: FeedContent[], keywords: string[], sources: string[], mps: string[]) => {
+    if (keywords.length === 0 && sources.length === 0 && mps.length === 0) {
       // Ensure content is sorted when no filters too
       return [...content].sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
     }
@@ -1032,10 +1075,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         })();
         
-        return keywordMatch && sourceMatch;
+        // Check MP filter - only applies to parliamentary stories
+        const mpMatch = mps.length === 0 || (() => {
+          if (!(story as any).is_parliamentary) return false;
+          return (story as any).mp_name && mps.includes((story as any).mp_name);
+        })();
+        
+        return keywordMatch && sourceMatch && mpMatch;
       }
       // Parliamentary mentions are not filtered
-      return keywords.length === 0 && sources.length === 0;
+      return keywords.length === 0 && sources.length === 0 && mps.length === 0;
     });
 
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
@@ -1064,7 +1113,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [topic, loadStories]);
 
-  // Handle keyword selection with hybrid filtering (Phase 2: includes sources)
+  // Handle keyword selection with hybrid filtering (Phase 2: includes sources and MPs)
   const toggleKeyword = useCallback((keyword: string) => {
     setSelectedKeywords(prev => {
       const newKeywords = prev.includes(keyword)
@@ -1079,10 +1128,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       // Apply immediate client-side filtering if we have server-filtered data
       if (serverFilteredRef.current || newKeywords.length === 0) {
         const baseContent = newKeywords.length === 0 ? allContent : filteredContent;
-        setFilteredContent(applyClientSideFiltering(baseContent, newKeywords, selectedSources));
+        setFilteredContent(applyClientSideFiltering(baseContent, newKeywords, selectedSources, selectedMPs));
       } else {
         // Apply client-side filtering immediately for responsiveness
-        setFilteredContent(applyClientSideFiltering(allContent, newKeywords, selectedSources));
+        setFilteredContent(applyClientSideFiltering(allContent, newKeywords, selectedSources, selectedMPs));
       }
 
       // Debounce server-side filtering (PHASE 2: now includes sources)
@@ -1092,7 +1141,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       return newKeywords;
     });
-  }, [allContent, filteredContent, selectedSources, applyClientSideFiltering, triggerServerFiltering]);
+  }, [allContent, filteredContent, selectedSources, selectedMPs, applyClientSideFiltering, triggerServerFiltering]);
+
+  // Handle MP selection with client-side filtering
+  useEffect(() => {
+    if (selectedMPs.length > 0 || selectedKeywords.length > 0 || selectedSources.length > 0) {
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources, selectedMPs));
+    }
+  }, [selectedMPs, selectedKeywords, selectedSources, allContent, applyClientSideFiltering]);
 
   // Handle source selection (Phase 2: with server-side filtering)
   const toggleSource = useCallback((sourceDomain: string) => {
@@ -1107,7 +1163,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Apply client-side filtering immediately for responsiveness
-      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, newSources));
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, newSources, selectedMPs));
 
       // PHASE 2: Debounce server-side filtering for sources too
       debounceRef.current = setTimeout(() => {
@@ -1152,7 +1208,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Apply client-side filtering immediately for responsiveness
-      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources));
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources, selectedMPs));
 
       // Debounce server-side filtering (combine all filters)
       debounceRef.current = setTimeout(() => {
@@ -1180,7 +1236,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Apply client-side filtering immediately for responsiveness
-      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources));
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources, selectedMPs));
 
       // Debounce server-side filtering (combine all filters)
       debounceRef.current = setTimeout(() => {
@@ -1285,6 +1341,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         console.log('📚 Loading stories for topic:', topicData?.id);
         await loadStories(topicData, 0, false, null, null);
         console.log('✅ Stories loaded successfully');
+        
+        // Load available MPs for filtering
+        if (topicData?.id) {
+          const mps = await fetchAvailableParliamentaryFilters(topicData.id);
+          setAvailableMPs(mps);
+          console.log('✅ Loaded', mps.length, 'available MPs for filtering');
+        }
       } catch (error) {
         console.error('Error initializing hybrid feed:', error);
         setLoading(false);
@@ -1294,7 +1357,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (slug) {
       initialize();
     }
-  }, [slug, loadTopic, loadStories]);
+  }, [slug, loadTopic, loadStories, fetchAvailableParliamentaryFilters]);
 
   // Real-time subscription for new stories and slide updates
   useEffect(() => {
