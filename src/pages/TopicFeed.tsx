@@ -698,7 +698,6 @@ const TopicFeed = () => {
                       confidenceScore={sentimentCard.confidence_score}
                       analysisDate={sentimentCard.analysis_date}
                       cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
-                      slides={sentimentCard.slides}
                     />
                   </div>
                 );
