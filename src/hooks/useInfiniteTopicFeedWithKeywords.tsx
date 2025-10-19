@@ -155,7 +155,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
       console.log('📚 Found stories with keyword filter:', storiesData.length);
 
       // Load slides for each story
-      const storyIds = storiesData.map((story: any) => story.id);
+      const storyIds = storiesData.map((story: any) => story.story_id);
       
       let slidesData: any[] = [];
       if (storyIds.length > 0) {
@@ -203,7 +203,7 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
       // Transform stories with slides data and popularity
       const transformedStories = storiesData.map((story: any) => {
         const storySlides = slidesData
-          .filter((slide: any) => slide.story_id === story.id)
+          .filter((slide: any) => slide.story_id === story.story_id)
           .map((slide: any) => ({
             id: slide.id,
             slide_number: slide.slide_number,
@@ -216,15 +216,15 @@ export const useInfiniteTopicFeedWithKeywords = (slug: string) => {
           }));
           
         return {
-          id: story.id,
-          title: story.title,
-          author: story.author || 'Unknown',
-          publication_name: '',
-          created_at: story.created_at,
-          updated_at: story.updated_at,
-          cover_illustration_url: story.cover_illustration_url,
+          id: story.story_id,
+          title: story.story_title,
+          author: story.story_author || 'Unknown',
+          publication_name: story.story_publication_name || '',
+          created_at: story.story_created_at,
+          updated_at: story.story_updated_at,
+          cover_illustration_url: story.story_cover_url,
           cover_illustration_prompt: story.cover_illustration_prompt,
-          popularity_data: popularityMap.get(story.id),
+          popularity_data: popularityMap.get(story.story_id),
           slides: storySlides,
           article: {
             source_url: story.article_source_url || '#',
