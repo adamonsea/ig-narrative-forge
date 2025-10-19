@@ -177,11 +177,11 @@ export const SentimentCard = ({
                     {trendData.currentCount}
                   </span>
                   {trendData.isIncrease ? (
-                    <ArrowUp className="h-8 w-8 text-green-600" />
+                    <ArrowUp className="h-8 w-8 text-foreground" />
                   ) : (
-                    <ArrowDown className="h-8 w-8 text-red-600" />
+                    <ArrowDown className="h-8 w-8 text-foreground" />
                   )}
-                  <span className={`text-2xl font-semibold ${trendData.isIncrease ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-2xl font-semibold text-foreground">
                     {trendData.isIncrease ? '+' : '-'}{trendData.change}
                   </span>
                 </div>
