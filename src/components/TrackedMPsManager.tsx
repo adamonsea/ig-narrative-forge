@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Star, Trash2, Users, Loader2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) =
   const [loadingMPs, setLoadingMPs] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [selectedMpId, setSelectedMpId] = useState<string>('');
+  const [lastCollectionTimes, setLastCollectionTimes] = useState<Map<string, string>>(new Map());
   const { toast } = useToast();
 
   const loadTrackedMPs = async () => {
@@ -91,8 +93,33 @@ export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) =
     }
   };
 
+  const loadLastCollectionTimes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('parliamentary_mentions')
+        .select('story_id, created_at, mp_name')
+        .eq('topic_id', topicId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Group by MP name and get most recent
+      const lastCollections = new Map<string, string>();
+      data?.forEach(pm => {
+        if (!lastCollections.has(pm.mp_name)) {
+          lastCollections.set(pm.mp_name, pm.created_at);
+        }
+      });
+
+      setLastCollectionTimes(lastCollections);
+    } catch (error: any) {
+      console.error('Error loading collection times:', error);
+    }
+  };
+
   useEffect(() => {
     loadTrackedMPs();
+    loadLastCollectionTimes();
   }, [topicId]);
 
   const handleToggle = async (mpId: string, currentStatus: boolean) => {
@@ -270,6 +297,13 @@ export const TrackedMPsManager = ({ topicId, region }: TrackedMPsManagerProps) =
                     <Badge variant="secondary">{mp.mp_party}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{mp.constituency}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Last checked: {
+                      lastCollectionTimes.has(mp.mp_name) 
+                        ? formatDistanceToNow(new Date(lastCollectionTimes.get(mp.mp_name)!), { addSuffix: true })
+                        : 'Never'
+                    }
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   {!mp.is_primary && trackedMPs.length > 1 && (

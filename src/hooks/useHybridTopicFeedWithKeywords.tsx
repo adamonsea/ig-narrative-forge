@@ -79,6 +79,13 @@ interface SourceCount {
   count: number;
 }
 
+interface MPFilter {
+  mp_name: string;
+  mp_party: string;
+  constituency: string;
+  count: number;
+}
+
 interface FilterStoryIndexEntry {
   id: string;
   sourceDomain: string | null;
@@ -147,6 +154,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Source filtering state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [availableSources, setAvailableSources] = useState<SourceCount[]>([]);
+  
+  // MP filtering state
+  const [selectedMPs, setSelectedMPs] = useState<string[]>([]);
+  const [availableMPs, setAvailableMPs] = useState<MPFilter[]>([]);
   
   // Refs for debouncing
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -1112,6 +1123,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     setSelectedLandmarks([]);
     setSelectedOrganizations([]);
     setSelectedSources([]);
+    setSelectedMPs([]);
     setFilteredContent(allContent);
     serverFilteredRef.current = false;
     
@@ -1469,7 +1481,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     toggleKeyword,
     clearAllFilters,
     removeKeyword,
-    hasActiveFilters: selectedKeywords.length > 0 || selectedLandmarks.length > 0 || selectedOrganizations.length > 0 || selectedSources.length > 0,
+    hasActiveFilters: selectedKeywords.length > 0 || selectedLandmarks.length > 0 || selectedOrganizations.length > 0 || selectedSources.length > 0 || selectedMPs.length > 0,
     isServerFiltering,
     
     // Landmark filtering
@@ -1488,6 +1500,21 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     selectedSources,
     availableSources,
     toggleSource,
-    removeSource
+    removeSource,
+    
+    // MP filtering
+    selectedMPs,
+    availableMPs,
+    toggleMP: (mpName: string) => {
+      setSelectedMPs(prev =>
+        prev.includes(mpName)
+          ? prev.filter(k => k !== mpName)
+          : [...prev, mpName]
+      );
+    },
+    removeMP: (mpName: string) => {
+      setSelectedMPs(prev => prev.filter(k => k !== mpName));
+    },
+    clearMPs: () => setSelectedMPs([])
   };
 };

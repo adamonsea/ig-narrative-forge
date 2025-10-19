@@ -2208,6 +2208,7 @@ export type Database = {
           created_at: string
           id: string
           illustration_generated_at: string | null
+          is_parliamentary: boolean | null
           is_published: boolean
           last_quality_check: string | null
           publication_name: string | null
@@ -2231,6 +2232,7 @@ export type Database = {
           created_at?: string
           id?: string
           illustration_generated_at?: string | null
+          is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null
@@ -2254,6 +2256,7 @@ export type Database = {
           created_at?: string
           id?: string
           illustration_generated_at?: string | null
+          is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
           publication_name?: string | null

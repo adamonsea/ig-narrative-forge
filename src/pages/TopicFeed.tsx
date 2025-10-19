@@ -83,6 +83,11 @@ const TopicFeed = () => {
     availableSources,
     toggleSource,
     removeSource,
+    selectedMPs,
+    availableMPs,
+    toggleMP,
+    removeMP,
+    clearMPs,
     isLive
   } = useHybridTopicFeedWithKeywords(slug || '');
 
@@ -579,7 +584,11 @@ const TopicFeed = () => {
           availableSources={availableSources}
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}
+          availableMPs={availableMPs}
+          selectedMPs={selectedMPs}
+          onMPToggle={toggleMP}
           onClearAll={clearAllFilters}
+          onClearMPs={clearMPs}
         />
 
         {/* Donation Modal */}

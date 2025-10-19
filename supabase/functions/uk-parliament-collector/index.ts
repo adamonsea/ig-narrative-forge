@@ -398,7 +398,22 @@ async function collectDailyVotes(
   const allVotes: VotingRecord[] = [];
   
   for (const mp of trackedMPs) {
-    console.log(`Collecting votes for ${mp.mp_name} (${mp.constituency})...`);
+    // Validate party data before collection
+    if (!mp.mp_party || mp.mp_party.trim() === '') {
+      console.warn(`⚠️ Missing party data for ${mp.mp_name}, fetching from Parliament API...`);
+      const mpInfo = await fetchCurrentMpForConstituency(mp.constituency);
+      if (mpInfo) {
+        mp.mp_party = mpInfo.party || 'Unknown';
+        // Update the database record
+        await supabase
+          .from('topic_tracked_mps')
+          .update({ mp_party: mp.mp_party })
+          .eq('id', mp.id);
+      }
+    }
+    
+    console.log(`📊 Collecting votes for ${mp.mp_name} (${mp.mp_party})`);
+    console.log(`   MP ID: ${mp.mp_id}, Constituency: ${mp.constituency}`);
     
     try {
       const votes = await collectVotesForMP(mp.mp_id, mp.mp_name, mp.mp_party, mp.constituency, region);
@@ -435,13 +450,16 @@ async function collectVotesForMP(
     
     const divisionsData = await divisionsResponse.json();
     
-    // Filter to last 2 days only
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    // Filter to last 7 days (extended for better coverage)
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    const endDate = new Date();
+    
+    console.log(`   Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
     
     for (const division of divisionsData || []) {
       const voteDate = new Date(division.Date);
-      if (voteDate < twoDaysAgo) continue; // Skip older votes
+      if (voteDate < startDate) continue; // Skip older votes
       
       // Get detailed division info
       const detailResponse = await fetch(
@@ -479,7 +497,7 @@ async function collectVotesForMP(
         mention_type: 'vote',
         mp_name: mpName,
         constituency: constituency,
-        party: party,
+        party: party || 'Unknown', // Ensure party is never null
         vote_title: title,
         vote_date: voteDate.toISOString().split('T')[0],
         vote_direction: voteDirection as 'aye' | 'no' | 'abstain',
@@ -860,6 +878,7 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
           title: sharedContent.title,
           status: 'ready',
           is_published: true,
+          is_parliamentary: true, // FLAG PARLIAMENTARY STORIES
           audience_expertise: 'general',
           tone: 'formal',
           writing_style: 'journalistic'

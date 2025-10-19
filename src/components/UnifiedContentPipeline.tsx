@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap, Bot } from "lucide-react";
+import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap, Bot, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
@@ -51,6 +53,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
   const [sentimentCount, setSentimentCount] = useState(0);
+  const [parliamentaryFilter, setParliamentaryFilter] = useState(false);
   const { toast } = useToast();
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
@@ -401,7 +404,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
           </TabsTrigger>
           <TabsTrigger value="published">
-            Published
+            <div className="flex items-center gap-2">
+              <span>Published</span>
+              {stories.filter(s => s.is_parliamentary).length > 0 && (
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                  <Users className="w-3 h-3 mr-1" />
+                  {stories.filter(s => s.is_parliamentary).length}
+                </Badge>
+              )}
+            </div>
           </TabsTrigger>
           <TabsTrigger value="insights">
             Insights ({sentimentCount})
@@ -518,8 +529,20 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         {/* Published Tab */}
         <TabsContent value="published" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
-            <div className="text-sm text-muted-foreground">
-              Stories that are published and visible in the feed
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                Stories that are published and visible in the feed
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="parliamentary-filter"
+                  checked={parliamentaryFilter}
+                  onCheckedChange={setParliamentaryFilter}
+                />
+                <Label htmlFor="parliamentary-filter" className="text-sm">
+                  Show only parliamentary stories
+                </Label>
+              </div>
             </div>
             <Button
               variant="outline" 
@@ -531,19 +554,24 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </Button>
           </div>
           
-          {stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status)).length === 0 ? (
+          {stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No published stories</p>
-                <p className="text-sm mt-2">Approved stories will appear here when published to the feed</p>
+                <p>No {parliamentaryFilter ? 'parliamentary ' : ''}published stories</p>
+                <p className="text-sm mt-2">
+                  {parliamentaryFilter 
+                    ? 'No parliamentary voting stories have been published yet'
+                    : 'Approved stories will appear here when published to the feed'
+                  }
+                </p>
               </CardContent>
             </Card>
           ) : (
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => s.is_published)}
+                  stories={stories.filter(s => s.is_published && (!parliamentaryFilter || s.is_parliamentary))}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}

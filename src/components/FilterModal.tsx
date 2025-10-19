@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Hash, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { Hash, Globe, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
 
@@ -49,7 +49,18 @@ interface FilterModalProps {
   availableSources: SourceCount[];
   selectedSources: string[];
   onSourceToggle: (sourceDomain: string) => void;
+  availableMPs?: MPFilter[];
+  selectedMPs?: string[];
+  onMPToggle?: (mpName: string) => void;
   onClearAll: () => void;
+  onClearMPs?: () => void;
+}
+
+interface MPFilter {
+  mp_name: string;
+  mp_party: string;
+  constituency: string;
+  count: number;
 }
 
 export const FilterModal = ({
@@ -67,9 +78,13 @@ export const FilterModal = ({
   availableSources,
   selectedSources,
   onSourceToggle,
-  onClearAll
+  availableMPs = [],
+  selectedMPs = [],
+  onMPToggle,
+  onClearAll,
+  onClearMPs
 }: FilterModalProps) => {
-  const totalSelected = selectedKeywords.length + selectedLandmarks.length + selectedOrganizations.length + selectedSources.length;
+  const totalSelected = selectedKeywords.length + selectedLandmarks.length + selectedOrganizations.length + selectedSources.length + selectedMPs.length;
 
   const [showAllKeywords, setShowAllKeywords] = useState(false);
   const [showAllSources, setShowAllSources] = useState(false);
@@ -119,7 +134,7 @@ export const FilterModal = ({
         </DialogHeader>
         
         <Tabs defaultValue="keywords" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="keywords" className="flex items-center gap-2">
               <Hash className="w-4 h-4" />
               <span className="hidden sm:inline">Keywords</span>
@@ -135,6 +150,15 @@ export const FilterModal = ({
               {selectedSources.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                   {selectedSources.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="mps" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">MP Votes</span>
+              {selectedMPs.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-purple-100 text-purple-700">
+                  {selectedMPs.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -277,6 +301,59 @@ export const FilterModal = ({
                 )}
                 <p className="text-xs text-muted-foreground text-center">
                   Click sources to filter stories. Numbers show story count.
+                </p>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="mps" className="mt-4">
+            <ScrollArea className="h-[60vh]">
+              <div className="space-y-4 pr-4">
+                {availableMPs.length > 0 ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Filter by MP voting records (last 30 days)
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {availableMPs.map((mp) => {
+                        const isSelected = selectedMPs.includes(mp.mp_name);
+                        return (
+                          <button
+                            key={mp.mp_name}
+                            onClick={() => onMPToggle?.(mp.mp_name)}
+                            className={cn(
+                              "flex flex-col items-start p-3 rounded-lg text-left transition-all",
+                              "hover:scale-[1.02] active:scale-[0.98]",
+                              isSelected 
+                                ? "bg-purple-600 text-white shadow-sm dark:bg-purple-500" 
+                                : "bg-purple-50 text-purple-900 border border-purple-200 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-100 dark:border-purple-800/60"
+                            )}
+                          >
+                            <span className="font-medium">{mp.mp_name}</span>
+                            <span className={cn("text-xs", isSelected ? "opacity-90" : "opacity-75")}>
+                              {mp.mp_party} • {mp.constituency}
+                            </span>
+                            <span className={cn("text-xs mt-1", isSelected ? "opacity-90" : "opacity-75")}>
+                              {mp.count} vote{mp.count !== 1 ? 's' : ''} this month
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedMPs.length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={onClearMPs}>
+                        Clear MP filters
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No parliamentary votes recorded yet</p>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground text-center">
+                  Filter stories by your MP's voting activity in Parliament.
                 </p>
               </div>
             </ScrollArea>
