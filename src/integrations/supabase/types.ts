@@ -1269,6 +1269,7 @@ export type Database = {
           hansard_url: string | null
           id: string
           import_metadata: Json | null
+          is_major_vote: boolean | null
           is_rebellion: boolean | null
           is_weekly_roundup: boolean | null
           landmark_mentioned: string | null
@@ -1303,6 +1304,7 @@ export type Database = {
           hansard_url?: string | null
           id?: string
           import_metadata?: Json | null
+          is_major_vote?: boolean | null
           is_rebellion?: boolean | null
           is_weekly_roundup?: boolean | null
           landmark_mentioned?: string | null
@@ -1337,6 +1339,7 @@ export type Database = {
           hansard_url?: string | null
           id?: string
           import_metadata?: Json | null
+          is_major_vote?: boolean | null
           is_rebellion?: boolean | null
           is_weekly_roundup?: boolean | null
           landmark_mentioned?: string | null

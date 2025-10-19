@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Vote, Calendar } from "lucide-react";
+import { ExternalLink, Vote, Calendar, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
 interface VotingRecord {
@@ -25,6 +26,7 @@ interface VotingRecord {
   national_relevance_score: number;
   local_impact_summary: string;
   is_weekly_roundup: boolean;
+  is_major_vote: boolean;
   story_id: string | null;
   created_at: string;
 }
@@ -47,9 +49,11 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   const [votes, setVotes] = useState<VotingRecord[]>([]);
   const [trackedMPs, setTrackedMPs] = useState<TrackedMP[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions' | 'major'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category' | 'mp'>('date');
+  const [isTopicOwner, setIsTopicOwner] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Check if we're in summer recess (typically July 25 - September 2)
   const isInSummerRecess = () => {
@@ -58,6 +62,23 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     const recessStart = new Date(year, 6, 25); // July 25
     const recessEnd = new Date(year, 8, 2); // September 2
     return now >= recessStart && now <= recessEnd;
+  };
+
+  const checkTopicOwnership = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('topics')
+        .select('created_by')
+        .eq('id', topicId)
+        .single();
+      
+      if (!error && data) {
+        setIsTopicOwner(data.created_by === user.id);
+      }
+    } catch (error) {
+      console.error('Error checking topic ownership:', error);
+    }
   };
 
   const loadTrackedMPs = async () => {
@@ -93,6 +114,8 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
         query = query.eq('is_weekly_roundup', true);
       } else if (filterType === 'rebellions') {
         query = query.eq('is_rebellion', true);
+      } else if (filterType === 'major') {
+        query = query.eq('is_major_vote', true);
       }
 
       const { data, error } = await query;
@@ -136,12 +159,14 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   };
 
   useEffect(() => {
+    checkTopicOwnership();
     loadTrackedMPs();
     loadVotes();
-  }, [topicId, filterType, sortBy]);
+  }, [topicId, filterType, sortBy, user]);
 
   const rebellionCount = votes.filter(v => v.is_rebellion && !v.is_weekly_roundup).length;
   const weeklyRoundupCount = votes.filter(v => v.is_weekly_roundup).length;
+  const majorVoteCount = votes.filter(v => v.is_major_vote).length;
   const totalVotes = votes.filter(v => !v.is_weekly_roundup).length;
   const uniqueMps = [...new Set(votes.map(v => v.mp_name))].length;
 
@@ -164,14 +189,55 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     return <Badge variant="outline">Abstain</Badge>;
   };
 
+  const toggleMajorVote = async (voteId: string, currentValue: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('parliamentary_mentions')
+        .update({ is_major_vote: !currentValue })
+        .eq('id', voteId);
+
+      if (error) throw error;
+
+      // Update local state
+      setVotes(prev => prev.map(v => 
+        v.id === voteId ? { ...v, is_major_vote: !currentValue } : v
+      ));
+
+      toast({
+        title: "Success",
+        description: `Vote ${!currentValue ? 'marked as major' : 'unmarked as major'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling major vote:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update vote status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const renderVoteCard = (vote: VotingRecord) => (
     <Card key={vote.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-4">
         <div className="space-y-3">
-          {/* Title with inline rebellion indicator */}
+          {/* Title with inline indicators */}
           <CardTitle className="text-lg leading-tight flex items-start gap-2">
+            {vote.is_major_vote && (
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0 mt-0.5" />
+            )}
             {vote.is_rebellion && <span className="text-base">🔥</span>}
             <span className="flex-1">{vote.vote_title}</span>
+            {isTopicOwner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 ml-auto flex-shrink-0"
+                onClick={() => toggleMajorVote(vote.id, vote.is_major_vote)}
+              >
+                <Star className={`w-3 h-3 ${vote.is_major_vote ? 'fill-amber-400 text-amber-400' : ''}`} />
+              </Button>
+            )}
           </CardTitle>
           
           {/* MP Info - single clean line */}
@@ -293,11 +359,20 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-blue-500">{totalVotes}</div>
             <div className="text-xs text-muted-foreground">Total Votes</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
+              <Star className="w-5 h-5 fill-amber-500" />
+              {majorVoteCount}
+            </div>
+            <div className="text-xs text-muted-foreground">Major Votes</div>
           </CardContent>
         </Card>
         <Card>
@@ -328,6 +403,7 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Votes ({votes.length})</SelectItem>
+            <SelectItem value="major">⭐ Major Votes ({majorVoteCount})</SelectItem>
             <SelectItem value="daily">Daily Posts</SelectItem>
             <SelectItem value="weekly">Weekly Roundups</SelectItem>
             <SelectItem value="rebellions">Rebellions Only</SelectItem>
