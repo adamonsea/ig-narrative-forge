@@ -1091,8 +1091,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         
         return keywordMatch && sourceMatch && mpMatch;
       }
-      // Parliamentary mentions are not filtered
-      return keywords.length === 0 && sources.length === 0 && mps.length === 0;
+      // Parliamentary mentions filtering
+      if (item.type === 'parliamentary_mention') {
+        if (mps.length > 0) {
+          const mention = item.data as ParliamentaryMention;
+          return mention.mp_name && mps.includes(mention.mp_name);
+        }
+        // Show parliamentary mentions only when no keyword/source filters active
+        return keywords.length === 0 && sources.length === 0;
+      }
+      return false;
     });
 
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
