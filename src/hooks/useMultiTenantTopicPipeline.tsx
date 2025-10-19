@@ -327,6 +327,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('🔄 Loading all stories for topic:', selectedTopicId);
 
+      // Fetch tracked MPs for this topic to filter parliamentary stories
+      const { data: trackedMPs } = await supabase
+        .from('topic_tracked_mps')
+        .select('mp_name, constituency, mp_id')
+        .eq('topic_id', selectedTopicId);
+
+      console.log('🗳️ Tracked MPs for filtering:', trackedMPs?.length || 0);
+
       // Use the new unified admin function for all stories (including published ones)
       const topicStoriesResult = await supabase
         .rpc('get_admin_topic_stories', {
@@ -410,8 +418,56 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       const parliamentaryStoryIds = new Set(parliamentaryData.map(p => p.story_id));
 
+      // Create tracked MPs lookup set for fast filtering (using mp_name + constituency)
+      const trackedMPSet = new Set(
+        trackedMPs?.map(mp => 
+          `${mp.mp_name.toLowerCase().trim()}|${mp.constituency.toLowerCase().trim()}`
+        ) || []
+      );
+
+      // Get parliamentary mentions for filtering (only mp_name and constituency exist in this table)
+      const { data: allParliamentaryMentions } = await supabase
+        .from('parliamentary_mentions')
+        .select('story_id, mp_name, constituency')
+        .in('story_id', sortedStories.map(s => s.id).filter(id => parliamentaryStoryIds.has(id)));
+
+      // Create map of story_id -> mention for filtering
+      const storyMentionMap = new Map(
+        allParliamentaryMentions?.map(m => [m.story_id, m]) || []
+      );
+
+      // Filter parliamentary stories - only keep those with tracked MPs
+      const parliamentaryFilteredStories = sortedStories.filter((story: any) => {
+        const isParliamentary = parliamentaryStoryIds.has(story.id);
+        
+        if (!isParliamentary) return true; // Keep all non-parliamentary stories
+
+        // For parliamentary stories, check if MP is tracked
+        const mention = storyMentionMap.get(story.id);
+        if (!mention || !mention.mp_name || !mention.constituency) {
+          console.warn('🚫 Parliamentary story without valid mention:', story.id, story.title);
+          return false;
+        }
+
+        const mentionKey = `${mention.mp_name.toLowerCase().trim()}|${mention.constituency.toLowerCase().trim()}`;
+        const isTracked = trackedMPSet.has(mentionKey);
+
+        if (!isTracked) {
+          console.log('🗳️ Filtered out parliamentary story (MP not tracked):', {
+            storyId: story.id,
+            title: story.title,
+            mp: mention.mp_name,
+            constituency: mention.constituency
+          });
+        }
+
+        return isTracked;
+      });
+
+      console.log(`🗳️ Parliamentary filter: ${sortedStories.filter(s => parliamentaryStoryIds.has(s.id)).length} total, ${parliamentaryFilteredStories.filter(s => parliamentaryStoryIds.has(s.id)).length} after filtering`);
+
       // Map to MultiTenantStory shape - the RPC already provides clean data structure
-      const storiesData = sortedStories.map((story: any) => {        
+      const storiesData = parliamentaryFilteredStories.map((story: any) => {
         const storySlides = slidesData.filter(slide => slide.story_id === story.id);
         const isParliamentary = parliamentaryStoryIds.has(story.id);
         

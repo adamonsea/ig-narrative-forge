@@ -183,3 +183,9 @@ verify_jwt = false
 
 [functions.topic-manifest]
 verify_jwt = false
+
+[functions.auto-recover-stuck-stories]
+verify_jwt = false
+
+[functions.cleanup-offtracking-parliamentary-votes]
+verify_jwt = false
