@@ -79,7 +79,12 @@ serve(async (req) => {
       console.error('Error fetching slides:', slidesError)
     }
 
-    const slideContent = slides?.map(s => s.content).join('\n\n') || ''
+    // Weight early slides more heavily for illustration - first 3 slides are primary narrative
+    const slideContent = slides?.map((s, idx) => {
+      const weight = idx < 3 ? '' : '(background context: ';
+      const suffix = idx < 3 ? '' : ')';
+      return `${weight}${s.content}${suffix}`;
+    }).join('\n\n') || '';
     console.log('Fetched slide content for cover generation:', slideContent ? `${slideContent.length} chars` : 'No slides found')
 
     // Allow regeneration - don't check if illustration already exists
@@ -195,14 +200,14 @@ Based on both the headline and the full narrative, respond with ONE word only fr
       }
     }
 
-    // Map tone to facial expression guidance
+    // Map tone to expression guidance emphasizing variety
     const toneGuidance: Record<string, string> = {
-      serious: 'neutral or concerned expressions - no smiles, thoughtful faces',
-      lighthearted: 'gentle, mild expressions - slight smiles acceptable but not exaggerated',
-      playful: 'upbeat expressions - comfortable with smiles but keep tasteful',
-      contentious: 'tense or stern expressions - furrowed brows, no smiles',
-      somber: 'grave, serious expressions - downcast eyes, no positive emotion',
-      balanced: 'neutral, measured expressions - subtle, understated'
+      serious: 'range of engaged expressions showing concentration, concern, or contemplation - variety in how different characters process serious subject matter',
+      lighthearted: 'variety of natural, relaxed expressions - gentle engagement with the subject, comfortable and accessible',
+      playful: 'diverse upbeat expressions showing different ways people engage with lighter subjects - varied energy levels',
+      contentious: 'range of animated expressions showing debate, discussion, or strong feelings - variety in how people express disagreement or passion',
+      somber: 'varied reflective expressions - different ways people show gravity, from quiet thought to visible emotion',
+      balanced: 'natural variety in expressions - show multiple characters or moments with different emotional responses to the same subject'
     };
 
     const expressionInstruction = toneGuidance[storyTone] || toneGuidance['balanced'];
@@ -265,7 +270,7 @@ Story headline: "${story.title}"
 (Note: This illustration is based on analysis of the complete story narrative, not just the headline)
 
 VISUAL CONCEPT:
-Illustrate the core subject identified above. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings) rather than generic representations. Focus on the unique aspects that distinguish this story.
+Illustrate the core subject identified above, drawing primarily from the opening narrative while using later details for background context. Show the story through varied character expressions and body language - different people respond differently to the same situation. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings, character interactions) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
 STYLE & COMPOSITION:
 Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated. Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition.
@@ -278,6 +283,9 @@ DIVERSITY PRINCIPLES:
 - Avoid defaulting to homogeneous demographics; include varied ages, ethnicities, and styles when depicting people
 
 Line work: Drawn with skilled confidence - lines that feel certain and expressive but naturally hand-drawn. Contemporary illustration style, not geometric or mechanical. Fresh and current aesthetic.
+
+CHARACTER VARIETY (when depicting people):
+Show natural diversity in how different people respond to the situation - varied body language, different expressions, multiple perspectives within the scene. Avoid uniform reactions; real scenes have variety in posture, gesture, and emotional response.
 
 CRITICAL: The illustration must be immediately recognizable as being about THIS specific story's subject matter. Prioritize subject-specific visual elements over generic scene-setting.
 
