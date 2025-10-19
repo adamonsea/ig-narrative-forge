@@ -1212,6 +1212,24 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     toggleSource(sourceDomain); // This will remove it since it's already selected
   }, [toggleSource]);
 
+  // MP filtering callbacks (client-side only, no server filtering needed)
+  const toggleMP = useCallback((mpName: string) => {
+    setSelectedMPs(prev => {
+      const newMPs = prev.includes(mpName)
+        ? prev.filter(m => m !== mpName)
+        : [...prev, mpName];
+
+      // Apply client-side filtering immediately for responsiveness
+      setFilteredContent(applyClientSideFiltering(allContent, selectedKeywords, selectedSources, newMPs));
+
+      return newMPs;
+    });
+  }, [allContent, selectedKeywords, selectedSources, applyClientSideFiltering]);
+
+  const removeMP = useCallback((mpName: string) => {
+    toggleMP(mpName); // This will remove it since it's already selected
+  }, [toggleMP]);
+
   const toggleLandmark = useCallback((landmark: string) => {
     setSelectedLandmarks(prev => {
       const newLandmarks = prev.includes(landmark)
@@ -1584,16 +1602,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     // MP filtering
     selectedMPs,
     availableMPs,
-    toggleMP: (mpName: string) => {
-      setSelectedMPs(prev =>
-        prev.includes(mpName)
-          ? prev.filter(k => k !== mpName)
-          : [...prev, mpName]
-      );
-    },
-    removeMP: (mpName: string) => {
-      setSelectedMPs(prev => prev.filter(k => k !== mpName));
-    },
+    toggleMP,
+    removeMP,
     clearMPs: () => setSelectedMPs([])
   };
 };
