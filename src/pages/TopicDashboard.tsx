@@ -22,7 +22,6 @@ import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentManager } from "@/components/SentimentManager";
-import { SentimentCardBackdater } from "@/components/SentimentCardBackdater";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
@@ -886,8 +885,6 @@ const TopicDashboard = () => {
                 <SentimentManager topicId={topic.id} />
               </CardContent>
             </Card>
-
-            <SentimentCardBackdater topicId={topic.id} />
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-8">

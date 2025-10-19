@@ -44,6 +44,7 @@ interface Story {
     published_at?: string;
   };
   is_teaser?: boolean; // Flag for stories generated from snippets
+  mp_party?: string; // Party affiliation for parliamentary stories
 }
 
 interface StoryCarouselProps {
@@ -66,6 +67,37 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   
   // Detect parliamentary stories for banner styling
   const isParliamentaryStory = (story as any).is_parliamentary === true;
+  
+  // Map MP party to color scheme
+  const getPartyColors = (party: string | undefined) => {
+    if (!party) return { border: 'border-l-4 border-l-gray-400', bg: 'bg-gray-50/30 dark:bg-gray-950/30' };
+    
+    const partyLower = party.toLowerCase();
+    if (partyLower.includes('liberal democrat') || partyLower.includes('lib dem')) {
+      return { border: 'border-l-4 border-l-amber-500', bg: 'bg-amber-50/30 dark:bg-amber-950/30' };
+    }
+    if (partyLower.includes('conservative') || partyLower.includes('tory')) {
+      return { border: 'border-l-4 border-l-blue-600', bg: 'bg-blue-50/30 dark:bg-blue-950/30' };
+    }
+    if (partyLower.includes('labour')) {
+      return { border: 'border-l-4 border-l-red-600', bg: 'bg-red-50/30 dark:bg-red-950/30' };
+    }
+    if (partyLower.includes('green')) {
+      return { border: 'border-l-4 border-l-green-600', bg: 'bg-green-50/30 dark:bg-green-950/30' };
+    }
+    if (partyLower.includes('reform')) {
+      return { border: 'border-l-4 border-l-purple-600', bg: 'bg-purple-50/30 dark:bg-purple-950/30' };
+    }
+    if (partyLower.includes('snp')) {
+      return { border: 'border-l-4 border-l-yellow-500', bg: 'bg-yellow-50/30 dark:bg-yellow-950/30' };
+    }
+    if (partyLower.includes('plaid')) {
+      return { border: 'border-l-4 border-l-emerald-600', bg: 'bg-emerald-50/30 dark:bg-emerald-950/30' };
+    }
+    return { border: 'border-l-4 border-l-gray-400', bg: 'bg-gray-50/30 dark:bg-gray-950/30' };
+  };
+
+  const partyColors = getPartyColors((story as any).mp_party);
   
   // Remove fit-to-height scaling functionality
   
@@ -341,10 +373,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const renderParliamentarySlide = (slide: any, slideIndex: number) => {
     const lines = slide.content.split('\n').filter((line: string) => line.trim());
     
-    // Slide 1: MP header + date + vote title
+    // Slide 1: MP header + date + vote title with ballot box icon
     if (slideIndex === 0) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center px-6 parliamentary-card">
+        <div className={`flex flex-col items-center justify-center h-full text-center px-6 ${partyColors.border} ${partyColors.bg}`}>
+          <div className="text-4xl mb-2">🗳️</div>
           <h1 className="text-4xl md:text-5xl font-bold mb-2">{lines[0]}</h1>
           {lines[1] && <p className="parl-small mb-4">{lines[1]}</p>}
           {lines[2] && <p className="text-xl md:text-2xl font-normal">{lines[2]}</p>}
@@ -359,7 +392,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const isAye = voteDirection === 'AYE';
       
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center parliamentary-card">
+        <div className={`flex flex-col items-center justify-center h-full text-center ${partyColors.border} ${partyColors.bg}`}>
           <p className="parl-small mb-2">Voted</p>
           <h2 className={`parl-xl ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</h2>
           {isRebellion && (
@@ -377,7 +410,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const counts = lines.find((l: string) => l.includes('Ayes'));
       
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center parliamentary-card">
+        <div className={`flex flex-col items-center justify-center h-full text-center ${partyColors.border} ${partyColors.bg}`}>
           <p className="parl-small mb-2">Vote outcome</p>
           <h2 className="parl-large mb-4">{outcome}</h2>
           {counts && <p className="parl-small">{counts}</p>}
@@ -391,7 +424,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       const info = lines.find((l: string) => l.startsWith('Information:'));
       
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center px-6 parliamentary-card">
+        <div className={`flex flex-col items-center justify-center h-full text-center px-6 ${partyColors.border} ${partyColors.bg}`}>
           {category && <p className="text-base md:text-lg font-medium mb-3">{category}</p>}
           {info && <p className="text-base md:text-xl">{info}</p>}
         </div>
@@ -401,7 +434,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     // Slide 5: CTA button only
     if (slideIndex === 4 && slide.links && slide.links.length > 0) {
       return (
-        <div className="flex flex-col items-center justify-center h-full parliamentary-card">
+        <div className={`flex flex-col items-center justify-center h-full ${partyColors.border} ${partyColors.bg}`}>
           <Button
             size="lg"
             onClick={(e) => {

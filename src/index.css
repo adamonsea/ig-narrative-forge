@@ -79,7 +79,7 @@
   
   /* Parliamentary vote banner styling */
   .parliamentary-card {
-    @apply border-l-4 border-l-blue-500;
+    /* Border color is now dynamic - applied via Tailwind classes */
     min-height: 300px;
   }
   
