@@ -83,6 +83,50 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Auto-recover stuck stories (passive self-healing)
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: stuckStories } = await supabase
+      .from('stories')
+      .select('id, title, article_id, topic_article_id, updated_at')
+      .eq('status', 'processing')
+      .lt('updated_at', tenMinutesAgo);
+    
+    if (stuckStories && stuckStories.length > 0) {
+      console.log(`🔧 Auto-recovering ${stuckStories.length} stuck stories...`);
+      
+      // Reset to draft
+      await supabase
+        .from('stories')
+        .update({ status: 'draft', updated_at: new Date().toISOString() })
+        .in('id', stuckStories.map(s => s.id));
+      
+      // Re-queue them
+      for (const story of stuckStories) {
+        if (story.article_id) {
+          await supabase.from('content_generation_queue')
+            .insert({ 
+              article_id: story.article_id, 
+              status: 'pending',
+              created_at: new Date().toISOString()
+            });
+        } else if (story.topic_article_id) {
+          await supabase.from('content_generation_queue')
+            .insert({ 
+              topic_article_id: story.topic_article_id,
+              status: 'pending',
+              created_at: new Date().toISOString()
+            });
+        }
+      }
+      
+      console.log(`✅ Recovered ${stuckStories.length} stuck stories and requeued them`);
+    }
+  } catch (error) {
+    console.error('Error in auto-recovery (non-fatal):', error);
+    // Don't throw - this is passive recovery, shouldn't break main flow
+  }
+
   // Enhanced Prompt System Builder
   async function buildPromptSystem(supabase: any, tone: string, expertise: string, slideType: string) {
     const { data: templates, error } = await supabase

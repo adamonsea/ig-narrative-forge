@@ -880,34 +880,41 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
       // Helper to map outcome
       const mapOutcome = (outcome: string) => outcome.toLowerCase() === 'passed' ? 'ACCEPTED' : 'REJECTED';
 
-      // Slide 1: Header with voting icon, MP name, date, and vote title
-      const slide1Content = `🗳️
+      // Get topic name for slide 4
+      const { data: topicData } = await supabase
+        .from('topics')
+        .select('name')
+        .eq('id', topicId)
+        .single();
+      const topicName = topicData?.name || 'this area';
 
-MP ${vote.mp_name}
+      // Slide 1: MP prefix, name, date (smaller/separate), vote title (body text)
+      const slide1Content = `MP ${vote.mp_name}
 
 ${voteDate}
 
 ${vote.vote_title}`;
 
-      // Slide 2: Vote direction only
+      // Slide 2: Small "Voted", large vote direction, optional rebellion indicator
+      const rebellionIndicator = vote.is_rebellion ? '\n\n🔥 Against party whip' : '';
       const slide2Content = `Voted
 
-${vote.vote_direction.toUpperCase()}`;
+${vote.vote_direction.toUpperCase()}${rebellionIndicator}`;
 
-      // Slide 3: Vote outcome and totals
+      // Slide 3: Small "Vote outcome", large outcome, small counts
       const slide3Content = `Vote outcome
 
 ${mapOutcome(vote.vote_outcome)}
 
 Ayes ${vote.aye_count}, Nos ${vote.no_count}`;
 
-      // Slide 4: Category and information
+      // Slide 4: Category and local impact
       const slide4Content = `Category: ${vote.vote_category}
 
-Information: ${vote.local_impact_summary || 'This legislative decision at Westminster affects local policy implementation'}`;
+Information: This legislative decision at Westminster affects ${topicName} as part of national policy implementation`;
 
-      // Slide 5: Link to vote details
-      const slide5Content = `View full voting record`;
+      // Slide 5: Link button only
+      const slide5Content = `View vote details on Parliament.uk`;
 
       // Insert all 5 slides
       const slides = [
@@ -915,7 +922,7 @@ Information: ${vote.local_impact_summary || 'This legislative decision at Westmi
         { slide_number: 2, content: slide2Content, links: [] },
         { slide_number: 3, content: slide3Content, links: [] },
         { slide_number: 4, content: slide4Content, links: [] },
-        { slide_number: 5, content: slide5Content, links: [{ text: 'View vote details', url: vote.vote_url }] }
+        { slide_number: 5, content: slide5Content, links: [{ text: 'View vote details', url: vote.vote_url, start: 0, end: 16 }] }
       ];
 
       for (const slideData of slides) {

@@ -80,10 +80,29 @@
   /* Parliamentary vote banner styling */
   .parliamentary-card {
     @apply border-l-4 border-l-blue-500;
+    min-height: 300px;
   }
   
   .parliamentary-card .feed-card-header {
     @apply bg-blue-50 dark:bg-blue-950/30;
+  }
+  
+  /* Rebellion indicator styling */
+  .parliamentary-card .rebellion-indicator {
+    @apply text-red-500 font-semibold text-sm;
+  }
+  
+  /* Vote direction badges */
+  .vote-direction-aye {
+    @apply text-green-600;
+  }
+  
+  .vote-direction-no {
+    @apply text-red-600;
+  }
+  
+  .vote-direction-abstain {
+    @apply text-gray-500;
   }
 }
 
