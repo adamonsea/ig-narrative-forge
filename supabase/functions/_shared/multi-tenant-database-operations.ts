@@ -178,9 +178,6 @@ export class MultiTenantDatabaseOperations {
         if (processed.topicArticle) result.topicArticlesCreated++
         if (processed.skipped) result.duplicatesSkipped++
 
-        // Also maintain legacy structure for backward compatibility
-        await this.processArticleLegacy(article, topic, sourceId, relevanceScore, qualityScore, processed.sharedContentId)
-
       } catch (error) {
         console.error('Error processing article:', error)
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -295,51 +292,6 @@ export class MultiTenantDatabaseOperations {
       topicArticle: !!topicArticle,
       skipped,
       sharedContentId: sharedContent.id
-    }
-  }
-
-  /**
-   * Maintain legacy structure for backward compatibility
-   */
-  private async processArticleLegacy(
-    article: ArticleData,
-    topic: any,
-    sourceId?: string,
-    relevanceScore: number = 0,
-    qualityScore: number = 0,
-    sharedContentId?: string
-  ) {
-    try {
-      // Only insert if sourceId is a valid UUID or null
-      const validSourceId = sourceId && sourceId.length === 36 ? sourceId : null;
-      
-      await this.supabase
-        .from('articles')
-        .insert({
-          topic_id: topic.id,
-          source_id: validSourceId,
-          title: article.title,
-          body: article.body || '',
-          author: article.author,
-          source_url: article.source_url,
-          image_url: article.image_url,
-          canonical_url: article.canonical_url,
-          published_at: article.published_at,
-          word_count: article.word_count || this.calculateWordCount(article.body || ''),
-          regional_relevance_score: relevanceScore,
-          content_quality_score: qualityScore,
-          processing_status: 'new',
-          language: article.language || 'en',
-          import_metadata: {
-            multi_tenant_migration: true,
-            shared_content_id: sharedContentId,
-            scrape_method: 'multi_tenant_compatible'
-          }
-        })
-    } catch (error) {
-      // Legacy errors are expected during migration, don't fail the whole process
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log('Legacy article insert warning:', errorMessage)
     }
   }
 
