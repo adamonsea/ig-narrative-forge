@@ -516,6 +516,29 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
 
   for (const vote of votes) {
     try {
+      // Validate that this MP is actually tracked for this topic
+      const { data: trackedMp, error: trackedError } = await supabase
+        .from('topic_tracked_mps')
+        .select('mp_id, constituency')
+        .eq('topic_id', topicId)
+        .eq('mp_name', vote.mp_name)
+        .maybeSingle();
+      
+      if (trackedError) {
+        console.error('Error checking tracked MPs:', trackedError);
+      }
+      
+      // Skip if MP is not tracked for this topic or constituency doesn't match
+      if (!trackedMp) {
+        console.log(`⏭️ Skipping vote for ${vote.mp_name} - not tracked for this topic`);
+        continue;
+      }
+      
+      if (trackedMp.constituency !== vote.constituency) {
+        console.log(`⏭️ Skipping vote for ${vote.mp_name} - constituency mismatch (expected: ${trackedMp.constituency}, got: ${vote.constituency})`);
+        continue;
+      }
+      
       const existingVoteQuery = supabase
         .from('parliamentary_mentions')
         .select('id, story_id')

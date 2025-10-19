@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Vote, Calendar, AlertTriangle, TrendingUp, Link2 } from "lucide-react";
+import { ExternalLink, Vote, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -166,79 +166,58 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
 
   const renderVoteCard = (vote: VotingRecord) => (
     <Card key={vote.id} className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              {vote.is_rebellion && (
-                <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-              )}
-              <CardTitle className="text-base leading-tight line-clamp-2">
-                {vote.vote_title}
-              </CardTitle>
-            </div>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <div className="flex items-center gap-1">
-                <span className="font-medium">{vote.mp_name}</span>
-                <span>•</span>
-                <span>{vote.party}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Calendar className="w-3 h-3" />
-                <span>{format(new Date(vote.vote_date), 'MMM d, yyyy')}</span>
-                {getVoteDirectionBadge(vote.vote_direction)}
-              </div>
-            </div>
+      <CardHeader className="pb-4">
+        <div className="space-y-3">
+          {/* Title with inline rebellion indicator */}
+          <CardTitle className="text-lg leading-tight flex items-start gap-2">
+            {vote.is_rebellion && <span className="text-base">🔥</span>}
+            <span className="flex-1">{vote.vote_title}</span>
+          </CardTitle>
+          
+          {/* MP Info - single clean line */}
+          <div className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
+            <span className="font-medium text-foreground">{vote.mp_name}</span>
+            <span>•</span>
+            <span>{vote.party}</span>
+            <span>•</span>
+            <span>{vote.constituency}</span>
+            <span>•</span>
+            <span className="text-xs">{format(new Date(vote.vote_date), 'MMM d, yyyy')}</span>
           </div>
-          <div className="flex flex-col gap-2 items-end">
-            <Badge className={getCategoryColor(vote.vote_category)}>
-              {vote.vote_category}
-            </Badge>
-            {vote.national_relevance_score >= 70 && (
-              <Badge variant="outline" className="text-xs">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                High Impact
-              </Badge>
-            )}
+          
+          {/* Vote direction and outcome - compact line */}
+          <div className="flex items-center gap-3 text-sm">
+            {getVoteDirectionBadge(vote.vote_direction)}
+            <span className="text-muted-foreground">
+              {vote.vote_outcome === 'passed' ? '✓' : '✗'} {vote.vote_outcome.charAt(0).toUpperCase() + vote.vote_outcome.slice(1)} ({vote.aye_count}-{vote.no_count})
+            </span>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
-        {vote.is_rebellion && (
-          <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded p-2 text-sm">
-            <span className="font-semibold text-orange-800 dark:text-orange-300">
-              ⚠️ Voted against {vote.party} party line
-            </span>
-          </div>
-        )}
-        
-        <p className="text-sm text-muted-foreground">
+      
+      <CardContent className="pt-0 space-y-4">
+        {/* Local impact */}
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {vote.local_impact_summary}
         </p>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div>
-            Outcome: <span className={`font-semibold ${vote.vote_outcome === 'passed' ? 'text-green-600' : 'text-red-600'}`}>
-              {vote.vote_outcome.toUpperCase()}
-            </span> ({vote.aye_count}-{vote.no_count})
-          </div>
-        </div>
-
-        <div className="flex gap-2 justify-end">
-          {vote.story_id && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={`/@${topicSlug}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
-                <Link2 className="w-3 h-3 mr-1" />
-                Story
+        
+        {/* Category as subtle text, links aligned right */}
+        <div className="flex items-center justify-between text-xs pt-2 border-t">
+          <span className="text-muted-foreground">{vote.vote_category}</span>
+          <div className="flex gap-2">
+            {vote.story_id && (
+              <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                <a href={`/@${topicSlug}/${vote.story_id}`} target="_blank" rel="noopener noreferrer">
+                  Story →
+                </a>
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+              <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
+                Parliament.uk →
               </a>
             </Button>
-          )}
-          <Button variant="outline" size="sm" asChild>
-            <a href={vote.vote_url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3 h-3 mr-1" />
-              Parliament.uk
-            </a>
-          </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
