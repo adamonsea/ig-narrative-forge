@@ -51,6 +51,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
 }) => {
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
+  const [forcingReturn, setForcingReturn] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
@@ -164,12 +165,72 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
     return "Good";
   };
 
+  const handleForceReturn = async (story: MultiTenantStory) => {
+    if (forcingReturn.has(story.id)) return;
+    
+    setForcingReturn(prev => new Set(prev.add(story.id)));
+    
+    try {
+      // Reset story to draft
+      const { error: storyError } = await supabase
+        .from('stories')
+        .update({ 
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', story.id);
+      
+      if (storyError) throw storyError;
+      
+      // Re-queue for processing
+      const { error: queueError } = await supabase
+        .from('content_generation_queue')
+        .insert({
+          topic_article_id: story.topic_article_id,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+      
+      if (queueError) throw queueError;
+      
+      toast({
+        title: 'Story Returned',
+        description: 'Story has been returned to the processing queue',
+      });
+      
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error('Error forcing return:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to return story to queue',
+        variant: 'destructive',
+      });
+    } finally {
+      setForcingReturn(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
+    }
+  };
+
+  const isStuck = (story: MultiTenantStory) => {
+    if (story.status !== 'processing') return false;
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    return new Date(story.updated_at) < tenMinutesAgo;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ready':
         return <Badge className="bg-green-100 text-green-800 border-green-300">Ready</Badge>;
       case 'draft':
         return <Badge variant="outline">Draft</Badge>;
+      case 'processing':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Processing</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -262,6 +323,9 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                   
                   <div className="flex items-center gap-2 sm:gap-4 text-muted-foreground flex-wrap">
                     {getStatusBadge(story.status)}
+                    {isStuck(story) && (
+                      <Badge variant="destructive" className="text-xs">Stuck</Badge>
+                    )}
                     <span>{story.slides?.length || 0} slides</span>
                     <span>{story.word_count || 0} words</span>
                     <span>
@@ -315,6 +379,22 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                   </div>
                   
                   <div className="flex gap-2">
+                    {isStuck(story) && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleForceReturn(story)}
+                        disabled={forcingReturn.has(story.id)}
+                        className="w-full sm:w-auto"
+                      >
+                        {forcingReturn.has(story.id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>Force return</>
+                        )}
+                      </Button>
+                    )}
+                    
                     {story.status === 'ready' && (
                       <>
                         <ImageModelSelector

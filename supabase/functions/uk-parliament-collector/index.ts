@@ -483,7 +483,7 @@ async function collectVotesForMP(
         vote_title: title,
         vote_date: voteDate.toISOString().split('T')[0],
         vote_direction: voteDirection as 'aye' | 'no' | 'abstain',
-        vote_url: `https://commonsvotes.digiminster.com/Divisions/Details/${division.DivisionId}`,
+        vote_url: `https://votes.parliament.uk/votes/commons/division/${division.DivisionId}`,
         region_mentioned: region,
         relevance_score: 75, // Default relevance since we track all MP votes
         source_api: 'uk_parliament_commons_votes',
