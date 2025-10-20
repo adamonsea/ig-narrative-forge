@@ -23,7 +23,11 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    console.log('🔍 Starting daily content monitoring...')
+    // Parse request body for options
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
+    const autoTriggerScraping = body.autoTriggerScraping ?? false
+
+    console.log(`🔍 Starting daily content monitoring... (Auto-scraping: ${autoTriggerScraping ? 'ENABLED' : 'DISABLED'})`)
 
     // Get all active topic-source combinations
     const { data: topicSources, error: tsError } = await supabase
@@ -95,7 +99,7 @@ Deno.serve(async (req) => {
         const checkDuration = Date.now() - startTime
 
         // Store the daily availability data
-        const { error: insertError } = await supabase
+        const { data: insertResult, error: insertError } = await supabase
           .from('daily_content_availability')
           .upsert({
             topic_id: topicSource.topic_id,
@@ -108,14 +112,72 @@ Deno.serve(async (req) => {
             discovery_method: discoveryResult.method,
             check_duration_ms: checkDuration,
             success: true,
-            error_message: null
+            error_message: null,
+            auto_scrape_triggered: false
           }, { 
             onConflict: 'topic_id,source_id,check_date',
             ignoreDuplicates: false 
           })
+          .select()
+          .single()
 
         if (insertError) {
           throw new Error(`Failed to store availability data: ${insertError.message}`)
+        }
+
+        // PROACTIVE SCRAPING: Trigger auto-scrape if new content detected
+        let autoScrapeTriggered = false
+        if (autoTriggerScraping && newTopicRelevantUrls.length >= 1 && (topicSource.topics as any)?.topic_type === 'regional') {
+          console.log(`🚨 New content detected for ${(topicSource.topics as any)?.name}: ${newTopicRelevantUrls.length} URLs`)
+          
+          // Check cooldown period (4 hours)
+          const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+          const { data: recentScrape } = await supabase
+            .from('daily_content_availability')
+            .select('created_at, auto_scrape_triggered')
+            .eq('topic_id', topicSource.topic_id)
+            .eq('source_id', topicSource.source_id)
+            .eq('auto_scrape_triggered', true)
+            .gte('created_at', fourHoursAgo)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+          
+          if (!recentScrape) {
+            console.log(`🔥 Triggering auto-scrape for ${(topicSource.topics as any)?.name}`)
+            
+            // Trigger scraper asynchronously
+            const scrapePromise = supabase.functions.invoke('universal-topic-scraper', {
+              body: {
+                topicId: topicSource.topic_id,
+                sourceIds: [topicSource.source_id],
+                forceRescrape: false,
+                testMode: false
+              }
+            })
+            
+            // Mark as triggered immediately (don't wait for completion)
+            await supabase
+              .from('daily_content_availability')
+              .update({ 
+                auto_scrape_triggered: true,
+                auto_scrape_completed_at: new Date().toISOString()
+              })
+              .eq('id', insertResult.id)
+            
+            autoScrapeTriggered = true
+            
+            // Log result in background
+            scrapePromise.then(result => {
+              if (result.error) {
+                console.error(`❌ Auto-scrape failed for ${(topicSource.topics as any)?.name}:`, result.error)
+              } else {
+                console.log(`✅ Auto-scrape completed for ${(topicSource.topics as any)?.name}`)
+              }
+            })
+          } else {
+            console.log(`⏳ Cooldown active for ${(topicSource.topics as any)?.name} - last scrape at ${recentScrape.created_at}`)
+          }
         }
 
         results.push({
@@ -127,10 +189,11 @@ Deno.serve(async (req) => {
           total_urls: discoveryResult.urls.length,
           topic_relevant_urls: topicRelevantUrls.length,
           duration_ms: checkDuration,
+          auto_scrape_triggered: autoScrapeTriggered,
           success: true
         })
 
-        console.log(`✅ ${(topicSource.content_sources as any)?.source_name || 'Unknown Source'}: ${newTopicRelevantUrls.length} new topic-relevant URLs (${discoveryResult.urls.length} total, ${topicRelevantUrls.length} relevant)`)
+        console.log(`✅ ${(topicSource.content_sources as any)?.source_name || 'Unknown Source'}: ${newTopicRelevantUrls.length} new topic-relevant URLs (${discoveryResult.urls.length} total, ${topicRelevantUrls.length} relevant)${autoScrapeTriggered ? ' [AUTO-SCRAPE TRIGGERED]' : ''}`)
 
       } catch (error) {
         const checkDuration = Date.now() - startTime
@@ -173,11 +236,13 @@ Deno.serve(async (req) => {
     const successful = results.filter(r => r.success)
     const failed = results.filter(r => !r.success)
     const totalNewUrls = successful.reduce((sum, r) => sum + (r.new_urls || 0), 0)
+    const autoScrapesTriggered = successful.filter(r => r.auto_scrape_triggered).length
 
     console.log(`📋 Daily content monitoring completed:`)
     console.log(`   ✅ ${successful.length} sources checked successfully`)
     console.log(`   ❌ ${failed.length} sources failed`)
     console.log(`   🆕 ${totalNewUrls} total new URLs discovered`)
+    console.log(`   🔥 ${autoScrapesTriggered} auto-scrapes triggered`)
 
     return new Response(
       JSON.stringify({
@@ -186,7 +251,8 @@ Deno.serve(async (req) => {
           total_sources: results.length,
           successful: successful.length,
           failed: failed.length,
-          total_new_urls: totalNewUrls
+          total_new_urls: totalNewUrls,
+          auto_scrapes_triggered: autoScrapesTriggered
         },
         results
       }),

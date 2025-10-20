@@ -682,6 +682,9 @@ export type Database = {
       }
       daily_content_availability: {
         Row: {
+          articles_scraped_count: number | null
+          auto_scrape_completed_at: string | null
+          auto_scrape_triggered: boolean | null
           check_date: string
           check_duration_ms: number | null
           created_at: string | null
@@ -698,6 +701,9 @@ export type Database = {
           urls_already_seen: number
         }
         Insert: {
+          articles_scraped_count?: number | null
+          auto_scrape_completed_at?: string | null
+          auto_scrape_triggered?: boolean | null
           check_date?: string
           check_duration_ms?: number | null
           created_at?: string | null
@@ -714,6 +720,9 @@ export type Database = {
           urls_already_seen?: number
         }
         Update: {
+          articles_scraped_count?: number | null
+          auto_scrape_completed_at?: string | null
+          auto_scrape_triggered?: boolean | null
           check_date?: string
           check_duration_ms?: number | null
           created_at?: string | null
