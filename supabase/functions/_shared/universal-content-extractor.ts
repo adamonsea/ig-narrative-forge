@@ -1,4 +1,4 @@
-import { ContentExtractionResult } from './types.ts';
+import { ContentExtractionResult, StructuredArticleCandidate } from './types.ts';
 
 // Enhanced anti-detection user agents that rotate with healthcare-specific ones
 const USER_AGENTS = [
@@ -455,42 +455,210 @@ export class UniversalContentExtractor {
     return octets.join('.');
   }
 
-  // Phase 1: New JSON-LD extraction method
-  private extractJSONLDData(doc: any, property: string): string {
+  private parseStructuredData(html: string): any[] {
+    const entries: any[] = [];
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = scriptRegex.exec(html)) !== null) {
+      const rawContent = (match[1] || '').trim();
+      if (!rawContent) {
+        continue;
+      }
+
+      try {
+        const sanitized = rawContent
+          .replace(/<!--([\s\S]*?)-->/g, '$1')
+          .replace(/<\\\//g, '</');
+
+        const parsed = JSON.parse(sanitized);
+        this.collectStructuredEntries(parsed, entries);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ Failed to parse JSON-LD script: ${errorMessage}`);
+      }
+    }
+
+    return entries;
+  }
+
+  private collectStructuredEntries(node: any, entries: any[]): void {
+    if (!node) {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        this.collectStructuredEntries(item, entries);
+      }
+      return;
+    }
+
+    if (typeof node !== 'object') {
+      return;
+    }
+
+    entries.push(node);
+
+    if (node['@graph']) {
+      this.collectStructuredEntries(node['@graph'], entries);
+    }
+  }
+
+  private isArticleStructuredEntry(entry: any): boolean {
+    if (!entry || typeof entry !== 'object') {
+      return false;
+    }
+
+    const type = entry['@type'];
+    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+    const allowedTypes = ['NewsArticle', 'Article', 'BlogPosting', 'Report', 'PressRelease'];
+
+    return typeArray.some((value: string) => allowedTypes.includes(value));
+  }
+
+  private ensureArray<T>(value: T | T[] | undefined): T[] {
+    if (!value) {
+      return [];
+    }
+    return Array.isArray(value) ? value : [value];
+  }
+
+  private extractStructuredImage(entry: any): string | undefined {
+    const image = entry?.image;
+    if (!image) {
+      return undefined;
+    }
+
+    if (typeof image === 'string') {
+      return image;
+    }
+
+    if (Array.isArray(image)) {
+      const first = image.find(item => typeof item === 'string' || (item && typeof item.url === 'string'));
+      if (!first) {
+        return undefined;
+      }
+      return typeof first === 'string' ? first : first.url;
+    }
+
+    if (typeof image === 'object' && typeof image.url === 'string') {
+      return image.url;
+    }
+
+    return undefined;
+  }
+
+  private extractJSONLDData(entries: any[], property: string): string {
     try {
-      const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
-      for (const script of scripts) {
-        try {
-          const jsonData = JSON.parse(script.textContent || '');
-          
-          // Handle arrays of structured data
-          const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
-          
-          for (const data of dataArray) {
-            if (data['@type'] === 'NewsArticle' || data['@type'] === 'Article') {
-              let value = data[property];
-              
-              // Handle author object
-              if (property === 'author' && typeof value === 'object') {
-                value = value.name || value['@name'] || '';
-              }
-              
-              if (value && typeof value === 'string') {
-                console.log(`📋 JSON-LD extracted ${property}: ${value.substring(0, 50)}...`);
-                return value;
-              }
-            }
-          }
-        } catch (parseError) {
-          // Continue to next script if JSON parsing fails
+      for (const entry of entries) {
+        if (!this.isArticleStructuredEntry(entry)) {
           continue;
+        }
+
+        let value = entry[property];
+
+        if (property === 'author' && value) {
+          const authors = this.ensureArray(value)
+            .map(author => {
+              if (typeof author === 'string') {
+                return author;
+              }
+              if (author && typeof author === 'object') {
+                return author.name || author['@name'] || author['@id'] || '';
+              }
+              return '';
+            })
+            .filter(Boolean);
+
+          if (authors.length > 0) {
+            value = authors.join(', ');
+          }
+        }
+
+        if (Array.isArray(value)) {
+          value = value.find(item => typeof item === 'string') || value[0];
+        }
+
+        if (value && typeof value === 'string') {
+          console.log(`📋 JSON-LD extracted ${property}: ${value.substring(0, 80)}...`);
+          return value;
         }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.log(`⚠️ JSON-LD extraction failed for ${property}: ${errorMessage}`);
     }
+
     return '';
+  }
+
+  extractStructuredArticleCandidates(html: string, baseUrl: string): StructuredArticleCandidate[] {
+    const entries = this.parseStructuredData(html);
+    const candidates = new Map<string, StructuredArticleCandidate>();
+
+    const addCandidate = (candidate: StructuredArticleCandidate) => {
+      try {
+        const normalized = this.resolveUrl(candidate.url, baseUrl);
+        candidates.set(normalized, {
+          ...candidate,
+          url: normalized,
+        });
+      } catch {
+        // Ignore invalid URLs
+      }
+    };
+
+    for (const entry of entries) {
+      if (this.isArticleStructuredEntry(entry)) {
+        const possibleUrls = [
+          entry.url,
+          entry['@id'],
+          entry.mainEntityOfPage?.['@id'],
+          entry.mainEntityOfPage?.url,
+          entry.mainEntityOfPage,
+        ].filter(Boolean);
+
+        for (const possibleUrl of possibleUrls) {
+          if (typeof possibleUrl === 'string') {
+            addCandidate({
+              url: possibleUrl,
+              headline: entry.headline || entry.name,
+              datePublished: entry.datePublished || entry.dateCreated || entry.dateModified,
+              image: this.extractStructuredImage(entry),
+              keywords: this.ensureArray(entry.keywords)
+                .map((keyword: any) => typeof keyword === 'string' ? keyword.trim() : '')
+                .filter((keyword: string) => keyword.length > 0),
+            });
+            break;
+          }
+        }
+      }
+
+      if (entry['@type'] === 'ItemList' && Array.isArray(entry.itemListElement)) {
+        for (const element of entry.itemListElement) {
+          const item = element?.item || element;
+          if (!item) {
+            continue;
+          }
+
+          const candidateUrl = typeof item === 'string' ? item : item.url || item['@id'];
+          if (typeof candidateUrl === 'string') {
+            addCandidate({
+              url: candidateUrl,
+              headline: item.name || item.headline,
+              datePublished: item.datePublished,
+              image: this.extractStructuredImage(item),
+              keywords: this.ensureArray(item.keywords)
+                .map((keyword: any) => typeof keyword === 'string' ? keyword.trim() : '')
+                .filter((keyword: string) => keyword.length > 0),
+            });
+          }
+        }
+      }
+    }
+
+    return Array.from(candidates.values());
   }
 
   // Enhanced method to try government RSS feed patterns
@@ -531,13 +699,13 @@ export class UniversalContentExtractor {
     // Clean HTML from noise before processing
     const cleanHtml = this.cleanHTML(html);
     
-    // Skip DOM parsing in server environment - use regex-based extraction instead
-    let doc = null; // DOMParser not available in edge functions
-    
+    const structuredEntries = this.parseStructuredData(cleanHtml);
+
     // Phase 1: Try JSON-LD structured data first
-    let title = this.extractJSONLDData(doc, 'headline') || this.extractJSONLDData(doc, 'name');
-    let author = this.extractJSONLDData(doc, 'author');  
-    let published_at = this.extractJSONLDData(doc, 'datePublished');
+    let title = this.extractJSONLDData(structuredEntries, 'headline') ||
+      this.extractJSONLDData(structuredEntries, 'name');
+    let author = this.extractJSONLDData(structuredEntries, 'author');
+    let published_at = this.extractJSONLDData(structuredEntries, 'datePublished');
     
     // Phase 1: Fallback to existing extraction methods if JSON-LD fails
     if (!title) title = this.extractTitle(cleanHtml);

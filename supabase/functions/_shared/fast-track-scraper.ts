@@ -3,7 +3,7 @@
  * Reduces timeouts by using quick accessibility checks and limited processing
  */
 
-import { ScrapingResult, ArticleData } from './types.ts';
+import { ScrapingResult, ArticleData, StructuredArticleCandidate } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
@@ -101,9 +101,15 @@ export class FastTrackScraper {
     if (rssResult.success && rssResult.articles.length > 0) {
       return rssResult;
     }
-    
+
+    // Attempt structured data extraction before full HTML parsing
+    const structuredResult = await this.tryFastStructuredDataStrategy();
+    if (structuredResult.success && structuredResult.articles.length > 0) {
+      return structuredResult;
+    }
+
     // Fallback to minimal HTML parsing
-    console.log('📄 RSS failed, trying fast HTML parsing...');
+    console.log('📄 RSS & structured data failed, trying fast HTML parsing...');
     return await this.tryFastHTMLStrategy();
   }
 
@@ -332,6 +338,111 @@ export class FastTrackScraper {
         scrape_timestamp: new Date().toISOString(),
         extractor_version: '3.0-fast'
       }
+    };
+  }
+
+  private async tryFastStructuredDataStrategy(): Promise<ScrapingResult> {
+    console.log('🧠 Fast structured data parsing...');
+
+    try {
+      const html = await this.retryStrategy.fetchWithDomainSpecificStrategy(this.baseUrl);
+      return await this.parseFastStructuredDataArticles(html, this.baseUrl);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Structured data parsing failed: ${errorMessage}`);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'structured_data'
+      };
+    }
+  }
+
+  private async parseFastStructuredDataArticles(html: string, baseUrl: string): Promise<ScrapingResult> {
+    const candidates: StructuredArticleCandidate[] = this.extractor.extractStructuredArticleCandidates(html, baseUrl);
+
+    if (candidates.length === 0) {
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: ['No structured data candidates found'],
+        method: 'structured_data'
+      };
+    }
+
+    const articles: ArticleData[] = [];
+    const errors: string[] = [];
+
+    for (const candidate of candidates.slice(0, 5)) {
+      const articleUrl = candidate.url;
+
+      try {
+        const extractor = new UniversalContentExtractor(articleUrl);
+        const articleHtml = await extractor.fetchWithRetry(articleUrl);
+        const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
+
+        if (!extractedContent.title && candidate.headline) {
+          extractedContent.title = candidate.headline;
+        }
+        if (!extractedContent.published_at && candidate.datePublished) {
+          extractedContent.published_at = candidate.datePublished;
+        }
+
+        if (extractedContent.body && this.isFastQualified(extractedContent)) {
+          const regionalConfig = {
+            keywords: [],
+            region_name: this.region || 'unknown'
+          };
+
+          const regionalRelevance = calculateRegionalRelevance(
+            extractedContent.body,
+            extractedContent.title,
+            regionalConfig,
+            this.sourceInfo?.source_type || 'national'
+          );
+
+          articles.push({
+            title: extractedContent.title,
+            body: extractedContent.body,
+            author: extractedContent.author,
+            published_at: extractedContent.published_at,
+            source_url: articleUrl,
+            canonical_url: articleUrl,
+            word_count: extractedContent.word_count,
+            regional_relevance_score: regionalRelevance,
+            content_quality_score: extractedContent.content_quality_score,
+            processing_status: 'new' as const,
+            import_metadata: {
+              extraction_method: 'fast_track_structured',
+              source_domain: this.sourceInfo?.canonical_domain,
+              scrape_timestamp: new Date().toISOString(),
+              extractor_version: '3.0-fast',
+              structured_data_hints: candidate
+            }
+          });
+        }
+
+      } catch (error) {
+        const articleErrorMessage = error instanceof Error ? error.message : String(error);
+        errors.push(`Structured data article error: ${articleErrorMessage}`);
+        if (errors.length > 3) {
+          break;
+        }
+      }
+    }
+
+    return {
+      success: articles.length > 0,
+      articles,
+      articlesFound: candidates.length,
+      articlesScraped: articles.length,
+      errors,
+      method: 'structured_data'
     };
   }
 
