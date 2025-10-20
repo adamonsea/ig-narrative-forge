@@ -134,11 +134,11 @@ export const usePushSubscription = (topicId?: string) => {
         isLoading: false
       }));
 
-      const messages = {
-        instant: "You'll get notified as soon as new stories are published",
-        daily: "You'll receive a daily summary every evening at 6 PM",
-        weekly: "You'll receive a weekly roundup every Friday at 10 AM"
-      };
+const messages = {
+  instant: "You'll get notified as soon as new stories are published",
+  daily: "You'll receive a daily summary every evening at 8 PM",
+  weekly: "You'll receive a weekly roundup every Sunday at 9 AM"
+};
 
       toast({
         title: "Subscribed!",

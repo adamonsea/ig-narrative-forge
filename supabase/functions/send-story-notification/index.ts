@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const BASE_URL = Deno.env.get('PUBLIC_SITE_URL') || 'https://curatr.pro';
+
 interface NotificationRequest {
   storyId?: string;
   topicId: string;
@@ -73,17 +75,17 @@ serve(async (req: Request) => {
 
       title = `New from ${topic.name}`;
       body = story.title;
-      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/story/${storyId}`;
+      url = `${BASE_URL}/feed/${topic.slug}/story/${storyId}`;
     } else if (notificationType === 'daily' && roundupDate) {
       // Daily roundup notification
       title = `Today in ${topic.name}`;
       body = `Check out today's roundup`;
-      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/daily/${roundupDate}`;
+      url = `${BASE_URL}/feed/${topic.slug}/daily/${roundupDate}`;
     } else if (notificationType === 'weekly' && weekStart) {
       // Weekly roundup notification
       title = `This Week in ${topic.name}`;
       body = `Your weekly roundup is ready`;
-      url = `https://65bbd18a-918e-4c43-a124-21fdf7b60408.lovableproject.com/feed/${topic.slug}/weekly/${weekStart}`;
+      url = `${BASE_URL}/feed/${topic.slug}/weekly/${weekStart}`;
     } else {
       throw new Error('Invalid notification type or missing required parameters');
     }

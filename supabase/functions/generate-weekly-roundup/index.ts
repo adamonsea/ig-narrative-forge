@@ -17,7 +17,43 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topic_id, week_start } = await req.json();
+    const body = await req.json();
+    const { topic_id, week_start } = body;
+    
+    // If no topic_id provided, generate for all active topics
+    if (!topic_id) {
+      const { data: topics, error: topicsError } = await supabase
+        .from('topics')
+        .select('id, name, slug')
+        .eq('is_active', true);
+
+      if (topicsError || !topics || topics.length === 0) {
+        throw new Error('No active topics found');
+      }
+
+      console.log(`📰 Generating weekly roundups for ${topics.length} topics starting ${week_start}`);
+
+      const results = [];
+      for (const topic of topics) {
+        try {
+          const response = await supabase.functions.invoke('generate-weekly-roundup', {
+            body: { topic_id: topic.id, week_start }
+          });
+          results.push({ topic: topic.name, success: true, ...response.data });
+        } catch (error) {
+          console.error(`Failed to generate roundup for ${topic.name}:`, error);
+          results.push({ topic: topic.name, success: false, error: error.message });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Generated roundups for ${results.filter(r => r.success).length}/${topics.length} topics`,
+        results
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     console.log(`📰 Generating weekly roundup for topic ${topic_id} starting ${week_start}`);
 
@@ -39,10 +75,15 @@ serve(async (req) => {
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Get all published stories for this week
+    // Get all published stories for this week and topic
     const { data: stories, error: storiesError } = await supabase
       .from('stories')
-      .select('id, title, author, publication_name, created_at')
+      .select(`
+        id, title, author, publication_name, created_at,
+        topic_article_id,
+        topic_articles!inner(topic_id)
+      `)
+      .eq('topic_articles.topic_id', topic_id)
       .eq('is_published', true)
       .in('status', ['ready', 'published'])
       .gte('created_at', weekStart.toISOString())

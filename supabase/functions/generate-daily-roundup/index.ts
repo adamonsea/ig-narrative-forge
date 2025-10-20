@@ -17,7 +17,43 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topic_id, date } = await req.json();
+    const body = await req.json();
+    const { topic_id, date } = body;
+    
+    // If no topic_id provided, generate for all active topics
+    if (!topic_id) {
+      const { data: topics, error: topicsError } = await supabase
+        .from('topics')
+        .select('id, name, slug')
+        .eq('is_active', true);
+
+      if (topicsError || !topics || topics.length === 0) {
+        throw new Error('No active topics found');
+      }
+
+      console.log(`📰 Generating daily roundups for ${topics.length} topics on ${date}`);
+
+      const results = [];
+      for (const topic of topics) {
+        try {
+          const response = await supabase.functions.invoke('generate-daily-roundup', {
+            body: { topic_id: topic.id, date }
+          });
+          results.push({ topic: topic.name, success: true, ...response.data });
+        } catch (error) {
+          console.error(`Failed to generate roundup for ${topic.name}:`, error);
+          results.push({ topic: topic.name, success: false, error: error.message });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Generated roundups for ${results.filter(r => r.success).length}/${topics.length} topics`,
+        results
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     console.log(`📰 Generating daily roundup for topic ${topic_id} on ${date}`);
 
@@ -37,10 +73,15 @@ serve(async (req) => {
     const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
-    // Get all published stories for this day
+    // Get all published stories for this day and topic
     const { data: stories, error: storiesError } = await supabase
       .from('stories')
-      .select('id, title, author, publication_name, created_at')
+      .select(`
+        id, title, author, publication_name, created_at,
+        topic_article_id,
+        topic_articles!inner(topic_id)
+      `)
+      .eq('topic_articles.topic_id', topic_id)
       .eq('is_published', true)
       .in('status', ['ready', 'published'])
       .gte('created_at', startOfDay.toISOString())
