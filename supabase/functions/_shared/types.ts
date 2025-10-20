@@ -29,7 +29,14 @@ export interface ScrapingResult {
   articlesFound: number;
   articlesScraped: number;
   errors: string[];
-  method: 'rss' | 'html' | 'api' | 'fallback';
+  method:
+    | 'rss'
+    | 'html'
+    | 'sitemap'
+    | 'structured_data'
+    | 'discovery'
+    | 'api'
+    | 'fallback';
 }
 
 export interface ContentExtractionResult {
@@ -39,6 +46,14 @@ export interface ContentExtractionResult {
   published_at?: string;
   word_count: number;
   content_quality_score: number;
+}
+
+export interface StructuredArticleCandidate {
+  url: string;
+  headline?: string;
+  datePublished?: string;
+  image?: string;
+  keywords?: string[];
 }
 
 export interface ScrapingConfig {

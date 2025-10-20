@@ -1,4 +1,4 @@
-import { ScrapingResult, ArticleData } from './types.ts';
+import { ScrapingResult, ArticleData, StructuredArticleCandidate } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
@@ -19,6 +19,7 @@ export class EnhancedScrapingStrategies {
     const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [
       { name: 'rss', executor: () => this.tryRSSStrategy() },
       { name: 'sitemap', executor: () => this.trySitemapStrategy() },
+      { name: 'structured_data', executor: () => this.tryStructuredDataStrategy() },
       { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
       { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
     ];
@@ -214,6 +215,62 @@ export class EnhancedScrapingStrategies {
         articlesScraped: 0,
         errors,
         method: 'sitemap'
+      };
+    }
+  }
+
+  private async tryStructuredDataStrategy(): Promise<ScrapingResult> {
+    console.log('🧠 Attempting structured data parsing...');
+
+    try {
+      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
+      const structuredCandidates = this.extractor.extractStructuredArticleCandidates(html, this.baseUrl);
+
+      if (structuredCandidates.length === 0) {
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No structured data article candidates discovered'],
+          method: 'structured_data'
+        };
+      }
+
+      const metadataByUrl = structuredCandidates.reduce<Record<string, StructuredArticleCandidate>>((acc, candidate) => {
+        acc[this.normalizeCandidateUrl(candidate.url)] = candidate;
+        return acc;
+      }, {});
+
+      const candidateUrls = structuredCandidates.map(candidate => candidate.url);
+      const { articles, errors } = await this.scrapeArticleUrls(
+        candidateUrls,
+        'structured_data',
+        {
+          discovery: 'json-ld-structured',
+          candidates_discovered: structuredCandidates.length
+        },
+        metadataByUrl
+      );
+
+      return {
+        success: articles.length > 0,
+        articles,
+        articlesFound: structuredCandidates.length,
+        articlesScraped: articles.length,
+        errors,
+        method: 'structured_data'
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'structured_data'
       };
     }
   }
@@ -666,7 +723,8 @@ export class EnhancedScrapingStrategies {
   private async scrapeArticleUrls(
     articleUrls: string[],
     method: ScrapingResult['method'],
-    metadata: Record<string, any> = {}
+    metadata: Record<string, any> = {},
+    candidateMetadata: Record<string, StructuredArticleCandidate> = {}
   ): Promise<{ articles: ArticleData[]; errors: string[] }> {
     const articles: ArticleData[] = [];
     const errors: string[] = [];
@@ -685,12 +743,33 @@ export class EnhancedScrapingStrategies {
         const articleHtml = await extractor.fetchWithRetry(articleUrl);
         const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
 
+        const normalizedUrl = this.normalizeCandidateUrl(articleUrl);
+        const structuredHints = candidateMetadata[normalizedUrl];
+
+        if (structuredHints) {
+          if (!extractedContent.title && structuredHints.headline) {
+            extractedContent.title = structuredHints.headline;
+          }
+          if (!extractedContent.published_at && structuredHints.datePublished) {
+            extractedContent.published_at = structuredHints.datePublished;
+          }
+        }
+
         if (extractedContent.body && this.isContentQualified(extractedContent)) {
           const regionalRelevance = this.calculateEnhancedRegionalRelevance(
             extractedContent.body,
             extractedContent.title,
             articleUrl
           );
+
+          const importMetadata = {
+            extraction_method: method,
+            discovery_metadata: metadata,
+            source_domain: this.sourceInfo?.canonical_domain,
+            scrape_timestamp: new Date().toISOString(),
+            extractor_version: '2.0',
+            ...(structuredHints ? { structured_data_hints: structuredHints } : {})
+          };
 
           articles.push({
             title: extractedContent.title,
@@ -703,13 +782,7 @@ export class EnhancedScrapingStrategies {
             regional_relevance_score: regionalRelevance,
             content_quality_score: extractedContent.content_quality_score,
             processing_status: 'new',
-            import_metadata: {
-              extraction_method: method,
-              discovery_metadata: metadata,
-              source_domain: this.sourceInfo?.canonical_domain,
-              scrape_timestamp: new Date().toISOString(),
-              extractor_version: '2.0'
-            }
+            import_metadata: importMetadata
           });
         }
 
@@ -935,6 +1008,14 @@ export class EnhancedScrapingStrategies {
       return new URL(url, baseUrl).href;
     } catch {
       return url.startsWith('http') ? url : `${baseUrl}${url}`;
+    }
+  }
+
+  private normalizeCandidateUrl(url: string): string {
+    try {
+      return new URL(url).href;
+    } catch {
+      return url;
     }
   }
 
