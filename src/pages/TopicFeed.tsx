@@ -362,7 +362,7 @@ const TopicFeed = () => {
       <AddToHomeScreen
         topicName={topic.name}
         topicSlug={slug || ''}
-        topicLogo={topic.branding_config?.logo_url}
+        topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url}
       />
 
       {/* Sticky header for scrollers */}

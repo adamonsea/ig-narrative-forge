@@ -6,7 +6,7 @@ import { Card } from './ui/card';
 interface AddToHomeScreenProps {
   topicName: string;
   topicSlug: string;
-  topicLogo?: string;
+  topicIcon?: string;
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -14,7 +14,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeScreenProps) => {
+export const AddToHomeScreen = ({ topicName, topicSlug, topicIcon }: AddToHomeScreenProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -55,8 +55,8 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
       appleTouchIcon.rel = 'apple-touch-icon';
       document.head.appendChild(appleTouchIcon);
     }
-    if (topicLogo) {
-      appleTouchIcon.href = topicLogo;
+    if (topicIcon) {
+      appleTouchIcon.href = topicIcon;
     }
 
     // Update apple-mobile-web-app-title
@@ -89,7 +89,7 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
     };
-  }, [topicName, topicSlug, topicLogo]);
+  }, [topicName, topicSlug, topicIcon]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -153,10 +153,10 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicLogo }: AddToHomeSc
       </button>
 
       <div className="flex gap-3 items-start">
-        {topicLogo && (
+        {topicIcon && (
           <img
-            src={topicLogo}
-            alt={`${topicName} logo`}
+            src={topicIcon}
+            alt={`${topicName} icon`}
             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
           />
         )}
