@@ -65,12 +65,11 @@ export const StoryPageSEO = ({
   
   const articleBody = getArticleBody();
   
-  // Prioritize topic logo for branding consistency, then cover illustration, then dynamic OG image
-  const imageUrl = topicLogoUrl || 
-    story.cover_illustration_url || 
-    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}`;
+  // Prioritize cover illustration for visual appeal, fallback to branded OG image with topic logo
+  const imageUrl = story.cover_illustration_url || 
+    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}&topic_name=${encodeURIComponent(topicName)}${topicLogoUrl ? `&logo_url=${encodeURIComponent(topicLogoUrl)}` : ''}`;
   
-  const siteName = `Curated ${topicName}`;
+  const siteName = topicName;
   
   // Published date
   const publishedTime = story.article?.published_at || story.created_at;
@@ -93,7 +92,7 @@ export const StoryPageSEO = ({
       "name": siteName,
       "logo": {
         "@type": "ImageObject",
-        "url": "https://curatr.pro/placeholder.svg"
+        "url": topicLogoUrl || "https://curatr.pro/placeholder.svg"
       }
     },
     "articleBody": articleBody,
@@ -124,6 +123,9 @@ export const StoryPageSEO = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={imageUrl} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={`${topicName} - ${story.title}`} />
       <meta property="og:site_name" content={siteName} />
       <meta property="article:published_time" content={publishedTime} />
       {story.author && <meta property="article:author" content={story.author} />}

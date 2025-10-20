@@ -15,14 +15,18 @@ serve(async (req) => {
     const title = url.searchParams.get('title') || 'Curated News';
     const subtitle = url.searchParams.get('subtitle') || '';
     const theme = url.searchParams.get('theme') || 'light';
+    const topicName = url.searchParams.get('topic_name') || subtitle;
+    const logoUrl = url.searchParams.get('logo_url');
+    const primaryColor = url.searchParams.get('primary_color') || 'rgb(59,130,246)';
+    const secondaryColor = url.searchParams.get('secondary_color') || 'rgb(147,51,234)';
 
-    // Generate SVG-based OG image
+    // Generate SVG-based OG image with topic branding
     const svg = `
       <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:rgb(59,130,246);stop-opacity:1" />
-            <stop offset="100%" style="stop-color:rgb(147,51,234);stop-opacity:1" />
+            <stop offset="0%" style="stop-color:${primaryColor};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${secondaryColor};stop-opacity:1" />
           </linearGradient>
         </defs>
         
@@ -34,15 +38,20 @@ serve(async (req) => {
         
         <!-- Content container -->
         <g>
+          ${logoUrl ? `
+          <!-- Topic Logo -->
+          <image x="60" y="40" width="80" height="80" href="${logoUrl}" preserveAspectRatio="xMidYMid meet"/>
+          ` : ''}
+          
           <!-- Subtitle -->
           ${subtitle ? `
-          <text x="60" y="80" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="600" fill="${theme === 'dark' ? '#9ca3af' : '#6b7280'}">
+          <text x="${logoUrl ? '160' : '60'}" y="${logoUrl ? '85' : '80'}" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="600" fill="${theme === 'dark' ? '#9ca3af' : '#6b7280'}">
             ${subtitle.substring(0, 50)}
           </text>
           ` : ''}
           
           <!-- Main title -->
-          <text x="60" y="${subtitle ? '180' : '140'}" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="700" fill="${theme === 'dark' ? '#ffffff' : '#1f2937'}">
+          <text x="60" y="${logoUrl ? '200' : (subtitle ? '180' : '140')}" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="700" fill="${theme === 'dark' ? '#ffffff' : '#1f2937'}">
             ${wrapText(title, 40).map((line, i) => `
             <tspan x="60" dy="${i === 0 ? 0 : 70}">${line}</tspan>
             `).join('')}
@@ -50,7 +59,7 @@ serve(async (req) => {
           
           <!-- Branding footer -->
           <text x="60" y="580" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="500" fill="${theme === 'dark' ? '#6b7280' : '#9ca3af'}">
-            curatr.pro
+            ${topicName}
           </text>
         </g>
       </svg>
