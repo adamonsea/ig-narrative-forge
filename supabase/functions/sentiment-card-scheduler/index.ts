@@ -23,6 +23,25 @@ serve(async (req) => {
 
     // Find keywords due for card generation (only from enabled topics)
     const now = new Date();
+    
+    // First, check what's in the tracking table
+    const { data: allTracked, error: debugError } = await supabase
+      .from('sentiment_keyword_tracking')
+      .select('*')
+      .eq('tracked_for_cards', true)
+      .limit(10);
+    
+    console.log('🔍 Debug: All tracked keywords', {
+      count: allTracked?.length || 0,
+      keywords: allTracked?.map(k => ({
+        phrase: k.keyword_phrase,
+        topic: k.topic_id,
+        trend: k.current_trend,
+        nextDue: k.next_card_due_at,
+        lastSeen: k.last_seen_at
+      }))
+    });
+    
     const { data: dueKeywords, error: queryError } = await supabase
       .from('sentiment_keyword_tracking')
       .select(`
@@ -31,6 +50,8 @@ serve(async (req) => {
         keyword_phrase, 
         total_cards_generated,
         next_card_due_at,
+        current_trend,
+        last_seen_at,
         topic_sentiment_settings!inner(enabled)
       `)
       .eq('tracked_for_cards', true)
@@ -46,19 +67,34 @@ serve(async (req) => {
 
     console.log(`📊 Query Results`, {
       keywordsFound: dueKeywords?.length || 0,
+      now: now.toISOString(),
       keywords: dueKeywords?.map(k => ({
         phrase: k.keyword_phrase,
         topic: k.topic_id,
-        dueAt: k.next_card_due_at
+        trend: k.current_trend,
+        dueAt: k.next_card_due_at,
+        overdue: k.next_card_due_at ? new Date(k.next_card_due_at) < now : true
       }))
     });
 
     if (!dueKeywords || dueKeywords.length === 0) {
+      console.warn('⚠️ No keywords due for card generation', {
+        timestamp: now.toISOString(),
+        possibleReasons: [
+          'No keywords with tracked_for_cards=true',
+          'No enabled topic_sentiment_settings',
+          'No keywords with trend "emerging" or "sustained"',
+          'All keywords have future next_card_due_at dates'
+        ]
+      });
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'No keywords due for generation',
-          processed: 0
+          processed: 0,
+          debug: {
+            trackedKeywordsTotal: allTracked?.length || 0
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

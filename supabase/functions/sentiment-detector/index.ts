@@ -246,7 +246,7 @@ serve(async (req) => {
 
     // Generate sentiment cards for keywords with frequency >= 2 and at least 2 sources
     for (const keyword of keywordAnalysis) {
-      if (keyword.frequency >= 2 && keyword.sources.length >= 2) {
+      if (keyword.frequency >= 3 && keyword.sources.length >= 3) {
         console.log(`🎯 Evaluating keyword for card: "${keyword.phrase}"`, {
           frequency: keyword.frequency,
           sources: keyword.sources.length,
@@ -362,7 +362,7 @@ serve(async (req) => {
 
     // Prepare keyword suggestions (keywords that could be added to topic)
     const keywordSuggestions = keywordAnalysis
-      .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Lower threshold for suggestions
+      .filter(k => k.frequency >= 3 && k.sources.length >= 3) // Match card generation threshold
       .filter(k => !topicKeywords.some((tk: any) => 
         tk.toLowerCase().includes(k.phrase.toLowerCase()) || 
         k.phrase.toLowerCase().includes(tk.toLowerCase())
@@ -526,16 +526,51 @@ REJECT any phrases about other locations outside ${topicName}. Only include loca
       frequency: kw.frequency,
       sentiment_context: kw.sentiment_context || { positive: 0, negative: 0, neutral: 0 },
       sources: articles
-        .filter(article => 
-          article.title.toLowerCase().includes(kw.phrase.toLowerCase()) ||
-          article.body?.toLowerCase().includes(kw.phrase.toLowerCase())
-        )
-        .slice(0, 5)
-        .map(article => ({
-          url: article.source_url,
-          title: article.title,
-          date: article.published_at,
-          author: article.author
+        .map(article => {
+          const titleMatch = article.title.toLowerCase().includes(kw.phrase.toLowerCase());
+          const bodyLower = (article.body || '').toLowerCase();
+          const phraseLower = kw.phrase.toLowerCase();
+          
+          // Calculate relevance score
+          let relevanceScore = 0;
+          if (titleMatch) relevanceScore += 10; // Strong signal if in title
+          
+          // Count keyword mentions in body
+          const mentionCount = (bodyLower.match(new RegExp(phraseLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+          relevanceScore += Math.min(mentionCount * 2, 20); // Up to 20 points for mentions
+          
+          // Bonus for high regional relevance
+          if (article.regional_relevance_score && article.regional_relevance_score > 70) {
+            relevanceScore += 5;
+          }
+          
+          return {
+            article,
+            relevanceScore
+          };
+        })
+        .filter(item => {
+          // Must meet minimum relevance threshold
+          if (item.relevanceScore < 10) return false;
+          
+          // Must have valid publication date
+          if (!item.article.published_at) return false;
+          
+          // Must have title
+          if (!item.article.title || item.article.title.length < 10) return false;
+          
+          // Must have sufficient content
+          if (!item.article.body || item.article.body.length < 100) return false;
+          
+          return true;
+        })
+        .sort((a, b) => b.relevanceScore - a.relevanceScore) // Sort by relevance
+        .slice(0, 5) // Take top 5 most relevant
+        .map(item => ({
+          url: item.article.source_url,
+          title: item.article.title,
+          date: item.article.published_at,
+          author: item.article.author
         }))
     }));
     
