@@ -302,12 +302,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         from
       });
 
-      // PHASE 2: Circuit breaker - 5 second timeout with AbortController
+      // PHASE 2: Circuit breaker - 15 second timeout with AbortController (increased for iOS Safari)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Phase 2: RPC timeout after 5 seconds, aborting...');
+        console.warn('⚠️ Phase 2: RPC timeout after 15 seconds, aborting...');
         controller.abort();
-      }, 5000);
+      }, 15000);
 
       let storiesData: any[] | null = null;
       let rpcError: any = null;
@@ -339,7 +339,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
           console.warn('⚠️ Phase 2: RPC aborted due to timeout');
-          rpcError = new Error('RPC timeout after 5 seconds');
+          rpcError = new Error('Connection slow - using cached content');
         } else {
           rpcError = err;
         }
@@ -744,11 +744,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
     } catch (error) {
       console.error('Error loading stories:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load stories",
-        variant: "destructive"
-      });
+      
+      // Don't show destructive toast for timeout fallbacks - they're handled gracefully
+      const errorMessage = error instanceof Error ? error.message : "Failed to load stories";
+      const isTimeoutFallback = errorMessage.includes('cached content');
+      
+      if (!isTimeoutFallback) {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
