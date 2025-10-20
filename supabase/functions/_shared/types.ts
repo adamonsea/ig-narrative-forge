@@ -52,3 +52,11 @@ export interface ScrapingConfig {
   titleSelector?: string;
   authorSelector?: string;
 }
+
+export interface StructuredArticleCandidate {
+  url: string;
+  headline?: string;
+  datePublished?: string;
+  image?: string;
+  keywords?: string[];
+}

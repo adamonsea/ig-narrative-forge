@@ -1,4 +1,13 @@
-import { ContentExtractionResult } from './types.ts';
+import { ContentExtractionResult, StructuredArticleCandidate } from './types.ts';
+
+const MAX_JSONLD_SCRIPTS = 10;
+const MAX_JSONLD_LENGTH = 100_000; // 100 KB
+const MAX_STRUCTURED_ENTRIES = 1000;
+const MAX_STRUCTURED_DEPTH = 10;
+const MAX_STRUCTURED_CANDIDATES = 50;
+const MAX_KEYWORDS = 20;
+const MAX_KEYWORD_LENGTH = 100;
+const MAX_HINT_STORAGE_BYTES = 5 * 1024; // 5 KB
 
 // Enhanced anti-detection user agents that rotate with healthcare-specific ones
 const USER_AGENTS = [
@@ -455,42 +464,465 @@ export class UniversalContentExtractor {
     return octets.join('.');
   }
 
-  // Phase 1: New JSON-LD extraction method
-  private extractJSONLDData(doc: any, property: string): string {
+  private sanitizeString(value: unknown, maxLength: number = 1000): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    const withoutTags = trimmed.replace(/<[^>]*>/g, '');
+    const withoutControlChars = withoutTags.replace(/[\u0000-\u001F\u007F]/g, '');
+    const sanitized = withoutControlChars.slice(0, maxLength);
+
+    return sanitized || undefined;
+  }
+
+  private validateAndNormalizeDate(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const sanitized = value.trim();
+    if (!sanitized) {
+      return undefined;
+    }
+
+    const parsed = new Date(sanitized);
+    if (Number.isNaN(parsed.getTime())) {
+      return undefined;
+    }
+
+    return parsed.toISOString();
+  }
+
+  private sanitizeKeywords(keywords: unknown): string[] {
+    return this.ensureArray(keywords)
+      .map(keyword => this.sanitizeString(keyword, MAX_KEYWORD_LENGTH))
+      .filter((keyword): keyword is string => Boolean(keyword))
+      .slice(0, MAX_KEYWORDS);
+  }
+
+  private isPrivateIPAddress(hostname: string): boolean {
+    const normalized = hostname.replace(/[\[\]]/g, '').toLowerCase();
+
+    if (normalized.includes(':')) {
+      if (normalized === '::1') return true;
+      if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+      if (normalized.startsWith('fe80')) return true;
+      return false;
+    }
+
+    const parts = normalized.split('.').map(part => Number(part));
+    if (parts.length === 4 && parts.every(part => Number.isInteger(part) && part >= 0 && part <= 255)) {
+      if (parts[0] === 10) return true;
+      if (parts[0] === 127) return true;
+      if (parts[0] === 0) return true;
+      if (parts[0] === 169 && parts[1] === 254) return true;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+      if (parts[0] === 192 && parts[1] === 168) return true;
+    }
+
+    return false;
+  }
+
+  private isAllowedUrl(url: string): boolean {
     try {
-      const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
-      for (const script of scripts) {
-        try {
-          const jsonData = JSON.parse(script.textContent || '');
-          
-          // Handle arrays of structured data
-          const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
-          
-          for (const data of dataArray) {
-            if (data['@type'] === 'NewsArticle' || data['@type'] === 'Article') {
-              let value = data[property];
-              
-              // Handle author object
-              if (property === 'author' && typeof value === 'object') {
-                value = value.name || value['@name'] || '';
+      const parsed = new URL(url);
+      const protocol = parsed.protocol;
+
+      if (protocol !== 'http:' && protocol !== 'https:') {
+        return false;
+      }
+
+      const hostname = parsed.hostname.toLowerCase();
+      if (!hostname) {
+        return false;
+      }
+
+      if (['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname)) {
+        return false;
+      }
+
+      if (hostname.endsWith('.local')) {
+        return false;
+      }
+
+      if (this.isPrivateIPAddress(hostname)) {
+        return false;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  public isAllowedExternalUrl(url: string): boolean {
+    return this.isAllowedUrl(url);
+  }
+
+  private normalizeAndValidateUrl(value: unknown, baseUrl: string): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    try {
+      const resolved = new URL(value, baseUrl).href;
+      if (!this.isAllowedUrl(resolved)) {
+        console.log(`⚠️ Structured data URL blocked: ${resolved}`);
+        return undefined;
+      }
+      return resolved;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private extractCandidateUrl(value: unknown): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'object') {
+      const candidate = (value as Record<string, unknown>).url ||
+        (value as Record<string, unknown>)['@id'] ||
+        (value as Record<string, unknown>)['@url'];
+      return typeof candidate === 'string' ? candidate : undefined;
+    }
+
+    return undefined;
+  }
+
+  private createStructuredCandidate(
+    candidate: StructuredArticleCandidate,
+    baseUrl: string
+  ): StructuredArticleCandidate | undefined {
+    const normalizedUrl = this.normalizeAndValidateUrl(candidate.url, baseUrl);
+    if (!normalizedUrl) {
+      return undefined;
+    }
+
+    const headline = this.sanitizeString(candidate.headline, 500);
+    const datePublished = this.validateAndNormalizeDate(candidate.datePublished);
+    const image = this.normalizeAndValidateUrl(candidate.image, baseUrl);
+    const keywords = this.sanitizeKeywords(candidate.keywords);
+
+    const sanitizedCandidate: StructuredArticleCandidate = {
+      url: normalizedUrl,
+      ...(headline ? { headline } : {}),
+      ...(datePublished ? { datePublished } : {}),
+      ...(image ? { image } : {}),
+      ...(keywords.length ? { keywords } : {})
+    };
+
+    const serialized = JSON.stringify(sanitizedCandidate);
+    if (serialized.length > MAX_HINT_STORAGE_BYTES) {
+      console.log(`⚠️ Structured data candidate exceeded size limit (${serialized.length} bytes)`);
+      return {
+        url: normalizedUrl
+      };
+    }
+
+    return sanitizedCandidate;
+  }
+
+  static pruneStructuredHintsForStorage(
+    candidate?: StructuredArticleCandidate
+  ): StructuredArticleCandidate | undefined {
+    if (!candidate) {
+      return undefined;
+    }
+
+    const pruned: StructuredArticleCandidate = {
+      url: candidate.url
+    };
+
+    if (candidate.headline) {
+      pruned.headline = candidate.headline;
+    }
+    if (candidate.datePublished) {
+      pruned.datePublished = candidate.datePublished;
+    }
+    if (candidate.image) {
+      pruned.image = candidate.image;
+    }
+    if (candidate.keywords?.length) {
+      pruned.keywords = candidate.keywords.slice(0, MAX_KEYWORDS);
+    }
+
+    let serialized = JSON.stringify(pruned);
+    if (serialized.length > MAX_HINT_STORAGE_BYTES) {
+      delete pruned.keywords;
+      serialized = JSON.stringify(pruned);
+    }
+
+    if (serialized.length > MAX_HINT_STORAGE_BYTES) {
+      delete pruned.headline;
+      serialized = JSON.stringify(pruned);
+    }
+
+    if (serialized.length > MAX_HINT_STORAGE_BYTES) {
+      delete pruned.image;
+      serialized = JSON.stringify(pruned);
+    }
+
+    if (serialized.length > MAX_HINT_STORAGE_BYTES) {
+      return { url: candidate.url };
+    }
+
+    return pruned;
+  }
+
+  private parseStructuredData(html: string): any[] {
+    const entries: any[] = [];
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let match: RegExpExecArray | null;
+    let processedScripts = 0;
+
+    while ((match = scriptRegex.exec(html)) !== null && processedScripts < MAX_JSONLD_SCRIPTS) {
+      processedScripts++;
+
+      const rawContent = (match[1] || '').trim();
+      if (!rawContent) {
+        continue;
+      }
+
+      if (rawContent.length > MAX_JSONLD_LENGTH) {
+        console.log('⚠️ Skipping oversized JSON-LD script');
+        continue;
+      }
+
+      try {
+        const sanitized = rawContent
+          .replace(/<!--([\s\S]*?)-->/g, '$1')
+          .replace(/<\\\//g, '</');
+
+        const parsed = JSON.parse(sanitized);
+        this.collectStructuredEntries(parsed, entries);
+
+        if (entries.length >= MAX_STRUCTURED_ENTRIES) {
+          console.log('⚠️ Structured data entry limit reached');
+          break;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️ Failed to parse JSON-LD script: ${errorMessage}`);
+      }
+    }
+
+    return entries;
+  }
+
+  private collectStructuredEntries(node: any, entries: any[], depth: number = 0): void {
+    if (!node || depth > MAX_STRUCTURED_DEPTH || entries.length >= MAX_STRUCTURED_ENTRIES) {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        if (entries.length >= MAX_STRUCTURED_ENTRIES) {
+          return;
+        }
+        this.collectStructuredEntries(item, entries, depth + 1);
+      }
+      return;
+    }
+
+    if (typeof node !== 'object') {
+      return;
+    }
+
+    entries.push(node);
+
+    if (node['@graph']) {
+      this.collectStructuredEntries(node['@graph'], entries, depth + 1);
+    }
+  }
+
+  private isArticleStructuredEntry(entry: any): boolean {
+    if (!entry || typeof entry !== 'object') {
+      return false;
+    }
+
+    const type = entry['@type'];
+    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+    const allowedTypes = ['NewsArticle', 'Article', 'BlogPosting', 'Report', 'PressRelease'];
+
+    return typeArray.some((value: string) => allowedTypes.includes(value));
+  }
+
+  private ensureArray<T>(value: T | T[] | undefined): T[] {
+    if (!value) {
+      return [];
+    }
+    return Array.isArray(value) ? value : [value];
+  }
+
+  private extractStructuredImage(entry: any, baseUrl: string): string | undefined {
+    const image = entry?.image;
+    if (!image) {
+      return undefined;
+    }
+
+    if (typeof image === 'string') {
+      return this.normalizeAndValidateUrl(image, baseUrl);
+    }
+
+    if (Array.isArray(image)) {
+      const first = image.find(item => typeof item === 'string' || (item && typeof item.url === 'string'));
+      if (!first) {
+        return undefined;
+      }
+      return typeof first === 'string'
+        ? this.normalizeAndValidateUrl(first, baseUrl)
+        : this.normalizeAndValidateUrl(first.url, baseUrl);
+    }
+
+    if (typeof image === 'object' && typeof image.url === 'string') {
+      return this.normalizeAndValidateUrl(image.url, baseUrl);
+    }
+
+    return undefined;
+  }
+
+  private extractJSONLDData(entries: any[], property: string): string {
+    try {
+      for (const entry of entries) {
+        if (!this.isArticleStructuredEntry(entry)) {
+          continue;
+        }
+
+        let value = entry[property];
+
+        if (property === 'author' && value) {
+          const authors = this.ensureArray(value)
+            .map(author => {
+              if (typeof author === 'string') {
+                return author;
               }
-              
-              if (value && typeof value === 'string') {
-                console.log(`📋 JSON-LD extracted ${property}: ${value.substring(0, 50)}...`);
-                return value;
+              if (author && typeof author === 'object') {
+                return author.name || author['@name'] || author['@id'] || '';
               }
+              return '';
+            })
+            .filter(Boolean);
+
+          if (authors.length > 0) {
+            value = authors.join(', ');
+          }
+        }
+
+        if (Array.isArray(value)) {
+          value = value.find(item => typeof item === 'string') || value[0];
+        }
+
+        if (value && typeof value === 'string') {
+          if (property === 'datePublished') {
+            const normalizedDate = this.validateAndNormalizeDate(value);
+            if (normalizedDate) {
+              console.log(`📋 JSON-LD extracted ${property}: ${normalizedDate}`);
+              return normalizedDate;
+            }
+          } else {
+            const sanitizedValue = this.sanitizeString(value, 500);
+            if (sanitizedValue) {
+              console.log(`📋 JSON-LD extracted ${property}: ${sanitizedValue.substring(0, 80)}...`);
+              return sanitizedValue;
             }
           }
-        } catch (parseError) {
-          // Continue to next script if JSON parsing fails
-          continue;
         }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.log(`⚠️ JSON-LD extraction failed for ${property}: ${errorMessage}`);
     }
+
     return '';
+  }
+
+  extractStructuredArticleCandidates(html: string, baseUrl: string): StructuredArticleCandidate[] {
+    const entries = this.parseStructuredData(html);
+    const candidates = new Map<string, StructuredArticleCandidate>();
+
+    const addCandidate = (candidate: StructuredArticleCandidate) => {
+      if (candidates.size >= MAX_STRUCTURED_CANDIDATES) {
+        return;
+      }
+
+      const sanitized = this.createStructuredCandidate(candidate, baseUrl);
+      if (!sanitized) {
+        return;
+      }
+
+      candidates.set(sanitized.url, sanitized);
+    };
+
+    for (const entry of entries) {
+      if (this.isArticleStructuredEntry(entry)) {
+        const possibleUrlSources = [
+          entry.url,
+          entry['@id'],
+          entry.mainEntityOfPage?.['@id'],
+          entry.mainEntityOfPage?.url,
+          entry.mainEntityOfPage,
+        ];
+
+        for (const possibleUrl of possibleUrlSources) {
+          const extractedUrl = this.extractCandidateUrl(possibleUrl);
+          if (!extractedUrl) {
+            continue;
+          }
+
+          addCandidate({
+            url: extractedUrl,
+            headline: entry.headline || entry.name,
+            datePublished: entry.datePublished || entry.dateCreated || entry.dateModified,
+            image: this.extractStructuredImage(entry, baseUrl),
+            keywords: entry.keywords,
+          });
+
+          break;
+        }
+      }
+
+      if (entry['@type'] === 'ItemList' && Array.isArray(entry.itemListElement)) {
+        for (const element of entry.itemListElement) {
+          const item = element?.item || element;
+          if (!item) {
+            continue;
+          }
+
+          const candidateUrl = this.extractCandidateUrl(item);
+          if (candidateUrl) {
+            addCandidate({
+              url: candidateUrl,
+              headline: item.name || item.headline,
+              datePublished: item.datePublished,
+              image: this.extractStructuredImage(item, baseUrl),
+              keywords: item.keywords,
+            });
+          }
+
+          if (candidates.size >= MAX_STRUCTURED_CANDIDATES) {
+            break;
+          }
+        }
+      }
+
+      if (candidates.size >= MAX_STRUCTURED_CANDIDATES) {
+        break;
+      }
+    }
+
+    return Array.from(candidates.values());
   }
 
   // Enhanced method to try government RSS feed patterns
@@ -531,13 +963,13 @@ export class UniversalContentExtractor {
     // Clean HTML from noise before processing
     const cleanHtml = this.cleanHTML(html);
     
-    // Skip DOM parsing in server environment - use regex-based extraction instead
-    let doc = null; // DOMParser not available in edge functions
-    
+    const structuredEntries = this.parseStructuredData(cleanHtml);
+
     // Phase 1: Try JSON-LD structured data first
-    let title = this.extractJSONLDData(doc, 'headline') || this.extractJSONLDData(doc, 'name');
-    let author = this.extractJSONLDData(doc, 'author');  
-    let published_at = this.extractJSONLDData(doc, 'datePublished');
+    let title = this.extractJSONLDData(structuredEntries, 'headline') ||
+      this.extractJSONLDData(structuredEntries, 'name');
+    let author = this.extractJSONLDData(structuredEntries, 'author');
+    let published_at = this.extractJSONLDData(structuredEntries, 'datePublished');
     
     // Phase 1: Fallback to existing extraction methods if JSON-LD fails
     if (!title) title = this.extractTitle(cleanHtml);

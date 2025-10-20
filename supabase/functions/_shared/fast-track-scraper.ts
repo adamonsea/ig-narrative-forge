@@ -96,7 +96,13 @@ export class FastTrackScraper {
 
     console.log(`✅ Source accessible (${accessibilityResult.responseTime}ms)`);
 
-    // Try RSS first with reduced processing
+    // Try structured data extraction first (fastest when available)
+    const structuredResult = await this.tryStructuredDataExtraction();
+    if (structuredResult.success && structuredResult.articles.length > 0) {
+      return structuredResult;
+    }
+
+    // Try RSS with reduced processing
     const rssResult = await this.tryFastRSSStrategy();
     if (rssResult.success && rssResult.articles.length > 0) {
       return rssResult;
@@ -105,6 +111,107 @@ export class FastTrackScraper {
     // Fallback to minimal HTML parsing
     console.log('📄 RSS failed, trying fast HTML parsing...');
     return await this.tryFastHTMLStrategy();
+  }
+
+  private async tryStructuredDataExtraction(): Promise<ScrapingResult> {
+    try {
+      console.log('📋 Attempting fast structured data extraction...');
+      const html = await this.retryStrategy.fetchWithRetry(this.baseUrl);
+      
+      const candidates = this.extractor.extractStructuredArticleCandidates(html, this.baseUrl);
+      
+      if (candidates.length === 0) {
+        console.log('⚠️ No structured data found');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No structured data found'],
+          method: 'fallback'
+        };
+      }
+
+      console.log(`📋 Found ${candidates.length} structured candidates (processing max 5 for speed)`);
+      
+      const articles: ArticleData[] = [];
+      const maxToProcess = Math.min(candidates.length, 5);
+
+      for (const candidate of candidates.slice(0, maxToProcess)) {
+        try {
+          if (!this.extractor.isAllowedExternalUrl(candidate.url)) {
+            console.log(`⚠️ Skipping blocked URL: ${candidate.url}`);
+            continue;
+          }
+
+          const articleExtractor = new UniversalContentExtractor(candidate.url);
+          const articleHtml = await this.retryStrategy.fetchWithRetry(candidate.url);
+          const extracted = articleExtractor.extractContentFromHTML(articleHtml, candidate.url);
+          
+          if (!this.isFastQualified(extracted)) {
+            console.log(`⚠️ Article failed fast qualification`);
+            continue;
+          }
+
+          const regionalConfig = {
+            keywords: [],
+            region_name: this.region || 'unknown'
+          };
+          
+          const relevanceScore = calculateRegionalRelevance(
+            extracted.body,
+            extracted.title,
+            regionalConfig,
+            this.sourceInfo?.source_type || 'national'
+          );
+
+          const prunedHints = UniversalContentExtractor.pruneStructuredHintsForStorage(candidate);
+
+          articles.push({
+            title: extracted.title,
+            body: extracted.body,
+            author: extracted.author,
+            published_at: extracted.published_at,
+            source_url: candidate.url,
+            image_url: candidate.image,
+            word_count: extracted.word_count,
+            regional_relevance_score: relevanceScore,
+            content_quality_score: extracted.content_quality_score,
+            processing_status: 'new',
+            import_metadata: {
+              extraction_method: 'structured_data',
+              structured_data_hints: prunedHints,
+              scraped_at: new Date().toISOString(),
+              fast_track: true
+            }
+          });
+        } catch (articleError) {
+          const errorMessage = articleError instanceof Error ? articleError.message : String(articleError);
+          console.log(`⚠️ Failed to process article ${candidate.url}: ${errorMessage}`);
+          continue;
+        }
+      }
+
+      return {
+        success: articles.length > 0,
+        articles,
+        articlesFound: candidates.length,
+        articlesScraped: articles.length,
+        errors: [],
+        method: 'html'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Fast structured data extraction failed:', errorMessage);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'fallback'
+      };
+    }
   }
 
   private async tryFastRSSStrategy(): Promise<ScrapingResult> {

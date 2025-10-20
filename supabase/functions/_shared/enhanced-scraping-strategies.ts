@@ -15,37 +15,150 @@ export class EnhancedScrapingStrategies {
   async executeScrapingStrategy(): Promise<ScrapingResult> {
     console.log(`🚀 Starting enhanced scraping for ${this.sourceInfo?.source_name || this.baseUrl}`);
 
-    const aggregatedErrors: string[] = [];
-    const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [
-      { name: 'rss', executor: () => this.tryRSSStrategy() },
-      { name: 'sitemap', executor: () => this.trySitemapStrategy() },
-      { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
-      { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
-    ];
+    try {
+      const aggregatedErrors: string[] = [];
+      const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [
+        { name: 'structured_data', executor: () => this.tryStructuredDataStrategy() },
+        { name: 'rss', executor: () => this.tryRSSStrategy() },
+        { name: 'sitemap', executor: () => this.trySitemapStrategy() },
+        { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
+        { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
+      ];
 
-    for (const strategy of strategies) {
-      const result = await strategy.executor();
+      for (const strategy of strategies) {
+        const result = await strategy.executor();
 
-      if (result.success && result.articles.length > 0) {
-        console.log(`✅ Strategy ${strategy.name} succeeded with ${result.articles.length} articles`);
-        return result;
+        if (result.success && result.articles.length > 0) {
+          console.log(`✅ Strategy ${strategy.name} succeeded with ${result.articles.length} articles`);
+          return result;
+        }
+
+        if (result.errors?.length) {
+          aggregatedErrors.push(...result.errors.map(error => `${strategy.name}: ${error}`));
+        }
+
+        console.log(`⚠️ Strategy ${strategy.name} did not yield content, moving to next fallback`);
       }
 
-      if (result.errors?.length) {
-        aggregatedErrors.push(...result.errors.map(error => `${strategy.name}: ${error}`));
-      }
-
-      console.log(`⚠️ Strategy ${strategy.name} did not yield content, moving to next fallback`);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: aggregatedErrors.length ? aggregatedErrors : ['No articles found via available strategies'],
+        method: 'fallback'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Top-level scraping error:', errorMessage);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'fallback'
+      };
     }
+  }
 
-    return {
-      success: false,
-      articles: [],
-      articlesFound: 0,
-      articlesScraped: 0,
-      errors: aggregatedErrors.length ? aggregatedErrors : ['No articles found via available strategies'],
-      method: 'fallback'
-    };
+  private async tryStructuredDataStrategy(): Promise<ScrapingResult> {
+    console.log('📋 Attempting structured data extraction...');
+    
+    try {
+      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
+      
+      const candidates = this.extractor.extractStructuredArticleCandidates(html, this.baseUrl);
+      
+      if (candidates.length === 0) {
+        console.log('⚠️ No structured data candidates found');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No structured article data found'],
+          method: 'fallback'
+        };
+      }
+
+      console.log(`📋 Found ${candidates.length} structured data candidates`);
+      
+      const articles: ArticleData[] = [];
+      let processedCount = 0;
+      const maxToProcess = Math.min(candidates.length, 20);
+
+      for (const candidate of candidates.slice(0, maxToProcess)) {
+        try {
+          if (!this.extractor.isAllowedExternalUrl(candidate.url)) {
+            console.log(`⚠️ Skipping blocked URL: ${candidate.url}`);
+            continue;
+          }
+
+          const extractor = new UniversalContentExtractor(candidate.url);
+          const articleHtml = await extractor.fetchWithRetry(candidate.url);
+          const extracted = extractor.extractContentFromHTML(articleHtml, candidate.url);
+          
+          if (extracted.word_count < 100) {
+            console.log(`⚠️ Article too short: ${extracted.word_count} words`);
+            continue;
+          }
+
+          const relevanceScore = this.calculateEnhancedRegionalRelevance(
+            extracted.body,
+            extracted.title,
+            candidate.url
+          );
+
+          const prunedHints = UniversalContentExtractor.pruneStructuredHintsForStorage(candidate);
+
+          articles.push({
+            title: extracted.title,
+            body: extracted.body,
+            author: extracted.author,
+            published_at: extracted.published_at,
+            source_url: candidate.url,
+            image_url: candidate.image,
+            word_count: extracted.word_count,
+            regional_relevance_score: relevanceScore,
+            content_quality_score: extracted.content_quality_score,
+            processing_status: 'new',
+            import_metadata: {
+              extraction_method: 'structured_data',
+              structured_data_hints: prunedHints,
+              scrape_timestamp: new Date().toISOString(),
+              extractor_version: '2.0'
+            }
+          });
+
+          processedCount++;
+        } catch (articleError) {
+          const errorMessage = articleError instanceof Error ? articleError.message : String(articleError);
+          console.log(`⚠️ Failed to process article ${candidate.url}: ${errorMessage}`);
+          continue;
+        }
+      }
+
+      return {
+        success: articles.length > 0,
+        articles,
+        articlesFound: candidates.length,
+        articlesScraped: articles.length,
+        errors: articles.length === 0 ? ['No valid articles extracted from structured data'] : [],
+        method: 'html'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Structured data extraction failed:', errorMessage);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'fallback'
+      };
+    }
   }
 
   private async tryRSSStrategy(): Promise<ScrapingResult> {
@@ -930,7 +1043,11 @@ export class EnhancedScrapingStrategies {
     return feedLinks;
   }
 
-  private resolveUrl(url: string, baseUrl: string): string {
+  private normalizeCandidateUrl(url: string): string {
+    return url.toLowerCase().replace(/\/$/, '');
+  }
+
+  private resolveUrl(url: string, baseUrl: string): string | null {
     try {
       return new URL(url, baseUrl).href;
     } catch {
