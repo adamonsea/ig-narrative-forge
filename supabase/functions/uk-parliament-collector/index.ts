@@ -836,6 +836,7 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
       topicArticle = existingTopicArticle;
     } else {
       // Create new topic article
+      console.log(`📝 Creating new topic_article for vote ${vote.id} (topic: ${topicId})`);
       const { data: newTopicArticle, error: topicArticleError } = await supabase
         .from('topic_articles')
         .insert({
@@ -857,18 +858,22 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
       topicArticle = newTopicArticle;
     }
     
-    // Check if story already exists
+    // Check if story already exists FOR THIS TOPIC_ARTICLE
+    // CRITICAL: Must check topic_article_id to prevent cross-topic story reuse
     const { data: existingStory } = await supabase
       .from('stories')
       .select('id, title')
       .eq('shared_content_id', sharedContent.id)
+      .eq('topic_article_id', topicArticle.id)
       .maybeSingle();
     
     let story;
     if (existingStory) {
-      console.log(`✓ Story already exists for vote ${vote.id}`);
+      console.log(`✓ Story already exists for vote ${vote.id} (topic: ${topicId})`);
       story = existingStory;
     } else {
+      console.log(`📝 Creating new story for vote ${vote.id} (topic: ${topicId}, topic_article: ${topicArticle.id})`);
+
       // Create new story
       const { data: newStory, error: storyError } = await supabase
         .from('stories')
