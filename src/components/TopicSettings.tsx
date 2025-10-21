@@ -570,11 +570,14 @@ export const TopicSettings = ({
                 id="region"
                 value={region || ''}
                 onChange={async (e) => {
-                  const newRegion = e.target.value;
+                  const newRegion = e.target.value.trim();
                   try {
                     const { error } = await supabase
                       .from('topics')
-                      .update({ region: newRegion, updated_at: new Date().toISOString() })
+                      .update({ 
+                        region: newRegion || null, // Convert empty strings to null
+                        updated_at: new Date().toISOString() 
+                      })
                       .eq('id', topicId);
 
                     if (error) throw error;
