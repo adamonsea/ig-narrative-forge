@@ -119,6 +119,47 @@ export class EnhancedRetryStrategies {
 
         clearTimeout(timeoutId);
 
+        // HEAD→GET fallback for anti-bot protection
+        if ([401, 403, 405, 406, 429].includes(response.status)) {
+          console.log(`🔄 ${response.status} detected, trying GET with Range header...`);
+          
+          try {
+            const rangeHeaders = {
+              ...headers,
+              'Range': 'bytes=0-8192', // Get first 8KB only
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            };
+            
+            const rangeController = new AbortController();
+            const rangeTimeoutId = setTimeout(() => rangeController.abort(), 5000);
+            
+            const rangeResponse = await fetch(url, {
+              method: 'GET',
+              signal: rangeController.signal,
+              headers: rangeHeaders,
+              redirect: 'follow'
+            });
+            
+            clearTimeout(rangeTimeoutId);
+            
+            if (rangeResponse.ok || rangeResponse.status === 206) {
+              const content = await rangeResponse.text();
+              
+              if (this.isValidContent(content)) {
+                console.log(`✅ GET fallback succeeded for ${url} (${content.length} chars)`);
+                return content;
+              }
+            }
+            
+            // Consume body to close connection
+            await rangeResponse.arrayBuffer().catch(() => {});
+          } catch (rangeError) {
+            const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
+            console.log(`❌ GET fallback failed: ${rangeErrorMessage}`);
+          }
+        }
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
