@@ -126,10 +126,20 @@ export const TopicManager = () => {
         const publishedIds = new Set((publishedStories || []).map(s => s.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
         const queuedIds = new Set((queuedItems || []).map(q => q.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
 
+        // Helper to check if article is parliamentary (matching Arrivals tab exclusion)
+        const isParliamentaryArticle = (a: any) => {
+          const metadata = a.import_metadata || {};
+          return (
+            metadata.source === 'parliamentary_vote' ||
+            metadata.parliamentary_vote === true ||
+            metadata.source === 'parliamentary_weekly_roundup'
+          );
+        };
+
         // 3) Count arrivals exactly like the Arrivals tab
         const arrivalsCount = mtArticles.filter(a => (
           a.processing_status === 'new' || a.processing_status === 'processed'
-        ) && !publishedIds.has(a.id) && !queuedIds.has(a.id)).length;
+        ) && !publishedIds.has(a.id) && !queuedIds.has(a.id) && !isParliamentaryArticle(a)).length;
 
           const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
           const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };

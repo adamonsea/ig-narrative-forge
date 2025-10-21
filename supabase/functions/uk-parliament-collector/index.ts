@@ -1035,7 +1035,15 @@ async function createWeeklyRoundup(
         shared_content_id: sharedContent.id,
         processing_status: 'processed',
         regional_relevance_score: 90,
-        content_quality_score: 85
+        content_quality_score: 85,
+        import_metadata: {
+          source: 'parliamentary_weekly_roundup', // Tag for deterministic exclusion from Arrivals
+          weekly_roundup: true,
+          week_start: startOfWeek.toISOString(),
+          week_end: endOfWeek.toISOString(),
+          total_votes: votesByMP.size,
+          tracked_mps: Array.from(votesByMP.keys())
+        }
       })
       .select()
       .single();

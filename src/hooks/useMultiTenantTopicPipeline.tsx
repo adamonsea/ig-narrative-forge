@@ -144,21 +144,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         });
       }
 
-      // Get story IDs to filter out articles that are already published
-      // ALSO filter out parliamentary stories (they're auto-published and shouldn't appear in Arrivals)
+      // Get story IDs to filter out articles that are already published or queued for this topic
       const { data: publishedStoriesData } = await supabase
         .from('stories')
-        .select('topic_article_id, is_parliamentary')
-        .or('status.in.(published,ready),is_parliamentary.eq.true')
+        .select('topic_article_id, topic_articles!inner(topic_id)')
+        .in('status', ['published', 'ready'])
+        .eq('topic_articles.topic_id', selectedTopicId)
         .not('topic_article_id', 'is', null);
       
       const publishedMultiTenantIds = new Set(publishedStoriesData?.map(s => s.topic_article_id) || []);
-      
-      console.log('🗳️ Filtered story types:', {
-        total: publishedStoriesData?.length || 0,
-        parliamentary: publishedStoriesData?.filter(s => s.is_parliamentary).length || 0,
-        regular: publishedStoriesData?.filter(s => !s.is_parliamentary).length || 0
-      });
 
       // Get pending/processing queue items to hide approved articles  
       const { data: queueItemsForFiltering } = await supabase
@@ -169,12 +163,25 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       
       const queuedMultiTenantIds = new Set(queueItemsForFiltering?.map(q => q.topic_article_id) || []);
 
+      // Deterministically exclude parliamentary items at topic_article level using import_metadata
+      const isParliamentaryArticle = (item: any) => {
+        const metadata = item.import_metadata || {};
+        return (
+          metadata.source === 'parliamentary_vote' ||
+          metadata.parliamentary_vote === true ||
+          metadata.source === 'parliamentary_weekly_roundup'
+        );
+      };
+
+      const parliamentaryExcluded = (multiTenantArticlesResult.data || []).filter(isParliamentaryArticle).length;
+      
       // Process ONLY multi-tenant articles (including snippets) that are still available for processing
       const rawMultiTenantArticles = (multiTenantArticlesResult.data || [])
         .filter((item: any) => 
           ['new', 'processed'].includes(item.processing_status) && // Show both new and processed articles
           !publishedMultiTenantIds.has(item.id) &&
-          !queuedMultiTenantIds.has(item.id)
+          !queuedMultiTenantIds.has(item.id) &&
+          !isParliamentaryArticle(item) // Exclude parliamentary items deterministically
         )
         .map((item: any) => {
           const wordCount = item.word_count || 0;
@@ -241,6 +248,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       console.log('🧪 Multi-Tenant Only Pipeline - Articles Loaded:', {
         rawMultiTenant: (multiTenantArticlesResult.data || []).length,
+        parliamentaryExcluded,
         afterFiltering: rawMultiTenantArticles.length,
         afterDeduplication: allArticles.length,
         publishedMultiTenant: publishedMultiTenantIds.size,
