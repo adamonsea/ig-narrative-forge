@@ -198,3 +198,6 @@ verify_jwt = true
 
 [functions.backfill-keyword-analytics]
 verify_jwt = true
+
+[functions.extract-content-from-upload]
+verify_jwt = true
