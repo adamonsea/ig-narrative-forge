@@ -119,9 +119,9 @@ export class EnhancedRetryStrategies {
 
         clearTimeout(timeoutId);
 
-        // HEAD→GET fallback for anti-bot protection
-        if ([401, 403, 405, 406, 429].includes(response.status)) {
-          console.log(`🔄 ${response.status} detected, trying GET with Range header...`);
+        // Helper function for GET fallback with Range header
+        const tryGetFallback = async (reason: string): Promise<string | null> => {
+          console.log(`🔄 ${reason}, trying GET with Range header...`);
           
           try {
             const rangeHeaders = {
@@ -158,21 +158,35 @@ export class EnhancedRetryStrategies {
             const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
             console.log(`❌ GET fallback failed: ${rangeErrorMessage}`);
           }
+          
+          return null;
+        };
+
+        // Phase 1: Check for explicit blocking status codes
+        if ([401, 403, 405, 406, 429].includes(response.status)) {
+          const fallbackContent = await tryGetFallback(`${response.status} detected`);
+          if (fallbackContent) return fallbackContent;
         }
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
+        // Phase 2: Fetch content and validate
         const content = await response.text();
         
-        // Validate content quality
         if (this.isValidContent(content)) {
           console.log(`✅ Successfully fetched content from ${url} (${content.length} chars, attempt ${attempt + 1})`);
           return content;
-        } else {
-          throw new Error('INVALID_CONTENT: Received error page or minimal content');
         }
+        
+        // Phase 3: Got 200 OK but content is invalid - try GET fallback
+        console.log(`⚠️ Got 200 OK but invalid content (${content.length} chars)`);
+        const fallbackContent = await tryGetFallback('Invalid content despite 200 OK');
+        if (fallbackContent) return fallbackContent;
+        
+        // All fallbacks failed
+        throw new Error('INVALID_CONTENT: Received error page or minimal content');
 
       } catch (error) {
         context.previousAttempts = attempt;
