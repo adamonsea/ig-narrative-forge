@@ -145,13 +145,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       // Get story IDs to filter out articles that are already published
+      // ALSO filter out parliamentary stories (they're auto-published and shouldn't appear in Arrivals)
       const { data: publishedStoriesData } = await supabase
         .from('stories')
-        .select('topic_article_id')
-        .in('status', ['published', 'ready'])
+        .select('topic_article_id, is_parliamentary')
+        .or('status.in.(published,ready),is_parliamentary.eq.true')
         .not('topic_article_id', 'is', null);
       
       const publishedMultiTenantIds = new Set(publishedStoriesData?.map(s => s.topic_article_id) || []);
+      
+      console.log('🗳️ Filtered story types:', {
+        total: publishedStoriesData?.length || 0,
+        parliamentary: publishedStoriesData?.filter(s => s.is_parliamentary).length || 0,
+        regular: publishedStoriesData?.filter(s => !s.is_parliamentary).length || 0
+      });
 
       // Get pending/processing queue items to hide approved articles  
       const { data: queueItemsForFiltering } = await supabase
