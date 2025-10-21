@@ -96,7 +96,7 @@ export class EnhancedScrapingStrategies {
           }
 
           const extractor = new UniversalContentExtractor(candidate.url);
-          const articleHtml = await extractor.fetchWithRetry(candidate.url);
+          const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(candidate.url);
           const extracted = extractor.extractContentFromHTML(articleHtml, candidate.url);
           
           if (extracted.word_count < 100) {
@@ -198,7 +198,7 @@ export class EnhancedScrapingStrategies {
         for (const govFeedUrl of governmentFeeds) {
           try {
             console.log(`🏛️ Trying government RSS feed: ${govFeedUrl}`);
-            const rssContent = await this.extractor.fetchWithRetry(govFeedUrl);
+            const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(govFeedUrl);
             const result = await this.parseRSSContent(rssContent, govFeedUrl);
             if (result.success && result.articles.length > 0) {
               return { ...result, method: 'rss' }; // Use 'rss' instead of 'government_rss_discovery'
@@ -342,7 +342,7 @@ export class EnhancedScrapingStrategies {
       for (const feedLink of feedLinks) {
         console.log(`🔗 Found feed link: ${feedLink}`);
         try {
-          const rssContent = await this.extractor.fetchWithRetry(feedLink);
+          const rssContent = await this.retryStrategy.fetchWithEnhancedRetry(feedLink);
           const result = await this.parseRSSContent(rssContent, feedLink);
           if (result.success && result.articles.length > 0) {
             return { ...result, method: 'rss' };

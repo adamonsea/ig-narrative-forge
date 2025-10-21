@@ -116,7 +116,7 @@ export class FastTrackScraper {
   private async tryStructuredDataExtraction(): Promise<ScrapingResult> {
     try {
       console.log('📋 Attempting fast structured data extraction...');
-      const html = await this.retryStrategy.fetchWithRetry(this.baseUrl);
+      const html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
       
       const candidates = this.extractor.extractStructuredArticleCandidates(html, this.baseUrl);
       
@@ -145,7 +145,7 @@ export class FastTrackScraper {
           }
 
           const articleExtractor = new UniversalContentExtractor(candidate.url);
-          const articleHtml = await this.retryStrategy.fetchWithRetry(candidate.url);
+          const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(candidate.url);
           const extracted = articleExtractor.extractContentFromHTML(articleHtml, candidate.url);
           
           if (!this.isFastQualified(extracted)) {
@@ -378,7 +378,7 @@ export class FastTrackScraper {
       try {
         console.log(`📄 Attempting full extraction - ${wordCount} words, snippet: ${isLikelySnippet}, ellipsis: ${hasEllipsis}, regional: ${isRegionalTopic}`);
         const extractor = new UniversalContentExtractor(articleUrl);
-        const articleHtml = await extractor.fetchWithRetry(articleUrl);
+        const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(articleUrl);
         const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
         
         // Use extracted content if significantly better than RSS
@@ -456,7 +456,7 @@ export class FastTrackScraper {
       for (const articleUrl of articleLinks.slice(0, 5)) {
         try {
           const extractor = new UniversalContentExtractor(articleUrl);
-          const articleHtml = await extractor.fetchWithRetry(articleUrl);
+          const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(articleUrl);
           const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
           
           if (extractedContent.body && this.isFastQualified(extractedContent)) {

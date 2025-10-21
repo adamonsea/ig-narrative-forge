@@ -415,9 +415,67 @@ export class UniversalContentExtractor {
           (fetchOptions.headers as any)['X-Forwarded-For'] = this.generateRandomIP();
         }
         
+        // Helper function for GET fallback with Range header
+        const tryGetFallback = async (reason: string): Promise<string | null> => {
+          console.log(`🔄 GET_RANGE_FALLBACK_START: ${reason}`);
+          
+          try {
+            const rangeHeaders = {
+              ...fetchOptions.headers as Record<string, string>,
+              'Range': 'bytes=0-8192', // Get first 8KB only
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            };
+            
+            const rangeController = new AbortController();
+            const rangeTimeoutId = setTimeout(() => rangeController.abort(), 5000);
+            
+            const rangeResponse = await fetch(currentUrl, {
+              method: 'GET',
+              signal: rangeController.signal,
+              headers: rangeHeaders,
+              redirect: 'follow'
+            });
+            
+            clearTimeout(rangeTimeoutId);
+            
+            if (rangeResponse.ok || rangeResponse.status === 206) {
+              const content = await rangeResponse.text();
+              
+              console.log(`🔄 GET_RANGE_FALLBACK_OK (status ${rangeResponse.status}, bytes ${content.length})`);
+              
+              // Validate content
+              if (content.length >= 50 && 
+                  !content.toLowerCase().includes('access is denied') && 
+                  !content.toLowerCase().includes('captcha verification required')) {
+                console.log(`✅ GET fallback succeeded for ${currentUrl} (${content.length} chars)`);
+                return content;
+              } else {
+                console.log(`🔄 GET_RANGE_FALLBACK_FAIL (invalid content despite ${content.length} chars)`);
+              }
+            } else {
+              console.log(`🔄 GET_RANGE_FALLBACK_FAIL (status ${rangeResponse.status})`);
+            }
+            
+            // Consume body to close connection
+            await rangeResponse.arrayBuffer().catch(() => {});
+          } catch (rangeError) {
+            const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
+            console.log(`🔄 GET_RANGE_FALLBACK_FAIL (error: ${rangeErrorMessage})`);
+          }
+          
+          return null;
+        };
+
         const response = await fetch(currentUrl, fetchOptions);
 
         clearTimeout(timeoutId);
+
+        // Phase 1: Check for explicit blocking status codes - try GET fallback
+        if ([401, 403, 405, 406, 429].includes(response.status)) {
+          const fallbackContent = await tryGetFallback(`${response.status} detected`);
+          if (fallbackContent) return fallbackContent;
+        }
 
         if (!response.ok) {
           // Enhanced error messages for better debugging
@@ -429,8 +487,17 @@ export class UniversalContentExtractor {
 
         const html = await response.text();
         
-        // Validate that we got actual content, not an error page - CHECK FOR ERROR PAGES ONLY
-        if (html.includes('404') || html.includes('not found') || html.includes('page not found') || html.length < 50) {
+        // Phase 2: Check for error pages in 200 OK responses
+        const isErrorPage = html.includes('404') || 
+                           html.includes('not found') || 
+                           html.includes('page not found') || 
+                           html.length < 50;
+        
+        if (isErrorPage) {
+          console.log(`⚠️ Got 200 OK but invalid content (${html.length} chars)`);
+          const fallbackContent = await tryGetFallback('Invalid content despite 200 OK');
+          if (fallbackContent) return fallbackContent;
+          
           throw new Error('INVALID_CONTENT: Received error page or minimal content');
         }
         

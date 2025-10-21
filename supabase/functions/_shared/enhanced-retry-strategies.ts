@@ -121,7 +121,7 @@ export class EnhancedRetryStrategies {
 
         // Helper function for GET fallback with Range header
         const tryGetFallback = async (reason: string): Promise<string | null> => {
-          console.log(`🔄 ${reason}, trying GET with Range header...`);
+          console.log(`🔄 GET_RANGE_FALLBACK_START: ${reason}`);
           
           try {
             const rangeHeaders = {
@@ -146,17 +146,23 @@ export class EnhancedRetryStrategies {
             if (rangeResponse.ok || rangeResponse.status === 206) {
               const content = await rangeResponse.text();
               
+              console.log(`🔄 GET_RANGE_FALLBACK_OK (status ${rangeResponse.status}, bytes ${content.length})`);
+              
               if (this.isValidContent(content)) {
                 console.log(`✅ GET fallback succeeded for ${url} (${content.length} chars)`);
                 return content;
+              } else {
+                console.log(`🔄 GET_RANGE_FALLBACK_FAIL (invalid content despite ${content.length} chars)`);
               }
+            } else {
+              console.log(`🔄 GET_RANGE_FALLBACK_FAIL (status ${rangeResponse.status})`);
             }
             
             // Consume body to close connection
             await rangeResponse.arrayBuffer().catch(() => {});
           } catch (rangeError) {
             const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
-            console.log(`❌ GET fallback failed: ${rangeErrorMessage}`);
+            console.log(`🔄 GET_RANGE_FALLBACK_FAIL (error: ${rangeErrorMessage})`);
           }
           
           return null;
@@ -453,6 +459,66 @@ export class EnhancedRetryStrategies {
       'brightonandhovenews.org'
     ];
 
+    // Phase 1C: Special handling for Hastings problem sources with cookie warm-up
+    const hastingsProblemDomains = [
+      'rnli.org',
+      'southernrailway.com',
+      'hastingsonlinetimes.co.uk'
+    ];
+
+    if (hastingsProblemDomains.some(d => domain.includes(d))) {
+      console.log(`🎯 Using Hastings specialized strategy for: ${domain}`);
+      
+      // Cookie warm-up: visit homepage first to collect cookies
+      try {
+        const hostname = new URL(url).hostname;
+        const homepageUrl = `https://${hostname}/`;
+        
+        console.log(`🍪 COOKIE_WARMUP_START for ${homepageUrl}`);
+        const warmupController = new AbortController();
+        const warmupTimeoutId = setTimeout(() => warmupController.abort(), 5000);
+        
+        const warmupResponse = await fetch(homepageUrl, {
+          method: 'GET',
+          signal: warmupController.signal,
+          headers: this.getEnhancedHeaders({
+            url: homepageUrl,
+            isGovernmentSite: this.isGovernmentSite(url),
+            previousAttempts: 0
+          }, this.userAgents[0]),
+          redirect: 'follow'
+        });
+        
+        clearTimeout(warmupTimeoutId);
+        
+        // Extract cookies from response
+        const setCookieHeader = warmupResponse.headers.get('set-cookie');
+        if (setCookieHeader) {
+          console.log(`🍪 COOKIE_WARMUP_OK (domain ${domain})`);
+        } else {
+          console.log(`🍪 COOKIE_WARMUP_NO_COOKIES (domain ${domain})`);
+        }
+        
+        // Small delay after warm-up
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (warmupError) {
+        const warmupErrorMessage = warmupError instanceof Error ? warmupError.message : String(warmupError);
+        console.log(`🍪 COOKIE_WARMUP_FAIL (domain ${domain}): ${warmupErrorMessage}`);
+        // Continue anyway - warm-up is best effort
+      }
+      
+      // Use aggressive strategy with longer delays and expanded Range
+      const config: RetryConfig = {
+        maxRetries: 3,
+        baseDelay: 2500, // 2.5 seconds base delay for these domains
+        maxDelay: 20000,
+        exponentialBackoff: true
+      };
+
+      return this.fetchWithEnhancedRetryHastings(url, config);
+    }
+
     if (problemDomains.some(d => domain.includes(d))) {
       console.log(`🎯 Using specialized strategy for problematic domain: ${domain}`);
       
@@ -469,6 +535,145 @@ export class EnhancedRetryStrategies {
 
     // Standard approach for other domains
     return this.fetchWithEnhancedRetry(url);
+  }
+
+  // Specialized variant for Hastings problem sources with expanded Range
+  private async fetchWithEnhancedRetryHastings(
+    url: string, 
+    config: RetryConfig
+  ): Promise<string> {
+    const context: ScrapingContext = {
+      url,
+      isGovernmentSite: this.isGovernmentSite(url),
+      previousAttempts: 0
+    };
+
+    console.log(`🌐 Fetching ${url} (Hastings mode, attempt 1/${config.maxRetries + 1})`);
+
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+      try {
+        const userAgent = this.getCurrentUserAgent(attempt);
+        const headers = this.getEnhancedHeaders(context, userAgent);
+        
+        // Intelligent delay before request (except first attempt)
+        if (attempt > 0) {
+          const delay = this.calculateDelay(context, config);
+          console.log(`⏳ Intelligent delay: ${Math.round(delay)}ms (Hastings mode, requests: ${attempt})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        const controller = new AbortController();
+        const timeout = 15000; // 15 second timeout for these problem sources
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        console.log(`🌐 Fetching ${url} (Hastings mode, attempt ${attempt + 1}/${config.maxRetries + 1})`);
+
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers,
+          redirect: 'follow'
+        });
+
+        clearTimeout(timeoutId);
+
+        // Helper function for GET fallback with EXPANDED Range header for anti-bot pages
+        const tryGetFallbackExpanded = async (reason: string): Promise<string | null> => {
+          console.log(`🔄 GET_RANGE_FALLBACK_START: ${reason}`);
+          
+          try {
+            const rangeHeaders = {
+              ...headers,
+              'Range': 'bytes=0-16384', // Get first 16KB (expanded for longer anti-bot pages)
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            };
+            
+            const rangeController = new AbortController();
+            const rangeTimeoutId = setTimeout(() => rangeController.abort(), 8000); // Longer timeout
+            
+            const rangeResponse = await fetch(url, {
+              method: 'GET',
+              signal: rangeController.signal,
+              headers: rangeHeaders,
+              redirect: 'follow'
+            });
+            
+            clearTimeout(rangeTimeoutId);
+            
+            if (rangeResponse.ok || rangeResponse.status === 206) {
+              const content = await rangeResponse.text();
+              
+              console.log(`🔄 GET_RANGE_FALLBACK_OK (status ${rangeResponse.status}, bytes ${content.length})`);
+              
+              if (this.isValidContent(content)) {
+                console.log(`✅ GET fallback succeeded for ${url} (${content.length} chars)`);
+                return content;
+              } else {
+                console.log(`🔄 GET_RANGE_FALLBACK_FAIL (invalid content despite ${content.length} chars)`);
+              }
+            } else {
+              console.log(`🔄 GET_RANGE_FALLBACK_FAIL (status ${rangeResponse.status})`);
+            }
+            
+            // Consume body to close connection
+            await rangeResponse.arrayBuffer().catch(() => {});
+          } catch (rangeError) {
+            const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
+            console.log(`🔄 GET_RANGE_FALLBACK_FAIL (error: ${rangeErrorMessage})`);
+          }
+          
+          return null;
+        };
+
+        // Phase 1: Check for explicit blocking status codes
+        if ([401, 403, 405, 406, 429].includes(response.status)) {
+          const fallbackContent = await tryGetFallbackExpanded(`${response.status} detected`);
+          if (fallbackContent) return fallbackContent;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Phase 2: Fetch content and validate
+        const content = await response.text();
+        
+        if (this.isValidContent(content)) {
+          console.log(`✅ Successfully fetched content from ${url} (${content.length} chars, Hastings mode, attempt ${attempt + 1})`);
+          return content;
+        }
+        
+        // Phase 3: Got 200 OK but content is invalid - try GET fallback
+        console.log(`⚠️ Got 200 OK but invalid content (${content.length} chars)`);
+        const fallbackContent = await tryGetFallbackExpanded('Invalid content despite 200 OK');
+        if (fallbackContent) return fallbackContent;
+        
+        // All fallbacks failed
+        throw new Error('INVALID_CONTENT: Received error page or minimal content');
+
+      } catch (error) {
+        context.previousAttempts = attempt;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        context.lastError = errorMessage;
+        
+        console.log(`❌ Attempt ${attempt + 1} failed (Hastings mode): ${errorMessage}`);
+        
+        // Don't retry on certain errors
+        if (this.isFatalError(error)) {
+          throw error;
+        }
+        
+        // If this was our last attempt, throw the error
+        if (attempt === config.maxRetries) {
+          const lastErrorMessage = error instanceof Error ? error.message : String(error);
+          throw new Error(`All retry attempts failed (Hastings mode). Last error: ${lastErrorMessage}`);
+        }
+        
+        console.log(`⏳ Retrying in ${Math.round(this.calculateDelay(context, config))}ms...`);
+      }
+    }
+
+    throw new Error('Unexpected end of retry loop (Hastings mode)');
   }
 
   // Source health monitoring
