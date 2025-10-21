@@ -1234,6 +1234,36 @@ export type Database = {
         }
         Relationships: []
       }
+      keyword_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          keyword: string
+          success_metrics: Json | null
+          topic_type: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          keyword: string
+          success_metrics?: Json | null
+          topic_type: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          keyword?: string
+          success_metrics?: Json | null
+          topic_type?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       newsletter_signup_rate_limits: {
         Row: {
           created_at: string | null

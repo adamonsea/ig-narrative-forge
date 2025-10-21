@@ -192,3 +192,9 @@ verify_jwt = false
 
 [functions.generate-og-image]
 verify_jwt = false
+
+[functions.suggest-regional-keywords]
+verify_jwt = true
+
+[functions.backfill-keyword-analytics]
+verify_jwt = true

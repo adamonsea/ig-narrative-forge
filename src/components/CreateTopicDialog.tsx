@@ -1,15 +1,23 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRandomTopicColors } from "@/lib/colorUtils";
+
+interface KeywordSuggestion {
+  keyword: string;
+  confidence: number;
+  rationale: string;
+}
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -38,6 +46,10 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [keywordInput, setKeywordInput] = useState('');
   const [creating, setCreating] = useState(false);
   const [previewColors, setPreviewColors] = useState<{gradient: string, border: string} | null>(null);
+  const [smartSuggestions, setSmartSuggestions] = useState<KeywordSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestionPreview, setShowSuggestionPreview] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -75,6 +87,79 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
       }
     }
   }, [open, user, toast]);
+
+  // Load smart suggestions when regional type is selected
+  useEffect(() => {
+    if (formData.topic_type === 'regional' && currentStep === 4 && smartSuggestions.length === 0 && !loadingSuggestions) {
+      loadSmartSuggestions();
+    }
+  }, [formData.topic_type, currentStep]);
+
+  const loadSmartSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-regional-keywords', {
+        body: {
+          topicType: formData.topic_type,
+          region: formData.region || formData.name,
+          existingKeywords: formData.keywords
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.suggestions) {
+        setSmartSuggestions(data.suggestions);
+        // Pre-select all by default
+        setSelectedSuggestions(data.suggestions.map((s: KeywordSuggestion) => s.keyword));
+      }
+    } catch (error) {
+      console.error('Failed to load smart suggestions:', error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const acceptAllSuggestions = () => {
+    const newKeywords = smartSuggestions
+      .map(s => s.keyword)
+      .filter(k => !formData.keywords.includes(k));
+    
+    setFormData({
+      ...formData,
+      keywords: [...formData.keywords, ...newKeywords]
+    });
+    
+    toast({
+      title: "Keywords added!",
+      description: `Added ${newKeywords.length} proven keywords to your topic`
+    });
+  };
+
+  const addSelectedSuggestions = () => {
+    const newKeywords = selectedSuggestions
+      .filter(k => !formData.keywords.includes(k));
+    
+    setFormData({
+      ...formData,
+      keywords: [...formData.keywords, ...newKeywords]
+    });
+    
+    setShowSuggestionPreview(false);
+    
+    toast({
+      title: "Keywords added!",
+      description: `Added ${newKeywords.length} keywords to your topic`
+    });
+  };
+
+  const toggleSuggestion = (keyword: string, checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedSuggestions([...selectedSuggestions, keyword]);
+    } else {
+      setSelectedSuggestions(selectedSuggestions.filter(k => k !== keyword));
+    }
+  };
 
   const clearDraft = () => {
     if (user) {
@@ -313,26 +398,72 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
           {/* Step 4: Keywords */}
           {currentStep === 4 && (
-            <div className="space-y-6 text-center">
-              <div className="space-y-3">
+            <div className="space-y-6">
+              <div className="space-y-3 text-center">
                 <h2 className="text-3xl font-bold">What keywords describe your topic?</h2>
                 <p className="text-lg text-muted-foreground">
                   Add words that help find relevant content
                 </p>
               </div>
-              <div className="max-w-xl mx-auto">
-                <div className="flex gap-2 mb-4">
-                  <Input
-                    value={keywordInput}
-                    onChange={(e) => setKeywordInput(e.target.value)}
-                    placeholder="Enter a keyword"
-                    className="text-lg p-4"
-                    onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
-                  />
-                  <Button onClick={addKeyword} disabled={!keywordInput.trim()}>
-                    Add
-                  </Button>
+
+              {/* Smart Setup for Regional Topics */}
+              {formData.topic_type === 'regional' && smartSuggestions.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-1">Smart Setup Available</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Based on successful regional feeds, we can pre-fill {smartSuggestions.length} proven keywords for local news coverage.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={acceptAllSuggestions}
+                          variant="default"
+                          size="sm"
+                        >
+                          Add All {smartSuggestions.length} Keywords
+                        </Button>
+                        <Button
+                          onClick={() => setShowSuggestionPreview(true)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Preview Keywords
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Loading state */}
+              {formData.topic_type === 'regional' && loadingSuggestions && (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading smart suggestions...</span>
+                </div>
+              )}
+
+              {/* Manual keyword entry */}
+              <div className="max-w-xl mx-auto space-y-4">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-center">Add Keywords Manually</h3>
+                  <div className="flex gap-2">
+                    <Input
+                      value={keywordInput}
+                      onChange={(e) => setKeywordInput(e.target.value)}
+                      placeholder="Enter a keyword"
+                      className="text-lg p-4"
+                      onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
+                    />
+                    <Button onClick={addKeyword} disabled={!keywordInput.trim()}>
+                      Add
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Show added keywords */}
                 <div className="flex flex-wrap gap-2 justify-center min-h-[60px]">
                   {formData.keywords.map((keyword) => (
                     <Badge key={keyword} variant="secondary" className="text-sm py-1 px-3">
@@ -346,11 +477,58 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                     </Badge>
                   ))}
                 </div>
+
                 {formData.keywords.length === 0 && (
-                  <p className="text-muted-foreground text-sm">No keywords added yet</p>
+                  <p className="text-muted-foreground text-sm text-center">No keywords added yet</p>
                 )}
+                
+                {/* Show count and recommendation */}
+                <p className="text-sm text-muted-foreground text-center">
+                  {formData.keywords.length} keyword{formData.keywords.length !== 1 ? 's' : ''} added
+                  {formData.keywords.length < 10 && formData.keywords.length > 0 && " • Recommended: 10-20 keywords"}
+                </p>
               </div>
             </div>
+          )}
+
+          {/* Preview Modal */}
+          {showSuggestionPreview && (
+            <Dialog open={showSuggestionPreview} onOpenChange={setShowSuggestionPreview}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Recommended Keywords for {formData.name || 'Your Topic'}</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-2">
+                    {smartSuggestions.map((suggestion) => (
+                      <div key={suggestion.keyword} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <Checkbox
+                          checked={selectedSuggestions.includes(suggestion.keyword)}
+                          onCheckedChange={(checked) => toggleSuggestion(suggestion.keyword, checked)}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{suggestion.keyword}</span>
+                            <Badge variant="secondary" className="text-xs">
+                              {Math.round(suggestion.confidence * 100)}% match
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{suggestion.rationale}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowSuggestionPreview(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={addSelectedSuggestions}>
+                    Add {selectedSuggestions.length} Keyword{selectedSuggestions.length !== 1 ? 's' : ''}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
 
           {/* Step 5: Audience */}
