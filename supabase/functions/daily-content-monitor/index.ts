@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     // Parse request body for options
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
-    const autoTriggerScraping = body.autoTriggerScraping ?? false
+    const autoTriggerScraping = body.autoTriggerScraping ?? true // Default to TRUE for automation
 
     console.log(`🔍 Starting daily content monitoring... (Auto-scraping: ${autoTriggerScraping ? 'ENABLED' : 'DISABLED'})`)
 
