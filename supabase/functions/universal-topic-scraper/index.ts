@@ -27,20 +27,64 @@ const FAILURE_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
 // Quick URL pre-validation
 async function quickUrlCheck(url: string, timeoutMs: number = 3000): Promise<boolean> {
-  try {
+  const isLikelyAccessible = (status: number) => status >= 200 && status < 400;
+  const shouldFallbackToGet = (status: number) => [401, 403, 405, 406, 429].includes(status);
+
+  const performRequest = async (
+    method: 'HEAD' | 'GET',
+    timeout: number,
+    extraHeaders: Record<string, string> = {}
+  ) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'eeZee Universal Scraper/1.0'
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        method,
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'eeZee Universal Scraper/1.0',
+          ...extraHeaders
+        }
+      });
+
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  try {
+    const headResponse = await performRequest('HEAD', timeoutMs);
+
+    if (headResponse.ok || isLikelyAccessible(headResponse.status)) {
+      return true;
+    }
+
+    if (shouldFallbackToGet(headResponse.status)) {
+      console.log(`🔄 HEAD blocked (${headResponse.status}) for ${url}, trying GET fallback...`);
+      const getResponse = await performRequest('GET', timeoutMs + 1000, {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Range': 'bytes=0-1023'
+      });
+
+      if (getResponse.ok || isLikelyAccessible(getResponse.status)) {
+        try {
+          await getResponse.arrayBuffer();
+        } catch (_) {
+          // Ignore partial consumption errors
+        }
+        console.log(`✅ GET fallback succeeded for ${url}`);
+        return true;
       }
-    });
-    
-    clearTimeout(timeoutId);
-    return response.ok;
+
+      console.log(`⚡ GET fallback failed for ${url}: status ${getResponse.status}`);
+      return false;
+    }
+
+    console.log(`⚡ HEAD request blocked for ${url}: status ${headResponse.status}`);
+    return false;
   } catch (error) {
     console.log(`⚡ Quick check failed for ${url}: ${error instanceof Error ? error.message : String(error)}`);
     return false;

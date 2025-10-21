@@ -277,30 +277,104 @@ export class EnhancedRetryStrategies {
     error?: string;
   }> {
     const startTime = Date.now();
-    
-    try {
+
+    const performRequest = async (
+      method: 'HEAD' | 'GET',
+      timeoutMs: number,
+      extraHeaders: Record<string, string> = {}
+    ) => {
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 5000); // Reduced timeout for edge functions
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // Use enhanced headers for better acceptance
-      const headers = this.getEnhancedHeaders({ 
-        url, 
-        isGovernmentSite: this.isGovernmentSite(url), 
-        previousAttempts: 0 
-      }, this.userAgents[0]);
+      try {
+        const headers = {
+          ...this.getEnhancedHeaders({
+            url,
+            isGovernmentSite: this.isGovernmentSite(url),
+            previousAttempts: 0
+          }, this.userAgents[0]),
+          ...extraHeaders
+        };
 
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal,
-        headers
-      });
+        const response = await fetch(url, {
+          method,
+          signal: controller.signal,
+          headers,
+          redirect: 'follow'
+        });
+
+        return response;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    const isLikelyAccessible = (status: number) => status >= 200 && status < 400;
+    const shouldFallbackToGet = (status: number) => [401, 403, 405, 406, 429].includes(status);
+
+    try {
+      // First attempt a lightweight HEAD request
+      const headResponse = await performRequest('HEAD', 5000);
+      const headStatus = headResponse.status;
+
+      if (headResponse.ok || isLikelyAccessible(headStatus)) {
+        return {
+          accessible: true,
+          responseTime: Date.now() - startTime,
+          statusCode: headStatus
+        };
+      }
+
+      if (shouldFallbackToGet(headStatus)) {
+        console.log(`🔄 HEAD blocked (${headStatus}) for ${url}, trying GET fallback...`);
+        try {
+          // Some sites block HEAD requests – retry with a small GET request
+          const getResponse = await performRequest('GET', 6000, {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Range': 'bytes=0-1023'
+          });
+
+          const getStatus = getResponse.status;
+
+          if (getResponse.ok || isLikelyAccessible(getStatus)) {
+            // Consume a tiny chunk to ensure connection closes cleanly
+            try {
+              await getResponse.arrayBuffer();
+            } catch (_) {
+              // Ignore partial read errors – we only care about status
+            }
+
+            console.log(`✅ GET fallback succeeded for ${url} (status ${getStatus})`);
+            return {
+              accessible: true,
+              responseTime: Date.now() - startTime,
+              statusCode: getStatus
+            };
+          }
+
+          return {
+            accessible: false,
+            responseTime: Date.now() - startTime,
+            statusCode: getStatus,
+            error: `GET fallback failed with status ${getStatus}`
+          };
+        } catch (fallbackError) {
+          const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+          return {
+            accessible: false,
+            responseTime: Date.now() - startTime,
+            statusCode: headStatus,
+            error: `HEAD blocked (${headStatus}), GET fallback error: ${errorMessage}`
+          };
+        }
+      }
 
       return {
-        accessible: response.ok,
+        accessible: false,
         responseTime: Date.now() - startTime,
-        statusCode: response.status
+        statusCode: headStatus,
+        error: `HEAD request blocked with status ${headStatus}`
       };
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
@@ -318,6 +392,7 @@ export class EnhancedRetryStrategies {
     // Special handling for known problematic sources
     const problemDomains = [
       'theargus.co.uk',
+      'sussexexpress.co.uk',
       'sussexnews24.co.uk', 
       'easbournenews.co.uk',
       'brightonandhovenews.org'
