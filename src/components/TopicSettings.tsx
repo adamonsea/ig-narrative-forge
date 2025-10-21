@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar, X, Plus } from "lucide-react";
+import { Settings, HelpCircle, Users, Bot, Clock, Building2, Calendar, X, Plus, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -557,6 +557,52 @@ export const TopicSettings = ({
         </div>
 
         <Separator />
+
+        {/* Regional Configuration - Only show for regional topics */}
+        {topicType === 'regional' && (
+          <div className="space-y-4 border rounded-lg p-4">
+            <div className="space-y-3">
+              <Label htmlFor="region" className="flex items-center gap-2 text-base font-medium">
+                <MapPin className="w-4 h-4" />
+                Region/Town
+              </Label>
+              <Input
+                id="region"
+                value={region || ''}
+                onChange={async (e) => {
+                  const newRegion = e.target.value;
+                  try {
+                    const { error } = await supabase
+                      .from('topics')
+                      .update({ region: newRegion, updated_at: new Date().toISOString() })
+                      .eq('id', topicId);
+
+                    if (error) throw error;
+
+                    toast({
+                      title: "Region Updated",
+                      description: "Topic region has been updated successfully"
+                    });
+                    
+                    onUpdate?.();
+                  } catch (error) {
+                    console.error('Error updating region:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to update region",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                placeholder="e.g., Hastings, Brighton, Lewes"
+                className="max-w-md"
+              />
+              <p className="text-sm text-muted-foreground">
+                Used for parliamentary tracking and regional content filtering
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Parliamentary Tracking - Only show for regional topics */}
         {topicType === 'regional' && (

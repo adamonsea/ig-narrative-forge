@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -199,7 +200,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const canProceed = () => {
     switch (currentStep) {
       case 1: return formData.name.trim().length > 0;
-      case 2: return formData.topic_type === 'keyword' || formData.topic_type === 'regional';
+      case 2: return formData.topic_type === 'keyword' || (formData.topic_type === 'regional' && formData.region.trim().length > 0);
       case 3: return true; // Description is optional
       case 4: return formData.keywords.length > 0;
       case 5: return formData.audience_expertise === 'beginner' || formData.audience_expertise === 'intermediate' || formData.audience_expertise === 'expert';
@@ -357,7 +358,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <p className="text-muted-foreground">Based on keywords and themes</p>
                 </button>
                 <button
-                  onClick={() => setFormData({ ...formData, topic_type: 'regional' })}
+                  onClick={() => setFormData({ ...formData, topic_type: 'regional', region: formData.name })}
                   className={`p-8 rounded-lg border-2 transition-all ${
                     formData.topic_type === 'regional'
                       ? 'border-primary bg-primary/5'
@@ -369,6 +370,26 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <p className="text-muted-foreground">Location-based content</p>
                 </button>
               </div>
+              
+              {/* Region input for regional topics */}
+              {formData.topic_type === 'regional' && (
+                <div className="mt-6 max-w-md mx-auto">
+                  <Label htmlFor="region" className="flex items-center gap-2 mb-2">
+                    <MapPin className="w-4 h-4" />
+                    Region/Town Name
+                  </Label>
+                  <Input
+                    id="region"
+                    value={formData.region}
+                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                    placeholder="e.g., Hastings, Brighton, Lewes"
+                    className="text-lg p-4"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Used for parliamentary tracking and regional content filtering
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
