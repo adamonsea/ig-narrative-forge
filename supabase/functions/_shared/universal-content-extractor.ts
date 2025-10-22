@@ -1,4 +1,3 @@
-// Phase 1C: Universal content extractor with enhanced strategies (v1.1.0)
 import { ContentExtractionResult, StructuredArticleCandidate } from './types.ts';
 
 const MAX_JSONLD_SCRIPTS = 10;
