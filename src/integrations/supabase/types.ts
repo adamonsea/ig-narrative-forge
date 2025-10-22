@@ -3940,35 +3940,6 @@ export type Database = {
         | {
             Args: {
               p_keywords?: string[]
-              p_limit?: number
-              p_offset?: number
-              p_sources?: string[]
-              p_topic_slug: string
-            }
-            Returns: {
-              article_published_at: string
-              article_source_url: string
-              constituency: string
-              cover_illustration_url: string
-              is_parliamentary: boolean
-              keyword_matches: string[]
-              mp_name: string
-              mp_names: string[]
-              mp_party: string
-              slide_content: string
-              slide_id: string
-              slide_image_url: string
-              slide_number: number
-              slide_type: string
-              source_name: string
-              story_created_at: string
-              story_id: string
-              story_title: string
-            }[]
-          }
-        | {
-            Args: {
-              p_keywords?: string[]
               p_mp_names?: string[]
               p_source_domains?: string[]
               p_topic_id: string
@@ -3991,6 +3962,31 @@ export type Database = {
               story_is_parliamentary: boolean
               story_is_published: boolean
               story_status: string
+              story_title: string
+            }[]
+          }
+        | {
+            Args: {
+              p_keywords?: string[]
+              p_limit?: number
+              p_mp_names?: string[]
+              p_offset?: number
+              p_source_domains?: string[]
+              p_topic_id: string
+            }
+            Returns: {
+              article_published_at: string
+              article_source_url: string
+              constituency: string
+              cover_illustration_url: string
+              is_parliamentary: boolean
+              mp_name: string
+              mp_party: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              story_created_at: string
+              story_id: string
               story_title: string
             }[]
           }
