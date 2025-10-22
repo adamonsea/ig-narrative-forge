@@ -1,3 +1,4 @@
+// Phase 1C: Enhanced retry strategies with cookie warmup and GET range fallback (v1.1.0)
 /**
  * Enhanced retry strategies with user-agent rotation and intelligent delays
  */

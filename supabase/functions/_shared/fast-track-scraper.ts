@@ -1,3 +1,4 @@
+// Phase 1C: Fast-track scraper with enhanced retry strategies (v1.1.0)
 /**
  * Fast-track scraper optimized for Supabase Edge Functions
  * Reduces timeouts by using quick accessibility checks and limited processing
