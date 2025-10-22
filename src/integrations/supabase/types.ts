@@ -3997,6 +3997,34 @@ export type Database = {
               story_title: string
             }[]
           }
+        | {
+            Args: {
+              p_keywords?: string[]
+              p_limit?: number
+              p_offset?: number
+              p_sources?: string[]
+              p_topic_id: string
+            }
+            Returns: {
+              article_published_at: string
+              article_source_url: string
+              constituency: string
+              is_parliamentary: boolean
+              mp_name: string
+              mp_names: string[]
+              mp_party: string
+              slide_alt_text: string
+              slide_content: string
+              slide_id: string
+              slide_links: Json
+              slide_number: number
+              story_cover_url: string
+              story_created_at: string
+              story_id: string
+              story_title: string
+              story_updated_at: string
+            }[]
+          }
       get_topic_visitor_stats: {
         Args: { p_topic_id: string }
         Returns: {

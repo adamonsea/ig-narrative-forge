@@ -175,6 +175,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
 
+  // Normalize MP names by removing honorifics and titles
+  const normalizeMPName = useCallback((name: string | null | undefined) => {
+    if (!name) return '';
+    return name
+      .replace(/^rt\.?\s+hon\.?\s+/i, '')
+      .replace(/\b(mp|msp|ms)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }, []);
+
   const fetchAvailableParliamentaryFilters = useCallback(async (topicId: string) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -200,12 +210,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }>();
 
     data?.forEach(record => {
-      const key = record.mp_name;
+      const normalizedName = normalizeMPName(record.mp_name);
+      const key = normalizedName;
       if (mpCounts.has(key)) {
         mpCounts.get(key)!.count++;
       } else {
         mpCounts.set(key, {
-          mp_name: record.mp_name,
+          mp_name: normalizedName,
           mp_party: record.party || 'Unknown',
           constituency: record.constituency || 'Unknown',
           count: 1
@@ -215,7 +226,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
     return Array.from(mpCounts.values())
       .sort((a, b) => b.count - a.count);
-  }, []);
+  }, [normalizeMPName]);
 
   const loadTopic = useCallback(async () => {
     try {
@@ -562,7 +573,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           slides: sortedSlides,
           is_parliamentary: !!story.is_parliamentary,
           mp_name: story.mp_name,
-          mp_names: Array.from((((story as any).mp_names as Set<string> | undefined) ?? new Set<string>())) as string[],
+          mp_names: Array.isArray(story.mp_names) 
+            ? story.mp_names.filter(Boolean).map(n => normalizeMPName(n))
+            : [],
           mp_party: story.mp_party,
           constituency: story.constituency,
           article: {
@@ -1147,7 +1160,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     });
 
     return filtered.sort((a, b) => new Date(b.content_date).getTime() - new Date(a.content_date).getTime());
-  }, []);
+  }, [normalizeMPName]);
 
   // Debounced server-side filtering with sources (Phase 2)
   const triggerServerFiltering = useCallback(async (keywords: string[], sources: string[]) => {
