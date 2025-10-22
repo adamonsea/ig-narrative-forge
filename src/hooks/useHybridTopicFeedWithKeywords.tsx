@@ -426,16 +426,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         if (row.slide_id) {
           const storyData = storyMap.get(row.story_id);
 
-          // Aggregate MP names across rows
-          if (row.mp_name) {
-            try {
-              storyData.mp_names?.add(row.mp_name);
-              if (!storyData.mp_name) {
-                storyData.mp_name = row.mp_name;
-              }
-            } catch (e) {
-              // no-op
-            }
+          // Aggregate MP names from RPC into Set
+          if (Array.isArray(row.mp_names)) {
+            row.mp_names.forEach((n: string) => {
+              if (n) storyData.mp_names?.add(n);
+            });
+          } else if (row.mp_name) {
+            storyData.mp_names?.add(row.mp_name);
+          }
+          
+          // Keep first mp_name for backwards compatibility
+          if (!storyData.mp_name && row.mp_name) {
+            storyData.mp_name = row.mp_name;
           }
 
           if (!storyData.slideIds.has(row.slide_id)) {
@@ -573,9 +575,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           slides: sortedSlides,
           is_parliamentary: !!story.is_parliamentary,
           mp_name: story.mp_name,
-          mp_names: Array.isArray(story.mp_names) 
-            ? story.mp_names.filter(Boolean).map(n => normalizeMPName(n))
-            : [],
+          mp_names: Array.from((story.mp_names || new Set<string>()) as Set<string>)
+            .map(n => normalizeMPName(n))
+            .filter((n): n is string => !!n),
           mp_party: story.mp_party,
           constituency: story.constituency,
           article: {
