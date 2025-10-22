@@ -174,7 +174,7 @@ export type Database = {
           reading_time_minutes: number | null
           region: string | null
           regional_relevance_score: number | null
-          search: unknown | null
+          search: unknown
           source_id: string | null
           source_url: string
           summary: string | null
@@ -206,7 +206,7 @@ export type Database = {
           reading_time_minutes?: number | null
           region?: string | null
           regional_relevance_score?: number | null
-          search?: unknown | null
+          search?: unknown
           source_id?: string | null
           source_url: string
           summary?: string | null
@@ -238,7 +238,7 @@ export type Database = {
           reading_time_minutes?: number | null
           region?: string | null
           regional_relevance_score?: number | null
-          search?: unknown | null
+          search?: unknown
           source_id?: string | null
           source_url?: string
           summary?: string | null
@@ -1272,7 +1272,7 @@ export type Database = {
           ip_hash: string
           signup_count: number | null
           updated_at: string | null
-          window_duration: unknown | null
+          window_duration: unknown
           window_start: string | null
         }
         Insert: {
@@ -1282,7 +1282,7 @@ export type Database = {
           ip_hash: string
           signup_count?: number | null
           updated_at?: string | null
-          window_duration?: unknown | null
+          window_duration?: unknown
           window_start?: string | null
         }
         Update: {
@@ -1292,7 +1292,7 @@ export type Database = {
           ip_hash?: string
           signup_count?: number | null
           updated_at?: string | null
-          window_duration?: unknown | null
+          window_duration?: unknown
           window_start?: string | null
         }
         Relationships: []
@@ -3470,14 +3470,8 @@ export type Database = {
         Args: { article_uuid: string }
         Returns: boolean
       }
-      article_is_public: {
-        Args: { p_article_id: string }
-        Returns: boolean
-      }
-      auto_generate_missing_schedules: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      article_is_public: { Args: { p_article_id: string }; Returns: boolean }
+      auto_generate_missing_schedules: { Args: never; Returns: Json }
       bulk_cleanup_topic_content: {
         Args: { p_topic_id: string }
         Returns: Json
@@ -3502,42 +3496,18 @@ export type Database = {
         Args: { p_email: string; p_ip_hash?: string }
         Returns: boolean
       }
-      cleanup_diane_abbott_stories_eastbourne: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      cleanup_duplicate_articles: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      cleanup_existing_duplicates: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      cleanup_expired_community_insights: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_rate_limits: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_orphaned_legacy_sources: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      cleanup_orphaned_sources: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      cleanup_diane_abbott_stories_eastbourne: { Args: never; Returns: Json }
+      cleanup_duplicate_articles: { Args: never; Returns: Json }
+      cleanup_existing_duplicates: { Args: never; Returns: Json }
+      cleanup_expired_community_insights: { Args: never; Returns: undefined }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      cleanup_orphaned_legacy_sources: { Args: never; Returns: Json }
+      cleanup_orphaned_sources: { Args: never; Returns: Json }
       cleanup_parliamentary_stories_for_topic: {
         Args: { p_topic_id: string }
         Returns: Json
       }
-      cleanup_stuck_scrape_jobs: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_stuck_scrape_jobs: { Args: never; Returns: number }
       create_story_from_multi_tenant: {
         Args: {
           p_shared_content_id: string
@@ -3563,28 +3533,26 @@ export type Database = {
           success: boolean
         }[]
       }
-      delete_story_cascade: {
-        Args: { p_story_id: string }
-        Returns: Json
-      }
-      delete_topic_cascade: {
-        Args: { p_topic_id: string }
-        Returns: Json
-      }
-      detect_article_duplicates: {
-        Args:
-          | { p_article_id: string }
-          | { p_article_id: string; p_topic_id?: string }
-        Returns: {
-          detection_method: string
-          duplicate_id: string
-          similarity_score: number
-        }[]
-      }
-      emergency_manual_scrape: {
-        Args: { p_topic_id?: string }
-        Returns: Json
-      }
+      delete_story_cascade: { Args: { p_story_id: string }; Returns: Json }
+      delete_topic_cascade: { Args: { p_topic_id: string }; Returns: Json }
+      detect_article_duplicates:
+        | {
+            Args: { p_article_id: string; p_topic_id?: string }
+            Returns: {
+              detection_method: string
+              duplicate_id: string
+              similarity_score: number
+            }[]
+          }
+        | {
+            Args: { p_article_id: string }
+            Returns: {
+              detection_method: string
+              duplicate_id: string
+              similarity_score: number
+            }[]
+          }
+      emergency_manual_scrape: { Args: { p_topic_id?: string }; Returns: Json }
       find_duplicate_articles: {
         Args: { p_article_id: string; p_similarity_threshold?: number }
         Returns: {
@@ -3593,34 +3561,55 @@ export type Database = {
           similarity_score: number
         }[]
       }
-      fix_sussex_express_sources: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_admin_topic_stories: {
-        Args:
-          | {
+      fix_sussex_express_sources: { Args: never; Returns: Json }
+      get_admin_topic_stories:
+        | {
+            Args: { p_topic_id: string }
+            Returns: {
+              article_id: string
+              author: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              slide_count: number
+              source_format: string
+              status: string
+              summary: string
+              title: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
               p_limit?: number
               p_offset?: number
               p_status?: string
               p_topic_id: string
             }
-          | { p_topic_id: string }
-        Returns: {
-          article_id: string
-          author: string
-          cover_illustration_url: string
-          created_at: string
-          id: string
-          is_published: boolean
-          slide_count: number
-          source_format: string
-          status: string
-          summary: string
-          title: string
-          updated_at: string
-        }[]
-      }
+            Returns: {
+              article_author: string
+              article_id: string
+              article_published_at: string
+              article_title: string
+              article_url: string
+              audience_expertise: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              shared_content_id: string
+              slide_count: number
+              slide_type: string
+              status: string
+              story_type: string
+              title: string
+              tone: string
+              topic_article_id: string
+              updated_at: string
+              writing_style: string
+            }[]
+          }
       get_article_content_unified: {
         Args: {
           p_article_id?: string
@@ -3643,12 +3632,9 @@ export type Database = {
           word_count: number
         }[]
       }
-      get_content_sources_count: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_content_sources_count: { Args: never; Returns: number }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_legacy_articles_awaiting_simplification: {
@@ -3682,33 +3668,46 @@ export type Database = {
         Args: { p_slug: string; p_story_id: string }
         Returns: Json
       }
-      get_public_topic_feed: {
-        Args:
-          | {
+      get_public_topic_feed:
+        | {
+            Args: {
               p_limit?: number
               p_offset?: number
               p_sort_by?: string
               topic_slug_param: string
             }
-          | { p_limit?: number; p_offset?: number; p_topic_slug: string }
-        Returns: {
-          article_id: string
-          article_source_url: string
-          author: string
-          cover_illustration_url: string
-          created_at: string
-          id: string
-          is_published: boolean
-          slide_count: number
-          slides: Json
-          status: string
-          summary: string
-          title: string
-          updated_at: string
-        }[]
-      }
+            Returns: {
+              article_id: string
+              article_source_url: string
+              author: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              slide_count: number
+              slides: Json
+              status: string
+              summary: string
+              title: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: { p_limit?: number; p_offset?: number; p_topic_slug: string }
+            Returns: {
+              article_published_at: string
+              article_source_url: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              title: string
+              updated_at: string
+            }[]
+          }
       get_published_stories_for_sitemap: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           story_id: string
           title: string
@@ -3734,7 +3733,7 @@ export type Database = {
         }[]
       }
       get_safe_public_topic_info: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           description: string
@@ -3748,7 +3747,7 @@ export type Database = {
         }[]
       }
       get_safe_public_topics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           description: string
@@ -3770,35 +3769,61 @@ export type Database = {
           topic_type: string
         }[]
       }
-      get_stories_unified: {
-        Args:
-          | {
+      get_stories_unified:
+        | {
+            Args: {
               p_limit?: number
               p_offset?: number
               p_status?: string
               p_topic_id: string
             }
-          | { p_topic_id?: string }
-        Returns: {
-          article_id: string
-          author: string
-          cover_illustration_prompt: string
-          cover_illustration_url: string
-          created_at: string
-          id: string
-          is_published: boolean
-          publication_name: string
-          quality_score: number
-          shared_content_id: string
-          slides: Json
-          source_url: string
-          status: string
-          title: string
-          topic_article_id: string
-          updated_at: string
-          word_count: number
-        }[]
-      }
+            Returns: {
+              article_id: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              publication_name: string
+              quality_score: number
+              shared_content_id: string
+              slides: Json
+              source_url: string
+              status: string
+              title: string
+              topic_article_id: string
+              updated_at: string
+              word_count: number
+            }[]
+          }
+        | {
+            Args: { p_topic_id?: string }
+            Returns: {
+              article_id: string
+              audience_expertise: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              illustration_generated_at: string
+              is_published: boolean
+              shared_content_id: string
+              slides: Json
+              slides_count: number
+              slidetype: string
+              source_type: string
+              source_url: string
+              status: string
+              title: string
+              tone: string
+              topic_article_id: string
+              updated_at: string
+              word_count: number
+              writing_style: string
+            }[]
+          }
       get_topic_articles_multi_tenant: {
         Args: {
           p_limit?: number
@@ -3911,71 +3936,73 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_topic_stories_with_keywords: {
-        Args:
-          | {
+      get_topic_stories_with_keywords:
+        | {
+            Args: {
               p_keywords?: string[]
               p_limit?: number
               p_offset?: number
               p_sources?: string[]
               p_topic_slug: string
             }
-          | {
+            Returns: {
+              article_id: string
+              article_published_at: string
+              article_region: string
+              article_source_url: string
+              constituency: string
+              mp_name: string
+              mp_party: string
+              shared_content_id: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              story_author: string
+              story_cover_url: string
+              story_created_at: string
+              story_id: string
+              story_is_parliamentary: boolean
+              story_is_published: boolean
+              story_publication_name: string
+              story_status: string
+              story_title: string
+              story_updated_at: string
+            }[]
+          }
+        | {
+            Args: {
               p_keywords?: string[]
               p_mp_names?: string[]
               p_source_domains?: string[]
               p_topic_id: string
             }
-        Returns: {
-          article_id: string
-          article_published_at: string
-          article_region: string
-          article_source_url: string
-          constituency: string
-          mp_name: string
-          mp_party: string
-          shared_content_id: string
-          slide_content: string
-          slide_id: string
-          slide_number: number
-          story_author: string
-          story_cover_url: string
-          story_created_at: string
-          story_id: string
-          story_is_parliamentary: boolean
-          story_is_published: boolean
-          story_publication_name: string
-          story_status: string
-          story_title: string
-          story_updated_at: string
-        }[]
-      }
+            Returns: {
+              article_id: string
+              article_published_at: string
+              article_source_url: string
+              constituency: string
+              content_type: string
+              mp_name: string
+              mp_party: string
+              shared_content_id: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              story_cover_url: string
+              story_created_at: string
+              story_id: string
+              story_is_parliamentary: boolean
+              story_is_published: boolean
+              story_status: string
+              story_title: string
+            }[]
+          }
       get_topic_visitor_stats: {
         Args: { p_topic_id: string }
         Returns: {
           visits_this_week: number
           visits_today: number
         }[]
-      }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
       }
       has_role: {
         Args: {
@@ -3984,18 +4011,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_feature_enabled: {
-        Args: { flag_name: string }
-        Returns: boolean
-      }
-      is_story_published: {
-        Args: { p_story_id: string }
-        Returns: boolean
-      }
-      is_story_visible: {
-        Args: { story_updated_at: string }
-        Returns: boolean
-      }
+      is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
+      is_story_published: { Args: { p_story_id: string }; Returns: boolean }
+      is_story_visible: { Args: { story_updated_at: string }; Returns: boolean }
       log_error_ticket: {
         Args: {
           p_context_data?: Json
@@ -4021,21 +4039,12 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: Json
       }
-      normalize_url: {
-        Args: { input_url: string }
-        Returns: string
-      }
-      normalize_url_enhanced: {
-        Args: { input_url: string }
-        Returns: string
-      }
-      populate_topic_sources_from_existing: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      queue_multi_tenant_article: {
-        Args:
-          | {
+      normalize_url: { Args: { input_url: string }; Returns: string }
+      normalize_url_enhanced: { Args: { input_url: string }; Returns: string }
+      populate_topic_sources_from_existing: { Args: never; Returns: number }
+      queue_multi_tenant_article:
+        | {
+            Args: {
               p_ai_provider?: string
               p_shared_content_id: string
               p_slidetype?: string
@@ -4043,15 +4052,18 @@ export type Database = {
               p_topic_article_id: string
               p_writing_style?: string
             }
-          | {
+            Returns: string
+          }
+        | {
+            Args: {
               p_ai_provider?: string
               p_shared_content_id: string
               p_slidetype?: string
               p_tone?: Database["public"]["Enums"]["tone_type"]
               p_writing_style?: string
             }
-        Returns: string
-      }
+            Returns: string
+          }
       record_feed_visit: {
         Args: {
           p_referrer?: string
@@ -4086,30 +4098,11 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: undefined
       }
-      reset_stalled_processing: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      reset_stalled_stories: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      test_rss_import: {
-        Args: { p_source_name?: string }
-        Returns: Json
-      }
+      reset_stalled_processing: { Args: never; Returns: undefined }
+      reset_stalled_stories: { Args: never; Returns: number }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      test_rss_import: { Args: { p_source_name?: string }; Returns: Json }
       test_search_functionality: {
         Args: { p_search_term?: string }
         Returns: {
@@ -4118,10 +4111,7 @@ export type Database = {
           title: string
         }[]
       }
-      update_cron_schedules: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_cron_schedules: { Args: never; Returns: undefined }
       update_scheduler_setting: {
         Args: { p_setting_key: string; p_setting_value: Json }
         Returns: boolean
