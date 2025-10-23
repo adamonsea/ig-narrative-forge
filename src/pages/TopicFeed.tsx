@@ -2,7 +2,6 @@ import { useParams } from "react-router-dom";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { format } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
-import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSentimentCards } from "@/hooks/useSentimentCards";
@@ -84,11 +83,6 @@ const TopicFeed = () => {
     availableSources,
     toggleSource,
     removeSource,
-    selectedMPs,
-    availableMPs,
-    toggleMP,
-    removeMP,
-    clearMPs,
     isLive
   } = useHybridTopicFeedWithKeywords(slug || '');
 
@@ -595,11 +589,7 @@ const TopicFeed = () => {
           availableSources={availableSources}
           selectedSources={selectedSources}
           onSourceToggle={toggleSource}
-          availableMPs={availableMPs}
-          selectedMPs={selectedMPs}
-          onMPToggle={toggleMP}
           onClearAll={clearAllFilters}
-          onClearMPs={clearMPs}
         />
 
         {/* Donation Modal */}

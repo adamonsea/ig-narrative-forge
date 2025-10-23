@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Filter, MapPin, X, Hash, Globe, Users } from "lucide-react";
+import { Filter, MapPin, X, Hash, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -20,9 +20,6 @@ interface FeedFiltersProps {
   // Location filtering props
   selectedLocations?: string[];
   onRemoveLocation?: (location: string) => void;
-  // MP filtering props
-  selectedMPs?: string[];
-  onRemoveMP?: (mpName: string) => void;
   hasActiveFilters?: boolean;
 }
 
@@ -38,11 +35,9 @@ export function FeedFilters({
   onRemoveSource,
   selectedLocations = [],
   onRemoveLocation,
-  selectedMPs = [],
-  onRemoveMP,
   hasActiveFilters = false
 }: FeedFiltersProps) {
-  const totalFilterCount = selectedKeywords.length + selectedSources.length + selectedLocations.length + selectedMPs.length;
+  const totalFilterCount = selectedKeywords.length + selectedSources.length + selectedLocations.length;
   const displayCount = hasActiveFilters && filteredStoryCount !== undefined ? filteredStoryCount : totalFilterCount;
   const [showTip, setShowTip] = useState(false);
 
@@ -93,7 +88,7 @@ export function FeedFilters({
       </div>
 
       {/* Selected filters */}
-      {(selectedKeywords.length > 0 || selectedSources.length > 0 || selectedLocations.length > 0 || selectedMPs.length > 0) && (
+      {(selectedKeywords.length > 0 || selectedSources.length > 0 || selectedLocations.length > 0) && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="text-xs text-muted-foreground">Filtering by:</span>
           {selectedKeywords.map((keyword) => {
@@ -150,7 +145,7 @@ export function FeedFilters({
               .split(' ')
               .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
               .join(' ');
-            
+
             return (
               <Badge
                 key={`source-${source}`}
@@ -169,23 +164,6 @@ export function FeedFilters({
               </Badge>
             );
           })}
-          {selectedMPs.map((mpName) => (
-            <Badge
-              key={`mp-${mpName}`}
-              className="flex items-center gap-1 pr-1 bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/60"
-            >
-              <Users className="w-3 h-3" />
-              <span>{mpName}</span>
-              {onRemoveMP && (
-                <button
-                  onClick={() => onRemoveMP(mpName)}
-                  className="ml-1 hover:bg-purple-200/50 dark:hover:bg-purple-800/50 rounded-full p-0.5 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </Badge>
-          ))}
         </div>
       )}
     </div>
