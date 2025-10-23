@@ -1102,12 +1102,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           p_topic_id: topicData.id,
           p_keywords: null,
           p_source_domains: null,
+          p_mp_names: null,
           p_limit: limit,
           p_offset: offset
         });
 
         if (error) {
-          console.warn('⚠️ Failed to load filter index batch:', error);
+          console.error('❌ Failed to load filter index batch:', {
+            error,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            params: { p_topic_id: topicData.id, offset, limit }
+          });
           break;
         }
 
