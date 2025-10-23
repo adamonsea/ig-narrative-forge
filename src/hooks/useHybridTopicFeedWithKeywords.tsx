@@ -1114,16 +1114,23 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         let rows = data || [];
         let usedFallback = false;
 
-        if (error) {
-          console.error('❌ Failed to load filter index batch:', {
-            error,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            params: { p_topic_id: topicData.id, offset, limit }
-          });
+        // Trigger fallback if RPC fails OR if first page returns empty (which suggests RPC issue)
+        const shouldUseFallback = error || (offset === 0 && rows.length === 0);
 
-          console.error('❌ RPC failed, attempting direct query fallback');
+        if (shouldUseFallback) {
+          if (error) {
+            console.error('❌ Failed to load filter index batch:', {
+              error,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              params: { p_topic_id: topicData.id, offset, limit }
+            });
+            console.error('❌ RPC failed, attempting direct query fallback');
+          } else {
+            console.warn('⚠️ RPC returned empty first page, using direct query fallback');
+          }
+
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('stories')
             .select(`
