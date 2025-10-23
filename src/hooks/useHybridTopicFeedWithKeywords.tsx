@@ -548,12 +548,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       try {
         const { data, error } = await supabase
           .rpc('get_topic_stories_with_keywords', {
-            p_topic_id: topicData.id,
+            p_topic_slug: topicData.slug,
             p_keywords: keywords,
-            p_source_domains: sources,
+            p_sources: sources,
             p_limit: rawLimit,
             p_offset: from
-          })
+          } as any)
           .abortSignal(controller.signal);
 
         clearTimeout(timeoutId);
@@ -1104,12 +1104,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       while (true) {
         const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_id: topicData.id,
+          p_topic_slug: slugToUse,
           p_keywords: null,
-          p_source_domains: null,
+          p_sources: null,
           p_limit: limit,
           p_offset: offset
-        });
+        } as any);
 
         let rows = data || [];
         let usedFallback = false;
