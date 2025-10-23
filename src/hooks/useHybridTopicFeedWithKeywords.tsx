@@ -170,10 +170,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const filterIndexLoadingRef = useRef(false);
   const domainNameCacheRef = useRef<Record<string, string>>({});
   const refreshIndexDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const allContentRef = useRef<FeedContent[]>([]);
+  const isServerFilteringRef = useRef(false);
   const [filterStoryIndex, setFilterStoryIndex] = useState<FilterStoryIndexEntry[]>([]);
   
   // Derived filtered stories for backward compatibility
   const filteredStories = filteredContent.filter(item => item.type === 'story').map(item => item.data as Story);
+
+  useEffect(() => {
+    isServerFilteringRef.current = isServerFiltering;
+  }, [isServerFiltering]);
 
   // Normalize MP names by removing honorifics and titles
   const normalizeMPName = useCallback((name: string | null | undefined) => {
@@ -324,6 +330,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           if (!append) {
             setAllStories([]);
             setAllContent([]);
+            allContentRef.current = [];
             if (!options.suppressFiltered) {
               setFilteredContent([]);
             }
@@ -469,11 +476,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                 map.set(item.id, item);
               }
             });
-            return Array.from(map.values()).sort((a, b) => {
+            const merged = Array.from(map.values()).sort((a, b) => {
               const aTime = new Date(a.content_date).getTime();
               const bTime = new Date(b.content_date).getTime();
               return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
             });
+            allContentRef.current = merged;
+            return merged;
           });
 
           setFilteredContent(prev => {
@@ -492,6 +501,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         } else {
           setAllStories(transformedStories);
           setAllContent(orderedContent);
+          allContentRef.current = orderedContent;
           if (!options.suppressFiltered) {
             setFilteredContent(orderedContent);
           }
@@ -516,7 +526,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   ) => {
     try {
       if (pageNum === 0) {
-        if (isServerFiltering) setLoadingMore(true);
+        if (isServerFilteringRef.current) setLoadingMore(true);
         else setLoading(true);
       } else {
         setLoadingMore(true);
@@ -544,6 +554,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       let storiesData: any[] | null = null;
       let rpcError: any = null;
+      const currentAllContent = allContentRef.current;
 
       try {
         const { data, error } = await supabase
@@ -596,10 +607,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         // Strategy 2: Client-side filtering on existing content
-        if (!append && allContent.length > 0) {
+        if (!append && currentAllContent.length > 0) {
           console.log('🔄 Phase 2: Using client-side filtering on existing content');
           const filtered = applyClientSideFiltering(
-            allContent,
+            currentAllContent,
             keywords || [],
             sources || [],
             []
@@ -610,13 +621,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         // Strategy 3: Filtered cold start → fetch unfiltered, then filter
-        if ((keywords || sources) && allContent.length === 0) {
+        if ((keywords || sources) && currentAllContent.length === 0) {
           try {
             console.log('🔄 Phase 2: Filtered cold start - fetching base content for client-side filtering');
             const result = await loadStoriesFromPublicFeed(topicData, pageNum, false, { suppressFiltered: true });
-            
+
             // Apply client-side filter synchronously using the returned content
-            const base = result.orderedContent.length > 0 ? result.orderedContent : allContent;
+            const base = result.orderedContent.length > 0 ? result.orderedContent : currentAllContent;
             const filtered = applyClientSideFiltering(base, keywords || [], sources || [], []);
             setFilteredContent(filtered);
             setHasMore(false);
@@ -636,6 +647,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         if (!append) {
           setAllStories([]);
           setAllContent([]);
+          allContentRef.current = [];
           setFilteredContent([]);
         }
         setHasMore(false);
@@ -945,6 +957,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
           });
           console.log('🔍 [APPEND] AllContent now has', merged.length, 'items');
+          allContentRef.current = merged;
           return merged;
         });
 
@@ -980,6 +993,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         setAllStories(transformedStories);
         // For initial load, use the mixed content with proper chronological order
         setAllContent(mixedContent);
+        allContentRef.current = mixedContent;
         if (!keywords && !sources) {
           setFilteredContent(mixedContent);
           console.log('🔍 [INITIAL] FilteredContent set to', mixedContent.length, 'mixed items (no filters)');
@@ -1021,8 +1035,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setLoading(false);
       setLoadingMore(false);
       setIsServerFiltering(false);
+      isServerFilteringRef.current = false;
     }
-  }, [slug, loadStoriesFromPublicFeed, allContent, isServerFiltering]);
+  }, [slug, loadStoriesFromPublicFeed, normalizeMPName]);
 
   const extractDomain = useCallback((url?: string | null) => {
     if (!url) return null;
@@ -1415,6 +1430,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (!topic) return;
 
     setIsServerFiltering(true);
+    isServerFilteringRef.current = true;
     setPage(0);
     setHasMore(true);
     serverFilteredRef.current = false;
@@ -1430,6 +1446,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     } catch (error) {
       console.error('Phase 2: Server filtering failed:', error);
       setIsServerFiltering(false);
+      isServerFilteringRef.current = false;
     }
   }, [topic, loadStories]);
 
