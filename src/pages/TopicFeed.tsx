@@ -722,7 +722,13 @@ const TopicFeed = () => {
                       id: `${mention.id}-slide-5`,
                       slide_number: 5,
                       content: 'View full details on Parliament.uk',
-                      word_count: 5
+                      word_count: 5,
+                      links: mention.vote_url || mention.debate_url ? [{
+                        url: mention.vote_url || mention.debate_url,
+                        text: 'View vote details',
+                        start: 0,
+                        end: 16
+                      }] : []
                     }
                   ],
                   article: {
@@ -800,6 +806,11 @@ const TopicFeed = () => {
 
               return items;
             }).flat()}
+            
+            {/* Universal bottom sentinel for infinite scroll */}
+            {hasMore && (
+              <div ref={lastStoryElementRef} className="h-px w-full" aria-hidden="true" />
+            )}
             
             {/* Loading more indicator */}
             {(loadingMore || isServerFiltering) && (

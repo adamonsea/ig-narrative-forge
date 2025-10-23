@@ -506,8 +506,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     sources: string[] | null = null
   ) => {
     try {
-      if (pageNum === 0) setLoading(true);
-      else setLoadingMore(true);
+      if (pageNum === 0) {
+        if (isServerFiltering) setLoadingMore(true);
+        else setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
       // Use a larger raw rows limit - increase when filters active to improve matching
       const rawLimit = (keywords || sources) ? STORIES_PER_PAGE * 15 : STORIES_PER_PAGE * 8;
@@ -1017,7 +1021,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setLoadingMore(false);
       setIsServerFiltering(false);
     }
-  }, [slug, loadStoriesFromPublicFeed, allContent]);
+  }, [slug, loadStoriesFromPublicFeed, allContent, isServerFiltering]);
 
   const extractDomain = useCallback((url?: string | null) => {
     if (!url) return null;
