@@ -3975,25 +3975,23 @@ export type Database = {
               p_topic_id: string
             }
             Returns: {
-              article_url: string
+              article_id: string
+              article_published_at: string
+              article_source_url: string
               constituency: string
+              content_type: string
               mp_name: string
               mp_party: string
-              slide_alt_text: string
+              shared_content_id: string
               slide_content: string
               slide_id: string
-              slide_image_url: string
               slide_number: number
-              slide_type: string
-              source_domain: string
-              source_name: string
-              source_url: string
+              story_cover_url: string
               story_created_at: string
-              story_headline: string
               story_id: string
               story_is_parliamentary: boolean
-              story_published_at: string
-              story_summary: string
+              story_is_published: boolean
+              story_status: string
               story_title: string
             }[]
           }
