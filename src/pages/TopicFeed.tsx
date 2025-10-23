@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { format } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
@@ -615,7 +616,7 @@ const TopicFeed = () => {
         )}
 
         {/* Content with infinite scroll - chronologically ordered stories and parliamentary mentions */}
-        {!loading && !loadingMore && !isServerFiltering && filteredContent.length === 0 ? (
+        {!loading && filteredContent.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             {hasActiveFilters ? (
               <>
@@ -667,6 +668,78 @@ const TopicFeed = () => {
                     <StoryCarousel 
                       story={story} 
                       storyUrl={storyShareUrl}
+                      topicId={topic?.id}
+                      storyIndex={index}
+                      onStorySwipe={handleStorySwipe}
+                      onStoryScrolledPast={handleStoryScrolledPast}
+                    />
+                  </div>
+                );
+              }
+
+              // Render parliamentary mention as a story carousel
+              if (contentItem.type === 'parliamentary_mention') {
+                const mention = contentItem.data as any;
+                
+                // Transform parliamentary mention into a Story-compatible object
+                const parliamentaryStory = {
+                  id: mention.id,
+                  title: mention.vote_title || mention.debate_title || 'Parliamentary Activity',
+                  author: mention.mp_name || 'Unknown MP',
+                  publication_name: 'UK Parliament',
+                  created_at: mention.created_at,
+                  updated_at: mention.created_at,
+                  is_parliamentary: true,
+                  mp_name: mention.mp_name,
+                  mp_party: mention.party,
+                  constituency: mention.constituency,
+                  slides: [
+                    {
+                      id: `${mention.id}-slide-1`,
+                      slide_number: 1,
+                      content: `${mention.mp_name || 'MP'}\n${format(new Date(mention.vote_date || mention.debate_date || mention.created_at), 'MMMM d, yyyy')}\n${mention.vote_title || mention.debate_title || 'Parliamentary Activity'}`,
+                      word_count: 15
+                    },
+                    {
+                      id: `${mention.id}-slide-2`,
+                      slide_number: 2,
+                      content: `${mention.vote_direction?.toUpperCase() || 'ABSTAIN'}${mention.is_rebellion ? '\n🔥 Against party whip' : ''}`,
+                      word_count: 5
+                    },
+                    {
+                      id: `${mention.id}-slide-3`,
+                      slide_number: 3,
+                      content: `${mention.vote_outcome?.toUpperCase() || 'PENDING'}\nAyes ${mention.aye_count || 0} : Noes ${mention.no_count || 0}`,
+                      word_count: 10
+                    },
+                    {
+                      id: `${mention.id}-slide-4`,
+                      slide_number: 4,
+                      content: `Category: ${mention.vote_category || 'General'}\n\n${mention.local_impact_summary || 'Parliamentary activity'}`,
+                      word_count: 20
+                    },
+                    {
+                      id: `${mention.id}-slide-5`,
+                      slide_number: 5,
+                      content: 'View full details on Parliament.uk',
+                      word_count: 5
+                    }
+                  ],
+                  article: {
+                    source_url: mention.vote_url || mention.debate_url || 'https://www.parliament.uk',
+                    published_at: mention.vote_date || mention.debate_date || mention.created_at,
+                    region: topic?.region || 'UK'
+                  }
+                };
+
+                items.push(
+                  <div
+                    key={`parliamentary-${mention.id}`}
+                    ref={index === lastStoryContentIndex ? lastStoryElementRef : null}
+                  >
+                    <StoryCarousel 
+                      story={parliamentaryStory} 
+                      storyUrl={`${window.location.origin}/feed/${slug}/parliamentary/${mention.id}`}
                       topicId={topic?.id}
                       storyIndex={index}
                       onStorySwipe={handleStorySwipe}
