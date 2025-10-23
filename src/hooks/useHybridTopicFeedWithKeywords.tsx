@@ -1078,6 +1078,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (!topicData?.id || filterIndexLoadingRef.current) return;
 
     filterIndexLoadingRef.current = true;
+    console.log('🔍 Loading filter index for topic:', topicData.id, topicData.name);
 
     try {
       const keywords = topicData.keywords || [];
@@ -1085,6 +1086,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const organizations = topicData.organizations || [];
       const allTerms = [...keywords, ...landmarks, ...organizations];
       const keywordsLower = allTerms.map(keyword => keyword.toLowerCase());
+      console.log('📋 Tracking terms:', { keywords: keywords.length, landmarks: landmarks.length, organizations: organizations.length });
 
       const limit = 400;
       let offset = 0;
@@ -1110,6 +1112,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         const rows = data || [];
+        console.log('📊 Loaded batch:', { offset, rowCount: rows.length, limit });
         rows.forEach((row: any) => {
           if (!row?.story_id) return;
           const existing = storyMap.get(row.story_id) || {
@@ -1161,6 +1164,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         });
       });
 
+      console.log('✅ Filter index built:', {
+        totalStories: storyMap.size,
+        indexEntries: indexEntries.length,
+        keywordsTracked: keywordsLower.length
+      });
+      
       setFilterStoryIndex(indexEntries);
     } catch (error) {
       console.warn('⚠️ Failed to build filter story index:', error);
@@ -1179,11 +1188,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     activeOrganizations: string[],
     activeSources: string[]
   ) => {
+    // If index is empty, return topic keywords/landmarks/organizations with count=0
     if (index.length === 0 && activeKeywords.length === 0 && activeLandmarks.length === 0 && activeOrganizations.length === 0 && activeSources.length === 0) {
+      const keywordResults = (topicKeywords || []).map(k => ({ keyword: k, count: 0 }));
+      const landmarkResults = (topicLandmarks || []).map(l => ({ keyword: l, count: 0 }));
+      const organizationResults = (topicOrganizations || []).map(o => ({ keyword: o, count: 0 }));
+      console.log('📋 Showing topic keywords with zero counts:', {
+        keywords: keywordResults.length,
+        landmarks: landmarkResults.length,
+        organizations: organizationResults.length
+      });
       return { 
-        keywords: [] as KeywordCount[], 
-        landmarks: [] as KeywordCount[], 
-        organizations: [] as KeywordCount[], 
+        keywords: keywordResults, 
+        landmarks: landmarkResults, 
+        organizations: organizationResults, 
         sources: [] as SourceCount[] 
       };
     }
