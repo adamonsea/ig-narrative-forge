@@ -809,7 +809,16 @@ const TopicFeed = () => {
             
             {/* Universal bottom sentinel for infinite scroll */}
             {hasMore && (
-              <div ref={lastStoryElementRef} className="h-px w-full" aria-hidden="true" />
+              <div 
+                ref={(el) => {
+                  if (el && lastStoryElementRef) {
+                    lastStoryElementRef(el);
+                    console.log('🔭 Bottom sentinel mounted, infinite scroll active');
+                  }
+                }} 
+                className="h-px w-full" 
+                aria-hidden="true" 
+              />
             )}
             
             {/* Loading more indicator */}

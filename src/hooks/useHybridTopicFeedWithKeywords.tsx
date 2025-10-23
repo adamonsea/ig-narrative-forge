@@ -290,7 +290,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   }, [slug]);
 
   const loadStoriesFromPublicFeed = useCallback(
-    async (topicData: Topic, pageNum: number = 0, append: boolean = false) => {
+    async (
+      topicData: Topic, 
+      pageNum: number = 0, 
+      append: boolean = false,
+      options: { suppressFiltered?: boolean } = {}
+    ): Promise<{ success: boolean; orderedContent: FeedContent[]; transformedStories: Story[] }> => {
       const topicSlug = topicData.slug || slug;
       if (!topicSlug) {
         throw new Error('Topic slug unavailable for legacy feed fallback');
@@ -319,10 +324,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           if (!append) {
             setAllStories([]);
             setAllContent([]);
-            setFilteredContent([]);
+            if (!options.suppressFiltered) {
+              setFilteredContent([]);
+            }
           }
           setHasMore(false);
-          return true;
+          return { success: true, orderedContent: [], transformedStories: [] };
         }
 
         const uniqueStoriesMap = new Map<string, any>();
@@ -485,14 +492,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         } else {
           setAllStories(transformedStories);
           setAllContent(orderedContent);
-          setFilteredContent(orderedContent);
+          if (!options.suppressFiltered) {
+            setFilteredContent(orderedContent);
+          }
         }
 
         setHasMore(deduplicatedStories.length === STORIES_PER_PAGE);
-        return true;
+        return { success: true, orderedContent, transformedStories };
       } catch (error) {
         console.error('❌ Legacy public feed fallback failed:', error);
-        throw error;
+        return { success: false, orderedContent: [], transformedStories: [] };
       }
     },
     [slug]
@@ -576,8 +585,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // Strategy 1: Unfiltered load → use legacy feed
         if (!keywords && !sources) {
           try {
-            const fallbackSucceeded = await loadStoriesFromPublicFeed(topicData, pageNum, append);
-            if (fallbackSucceeded) {
+            const result = await loadStoriesFromPublicFeed(topicData, pageNum, append);
+            if (result.success) {
               console.log('🛟 Phase 2: Legacy public feed fallback succeeded');
               return;
             }
@@ -604,15 +613,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         if ((keywords || sources) && allContent.length === 0) {
           try {
             console.log('🔄 Phase 2: Filtered cold start - fetching base content for client-side filtering');
-            await loadStoriesFromPublicFeed(topicData, pageNum, false);
+            const result = await loadStoriesFromPublicFeed(topicData, pageNum, false, { suppressFiltered: true });
             
-            // Wait a tick for state to update, then filter
-            setTimeout(() => {
-              const filtered = applyClientSideFiltering(allContent, keywords || [], sources || [], []);
-              setFilteredContent(filtered);
-              setHasMore(false);
-              console.log('🛟 Phase 2: Filtered fallback succeeded');
-            }, 0);
+            // Apply client-side filter synchronously using the returned content
+            const base = result.orderedContent.length > 0 ? result.orderedContent : allContent;
+            const filtered = applyClientSideFiltering(base, keywords || [], sources || [], []);
+            setFilteredContent(filtered);
+            setHasMore(false);
+            console.log('🛟 Phase 2: Filtered fallback succeeded with', filtered.length, 'items');
             return;
           } catch (fallbackError) {
             console.error('❌ Phase 2: Filtered fallback failed:', fallbackError);
@@ -991,16 +999,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         })));
       }
       
-      // Determine if there might be more data
-      // When filters are active, check if we got enough unique stories
-      // When no filters, check if we got a full batch of raw rows
-      if (keywords || sources) {
-        // With filters: assume more if we got exactly STORIES_PER_PAGE unique stories
-        setHasMore(pageUniqueStories.length >= STORIES_PER_PAGE);
-      } else {
-        // No filters: check raw batch size
-        setHasMore((storiesData?.length || 0) === rawLimit);
-      }
+      // Determine if there might be more data based on unique story count
+      // Use pageUniqueStories.length for reliable pagination regardless of filters or content type
+      setHasMore(pageUniqueStories.length >= STORIES_PER_PAGE);
       
     } catch (error) {
       console.error('Error loading stories:', error);
