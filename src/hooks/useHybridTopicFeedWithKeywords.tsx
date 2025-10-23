@@ -1078,7 +1078,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     if (!topicData?.id || filterIndexLoadingRef.current) return;
 
     filterIndexLoadingRef.current = true;
-    console.log('🔍 Loading filter index for topic:', topicData.id, topicData.name);
+    console.log('🔍 [FILTER INDEX] Starting load for topic:', {
+      topicId: topicData.id,
+      topicSlug: topicData.slug,
+      topicName: topicData.name,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       const keywords = topicData.keywords || [];
@@ -1107,6 +1112,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           p_offset: offset
         });
 
+        let rows = data || [];
+        let usedFallback = false;
+
         if (error) {
           console.error('❌ Failed to load filter index batch:', {
             error,
@@ -1115,11 +1123,51 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             hint: error.hint,
             params: { p_topic_id: topicData.id, offset, limit }
           });
-          break;
+
+          console.error('❌ RPC failed, attempting direct query fallback');
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('stories')
+            .select(`
+              id,
+              title,
+              is_published,
+              article:articles ( source_url, canonical_url, original_url ),
+              topic_article:topic_articles!inner ( topic_id ),
+              slides ( content )
+            `)
+            .eq('topic_article.topic_id', topicData.id)
+            .eq('is_published', true)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+          if (fallbackError) {
+            console.error('❌ Fallback query also failed:', fallbackError);
+            break;
+          }
+
+          usedFallback = true;
+          rows = (fallbackData || []).flatMap((story: any) => {
+            const slides = story?.slides || [];
+            const sourceUrl = story?.article?.source_url || story?.article?.canonical_url || story?.article?.original_url || null;
+            if (!slides || slides.length === 0) {
+              return [{
+                story_id: story?.id,
+                story_title: story?.title,
+                article_source_url: sourceUrl,
+                slide_content: ''
+              }];
+            }
+
+            return slides.map((slide: any) => ({
+              story_id: story?.id,
+              story_title: story?.title,
+              article_source_url: sourceUrl,
+              slide_content: slide?.content || ''
+            }));
+          });
         }
 
-        const rows = data || [];
-        console.log('📊 Loaded batch:', { offset, rowCount: rows.length, limit });
+        console.log(usedFallback ? '📊 Loaded fallback batch:' : '📊 Loaded batch:', { offset, rowCount: rows.length, limit });
         rows.forEach((row: any) => {
           if (!row?.story_id) return;
           const existing = storyMap.get(row.story_id) || {
@@ -1174,9 +1222,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       console.log('✅ Filter index built:', {
         totalStories: storyMap.size,
         indexEntries: indexEntries.length,
-        keywordsTracked: keywordsLower.length
+        keywordsTracked: keywordsLower.length,
+        sampleEntry: indexEntries[0],
+        topicId: topicData.id
       });
-      
+
       setFilterStoryIndex(indexEntries);
     } catch (error) {
       console.warn('⚠️ Failed to build filter story index:', error);
@@ -1184,6 +1234,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       filterIndexLoadingRef.current = false;
     }
   }, [extractDomain, slug]);
+
+  const ensureFilterStoryIndexLoaded = useCallback(() => {
+    if (!topic || filterIndexLoadingRef.current) return;
+
+    if (filterStoryIndex.length === 0) {
+      loadFilterStoryIndex(topic);
+    }
+  }, [topic, filterStoryIndex.length, loadFilterStoryIndex]);
 
   const computeFilterOptionsFromIndex = useCallback(async (
     index: FilterStoryIndexEntry[],
@@ -1877,6 +1935,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     selectedSources,
     availableSources,
     toggleSource,
-    removeSource
+    removeSource,
+
+    ensureFilterStoryIndexLoaded
   };
 };

@@ -83,8 +83,15 @@ const TopicFeed = () => {
     availableSources,
     toggleSource,
     removeSource,
-    isLive
+    isLive,
+    ensureFilterStoryIndexLoaded
   } = useHybridTopicFeedWithKeywords(slug || '');
+
+  useEffect(() => {
+    if (isModalOpen) {
+      ensureFilterStoryIndexLoaded();
+    }
+  }, [isModalOpen, ensureFilterStoryIndexLoaded]);
 
   // Track visitor for analytics
   useVisitorTracking(topic?.id);
