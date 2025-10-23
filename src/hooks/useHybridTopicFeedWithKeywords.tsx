@@ -1107,7 +1107,6 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           p_topic_id: topicData.id,
           p_keywords: null,
           p_source_domains: null,
-          p_mp_names: null,
           p_limit: limit,
           p_offset: offset
         });
