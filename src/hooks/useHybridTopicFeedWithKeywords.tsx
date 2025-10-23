@@ -565,10 +565,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
 
-      // PHASE 2: If RPC failed, fall back to client-side filtering
+      // PHASE 2: If RPC failed, fall back to multiple strategies
       if (rpcError) {
         console.error('🚨 Phase 2: RPC failed, falling back strategies triggered:', rpcError);
 
+        // Strategy 1: Unfiltered load → use legacy feed
         if (!keywords && !sources) {
           try {
             const fallbackSucceeded = await loadStoriesFromPublicFeed(topicData, pageNum, append);
@@ -581,8 +582,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         }
 
+        // Strategy 2: Client-side filtering on existing content
         if (!append && allContent.length > 0) {
-          // Apply client-side filtering to existing loaded content
           console.log('🔄 Phase 2: Using client-side filtering on existing content');
           const filtered = applyClientSideFiltering(
             allContent,
@@ -591,12 +592,31 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             []
           );
           setFilteredContent(filtered);
-          setHasMore(false); // Can't paginate with client-side filtering
+          setHasMore(false);
           return;
-        } else {
-          // No content to filter, throw error
-          throw rpcError;
         }
+
+        // Strategy 3: Filtered cold start → fetch unfiltered, then filter
+        if ((keywords || sources) && allContent.length === 0) {
+          try {
+            console.log('🔄 Phase 2: Filtered cold start - fetching base content for client-side filtering');
+            await loadStoriesFromPublicFeed(topicData, pageNum, false);
+            
+            // Wait a tick for state to update, then filter
+            setTimeout(() => {
+              const filtered = applyClientSideFiltering(allContent, keywords || [], sources || [], []);
+              setFilteredContent(filtered);
+              setHasMore(false);
+              console.log('🛟 Phase 2: Filtered fallback succeeded');
+            }, 0);
+            return;
+          } catch (fallbackError) {
+            console.error('❌ Phase 2: Filtered fallback failed:', fallbackError);
+          }
+        }
+
+        // Strategy 4: All fallbacks failed → show error
+        throw rpcError;
       }
 
       if (!storiesData || storiesData.length === 0) {
@@ -997,7 +1017,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setLoadingMore(false);
       setIsServerFiltering(false);
     }
-  }, [slug, loadStoriesFromPublicFeed]);
+  }, [slug, loadStoriesFromPublicFeed, allContent]);
 
   const extractDomain = useCallback((url?: string | null) => {
     if (!url) return null;

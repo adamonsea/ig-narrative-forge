@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import StoryCarousel from "@/components/StoryCarousel";
 import { FeedFilters } from "@/components/FeedFilters";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
@@ -257,9 +257,19 @@ const TopicFeed = () => {
 
   const { sentimentCards } = useSentimentCards(topic?.id);
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
-  
+
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
+
+  const lastStoryContentIndex = useMemo(() => {
+    let lastIndex = -1;
+    filteredContent.forEach((item, index) => {
+      if (item.type === 'story') {
+        lastIndex = index;
+      }
+    });
+    return lastIndex;
+  }, [filteredContent]);
 
   // Track visitor stats
   useVisitorTracking(topic?.id);
@@ -650,9 +660,9 @@ const TopicFeed = () => {
                 const storyShareUrl = `${window.location.origin}/feed/${slug}/story/${story.id}`;
                 
                 items.push(
-                <div
+                  <div
                     key={`story-${story.id}`}
-                    ref={index === filteredContent.length - 1 ? lastStoryElementRef : null}
+                    ref={index === lastStoryContentIndex ? lastStoryElementRef : null}
                   >
                     <StoryCarousel 
                       story={story} 

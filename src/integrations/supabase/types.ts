@@ -3936,36 +3936,73 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_topic_stories_with_keywords: {
-        Args: {
-          p_keywords?: string[]
-          p_limit?: number
-          p_mp_names?: string[]
-          p_offset?: number
-          p_source_domains?: string[]
-          p_topic_id: string
-        }
-        Returns: {
-          article_id: string
-          article_published_at: string
-          article_source_url: string
-          constituency: string
-          content_type: string
-          mp_name: string
-          mp_party: string
-          shared_content_id: string
-          slide_content: string
-          slide_id: string
-          slide_number: number
-          story_cover_url: string
-          story_created_at: string
-          story_id: string
-          story_is_parliamentary: boolean
-          story_is_published: boolean
-          story_status: string
-          story_title: string
-        }[]
-      }
+      get_topic_stories_with_keywords:
+        | {
+            Args: {
+              p_keyword_filters?: string[]
+              p_limit?: number
+              p_offset?: number
+              p_source_filters?: string[]
+              p_topic_id: string
+            }
+            Returns: {
+              article_id: string
+              article_published_at: string
+              article_region: string
+              article_source_url: string
+              is_parliamentary: boolean
+              mp_name: string
+              pm_created_at: string
+              pm_debate_date: string
+              pm_id: string
+              pm_mp_id: string
+              pm_relevance_score: number
+              pm_summary: string
+              pm_vote_date: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              slide_word_count: number
+              story_author: string
+              story_cover_illustration_prompt: string
+              story_cover_illustration_url: string
+              story_created_at: string
+              story_id: string
+              story_publication_name: string
+              story_title: string
+              story_updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              p_keywords?: string[]
+              p_limit?: number
+              p_mp_names?: string[]
+              p_offset?: number
+              p_source_domains?: string[]
+              p_topic_id: string
+            }
+            Returns: {
+              article_id: string
+              article_published_at: string
+              article_source_url: string
+              constituency: string
+              content_type: string
+              mp_name: string
+              mp_party: string
+              shared_content_id: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              story_cover_url: string
+              story_created_at: string
+              story_id: string
+              story_is_parliamentary: boolean
+              story_is_published: boolean
+              story_status: string
+              story_title: string
+            }[]
+          }
       get_topic_visitor_stats: {
         Args: { p_topic_id: string }
         Returns: {
