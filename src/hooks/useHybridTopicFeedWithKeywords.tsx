@@ -289,9 +289,218 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     }
   }, [slug]);
 
+  const loadStoriesFromPublicFeed = useCallback(
+    async (topicData: Topic, pageNum: number = 0, append: boolean = false) => {
+      const topicSlug = topicData.slug || slug;
+      if (!topicSlug) {
+        throw new Error('Topic slug unavailable for legacy feed fallback');
+      }
+
+      try {
+        const from = pageNum * STORIES_PER_PAGE;
+        console.log('🛟 Fallback: Loading stories via get_public_topic_feed', {
+          topicSlug,
+          pageNum,
+          from
+        });
+
+        const { data: storiesData, error } = await supabase.rpc('get_public_topic_feed', {
+          topic_slug_param: topicSlug,
+          p_limit: STORIES_PER_PAGE,
+          p_offset: from,
+          p_sort_by: 'newest'
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!storiesData || storiesData.length === 0) {
+          if (!append) {
+            setAllStories([]);
+            setAllContent([]);
+            setFilteredContent([]);
+          }
+          setHasMore(false);
+          return true;
+        }
+
+        const uniqueStoriesMap = new Map<string, any>();
+        storiesData.forEach((story: any) => {
+          if (story?.id && !uniqueStoriesMap.has(story.id)) {
+            uniqueStoriesMap.set(story.id, story);
+          }
+        });
+
+        const deduplicatedStories = Array.from(uniqueStoriesMap.values());
+        const storyIds = deduplicatedStories.map((story: any) => story.id).filter(Boolean);
+
+        let slidesData: any[] = [];
+        if (storyIds.length > 0) {
+          const { data: slides, error: slidesError } = await supabase.rpc('get_public_slides_for_stories', {
+            p_story_ids: storyIds
+          });
+
+          if (slidesError) {
+            console.warn('⚠️ Fallback: Failed to load slides via RPC, attempting direct query', slidesError);
+            const { data: fallbackSlides, error: fallbackError } = await supabase
+              .from('slides')
+              .select('id,story_id,slide_number,content,word_count')
+              .in('story_id', storyIds)
+              .order('slide_number', { ascending: true });
+
+            if (fallbackError) {
+              throw fallbackError;
+            }
+
+            slidesData = fallbackSlides || [];
+          } else {
+            slidesData = slides || [];
+          }
+        }
+
+        const transformedStories: Story[] = deduplicatedStories.map((story: any) => {
+          const storySlides = (slidesData || [])
+            .filter((slide: any) => slide.story_id === story.id)
+            .map((slide: any) => ({
+              id: slide.id,
+              slide_number: slide.slide_number,
+              content: slide.content,
+              word_count: slide.word_count || 0
+            }));
+
+          return {
+            id: story.id,
+            title: story.title,
+            author: story.author || 'Unknown',
+            publication_name: story.publication_name || '',
+            created_at: story.created_at,
+            updated_at: story.updated_at,
+            cover_illustration_url: story.cover_illustration_url,
+            cover_illustration_prompt: story.cover_illustration_prompt,
+            slides: storySlides,
+            is_parliamentary: false,
+            mp_name: undefined,
+            mp_names: [],
+            article: {
+              source_url: story.article_source_url || '#',
+              published_at: story.article_published_at || story.created_at,
+              region: topicData.region || 'Unknown'
+            }
+          };
+        });
+
+        const storyContent: FeedContent[] = transformedStories.map(story => ({
+          type: 'story',
+          id: story.id,
+          content_date: story.article.published_at || story.created_at,
+          data: story
+        }));
+
+        let parliamentaryMentions: ParliamentaryMention[] = [];
+        if (
+          topicData.topic_type === 'regional' &&
+          topicData.parliamentary_tracking_enabled &&
+          pageNum === 0
+        ) {
+          try {
+            const { data: mentionsData, error: mentionsError } = await supabase
+              .from('parliamentary_mentions')
+              .select('*')
+              .eq('topic_id', topicData.id)
+              .gte('relevance_score', 30)
+              .order('created_at', { ascending: false })
+              .limit(20);
+
+            if (!mentionsError && mentionsData) {
+              parliamentaryMentions = mentionsData;
+            }
+          } catch (error) {
+            console.warn('⚠️ Fallback: Failed to load parliamentary mentions:', error);
+          }
+        }
+
+        const parliamentaryContent: FeedContent[] = parliamentaryMentions.map(mention => ({
+          type: 'parliamentary_mention' as const,
+          id: mention.id,
+          content_date: mention.vote_date || mention.debate_date || mention.created_at,
+          data: mention
+        }));
+
+        const mergedContent = [...storyContent, ...parliamentaryContent]
+          .filter(item => !!item?.id)
+          .reduce<Map<string, FeedContent>>((acc, item) => {
+            if (!acc.has(item.id)) {
+              acc.set(item.id, item);
+            }
+            return acc;
+          }, new Map())
+          .values();
+
+        const orderedContent = Array.from(mergedContent).sort((a, b) => {
+          const aTime = new Date(a.content_date).getTime();
+          const bTime = new Date(b.content_date).getTime();
+          return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+        });
+
+        if (append) {
+          setAllStories(prev => {
+            const combined = [...prev, ...transformedStories];
+            const map = new Map<string, Story>();
+            combined.forEach(item => {
+              if (!map.has(item.id)) {
+                map.set(item.id, item);
+              }
+            });
+            return Array.from(map.values());
+          });
+
+          setAllContent(prev => {
+            const map = new Map<string, FeedContent>();
+            [...prev, ...storyContent].forEach(item => {
+              if (!map.has(item.id)) {
+                map.set(item.id, item);
+              }
+            });
+            return Array.from(map.values()).sort((a, b) => {
+              const aTime = new Date(a.content_date).getTime();
+              const bTime = new Date(b.content_date).getTime();
+              return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+            });
+          });
+
+          setFilteredContent(prev => {
+            const map = new Map<string, FeedContent>();
+            [...prev, ...storyContent].forEach(item => {
+              if (!map.has(item.id)) {
+                map.set(item.id, item);
+              }
+            });
+            return Array.from(map.values()).sort((a, b) => {
+              const aTime = new Date(a.content_date).getTime();
+              const bTime = new Date(b.content_date).getTime();
+              return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+            });
+          });
+        } else {
+          setAllStories(transformedStories);
+          setAllContent(orderedContent);
+          setFilteredContent(orderedContent);
+        }
+
+        setHasMore(deduplicatedStories.length === STORIES_PER_PAGE);
+        return true;
+      } catch (error) {
+        console.error('❌ Legacy public feed fallback failed:', error);
+        throw error;
+      }
+    },
+    [slug]
+  );
+
   const loadStories = useCallback(async (
-    topicData: any, 
-    pageNum: number = 0, 
+    topicData: any,
+    pageNum: number = 0,
     append: boolean = false,
     keywords: string[] | null = null,
     sources: string[] | null = null
@@ -358,14 +567,26 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       // PHASE 2: If RPC failed, fall back to client-side filtering
       if (rpcError) {
-        console.error('🚨 Phase 2: RPC failed, falling back to client-side filtering:', rpcError);
-        
+        console.error('🚨 Phase 2: RPC failed, falling back strategies triggered:', rpcError);
+
+        if (!keywords && !sources) {
+          try {
+            const fallbackSucceeded = await loadStoriesFromPublicFeed(topicData, pageNum, append);
+            if (fallbackSucceeded) {
+              console.log('🛟 Phase 2: Legacy public feed fallback succeeded');
+              return;
+            }
+          } catch (fallbackError) {
+            console.error('❌ Phase 2: Legacy fallback failed:', fallbackError);
+          }
+        }
+
         if (!append && allContent.length > 0) {
           // Apply client-side filtering to existing loaded content
           console.log('🔄 Phase 2: Using client-side filtering on existing content');
           const filtered = applyClientSideFiltering(
-            allContent, 
-            keywords || [], 
+            allContent,
+            keywords || [],
             sources || [],
             []
           );
@@ -776,7 +997,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setLoadingMore(false);
       setIsServerFiltering(false);
     }
-  }, [slug]);
+  }, [slug, loadStoriesFromPublicFeed]);
 
   const extractDomain = useCallback((url?: string | null) => {
     if (!url) return null;
