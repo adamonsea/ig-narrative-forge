@@ -6,7 +6,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { RefreshCw, Loader2, AlertCircle, CheckCircle, ExternalLink, Trash2, Zap, Bot, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -354,17 +353,35 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
 
   // Function to highlight whole keywords in text
   const highlightKeywords = (text: string, keywords: string[]) => {
-    if (!text || !keywords.length) return text;
-    
-    let highlightedText = text;
+    if (!text) return '';
+
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    let highlightedText = escapeHtml(text);
+
+    if (!keywords.length) {
+      return highlightedText;
+    }
+
     keywords.forEach(keyword => {
       if (keyword && keyword.trim()) {
-        // Use word boundaries to match whole words only
-        const regex = new RegExp(`\\b(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
-        highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const useWordBoundaries = /^[\w-]+$/.test(keyword.trim());
+        const boundary = useWordBoundaries ? '\\b' : '';
+        const regex = new RegExp(`${boundary}(${escapedKeyword})${boundary}`, 'gi');
+        highlightedText = highlightedText.replace(
+          regex,
+          '<mark class="bg-yellow-200 px-1 rounded">$1</mark>'
+        );
       }
     });
-    
+
     return highlightedText;
   };
 
@@ -636,10 +653,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           <div className="space-y-4">
             {previewArticle?.body && (
               <div className="prose max-w-none">
-                <Textarea
-                  value={previewArticle.body}
-                  readOnly
-                  className="min-h-[300px] font-mono text-sm"
+                <div
+                  className="min-h-[300px] whitespace-pre-wrap font-mono text-sm leading-relaxed border rounded-md p-4 bg-muted/30"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightKeywords(previewArticle.body, currentTopicKeywords)
+                  }}
                 />
               </div>
             )}
