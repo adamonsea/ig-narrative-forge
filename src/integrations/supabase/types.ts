@@ -3977,6 +3977,31 @@ export type Database = {
             Args: {
               p_keywords?: string[]
               p_limit?: number
+              p_offset?: number
+              p_sources?: string[]
+              p_topic_slug: string
+            }
+            Returns: {
+              article_id: string
+              article_published_at: string
+              article_source_url: string
+              content_type: string
+              shared_content_id: string
+              slide_content: string
+              slide_id: string
+              slide_number: number
+              story_cover_url: string
+              story_created_at: string
+              story_id: string
+              story_is_published: boolean
+              story_status: string
+              story_title: string
+            }[]
+          }
+        | {
+            Args: {
+              p_keywords?: string[]
+              p_limit?: number
               p_mp_names?: string[]
               p_offset?: number
               p_source_domains?: string[]
