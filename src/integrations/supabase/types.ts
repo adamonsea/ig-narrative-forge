@@ -2245,6 +2245,7 @@ export type Database = {
           article_id: string | null
           audience_expertise: string | null
           author: string | null
+          constituency: string | null
           cover_illustration_prompt: string | null
           cover_illustration_url: string | null
           created_at: string
@@ -2253,6 +2254,8 @@ export type Database = {
           is_parliamentary: boolean | null
           is_published: boolean
           last_quality_check: string | null
+          mp_name: string | null
+          mp_party: string | null
           publication_name: string | null
           quality_score: number | null
           selected_cover_id: string | null
@@ -2269,6 +2272,7 @@ export type Database = {
           article_id?: string | null
           audience_expertise?: string | null
           author?: string | null
+          constituency?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
           created_at?: string
@@ -2277,6 +2281,8 @@ export type Database = {
           is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
+          mp_name?: string | null
+          mp_party?: string | null
           publication_name?: string | null
           quality_score?: number | null
           selected_cover_id?: string | null
@@ -2293,6 +2299,7 @@ export type Database = {
           article_id?: string | null
           audience_expertise?: string | null
           author?: string | null
+          constituency?: string | null
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
           created_at?: string
@@ -2301,6 +2308,8 @@ export type Database = {
           is_parliamentary?: boolean | null
           is_published?: boolean
           last_quality_check?: string | null
+          mp_name?: string | null
+          mp_party?: string | null
           publication_name?: string | null
           quality_score?: number | null
           selected_cover_id?: string | null
