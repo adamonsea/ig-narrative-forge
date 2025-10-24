@@ -883,7 +883,10 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
           title: sharedContent.title,
           status: 'published',
           is_published: true,
-          is_parliamentary: true, // FLAG PARLIAMENTARY STORIES
+          is_parliamentary: true,
+          mp_name: vote.mpName,
+          mp_party: vote.mpParty,
+          constituency: vote.constituency,
           audience_expertise: 'general',
           tone: 'formal',
           writing_style: 'journalistic'
@@ -1063,6 +1066,10 @@ async function createWeeklyRoundup(
         title: sharedContent.title,
         status: 'ready',
         is_published: true,
+        is_parliamentary: true,
+        mp_name: 'Multiple MPs',
+        mp_party: 'Various',
+        constituency: region,
         audience_expertise: 'general',
         tone: 'formal',
         writing_style: 'journalistic'

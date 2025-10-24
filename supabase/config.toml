@@ -157,6 +157,9 @@ verify_jwt = false
 [functions.parliamentary-weekly-backfill]
 verify_jwt = false
 
+[functions.backfill-parliamentary-metadata]
+verify_jwt = false
+
 [functions.select-story-cover]
 verify_jwt = true
 
