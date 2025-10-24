@@ -563,9 +563,16 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     if (parliamentaryLayoutVariant === 2) {
       if (slideIndex === 0) {
         return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col gap-4 justify-center`}>
-            <p className={headerAccentClass}>Parliamentary vote</p>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight text-balance">{lines[0]}</h1>
+          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col gap-6 justify-center`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold ${partyColors.pill}`}>
+                {mpInitials}
+              </div>
+              <div>
+                <p className={headerAccentClass}>Parliamentary vote</p>
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-balance">{lines[0]}</h1>
+              </div>
+            </div>
             {lines[1] && <p className="text-sm text-muted-foreground">{lines[1]}</p>}
             {lines[2] && <p className="text-2xl md:text-3xl font-medium text-foreground text-balance">{lines[2]}</p>}
           </div>
