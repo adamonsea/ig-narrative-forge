@@ -971,45 +971,53 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
           <div className={`p-4 border-b feed-card-header ${isParliamentaryStory ? partyColors.header : ''}`}>
-            <div className="flex flex-col gap-2">
-              {/* Top Row: Badges and Slide Counter */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 flex-wrap flex-1">
-                  {isParliamentaryStory ? (
-                    <>
-                      <Badge className={`text-[10px] uppercase tracking-[0.3em] rounded-full ${partyColors.chip}`}>
-                        Parliament
-                      </Badge>
-                      {(story as any).mp_party && (
-                        <span className={`text-xs font-semibold ${partyColors.accentText}`}>
-                          {(story as any).mp_party}
-                        </span>
-                      )}
-                      {storyBadges}
-                    </>
-                  ) : (
-                    <>
-                      {teaserBadge}
-                      {storyBadges}
-                    </>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  {isParliamentaryStory && (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${partyColors.pill}`}>
+                      {mpInitials}
+                    </div>
                   )}
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {teaserBadge}
+                      {isParliamentaryStory ? (
+                        <>
+                          <Badge className={`text-[10px] uppercase tracking-[0.3em] rounded-full ${partyColors.chip}`}>
+                            Parliament
+                          </Badge>
+                          {(story as any).mp_party && (
+                            <span className={`text-xs font-semibold ${partyColors.accentText}`}>
+                              {(story as any).mp_party}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        storyBadges
+                      )}
+                    </div>
+                    {isParliamentaryStory && (
+                      <>
+                        <h2 className="text-base font-semibold text-foreground leading-tight text-balance">
+                          {story.title}
+                        </h2>
+                        <p className="text-xs text-muted-foreground text-balance">
+                          {mpName}
+                          {constituency ? ` • ${constituency}` : ''}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground shrink-0">
+                <span className="text-sm text-muted-foreground">
                   {currentSlideIndex + 1} of {validSlides.length}
                 </span>
               </div>
-
-              {/* Story Title */}
-              <h2 className="text-base font-semibold text-foreground leading-tight text-balance">
-                {story.title}
-              </h2>
-
-              {/* MP Details - Parliamentary Stories Only */}
-              {isParliamentaryStory && (
-                <p className="text-xs text-muted-foreground text-balance">
-                  {mpName}
-                  {constituency ? ` • ${constituency}` : ''}
-                </p>
+              {isParliamentaryStory && storyBadges.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {storyBadges}
+                </div>
               )}
             </div>
           </div>
