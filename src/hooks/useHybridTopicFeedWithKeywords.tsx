@@ -362,6 +362,31 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         }
 
+        // Enrich with parliamentary metadata from stories table
+        let parliamentaryMetaMap = new Map<string, any>();
+        if (storyIds.length > 0) {
+          try {
+            const { data: metaData, error: metaError } = await supabase
+              .from('stories')
+              .select('id, is_parliamentary, mp_name, mp_party, constituency')
+              .in('id', storyIds);
+            
+            if (!metaError && metaData) {
+              metaData.forEach((meta: any) => {
+                parliamentaryMetaMap.set(meta.id, {
+                  is_parliamentary: meta.is_parliamentary,
+                  mp_name: meta.mp_name,
+                  mp_party: meta.mp_party,
+                  constituency: meta.constituency
+                });
+              });
+              console.debug('🏛️ Fallback: Enriched', metaData.length, 'stories with parliamentary metadata');
+            }
+          } catch (error) {
+            console.warn('⚠️ Fallback: Failed to enrich parliamentary metadata:', error);
+          }
+        }
+
         const transformedStories: Story[] = deduplicatedStories.map((story: any) => {
           const storySlides = (slidesData || [])
             .filter((slide: any) => slide.story_id === story.id)
@@ -371,6 +396,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
               content: slide.content,
               word_count: slide.word_count || 0
             }));
+
+          const meta = parliamentaryMetaMap.get(story.id);
+          const isParliamentary = meta?.is_parliamentary || !!(meta?.mp_name || meta?.mp_party || meta?.constituency);
 
           return {
             id: story.id,
@@ -382,9 +410,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             cover_illustration_url: story.cover_illustration_url,
             cover_illustration_prompt: story.cover_illustration_prompt,
             slides: storySlides,
-            is_parliamentary: false,
-            mp_name: undefined,
-            mp_names: [],
+            is_parliamentary: isParliamentary,
+            mp_name: meta?.mp_name,
+            mp_names: meta?.mp_name ? [meta.mp_name] : [],
+            mp_party: meta?.mp_party,
+            constituency: meta?.constituency,
             article: {
               source_url: story.article_source_url || '#',
               published_at: story.article_published_at || story.created_at,
@@ -392,6 +422,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             }
           };
         });
+
+        const parliamentaryCount = transformedStories.filter(s => s.is_parliamentary).length;
+        if (parliamentaryCount > 0) {
+          console.debug(`🏛️ Fallback: ${parliamentaryCount}/${transformedStories.length} stories marked as parliamentary`);
+        }
 
         const storyContent: FeedContent[] = transformedStories.map(story => ({
           type: 'story',
@@ -784,6 +819,31 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       }
 
+      // Defensive backfill: enrich with parliamentary metadata from stories table
+      let parliamentaryMetaMap = new Map<string, any>();
+      if (storyIdsForPopularity.length > 0) {
+        try {
+          const { data: metaData, error: metaError } = await supabase
+            .from('stories')
+            .select('id, is_parliamentary, mp_name, mp_party, constituency')
+            .in('id', storyIdsForPopularity);
+          
+          if (!metaError && metaData) {
+            metaData.forEach((meta: any) => {
+              parliamentaryMetaMap.set(meta.id, {
+                is_parliamentary: meta.is_parliamentary,
+                mp_name: meta.mp_name,
+                mp_party: meta.mp_party,
+                constituency: meta.constituency
+              });
+            });
+            console.debug('🏛️ Primary RPC: Enriched', metaData.length, 'stories with parliamentary metadata');
+          }
+        } catch (error) {
+          console.warn('⚠️ Primary RPC: Failed to enrich parliamentary metadata:', error);
+        }
+      }
+
       // Transform stories with slides data and popularity
       const transformedStories = pageUniqueStories.map((story: any) => {
         // Sort slides by slide_number and remove slideIds tracking property
@@ -815,6 +875,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
         }
           
+        // Backfill missing parliamentary data from stories table
+        const meta = parliamentaryMetaMap.get(story.id);
+        const isParliamentaryFromRPC = !!story.is_parliamentary;
+        const mpNameFinal = story.mp_name || meta?.mp_name;
+        const mpPartyFinal = story.mp_party || meta?.mp_party;
+        const constituencyFinal = story.constituency || meta?.constituency;
+        
+        // Safety heuristic: set is_parliamentary true if RPC says so OR if MP metadata exists
+        const isParliamentaryFinal = isParliamentaryFromRPC || 
+          meta?.is_parliamentary || 
+          !!(mpNameFinal || mpPartyFinal || constituencyFinal);
+
         return {
           id: story.id,
           title: story.title,
@@ -826,13 +898,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           cover_illustration_prompt: '',
           popularity_data: popularityMap.get(story.id),
           slides: sortedSlides,
-          is_parliamentary: !!story.is_parliamentary,
-          mp_name: story.mp_name,
+          is_parliamentary: isParliamentaryFinal,
+          mp_name: mpNameFinal,
           mp_names: Array.from((story.mp_names || new Set<string>()) as Set<string>)
             .map(n => normalizeMPName(n))
             .filter((n): n is string => !!n),
-          mp_party: story.mp_party,
-          constituency: story.constituency,
+          mp_party: mpPartyFinal,
+          constituency: constituencyFinal,
           article: {
             source_url: story.article_source_url || '#',
             published_at: story.article_published_at,
@@ -840,6 +912,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
         };
       });
+
+      const parliamentaryCount = transformedStories.filter(s => s.is_parliamentary).length;
+      if (parliamentaryCount > 0) {
+        console.debug(`🏛️ Primary RPC: ${parliamentaryCount}/${transformedStories.length} stories marked as parliamentary`);
+      }
 
       // Fetch parliamentary mentions if enabled for regional topics
       let parliamentaryMentions: ParliamentaryMention[] = [];
