@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, startOfWeek } from "date-fns";
 import RoundupCarousel from "@/components/RoundupCarousel";
+import { RoundupSEO } from "@/components/seo/RoundupSEO";
 
 interface Topic {
   id: string;
@@ -134,27 +135,35 @@ const WeeklyRoundup = () => {
   }
 
   return (
-    <div className="min-h-screen feed-background">
-      <div className="max-w-lg mx-auto">
-        {/* Sticky Header with Back Button */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b p-4">
-          <Button variant="outline" asChild>
-            <Link to={`/feed/${slug}`}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to {topic.name}
-            </Link>
-          </Button>
+    <>
+      <RoundupSEO 
+        roundup={roundup}
+        topicName={topic.name}
+        topicSlug={slug!}
+      />
+      
+      <div className="min-h-screen feed-background">
+        <div className="max-w-lg mx-auto">
+          {/* Sticky Header with Back Button */}
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b p-4">
+            <Button variant="outline" asChild>
+              <Link to={`/feed/${slug}`}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to {topic.name}
+              </Link>
+            </Button>
+          </div>
+          
+          <RoundupCarousel 
+            roundup={roundup}
+            topicId={topic.id}
+            topicName={topic.name}
+            topicSlug={slug!}
+            roundupType="weekly"
+          />
         </div>
-        
-        <RoundupCarousel 
-          roundup={roundup}
-          topicId={topic.id}
-          topicName={topic.name}
-          topicSlug={slug!}
-          roundupType="weekly"
-        />
       </div>
-    </div>
+    </>
   );
 };
 
