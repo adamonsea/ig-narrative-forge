@@ -94,7 +94,7 @@ const TopicFeed = () => {
   }, [isModalOpen, ensureFilterStoryIndexLoaded]);
 
   // Track visitor for analytics
-  useVisitorTracking(topic?.id);
+  const visitorId = useVisitorTracking(topic?.id);
 
   // Check if user already has notifications enabled for this topic
   useEffect(() => {
@@ -436,6 +436,8 @@ const TopicFeed = () => {
                 <DonationButton
                   onClick={() => setShowDonationModal(true)}
                   buttonText={topic.donation_config.button_text || "Support"}
+                  topicId={topic.id}
+                  visitorId={visitorId}
                 />
               )}
 

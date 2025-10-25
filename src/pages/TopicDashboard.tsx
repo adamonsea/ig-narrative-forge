@@ -39,11 +39,12 @@ interface TopicDashboardStats {
   pending_articles: number;
   processing_queue: number;
   ready_stories: number;
-  arrivals_count: number;
   simplified_stories_24h: number;
   sentiment_cards: number;
   notifications_enabled?: number;
   pwa_installs?: number;
+  donation_button_clicks?: number;
+  donation_modal_opens?: number;
 }
 
 interface Topic {
@@ -94,7 +95,6 @@ const TopicDashboard = () => {
     pending_articles: 0,
     processing_queue: 0,
     ready_stories: 0,
-    arrivals_count: 0,
     simplified_stories_24h: 0,
     sentiment_cards: 0
   });
@@ -234,6 +234,19 @@ const TopicDashboard = () => {
         { p_topic_id: topicData.id }
       );
 
+      // Get donation interaction stats
+      const { count: donationButtonClicks } = await supabase
+        .from('story_interactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('interaction_type', 'donation_button_clicked');
+
+      const { count: donationModalOpens } = await supabase
+        .from('story_interactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('interaction_type', 'donation_modal_opened');
+
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
@@ -241,11 +254,12 @@ const TopicDashboard = () => {
         pending_articles: pendingArticlesRes.count || 0,
         processing_queue: queueRes.count || 0,
         ready_stories: readyStoriesRes.count || 0,
-        arrivals_count: arrivalsRes.count || 0,
         simplified_stories_24h: simplifiedRes.count || 0,
         sentiment_cards: sentimentRes.count || 0,
         notifications_enabled: Number(engagementStats?.[0]?.notifications_enabled || 0),
         pwa_installs: Number(engagementStats?.[0]?.pwa_installs || 0),
+        donation_button_clicks: donationButtonClicks || 0,
+        donation_modal_opens: donationModalOpens || 0,
       });
 
     } catch (error) {
@@ -590,10 +604,10 @@ const TopicDashboard = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <Database className="h-5 w-5 text-blue-500" />
+                    <Activity className="h-5 w-5 text-green-500" />
                     <div>
-                      <div className="text-2xl font-bold text-blue-500">{stats.arrivals_count}</div>
-                      <p className="text-sm text-muted-foreground">Articles in Arrivals</p>
+                      <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
+                      <p className="text-sm text-muted-foreground">Stories Simplified (24h)</p>
                     </div>
                   </div>
                 </CardContent>
@@ -602,10 +616,10 @@ const TopicDashboard = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-green-500" />
+                    <MessageCircle className="h-5 w-5 text-purple-500" />
                     <div>
-                      <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
-                      <p className="text-sm text-muted-foreground">Stories Simplified (24h)</p>
+                      <div className="text-2xl font-bold text-purple-500">{stats.sentiment_cards}</div>
+                      <p className="text-sm text-muted-foreground">Sentiment Cards</p>
                     </div>
                   </div>
                 </CardContent>
@@ -645,26 +659,6 @@ const TopicDashboard = () => {
                     <div>
                       <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
                       <p className="text-sm text-muted-foreground">Available Stories</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card 
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => {
-                  setActiveTab("content-flow");
-                  setTimeout(() => {
-                    document.getElementById('sentiment-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 100);
-                }}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <div className="text-2xl font-bold text-purple-500">{stats.sentiment_cards}</div>
-                      <p className="text-sm text-muted-foreground">Sentiment Cards (click to view)</p>
                     </div>
                   </div>
                 </CardContent>
@@ -713,7 +707,7 @@ const TopicDashboard = () => {
                 <CardTitle className="text-sm font-medium">User Engagement</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <div className="text-2xl font-bold">{stats.notifications_enabled || 0}</div>
                     <p className="text-xs text-muted-foreground">Notifications Enabled</p>
@@ -722,6 +716,18 @@ const TopicDashboard = () => {
                     <div className="text-2xl font-bold">{stats.pwa_installs || 0}</div>
                     <p className="text-xs text-muted-foreground">App Installs</p>
                   </div>
+                  {topic?.donation_enabled && (
+                    <>
+                      <div>
+                        <div className="text-2xl font-bold">{stats.donation_button_clicks || 0}</div>
+                        <p className="text-xs text-muted-foreground">Donate Button Clicks</p>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold">{stats.donation_modal_opens || 0}</div>
+                        <p className="text-xs text-muted-foreground">Donation Modals Opened</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

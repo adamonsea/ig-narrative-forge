@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 // Generate a visitor ID based on browser fingerprint and IP approximation
@@ -29,12 +29,19 @@ const generateVisitorId = (): string => {
 };
 
 export const useVisitorTracking = (topicId: string | undefined) => {
+  const [visitorId, setVisitorId] = useState<string>('');
+
   useEffect(() => {
-    if (!topicId) return;
+    // Generate visitor ID once on mount
+    const id = generateVisitorId();
+    setVisitorId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!topicId || !visitorId) return;
 
     const trackVisit = async () => {
       try {
-        const visitorId = generateVisitorId();
         const userAgent = navigator.userAgent;
         const referrer = document.referrer;
 
@@ -53,5 +60,7 @@ export const useVisitorTracking = (topicId: string | undefined) => {
     // Track visit after a short delay to ensure page has loaded
     const timer = setTimeout(trackVisit, 1000);
     return () => clearTimeout(timer);
-  }, [topicId]);
+  }, [topicId, visitorId]);
+
+  return visitorId;
 };
