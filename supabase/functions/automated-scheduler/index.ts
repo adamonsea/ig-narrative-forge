@@ -298,8 +298,8 @@ serve(async (req) => {
       }
     }
 
-    // Weekly Roundup: 9 AM (09:00) on Sunday
-    if (hour === 9 && dayOfWeek === 0) {
+    // Weekly Roundup: 6 AM (06:00) on Sunday (aligned with morning cron job)
+    if (hour === 6 && dayOfWeek === 0) {
       console.log('📅 Triggering weekly roundup generation...');
       try {
         const { data: topics } = await supabase
