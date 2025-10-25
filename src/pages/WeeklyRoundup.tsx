@@ -62,14 +62,15 @@ const WeeklyRoundup = () => {
 
         // Parse week start date
         const weekStartDate = parseISO(weekStart);
-        const weekStartISO = startOfWeek(weekStartDate, { weekStartsOn: 1 }).toISOString();
+        const weekStartFormatted = format(startOfWeek(weekStartDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
         const { data: roundupData, error: roundupError } = await supabase
           .from('topic_roundups')
           .select('*')
           .eq('topic_id', topicData.id)
           .eq('roundup_type', 'weekly')
-          .eq('period_start', weekStartISO)
+          .gte('period_start', `${weekStartFormatted}T00:00:00Z`)
+          .lt('period_start', `${weekStartFormatted}T23:59:59.999Z`)
           .eq('is_published', true)
           .maybeSingle();
 
