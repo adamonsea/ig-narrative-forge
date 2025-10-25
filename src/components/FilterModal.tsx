@@ -157,7 +157,11 @@ export const FilterModal = ({
                           if (type === 'keyword') onKeywordToggle(keyword);
                           else if (type === 'landmark') onLandmarkToggle?.(keyword);
                           else onOrganizationToggle?.(keyword);
-                          onClose();
+                          
+                          // Delay close to ensure state update completes
+                          setTimeout(() => {
+                            onClose();
+                          }, 50);
                         };
 
                         // Use blue for keywords and organizations, emerald for landmarks
@@ -234,7 +238,11 @@ export const FilterModal = ({
                             key={source_domain}
                             onClick={() => {
                               onSourceToggle(source_domain);
-                              onClose();
+                              
+                              // Delay close to ensure state update completes
+                              setTimeout(() => {
+                                onClose();
+                              }, 50);
                             }}
                             className={cn(
                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
