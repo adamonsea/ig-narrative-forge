@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 // Force cache refresh
 
 interface Story {
@@ -865,10 +866,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             {/* Cover Illustration - Full card width */}
             <div className="relative w-full h-80 md:h-96 overflow-hidden">
               <img
-                src={story.cover_illustration_url}
+                src={optimizeImageUrl(story.cover_illustration_url, { 
+                  width: 800, 
+                  height: 600, 
+                  quality: 85 
+                }) || story.cover_illustration_url}
                 alt={`Cover illustration for ${story.title}`}
                 className="w-full h-full object-cover"
-                style={{ imageRendering: 'crisp-edges' }}
+                loading="lazy"
               />
             </div>
             
