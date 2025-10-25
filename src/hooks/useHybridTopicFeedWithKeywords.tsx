@@ -91,7 +91,7 @@ interface FilterStoryIndexEntry {
 }
 
 const STORIES_PER_PAGE = 10;
-const DEBOUNCE_DELAY_MS = 500;
+const DEBOUNCE_DELAY_MS = 0;
 
 // Enhanced Story interface to include parliamentary mentions
 interface FeedContent {

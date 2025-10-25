@@ -157,6 +157,7 @@ export const FilterModal = ({
                           if (type === 'keyword') onKeywordToggle(keyword);
                           else if (type === 'landmark') onLandmarkToggle?.(keyword);
                           else onOrganizationToggle?.(keyword);
+                          onClose();
                         };
 
                         // Use blue for keywords and organizations, emerald for landmarks
@@ -231,7 +232,10 @@ export const FilterModal = ({
                         return (
                           <button
                             key={source_domain}
-                            onClick={() => onSourceToggle(source_domain)}
+                            onClick={() => {
+                              onSourceToggle(source_domain);
+                              onClose();
+                            }}
                             className={cn(
                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
                             "hover:scale-105 active:scale-95",
