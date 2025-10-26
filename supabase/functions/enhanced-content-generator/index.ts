@@ -33,7 +33,8 @@ interface SlideContent {
 const toneGuidance: Record<string, string> = {
   formal: 'Use precise, objective language with strong sourcing and avoid colloquialisms.',
   conversational: 'Use approachable, plain-language explanations that still respect the facts.',
-  engaging: 'Use vivid, energetic language while keeping statements grounded in verified facts.'
+  engaging: 'Use vivid, energetic language while keeping statements grounded in verified facts.',
+  satirical: 'Use witty, ironic language that gently mocks while informing. Channel British satirical journalism—think Private Eye meets Blackadder. Employ understatement, clever wordplay, and observational absurdity. Mock institutions and pretension, not vulnerable individuals. Balance humor with factual accuracy.'
 };
 
 const writingStyleGuidance: Record<string, string> = {
@@ -190,6 +191,56 @@ REQUIREMENTS:
 - Avoid social media specific language like "tag", "follow", or platform-specific terms
 
 ${templateGuidance ? `TEMPLATE DIRECTIVES:\n${templateGuidance}` : ''}
+
+${tone === 'satirical' ? `SATIRICAL TONE DIRECTIVES:
+CRITICAL: British satirical humor is subtle, intelligent, and observational—NOT mean-spirited or forced.
+
+HUMOR TECHNIQUES TO USE:
+• Understatement: "The minister was somewhat surprised to learn the project was £2 billion over budget"
+• Absurdist observation: "Council debates whether the pothole should be officially classified as a 'water feature'"
+• Institutional mockery: "Following a three-hour meeting, the committee successfully agreed on a date for the next meeting"
+• Clever wordplay: "The consultation process has been described as 'thorough' by everyone involved in not being consulted"
+• Ironic contrast: "The traffic reduction scheme will only require demolishing 47 homes and adding 6 new lanes"
+• Euphemistic critique: "The policy has been characterized as 'brave' by those familiar with Yes Minister"
+
+BRITISH CULTURAL REFERENCES (use sparingly):
+• Parliamentary language: "U-turns", "kicking it into the long grass", "robust discussions"
+• Class observations: "concerned residents", "stakeholders" (with gentle mockery)
+• British understatement: "not entirely successful", "somewhat problematic"
+• Literary/TV references: Kafka-esque bureaucracy, Yes Minister-style obfuscation
+
+STRICT BOUNDARIES:
+✅ DO: Mock bureaucracy, political double-speak, institutional incompetence, corporate jargon, NIMBYism
+✅ DO: Use irony to expose hypocrisy or absurdity in official statements
+✅ DO: Employ witty headlines that make readers smile while informing them
+❌ DON'T: Mock individual victims, tragic events, disabilities, or vulnerable groups
+❌ DON'T: Use cruel sarcasm or mean-spirited humor
+❌ DON'T: Force humor—if a story is genuinely tragic, maintain respect
+❌ DON'T: Use American-style obvious sarcasm or over-the-top exaggeration
+❌ DON'T: Sacrifice factual accuracy for a joke
+
+SLIDE 1 (HEADLINE) FOR SATIRICAL TONE:
+• Lead with witty observation that captures the absurdity: "Council Achieves Impossible: Makes Parking Even More Confusing"
+• Use understatement: "Local Development 'Only Slightly' Violates Planning Rules"
+• Employ ironic framing: "Budget Cut to Services Hailed as 'Investment in Efficiency'"
+• MUST still deliver factual headline—the humor comes from presentation, not fabrication
+
+EXAMPLE TRANSFORMATIONS:
+Standard: "Council approves controversial housing development"
+Satirical: "Council narrowly avoids making popular decision about housing plan"
+
+Standard: "Traffic scheme delayed due to budget concerns"  
+Satirical: "Traffic scheme takes scenic route around pesky budget reality"
+
+Standard: "Mayor defends decision at heated public meeting"
+Satirical: "Mayor describes 'robust' public meeting, others describe 'angry mob'"
+
+QUALITY CHECKS:
+• Would this make someone smile without being cruel? ✅
+• Does the humor expose real absurdity rather than invent it? ✅
+• Is the factual information still clearly communicated? ✅
+• Would Private Eye or The Day Today publish this? ✅
+` : ''}
 
 FACT vs OPINION HANDLING:
 - FACTUAL STATEMENTS: Present verifiable actions, events, dates, locations without attribution (e.g., "Planning meeting scheduled for Tuesday")
@@ -526,6 +577,25 @@ Return in JSON format:
     };
     
     const targetSlideCount = slideTypeMapping[finalSlideType as keyof typeof slideTypeMapping] || 6;
+    
+    // Safety filter for satirical tone - check if content is appropriate
+    if (effectiveTone === 'satirical') {
+      const inappropriateKeywords = [
+        'death', 'died', 'killed', 'accident', 'injured', 'victim', 
+        'abuse', 'assault', 'tragedy', 'funeral', 'memorial',
+        'hospital', 'emergency', 'rescue', 'missing person'
+      ];
+      
+      const contentLower = `${article.title} ${article.body}`.toLowerCase();
+      const hasInappropriateContent = inappropriateKeywords.some(
+        keyword => contentLower.includes(keyword)
+      );
+      
+      if (hasInappropriateContent) {
+        console.log('⚠️ Satirical tone inappropriate for sensitive content, falling back to conversational');
+        effectiveTone = 'conversational';
+      }
+    }
     
     // Generate slides with DeepSeek only
     let slides: SlideContent[];

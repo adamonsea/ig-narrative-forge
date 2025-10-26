@@ -4,7 +4,7 @@
  */
 
 export interface ContentGenerationSettings {
-  tone: 'formal' | 'conversational' | 'engaging';
+  tone: 'formal' | 'conversational' | 'engaging' | 'satirical';
   writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   audienceExpertise: 'beginner' | 'intermediate' | 'expert';
   slideCount: number;
@@ -20,7 +20,8 @@ export const enhancePromptWithSettings = (
   const toneInstructions = {
     formal: "Use formal, professional language with precise terminology. Maintain an authoritative and objective tone throughout.",
     conversational: "Write in a friendly, approachable tone as if speaking directly to the reader. Use natural language and relatable examples.",
-    engaging: "Use dynamic, compelling language that captures attention. Include rhetorical questions, vivid descriptions, and emotional hooks."
+    engaging: "Use dynamic, compelling language that captures attention. Include rhetorical questions, vivid descriptions, and emotional hooks.",
+    satirical: "Write with wit, irony, and gentle mockery inspired by British satirical journalism (Private Eye, The Day Today). Use understated humor, clever wordplay, and subtle absurdist observations. Channel the spirit of Blackadder's sardonic wit and Monty Python's intelligent absurdism. Mock institutions, bureaucracy, and pretension—not individuals or vulnerable groups. Balance genuine information delivery with humorous commentary that exposes absurdity. Use British cultural references where appropriate (parliamentary terminology, class observations, understatement). Maintain journalistic accuracy while presenting information through a satirical lens."
   };
 
   const styleInstructions = {

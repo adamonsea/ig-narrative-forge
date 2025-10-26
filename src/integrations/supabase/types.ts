@@ -4187,7 +4187,7 @@ export type Database = {
       app_role: "admin" | "user" | "superadmin"
       audience_expertise: "beginner" | "intermediate" | "expert"
       mp_detection_confidence: "high" | "medium" | "low"
-      tone_type: "formal" | "conversational" | "engaging"
+      tone_type: "formal" | "conversational" | "engaging" | "satirical"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4318,7 +4318,7 @@ export const Constants = {
       app_role: ["admin", "user", "superadmin"],
       audience_expertise: ["beginner", "intermediate", "expert"],
       mp_detection_confidence: ["high", "medium", "low"],
-      tone_type: ["formal", "conversational", "engaging"],
+      tone_type: ["formal", "conversational", "engaging", "satirical"],
     },
   },
 } as const

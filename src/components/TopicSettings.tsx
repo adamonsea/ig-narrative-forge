@@ -54,7 +54,7 @@ export const TopicSettings = ({
   onUpdate 
 }: TopicSettingsProps) => {
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
-  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging'>(currentTone || 'conversational');
+  const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
@@ -270,7 +270,7 @@ export const TopicSettings = ({
             <Label htmlFor="tone">
               Default Content Tone
             </Label>
-            <Select value={tone} onValueChange={(value: 'formal' | 'conversational' | 'engaging') => setTone(value)}>
+            <Select value={tone} onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical') => setTone(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -291,6 +291,12 @@ export const TopicSettings = ({
                   <div>
                     <div className="font-medium">Engaging</div>
                     <div className="text-xs text-muted-foreground">Dynamic, compelling</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="satirical">
+                  <div>
+                    <div className="font-medium">Satirical ⚡</div>
+                    <div className="text-xs text-muted-foreground">Witty, ironic British humor</div>
                   </div>
                 </SelectItem>
               </SelectContent>
