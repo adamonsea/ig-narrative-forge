@@ -529,10 +529,10 @@ Return in JSON format:
         .maybeSingle();
       
       if (topicData) {
-        topicExpertise = topicData.audience_expertise || audienceExpertise;
-        effectiveTone = topicData.default_tone || tone;
-        effectiveWritingStyle = topicData.default_writing_style || writingStyle;
-        console.log(`Using topic defaults: expertise=${topicExpertise}, tone=${effectiveTone}, style=${effectiveWritingStyle}`);
+        topicExpertise = audienceExpertise || topicData.audience_expertise;
+        effectiveTone = tone || topicData.default_tone;
+        effectiveWritingStyle = writingStyle || topicData.default_writing_style;
+        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}`);
       }
     }
 
