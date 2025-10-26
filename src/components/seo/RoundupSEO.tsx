@@ -22,20 +22,20 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
   const startDate = parseISO(roundup.period_start);
   const endDate = parseISO(roundup.period_end);
   
-  // Create title and description based on roundup type
+  // Create title and description based on briefing type
   const title = isWeekly
-    ? `${format(startDate, 'MMMM d')} - ${format(endDate, 'MMMM d, yyyy')} ${topicName} Weekly Roundup`
-    : `${format(startDate, 'MMMM d, yyyy')} ${topicName} Daily Roundup`;
+    ? `${format(startDate, 'MMMM d')} - ${format(endDate, 'MMMM d, yyyy')} ${topicName} Weekly Briefing`
+    : `${format(startDate, 'MMMM d, yyyy')} ${topicName} Daily Briefing`;
   
   const description = isWeekly
     ? `Catch up on ${storyCount} stories from ${topicName} this week (${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}). Your comprehensive weekly news digest.`
-    : `Today's ${topicName} news digest featuring ${storyCount} stories from ${format(startDate, 'MMMM d, yyyy')}. Stay informed with our daily roundup.`;
+    : `Today's ${topicName} news digest featuring ${storyCount} stories from ${format(startDate, 'MMMM d, yyyy')}. Stay informed with our daily briefing.`;
   
   const url = isWeekly
     ? `${window.location.origin}/feed/${topicSlug}/weekly/${format(startDate, 'yyyy-MM-dd')}`
     : `${window.location.origin}/feed/${topicSlug}/daily/${format(startDate, 'yyyy-MM-dd')}`;
   
-  // Structured data for the roundup
+  // Structured data for the briefing
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -83,7 +83,7 @@ export const RoundupSEO = ({ roundup, topicName, topicSlug }: RoundupSEOProps) =
         {
           "@type": "ListItem",
           "position": 3,
-          "name": isWeekly ? "Weekly Roundup" : "Daily Roundup",
+          "name": isWeekly ? "Weekly Briefing" : "Daily Briefing",
           "item": url
         }
       ]

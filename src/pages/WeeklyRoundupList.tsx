@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfWeek } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Filter } from "lucide-react";
+import { ArrowLeft, Filter, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoundupSEO } from "@/components/seo/RoundupSEO";
 import { FilterModal } from "@/components/FilterModal";
@@ -299,9 +299,9 @@ export default function WeeklyRoundupList() {
             Back to Feed
           </Button>
           <div className="text-center space-y-4">
-            <h1 className="text-3xl font-bold">Roundup Not Available</h1>
+            <h1 className="text-3xl font-bold">Briefing Not Available</h1>
             <p className="text-muted-foreground">
-              This weekly roundup doesn't exist or hasn't been published yet.
+              This weekly briefing doesn't exist or hasn't been published yet.
             </p>
           </div>
         </div>
@@ -350,12 +350,35 @@ export default function WeeklyRoundupList() {
             </Button>
           </div>
           
-          <div className="text-center">
-            <h1 className="text-2xl md:text-3xl font-bold mb-1">{startDate} - {endDate}</h1>
-            <p className="text-lg text-muted-foreground mb-1">{topic.name} Weekly Roundup</p>
-            <p className="text-sm text-muted-foreground">
-              {filteredStories.length} {filteredStories.length === 1 ? 'story' : 'stories'}
+          <div className="text-center space-y-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">
+              Weekly Briefing
             </p>
+            <h1 className="text-3xl md:text-4xl font-bold">{startDate} - {endDate}</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const shareUrl = `${window.location.origin}/feed/${slug}/weekly/${weekStart}`;
+                const shareText = `${topic.name} Weekly Briefing - ${startDate} - ${endDate}`;
+                if (navigator.share) {
+                  navigator.share({
+                    title: shareText,
+                    text: `${shareText} - ${filteredStories.length} ${filteredStories.length === 1 ? 'story' : 'stories'}`,
+                    url: shareUrl
+                  }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(shareUrl);
+                  toast({
+                    title: "Link copied",
+                    description: "Briefing link copied to clipboard",
+                  });
+                }
+              }}
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share {filteredStories.length} {filteredStories.length === 1 ? 'story' : 'stories'}
+            </Button>
           </div>
         </div>
       </div>
