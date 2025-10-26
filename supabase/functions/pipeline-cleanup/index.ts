@@ -77,16 +77,8 @@ serve(async (req) => {
           }
         }
 
-        // Check competing regions
-        if (!shouldDiscard && topic.competing_regions && topic.competing_regions.length > 0) {
-          for (const competingRegion of topic.competing_regions) {
-            if (fullText.includes(competingRegion.toLowerCase())) {
-              shouldDiscard = true;
-              discardReason = `Mentions competing region: ${competingRegion}`;
-              break;
-            }
-          }
-        }
+        // Competing regions now handled via weighted scoring in region-config.ts
+        // No binary rejection - rely on relevance score threshold
 
         // Also check for very low regional relevance scores
         if (!shouldDiscard && article.regional_relevance_score < 10) {

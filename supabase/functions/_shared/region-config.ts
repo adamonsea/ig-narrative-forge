@@ -23,6 +23,10 @@ export function calculateRegionalRelevance(
 ): number {
   if (!topicConfig || !topicConfig.keywords?.length) return 0;
 
+  // Extract content structure for context-aware analysis
+  const titleLower = title.toLowerCase();
+  const leadContent = content.substring(0, 500).toLowerCase(); // First 500 chars
+  const bodyContent = content.substring(500).toLowerCase(); // Remaining content
   const text = `${title} ${content}`.toLowerCase();
   let score = 0;
 
@@ -41,26 +45,44 @@ export function calculateRegionalRelevance(
     }
   }
 
-  // PHASE 1: Confidence-based competing regions detection
+  // Context-aware competing regions detection with weighted penalties
   const currentRegion = topicConfig.region_name.toLowerCase();
   
-  // Much more lenient competing region handling
   if (otherRegionalTopics?.length) {
-    const competingRegionMatches = otherRegionalTopics
-      .filter(other => other.region_name !== topicConfig.region_name)
-      .filter(other => {
-        const regionName = other.region_name.toLowerCase();
-        const regionRegex = new RegExp(`\\b${regionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-        return regionRegex.test(text) && 
-          !text.includes(`${regionName} to ${currentRegion}`) &&
-          !text.includes(`${currentRegion} to ${regionName}`) &&
-          !text.includes(`${currentRegion} and ${regionName}`) &&
-          !text.includes(`${regionName} and ${currentRegion}`);
-      }).length;
-
-    if (competingRegionMatches > 0) {
-      // PHASE 1: Light penalty for confidence scoring instead of rejection
-      score -= competingRegionMatches * 15; // Much lighter penalty (-15 vs -100)
+    for (const otherTopic of otherRegionalTopics) {
+      if (otherTopic.region_name === topicConfig.region_name) continue;
+      
+      const competingRegion = otherTopic.region_name.toLowerCase();
+      const regionRegex = new RegExp(`\\b${competingRegion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      
+      // Check title mentions (highest penalty)
+      const titleMatches = (titleLower.match(regionRegex) || []).length;
+      if (titleMatches > 0) {
+        score -= titleMatches * 45; // Very strong penalty for title
+        console.log(`⚠️ Title mentions competing region "${competingRegion}": -${titleMatches * 45}`);
+      }
+      
+      // Check lead content mentions (strong penalty)
+      const leadMatches = (leadContent.match(regionRegex) || []).length;
+      if (leadMatches > 0) {
+        score -= leadMatches * 30; // Strong penalty for lead
+        console.log(`⚠️ Lead mentions competing region "${competingRegion}": -${leadMatches * 30}`);
+      }
+      
+      // Check body mentions (graduated penalty based on context)
+      const bodyMatches = (bodyContent.match(regionRegex) || []).length;
+      if (bodyMatches > 0) {
+        // Check for comparison language
+        const hasComparisonContext = 
+          text.includes(`${currentRegion} to ${competingRegion}`) ||
+          text.includes(`${competingRegion} to ${currentRegion}`) ||
+          text.includes(`${currentRegion} and ${competingRegion}`) ||
+          text.includes(`compared to ${competingRegion}`);
+        
+        const bodyPenalty = hasComparisonContext ? 5 : 15; // Lighter penalty for comparison contexts
+        score -= bodyMatches * bodyPenalty;
+        console.log(`⚠️ Body mentions competing region "${competingRegion}" (${bodyMatches}x): -${bodyMatches * bodyPenalty}${hasComparisonContext ? ' (comparison context)' : ''}`);
+      }
     }
   }
 
@@ -180,6 +202,8 @@ export function calculateRegionalRelevance(
   // PHASE 1: Much more permissive bounds - trust source selection
   // Minimum score of 15 for any content from trusted sources (user-added sources)
   const confidenceScore = Math.max(15, Math.min(100, finalScore));
+  
+  console.log(`📊 Final score for "${title.substring(0, 30)}...": ${confidenceScore} (raw: ${finalScore})`);
   
   // Only return very low scores for content with strong negative signals
   return finalScore < -30 ? Math.max(-30, finalScore) : confidenceScore;

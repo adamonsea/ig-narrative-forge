@@ -177,16 +177,8 @@ serve(async (req) => {
         }
       }
 
-      // Check competing regions from topic configuration
-      if (!shouldDiscard && topicData.competing_regions && topicData.competing_regions.length > 0) {
-        for (const competingRegion of topicData.competing_regions) {
-          if (fullText.includes(competingRegion.toLowerCase())) {
-            shouldDiscard = true;
-            discardReason = `Mentions competing region: ${competingRegion}`;
-            break;
-          }
-        }
-      }
+      // Competing regions now handled via weighted scoring in region-config.ts
+      // No binary rejection - let the relevance score determine pass/fail
 
       // Check relevance threshold
       const threshold = getRelevanceThreshold(topicConfig.topic_type, sourceInfo.source_type || 'national');
@@ -217,7 +209,7 @@ serve(async (req) => {
           passed_relevance_threshold: true
         };
 
-        console.log(`✅ PASSED FILTER: "${article.title.substring(0, 50)}..." relevance: ${relevanceScore.relevance_score}%`);
+        console.log(`✅ PASSED FILTER: "${article.title.substring(0, 50)}..." | Relevance: ${relevanceScore.relevance_score}% | Method: ${relevanceScore.method}`);
         
         // Add detailed keyword matching debug info
         if (relevanceScore.method === 'keyword' && relevanceScore.details.keyword_matches) {
