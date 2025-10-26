@@ -998,11 +998,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   {currentSlideIndex + 1} of {validSlides.length}
                 </span>
               </div>
-              {isParliamentaryStory && storyBadges.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {storyBadges}
-                </div>
-              )}
             </div>
           </div>
 
