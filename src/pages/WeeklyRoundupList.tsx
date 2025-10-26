@@ -130,13 +130,7 @@ export default function WeeklyRoundupList() {
           const { data: storiesData, error: storiesError } = await supabase
             .from('stories')
             .select(`
-              id,
-              title,
-              author,
-              publication_name,
-              created_at,
-              is_published,
-              cover_illustration_url,
+              *,
               slides (
                 id,
                 slide_number,
@@ -144,13 +138,6 @@ export default function WeeklyRoundupList() {
                 word_count,
                 links,
                 alt_text
-              ),
-              article:topic_articles!inner (
-                shared_content:shared_content!inner (
-                  source_url,
-                  published_at,
-                  region
-                )
               )
             `)
             .in('id', roundupData.story_ids)
