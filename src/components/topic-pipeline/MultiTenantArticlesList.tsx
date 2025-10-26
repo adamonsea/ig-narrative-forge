@@ -307,7 +307,7 @@ export default function MultiTenantArticlesList({
               {/* Tone */}
               <Select
                 value={toneOverride}
-                onValueChange={(value: 'formal' | 'conversational' | 'engaging') => 
+                onValueChange={(value: 'formal' | 'conversational' | 'engaging' | 'satirical') => 
                   onToneOverrideChange(article.id, value)
                 }
               >
@@ -318,6 +318,7 @@ export default function MultiTenantArticlesList({
                   <SelectItem value="formal">Formal</SelectItem>
                   <SelectItem value="conversational">Conversational</SelectItem>
                   <SelectItem value="engaging">Engaging</SelectItem>
+                  <SelectItem value="satirical">Satirical ⚡</SelectItem>
                 </SelectContent>
               </Select>
 
