@@ -52,6 +52,9 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
   const [filterType, setFilterType] = useState<'all' | 'daily' | 'weekly' | 'rebellions' | 'major'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'rebellion' | 'category' | 'mp'>('date');
   const [isTopicOwner, setIsTopicOwner] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [lastCollectionAt, setLastCollectionAt] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -69,15 +72,95 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     try {
       const { data, error } = await supabase
         .from('topics')
-        .select('created_by')
+        .select('created_by, parliamentary_last_collection_at')
         .eq('id', topicId)
         .single();
       
       if (!error && data) {
         setIsTopicOwner(data.created_by === user.id);
+        setLastCollectionAt(data.parliamentary_last_collection_at);
       }
     } catch (error) {
       console.error('Error checking topic ownership:', error);
+    }
+  };
+
+  const validateCompleteness = async () => {
+    if (!isTopicOwner) return;
+    
+    setValidating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-parliamentary-completeness', {
+        body: { topicId, days: 30 }
+      });
+
+      if (error) throw error;
+      
+      setValidationResult(data);
+      toast({
+        title: "Validation Complete",
+        description: `${data.validation.completeness}% completeness - ${data.validation.missingVotes} missing votes detected`,
+      });
+    } catch (error) {
+      console.error('Validation error:', error);
+      toast({
+        title: "Validation Failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const triggerManualCollection = async () => {
+    if (!isTopicOwner) return;
+    
+    try {
+      toast({
+        title: "Triggering Collection",
+        description: "Fetching latest votes from Parliament...",
+      });
+
+      const { data: topic } = await supabase
+        .from('topics')
+        .select('region')
+        .eq('id', topicId)
+        .single();
+
+      if (!topic?.region) {
+        throw new Error('Topic region not configured');
+      }
+
+      const { error } = await supabase.functions.invoke('uk-parliament-collector', {
+        body: {
+          topicId,
+          region: topic.region,
+          mode: 'daily',
+          forceRefresh: true
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Collection Started",
+        description: "Refreshing votes... This may take a minute.",
+      });
+
+      // Refresh data after 5 seconds
+      setTimeout(() => {
+        checkTopicOwnership();
+        loadVotes();
+      }, 5000);
+
+    } catch (error) {
+      console.error('Manual collection error:', error);
+      toast({
+        title: "Collection Failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
     }
   };
 
@@ -385,6 +468,53 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
           </p>
         </div>
       </div>
+
+      {/* Monitoring & Validation Dashboard */}
+      {isTopicOwner && (
+        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-sm mb-1">📊 Data Monitoring</h4>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>Last Collection: {lastCollectionAt ? format(new Date(lastCollectionAt), 'MMM d, yyyy HH:mm') : 'Never'}</div>
+                  {validationResult && (
+                    <>
+                      <div>Completeness: {validationResult.validation.completeness}%</div>
+                      <div>Missing Votes: {validationResult.validation.missingVotes}</div>
+                      <div>Orphaned Votes: {validationResult.validation.orphanedVotes}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={validateCompleteness}
+                  disabled={validating}
+                >
+                  {validating ? 'Validating...' : 'Validate'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={triggerManualCollection}
+                >
+                  Refresh Now
+                </Button>
+              </div>
+            </div>
+            {validationResult && validationResult.recommendations.length > 0 && (
+              <div className="pt-2 border-t text-xs space-y-1">
+                <div className="font-medium">Recommendations:</div>
+                {validationResult.recommendations.map((rec: string, idx: number) => (
+                  <div key={idx} className="text-muted-foreground">• {rec}</div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tracked MPs Banner */}
       {trackedMPs.length > 0 && (

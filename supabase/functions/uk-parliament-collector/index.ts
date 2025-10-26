@@ -440,7 +440,7 @@ async function collectVotesForMP(
   const votes: VotingRecord[] = [];
   try {
     const divisionsResponse = await fetch(
-      `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.memberId=${mpId}&queryParameters.take=10`
+      `https://commonsvotes-api.parliament.uk/data/divisions.json/search?queryParameters.memberId=${mpId}&queryParameters.take=50`
     );
     
     if (!divisionsResponse.ok) {
@@ -450,9 +450,9 @@ async function collectVotesForMP(
     
     const divisionsData = await divisionsResponse.json();
     
-    // Filter to last 7 days (extended for better coverage)
+    // Filter to last 14 days (extended for better coverage and resilience to automation gaps)
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 7);
+    startDate.setDate(startDate.getDate() - 14);
     const endDate = new Date();
     
     console.log(`   Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
