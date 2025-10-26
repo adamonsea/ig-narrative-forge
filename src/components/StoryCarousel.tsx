@@ -1002,17 +1002,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                         storyBadges
                       )}
                     </div>
-                    {isParliamentaryStory && (
-                      <>
-                        <h2 className="text-base font-semibold text-foreground leading-tight text-balance">
-                          {story.title}
-                        </h2>
-                        <p className="text-xs text-muted-foreground text-balance">
-                          {mpName}
-                          {constituency ? ` • ${constituency}` : ''}
-                        </p>
-                      </>
-                    )}
                   </div>
                 </div>
                 <span className="text-sm text-muted-foreground">
