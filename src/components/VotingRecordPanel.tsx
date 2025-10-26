@@ -162,6 +162,20 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
     checkTopicOwnership();
     loadTrackedMPs();
     loadVotes();
+    
+    // Subscribe to new parliamentary mentions for real-time updates
+    const subscription = supabase
+      .channel(`parliamentary-votes-${topicId}`)
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'parliamentary_mentions', filter: `topic_id=eq.${topicId}` },
+        () => {
+          console.log('🔔 New parliamentary vote detected, refreshing...');
+          loadVotes();
+        }
+      )
+      .subscribe();
+    
+    return () => { subscription.unsubscribe(); };
   }, [topicId, filterType, sortBy, user]);
 
   const rebellionCount = votes.filter(v => v.is_rebellion && !v.is_weekly_roundup).length;

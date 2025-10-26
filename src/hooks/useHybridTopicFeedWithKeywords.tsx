@@ -885,7 +885,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // Safety heuristic: set is_parliamentary true if RPC says so OR if MP metadata exists
         const isParliamentaryFinal = isParliamentaryFromRPC || 
           meta?.is_parliamentary || 
-          !!(mpNameFinal || mpPartyFinal || constituencyFinal);
+          !!(mpNameFinal || mpPartyFinal || constituencyFinal) ||
+          // Additional heuristic: check if story title contains vote-related keywords
+          /voted (aye|no|abstain) on/i.test(story.title) ||
+          /parliament|division|vote/i.test(story.title);
 
         return {
           id: story.id,
@@ -1045,10 +1048,20 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
 
           if (keywords || sources) {
-            const filtered = merged.filter(item => item.type === 'story');
-            console.log('🔍 [APPEND] FilteredContent now has', filtered.length, 'stories (filtered)');
+            // Filter stories by keywords/sources, but ALWAYS include parliamentary content
+            const filtered = merged.filter(item => {
+              if (item.type === 'parliamentary_mention') return true; // Always keep parliamentary
+              return item.type === 'story'; // Apply filtering to regular stories
+            });
+            console.log('🔍 [APPEND] FilteredContent now has', filtered.length, 'items (filtered, parliamentary preserved)');
             return filtered;
           }
+          
+          console.log(`🏛️ Parliamentary content in feed:`, {
+            total_items: contentMap.size,
+            parliamentary_count: Array.from(contentMap.values()).filter(i => i.type === 'parliamentary_mention').length,
+            story_count: Array.from(contentMap.values()).filter(i => i.type === 'story').length
+          });
 
           console.log('🔍 [APPEND] FilteredContent now has', merged.length, 'items');
           return merged;

@@ -884,8 +884,8 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
           status: 'published',
           is_published: true,
           is_parliamentary: true,
-          mp_name: vote.mpName,
-          mp_party: vote.mpParty,
+          mp_name: vote.mp_name,
+          mp_party: vote.party,
           constituency: vote.constituency,
           audience_expertise: 'general',
           tone: 'formal',
@@ -896,6 +896,14 @@ async function createDailyVoteStory(supabase: any, vote: any, topicId: string) {
       
       if (storyError) throw storyError;
       story = newStory;
+      
+      console.log(`✅ Created parliamentary story:`, {
+        story_id: story.id.substring(0, 8),
+        mp_name: vote.mp_name,
+        mp_party: vote.party,
+        constituency: vote.constituency,
+        is_parliamentary: true
+      });
       
       // Format vote date
       const voteDate = new Date(vote.vote_date).toLocaleDateString('en-GB', { 
