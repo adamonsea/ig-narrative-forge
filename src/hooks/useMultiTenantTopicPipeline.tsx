@@ -603,7 +603,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const handleMultiTenantApprove = useCallback(async (
     article: MultiTenantArticle,
     slideType: 'short' | 'tabloid' | 'indepth' | 'extensive' = 'tabloid',
-    tone: 'formal' | 'conversational' | 'engaging' = 'conversational',
+    tone: 'formal' | 'conversational' | 'engaging' | 'satirical' = 'conversational',
     writingStyle: 'journalistic' | 'educational' | 'listicle' | 'story_driven' = 'journalistic'
   ) => {
     // Auto-detect snippets and default to 'short' (3 slides) for better experience

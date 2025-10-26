@@ -17,20 +17,20 @@ interface MultiTenantArticlesListProps {
   
   // Configuration defaults (from topic settings)
   defaultSlideQuantity?: 'short' | 'tabloid' | 'indepth' | 'extensive';
-  defaultTone?: 'formal' | 'conversational' | 'engaging';
+  defaultTone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
   defaultWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   
   // Individual overrides (user selections per article)
   slideQuantityOverrides?: Record<string, 'short' | 'tabloid' | 'indepth' | 'extensive'>;
-  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging'>;  
+  toneOverrides?: Record<string, 'formal' | 'conversational' | 'engaging' | 'satirical'>;  
   writingStyleOverrides?: Record<string, 'journalistic' | 'educational' | 'listicle' | 'story_driven'>;
   
   onSlideQuantityChange: (articleId: string, quantity: 'short' | 'tabloid' | 'indepth' | 'extensive') => void;
-  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging') => void;
+  onToneOverrideChange: (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical') => void;
   onWritingStyleOverrideChange: (articleId: string, style: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   
   onPreview?: (article: MultiTenantArticle) => void;
-  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
+  onApprove: (article: MultiTenantArticle, slideType?: 'short' | 'tabloid' | 'indepth' | 'extensive', tone?: 'formal' | 'conversational' | 'engaging' | 'satirical', writingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven') => void;
   onDelete: (articleId: string, articleTitle: string) => void;
   onDiscardAndSuppress?: (articleId: string, topicId: string, articleUrl: string, articleTitle: string) => void;
   onBulkDelete?: (articleIds: string[]) => void;

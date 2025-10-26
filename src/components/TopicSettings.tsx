@@ -19,7 +19,7 @@ import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 interface TopicSettingsProps {
   topicId: string;
   currentExpertise?: 'beginner' | 'intermediate' | 'expert';
-  currentTone?: 'formal' | 'conversational' | 'engaging';
+  currentTone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
   currentWritingStyle?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   currentCommunityEnabled?: boolean;
   currentCommunityPulseFrequency?: number;

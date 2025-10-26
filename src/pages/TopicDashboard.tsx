@@ -64,7 +64,7 @@ interface Topic {
   created_by: string;
   created_at: string;
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
-  default_tone?: 'formal' | 'conversational' | 'engaging';
+  default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
