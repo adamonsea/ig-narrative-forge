@@ -188,7 +188,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     setSlideQuantities(prev => ({ ...prev, [articleId]: quantity }));
   };
 
-  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | undefined) => {
+  const handleToneOverrideChange = (articleId: string, tone: 'formal' | 'conversational' | 'engaging' | 'satirical' | undefined) => {
     setToneOverrides(prev => ({ ...prev, [articleId]: tone }));
   };
 
