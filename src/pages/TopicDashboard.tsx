@@ -15,7 +15,6 @@ import { ManualContentStaging } from "@/components/ManualContentStaging";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
 import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
-import { UniversalTopicScraper } from "@/components/UniversalTopicScraper";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
@@ -586,7 +585,7 @@ const TopicDashboard = () => {
           </Card>
         </div>
 
-        {/* Collapsible Dashboard Overview */}
+        {/* Collapsible Dashboard Overview - Simplified to Key Highlights Only */}
         <Collapsible open={dashboardExpanded} onOpenChange={setDashboardExpanded} className="mb-8">
           <CollapsibleTrigger asChild>
             <Button 
@@ -599,54 +598,15 @@ const TopicDashboard = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
-            {/* Essential Metrics - New Dashboard Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Key Highlights Only */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
                     <Activity className="h-5 w-5 text-green-500" />
                     <div>
                       <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
-                      <p className="text-sm text-muted-foreground">Stories Simplified (24h)</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <div className="text-2xl font-bold text-purple-500">{stats.sentiment_cards}</div>
-                      <p className="text-sm text-muted-foreground">Sentiment Cards</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Essential Metrics - Available Stories */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-chart-2" />
-                    <div>
-                      <div className="text-2xl font-bold text-chart-2">{stats.pending_articles}</div>
-                      <p className="text-sm text-muted-foreground">Available Articles</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 text-chart-3" />
-                    <div>
-                      <div className="text-2xl font-bold text-chart-3">{stats.processing_queue}</div>
-                      <p className="text-sm text-muted-foreground">Processing Queue</p>
+                      <p className="text-sm text-muted-foreground">Stories (24h)</p>
                     </div>
                   </div>
                 </CardContent>
@@ -663,74 +623,31 @@ const TopicDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Additional Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sources</CardTitle>
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.sources}</div>
-                  <p className="text-xs text-muted-foreground">Active content sources</p>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-2xl font-bold">{stats.sources}</div>
+                      <p className="text-sm text-muted-foreground">Active Sources</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Articles</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.articles}</div>
-                  <p className="text-xs text-muted-foreground">Total articles</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Stories</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.stories}</div>
-                  <p className="text-xs text-muted-foreground">Generated stories</p>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-2xl font-bold">{stats.pending_articles}</div>
+                      <p className="text-sm text-muted-foreground">Available Articles</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
-
-            {/* User Engagement Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">User Engagement</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <div className="text-2xl font-bold">{stats.notifications_enabled || 0}</div>
-                    <p className="text-xs text-muted-foreground">Notifications Enabled</p>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{stats.pwa_installs || 0}</div>
-                    <p className="text-xs text-muted-foreground">App Installs</p>
-                  </div>
-                  {topic?.donation_enabled && (
-                    <>
-                      <div>
-                        <div className="text-2xl font-bold">{stats.donation_button_clicks || 0}</div>
-                        <p className="text-xs text-muted-foreground">Donate Button Clicks</p>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold">{stats.donation_modal_opens || 0}</div>
-                        <p className="text-xs text-muted-foreground">Donation Modals Opened</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </CollapsibleContent>
         </Collapsible>
 
@@ -854,11 +771,6 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            <UniversalTopicScraper 
-              topicId={topic.id}
-              topicName={topic.name}
-            />
-            
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardContent className="p-6">
                 <TopicScheduleMonitor 

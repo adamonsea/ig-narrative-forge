@@ -837,7 +837,12 @@ const TopicFeed = () => {
             {/* End of feed CTA */}
             {!hasMore && !loadingMore && (
               <div className="pt-8">
-                <EndOfFeedCTA topicName={topic.name} topicId={topic.id} />
+                <EndOfFeedCTA 
+                  topicName={topic.name} 
+                  topicId={topic.id}
+                  topicSlug={topic.slug}
+                  topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url}
+                />
               </div>
             )}
           </div>

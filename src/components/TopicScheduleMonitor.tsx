@@ -255,32 +255,36 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
     }
   };
 
-  // This function is now redundant as we have "Gather All" in TopicDashboard
-  // Keeping it for backward compatibility with event listeners
-  const handleRescanAllSources = async () => {
+  const handleBackfill30Days = async () => {
     if (!data) return;
     
     setLoading(true);
     try {
+      toast({
+        title: "30-Day Backfill Started",
+        description: `Gathering historical content for ${topicName}...`,
+      });
+
       const { data: result, error } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
           topicId,
-          testMode: false
+          maxAgeDays: 30,
+          forceRescrape: false
         }
       });
 
       if (error) throw error;
       
       toast({
-        title: "Gather All Complete",
+        title: "Backfill Complete",
         description: `Found ${result.totalArticles || 0} articles from ${result.successfulSources || 0} sources`,
       });
 
       fetchTopicData();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: `Gather all failed: ${error.message}`,
+        title: "Backfill Failed",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -316,14 +320,6 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
   useEffect(() => {
     fetchTopicData();
-    
-    // Listen for gather all sources event
-    const handleGatherAll = () => handleRescanAllSources();
-    window.addEventListener('gatherAllSources', handleGatherAll);
-    
-    return () => {
-      window.removeEventListener('gatherAllSources', handleGatherAll);
-    };
   }, [topicId]);
 
   const getHealthBadge = (status: string) => {
@@ -538,6 +534,21 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Discreet 30-day backfill button - only show when sources exist */}
+              {data.sources.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleBackfill30Days}
+                    disabled={loading}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {loading ? 'Running backfill...' : '30-day content backfill'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
