@@ -15,8 +15,8 @@ import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 import StoryPage from "./pages/StoryPage";
-import DailyRoundup from "./pages/DailyRoundup";
-import WeeklyRoundup from "./pages/WeeklyRoundup";
+import DailyRoundupList from "./pages/DailyRoundupList";
+import WeeklyRoundupList from "./pages/WeeklyRoundupList";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -64,10 +64,10 @@ const App = () => {
                 <Route path="/feed/topic/:slug/story/:storyId" element={<StoryRedirect />} />
                 
                 {/* New universal routes */}
-                <Route path="/feed/:slug" element={<TopicFeed />} />
-                <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
-                <Route path="/feed/:slug/daily/:date" element={<DailyRoundup />} />
-                <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundup />} />
+              <Route path="/feed/:slug" element={<TopicFeed />} />
+              <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
+              <Route path="/feed/:slug/daily/:date" element={<DailyRoundupList />} />
+              <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
