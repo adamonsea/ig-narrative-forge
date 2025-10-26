@@ -273,7 +273,7 @@ VISUAL CONCEPT:
 Illustrate the core subject identified above, drawing primarily from the opening narrative while using later details for background context. Show the story through varied character expressions and body language - different people respond differently to the same situation. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings, character interactions) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
 STYLE & COMPOSITION:
-Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated. Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition.
+Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated. Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition. Spatial relationships: Maintain clear physical boundaries between figures and environment. If a character's lower body is visible, ensure proper grounding with natural contact points.
 
 TONE GUIDANCE:
 ${storyTone.toUpperCase()} - ${expressionInstruction}
@@ -287,9 +287,18 @@ Line work: Drawn with skilled confidence - lines that feel certain and expressiv
 CHARACTER VARIETY (when depicting people):
 Show natural diversity in how different people respond to the situation - varied body language, different expressions, multiple perspectives within the scene. Avoid uniform reactions; real scenes have variety in posture, gesture, and emotional response.
 
+ANATOMICAL CORRECTNESS:
+When figures are partially visible in frame, ensure all visible body parts follow natural physics:
+- If legs/feet are visible, they must be properly grounded on surfaces
+- Limbs must not appear to merge with or sink into ground/floors/surfaces
+- Body parts must have clear boundaries from environment
+- Partial figures should be cropped at natural boundaries (shoulders, waist, mid-thigh) not at joints
+
+If showing a person from waist-up, knees-up, or any cropped view: this is perfectly fine for composition. But if their feet/legs ARE visible in the frame, they must be drawn with correct spatial relationship to the ground.
+
 CRITICAL: The illustration must be immediately recognizable as being about THIS specific story's subject matter. Prioritize subject-specific visual elements over generic scene-setting.
 
-Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, overly complex hatching, mechanical precision.`;
+Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, overly complex hatching, mechanical precision, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
