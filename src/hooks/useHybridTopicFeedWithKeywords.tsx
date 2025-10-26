@@ -1009,7 +1009,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         setAllContent(prev => {
           console.log('🔍 [APPEND] Merging into allContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
-          [...prev, ...storyContent].forEach(item => {
+          [...prev, ...storyContent, ...parliamentaryContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
             } else {
@@ -1029,8 +1029,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         setFilteredContent(prev => {
           console.log('🔍 [APPEND] Merging into filteredContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
-          const base = keywords || sources ? [...prev.filter(item => item.type === 'story')] : prev;
-          [...base, ...storyContent].forEach(item => {
+          const base = prev;
+          [...base, ...storyContent, ...parliamentaryContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
             } else {
