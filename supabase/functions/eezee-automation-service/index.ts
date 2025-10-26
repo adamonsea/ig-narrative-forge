@@ -257,7 +257,10 @@ serve(async (req) => {
             .eq('topic_id', topic.id);
 
           console.log(`✅ ${topic.name}: ${articlesScraped} articles scraped, next run: ${nextRunAt.toISOString()}`);
-          } // End auto_gather check
+          } catch (scrapeError) {
+            console.error(`❌ Scraping failed for topic ${topic.name}:`, scrapeError);
+          }
+        } // End auto_gather check
 
           // Phase 3b: Auto-Simplification (if auto_simplify or holiday mode)
           if ((automationMode === 'auto_simplify' || automationMode === 'holiday') && automationConfig.auto_simplify_enabled) {
