@@ -979,19 +979,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1">
-                  {isParliamentaryStory && (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${partyColors.pill}`}>
-                      {mpInitials}
-                    </div>
-                  )}
                   <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {teaserBadge}
                       {isParliamentaryStory ? (
                         <>
-                          <Badge className={`text-[10px] uppercase tracking-[0.3em] rounded-full ${partyColors.chip}`}>
-                            Parliament
-                          </Badge>
                           {(story as any).mp_party && (
                             <span className={`text-xs font-semibold ${partyColors.accentText}`}>
                               {(story as any).mp_party}
