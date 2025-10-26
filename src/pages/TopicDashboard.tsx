@@ -737,44 +737,35 @@ const TopicDashboard = () => {
         {/* Primary Action Bar - Mobile Responsive */}
         <Card className={`${accentColor} bg-card/60 backdrop-blur-sm mb-6`}>
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <Button 
-                  onClick={handleGatherAll}
-                  disabled={gatheringAll}
-                  className="flex items-center gap-2 w-full sm:w-auto"
-                >
-                  {gatheringAll ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Play className="w-4 h-4" />
-                  )}
-                  {gatheringAll ? 'Gathering...' : 'Gather All'}
-                </Button>
-                
-                <div className="flex items-center gap-2 justify-center sm:justify-start">
-                  <span className="text-sm text-muted-foreground">Auto-simplify:</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAutoSimplifyToggle}
-                    className="p-1 h-auto"
-                  >
-                    {topic?.auto_simplify_enabled ? (
-                      <ToggleRight className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <ToggleLeft className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              
-              <Button variant="outline" asChild size="sm" className="w-full sm:w-auto">
-                <Link to={`/feed/${topic.slug}`} target="_blank">
-                  <Globe className="w-4 h-4 mr-2" />
-                  Preview Feed
-                </Link>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <Button 
+                onClick={handleGatherAll}
+                disabled={gatheringAll}
+                className="flex items-center gap-2 w-full sm:w-auto"
+              >
+                {gatheringAll ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+                {gatheringAll ? 'Gathering...' : 'Gather All'}
               </Button>
+              
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <span className="text-sm text-muted-foreground">Auto-simplify:</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAutoSimplifyToggle}
+                  className="p-1 h-auto"
+                >
+                  {topic?.auto_simplify_enabled ? (
+                    <ToggleRight className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
