@@ -16,6 +16,9 @@ interface Topic {
   name: string;
   slug: string;
   branding_config?: any;
+  keywords?: string[];
+  landmarks?: string[];
+  organizations?: string[];
 }
 
 interface Roundup {
@@ -61,6 +64,7 @@ export default function DailyRoundupList() {
   
   // Filter states
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function DailyRoundupList() {
         // Fetch topic
         const { data: topicData, error: topicError } = await supabase
           .from('topics')
-          .select('id, name, slug, branding_config')
+          .select('id, name, slug, branding_config, keywords, landmarks, organizations')
           .eq('slug', slug)
           .eq('is_public', true)
           .eq('is_active', true)
@@ -175,18 +179,33 @@ export default function DailyRoundupList() {
     fetchData();
   }, [slug, date, navigate, toast]);
 
-  // Extract available keywords and sources from stories
-  const { availableKeywords, availableSources } = useMemo(() => {
-    const keywordSet = new Set<string>();
+  // Extract available keywords, locations (landmarks + organizations) and sources from stories based on topic config
+  const { availableKeywords, availableLocations, availableSources } = useMemo(() => {
+    if (!topic) return { availableKeywords: [], availableLocations: [], availableSources: [] };
+    
+    const topicKeywords = topic.keywords || [];
+    const topicLandmarks = topic.landmarks || [];
+    const topicOrganizations = topic.organizations || [];
+    
+    const keywordCounts = new Map<string, number>();
+    const locationCounts = new Map<string, number>();
     const sourceMap = new Map<string, { domain: string; count: number }>();
 
     stories.forEach(story => {
-      // Extract keywords from story content (simplified)
-      story.slides?.forEach(slide => {
-        const words = slide.content?.toLowerCase().split(/\s+/) || [];
-        words.forEach(word => {
-          if (word.length > 4) keywordSet.add(word);
-        });
+      const storyText = story.slides?.map(s => s.content).join(' ').toLowerCase() || '';
+      
+      // Count topic keywords that appear in this story
+      topicKeywords.forEach(keyword => {
+        if (storyText.includes(keyword.toLowerCase())) {
+          keywordCounts.set(keyword, (keywordCounts.get(keyword) || 0) + 1);
+        }
+      });
+      
+      // Count topic landmarks and organizations (combined as "locations")
+      [...topicLandmarks, ...topicOrganizations].forEach(location => {
+        if (storyText.includes(location.toLowerCase())) {
+          locationCounts.set(location, (locationCounts.get(location) || 0) + 1);
+        }
       });
 
       // Extract source domains
@@ -206,10 +225,12 @@ export default function DailyRoundupList() {
     });
 
     return {
-      availableKeywords: Array.from(keywordSet).slice(0, 50).sort().map(kw => ({
-        keyword: kw,
-        count: 1
-      })),
+      availableKeywords: Array.from(keywordCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([keyword, count]) => ({ keyword, count })),
+      availableLocations: Array.from(locationCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([keyword, count]) => ({ keyword, count })),
       availableSources: Array.from(sourceMap.values())
         .sort((a, b) => b.count - a.count)
         .map(s => ({
@@ -218,20 +239,27 @@ export default function DailyRoundupList() {
           count: s.count
         })),
     };
-  }, [stories]);
+  }, [stories, topic]);
 
   // Filter stories
   const filteredStories = useMemo(() => {
-    if (selectedKeywords.length === 0 && selectedSources.length === 0) {
+    if (selectedKeywords.length === 0 && selectedLocations.length === 0 && selectedSources.length === 0) {
       return stories;
     }
 
     return stories.filter(story => {
+      const storyText = story.slides?.map(s => s.content).join(' ').toLowerCase() || '';
+      
       // Keyword filter
       if (selectedKeywords.length > 0) {
-        const storyText = story.slides?.map(s => s.content).join(' ').toLowerCase() || '';
         const hasKeyword = selectedKeywords.some(kw => storyText.includes(kw.toLowerCase()));
         if (!hasKeyword) return false;
+      }
+      
+      // Location filter (landmarks + organizations)
+      if (selectedLocations.length > 0) {
+        const hasLocation = selectedLocations.some(loc => storyText.includes(loc.toLowerCase()));
+        if (!hasLocation) return false;
       }
 
       // Source filter
@@ -246,7 +274,7 @@ export default function DailyRoundupList() {
 
       return true;
     });
-  }, [stories, selectedKeywords, selectedSources]);
+  }, [stories, selectedKeywords, selectedLocations, selectedSources]);
 
   const toggleKeyword = (keyword: string) => {
     setSelectedKeywords(prev =>
@@ -263,9 +291,18 @@ export default function DailyRoundupList() {
         : [...prev, source]
     );
   };
+  
+  const toggleLocation = (location: string) => {
+    setSelectedLocations(prev =>
+      prev.includes(location)
+        ? prev.filter(l => l !== location)
+        : [...prev, location]
+    );
+  };
 
   const clearAllFilters = () => {
     setSelectedKeywords([]);
+    setSelectedLocations([]);
     setSelectedSources([]);
   };
 
@@ -309,7 +346,7 @@ export default function DailyRoundupList() {
   }
 
   const formattedDate = format(parseISO(roundup.period_start), 'MMMM d, yyyy');
-  const hasActiveFilters = selectedKeywords.length > 0 || selectedSources.length > 0;
+  const hasActiveFilters = selectedKeywords.length > 0 || selectedLocations.length > 0 || selectedSources.length > 0;
 
   return (
     <div className="min-h-screen feed-background">
@@ -388,6 +425,8 @@ export default function DailyRoundupList() {
             slideCount={filteredStories.length}
             selectedKeywords={selectedKeywords}
             onRemoveKeyword={(kw) => setSelectedKeywords(prev => prev.filter(k => k !== kw))}
+            selectedLocations={selectedLocations}
+            onRemoveLocation={(loc) => setSelectedLocations(prev => prev.filter(l => l !== loc))}
             selectedSources={selectedSources}
             onRemoveSource={(src) => setSelectedSources(prev => prev.filter(s => s !== src))}
             hasActiveFilters={hasActiveFilters}
@@ -429,16 +468,16 @@ export default function DailyRoundupList() {
         availableKeywords={availableKeywords}
         selectedKeywords={selectedKeywords}
         onKeywordToggle={toggleKeyword}
+        availableLandmarks={availableLocations}
+        selectedLandmarks={selectedLocations}
+        onLandmarkToggle={toggleLocation}
+        availableOrganizations={[]}
+        selectedOrganizations={[]}
+        onOrganizationToggle={() => {}}
         availableSources={availableSources}
         selectedSources={selectedSources}
         onSourceToggle={toggleSource}
         onClearAll={clearAllFilters}
-        availableLandmarks={[]}
-        selectedLandmarks={[]}
-        onLandmarkToggle={() => {}}
-        availableOrganizations={[]}
-        selectedOrganizations={[]}
-        onOrganizationToggle={() => {}}
       />
     </div>
   );
