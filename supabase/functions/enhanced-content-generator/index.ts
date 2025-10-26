@@ -626,6 +626,7 @@ Return in JSON format:
         title: article.title,
         status: 'published', // Auto-publish updated stories
         is_published: true, // Auto-publish updated stories
+        quality_score: article.content_quality_score, // Persist for auto-illustration
         updated_at: new Date().toISOString()
       };
       
@@ -658,7 +659,8 @@ Return in JSON format:
         status: 'published', // Auto-publish new stories
         is_published: true, // Auto-publish new stories
         tone: effectiveTone,
-        audience_expertise: topicExpertise
+        audience_expertise: topicExpertise,
+        quality_score: article.content_quality_score // Persist quality score for auto-illustration
       };
       
       // Set appropriate IDs based on context - mutually exclusive

@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
+import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
 
 interface TopicSettingsProps {
   topicId: string;
@@ -619,66 +620,8 @@ export const TopicSettings = ({
 
         <Separator />
 
-        {/* Automation Settings */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Bot className="w-4 h-4" />
-            <Label className="text-base font-medium">Automation Settings</Label>
-          </div>
-          
-          <div className="space-y-4 p-4 border rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Auto-Simplification
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Auto-Simplification:</strong> Automatically processes new articles that meet quality thresholds</p>
-                          <p>Articles are queued for story generation without manual approval</p>
-                          <p className="text-muted-foreground">Configure automated gathering and simplification for this topic</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {autoSimplifyEnabled ? "New articles will be automatically processed" : "Manual approval required for story generation"}
-                </p>
-              </div>
-              <Switch
-                checked={autoSimplifyEnabled}
-                onCheckedChange={setAutoSimplifyEnabled}
-              />
-            </div>
-
-            {autoSimplifyEnabled && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>
-                    Quality Threshold: {automationQualityThreshold}%
-                  </Label>
-                  <Slider
-                    value={[automationQualityThreshold]}
-                    onValueChange={([value]) => setAutomationQualityThreshold(value)}
-                    max={100}
-                    min={30}
-                    step={5}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Only articles with quality scores above this threshold will be automatically processed
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Unified Automation Settings */}
+        <TopicAutomationSettings topicId={topicId} />
 
         <div className="flex justify-end">
           <Button 

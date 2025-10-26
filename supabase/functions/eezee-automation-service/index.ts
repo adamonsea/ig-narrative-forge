@@ -118,6 +118,10 @@ serve(async (req) => {
           topic_automation_settings (
             scrape_frequency_hours,
             is_active,
+            automation_mode,
+            quality_threshold,
+            illustration_quality_threshold,
+            auto_illustrate_enabled,
             last_run_at,
             next_run_at
           )
@@ -200,8 +204,21 @@ serve(async (req) => {
       let userArticlesGathered = 0;
       let userStoriesGenerated = 0;
 
-      // Phase 3: Scrape Topics
+      // Phase 3: Process Topics Based on Automation Mode
       for (const topic of topicsToScrape) {
+        const automationSettings = topic.topic_automation_settings[0];
+        const automationMode = automationSettings?.automation_mode || 'manual';
+        
+        console.log(`🎯 Processing topic: ${topic.name} (mode: ${automationMode})`);
+        
+        // Skip if manual mode
+        if (automationMode === 'manual') {
+          console.log(`⏭️ Skipping ${topic.name} - manual mode enabled`);
+          continue;
+        }
+
+      // Phase 3a: Scrape Articles (if auto_gather or holiday mode)
+      if (automationMode === 'auto_gather' || automationMode === 'holiday') {
         try {
           console.log(`🎯 Scraping topic: ${topic.name}`);
 
@@ -239,9 +256,10 @@ serve(async (req) => {
             .eq('topic_id', topic.id);
 
           console.log(`✅ ${topic.name}: ${articlesScraped} articles scraped, next run: ${nextRunAt.toISOString()}`);
+      } // End auto_gather check
 
-          // Phase 4: Auto-Simplification (if enabled)
-          if (topic.auto_simplify_enabled && automationConfig.auto_simplify_enabled) {
+          // Phase 3b: Auto-Simplification (if auto_simplify or holiday mode)
+          if ((automationMode === 'auto_simplify' || automationMode === 'holiday') && automationConfig.auto_simplify_enabled) {
             try {
               console.log(`🎨 Starting auto-simplification for topic: ${topic.name}`);
 
@@ -329,7 +347,33 @@ serve(async (req) => {
             } catch (simplifyError) {
               console.error(`❌ Auto-simplification failed for topic ${topic.name}:`, simplifyError);
             }
-          }
+          } // End auto_simplify check
+
+          // Phase 3c: Auto-Illustration (if auto_illustrate or holiday mode)
+          if (automationMode === 'auto_illustrate' || automationMode === 'holiday') {
+            try {
+              console.log(`🎨 Starting auto-illustration for topic: ${topic.name}`);
+
+              const { data: illustrationResult, error: illustrationError } = await supabase.functions.invoke(
+                'auto-illustrate-stories',
+                {
+                  body: {
+                    topicId: topic.id,
+                    maxIllustrations: 5
+                  }
+                }
+              );
+
+              if (illustrationError) {
+                console.error(`❌ Auto-illustration failed for ${topic.name}:`, illustrationError);
+              } else {
+                console.log(`✅ ${topic.name}: ${illustrationResult?.successCount || 0} illustrations generated`);
+              }
+
+            } catch (illustrationError) {
+              console.error(`❌ Auto-illustration error for topic ${topic.name}:`, illustrationError);
+            }
+          } // End auto_illustrate check
 
         } catch (topicError) {
           console.error(`❌ Error processing topic ${topic.name}:`, topicError);

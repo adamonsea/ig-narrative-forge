@@ -2588,9 +2588,12 @@ export type Database = {
       }
       topic_automation_settings: {
         Row: {
+          auto_illustrate_enabled: boolean | null
           auto_simplify_enabled: boolean | null
+          automation_mode: string | null
           created_at: string
           id: string
+          illustration_quality_threshold: number | null
           is_active: boolean
           last_run_at: string | null
           next_run_at: string
@@ -2600,9 +2603,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_illustrate_enabled?: boolean | null
           auto_simplify_enabled?: boolean | null
+          automation_mode?: string | null
           created_at?: string
           id?: string
+          illustration_quality_threshold?: number | null
           is_active?: boolean
           last_run_at?: string | null
           next_run_at?: string
@@ -2612,9 +2618,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_illustrate_enabled?: boolean | null
           auto_simplify_enabled?: boolean | null
+          automation_mode?: string | null
           created_at?: string
           id?: string
+          illustration_quality_threshold?: number | null
           is_active?: boolean
           last_run_at?: string | null
           next_run_at?: string
