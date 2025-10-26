@@ -86,9 +86,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const getPartyColors = (party: string | undefined): PartyColorTheme => {
     const baseTheme: PartyColorTheme = {
       border: 'border-l-4 border-l-slate-400',
-      bg: 'bg-slate-50/40 dark:bg-slate-950/30',
-      gradient: 'bg-gradient-to-br from-slate-100/70 via-white to-slate-50/60 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-900/50',
-      header: 'bg-gradient-to-r from-slate-100/60 via-white to-transparent dark:from-slate-950/50 dark:via-slate-950/40',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
       accentText: 'text-slate-700 dark:text-slate-100',
       pill: 'bg-slate-200 text-slate-800 dark:bg-slate-900/50 dark:text-slate-100',
       chip: 'border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200',
@@ -101,10 +101,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const partyLower = party.toLowerCase();
     if (partyLower.includes('liberal democrat') || partyLower.includes('lib dem')) {
       return {
-        border: 'border-l-4 border-l-amber-500',
-        bg: 'bg-amber-50/30 dark:bg-amber-950/30',
-        gradient: 'bg-gradient-to-br from-amber-50/80 via-white to-orange-100/70 dark:from-amber-950/40 dark:via-slate-950/60 dark:to-orange-900/30',
-        header: 'bg-gradient-to-r from-amber-100/70 via-white to-transparent dark:from-amber-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-amber-500',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-amber-700 dark:text-amber-200',
         pill: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-100',
         chip: 'border border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-200',
@@ -114,10 +114,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('conservative') || partyLower.includes('tory')) {
       return {
-        border: 'border-l-4 border-l-blue-600',
-        bg: 'bg-blue-50/30 dark:bg-blue-950/30',
-        gradient: 'bg-gradient-to-br from-blue-50/80 via-white to-sky-100/70 dark:from-blue-950/50 dark:via-slate-950/60 dark:to-blue-900/30',
-        header: 'bg-gradient-to-r from-blue-100/70 via-white to-transparent dark:from-blue-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-blue-600',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-blue-700 dark:text-blue-200',
         pill: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-100',
         chip: 'border border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-200',
@@ -127,10 +127,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('labour')) {
       return {
-        border: 'border-l-4 border-l-red-600',
-        bg: 'bg-red-50/30 dark:bg-red-950/30',
-        gradient: 'bg-gradient-to-br from-red-50/80 via-white to-rose-100/70 dark:from-red-950/50 dark:via-slate-950/60 dark:to-rose-900/30',
-        header: 'bg-gradient-to-r from-red-100/70 via-white to-transparent dark:from-red-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-red-600',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-red-700 dark:text-red-200',
         pill: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-100',
         chip: 'border border-red-300 text-red-700 dark:border-red-700 dark:text-red-200',
@@ -140,10 +140,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('green')) {
       return {
-        border: 'border-l-4 border-l-green-600',
-        bg: 'bg-green-50/30 dark:bg-green-950/30',
-        gradient: 'bg-gradient-to-br from-green-50/80 via-white to-emerald-100/70 dark:from-green-950/50 dark:via-slate-950/60 dark:to-emerald-900/30',
-        header: 'bg-gradient-to-r from-green-100/70 via-white to-transparent dark:from-green-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-green-600',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-green-700 dark:text-green-200',
         pill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-100',
         chip: 'border border-green-300 text-green-700 dark:border-green-700 dark:text-green-200',
@@ -153,10 +153,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('reform')) {
       return {
-        border: 'border-l-4 border-l-purple-600',
-        bg: 'bg-purple-50/30 dark:bg-purple-950/30',
-        gradient: 'bg-gradient-to-br from-purple-50/80 via-white to-fuchsia-100/70 dark:from-purple-950/50 dark:via-slate-950/60 dark:to-fuchsia-900/30',
-        header: 'bg-gradient-to-r from-purple-100/70 via-white to-transparent dark:from-purple-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-purple-600',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-purple-700 dark:text-purple-200',
         pill: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-100',
         chip: 'border border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-200',
@@ -166,10 +166,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('snp')) {
       return {
-        border: 'border-l-4 border-l-yellow-500',
-        bg: 'bg-yellow-50/30 dark:bg-yellow-950/30',
-        gradient: 'bg-gradient-to-br from-yellow-50/80 via-white to-amber-100/70 dark:from-yellow-950/45 dark:via-slate-950/60 dark:to-amber-900/30',
-        header: 'bg-gradient-to-r from-yellow-100/70 via-white to-transparent dark:from-yellow-950/45 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-yellow-500',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-yellow-700 dark:text-yellow-200',
         pill: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-100',
         chip: 'border border-yellow-300 text-yellow-700 dark:border-yellow-700 dark:text-yellow-200',
@@ -179,10 +179,10 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
     if (partyLower.includes('plaid')) {
       return {
-        border: 'border-l-4 border-l-emerald-600',
-        bg: 'bg-emerald-50/30 dark:bg-emerald-950/30',
-        gradient: 'bg-gradient-to-br from-emerald-50/80 via-white to-teal-100/70 dark:from-emerald-950/50 dark:via-slate-950/60 dark:to-teal-900/30',
-        header: 'bg-gradient-to-r from-emerald-100/70 via-white to-transparent dark:from-emerald-950/50 dark:via-slate-950/40',
+      border: 'border-l-4 border-l-emerald-600',
+        bg: 'bg-white dark:bg-slate-950',
+        gradient: 'bg-white dark:bg-slate-950',
+        header: 'bg-slate-50/50 dark:bg-slate-900/50',
         accentText: 'text-emerald-700 dark:text-emerald-200',
         pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-100',
         chip: 'border border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-200',
@@ -558,7 +558,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   // Parliamentary slide renderer with specific design/scale
   const renderParliamentarySlide = (slide: any, slideIndex: number) => {
     const lines = slide.content.split('\n').filter((line: string) => line.trim());
-    const backgroundClass = parliamentaryLayoutVariant === 1 ? partyColors.bg : partyColors.gradient;
+    const backgroundClass = 'bg-white dark:bg-slate-950';
     const headerAccentClass = `uppercase tracking-[0.35em] text-xs font-semibold ${partyColors.accentText}`;
 
     if (parliamentaryLayoutVariant === 2) {
@@ -722,6 +722,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               </div>
             )}
             {info && <p className="text-lg leading-relaxed text-center md:text-left text-balance">{info.replace('Information: ', '')}</p>}
+          </div>
+        );
+      }
+
+      if (slideIndex === 4) {
+        return (
+          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-16 flex items-center justify-center`}>
+            {renderParliamentaryCta(slide)}
           </div>
         );
       }
@@ -975,24 +983,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} data-story-card data-story-id={story.id}>
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
-          <div className={`p-4 border-b feed-card-header ${isParliamentaryStory ? partyColors.header : ''}`}>
+          <div className="p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1">
                   <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       {teaserBadge}
-                      {isParliamentaryStory ? (
-                        <>
-                          {(story as any).mp_party && (
-                            <span className={`text-xs font-semibold ${partyColors.accentText}`}>
-                              {(story as any).mp_party}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        storyBadges
-                      )}
+                      {storyBadges}
                     </div>
                   </div>
                 </div>
