@@ -490,6 +490,7 @@ serve(async (req) => {
       }
     }
 
+
     const duration = Date.now() - startTime;
     const summary = {
       success: true,
