@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,10 +122,20 @@ serve(async (req: Request) => {
 
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+    const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:notifications@curatr.pro';
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       throw new Error('VAPID keys not configured');
     }
+
+    // Configure VAPID details for web-push
+    webpush.setVapidDetails(
+      vapidSubject,
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    console.log(`📬 Found ${signups.length} active ${notificationFilter} subscriptions`);
 
     // Prepare notification payload with icon/badge from branding
     const notificationPayload = {
@@ -145,59 +156,72 @@ serve(async (req: Request) => {
 
     let successCount = 0;
     let failureCount = 0;
+    const failedSubscriptions: string[] = [];
 
-    // Send notifications to all subscribers
+    // Send notifications to all subscribers using proper Web Push protocol
     for (const signup of signups) {
       try {
         const subscription = signup.push_subscription as PushSubscription;
         
-        // Send push notification using Web Push API
-        const response = await fetch(subscription.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'TTL': '86400',
-          },
-          body: JSON.stringify({
-            notification: notificationPayload
-          }),
-        });
-
-        if (response.ok) {
-          successCount++;
-        } else {
+        // Validate subscription format
+        if (!subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
+          console.error(`Invalid subscription format for ${signup.email}`);
           failureCount++;
-          console.error(`Failed to send to ${signup.email}:`, response.status, await response.text());
-          
-          // If subscription is invalid (410 Gone), mark it as inactive
-          if (response.status === 410) {
-            await supabase
-              .from('topic_newsletter_signups')
-              .update({ is_active: false })
-              .match({ 
-                topic_id: topicId, 
-                email: signup.email 
-              });
-          }
+          failedSubscriptions.push(signup.email || 'unknown');
+          continue;
         }
-      } catch (error) {
+
+        // Send push notification using web-push library with proper VAPID auth
+        await webpush.sendNotification(
+          subscription,
+          JSON.stringify(notificationPayload),
+          {
+            TTL: 86400, // 24 hours
+          }
+        );
+
+        successCount++;
+        console.log(`✅ Notification sent successfully to ${signup.email || 'subscriber'}`);
+
+      } catch (error: any) {
         failureCount++;
-        console.error(`Error sending notification to ${signup.email}:`, error);
+        const email = signup.email || 'unknown';
+        failedSubscriptions.push(email);
+        
+        console.error(`❌ Failed to send to ${email}:`, error.message);
+        
+        // If subscription is expired/invalid (410 Gone or 404), mark it as inactive
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          console.log(`🗑️ Marking subscription as inactive for ${email}`);
+          await supabase
+            .from('topic_newsletter_signups')
+            .update({ is_active: false })
+            .match({ 
+              topic_id: topicId, 
+              email: email 
+            });
+        }
       }
     }
 
-    // Log notification send
+    console.log(`📊 Notification summary: ${successCount} sent, ${failureCount} failed out of ${signups.length} total`);
+
+    // Log notification send with detailed context
     await supabase.from('system_logs').insert({
-      level: 'info',
-      message: `${notificationType} notifications sent`,
+      level: successCount > 0 ? 'info' : 'warning',
+      message: `${notificationType} notifications: ${successCount} sent, ${failureCount} failed`,
       context: {
         story_id: storyId,
         topic_id: topicId,
+        topic_slug: topic.slug,
         notification_type: notificationType,
+        notification_filter: notificationFilter,
         roundup_date: roundupDate,
         week_start: weekStart,
         success_count: successCount,
-        failure_count: failureCount
+        failure_count: failureCount,
+        total_subscriptions: signups.length,
+        failed_emails: failedSubscriptions
       },
       function_name: 'send-story-notification'
     });
