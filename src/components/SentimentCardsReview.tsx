@@ -33,6 +33,7 @@ interface SentimentCardData {
   is_visible: boolean;
   needs_review: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface SentimentCardsReviewProps {
@@ -299,6 +300,8 @@ export const SentimentCardsReview = ({ topicId }: SentimentCardsReviewProps) => 
                   confidenceScore={card.confidence_score}
                   analysisDate={card.analysis_date}
                   cardType={card.card_type as any}
+                  createdAt={card.created_at}
+                  updatedAt={card.updated_at}
                 />
               </div>
             </CardContent>

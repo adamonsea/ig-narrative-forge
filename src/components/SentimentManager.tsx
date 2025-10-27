@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Pin, TrendingDown, Sparkles, Clock, Radio } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Pin, TrendingDown, Sparkles, Clock, Radio, TrendingUp, Activity, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +29,7 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   const [trendingKeywords, setTrendingKeywords] = useState<TrendingKeyword[]>([]);
   const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastAnalysisAt, setLastAnalysisAt] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,13 +41,14 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
       // Load sentiment settings
       const { data: settings } = await supabase
         .from('topic_sentiment_settings')
-        .select('enabled, excluded_keywords')
+        .select('enabled, excluded_keywords, last_analysis_at')
         .eq('topic_id', topicId)
         .single();
 
       if (settings) {
         setEnabled(settings.enabled);
         setExcludedKeywords(settings.excluded_keywords || []);
+        setLastAnalysisAt(settings.last_analysis_at);
       }
 
       // Load trending keywords with tracking info
@@ -212,11 +215,26 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
   if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   const trackedCount = trendingKeywords.filter(k => k.tracked_for_cards).length;
-  const activeKeywords = trendingKeywords.filter(k => k.tracked_for_cards);
-  const inactiveKeywords = trendingKeywords.filter(k => !k.tracked_for_cards);
+  
+  // Filter keywords by status
+  const risingKeywords = trendingKeywords.filter(k => 
+    !k.tracked_for_cards && k.current_trend === 'emerging'
+  );
+  const trackedKeywordsList = trendingKeywords.filter(k => k.tracked_for_cards);
+  const fadingKeywords = trendingKeywords.filter(k => 
+    !k.tracked_for_cards && k.current_trend === 'fading'
+  );
 
   return (
     <div className="space-y-3">
+      {/* Last analysis timestamp */}
+      {lastAnalysisAt && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Last analysis: {formatDistanceToNow(new Date(lastAnalysisAt), { addSuffix: true })}
+        </div>
+      )}
+
       {/* Compact toggle + action row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -237,84 +255,129 @@ export const SentimentManager = ({ topicId }: SentimentManagerProps) => {
         </Button>
       </div>
 
-      {/* Active tracked keywords */}
-      {activeKeywords.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-sm flex items-center gap-2">
-            <Radio className="h-3 w-3 text-green-500" />
-            Actively Tracked ({activeKeywords.length})
-          </Label>
-          <div className="space-y-2">
-            {activeKeywords.map(kw => (
-              <div
-                key={kw.keyword_phrase}
-                className="border rounded-lg p-2 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
-                onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="default" className="text-xs">
-                        <Pin className="h-3 w-3 mr-1" />
-                        {kw.keyword_phrase}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {kw.total_mentions} mentions
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      {kw.last_card_generated_at ? (
-                        <>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Last: {formatDistanceToNow(new Date(kw.last_card_generated_at), { addSuffix: true })}
+      {/* Filter tabs for keywords */}
+      <Tabs defaultValue="rising" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="rising" className="text-xs">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            Rising ({risingKeywords.length})
+          </TabsTrigger>
+          <TabsTrigger value="tracked" className="text-xs">
+            <Radio className="h-3 w-3 mr-1" />
+            Tracked ({trackedKeywordsList.length})
+          </TabsTrigger>
+          <TabsTrigger value="fading" className="text-xs">
+            <TrendingDown className="h-3 w-3 mr-1" />
+            Fading ({fadingKeywords.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Rising Keywords */}
+        <TabsContent value="rising" className="space-y-2">
+          {risingKeywords.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {risingKeywords.map(kw => (
+                  <Badge
+                    key={kw.keyword_phrase}
+                    variant="outline"
+                    className="cursor-pointer transition-colors hover:bg-green-50 border-green-300 text-green-700 hover:border-green-400"
+                    onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
+                  >
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    {kw.keyword_phrase} ({kw.total_mentions})
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ↗ Tap to track rising keywords and auto-generate cards
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">No rising keywords detected yet</p>
+          )}
+        </TabsContent>
+
+        {/* Tracked Keywords */}
+        <TabsContent value="tracked" className="space-y-2">
+          {trackedKeywordsList.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {trackedKeywordsList.map(kw => (
+                  <div
+                    key={kw.keyword_phrase}
+                    className="border rounded-lg p-2 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
+                    onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="default" className="text-xs">
+                            <Pin className="h-3 w-3 mr-1" />
+                            {kw.keyword_phrase}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {kw.total_mentions} mentions
                           </span>
-                          <span>•</span>
-                          <span>
-                            {kw.total_cards_generated} {kw.total_cards_generated === 1 ? 'card' : 'cards'}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-orange-600 font-medium">
-                          Generating first card...
-                        </span>
-                      )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {kw.last_card_generated_at ? (
+                            <>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Last: {formatDistanceToNow(new Date(kw.last_card_generated_at), { addSuffix: true })}
+                              </span>
+                              <span>•</span>
+                              <span>
+                                {kw.total_cards_generated} {kw.total_cards_generated === 1 ? 'card' : 'cards'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-orange-600 font-medium">
+                              Generating first card...
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {enabled ? '✓ Auto-generating cards weekly' : '⏸ Paused - no new cards'}
-          </p>
-        </div>
-      )}
+              <p className="text-xs text-muted-foreground">
+                {enabled ? '✓ Auto-generating cards weekly' : '⏸ Paused - no new cards'}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">No keywords tracked yet. Check Rising tab to start.</p>
+          )}
+        </TabsContent>
 
-      {/* Inactive discovered keywords */}
-      {inactiveKeywords.length > 0 && (
-        <div className="space-y-2">
-          <Label className="text-sm">Discovered Trends ({inactiveKeywords.length})</Label>
-          <div className="flex flex-wrap gap-2">
-            {inactiveKeywords.map(kw => (
-              <Badge
-                key={kw.keyword_phrase}
-                variant="outline"
-                className="cursor-pointer transition-colors hover:bg-primary/10"
-                onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
-              >
-                {kw.keyword_phrase} ({kw.total_mentions})
-                {kw.current_trend === 'fading' && (
-                  <TrendingDown className="h-3 w-3 ml-1 text-orange-500" />
-                )}
-              </Badge>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Tap to start tracking and auto-generate cards
-          </p>
-        </div>
-      )}
+        {/* Fading Keywords */}
+        <TabsContent value="fading" className="space-y-2">
+          {fadingKeywords.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {fadingKeywords.map(kw => (
+                  <Badge
+                    key={kw.keyword_phrase}
+                    variant="outline"
+                    className="cursor-pointer transition-colors hover:bg-orange-50 border-orange-300 text-orange-700 opacity-60"
+                    onClick={() => toggleTracking(kw.keyword_phrase, kw.tracked_for_cards)}
+                  >
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                    {kw.keyword_phrase} ({kw.total_mentions})
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ↘ Low activity keywords - tap to track anyway
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">No fading keywords</p>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Minimal exclude list */}
       {excludedKeywords.length > 0 && (

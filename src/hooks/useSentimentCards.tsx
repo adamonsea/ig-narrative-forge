@@ -26,6 +26,7 @@ interface SentimentCard {
   is_visible: boolean;
   needs_review: boolean;
   created_at: string;
+  updated_at: string;
   slides?: Array<{
     type: 'hero' | 'mention-count' | 'sentiment-score' | 'confidence-score' | 'forum-insight' | 'quote' | 'references';
     content: string;
@@ -91,6 +92,7 @@ export const useSentimentCards = (topicId?: string) => {
         is_visible: card.is_visible || false,
         needs_review: card.needs_review || false,
         created_at: card.created_at || '',
+        updated_at: card.updated_at || card.created_at || '',
         display_count: card.display_count || 0,
         last_shown_at: card.last_shown_at || null
       })));

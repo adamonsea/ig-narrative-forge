@@ -1,7 +1,9 @@
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { useState } from "react";
 import { SwipeCarousel } from "@/components/ui/swipe-carousel";
+import { formatDistanceToNow } from "date-fns";
 
 interface SentimentSlide {
   type: 'hero' | 'mention-count' | 'trend-graph' | 'references';
@@ -31,6 +33,8 @@ interface SentimentCardProps {
   analysisDate: string;
   cardType: 'quote' | 'trend' | 'comparison' | 'timeline';
   slides?: SentimentSlide[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const SentimentCard = ({
@@ -39,9 +43,21 @@ export const SentimentCard = ({
   sources,
   sentimentScore,
   confidenceScore,
-  slides = []
+  slides = [],
+  createdAt,
+  updatedAt
 }: SentimentCardProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Check if card was recently updated
+  const isRecentlyUpdated = () => {
+    if (!createdAt || !updatedAt) return false;
+    const created = new Date(createdAt).getTime();
+    const updated = new Date(updatedAt).getTime();
+    const hoursSinceUpdate = (Date.now() - updated) / (1000 * 60 * 60);
+    // Show badge if updated more than 1 hour after creation and within last 72 hours
+    return updated > created + (60 * 60 * 1000) && hoursSinceUpdate < 72;
+  };
 
   // Extract mention count from statistics
   const getMentionCount = () => {
@@ -289,7 +305,13 @@ export const SentimentCard = ({
       <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale border-2 ${sentiment.border}`}>
         <div className={`relative h-[600px] flex flex-col overflow-hidden ${sentiment.gradient}`}>
           {/* Header */}
-          <div className="flex items-center justify-end p-4 border-b border-border/50">
+          <div className="flex items-center justify-between p-4 border-b border-border/50">
+            {isRecentlyUpdated() && updatedAt && (
+              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-300">
+                UPDATED {formatDistanceToNow(new Date(updatedAt), { addSuffix: true })}
+              </Badge>
+            )}
+            {!isRecentlyUpdated() && <div />}
             {displaySlides.length > 1 && (
               <span className="text-sm text-muted-foreground">
                 {currentSlide + 1} of {displaySlides.length}
