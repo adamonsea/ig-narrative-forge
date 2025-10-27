@@ -37,6 +37,7 @@ interface Story {
   mp_names?: string[]; // all MPs associated with this story (aggregated)
   mp_party?: string;
   constituency?: string;
+  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
 }
 
 interface Topic {
@@ -368,7 +369,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           try {
             const { data: metaData, error: metaError } = await supabase
               .from('stories')
-              .select('id, is_parliamentary, mp_name, mp_party, constituency')
+              .select('id, is_parliamentary, mp_name, mp_party, constituency, tone')
               .in('id', storyIds);
             
             if (!metaError && metaData) {
@@ -377,7 +378,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                   is_parliamentary: meta.is_parliamentary,
                   mp_name: meta.mp_name,
                   mp_party: meta.mp_party,
-                  constituency: meta.constituency
+                  constituency: meta.constituency,
+                  tone: meta.tone
                 });
               });
               console.debug('🏛️ Fallback: Enriched', metaData.length, 'stories with parliamentary metadata');
@@ -415,6 +417,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             mp_names: meta?.mp_name ? [meta.mp_name] : [],
             mp_party: meta?.mp_party,
             constituency: meta?.constituency,
+            tone: meta?.tone,
             article: {
               source_url: story.article_source_url || '#',
               published_at: story.article_published_at || story.created_at,
@@ -699,6 +702,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             mp_name: row.mp_name || undefined,
             mp_party: row.mp_party || undefined,
             constituency: row.constituency || undefined,
+            tone: row.story_tone || undefined,
             mp_names: new Set<string>(), // aggregate MPs across rows
             slides: [],
             slideIds: new Set() // Track slide IDs to prevent duplicates
@@ -825,7 +829,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         try {
           const { data: metaData, error: metaError } = await supabase
             .from('stories')
-            .select('id, is_parliamentary, mp_name, mp_party, constituency')
+            .select('id, is_parliamentary, mp_name, mp_party, constituency, tone')
             .in('id', storyIdsForPopularity);
           
           if (!metaError && metaData) {
@@ -834,7 +838,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                 is_parliamentary: meta.is_parliamentary,
                 mp_name: meta.mp_name,
                 mp_party: meta.mp_party,
-                constituency: meta.constituency
+                constituency: meta.constituency,
+                tone: meta.tone
               });
             });
             console.debug('🏛️ Primary RPC: Enriched', metaData.length, 'stories with parliamentary metadata');
@@ -881,6 +886,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         const mpNameFinal = story.mp_name || meta?.mp_name;
         const mpPartyFinal = story.mp_party || meta?.mp_party;
         const constituencyFinal = story.constituency || meta?.constituency;
+        const toneFinal = story.tone || meta?.tone;
         
         // Safety heuristic: set is_parliamentary true if RPC says so OR if MP metadata exists
         const isParliamentaryFinal = isParliamentaryFromRPC || 
@@ -908,6 +914,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             .filter((n): n is string => !!n),
           mp_party: mpPartyFinal,
           constituency: constituencyFinal,
+          tone: toneFinal,
           article: {
             source_url: story.article_source_url || '#',
             published_at: story.article_published_at,
