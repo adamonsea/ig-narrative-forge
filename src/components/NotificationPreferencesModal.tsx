@@ -87,7 +87,7 @@ export const NotificationPreferencesModal = ({
       type: 'daily' as NotificationType,
       icon: Calendar,
       title: 'Daily Briefing',
-      description: 'One notification per day at 8 PM',
+      description: 'One notification per day at 5 PM',
       color: 'text-blue-500'
     },
     {

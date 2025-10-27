@@ -21,9 +21,9 @@ export const usePushSubscription = (topicId?: string) => {
     permission: 'default'
   });
 
-  // Check if push notifications are supported
+  // Check if push notifications are supported and auto-heal existing subscriptions
   useEffect(() => {
-    const checkSupport = () => {
+    const checkSupportAndHealSubscriptions = async () => {
       const isSupported = 
         'serviceWorker' in navigator &&
         'PushManager' in window &&
@@ -35,10 +35,49 @@ export const usePushSubscription = (topicId?: string) => {
         permission: isSupported ? Notification.permission : 'denied',
         isLoading: false
       }));
+
+      // Auto-heal subscriptions if permission already granted
+      if (isSupported && Notification.permission === 'granted' && topicId && VAPID_PUBLIC_KEY) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const existingSubscription = await registration.pushManager.getSubscription();
+          
+          if (existingSubscription) {
+            console.log('🔄 Auto-healing push subscription with current VAPID key');
+            
+            // Unsubscribe old subscription
+            await existingSubscription.unsubscribe();
+            
+            // Re-subscribe with current VAPID key
+            const newSubscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+
+            const subscriptionData = JSON.parse(JSON.stringify(newSubscription));
+            const oldEndpoint = JSON.parse(JSON.stringify(existingSubscription)).endpoint;
+
+            // Update all subscriptions for this topic with the new subscription data
+            await supabase
+              .from('topic_newsletter_signups')
+              .update({ 
+                push_subscription: subscriptionData,
+                is_active: true 
+              })
+              .eq('topic_id', topicId)
+              .filter('push_subscription->endpoint', 'eq', oldEndpoint);
+
+            console.log('✅ Push subscription auto-healed successfully');
+          }
+        } catch (error) {
+          console.error('Failed to auto-heal subscription:', error);
+          // Silent fail - user can manually re-subscribe if needed
+        }
+      }
     };
 
-    checkSupport();
-  }, []);
+    checkSupportAndHealSubscriptions();
+  }, [topicId]);
 
   // Convert base64 VAPID key to Uint8Array
   const urlBase64ToUint8Array = (base64String: string) => {
@@ -136,7 +175,7 @@ export const usePushSubscription = (topicId?: string) => {
 
 const messages = {
   instant: "You'll get notified as soon as new stories are published",
-  daily: "You'll receive a daily summary every evening at 8 PM",
+  daily: "You'll receive a daily summary every evening at 5 PM",
   weekly: "You'll receive a weekly roundup every Sunday at 9 AM"
 };
 

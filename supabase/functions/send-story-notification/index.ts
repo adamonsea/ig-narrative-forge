@@ -96,12 +96,11 @@ serve(async (req: Request) => {
     if (notificationType === 'daily') notificationFilter = 'daily';
     if (notificationType === 'weekly') notificationFilter = 'weekly';
 
-    // Fetch all active push subscriptions for this topic - filter by notification type
+    // Fetch all active push subscriptions for this topic
     const { data: signups, error: signupsError } = await supabase
       .from('topic_newsletter_signups')
-      .select('push_subscription, email')
+      .select('push_subscription, email, notification_type, frequency')
       .eq('topic_id', topicId)
-      .eq('notification_type', notificationFilter)
       .eq('is_active', true)
       .not('push_subscription', 'is', null);
 
@@ -111,10 +110,43 @@ serve(async (req: Request) => {
 
     if (!signups || signups.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'No active push subscriptions found',
-          sent: 0 
+          sent: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Support both the new notification_type column and legacy frequency column values
+    type SignupRecord = {
+      push_subscription: PushSubscription | null;
+      email: string | null;
+      notification_type: string | null;
+      frequency: string | null;
+    };
+
+    const typedSignups = signups as SignupRecord[];
+
+    const matchedSignups = typedSignups.filter(signup => {
+      const type = (signup.notification_type || signup.frequency || '').toLowerCase();
+
+      if (notificationFilter === 'instant') {
+        // Legacy rows may have stored "story" or "instant" to represent story notifications
+        return type === 'instant' || type === 'story';
+      }
+
+      return type === notificationFilter;
+    });
+
+    if (matchedSignups.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `No active push subscriptions found for ${notificationFilter} notifications`,
+          sent: 0,
+          total: signups.length
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -135,7 +167,7 @@ serve(async (req: Request) => {
       vapidPrivateKey
     );
 
-    console.log(`📬 Found ${signups.length} active ${notificationFilter} subscriptions`);
+    console.log(`📬 Found ${matchedSignups.length} active ${notificationFilter} subscriptions (from ${signups.length} total push signups)`);
 
     // Prepare notification payload with icon/badge from branding
     const notificationPayload = {
@@ -159,7 +191,7 @@ serve(async (req: Request) => {
     const failedSubscriptions: string[] = [];
 
     // Send notifications to all subscribers using proper Web Push protocol
-    for (const signup of signups) {
+    for (const signup of matchedSignups) {
       try {
         const subscription = signup.push_subscription as PushSubscription;
         
@@ -188,11 +220,11 @@ serve(async (req: Request) => {
         const email = signup.email || 'unknown';
         failedSubscriptions.push(email);
         
-        console.error(`❌ Failed to send to ${email}:`, error.message);
+        console.error(`❌ Failed to send to ${email}:`, error.message, `(status: ${error.statusCode || 'unknown'})`);
         
-        // If subscription is expired/invalid (410 Gone or 404), mark it as inactive
-        if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log(`🗑️ Marking subscription as inactive for ${email}`);
+        // If subscription is expired/invalid or unauthorized (410, 404, 401, 403), mark it as inactive
+        if (error.statusCode === 410 || error.statusCode === 404 || error.statusCode === 401 || error.statusCode === 403) {
+          console.log(`🗑️ Marking subscription as inactive for ${email} (status: ${error.statusCode})`);
           await supabase
             .from('topic_newsletter_signups')
             .update({ is_active: false })
@@ -204,7 +236,7 @@ serve(async (req: Request) => {
       }
     }
 
-    console.log(`📊 Notification summary: ${successCount} sent, ${failureCount} failed out of ${signups.length} total`);
+    console.log(`📊 Notification summary: ${successCount} sent, ${failureCount} failed out of ${matchedSignups.length} targeted (${signups.length} total push signups)`);
 
     // Log notification send with detailed context
     await supabase.from('system_logs').insert({
@@ -221,6 +253,7 @@ serve(async (req: Request) => {
         success_count: successCount,
         failure_count: failureCount,
         total_subscriptions: signups.length,
+        targeted_subscriptions: matchedSignups.length,
         failed_emails: failedSubscriptions
       },
       function_name: 'send-story-notification'
