@@ -196,13 +196,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
   const partyColors = getPartyColors((story as any).mp_party);
 
-  const getParliamentaryLayoutVariant = (storyId: string) => {
-    if (!storyId) return 1;
-    const codeSum = storyId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return (codeSum % 3) + 1;
-  };
-
-  const parliamentaryLayoutVariant = getParliamentaryLayoutVariant(story.id);
+  // Removed layout randomization - using single consistent layout
 
   const mpName = (story as any).mp_name || story.author || 'Member of Parliament';
   const constituency = (story as any).constituency;
@@ -215,20 +209,33 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     .toUpperCase() || 'MP';
 
   const renderParliamentaryCta = (slide: any) => {
-    if (!slide.links || slide.links.length === 0) return null;
-
-    const primaryLink = slide.links[0];
+    // Priority: slide.links > story vote_url > article source_url > generic fallback
+    let ctaUrl = story.article?.source_url;
+    let ctaText = 'View full vote details';
+    
+    if (slide.links && slide.links.length > 0) {
+      ctaUrl = slide.links[0].url;
+      ctaText = slide.links[0].text || ctaText;
+    } else if ((story as any).vote_url) {
+      ctaUrl = (story as any).vote_url;
+    }
+    
+    // Generic fallback if no URL available
+    if (!ctaUrl || ctaUrl === '#') {
+      ctaUrl = 'https://votes.parliament.uk';
+      ctaText = 'View on Parliament website';
+    }
 
     return (
       <Button
         size="lg"
         onClick={(e) => {
           e.stopPropagation();
-          window.open(primaryLink.url, '_blank', 'noopener,noreferrer');
+          window.open(ctaUrl, '_blank', 'noopener,noreferrer');
         }}
-        className={`text-lg px-8 py-6 rounded-full shadow-sm transition ${partyColors.button}`}
+        className={`text-lg px-8 py-6 rounded-full shadow-lg transition-transform hover:scale-105 ${partyColors.button}`}
       >
-        {primaryLink.text || 'View vote details'}
+        {ctaText}
       </Button>
     );
   };
@@ -555,249 +562,138 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     return parts.join('');
   };
 
-  // Parliamentary slide renderer with specific design/scale
+  // Parliamentary slide renderer - single clean layout
   const renderParliamentarySlide = (slide: any, slideIndex: number) => {
     const lines = slide.content.split('\n').filter((line: string) => line.trim());
     const backgroundClass = 'bg-white dark:bg-slate-950';
-    const headerAccentClass = `uppercase tracking-[0.35em] text-xs font-semibold ${partyColors.accentText}`;
 
-    if (parliamentaryLayoutVariant === 2) {
-      if (slideIndex === 0) {
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col gap-6 justify-center`}>
-            <div className="flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold ${partyColors.pill}`}>
-                {mpInitials}
-              </div>
-              <div>
-                <p className={headerAccentClass}>Parliamentary vote</p>
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-balance">{lines[0]}</h1>
-              </div>
-            </div>
-            {lines[1] && <p className="text-sm text-muted-foreground">{lines[1]}</p>}
-            {lines[2] && <p className="text-2xl md:text-3xl font-medium text-foreground text-balance">{lines[2]}</p>}
-          </div>
-        );
-      }
-
-      if (slideIndex === 1) {
-        const voteDirection = lines.find((l: string) => l === 'AYE' || l === 'NO') || 'ABSTAIN';
-        const isRebellion = slide.content.includes('Against party whip');
-        const isAye = voteDirection === 'AYE';
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center`}>
-            <div className="grid gap-8 md:grid-cols-[160px_1fr] items-center">
-              <div className="flex flex-col items-start gap-3">
-                <span className={headerAccentClass}>Vote</span>
-                <span className={`text-6xl font-black ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</span>
-              </div>
-              <div className="space-y-4 text-left">
-                <p className="text-base text-muted-foreground">
-                  {isAye ? 'Backed the motion in Parliament' : voteDirection === 'NO' ? 'Opposed the motion in Parliament' : 'Abstained from the vote'}
-                </p>
-                {isRebellion && (
-                  <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50/70 px-3 py-2 text-sm font-semibold text-red-600 dark:border-red-800/60 dark:bg-red-900/40 dark:text-red-200">
-                    <span>🔥 Against party whip</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      if (slideIndex === 2) {
-        const outcome = lines.find((l: string) => l === 'ACCEPTED' || l === 'REJECTED') || 'PENDING';
-        const counts = lines.find((l: string) => l.includes('Ayes'));
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center`}>
-            <div className="grid gap-6 md:grid-cols-2 items-center">
-              <div>
-                <span className={headerAccentClass}>Result</span>
-                <p className="mt-4 text-4xl md:text-5xl font-bold text-foreground">{outcome}</p>
-              </div>
-              <div className="text-sm md:text-base text-muted-foreground md:text-right">
-                {counts}
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      if (slideIndex === 3) {
-        const category = lines.find((l: string) => l.startsWith('Category:'));
-        const info = lines.find((l: string) => l.startsWith('Information:'));
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center gap-6 text-left`}>
-            {category && <p className="text-sm font-semibold text-muted-foreground">{category}</p>}
-            {info && <p className="text-xl md:text-2xl leading-relaxed text-balance">{info.replace('Information: ', '')}</p>}
-          </div>
-        );
-      }
-
-      if (slideIndex === 4) {
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-16 flex items-center justify-center`}>
-            {renderParliamentaryCta(slide)}
-          </div>
-        );
-      }
-    }
-
-    if (parliamentaryLayoutVariant === 3) {
-      if (slideIndex === 0) {
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-between`}>
-            <div className="space-y-3 text-left">
-              <p className={headerAccentClass}>Constituency spotlight</p>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight text-balance">{lines[0]}</h1>
-            </div>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              {lines[1] && <p>{lines[1]}</p>}
-              {lines[2] && <p className="text-xl md:text-2xl font-semibold text-foreground text-balance">{lines[2]}</p>}
-            </div>
-          </div>
-        );
-      }
-
-      if (slideIndex === 1) {
-        const voteDirection = lines.find((l: string) => l === 'AYE' || l === 'NO') || 'ABSTAIN';
-        const isRebellion = slide.content.includes('Against party whip');
-        const isAye = voteDirection === 'AYE';
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center`}>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <span className={`text-5xl font-black ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</span>
-                <div className="flex-1 border-t border-dashed border-current opacity-20" />
-                <span className={`text-xs font-semibold ${partyColors.accentText}`}>House of Commons</span>
-              </div>
-              {isRebellion && (
-                <div className="flex items-center gap-2 text-sm font-semibold text-red-600 dark:text-red-200">
-                  <span>🔥 Rebellion alert</span>
-                  <div className="h-px flex-1 bg-red-200 dark:bg-red-900/60" />
-                </div>
-              )}
-              <p className="text-base text-muted-foreground">
-                {isAye ? `${mpName} supported this motion in Parliament.` : voteDirection === 'NO' ? `${mpName} voted against this motion.` : `${mpName} did not register a vote.`}
-              </p>
-            </div>
-          </div>
-        );
-      }
-
-      if (slideIndex === 2) {
-        const outcome = lines.find((l: string) => l === 'ACCEPTED' || l === 'REJECTED') || 'PENDING';
-        const counts = lines.find((l: string) => l.includes('Ayes'));
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center gap-6`}>
-            <div className="flex items-center gap-4">
-              <div className="flex-1 h-px bg-muted/60" />
-              <span className={headerAccentClass}>Outcome</span>
-              <div className="flex-1 h-px bg-muted/60" />
-            </div>
-            <p className="text-4xl md:text-5xl font-bold text-center text-foreground">{outcome}</p>
-            {counts && <p className="text-sm text-muted-foreground text-center">{counts}</p>}
-          </div>
-        );
-      }
-
-      if (slideIndex === 3) {
-        const category = lines.find((l: string) => l.startsWith('Category:'));
-        const info = lines.find((l: string) => l.startsWith('Information:'));
-
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-12 flex flex-col justify-center gap-5`}>
-            {category && (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${partyColors.chip}`}>
-                  {category.replace('Category: ', '')}
-                </span>
-                <div className="h-px flex-1 bg-muted/40" />
-              </div>
-            )}
-            {info && <p className="text-lg leading-relaxed text-center md:text-left text-balance">{info.replace('Information: ', '')}</p>}
-          </div>
-        );
-      }
-
-      if (slideIndex === 4) {
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-16 flex items-center justify-center`}>
-            {renderParliamentaryCta(slide)}
-          </div>
-        );
-      }
-
-      if (slideIndex === 4) {
-        return (
-          <div className={`h-full w-full ${backgroundClass} ${partyColors.border} px-10 py-16 flex items-center justify-center`}>
-            {renderParliamentaryCta(slide)}
-          </div>
-        );
-      }
-    }
-
-    // Default layout (variant 1) closely matches legacy centre-aligned design
+    // Slide 1: Title + MP Info
     if (slideIndex === 0) {
+      const voteTitle = lines[0] || 'Parliamentary Vote';
+      const mpInfo = lines[1] || '';
+      const voteDate = lines[2] || '';
+
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 ${partyColors.border} ${backgroundClass}`}>
-          <div className={`text-4xl mb-4 ${partyColors.icon}`}>🗳️</div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-balance">{lines[0]}</h1>
-          {lines[1] && <p className="parl-small mb-6">{lines[1]}</p>}
-          {lines[2] && <p className="text-xl md:text-2xl font-normal text-balance">{lines[2]}</p>}
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
+          {/* MP Avatar */}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${partyColors.pill}`}>
+            {mpInitials}
+          </div>
+          
+          {/* Parliamentary Vote Badge */}
+          <div className={`text-xs uppercase tracking-widest font-semibold ${partyColors.accentText}`}>
+            Parliamentary Vote
+          </div>
+          
+          {/* Vote Title */}
+          <h1 className="text-3xl md:text-4xl font-bold leading-tight text-balance">
+            {voteTitle}
+          </h1>
+          
+          {/* MP Name + Constituency */}
+          {mpInfo && (
+            <p className="text-sm text-muted-foreground">
+              {mpInfo}
+            </p>
+          )}
+          
+          {/* Date */}
+          {voteDate && (
+            <p className="text-xs text-muted-foreground">
+              {voteDate}
+            </p>
+          )}
         </div>
       );
     }
 
+    // Slide 2: Vote Direction
     if (slideIndex === 1) {
       const voteDirection = lines.find((l: string) => l === 'AYE' || l === 'NO') || 'ABSTAIN';
       const isRebellion = slide.content.includes('Against party whip');
       const isAye = voteDirection === 'AYE';
 
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-16 ${partyColors.border} ${backgroundClass}`}>
-          <p className="parl-small mb-4">Voted</p>
-          <h2 className={`parl-xl ${isAye ? 'parl-aye' : 'parl-no'}`}>{voteDirection}</h2>
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
+          {/* Large Vote Direction */}
+          <div className="space-y-3">
+            <h2 className={`text-7xl font-black ${isAye ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {voteDirection}
+            </h2>
+            <p className="text-base text-muted-foreground">
+              {isAye ? 'Backed the motion' : voteDirection === 'NO' ? 'Opposed the motion' : 'Abstained from voting'}
+            </p>
+          </div>
+          
+          {/* Rebellion Badge */}
           {isRebellion && (
-            <div className="mt-6 px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
-              <span className="parl-rebel text-sm">🔥 Against party whip</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800">
+              <span className="text-sm font-semibold text-red-700 dark:text-red-200">
+                🔥 Against party whip
+              </span>
             </div>
           )}
         </div>
       );
     }
 
+    // Slide 3: Outcome
     if (slideIndex === 2) {
       const outcome = lines.find((l: string) => l === 'ACCEPTED' || l === 'REJECTED') || 'PENDING';
       const counts = lines.find((l: string) => l.includes('Ayes'));
 
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-16 ${partyColors.border} ${backgroundClass}`}>
-          <p className="parl-small mb-4">Vote outcome</p>
-          <h2 className="parl-large mb-6">{outcome}</h2>
-          {counts && <p className="parl-small">{counts}</p>}
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">
+              Vote Outcome
+            </p>
+            <h2 className="text-5xl font-bold">
+              {outcome}
+            </h2>
+            {counts && (
+              <p className="text-sm text-muted-foreground">
+                {counts}
+              </p>
+            )}
+          </div>
         </div>
       );
     }
 
+    // Slide 4: Category/Context
     if (slideIndex === 3) {
-      const category = lines.find((l: string) => l.startsWith('Category:'));
-      const info = lines.find((l: string) => l.startsWith('Information:'));
+      const category = lines.find((l: string) => l.startsWith('Category:'))?.replace('Category: ', '');
+      const info = lines.find((l: string) => l.startsWith('Information:'))?.replace('Information: ', '');
+      const voteTitle = lines[0] || '';
 
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 ${partyColors.border} ${backgroundClass}`}>
-          {category && <p className="text-base md:text-lg font-medium mb-6">{category}</p>}
-          {info && <p className="text-base md:text-xl">{info}</p>}
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 py-12 gap-6 ${partyColors.border} ${backgroundClass}`}>
+          {/* Category Badge */}
+          {category && (
+            <div className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold ${partyColors.pill}`}>
+              {category}
+            </div>
+          )}
+          
+          {/* Vote Title for Context */}
+          {voteTitle && (
+            <p className="text-lg font-medium text-balance">
+              {voteTitle}
+            </p>
+          )}
+          
+          {/* Additional Info */}
+          {info && (
+            <p className="text-base text-muted-foreground text-balance leading-relaxed">
+              {info}
+            </p>
+          )}
         </div>
       );
     }
 
+    // Slide 5: CTA
     if (slideIndex === 4) {
       return (
         <div className={`flex flex-col items-center justify-center h-full px-8 py-16 ${partyColors.border} ${backgroundClass}`}>
@@ -806,7 +702,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       );
     }
 
-    // Fallback to standard rendering
+    // Fallback
     return null;
   };
 

@@ -160,9 +160,6 @@ verify_jwt = false
 [functions.backfill-parliamentary-metadata]
 verify_jwt = false
 
-[functions.generate-vote-context]
-verify_jwt = false
-
 [functions.select-story-cover]
 verify_jwt = true
 
