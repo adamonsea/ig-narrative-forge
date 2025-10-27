@@ -87,7 +87,7 @@ CONTEXT: [your one-sentence context]`;
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'deepseek/deepseek-chat',
+            model: 'google/gemini-2.5-flash-lite',
             messages: [
               { role: 'system', content: 'You are a helpful UK political analyst. Always format responses exactly as requested.' },
               { role: 'user', content: prompt }
