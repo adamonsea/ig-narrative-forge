@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DeepSeekPromptBuilder } from "../_shared/prompt-optimization.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,9 +15,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 
-    if (!supabaseUrl || !supabaseServiceKey || !lovableApiKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !deepseekApiKey) {
       throw new Error('Missing required environment variables');
     }
 
@@ -59,37 +60,44 @@ serve(async (req) => {
         const billDescription = vote.import_metadata?.bill_description || '';
         const billStage = vote.import_metadata?.bill_stage || 'Main Chamber';
 
-        // Generate AI context using DeepSeek
-        const prompt = `You are a UK political analyst explaining parliamentary votes to local residents.
-
+        // Build optimized prompt for DeepSeek
+        const contextInfo = `
 Vote Title: ${vote.vote_title}
 Category: ${vote.vote_category}
 Bill Stage: ${billStage}
-${billDescription ? `Description: ${billDescription}` : ''}
-Outcome: ${vote.vote_outcome} (${vote.aye_count} Ayes, ${vote.no_count} Noes)
+${billDescription ? `Bill Description: ${billDescription}` : ''}
+Outcome: ${vote.vote_outcome} (${vote.aye_count} Ayes, ${vote.no_count} Noes)`;
 
-Generate:
-1. One-sentence summary (max 120 chars): What this vote was about
-2. Why it matters (2-3 sentences): Local impact in plain English
-3. Key context (1 sentence): What happens next or why MPs debated this
+        const prompt = new DeepSeekPromptBuilder()
+          .context(`You are explaining UK parliamentary votes to local residents. Here's the vote data:\n\n${contextInfo}`)
+          .addInstruction('Generate a one-sentence summary (max 120 characters)', [
+            'Explain what this vote was about in plain English',
+            'Focus on the bill/amendment subject, not the process',
+            'Example: "New protections for domestic abuse victims in sentencing" not "MPs voted on a clause"'
+          ])
+          .addInstruction('Explain why it matters locally (2-3 sentences)', [
+            'Connect to real-world impact for residents',
+            'Use plain language - no parliamentary jargon',
+            'Mention both supporter and critic perspectives if relevant'
+          ])
+          .addInstruction('Provide key context (1 sentence)', [
+            'What stage is the bill at? What happens next?',
+            'Why was this debated now?'
+          ])
+          .addCriticalPoint('Avoid generic phrases like "MPs voted" or "This proposal". Be specific about the actual policy.')
+          .outputFormat('Format exactly as:\nSUMMARY: [120 char summary]\nIMPACT: [2-3 sentence explanation]\nCONTEXT: [1 sentence]')
+          .build();
 
-Write for general audience. No jargon. Be accurate but concise.
-
-Format your response exactly as:
-SUMMARY: [your one-sentence summary]
-IMPACT: [your 2-3 sentence impact explanation]
-CONTEXT: [your one-sentence context]`;
-
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            'Authorization': `Bearer ${deepseekApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-lite',
+            model: 'deepseek-chat',
             messages: [
-              { role: 'system', content: 'You are a helpful UK political analyst. Always format responses exactly as requested.' },
+              { role: 'system', content: 'You are a UK political analyst. Write clearly for general audiences.' },
               { role: 'user', content: prompt }
             ],
             temperature: 0.7,
