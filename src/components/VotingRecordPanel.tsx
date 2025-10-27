@@ -29,6 +29,9 @@ interface VotingRecord {
   is_major_vote: boolean;
   story_id: string | null;
   created_at: string;
+  vote_context?: string | null;
+  bill_stage?: string | null;
+  bill_description?: string | null;
 }
 
 interface TrackedMP {
@@ -414,15 +417,38 @@ export const VotingRecordPanel = ({ topicId, topicSlug }: VotingRecordPanelProps
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0 space-y-4">
-        {/* Local impact */}
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {vote.local_impact_summary}
-        </p>
+      <CardContent className="pt-0 space-y-4 max-h-96 overflow-y-auto">
+        {/* Bill stage and category badges */}
+        <div className="flex items-center gap-2">
+          <Badge className={getCategoryColor(vote.vote_category)}>{vote.vote_category}</Badge>
+          {vote.bill_stage && (
+            <Badge variant="outline" className="text-xs">{vote.bill_stage}</Badge>
+          )}
+        </div>
+
+        {/* AI-generated context summary */}
+        {vote.vote_context && (
+          <div className="bg-primary/5 border-l-2 border-primary/30 pl-3 py-2">
+            <p className="text-sm font-medium text-foreground">
+              📋 What it's about:
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {vote.vote_context}
+            </p>
+          </div>
+        )}
         
-        {/* Category as subtle text, links aligned right */}
+        {/* Enhanced local impact */}
+        <div>
+          <p className="text-sm font-medium text-foreground mb-1">💡 Why it matters:</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {vote.local_impact_summary}
+          </p>
+        </div>
+        
+        {/* Footer with links */}
         <div className="flex items-center justify-between text-xs pt-2 border-t">
-          <span className="text-muted-foreground">{vote.vote_category}</span>
+          <span className="text-muted-foreground">Parliamentary Record</span>
           <div className="flex gap-2">
             {vote.story_id && (
               <Button variant="ghost" size="sm" className="h-7 px-2" asChild>

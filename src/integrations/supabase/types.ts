@@ -1300,6 +1300,8 @@ export type Database = {
       parliamentary_mentions: {
         Row: {
           aye_count: number | null
+          bill_description: string | null
+          bill_stage: string | null
           constituency: string | null
           created_at: string | null
           debate_date: string | null
@@ -1326,6 +1328,7 @@ export type Database = {
           topic_id: string
           updated_at: string | null
           vote_category: string | null
+          vote_context: string | null
           vote_date: string | null
           vote_direction: string | null
           vote_outcome: string | null
@@ -1335,6 +1338,8 @@ export type Database = {
         }
         Insert: {
           aye_count?: number | null
+          bill_description?: string | null
+          bill_stage?: string | null
           constituency?: string | null
           created_at?: string | null
           debate_date?: string | null
@@ -1361,6 +1366,7 @@ export type Database = {
           topic_id: string
           updated_at?: string | null
           vote_category?: string | null
+          vote_context?: string | null
           vote_date?: string | null
           vote_direction?: string | null
           vote_outcome?: string | null
@@ -1370,6 +1376,8 @@ export type Database = {
         }
         Update: {
           aye_count?: number | null
+          bill_description?: string | null
+          bill_stage?: string | null
           constituency?: string | null
           created_at?: string | null
           debate_date?: string | null
@@ -1396,6 +1404,7 @@ export type Database = {
           topic_id?: string
           updated_at?: string | null
           vote_category?: string | null
+          vote_context?: string | null
           vote_date?: string | null
           vote_direction?: string | null
           vote_outcome?: string | null

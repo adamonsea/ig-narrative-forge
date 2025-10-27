@@ -309,6 +309,11 @@ serve(async (req) => {
       
       if (votes.length > 0) {
         await storeDailyVotes(supabase, votes, topicId);
+        
+        // Trigger AI context generation for new votes (fire and forget)
+        supabase.functions.invoke('generate-vote-context', {
+          body: { batchMode: true }
+        }).catch(err => console.error('Context generation trigger error:', err));
       }
       
       return new Response(
@@ -480,6 +485,10 @@ async function collectVotesForMP(
       const outcome = ayeCount > noCount ? 'passed' : 'rejected';
       const title = division.Title || '';
       
+      // Extract bill context from Parliament API
+      const billDescription = detailData.Description || '';
+      const billStage = detailData.PublicationUpdated || detailData.DivisionWasExclusivelyWhileOnline ? 'Committee' : 'Main Chamber';
+      
       // Detect party whip and rebellion
       const partyWhip = await detectPartyWhip(detailData, party);
       const isRebellion = detectRebellion(voteDirection, partyWhip);
@@ -518,7 +527,9 @@ async function collectVotesForMP(
           collection_method: 'comprehensive_mp_voting',
           division_id: division.DivisionId,
           mp_id: mpId,
-          comprehensive_tracking: true
+          comprehensive_tracking: true,
+          bill_description: billDescription,
+          bill_stage: billStage
         }
       });
       
