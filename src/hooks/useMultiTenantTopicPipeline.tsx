@@ -754,7 +754,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, loadTopicContent]);
 
-  // Real-time subscriptions
+  // Real-time subscriptions for granular updates
   useEffect(() => {
     if (!selectedTopicId) return;
 
@@ -765,37 +765,85 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'topic_articles'
+          table: 'topic_articles',
+          filter: `topic_id=eq.${selectedTopicId}`
         },
-        (payload) => {
-          console.log('🔄 Topic articles changed, reloading...', payload);
+        async (payload) => {
+          console.log('🔄 New topic article detected, refreshing arrivals...', payload);
+          // Reload only articles section
           loadTopicContent();
         }
       )
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'shared_article_content'
+          table: 'topic_articles',
+          filter: `topic_id=eq.${selectedTopicId}`
         },
-        (payload) => {
-          console.log('🔄 Shared content changed, reloading...', payload);
+        async (payload) => {
+          console.log('🔄 Topic article updated, refreshing...', payload);
           loadTopicContent();
         }
       )
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'stories'
         },
-        (payload) => {
-          console.log('🔄 Stories changed, reloading...', payload);
-          loadTopicContent();
+        async (payload) => {
+          console.log('🔄 New story detected, checking if for this topic...', payload);
+          const newStory = payload.new as any;
+          
+          // Check if story belongs to this topic
+          if (newStory.topic_article_id) {
+            const { data: topicArticle } = await supabase
+              .from('topic_articles')
+              .select('topic_id')
+              .eq('id', newStory.topic_article_id)
+              .single();
+            
+            if (topicArticle?.topic_id === selectedTopicId) {
+              console.log('✅ Story belongs to this topic, refreshing published queue...');
+              loadTopicContent();
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stories'
+        },
+        async (payload) => {
+          console.log('🔄 Story updated, checking if for this topic...', payload);
+          const updatedStory = payload.new as any;
+          
+          // Check if this story is already in our list
+          const existingStory = stories.find(s => s.id === updatedStory.id);
+          if (existingStory) {
+            console.log('✅ Story in our list, refreshing published queue...');
+            loadTopicContent();
+          } else if (updatedStory.topic_article_id) {
+            // Check if story belongs to this topic
+            const { data: topicArticle } = await supabase
+              .from('topic_articles')
+              .select('topic_id')
+              .eq('id', updatedStory.topic_article_id)
+              .single();
+            
+            if (topicArticle?.topic_id === selectedTopicId) {
+              console.log('✅ Updated story belongs to this topic, refreshing...');
+              loadTopicContent();
+            }
+          }
         }
       )
       .on(
@@ -805,9 +853,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'slides'
         },
-        (payload) => {
-          console.log('🔄 Slides changed, reloading...', payload);
-          loadTopicContent();
+        async (payload) => {
+          const slide = payload.new as any;
+          const existingStory = stories.find(s => s.id === slide?.story_id);
+          
+          if (existingStory) {
+            console.log('🔄 Slide changed for story in this topic, refreshing...', payload);
+            loadTopicContent();
+          }
         }
       )
       .on(
@@ -817,9 +870,22 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           schema: 'public',
           table: 'content_generation_queue'
         },
-        (payload) => {
-          console.log('🔄 Queue changed, reloading...', payload);
-          loadTopicContent();
+        async (payload) => {
+          console.log('🔄 Queue item changed, checking if for this topic...', payload);
+          const queueItem = payload.new as any;
+          
+          if (queueItem?.topic_article_id) {
+            const { data: topicArticle } = await supabase
+              .from('topic_articles')
+              .select('topic_id')
+              .eq('id', queueItem.topic_article_id)
+              .single();
+            
+            if (topicArticle?.topic_id === selectedTopicId) {
+              console.log('✅ Queue item belongs to this topic, refreshing processing queue...');
+              loadTopicContent();
+            }
+          }
         }
       )
       .subscribe((status) => {
@@ -829,7 +895,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedTopicId, loadTopicContent]);
+  }, [selectedTopicId, loadTopicContent, stories]);
 
   return {
     // Data
