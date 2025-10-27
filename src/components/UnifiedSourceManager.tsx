@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,9 @@ import { EnhancedSourceStatusBadge } from '@/components/EnhancedSourceStatusBadg
 import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
+import { SourceHealthSummary } from '@/components/SourceHealthSummary';
+import { SourceHealthOverview } from '@/components/SourceHealthOverview';
+import { SourceHealthSnapshot } from '@/lib/sourceHealth';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -60,6 +64,7 @@ interface ContentSource {
   total_failures?: number;
   last_failure_at?: string | null;
   last_failure_reason?: string | null;
+  recommend_replacement?: boolean | null;
 }
 
 interface Topic {
@@ -106,18 +111,21 @@ export const UnifiedSourceManager = ({
   description
 }: UnifiedSourceManagerProps) => {
   const { toast } = useToast();
-  const [sources, setSources] = useState<ContentSource[]>([]);
+  const queryClient = useQueryClient();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [currentTopic, setCurrentTopic] = useState<Topic | null>(null);
   const [showAddForm, setShowAddForm] = useState(externalShowAddForm);
   const [editingSource, setEditingSource] = useState<ContentSource | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [gatheringSource, setGatheringSource] = useState<string | null>(null);
   const [gatheringAll, setGatheringAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const isGlobalMode = mode === 'global';
   
   // Daily content availability for topic mode
   const { 
@@ -142,7 +150,7 @@ export const UnifiedSourceManager = ({
           description: result.message || "Legacy source cleanup completed successfully",
         });
         // Reload sources to reflect changes
-        loadSources();
+        await refreshSources();
       } else {
         throw new Error(result.error || 'Unknown error during cleanup');
       }
@@ -168,14 +176,23 @@ export const UnifiedSourceManager = ({
   });
 
   useEffect(() => {
-    loadSources();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
     if (mode === 'topic' && topicId) {
       loadTopicInfo(topicId);
       // Auto-run content availability check on first load
-      setTimeout(() => {
+      timeout = setTimeout(() => {
         runContentMonitor();
       }, 1000);
     }
+
+    setPage(0);
+
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
   }, [mode, topicId, region]);
 
   useEffect(() => {
@@ -203,81 +220,151 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const loadSources = async () => {
-    try {
-      setLoading(true);
+  type HealthOverviewRow = Pick<
+    ContentSource,
+    'id' | 'source_name' | 'is_active' | 'consecutive_failures' | 'last_failure_at' | 'last_failure_reason' | 'last_scraped_at'
+  >;
 
-      if (mode === 'topic' && topicId) {
-        // For topic mode, get sources with failure data
-        const { data: junctionData, error: junctionError } = await supabase.rpc('get_topic_sources', {
-          p_topic_id: topicId
-        });
+  const fetchSources = async () => {
+    if (mode === 'topic' && !topicId) {
+      return { sources: [] as ContentSource[], totalCount: 0 };
+    }
 
-        if (junctionError) throw junctionError;
-        
-        // Fetch full source details including failure counts
-        const sourceIds = (junctionData || []).map((s: any) => s.source_id);
-        
-        if (sourceIds.length === 0) {
-          setSources([]);
-          return;
-        }
+    if (mode === 'topic' && topicId) {
+      const { data: junctionData, error: junctionError } = await supabase.rpc('get_topic_sources', {
+        p_topic_id: topicId
+      });
 
-        const { data: fullSources, error: sourcesError } = await supabase
-          .from('content_sources')
-          .select('*')
-          .in('id', sourceIds);
+      if (junctionError) throw junctionError;
 
-        if (sourcesError) throw sourcesError;
+      const sourceIds = (junctionData || []).map((s: any) => s.source_id);
 
-        // Merge junction data with full source data
-        const transformedSources = (fullSources || []).map((source: any) => {
-          const junctionInfo = junctionData.find((j: any) => j.source_id === source.id);
-          return {
-            ...source,
-            topic_id: topicId,
-            source_config: junctionInfo?.source_config
-          };
-        });
-        
-        setSources(transformedSources);
-      } else {
-        // For global mode, show only sources that are actively linked to topics via topic_sources
-        if (mode === 'global') {
-          const { data, error } = await supabase
-            .from('content_sources')
-            .select(`
-              *,
-              topic_sources!inner(topic_id, is_active, source_config)
-            `)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-          
-          if (error) throw error;
-          setSources(data || []);
-        } else {
-          // For region mode, use original approach (legacy sources not linked to topics)
-          let query = supabase.from('content_sources').select('*');
-
-          if (mode === 'region' && region) {
-            query = query.eq('region', region).is('topic_id', null);
-          }
-
-          const { data, error } = await query.order('created_at', { ascending: false });
-
-          if (error) throw error;
-          setSources(data || []);
-        }
+      if (sourceIds.length === 0) {
+        return { sources: [] as ContentSource[], totalCount: 0 };
       }
-    } catch (error) {
+
+      const { data: fullSources, error: sourcesError } = await supabase
+        .from('content_sources')
+        .select('*')
+        .in('id', sourceIds);
+
+      if (sourcesError) throw sourcesError;
+
+      const transformedSources = (fullSources || []).map((source: any) => {
+        const junctionInfo = junctionData.find((j: any) => j.source_id === source.id);
+        return {
+          ...source,
+          topic_id: topicId,
+          source_config: junctionInfo?.source_config
+        } as ContentSource;
+      });
+
+      return { sources: transformedSources, totalCount: transformedSources.length };
+    }
+
+    if (mode === 'global') {
+      const rangeStart = page * pageSize;
+      const rangeEnd = rangeStart + pageSize - 1;
+
+      const { data, error, count } = await supabase
+        .from('content_sources')
+        .select(
+          `
+            *,
+            topic_sources!inner(topic_id, is_active, source_config)
+          `,
+          { count: 'exact' }
+        )
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .range(rangeStart, rangeEnd);
+
+      if (error) throw error;
+
+      return { sources: (data as ContentSource[]) || [], totalCount: count ?? 0 };
+    }
+
+    let query = supabase
+      .from('content_sources')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (mode === 'region' && region) {
+      query = query.eq('region', region).is('topic_id', null);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    return { sources: (data as ContentSource[]) || [], totalCount: count ?? (data?.length ?? 0) };
+  };
+
+  const {
+    data: sourceData,
+    isFetching: isFetchingSources,
+    isLoading: isLoadingSources,
+    refetch: refetchSources
+  } = useQuery({
+    queryKey: ['unified-sources', mode, topicId, region, isGlobalMode ? page : 0],
+    queryFn: fetchSources,
+    enabled: mode !== 'topic' || Boolean(topicId),
+    staleTime: 5 * 60 * 1000,
+    keepPreviousData: true,
+    retry: false,
+    onError: (error) => {
       console.error('Error loading sources:', error);
       toast({
         title: 'Error',
         description: 'Failed to load sources',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+    }
+  });
+
+  const sources = sourceData?.sources ?? [];
+  const totalSourceCount = sourceData?.totalCount ?? sources.length;
+  const totalPages = isGlobalMode ? Math.max(1, Math.ceil(totalSourceCount / pageSize)) : 1;
+  const isInitialLoading = isLoadingSources && !sourceData;
+  const isRefreshingSources = isFetchingSources && Boolean(sourceData);
+  const pageStart = isGlobalMode ? page * pageSize + 1 : 0;
+  const pageEnd = isGlobalMode ? Math.min(totalSourceCount, pageStart + pageSize - 1) : 0;
+  const hasNextPage = isGlobalMode ? page < totalPages - 1 : false;
+  const hasPreviousPage = isGlobalMode ? page > 0 : false;
+
+  const fetchHealthSnapshots = async () => {
+    if (!isGlobalMode) {
+      return [] as HealthOverviewRow[];
+    }
+
+    const { data, error } = await supabase
+      .from('content_sources')
+      .select('id, source_name, is_active, consecutive_failures, last_failure_at, last_failure_reason, last_scraped_at')
+      .order('last_scraped_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw error;
+
+    return (data as HealthOverviewRow[]) || [];
+  };
+
+  const { data: healthSnapshotRows } = useQuery({
+    queryKey: ['source-health-snapshots', mode, topicId, region],
+    queryFn: fetchHealthSnapshots,
+    enabled: isGlobalMode,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    onError: (error) => {
+      console.error('Error loading source health snapshots:', error);
+    }
+  });
+
+  const overviewSources = (isGlobalMode ? healthSnapshotRows : sources) ?? sources;
+
+  const refreshSources = async () => {
+    await refetchSources();
+    if (isGlobalMode) {
+      await queryClient.invalidateQueries({ queryKey: ['source-health-snapshots', mode, topicId, region] });
     }
   };
 
@@ -377,7 +464,7 @@ export const UnifiedSourceManager = ({
     }
 
     try {
-      setLoading(true);
+      setIsMutating(true);
       const normalizedUrl = normalizeUrl(newSource.feed_url.trim());
       const domain = extractDomainFromUrl(normalizedUrl);
       
@@ -543,7 +630,7 @@ export const UnifiedSourceManager = ({
       });
       setShowAddForm(false);
       setValidationResult(null);
-      loadSources();
+      await refreshSources();
       onSourcesChange();
     } catch (error) {
       console.error('Error adding source:', error);
@@ -553,13 +640,13 @@ export const UnifiedSourceManager = ({
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsMutating(false);
     }
   };
 
   const handleUpdateSource = async (sourceId: string, updates: Partial<ContentSource>) => {
     try {
-      setLoading(true);
+      setIsMutating(true);
       const { error } = await supabase
         .from('content_sources')
         .update(updates)
@@ -572,7 +659,7 @@ export const UnifiedSourceManager = ({
         description: 'Source updated successfully',
       });
 
-      loadSources();
+      await refreshSources();
       onSourcesChange();
     } catch (error) {
       console.error('Error updating source:', error);
@@ -582,7 +669,7 @@ export const UnifiedSourceManager = ({
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsMutating(false);
     }
   };
 
@@ -600,7 +687,7 @@ export const UnifiedSourceManager = ({
     }
 
     try {
-      setLoading(true);
+      setIsMutating(true);
       
       if (mode === 'topic' && topicId) {
         // Remove source from topic using junction table
@@ -654,7 +741,7 @@ export const UnifiedSourceManager = ({
         });
       }
 
-      loadSources();
+      await refreshSources();
       onSourcesChange();
     } catch (error) {
       console.error('Error deleting source:', error);
@@ -664,7 +751,7 @@ export const UnifiedSourceManager = ({
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsMutating(false);
     }
   };
 
@@ -761,7 +848,7 @@ export const UnifiedSourceManager = ({
         throw new Error(data?.error || 'Content gathering failed');
       }
 
-      loadSources();
+      await refreshSources();
       onSourcesChange();
     } catch (error) {
       console.error('Content gathering error:', error);
@@ -844,7 +931,7 @@ export const UnifiedSourceManager = ({
         description: `Discovered ${totalArticlesFound} articles • ${totalArticlesScraped} added to arrivals queue${failedSources > 0 ? ` • ${failedSources} sources failed` : ''}`,
       });
 
-      loadSources();
+      await refreshSources();
       onSourcesChange();
     } catch (error) {
       console.error('Bulk content gathering error:', error);
@@ -905,7 +992,7 @@ export const UnifiedSourceManager = ({
           description: `${source.source_name} is now responding correctly`,
         });
         
-        loadSources();
+        await refreshSources();
       }
     } catch (error) {
       console.error('Source test failed:', error);
@@ -933,7 +1020,7 @@ export const UnifiedSourceManager = ({
         description: `${source.source_name} has been reactivated`,
       });
       
-      loadSources();
+      await refreshSources();
     } catch (error) {
       console.error('Failed to reactivate source:', error);
       toast({
@@ -1015,6 +1102,20 @@ export const UnifiedSourceManager = ({
     return 'Manage all content sources with enhanced validation and health monitoring';
   };
 
+  const buildHealthSnapshot = (
+    source: Pick<
+      ContentSource,
+      'is_active' | 'consecutive_failures' | 'last_failure_at' | 'last_failure_reason' | 'last_scraped_at'
+    >
+  ): SourceHealthSnapshot => ({
+    isActive: source.is_active,
+    consecutiveFailures: source.consecutive_failures ?? 0,
+    lastFailureAt: source.last_failure_at,
+    lastFailureReason: source.last_failure_reason,
+    lastScrapedAt: source.last_scraped_at,
+    lastSuccessfulScrape: source.last_scraped_at
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1075,6 +1176,41 @@ export const UnifiedSourceManager = ({
       </div>
 
       <Separator />
+
+      <SourceHealthOverview
+        sources={overviewSources.map((source) => ({
+          id: source.id,
+          name: source.source_name,
+          snapshot: buildHealthSnapshot(source)
+        }))}
+        loading={isRefreshingSources}
+      />
+
+      {isGlobalMode && totalSourceCount > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Showing {pageStart}-{pageEnd} of {totalSourceCount} sources
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+              disabled={!hasPreviousPage || isRefreshingSources}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => (hasNextPage ? prev + 1 : prev))}
+              disabled={!hasNextPage || isRefreshingSources}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Add Source Form */}
       {showAddForm && (
@@ -1206,11 +1342,11 @@ export const UnifiedSourceManager = ({
               <Button variant="outline" onClick={() => setShowAddForm(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleAddSource} 
-                disabled={loading || !newSource.source_name.trim() || !newSource.feed_url.trim()}
+              <Button
+                onClick={handleAddSource}
+                disabled={isMutating || !newSource.source_name.trim() || !newSource.feed_url.trim()}
               >
-                {loading ? (
+                {isMutating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Adding...
@@ -1229,17 +1365,22 @@ export const UnifiedSourceManager = ({
 
       {/* Sources List */}
       <div className="grid gap-4">
-        {sources.map((source) => (
-          <Card key={source.id} className={hasConnectionIssues(source) ? 'opacity-60 bg-muted/30' : ''}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
+        {sources.map((source) => {
+          const consecutiveFailures = source.consecutive_failures || 0;
+          const showHealthIndicator = consecutiveFailures > 0 || (!source.is_active && consecutiveFailures >= 3);
+
+          return (
+            <Card key={source.id} className={hasConnectionIssues(source) ? 'opacity-60 bg-muted/30' : ''}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
-                    <EnhancedSourceStatusBadge 
-                      source={source} 
+                    <EnhancedSourceStatusBadge
+                      source={source}
                       isGathering={gatheringSource === source.id}
                     />
+                    <SourceHealthSummary snapshot={buildHealthSnapshot(source)} />
                     {mode === 'topic' && getNewContentBadge(source.id)}
                     <ProcessingStatusIndicator sourceId={source.id} />
                   </div>
@@ -1305,35 +1446,34 @@ export const UnifiedSourceManager = ({
               </div>
 
               {/* Source Health Indicator */}
-              {(source.consecutive_failures || 0) > 0 || !source.is_active && (
-                source.consecutive_failures && source.consecutive_failures >= 3
-              ) && (
-                <div className="mt-3">
-                  <SourceHealthIndicator
-                    consecutiveFailures={source.consecutive_failures || 0}
-                    totalFailures={source.total_failures || 0}
-                    lastFailureAt={source.last_failure_at}
-                    lastFailureReason={source.last_failure_reason}
-                    isActive={source.is_active || false}
-                    onTest={() => handleTestSource(source)}
-                    onReactivate={() => handleReactivateSource(source)}
-                    testing={testingSource === source.id}
-                  />
-                </div>
-              )}
+                {showHealthIndicator && (
+                  <div className="mt-3">
+                    <SourceHealthIndicator
+                      consecutiveFailures={consecutiveFailures}
+                      totalFailures={source.total_failures || 0}
+                      lastFailureAt={source.last_failure_at}
+                      lastFailureReason={source.last_failure_reason}
+                      isActive={source.is_active || false}
+                      onTest={() => handleTestSource(source)}
+                      onReactivate={() => handleReactivateSource(source)}
+                      testing={testingSource === source.id}
+                    />
+                  </div>
+                )}
 
-              {source.last_error && (source.consecutive_failures || 0) < 3 && (
-                <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                  <p className="text-sm text-red-700 dark:text-red-400">
-                    <strong>Last Error:</strong> {source.last_error}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {source.last_error && (source.consecutive_failures || 0) < 3 && (
+                  <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                    <p className="text-sm text-red-700 dark:text-red-400">
+                      <strong>Last Error:</strong> {source.last_error}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
 
-        {sources.length === 0 && !loading && (
+        {sources.length === 0 && !isInitialLoading && (
           <div className="text-center py-12">
             <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
