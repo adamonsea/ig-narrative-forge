@@ -48,6 +48,7 @@ interface Story {
   mp_name?: string;
   mp_party?: string; // Party affiliation for parliamentary stories
   constituency?: string;
+  tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
 }
 
 interface StoryCarouselProps {
@@ -242,6 +243,20 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
   const storyBadges = useMemo<React.ReactNode[]>(() => {
     const badges: React.ReactNode[] = [];
+    
+    // Add satirical/comment indicator
+    if (story.tone === 'satirical') {
+      badges.push(
+        <Badge
+          key="satirical"
+          variant="outline"
+          className="text-xs px-2 py-1 scale-80 origin-left bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800"
+        >
+          🤔
+        </Badge>
+      );
+    }
+    
     const isNew = isNewStory(storyIndex);
 
     if (isNew) {
