@@ -22,9 +22,17 @@ export type AccessibilityDiagnosis =
   | 'head-blocked'
   | 'partial-get-blocked'
   | 'cookie-required'
+  | 'alternate-route'
   | 'full-block'
   | 'network-block'
   | 'unknown';
+
+type AlternateRouteStrategy =
+  | 'amp-host'
+  | 'amp-query'
+  | 'amp-path-prefix'
+  | 'mobile-host'
+  | 'rss-suffix';
 
 type WarmupBlockProfile = {
   server?: string;
@@ -38,6 +46,10 @@ type WarmupHint = {
   reason: string;
   lastStatus?: number;
   blockProfile?: WarmupBlockProfile;
+  alternateRoute?: {
+    strategy: AlternateRouteStrategy;
+    lastSuccess: number;
+  };
 };
 
 export class EnhancedRetryStrategies {
@@ -82,6 +94,10 @@ export class EnhancedRetryStrategies {
       reason: string;
       statusCode?: number;
       blockProfile?: WarmupBlockProfile;
+      alternateRoute?: {
+        strategy: AlternateRouteStrategy;
+        lastSuccess?: number;
+      };
     }
   ): void {
     const previous = this.dynamicWarmupDomains.get(domainKey);
@@ -93,8 +109,195 @@ export class EnhancedRetryStrategies {
       lastStatus: info.statusCode ?? previous?.lastStatus,
       blockProfile: info.blockProfile
         ? { ...previous?.blockProfile, ...info.blockProfile }
-        : previous?.blockProfile
+        : previous?.blockProfile,
+      alternateRoute: info.alternateRoute
+        ? {
+            strategy: info.alternateRoute.strategy,
+            lastSuccess: info.alternateRoute.lastSuccess ?? Date.now()
+          }
+        : previous?.alternateRoute
     });
+  }
+
+  private applyAlternateRoute(url: string, strategy: AlternateRouteStrategy): string | null {
+    try {
+      const urlObj = new URL(url);
+      const { hostname, pathname, searchParams } = urlObj;
+      const ensureTrailingSlash = (path: string) => (path.endsWith('/') ? path : `${path}/`);
+
+      switch (strategy) {
+        case 'amp-host': {
+          if (hostname.startsWith('amp.')) {
+            return null;
+          }
+
+          const hostParts = hostname.split('.');
+          if (hostParts.length < 2) {
+            return null;
+          }
+
+          if (hostParts[0] === 'www') {
+            hostParts[0] = 'amp';
+          } else {
+            hostParts.unshift('amp');
+          }
+
+          urlObj.hostname = hostParts.join('.');
+          return urlObj.toString();
+        }
+        case 'mobile-host': {
+          if (hostname.startsWith('m.')) {
+            return null;
+          }
+
+          const hostParts = hostname.split('.');
+          if (hostParts.length < 2) {
+            return null;
+          }
+
+          if (hostParts[0] === 'www') {
+            hostParts[0] = 'm';
+          } else {
+            hostParts.unshift('m');
+          }
+
+          urlObj.hostname = hostParts.join('.');
+          return urlObj.toString();
+        }
+        case 'amp-query': {
+          if (searchParams.has('output') && searchParams.get('output') === 'amp') {
+            return null;
+          }
+
+          searchParams.set('output', 'amp');
+          urlObj.search = searchParams.toString();
+          return urlObj.toString();
+        }
+        case 'amp-path-prefix': {
+          if (pathname.startsWith('/amp/')) {
+            return null;
+          }
+
+          const normalized = ensureTrailingSlash(pathname);
+          urlObj.pathname = `/amp${normalized}`;
+          return urlObj.toString();
+        }
+        case 'rss-suffix': {
+          if (pathname.includes('/rss')) {
+            return null;
+          }
+
+          const normalized = ensureTrailingSlash(pathname);
+          urlObj.pathname = `${normalized}rss/`;
+          return urlObj.toString();
+        }
+        default:
+          return null;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ Failed to build alternate route (${strategy}): ${message}`);
+      return null;
+    }
+  }
+
+  private generateAlternateAccessRoutes(url: string): Array<{
+    url: string;
+    strategy: AlternateRouteStrategy;
+  }> {
+    const strategies: AlternateRouteStrategy[] = [
+      'amp-host',
+      'amp-query',
+      'amp-path-prefix',
+      'mobile-host',
+      'rss-suffix'
+    ];
+
+    const seen = new Set<string>();
+    const alternates: Array<{ url: string; strategy: AlternateRouteStrategy }> = [];
+
+    for (const strategy of strategies) {
+      const alternateUrl = this.applyAlternateRoute(url, strategy);
+      if (!alternateUrl) {
+        continue;
+      }
+
+      if (alternateUrl === url) {
+        continue;
+      }
+
+      const normalized = alternateUrl.toLowerCase();
+      if (seen.has(normalized)) {
+        continue;
+      }
+
+      seen.add(normalized);
+      alternates.push({ url: alternateUrl, strategy });
+    }
+
+    return alternates;
+  }
+
+  private async attemptAlternateRoutes(
+    url: string,
+    config: RetryConfig,
+    options: {
+      cookieHeader?: string;
+      reason?: string;
+      allowHastingsMode?: boolean;
+    } = {}
+  ): Promise<string | null> {
+    const alternates = this.generateAlternateAccessRoutes(url);
+
+    if (alternates.length === 0) {
+      return null;
+    }
+
+    const domainKey = this.getDomainKeyFromUrl(url);
+
+    for (const alternate of alternates) {
+      try {
+        console.log(`🛣️ Trying alternate route (${alternate.strategy}) -> ${alternate.url}`);
+
+        const alternateConfig: RetryConfig = {
+          ...config,
+          maxRetries: Math.min(config.maxRetries, 2)
+        };
+
+        const reason = options.reason ? `${options.reason}:${alternate.strategy}` : `alternate:${alternate.strategy}`;
+
+        const result = options.allowHastingsMode
+          ? await this.fetchWithEnhancedRetryHastings(alternate.url, alternateConfig, {
+              cookieHeader: options.cookieHeader,
+              reason,
+              skipAlternateRoutes: true
+            })
+          : await this.fetchWithEnhancedRetry(alternate.url, alternateConfig, {
+              allowAlternateRoutes: false,
+              cookieHeader: options.cookieHeader,
+              reason
+            });
+
+        this.rememberWarmupHint(domainKey, {
+          reason: `alternate-route:${alternate.strategy}`,
+          blockProfile: {
+            diagnosis: 'alternate-route',
+            details: `Alternate route ${alternate.strategy} succeeded`
+          },
+          alternateRoute: {
+            strategy: alternate.strategy,
+            lastSuccess: Date.now()
+          }
+        });
+
+        return result;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`🛣️ Alternate route failed (${alternate.strategy}): ${message}`);
+      }
+    }
+
+    return null;
   }
 
   private extractCookiesFromHeaders(headers: Headers): string | undefined {
@@ -237,13 +440,18 @@ export class EnhancedRetryStrategies {
   }
 
   async fetchWithEnhancedRetry(
-    url: string, 
+    url: string,
     config: RetryConfig = {
       maxRetries: 2,
       baseDelay: 500,
       maxDelay: 8000,
       exponentialBackoff: true
-    }
+    },
+    options: {
+      allowAlternateRoutes?: boolean;
+      cookieHeader?: string;
+      reason?: string;
+    } = {}
   ): Promise<string> {
     const context: ScrapingContext = {
       url,
@@ -254,12 +462,36 @@ export class EnhancedRetryStrategies {
     const domainKey = this.getDomainKeyFromUrl(url);
     const dynamicHint = this.dynamicWarmupDomains.get(domainKey);
 
-    console.log(`🌐 Fetching ${url} (attempt 1/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
+    const dynamicAlternate =
+      options.allowAlternateRoutes !== false
+        ? dynamicHint?.alternateRoute
+        : undefined;
+
+    const initialUrl = dynamicAlternate
+      ? this.applyAlternateRoute(url, dynamicAlternate.strategy) ?? url
+      : url;
+
+    if (initialUrl !== url) {
+      console.log(`🛣️ Using cached alternate route (${dynamicAlternate?.strategy}) for ${url}`);
+    }
+
+    const targetUrl = initialUrl;
+
+    console.log(`🌐 Fetching ${targetUrl} (attempt 1/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
 
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         const userAgent = this.getCurrentUserAgent(attempt);
-        const headers = this.getEnhancedHeaders(context, userAgent);
+        const requestContext: ScrapingContext = {
+          ...context,
+          url: targetUrl
+        };
+
+        const headers = this.getEnhancedHeaders(requestContext, userAgent);
+        
+        if (options.cookieHeader) {
+          headers['Cookie'] = options.cookieHeader;
+        }
 
         if (attempt === 0 && dynamicHint?.cookieHeader) {
           headers['Cookie'] = dynamicHint.cookieHeader;
@@ -276,9 +508,9 @@ export class EnhancedRetryStrategies {
         const timeout = context.isGovernmentSite ? 15000 : 10000; // Reduced timeout for edge functions
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        console.log(`🌐 Fetching ${url} (attempt ${attempt + 1}/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
+        console.log(`🌐 Fetching ${targetUrl} (attempt ${attempt + 1}/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
 
-        const response = await fetch(url, {
+        const response = await fetch(targetUrl, {
           signal: controller.signal,
           headers,
           redirect: 'follow'
@@ -301,7 +533,7 @@ export class EnhancedRetryStrategies {
             const rangeController = new AbortController();
             const rangeTimeoutId = setTimeout(() => rangeController.abort(), 5000);
             
-            const rangeResponse = await fetch(url, {
+            const rangeResponse = await fetch(targetUrl, {
               method: 'GET',
               signal: rangeController.signal,
               headers: rangeHeaders,
@@ -373,8 +605,25 @@ export class EnhancedRetryStrategies {
           throw error;
         }
         
-        // If this was our last attempt, throw the error
+        // If this was our last attempt, try alternate routes or throw
         if (attempt === config.maxRetries) {
+          // Try alternate routes if enabled
+          if (options.allowAlternateRoutes !== false) {
+            console.log(`🛣️ Attempting alternate routes for ${url}...`);
+            try {
+              const alternateResult = await this.attemptAlternateRoutes(url, config, {
+                cookieHeader: options.cookieHeader,
+                reason: options.reason
+              });
+              
+              if (alternateResult) {
+                return alternateResult;
+              }
+            } catch (altError) {
+              console.log(`🛣️ All alternate routes exhausted`);
+            }
+          }
+          
           const lastErrorMessage = error instanceof Error ? error.message : String(error);
           throw new Error(`All retry attempts failed. Last error: ${lastErrorMessage}`);
         }

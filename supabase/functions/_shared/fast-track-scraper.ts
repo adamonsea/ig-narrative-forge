@@ -106,6 +106,8 @@ export class FastTrackScraper {
         errors.push('Requires cookie warm-up – ensure warm-up hints are reused before scraping.');
       } else if (accessibilityResult.diagnosis === 'partial-get-blocked') {
         errors.push('Partial GET requests rejected – escalate to full GET with warm-up before parsing.');
+      } else if (accessibilityResult.diagnosis === 'alternate-route') {
+        errors.push('Primary route blocked – retry with AMP/mobile alternates or screenshot fallback.');
       }
 
       return {
