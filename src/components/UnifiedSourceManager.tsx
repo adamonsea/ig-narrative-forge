@@ -114,7 +114,6 @@ export const UnifiedSourceManager = ({
   const [gatheringAll, setGatheringAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
-  const [showDisabled, setShowDisabled] = useState(false);
   
   // Daily content availability for topic mode
   const { 
@@ -999,14 +998,6 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
-          <Button
-            onClick={() => setShowDisabled(!showDisabled)}
-            variant="outline"
-            size="sm"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            {showDisabled ? 'Hide' : 'Show'} Disabled
-          </Button>
           {mode === 'topic' && topicId && (
             <Button 
               onClick={handleCheckNewContent}
@@ -1184,7 +1175,7 @@ export const UnifiedSourceManager = ({
 
       {/* Sources List */}
       <div className="grid gap-4">
-        {sources.filter(s => showDisabled || s.is_active).map((source) => (
+        {sources.filter(s => s.is_active).map((source) => (
           <Card key={source.id}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">

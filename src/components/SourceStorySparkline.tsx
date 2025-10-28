@@ -29,12 +29,20 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
       // Query last 7 days of published stories
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       
-      // @ts-ignore - Supabase types can cause deep instantiation issues
+      // First get topic_article IDs for this source+topic combination
+      const { data: topicArticles } = await supabase
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .eq('source_id', sourceId);
+
+      const topicArticleIds = topicArticles?.map(ta => ta.id) || [];
+
+      // Now get stories for those topic_articles
       const { data: storiesData, error } = await supabase
         .from('stories')
         .select('created_at')
-        .eq('topic_id', topicId)
-        .eq('source_id', sourceId)
+        .in('topic_article_id', topicArticleIds)
         .eq('is_published', true)
         .gte('created_at', sevenDaysAgo);
 
@@ -88,7 +96,7 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
   const maxCount = Math.max(...data.map(d => d.count), 1);
 
   return (
-    <div className="inline-block w-[100px] h-[30px]">
+    <div className="inline-block w-[120px] h-[40px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
           <XAxis dataKey="date" hide />
