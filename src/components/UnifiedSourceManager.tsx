@@ -29,10 +29,10 @@ import {
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 import { StatusIndicator } from '@/components/StatusIndicator';
-import { EnhancedSourceStatusBadge } from '@/components/EnhancedSourceStatusBadge';
 import { GatheringProgressIndicator } from '@/components/GatheringProgressIndicator';
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
+import { SourceStorySparkline } from '@/components/SourceStorySparkline';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -40,26 +40,22 @@ interface ContentSource {
   source_name: string;
   feed_url: string | null;
   canonical_domain: string | null;
-  credibility_score: number | null;
   is_active: boolean | null;
-  articles_scraped: number | null;
-  success_rate: number | null;
-  avg_response_time_ms: number | null;
-  last_scraped_at: string | null;
   region: string | null;
   content_type: string | null;
   is_whitelisted: boolean | null;
   is_blacklisted: boolean | null;
   scrape_frequency_hours: number | null;
   topic_id: string | null;
-  scraping_method: string | null;
-  success_count?: number;
-  failure_count?: number;
-  last_error?: string | null;
+  is_gathering?: boolean;
+  stories_published_7d?: number;
+  stories_published_total?: number;
+  last_story_date?: string | null;
   consecutive_failures?: number;
   total_failures?: number;
   last_failure_at?: string | null;
   last_failure_reason?: string | null;
+  last_error?: string | null;
 }
 
 interface Topic {
@@ -162,7 +158,6 @@ export const UnifiedSourceManager = ({
     source_name: '',
     feed_url: '',
     region: region || 'general',
-    credibility_score: 70,
     scrape_frequency_hours: 24,
     content_type: 'news',
   });
@@ -208,37 +203,39 @@ export const UnifiedSourceManager = ({
       setLoading(true);
 
       if (mode === 'topic' && topicId) {
-        // For topic mode, get sources with failure data
-        const { data: junctionData, error: junctionError } = await supabase.rpc('get_topic_sources', {
+        // For topic mode, use the new stats function
+        const { data: statsData, error: statsError } = await supabase.rpc('get_topic_source_stats', {
           p_topic_id: topicId
         });
 
-        if (junctionError) throw junctionError;
+        if (statsError) {
+          console.error('Error loading topic source stats:', statsError);
+          throw statsError;
+        }
         
-        // Fetch full source details including failure counts
-        const sourceIds = (junctionData || []).map((s: any) => s.source_id);
-        
-        if (sourceIds.length === 0) {
+        if (!statsData || statsData.length === 0) {
           setSources([]);
           return;
         }
 
-        const { data: fullSources, error: sourcesError } = await supabase
-          .from('content_sources')
-          .select('*')
-          .in('id', sourceIds);
-
-        if (sourcesError) throw sourcesError;
-
-        // Merge junction data with full source data
-        const transformedSources = (fullSources || []).map((source: any) => {
-          const junctionInfo = junctionData.find((j: any) => j.source_id === source.id);
-          return {
-            ...source,
-            topic_id: topicId,
-            source_config: junctionInfo?.source_config
-          };
-        });
+        // Transform the stats data to match ContentSource interface
+        const transformedSources = (statsData || []).map((stat: any) => ({
+          id: stat.source_id,
+          source_name: stat.source_name,
+          feed_url: stat.feed_url,
+          canonical_domain: stat.canonical_domain,
+          is_active: stat.is_active,
+          is_gathering: stat.is_gathering,
+          stories_published_7d: stat.stories_published_7d,
+          stories_published_total: stat.stories_published_total,
+          last_story_date: stat.last_story_date,
+          topic_id: topicId,
+          region: null,
+          content_type: null,
+          is_whitelisted: null,
+          is_blacklisted: null,
+          scrape_frequency_hours: null,
+        }));
         
         setSources(transformedSources);
       } else {
@@ -436,7 +433,6 @@ export const UnifiedSourceManager = ({
             source_name: newSource.source_name.trim(),
             feed_url: normalizedUrl,
             canonical_domain: domain,
-            credibility_score: newSource.credibility_score,
             scrape_frequency_hours: newSource.scrape_frequency_hours,
             content_type: newSource.content_type,
             is_active: true,
@@ -498,7 +494,6 @@ export const UnifiedSourceManager = ({
           source_name: newSource.source_name.trim(),
           feed_url: normalizedUrl,
           canonical_domain: domain,
-          credibility_score: newSource.credibility_score,
           scrape_frequency_hours: newSource.scrape_frequency_hours,
           content_type: newSource.content_type,
           is_active: true,
@@ -537,7 +532,6 @@ export const UnifiedSourceManager = ({
         source_name: '',
         feed_url: '',
         region: region || 'general',
-        credibility_score: 70,
         scrape_frequency_hours: 24,
         content_type: 'news',
       });
@@ -864,20 +858,15 @@ export const UnifiedSourceManager = ({
       return <Badge variant="destructive">Blacklisted</Badge>;
     }
     
-    // Use the unified EnhancedSourceStatusBadge for all other cases
-    return <EnhancedSourceStatusBadge source={source} automationLastError={source.last_error} />;
+    // Simple enabled/disabled badge
+    return <Badge variant={source.is_active ? "default" : "secondary"}>
+      {source.is_active ? "Enabled" : "Disabled"}
+    </Badge>;
   };
 
   const hasConnectionIssues = (source: ContentSource) => {
-    if (!source.is_active || source.is_blacklisted) return false;
-    
-    const successRate = source.success_rate || 0;
-    const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at) : null;
-    const daysSinceLastScrape = lastScraped ? 
-      Math.floor((Date.now() - lastScraped.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-    
-    // Connection issues if: has recent errors AND poor performance OR very stale
-    return (source.last_error && successRate < 30) || daysSinceLastScrape > 30;
+    // Check for consecutive failures
+    return (source.consecutive_failures || 0) >= 3 || source.is_blacklisted || !source.is_active;
   };
 
   const handleTestSource = async (source: ContentSource) => {
@@ -967,38 +956,6 @@ export const UnifiedSourceManager = ({
         variant: 'destructive',
       });
     }
-  };
-
-  const getNewContentBadge = (sourceId: string) => {
-    const sourceAvailability = availability[sourceId];
-    
-    if (!sourceAvailability) {
-      return (
-        <Badge variant="secondary" className="text-xs">
-          New: ?
-        </Badge>
-      );
-    }
-    
-    const newCount = sourceAvailability.new_urls_found || 0;
-    const hasError = !sourceAvailability.success;
-    
-    if (hasError) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          Check failed
-        </Badge>
-      );
-    }
-    
-    return (
-      <Badge 
-        variant={newCount > 0 ? "default" : "secondary"} 
-        className="text-xs"
-      >
-        New: {newCount}
-      </Badge>
-    );
   };
 
   const getDisplayTitle = () => {
@@ -1179,17 +1136,6 @@ export const UnifiedSourceManager = ({
                 </div>
               )}
               <div>
-                <Label htmlFor="credibility">Credibility Score (1-100)</Label>
-                <Input
-                  id="credibility"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={newSource.credibility_score}
-                  onChange={(e) => setNewSource(prev => ({ ...prev, credibility_score: parseInt(e.target.value) }))}
-                />
-              </div>
-              <div>
                 <Label htmlFor="frequency">Scrape Frequency (hours)</Label>
                 <Input
                   id="frequency"
@@ -1236,32 +1182,35 @@ export const UnifiedSourceManager = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
-                    <EnhancedSourceStatusBadge 
-                      source={source} 
-                      isGathering={gatheringSource === source.id}
-                    />
-                    {mode === 'topic' && getNewContentBadge(source.id)}
+                    
+                    {/* Enabled/Disabled Badge */}
+                    <Badge variant={source.is_active ? "default" : "secondary"}>
+                      {source.is_active ? "Enabled" : "Disabled"}
+                    </Badge>
+                    
+                    {/* 7-day sparkline chart - only in topic mode */}
+                    {mode === 'topic' && topicId && (
+                      <SourceStorySparkline 
+                        sourceId={source.id} 
+                        topicId={topicId}
+                      />
+                    )}
+                    
+                    {/* Stories count badge */}
+                    {mode === 'topic' && (
+                      <Badge variant="outline" className="gap-1">
+                        <BarChart3 className="w-3 h-3" />
+                        {source.stories_published_7d || 0} {source.stories_published_7d === 1 ? 'story' : 'stories'}
+                      </Badge>
+                    )}
+                    
+                    {/* Processing indicator */}
                     <ProcessingStatusIndicator sourceId={source.id} />
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Globe className="w-4 h-4" />
-                      <span>{source.canonical_domain}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <BarChart3 className="w-4 h-4" />
-                      <span>{source.articles_scraped || 0} articles</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {source.last_scraped_at 
-                          ? new Date(source.last_scraped_at).toLocaleDateString()
-                          : 'Never scraped'
-                        }
-                      </span>
-                    </div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Globe className="w-4 h-4" />
+                    <span>{source.canonical_domain}</span>
                   </div>
                 </div>
 

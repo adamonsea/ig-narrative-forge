@@ -3928,6 +3928,20 @@ export type Database = {
           total_swipes: number
         }[]
       }
+      get_topic_source_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          canonical_domain: string
+          feed_url: string
+          is_active: boolean
+          is_gathering: boolean
+          last_story_date: string
+          source_id: string
+          source_name: string
+          stories_published_7d: number
+          stories_published_total: number
+        }[]
+      }
       get_topic_sources: {
         Args: { p_topic_id: string }
         Returns: {
