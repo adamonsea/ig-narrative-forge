@@ -60,6 +60,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         
+        // Handle token refresh failures
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          console.error('Token refresh failed - cleaning up auth state');
+          cleanupAuthState();
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again.",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            window.location.href = '/auth';
+          }, 1000);
+          return;
+        }
+        
         // Update state synchronously
         setSession(session);
         setUser(session?.user ?? null);
