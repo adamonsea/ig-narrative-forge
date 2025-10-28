@@ -321,7 +321,7 @@ serve(async (req) => {
       }
     }
 
-    // Check for topic-scoped duplicates (only if we have topicId)
+    // Test scraping functionality if topicId provided (removed duplicate check - handled client-side)
     if (topicId && result.isAccessible) {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -329,27 +329,6 @@ serve(async (req) => {
         
         if (supabaseUrl && supabaseServiceKey) {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
-          
-          // Check if this URL already exists for this specific topic
-          const { data: existingTopicSource } = await supabase
-            .from('topic_sources')
-            .select(`
-              id,
-              content_sources!inner(feed_url, source_name)
-            `)
-            .eq('topic_id', topicId)
-            .eq('content_sources.feed_url', url)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (existingTopicSource) {
-            result.success = false;
-            result.error = 'This source is already active for this topic';
-            return new Response(JSON.stringify(result), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
           
           // Test scraping functionality using unified approach
           const scraperFunction = 'universal-topic-scraper'; // All topics use unified scraper now

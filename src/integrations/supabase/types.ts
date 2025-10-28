@@ -4180,6 +4180,13 @@ export type Database = {
       }
       reset_stalled_processing: { Args: never; Returns: undefined }
       reset_stalled_stories: { Args: never; Returns: number }
+      safe_cleanup_inactive_sources: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          message: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       test_rss_import: { Args: { p_source_name?: string }; Returns: Json }

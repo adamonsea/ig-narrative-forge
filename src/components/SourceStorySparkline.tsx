@@ -29,7 +29,7 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
       // Query last 7 days of published stories
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       
-      // First get topic_article IDs for this source+topic combination
+      // Get topic_article IDs for this source+topic combination
       const { data: topicArticles } = await supabase
         .from('topic_articles')
         .select('id')
@@ -37,6 +37,11 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
         .eq('source_id', sourceId);
 
       const topicArticleIds = topicArticles?.map(ta => ta.id) || [];
+
+      if (topicArticleIds.length === 0) {
+        setData([]);
+        return;
+      }
 
       // Now get stories for those topic_articles
       const { data: storiesData, error } = await supabase

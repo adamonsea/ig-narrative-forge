@@ -114,6 +114,12 @@ export const UnifiedSourceManager = ({
   const [gatheringAll, setGatheringAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
+  const [showDisabled, setShowDisabled] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    sourceId: string;
+    sourceName: string;
+    articleCount: number;
+  } | null>(null);
   
   // Daily content availability for topic mode
   const { 
@@ -390,24 +396,51 @@ export const UnifiedSourceManager = ({
 
         let sourceId: string;
 
-        if (existingSource) {
-          // Source exists, check if already linked to this topic
-          const { data: existingLink } = await supabase
-            .from('topic_sources')
-            .select('id')
-            .eq('topic_id', topicId)
-            .eq('source_id', existingSource.id)
-            .eq('is_active', true)
-            .maybeSingle();
+      if (existingSource) {
+        // Source exists, check if already linked to this topic
+        const { data: existingLinks } = await supabase
+          .from('topic_sources')
+          .select('id, is_active')
+          .eq('topic_id', topicId)
+          .eq('source_id', existingSource.id);
 
-          if (existingLink) {
+        const activeLink = existingLinks?.find(link => link.is_active);
+        const inactiveLink = existingLinks?.find(link => !link.is_active);
+
+        if (activeLink) {
+          toast({
+            title: 'Source Already Added',
+            description: 'This source is already active for this topic',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (inactiveLink) {
+          const reactivate = window.confirm(
+            `Source "${existingSource.source_name}" already exists but is disabled for this topic. Reactivate it?`
+          );
+          if (reactivate) {
+            const { error } = await supabase
+              .from('topic_sources')
+              .update({ is_active: true })
+              .eq('id', inactiveLink.id);
+
+            if (error) throw error;
+            
             toast({
-              title: 'Source Already Added',
-              description: 'This source is already linked to this topic',
-              variant: 'destructive',
+              title: 'Source Reactivated',
+              description: `"${existingSource.source_name}" has been reactivated for this topic`,
             });
+            
+            loadSources();
+            onSourcesChange();
+            setShowAddForm(false);
+            return;
+          } else {
             return;
           }
+        }
 
           // Link existing source to topic
           const { error: linkError } = await supabase.rpc('add_source_to_topic', {
@@ -581,14 +614,25 @@ export const UnifiedSourceManager = ({
   };
 
   const handleDeleteSource = async (sourceId: string, sourceName: string) => {
+    // Get source details for confirmation
+    const source = sources.find(s => s.id === sourceId);
+    
     if (mode === 'topic' && topicId) {
-      // For topic mode, remove source from topic (don't delete the source itself)
-      if (!confirm(`Are you sure you want to remove "${sourceName}" from this topic? The source will remain available for other topics.`)) {
+      // For topic mode, just unlink (safe operation)
+      if (!confirm(`Remove "${sourceName}" from this topic?\n\nThe source will remain available for other topics.`)) {
         return;
       }
     } else {
-      // For global/region mode, delete the entire source
-      if (!confirm(`Are you sure you want to delete "${sourceName}"? This action cannot be undone.`)) {
+      // For global/region mode, permanent deletion with strong warnings
+      const articleCount = source?.stories_published_total || 0;
+      const confirmMessage = `⚠️ PERMANENTLY DELETE "${sourceName}"?\n\nThis source has ${articleCount} articles.\nThis action CANNOT be undone.\n\nType DELETE to confirm:`;
+      
+      const userInput = window.prompt(confirmMessage);
+      if (userInput !== 'DELETE') {
+        toast({
+          title: 'Deletion Cancelled',
+          description: 'Source was not deleted',
+        });
         return;
       }
     }
@@ -610,47 +654,42 @@ export const UnifiedSourceManager = ({
           description: `Source "${sourceName}" removed from topic`,
         });
       } else {
-        // For global/region mode, delete entire source (original logic)
-        
-        // Check for existing articles
-        const { data: articleCount, error: countError } = await supabase
-          .from('articles')
-          .select('id', { count: 'exact', head: true })
-          .eq('source_id', sourceId);
-
-        if (countError) throw countError;
-
-        const hasArticles = (articleCount as any)?.count > 0;
-        
-        if (hasArticles) {
-          // Orphan articles by setting source_id to null
-          const { error: updateError } = await supabase
-            .from('articles')
-            .update({ source_id: null })
-            .eq('source_id', sourceId);
-
-          if (updateError) throw updateError;
-        }
-
-        // Delete the source (this will cascade delete topic_sources entries)
+        // For global/region mode, attempt permanent deletion
         const { error } = await supabase
           .from('content_sources')
           .delete()
           .eq('id', sourceId);
 
-        if (error) throw error;
+        if (error) {
+          // Check if it's our protection trigger or foreign key violation
+          if (error.message?.includes('still linked to active topics') || 
+              error.message?.includes('Cannot delete source')) {
+            toast({
+              title: 'Cannot Delete',
+              description: 'Source is linked to active topics. Remove all topic associations first.',
+              variant: 'destructive',
+            });
+          } else if (error.code === '23503') {
+            toast({
+              title: 'Cannot Delete',
+              description: 'Source has associated data. Remove topic links first.',
+              variant: 'destructive',
+            });
+          } else {
+            throw error;
+          }
+          return;
+        }
 
         toast({
           title: 'Success',
-          description: hasArticles 
-            ? `Source "${sourceName}" deleted and ${(articleCount as any)?.count} articles orphaned`
-            : `Source "${sourceName}" deleted successfully`,
+          description: `Source "${sourceName}" permanently deleted`,
         });
       }
 
       loadSources();
       onSourcesChange();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting source:', error);
       toast({
         title: 'Error',
@@ -853,15 +892,31 @@ export const UnifiedSourceManager = ({
   };
 
   const getSourceHealthBadge = (source: ContentSource) => {
-    // Handle blacklisted sources separately (special case)
-    if (source.is_blacklisted) {
-      return <Badge variant="destructive">Blacklisted</Badge>;
+    if (!source.is_active) {
+      return <Badge variant="secondary" className="text-xs">🔴 Disabled</Badge>;
     }
     
-    // Simple enabled/disabled badge
-    return <Badge variant={source.is_active ? "default" : "secondary"}>
-      {source.is_active ? "Enabled" : "Disabled"}
-    </Badge>;
+    if (hasConnectionIssues(source)) {
+      return <Badge variant="destructive" className="text-xs">🔴 Connection Issues</Badge>;
+    }
+    
+    if (!source.last_story_date) {
+      return <Badge variant="outline" className="text-xs">⚪ No Stories Yet</Badge>;
+    }
+    
+    const daysSinceLastStory = Math.floor(
+      (Date.now() - new Date(source.last_story_date).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    if (daysSinceLastStory > 7) {
+      return <Badge variant="outline" className="text-xs">🟡 Stale ({daysSinceLastStory}d)</Badge>;
+    }
+    
+    if ((source.stories_published_7d || 0) === 0) {
+      return <Badge variant="outline" className="text-xs">🟡 No Recent Stories</Badge>;
+    }
+    
+    return <Badge variant="default" className="text-xs">🟢 Healthy</Badge>;
   };
 
   const hasConnectionIssues = (source: ContentSource) => {
@@ -903,19 +958,34 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const handleReactivateSource = async (source: ContentSource) => {
+  const handleReactivateSource = async (sourceId: string) => {
+    const source = sources.find(s => s.id === sourceId);
+    if (!source) return;
+
     try {
-      const { error } = await supabase
-        .from('content_sources')
-        .update({
-          is_active: true,
-          consecutive_failures: 0,
-          last_failure_at: null,
-          last_failure_reason: null
-        })
-        .eq('id', source.id);
-      
-      if (error) throw error;
+      if (mode === 'topic' && topicId) {
+        // Reactivate in topic_sources junction table
+        const { error } = await supabase
+          .from('topic_sources')
+          .update({ is_active: true })
+          .eq('topic_id', topicId)
+          .eq('source_id', sourceId);
+        
+        if (error) throw error;
+      } else {
+        // Reactivate in content_sources table
+        const { error } = await supabase
+          .from('content_sources')
+          .update({
+            is_active: true,
+            consecutive_failures: 0,
+            last_failure_at: null,
+            last_failure_reason: null
+          })
+          .eq('id', sourceId);
+        
+        if (error) throw error;
+      }
       
       toast({
         title: 'Source Reactivated',
@@ -998,6 +1068,14 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
+          <Button
+            onClick={() => setShowDisabled(!showDisabled)}
+            variant="outline"
+            size="sm"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            {showDisabled ? 'Hide' : 'Show'} Disabled
+          </Button>
           {mode === 'topic' && topicId && (
             <Button 
               onClick={handleCheckNewContent}
@@ -1175,7 +1253,7 @@ export const UnifiedSourceManager = ({
 
       {/* Sources List */}
       <div className="grid gap-4">
-        {sources.filter(s => s.is_active).map((source) => (
+        {sources.filter(s => showDisabled || s.is_active).map((source) => (
           <Card key={source.id}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
@@ -1183,13 +1261,11 @@ export const UnifiedSourceManager = ({
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">{source.source_name}</h3>
                     
-                    {/* Enabled/Disabled Badge */}
-                    <Badge variant={source.is_active ? "default" : "secondary"}>
-                      {source.is_active ? "Enabled" : "Disabled"}
-                    </Badge>
+                    {/* Health Badge with emoji indicators */}
+                    {getSourceHealthBadge(source)}
                     
                     {/* 7-day sparkline chart - only in topic mode */}
-                    {mode === 'topic' && topicId && (
+                    {mode === 'topic' && topicId && source.is_active && (
                       <SourceStorySparkline 
                         sourceId={source.id} 
                         topicId={topicId}
@@ -1212,30 +1288,46 @@ export const UnifiedSourceManager = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleScrapeSource(source)}
-                    disabled={gatheringSource === source.id || !source.feed_url}
-                  >
-                    {gatheringSource === source.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Play className="w-4 h-4" />
-                    )}
-                  </Button>
+                  {source.is_active && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleScrapeSource(source)}
+                        disabled={gatheringSource === source.id || !source.feed_url}
+                      >
+                        {gatheringSource === source.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Play className="w-4 h-4" />
+                        )}
+                      </Button>
+                      
+                      <Switch
+                        checked={true}
+                        onCheckedChange={(checked) => handleUpdateSource(source.id, { is_active: checked })}
+                      />
+                    </>
+                  )}
                   
-                  <Switch
-                    checked={source.is_active || false}
-                    onCheckedChange={(checked) => handleUpdateSource(source.id, { is_active: checked })}
-                  />
+                  {!source.is_active && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleReactivateSource(source.id)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Reactivate
+                    </Button>
+                  )}
                   
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteSource(source.id, source.source_name)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {mode === 'topic' ? 'Remove' : 'Delete'}
                   </Button>
                   
                   {source.feed_url && (
@@ -1250,10 +1342,8 @@ export const UnifiedSourceManager = ({
                 </div>
               </div>
 
-              {/* Source Health Indicator */}
-              {(source.consecutive_failures || 0) > 0 || !source.is_active && (
-                source.consecutive_failures && source.consecutive_failures >= 3
-              ) && (
+              {/* Source Health Indicator - only for connection issues */}
+              {source.is_active && (source.consecutive_failures || 0) >= 3 && (
                 <div className="mt-3">
                   <SourceHealthIndicator
                     consecutiveFailures={source.consecutive_failures || 0}
@@ -1262,7 +1352,7 @@ export const UnifiedSourceManager = ({
                     lastFailureReason={source.last_failure_reason}
                     isActive={source.is_active || false}
                     onTest={() => handleTestSource(source)}
-                    onReactivate={() => handleReactivateSource(source)}
+                    onReactivate={() => handleReactivateSource(source.id)}
                     testing={testingSource === source.id}
                   />
                 </div>
