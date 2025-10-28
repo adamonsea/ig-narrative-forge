@@ -320,16 +320,6 @@ serve(async (req) => {
               maxAgeDays  // Pass the maxAgeDays parameter
             );
 
-            // Background update of source metrics (don't wait for it)
-            void supabase
-              .from('content_sources')
-              .update({
-                articles_scraped: source.articles_scraped + scrapeResult.articlesScraped,
-                last_scraped_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', source.source_id);
-
             const result: ScraperSourceResult = {
               sourceId: source.source_id,
               sourceName: source.source_name,
@@ -472,6 +462,28 @@ serve(async (req) => {
         
         const result = await Promise.race([sourcePromise, timeoutPromise]);
         standardResponse.addSourceResult(result);
+
+        // Update last_scraped_at for successful scrapes (including empty results)
+        if (result.success) {
+          try {
+            const { error: updateError } = await supabase
+              .from('content_sources')
+              .update({
+                articles_scraped: source.articles_scraped + (result.articlesScraped || 0),
+                last_scraped_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', source.source_id);
+
+            if (updateError) {
+              console.error(`❌ Failed to update last_scraped_at for ${source.source_name}:`, updateError);
+            } else {
+              console.log(`✅ Updated last_scraped_at for ${source.source_name}`);
+            }
+          } catch (updateErr) {
+            console.error(`❌ Error updating source metrics for ${source.source_name}:`, updateErr);
+          }
+        }
       } catch (timeoutError) {
         console.error(`⏰ Timeout processing ${source.source_name}:`, timeoutError);
         recordFailure(source.normalizedUrl);
