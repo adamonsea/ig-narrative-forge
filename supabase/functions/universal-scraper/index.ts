@@ -264,7 +264,7 @@ serve(async (req) => {
         console.log(`⚠️ No topic available for multi-tenant storage`);
       }
 
-      console.log(`📊 Storage complete: Legacy: ${storedCount} stored, ${duplicateCount} duplicates, ${discardedCount} discarded | Multi-tenant: ${multiTenantStoredCount} processed`);
+      console.log(`📊 Storage complete: Multi-tenant: ${multiTenantStoredCount} articles processed`);
     } else {
       console.log(`❌ Scraping failed or no articles found`);
     }
@@ -308,7 +308,7 @@ serve(async (req) => {
         responseTime,
         errors: scrapingResult.errors,
         message: scrapingResult.success 
-          ? `Successfully scraped ${storedCount} articles (${multiTenantStoredCount} multi-tenant) using ${scrapingResult.method}`
+          ? `Successfully scraped ${multiTenantStoredCount} articles using ${scrapingResult.method}`
           : `Scraping failed: ${scrapingResult.errors.join(', ')}`
       }),
       { 
