@@ -82,14 +82,38 @@ export class FastTrackScraper {
     
     // Quick accessibility check first
     const accessibilityResult = await this.retryStrategy.quickAccessibilityCheck(this.baseUrl);
+
+    console.log(
+      `🩺 Accessibility diagnosis: ${accessibilityResult.diagnosis}` +
+      (accessibilityResult.blockingServer ? ` (server: ${accessibilityResult.blockingServer})` : '')
+    );
+
     if (!accessibilityResult.accessible) {
       console.log(`❌ Source not accessible: ${accessibilityResult.error}`);
+
+      const diagnosisNote = `Source not accessible (${accessibilityResult.diagnosis})` +
+        (accessibilityResult.blockingServer ? ` via ${accessibilityResult.blockingServer}` : '');
+
+      const errors: string[] = [
+        accessibilityResult.error
+          ? `${diagnosisNote}: ${accessibilityResult.error}`
+          : diagnosisNote
+      ];
+
+      if (accessibilityResult.diagnosis === 'network-block') {
+        errors.push('Network or proxy blocked the request – schedule screenshot or remote browser fallback.');
+      } else if (accessibilityResult.diagnosis === 'cookie-required') {
+        errors.push('Requires cookie warm-up – ensure warm-up hints are reused before scraping.');
+      } else if (accessibilityResult.diagnosis === 'partial-get-blocked') {
+        errors.push('Partial GET requests rejected – escalate to full GET with warm-up before parsing.');
+      }
+
       return {
         success: false,
         articles: [],
         articlesFound: 0,
         articlesScraped: 0,
-        errors: [`Source not accessible: ${accessibilityResult.error}`],
+        errors,
         method: 'fallback'
       };
     }

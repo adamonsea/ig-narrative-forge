@@ -17,6 +17,29 @@ export interface ScrapingContext {
   lastError?: string;
 }
 
+export type AccessibilityDiagnosis =
+  | 'ok'
+  | 'head-blocked'
+  | 'partial-get-blocked'
+  | 'cookie-required'
+  | 'full-block'
+  | 'network-block'
+  | 'unknown';
+
+type WarmupBlockProfile = {
+  server?: string;
+  diagnosis?: AccessibilityDiagnosis;
+  details?: string;
+};
+
+type WarmupHint = {
+  cookieHeader?: string;
+  lastUpdated: number;
+  reason: string;
+  lastStatus?: number;
+  blockProfile?: WarmupBlockProfile;
+};
+
 export class EnhancedRetryStrategies {
   private userAgents = [
     // Latest Chrome versions - most common and accepted
@@ -37,12 +60,7 @@ export class EnhancedRetryStrategies {
     'Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
   ];
 
-  private dynamicWarmupDomains = new Map<string, {
-    cookieHeader?: string;
-    lastUpdated: number;
-    reason: string;
-    lastStatus?: number;
-  }>();
+  private dynamicWarmupDomains = new Map<string, WarmupHint>();
 
   private getCurrentUserAgent(attempt: number): string {
     return this.userAgents[attempt % this.userAgents.length];
@@ -59,7 +77,12 @@ export class EnhancedRetryStrategies {
 
   private rememberWarmupHint(
     domainKey: string,
-    info: { cookieHeader?: string; reason: string; statusCode?: number }
+    info: {
+      cookieHeader?: string;
+      reason: string;
+      statusCode?: number;
+      blockProfile?: WarmupBlockProfile;
+    }
   ): void {
     const previous = this.dynamicWarmupDomains.get(domainKey);
 
@@ -67,7 +90,10 @@ export class EnhancedRetryStrategies {
       cookieHeader: info.cookieHeader ?? previous?.cookieHeader,
       lastUpdated: Date.now(),
       reason: info.reason,
-      lastStatus: info.statusCode ?? previous?.lastStatus
+      lastStatus: info.statusCode ?? previous?.lastStatus,
+      blockProfile: info.blockProfile
+        ? { ...previous?.blockProfile, ...info.blockProfile }
+        : previous?.blockProfile
     });
   }
 
@@ -146,10 +172,17 @@ export class EnhancedRetryStrategies {
         console.log(`🍪 COOKIE_WARMUP_NO_COOKIES (${hostname})`);
       }
 
+      const serverHeader = warmupResponse.headers.get('server') || existing?.blockProfile?.server;
+
       this.rememberWarmupHint(domainKey, {
         cookieHeader,
         reason: `warmup:${reason}`,
-        statusCode: warmupResponse.status
+        statusCode: warmupResponse.status,
+        blockProfile: {
+          server: serverHeader,
+          details: `Warm-up returned status ${warmupResponse.status}`,
+          diagnosis: existing?.blockProfile?.diagnosis
+        }
       });
 
       await new Promise(resolve => setTimeout(resolve, 750));
@@ -160,7 +193,8 @@ export class EnhancedRetryStrategies {
       console.log(`🍪 COOKIE_WARMUP_FAIL (${hostname}) [${reason}]: ${message}`);
 
       this.rememberWarmupHint(domainKey, {
-        reason: `warmup-failed:${reason}`
+        reason: `warmup-failed:${reason}`,
+        blockProfile: existing?.blockProfile
       });
 
       return existing?.cookieHeader;
@@ -217,12 +251,19 @@ export class EnhancedRetryStrategies {
       previousAttempts: 0
     };
 
+    const domainKey = this.getDomainKeyFromUrl(url);
+    const dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+
     console.log(`🌐 Fetching ${url} (attempt 1/${config.maxRetries + 1}) ${context.isGovernmentSite ? '[GOV SITE]' : ''}`);
 
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         const userAgent = this.getCurrentUserAgent(attempt);
         const headers = this.getEnhancedHeaders(context, userAgent);
+
+        if (attempt === 0 && dynamicHint?.cookieHeader) {
+          headers['Cookie'] = dynamicHint.cookieHeader;
+        }
         
         // Intelligent delay before request (except first attempt)
         if (attempt > 0) {
@@ -462,9 +503,14 @@ export class EnhancedRetryStrategies {
     responseTime: number;
     statusCode?: number;
     error?: string;
+    diagnosis: AccessibilityDiagnosis;
+    blockingServer?: string;
   }> {
     const startTime = Date.now();
     const domainKey = this.getDomainKeyFromUrl(url);
+    const existingHint = this.dynamicWarmupDomains.get(domainKey);
+    let blockingServer: string | undefined = existingHint?.blockProfile?.server;
+    let diagnosis: AccessibilityDiagnosis = 'unknown';
 
     const performRequest = async (
       method: 'HEAD' | 'GET',
@@ -501,7 +547,15 @@ export class EnhancedRetryStrategies {
     const shouldFallbackToGet = (status: number) => [401, 403, 405, 406, 429].includes(status);
     let lastWarmupFailure: { status?: number; error?: string } | null = null;
 
-    const attemptWarmupRetry = async (trigger: string) => {
+    const attemptWarmupRetry = async (
+      trigger: string
+    ): Promise<{
+      accessible: true;
+      responseTime: number;
+      statusCode?: number;
+      diagnosis: AccessibilityDiagnosis;
+      blockingServer?: string;
+    } | null> => {
       try {
         const cookieHeader = await this.performCookieWarmup(url, `accessibility:${trigger}`);
 
@@ -518,6 +572,10 @@ export class EnhancedRetryStrategies {
 
         const expandedResponse = await performRequest('GET', 8000, warmupHeaders);
         const expandedStatus = expandedResponse.status;
+        const expandedServer = expandedResponse.headers.get('server') || blockingServer;
+        if (expandedServer) {
+          blockingServer = expandedServer;
+        }
 
         if (expandedResponse.ok || isLikelyAccessible(expandedStatus)) {
           try {
@@ -526,16 +584,26 @@ export class EnhancedRetryStrategies {
             // Ignore partial read errors
           }
 
+          const warmupDiagnosis: AccessibilityDiagnosis = cookieHeader ? 'cookie-required' : 'partial-get-blocked';
+          diagnosis = warmupDiagnosis;
+
           this.rememberWarmupHint(domainKey, {
             cookieHeader,
             reason: `accessibility:${trigger}:expanded`,
-            statusCode: expandedStatus
+            statusCode: expandedStatus,
+            blockProfile: {
+              server: expandedServer,
+              diagnosis: warmupDiagnosis,
+              details: `Expanded warm-up GET returned ${expandedStatus}`
+            }
           });
 
           return {
             accessible: true,
             responseTime: Date.now() - startTime,
-            statusCode: expandedStatus
+            statusCode: expandedStatus,
+            diagnosis: warmupDiagnosis,
+            blockingServer
           } as const;
         }
 
@@ -545,6 +613,10 @@ export class EnhancedRetryStrategies {
 
           const fullResponse = await performRequest('GET', 10_000, fullHeaders);
           const fullStatus = fullResponse.status;
+          const fullServer = fullResponse.headers.get('server') || blockingServer;
+          if (fullServer) {
+            blockingServer = fullServer;
+          }
 
           if (fullResponse.ok || isLikelyAccessible(fullStatus)) {
             try {
@@ -553,16 +625,26 @@ export class EnhancedRetryStrategies {
               // Ignore partial read errors
             }
 
+            const warmupDiagnosis: AccessibilityDiagnosis = cookieHeader ? 'cookie-required' : 'partial-get-blocked';
+            diagnosis = warmupDiagnosis;
+
             this.rememberWarmupHint(domainKey, {
               cookieHeader,
               reason: `accessibility:${trigger}:full`,
-              statusCode: fullStatus
+              statusCode: fullStatus,
+              blockProfile: {
+                server: fullServer,
+                diagnosis: warmupDiagnosis,
+                details: `Full GET after warm-up returned ${fullStatus}`
+              }
             });
 
             return {
               accessible: true,
               responseTime: Date.now() - startTime,
-              statusCode: fullStatus
+              statusCode: fullStatus,
+              diagnosis: warmupDiagnosis,
+              blockingServer
             } as const;
           }
 
@@ -575,7 +657,12 @@ export class EnhancedRetryStrategies {
           this.rememberWarmupHint(domainKey, {
             cookieHeader,
             reason: `accessibility:${trigger}:full-fail`,
-            statusCode: fullStatus
+            statusCode: fullStatus,
+            blockProfile: {
+              server: fullServer,
+              diagnosis: 'full-block',
+              details: `Full GET after warm-up failed with status ${fullStatus}`
+            }
           });
 
           return null;
@@ -590,7 +677,12 @@ export class EnhancedRetryStrategies {
         this.rememberWarmupHint(domainKey, {
           cookieHeader,
           reason: `accessibility:${trigger}:expanded-fail`,
-          statusCode: expandedStatus
+          statusCode: expandedStatus,
+          blockProfile: {
+            server: expandedServer,
+            diagnosis: 'full-block',
+            details: `Expanded GET after warm-up failed with status ${expandedStatus}`
+          }
         });
 
         return null;
@@ -601,7 +693,12 @@ export class EnhancedRetryStrategies {
         };
 
         this.rememberWarmupHint(domainKey, {
-          reason: `accessibility:${trigger}:error`
+          reason: `accessibility:${trigger}:error`,
+          blockProfile: {
+            server: blockingServer,
+            diagnosis: 'full-block',
+            details: `Warm-up retry error: ${errorMessage}`
+          }
         });
 
         return null;
@@ -612,19 +709,32 @@ export class EnhancedRetryStrategies {
       // First attempt a lightweight HEAD request
       const headResponse = await performRequest('HEAD', 5000);
       const headStatus = headResponse.status;
+      const headServer = headResponse.headers.get('server') || blockingServer;
+      if (headServer) {
+        blockingServer = headServer;
+      }
 
       if (headResponse.ok || isLikelyAccessible(headStatus)) {
+        diagnosis = 'ok';
         return {
           accessible: true,
           responseTime: Date.now() - startTime,
-          statusCode: headStatus
+          statusCode: headStatus,
+          diagnosis,
+          blockingServer
         };
       }
 
       if (shouldFallbackToGet(headStatus)) {
+        diagnosis = 'head-blocked';
         this.rememberWarmupHint(domainKey, {
           reason: `accessibility:head-${headStatus}`,
-          statusCode: headStatus
+          statusCode: headStatus,
+          blockProfile: {
+            server: headServer,
+            diagnosis,
+            details: `HEAD request returned ${headStatus}`
+          }
         });
 
         console.log(`🔄 HEAD blocked (${headStatus}) for ${url}, trying GET fallback...`);
@@ -636,6 +746,10 @@ export class EnhancedRetryStrategies {
           });
 
           const getStatus = getResponse.status;
+          const getServer = getResponse.headers.get('server') || blockingServer;
+          if (getServer) {
+            blockingServer = getServer;
+          }
 
           if (getResponse.ok || isLikelyAccessible(getStatus)) {
             // Consume a tiny chunk to ensure connection closes cleanly
@@ -646,10 +760,24 @@ export class EnhancedRetryStrategies {
             }
 
             console.log(`✅ GET fallback succeeded for ${url} (status ${getStatus})`);
+            diagnosis = 'head-blocked';
+
+            this.rememberWarmupHint(domainKey, {
+              reason: `accessibility:head-${headStatus}:get-success`,
+              statusCode: getStatus,
+              blockProfile: {
+                server: getServer,
+                diagnosis,
+                details: `Initial GET fallback succeeded with status ${getStatus}`
+              }
+            });
+
             return {
               accessible: true,
               responseTime: Date.now() - startTime,
-              statusCode: getStatus
+              statusCode: getStatus,
+              diagnosis,
+              blockingServer
             };
           }
 
@@ -658,11 +786,14 @@ export class EnhancedRetryStrategies {
             return warmupRetry;
           }
 
+          diagnosis = 'full-block';
           return {
             accessible: false,
             responseTime: Date.now() - startTime,
             statusCode: getStatus,
-            error: `GET fallback failed with status ${getStatus}`
+            error: `GET fallback failed with status ${getStatus}`,
+            diagnosis,
+            blockingServer
           };
         } catch (fallbackError) {
           const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
@@ -672,29 +803,59 @@ export class EnhancedRetryStrategies {
             return warmupRetry;
           }
 
+          diagnosis = 'full-block';
           return {
             accessible: false,
             responseTime: Date.now() - startTime,
             statusCode: headStatus,
-            error: `HEAD blocked (${headStatus}), GET fallback error: ${errorMessage}`
+            error: `HEAD blocked (${headStatus}), GET fallback error: ${errorMessage}`,
+            diagnosis,
+            blockingServer
           };
         }
       }
 
+      diagnosis = 'full-block';
       return {
         accessible: false,
         responseTime: Date.now() - startTime,
         statusCode: headStatus,
         error: lastWarmupFailure?.error
           ? `HEAD request blocked with status ${headStatus}. ${lastWarmupFailure.error}`
-          : `HEAD request blocked with status ${headStatus}`
+          : `HEAD request blocked with status ${headStatus}`,
+        diagnosis,
+        blockingServer
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const lowered = errorMessage.toLowerCase();
+      if (
+        lowered.includes('proxy') ||
+        lowered.includes('tunnel') ||
+        lowered.includes('connect') ||
+        lowered.includes('enoent') ||
+        lowered.includes('enotfound')
+      ) {
+        diagnosis = 'network-block';
+      } else {
+        diagnosis = 'full-block';
+      }
+
+      this.rememberWarmupHint(domainKey, {
+        reason: `accessibility:error`,
+        blockProfile: {
+          server: blockingServer,
+          diagnosis,
+          details: errorMessage
+        }
+      });
+
       return {
         accessible: false,
         responseTime: Date.now() - startTime,
-        error: errorMessage
+        error: errorMessage,
+        diagnosis,
+        blockingServer
       };
     }
   }
@@ -705,12 +866,19 @@ export class EnhancedRetryStrategies {
     const domainKey = this.getDomainKeyFromHost(domain);
     const dynamicWarmupHint = this.dynamicWarmupDomains.get(domainKey);
 
+    if (dynamicWarmupHint?.blockProfile?.diagnosis) {
+      console.log(
+        `🛡️ Domain ${domain} previously diagnosed as ${dynamicWarmupHint.blockProfile.diagnosis}` +
+        (dynamicWarmupHint.blockProfile.server ? ` (server: ${dynamicWarmupHint.blockProfile.server})` : '')
+      );
+    }
+
     // Special handling for known problematic sources
     const problemDomains = [
       'theargus.co.uk',
       'sussexexpress.co.uk',
       'sussexnews24.co.uk',
-      'easbournenews.co.uk',
+      'eastbournenews.co.uk',
       'brightonandhovenews.org'
     ];
 
