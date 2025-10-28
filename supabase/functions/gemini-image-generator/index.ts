@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { compressAndResize, estimateFileSize } from '../_shared/image-optimizer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,9 +122,24 @@ serve(async (req) => {
     }
 
     // Extract just the base64 data (remove the data:image prefix if present)
-    const base64Image = base64ImageUrl.includes('base64,')
+    let base64Image = base64ImageUrl.includes('base64,')
       ? base64ImageUrl.split('base64,')[1]
       : base64ImageUrl;
+
+    // Optimize image before storing
+    const originalSize = estimateFileSize(base64Image) / 1024 / 1024;
+    console.log(`📊 Original image size: ${originalSize.toFixed(2)} MB`);
+    
+    base64Image = await compressAndResize(base64Image, {
+      maxWidth: 1200,
+      maxHeight: 900,
+      quality: 80,
+      format: 'webp'
+    });
+    
+    const optimizedSize = estimateFileSize(base64Image) / 1024 / 1024;
+    console.log(`✅ Optimized image size: ${optimizedSize.toFixed(2)} MB (saved ${(originalSize - optimizedSize).toFixed(2)} MB)`);
+
 
     // Get slide details for alt text
     const { data: slide, error: slideError } = await supabase
