@@ -395,18 +395,12 @@ export default function MultiTenantArticlesList({
           No Articles Available
         </h3>
         <p className="text-muted-foreground mb-6 max-w-md">
-          No new articles have been discovered yet. All articles have been processed or the feed is empty.
+          No new articles have been discovered yet. Use the "Start Scraping" button at the top to gather content.
         </p>
-        <div className="flex gap-3">
-          <Button onClick={onRefresh} variant="outline" className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Gather Content
-          </Button>
-          <Button onClick={onRefresh} variant="outline" className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
-        </div>
+        <Button onClick={onRefresh} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </Button>
       </div>
     );
   }

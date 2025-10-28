@@ -1076,32 +1076,6 @@ export const UnifiedSourceManager = ({
             <Eye className="w-4 h-4 mr-2" />
             {showDisabled ? 'Hide' : 'Show'} Disabled
           </Button>
-          {mode === 'topic' && topicId && (
-            <Button 
-              onClick={handleCheckNewContent}
-              disabled={availabilityLoading}
-              variant="outline"
-            >
-              {availabilityLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Gather Content
-            </Button>
-          )}
-          <Button 
-            onClick={handleScrapeAll}
-            disabled={gatheringAll || sources.filter(s => s.is_active).length === 0}
-            variant="outline"
-          >
-            {gatheringAll ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4 mr-2" />
-            )}
-            Gather All Sources
-          </Button>
           <Button onClick={() => setShowAddForm(true)}>
             <Plus className="w-4 w-4 mr-2" />
             Add Source
