@@ -87,6 +87,110 @@ export class EnhancedRetryStrategies {
     return this.getDomainKeyFromHost(new URL(url).hostname);
   }
 
+  /**
+   * Dynamically determines if warmup is needed based on cached hints
+   */
+  private determineWarmupStrategy(hint?: WarmupHint): {
+    needsWarmup: boolean;
+    reason: string;
+    confidenceLevel: 'high' | 'medium' | 'low';
+  } {
+    if (!hint) {
+      return {
+        needsWarmup: false,
+        reason: 'no-history',
+        confidenceLevel: 'low'
+      };
+    }
+
+    const age = Date.now() - hint.lastUpdated;
+    const isRecent = age < 5 * 60 * 1000; // 5 minutes
+
+    // High confidence: Recent hint with cookie or successful alternate route
+    if (isRecent && (hint.cookieHeader || hint.alternateRoute)) {
+      return {
+        needsWarmup: !!hint.cookieHeader,
+        reason: hint.cookieHeader ? 'recent-cookie-success' : 'recent-alternate-route',
+        confidenceLevel: 'high'
+      };
+    }
+
+    // Medium confidence: diagnosis suggests blocking
+    const blockingDiagnoses: AccessibilityDiagnosis[] = [
+      'cookie-required',
+      'head-blocked',
+      'partial-get-blocked'
+    ];
+
+    if (hint.blockProfile?.diagnosis && blockingDiagnoses.includes(hint.blockProfile.diagnosis)) {
+      return {
+        needsWarmup: true,
+        reason: `diagnosed-as-${hint.blockProfile.diagnosis}`,
+        confidenceLevel: isRecent ? 'high' : 'medium'
+      };
+    }
+
+    // Low confidence: old hint or no clear pattern
+    return {
+      needsWarmup: false,
+      reason: 'unclear-pattern',
+      confidenceLevel: 'low'
+    };
+  }
+
+  /**
+   * Determines if cautious approach is needed based on domain history
+   */
+  private determineCautiousStrategy(hint?: WarmupHint): {
+    useCautious: boolean;
+    baseDelay: number;
+    maxRetries: number;
+    reason: string;
+  } {
+    if (!hint) {
+      return {
+        useCautious: false,
+        baseDelay: 500,
+        maxRetries: 2,
+        reason: 'no-history'
+      };
+    }
+
+    const hasRecentFailure = hint.blockProfile?.diagnosis &&
+      ['full-block', 'network-block'].includes(hint.blockProfile.diagnosis);
+
+    const hasSuccessfulWorkaround = hint.alternateRoute ||
+      (hint.cookieHeader && hint.blockProfile?.diagnosis === 'cookie-required');
+
+    // Cautious: known blocking but no successful workaround yet
+    if (hasRecentFailure && !hasSuccessfulWorkaround) {
+      return {
+        useCautious: true,
+        baseDelay: 2000,
+        maxRetries: 3,
+        reason: `cautious-due-to-${hint.blockProfile?.diagnosis}`
+      };
+    }
+
+    // Moderate: has workaround, use medium delays
+    if (hasSuccessfulWorkaround) {
+      return {
+        useCautious: true,
+        baseDelay: 1500,
+        maxRetries: 3,
+        reason: 'using-known-workaround'
+      };
+    }
+
+    // Standard: no issues or old hint
+    return {
+      useCautious: false,
+      baseDelay: 500,
+      maxRetries: 2,
+      reason: 'standard-approach'
+    };
+  }
+
   private rememberWarmupHint(
     domainKey: string,
     info: {
@@ -1109,69 +1213,61 @@ export class EnhancedRetryStrategies {
     }
   }
 
-  // Enhanced method for problematic sources
+  // Enhanced multi-tenant domain-specific strategy (no hardcoded domains)
   async fetchWithDomainSpecificStrategy(url: string): Promise<string> {
     const domain = new URL(url).hostname.toLowerCase();
     const domainKey = this.getDomainKeyFromHost(domain);
-    const dynamicWarmupHint = this.dynamicWarmupDomains.get(domainKey);
+    const dynamicHint = this.dynamicWarmupDomains.get(domainKey);
 
-    if (dynamicWarmupHint?.blockProfile?.diagnosis) {
+    // Use dynamic strategy determination
+    const warmupStrategy = this.determineWarmupStrategy(dynamicHint);
+    const cautiousStrategy = this.determineCautiousStrategy(dynamicHint);
+
+    if (dynamicHint?.blockProfile?.diagnosis) {
       console.log(
-        `🛡️ Domain ${domain} previously diagnosed as ${dynamicWarmupHint.blockProfile.diagnosis}` +
-        (dynamicWarmupHint.blockProfile.server ? ` (server: ${dynamicWarmupHint.blockProfile.server})` : '')
+        `🛡️ Domain ${domain} diagnosed as ${dynamicHint.blockProfile.diagnosis}` +
+        (dynamicHint.blockProfile.server ? ` (server: ${dynamicHint.blockProfile.server})` : '') +
+        ` | Strategy: warmup=${warmupStrategy.needsWarmup} (${warmupStrategy.reason}), ` +
+        `cautious=${cautiousStrategy.useCautious} (${cautiousStrategy.reason})`
       );
     }
 
-    // Special handling for known problematic sources
-    const problemDomains = [
-      'theargus.co.uk',
-      'sussexexpress.co.uk',
-      'sussexnews24.co.uk',
-      'eastbournenews.co.uk',
-      'brightonandhovenews.org'
-    ];
+    // Dynamic warmup decision based on learned behavior
+    if (warmupStrategy.needsWarmup) {
+      console.log(
+        `🎯 Dynamic warmup triggered for ${domain} ` +
+        `(confidence: ${warmupStrategy.confidenceLevel}, reason: ${warmupStrategy.reason})`
+      );
 
-    // Phase 1C: Special handling for Hastings problem sources with cookie warm-up
-    const hastingsProblemDomains = [
-      'rnli.org',
-      'southernrailway.com',
-      'hastingsonlinetimes.co.uk'
-    ];
-
-    const requiresWarmup =
-      !!dynamicWarmupHint ||
-      hastingsProblemDomains.some(d => domain.includes(d));
-
-    if (requiresWarmup) {
-      console.log(`🎯 Using warm-up strategy for: ${domain}`);
-
-      const warmupReason = dynamicWarmupHint?.reason ?? 'preconfigured:hastings';
-      const warmupCookie = await this.performCookieWarmup(url, warmupReason, {
-        force: !dynamicWarmupHint
+      const warmupCookie = await this.performCookieWarmup(url, warmupStrategy.reason, {
+        force: warmupStrategy.confidenceLevel === 'low'
       });
 
       const config: RetryConfig = {
-        maxRetries: 3,
-        baseDelay: 2500, // 2.5 seconds base delay for these domains
+        maxRetries: cautiousStrategy.maxRetries,
+        baseDelay: cautiousStrategy.baseDelay,
         maxDelay: 20000,
         exponentialBackoff: true
       };
 
-      const cookieHeader = warmupCookie ?? dynamicWarmupHint?.cookieHeader;
+      const cookieHeader = warmupCookie ?? dynamicHint?.cookieHeader;
 
       return this.fetchWithEnhancedRetryHastings(url, config, {
         cookieHeader,
-        reason: warmupReason
+        reason: warmupStrategy.reason
       });
     }
 
-    if (problemDomains.some(d => domain.includes(d))) {
-      console.log(`🎯 Using specialized strategy for problematic domain: ${domain}`);
-      
-      // Use longer delays and more conservative approach
+    // Use cautious approach if history suggests it
+    if (cautiousStrategy.useCautious) {
+      console.log(
+        `⚠️ Cautious strategy for ${domain} ` +
+        `(reason: ${cautiousStrategy.reason}, delay: ${cautiousStrategy.baseDelay}ms)`
+      );
+
       const config: RetryConfig = {
-        maxRetries: 3,
-        baseDelay: 2000, // 2 seconds base delay
+        maxRetries: cautiousStrategy.maxRetries,
+        baseDelay: cautiousStrategy.baseDelay,
         maxDelay: 15000,
         exponentialBackoff: true
       };
@@ -1179,7 +1275,8 @@ export class EnhancedRetryStrategies {
       return this.fetchWithEnhancedRetry(url, config);
     }
 
-    // Standard approach for other domains
+    // Standard approach for domains with no issues or no history
+    console.log(`✅ Standard strategy for ${domain} (no issues recorded)`);
     return this.fetchWithEnhancedRetry(url);
   }
 
