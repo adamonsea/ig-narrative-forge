@@ -13,6 +13,8 @@ interface GatheringStatus {
   progress: number;
   lastUpdate: string;
   error?: string;
+  diagnosticInfo?: string;
+  alternateRouteUsed?: string;
 }
 
 interface GatheringProgressIndicatorProps {

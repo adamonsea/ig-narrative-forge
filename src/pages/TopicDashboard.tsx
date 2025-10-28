@@ -276,20 +276,23 @@ const TopicDashboard = () => {
 
   const [jobRunId, setJobRunId] = useState<string | null>(null);
   const [showGatheringProgress, setShowGatheringProgress] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [maxAgeDays, setMaxAgeDays] = useState(30);
+  const [forceRescrape, setForceRescrape] = useState(true);
 
-  const handleGatherAll = async () => {
+  const handleStartScraping = async () => {
     if (!topic) return;
     
     setGatheringAll(true);
     setShowGatheringProgress(true);
     try {
-      // Call universal-topic-automation with force=true for comprehensive gathering
+      // Call universal-topic-automation with configured options
       const response = await supabase.functions.invoke('universal-topic-automation', {
         body: { 
           topicIds: [topic.id],
-          force: true,
+          force: forceRescrape,
           dryRun: false,
-          maxAgeDays: 30 // Scrape articles from last 30 days
+          maxAgeDays: maxAgeDays
         }
       });
 
@@ -301,8 +304,8 @@ const TopicDashboard = () => {
       }
       
       toast({
-        title: "Gathering Started",
-        description: "Comprehensive content gathering initiated across all sources",
+        title: "Scraping Started",
+        description: `Gathering content from last ${maxAgeDays} days across all sources`,
       });
       
       // Refresh stats periodically
@@ -316,10 +319,10 @@ const TopicDashboard = () => {
       }, 60000); // Stop polling after 1 minute
       
     } catch (error) {
-      console.error('Error gathering content:', error);
+      console.error('Error starting scrape:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start content gathering",
+        description: error instanceof Error ? error.message : "Failed to start scraping",
         variant: "destructive"
       });
       setGatheringAll(false);
@@ -655,35 +658,76 @@ const TopicDashboard = () => {
         {/* Primary Action Bar - Mobile Responsive */}
         <Card className={`${accentColor} bg-card/60 backdrop-blur-sm mb-6`}>
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-              <Button 
-                onClick={handleGatherAll}
-                disabled={gatheringAll}
-                className="flex items-center gap-2 w-full sm:w-auto"
-              >
-                {gatheringAll ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Play className="w-4 h-4" />
-                )}
-                {gatheringAll ? 'Gathering...' : 'Gather All'}
-              </Button>
-              
-              <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <span className="text-sm text-muted-foreground">Auto-simplify:</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAutoSimplifyToggle}
-                  className="p-1 h-auto"
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <Button 
+                  onClick={handleStartScraping}
+                  disabled={gatheringAll}
+                  className="flex items-center gap-2 w-full sm:w-auto"
+                  size="lg"
                 >
-                  {topic?.auto_simplify_enabled ? (
-                    <ToggleRight className="w-5 h-5 text-green-500" />
+                  {gatheringAll ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <ToggleLeft className="w-5 h-5 text-muted-foreground" />
+                    <Play className="w-4 h-4" />
                   )}
+                  {gatheringAll ? 'Scraping...' : 'Start Scraping'}
                 </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                  className="w-full sm:w-auto"
+                >
+                  {showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options
+                </Button>
+                
+                <div className="flex items-center gap-2 justify-center sm:justify-start ml-auto">
+                  <span className="text-sm text-muted-foreground">Auto-simplify:</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAutoSimplifyToggle}
+                    className="p-1 h-auto"
+                  >
+                    {topic?.auto_simplify_enabled ? (
+                      <ToggleRight className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {showAdvancedOptions && (
+                <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-border">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Content Age Window</label>
+                    <select 
+                      value={maxAgeDays}
+                      onChange={(e) => setMaxAgeDays(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                    >
+                      <option value={7}>Last 7 days</option>
+                      <option value={30}>Last 30 days</option>
+                      <option value={60}>Last 60 days</option>
+                      <option value={100}>Last 100 days</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={forceRescrape}
+                        onChange={(e) => setForceRescrape(e.target.checked)}
+                        className="w-4 h-4 rounded border-input"
+                      />
+                      <span className="text-sm font-medium">Force Rescrape (ignore cache)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
