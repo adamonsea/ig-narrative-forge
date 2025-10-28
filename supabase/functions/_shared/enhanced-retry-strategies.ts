@@ -37,8 +37,134 @@ export class EnhancedRetryStrategies {
     'Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
   ];
 
+  private dynamicWarmupDomains = new Map<string, {
+    cookieHeader?: string;
+    lastUpdated: number;
+    reason: string;
+    lastStatus?: number;
+  }>();
+
   private getCurrentUserAgent(attempt: number): string {
     return this.userAgents[attempt % this.userAgents.length];
+  }
+
+  private getDomainKeyFromHost(hostname: string): string {
+    const normalized = hostname.toLowerCase();
+    return normalized.startsWith('www.') ? normalized.slice(4) : normalized;
+  }
+
+  private getDomainKeyFromUrl(url: string): string {
+    return this.getDomainKeyFromHost(new URL(url).hostname);
+  }
+
+  private rememberWarmupHint(
+    domainKey: string,
+    info: { cookieHeader?: string; reason: string; statusCode?: number }
+  ): void {
+    const previous = this.dynamicWarmupDomains.get(domainKey);
+
+    this.dynamicWarmupDomains.set(domainKey, {
+      cookieHeader: info.cookieHeader ?? previous?.cookieHeader,
+      lastUpdated: Date.now(),
+      reason: info.reason,
+      lastStatus: info.statusCode ?? previous?.lastStatus
+    });
+  }
+
+  private extractCookiesFromHeaders(headers: Headers): string | undefined {
+    const anyHeaders = headers as Headers & { getSetCookie?: () => string[] };
+    let rawCookies: string[] = [];
+
+    if (typeof anyHeaders.getSetCookie === 'function') {
+      try {
+        rawCookies = anyHeaders.getSetCookie();
+      } catch (_) {
+        rawCookies = [];
+      }
+    }
+
+    if (!rawCookies.length) {
+      const headerValue = headers.get('set-cookie');
+      if (headerValue) {
+        rawCookies = headerValue.split(/,(?=[^;,\s]+=)/g);
+      }
+    }
+
+    const cookiePairs = rawCookies
+      .map(cookie => cookie.trim())
+      .filter(Boolean)
+      .map(cookie => cookie.split(';')[0])
+      .filter(Boolean);
+
+    if (!cookiePairs.length) {
+      return undefined;
+    }
+
+    return cookiePairs.join('; ');
+  }
+
+  private async performCookieWarmup(
+    url: string,
+    reason: string,
+    options: { force?: boolean } = {}
+  ): Promise<string | undefined> {
+    const hostname = new URL(url).hostname;
+    const domainKey = this.getDomainKeyFromHost(hostname);
+    const existing = this.dynamicWarmupDomains.get(domainKey);
+
+    if (!options.force && existing && Date.now() - existing.lastUpdated < 60_000) {
+      console.log(`🍪 COOKIE_WARMUP_SKIP (cached) for ${hostname}`);
+      return existing.cookieHeader;
+    }
+
+    const homepageUrl = `https://${hostname}/`;
+
+    console.log(`🍪 COOKIE_WARMUP_START [${reason}] for ${homepageUrl}`);
+
+    try {
+      const warmupController = new AbortController();
+      const warmupTimeoutId = setTimeout(() => warmupController.abort(), 5000);
+
+      const warmupResponse = await fetch(homepageUrl, {
+        method: 'GET',
+        signal: warmupController.signal,
+        headers: this.getEnhancedHeaders({
+          url: homepageUrl,
+          isGovernmentSite: this.isGovernmentSite(homepageUrl),
+          previousAttempts: 0
+        }, this.userAgents[0]),
+        redirect: 'follow'
+      });
+
+      clearTimeout(warmupTimeoutId);
+
+      const cookieHeader = this.extractCookiesFromHeaders(warmupResponse.headers);
+
+      if (cookieHeader) {
+        console.log(`🍪 COOKIE_WARMUP_OK (${hostname})`);
+      } else {
+        console.log(`🍪 COOKIE_WARMUP_NO_COOKIES (${hostname})`);
+      }
+
+      this.rememberWarmupHint(domainKey, {
+        cookieHeader,
+        reason: `warmup:${reason}`,
+        statusCode: warmupResponse.status
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 750));
+
+      return cookieHeader;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`🍪 COOKIE_WARMUP_FAIL (${hostname}) [${reason}]: ${message}`);
+
+      this.rememberWarmupHint(domainKey, {
+        reason: `warmup-failed:${reason}`
+      });
+
+      return existing?.cookieHeader;
+    }
   }
 
   private calculateDelay(context: ScrapingContext, config: RetryConfig): number {
@@ -338,6 +464,7 @@ export class EnhancedRetryStrategies {
     error?: string;
   }> {
     const startTime = Date.now();
+    const domainKey = this.getDomainKeyFromUrl(url);
 
     const performRequest = async (
       method: 'HEAD' | 'GET',
@@ -372,6 +499,114 @@ export class EnhancedRetryStrategies {
 
     const isLikelyAccessible = (status: number) => status >= 200 && status < 400;
     const shouldFallbackToGet = (status: number) => [401, 403, 405, 406, 429].includes(status);
+    let lastWarmupFailure: { status?: number; error?: string } | null = null;
+
+    const attemptWarmupRetry = async (trigger: string) => {
+      try {
+        const cookieHeader = await this.performCookieWarmup(url, `accessibility:${trigger}`);
+
+        const warmupHeaders: Record<string, string> = {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Range': 'bytes=0-16383',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        };
+
+        if (cookieHeader) {
+          warmupHeaders['Cookie'] = cookieHeader;
+        }
+
+        const expandedResponse = await performRequest('GET', 8000, warmupHeaders);
+        const expandedStatus = expandedResponse.status;
+
+        if (expandedResponse.ok || isLikelyAccessible(expandedStatus)) {
+          try {
+            await expandedResponse.arrayBuffer();
+          } catch (_) {
+            // Ignore partial read errors
+          }
+
+          this.rememberWarmupHint(domainKey, {
+            cookieHeader,
+            reason: `accessibility:${trigger}:expanded`,
+            statusCode: expandedStatus
+          });
+
+          return {
+            accessible: true,
+            responseTime: Date.now() - startTime,
+            statusCode: expandedStatus
+          } as const;
+        }
+
+        if (shouldFallbackToGet(expandedStatus)) {
+          const fullHeaders = { ...warmupHeaders };
+          delete fullHeaders['Range'];
+
+          const fullResponse = await performRequest('GET', 10_000, fullHeaders);
+          const fullStatus = fullResponse.status;
+
+          if (fullResponse.ok || isLikelyAccessible(fullStatus)) {
+            try {
+              await fullResponse.arrayBuffer();
+            } catch (_) {
+              // Ignore partial read errors
+            }
+
+            this.rememberWarmupHint(domainKey, {
+              cookieHeader,
+              reason: `accessibility:${trigger}:full`,
+              statusCode: fullStatus
+            });
+
+            return {
+              accessible: true,
+              responseTime: Date.now() - startTime,
+              statusCode: fullStatus
+            } as const;
+          }
+
+          await fullResponse.arrayBuffer().catch(() => {});
+          lastWarmupFailure = {
+            status: fullStatus,
+            error: `Full GET after warm-up failed with status ${fullStatus}`
+          };
+
+          this.rememberWarmupHint(domainKey, {
+            cookieHeader,
+            reason: `accessibility:${trigger}:full-fail`,
+            statusCode: fullStatus
+          });
+
+          return null;
+        }
+
+        await expandedResponse.arrayBuffer().catch(() => {});
+        lastWarmupFailure = {
+          status: expandedStatus,
+          error: `Expanded GET after warm-up failed with status ${expandedStatus}`
+        };
+
+        this.rememberWarmupHint(domainKey, {
+          cookieHeader,
+          reason: `accessibility:${trigger}:expanded-fail`,
+          statusCode: expandedStatus
+        });
+
+        return null;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        lastWarmupFailure = {
+          error: `Warm-up retry error: ${errorMessage}`
+        };
+
+        this.rememberWarmupHint(domainKey, {
+          reason: `accessibility:${trigger}:error`
+        });
+
+        return null;
+      }
+    };
 
     try {
       // First attempt a lightweight HEAD request
@@ -387,6 +622,11 @@ export class EnhancedRetryStrategies {
       }
 
       if (shouldFallbackToGet(headStatus)) {
+        this.rememberWarmupHint(domainKey, {
+          reason: `accessibility:head-${headStatus}`,
+          statusCode: headStatus
+        });
+
         console.log(`🔄 HEAD blocked (${headStatus}) for ${url}, trying GET fallback...`);
         try {
           // Some sites block HEAD requests – retry with a small GET request
@@ -413,6 +653,11 @@ export class EnhancedRetryStrategies {
             };
           }
 
+          const warmupRetry = await attemptWarmupRetry(`head-${headStatus}-get-${getStatus}`);
+          if (warmupRetry) {
+            return warmupRetry;
+          }
+
           return {
             accessible: false,
             responseTime: Date.now() - startTime,
@@ -421,6 +666,12 @@ export class EnhancedRetryStrategies {
           };
         } catch (fallbackError) {
           const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+
+          const warmupRetry = await attemptWarmupRetry(`head-${headStatus}-get-error`);
+          if (warmupRetry) {
+            return warmupRetry;
+          }
+
           return {
             accessible: false,
             responseTime: Date.now() - startTime,
@@ -434,7 +685,9 @@ export class EnhancedRetryStrategies {
         accessible: false,
         responseTime: Date.now() - startTime,
         statusCode: headStatus,
-        error: `HEAD request blocked with status ${headStatus}`
+        error: lastWarmupFailure?.error
+          ? `HEAD request blocked with status ${headStatus}. ${lastWarmupFailure.error}`
+          : `HEAD request blocked with status ${headStatus}`
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -449,12 +702,14 @@ export class EnhancedRetryStrategies {
   // Enhanced method for problematic sources
   async fetchWithDomainSpecificStrategy(url: string): Promise<string> {
     const domain = new URL(url).hostname.toLowerCase();
-    
+    const domainKey = this.getDomainKeyFromHost(domain);
+    const dynamicWarmupHint = this.dynamicWarmupDomains.get(domainKey);
+
     // Special handling for known problematic sources
     const problemDomains = [
       'theargus.co.uk',
       'sussexexpress.co.uk',
-      'sussexnews24.co.uk', 
+      'sussexnews24.co.uk',
       'easbournenews.co.uk',
       'brightonandhovenews.org'
     ];
@@ -466,49 +721,18 @@ export class EnhancedRetryStrategies {
       'hastingsonlinetimes.co.uk'
     ];
 
-    if (hastingsProblemDomains.some(d => domain.includes(d))) {
-      console.log(`🎯 Using Hastings specialized strategy for: ${domain}`);
-      
-      // Cookie warm-up: visit homepage first to collect cookies
-      try {
-        const hostname = new URL(url).hostname;
-        const homepageUrl = `https://${hostname}/`;
-        
-        console.log(`🍪 COOKIE_WARMUP_START for ${homepageUrl}`);
-        const warmupController = new AbortController();
-        const warmupTimeoutId = setTimeout(() => warmupController.abort(), 5000);
-        
-        const warmupResponse = await fetch(homepageUrl, {
-          method: 'GET',
-          signal: warmupController.signal,
-          headers: this.getEnhancedHeaders({
-            url: homepageUrl,
-            isGovernmentSite: this.isGovernmentSite(url),
-            previousAttempts: 0
-          }, this.userAgents[0]),
-          redirect: 'follow'
-        });
-        
-        clearTimeout(warmupTimeoutId);
-        
-        // Extract cookies from response
-        const setCookieHeader = warmupResponse.headers.get('set-cookie');
-        if (setCookieHeader) {
-          console.log(`🍪 COOKIE_WARMUP_OK (domain ${domain})`);
-        } else {
-          console.log(`🍪 COOKIE_WARMUP_NO_COOKIES (domain ${domain})`);
-        }
-        
-        // Small delay after warm-up
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-      } catch (warmupError) {
-        const warmupErrorMessage = warmupError instanceof Error ? warmupError.message : String(warmupError);
-        console.log(`🍪 COOKIE_WARMUP_FAIL (domain ${domain}): ${warmupErrorMessage}`);
-        // Continue anyway - warm-up is best effort
-      }
-      
-      // Use aggressive strategy with longer delays and expanded Range
+    const requiresWarmup =
+      !!dynamicWarmupHint ||
+      hastingsProblemDomains.some(d => domain.includes(d));
+
+    if (requiresWarmup) {
+      console.log(`🎯 Using warm-up strategy for: ${domain}`);
+
+      const warmupReason = dynamicWarmupHint?.reason ?? 'preconfigured:hastings';
+      const warmupCookie = await this.performCookieWarmup(url, warmupReason, {
+        force: !dynamicWarmupHint
+      });
+
       const config: RetryConfig = {
         maxRetries: 3,
         baseDelay: 2500, // 2.5 seconds base delay for these domains
@@ -516,7 +740,12 @@ export class EnhancedRetryStrategies {
         exponentialBackoff: true
       };
 
-      return this.fetchWithEnhancedRetryHastings(url, config);
+      const cookieHeader = warmupCookie ?? dynamicWarmupHint?.cookieHeader;
+
+      return this.fetchWithEnhancedRetryHastings(url, config, {
+        cookieHeader,
+        reason: warmupReason
+      });
     }
 
     if (problemDomains.some(d => domain.includes(d))) {
@@ -539,8 +768,9 @@ export class EnhancedRetryStrategies {
 
   // Specialized variant for Hastings problem sources with expanded Range
   private async fetchWithEnhancedRetryHastings(
-    url: string, 
-    config: RetryConfig
+    url: string,
+    config: RetryConfig,
+    options: { cookieHeader?: string; reason?: string } = {}
   ): Promise<string> {
     const context: ScrapingContext = {
       url,
@@ -548,13 +778,25 @@ export class EnhancedRetryStrategies {
       previousAttempts: 0
     };
 
+    const domainKey = this.getDomainKeyFromUrl(url);
+
+    if (options.cookieHeader) {
+      this.rememberWarmupHint(domainKey, {
+        cookieHeader: options.cookieHeader,
+        reason: options.reason ?? 'warmup-strategy:init'
+      });
+    }
+
     console.log(`🌐 Fetching ${url} (Hastings mode, attempt 1/${config.maxRetries + 1})`);
 
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         const userAgent = this.getCurrentUserAgent(attempt);
-        const headers = this.getEnhancedHeaders(context, userAgent);
-        
+        const headers = {
+          ...this.getEnhancedHeaders(context, userAgent),
+          ...(options.cookieHeader ? { 'Cookie': options.cookieHeader } : {})
+        };
+
         // Intelligent delay before request (except first attempt)
         if (attempt > 0) {
           const delay = this.calculateDelay(context, config);
@@ -576,10 +818,18 @@ export class EnhancedRetryStrategies {
 
         clearTimeout(timeoutId);
 
+        const rememberSuccess = (statusCode: number) => {
+          this.rememberWarmupHint(domainKey, {
+            cookieHeader: options.cookieHeader,
+            reason: options.reason ?? 'warmup-strategy:success',
+            statusCode
+          });
+        };
+
         // Helper function for GET fallback with EXPANDED Range header for anti-bot pages
         const tryGetFallbackExpanded = async (reason: string): Promise<string | null> => {
           console.log(`🔄 GET_RANGE_FALLBACK_START: ${reason}`);
-          
+
           try {
             const rangeHeaders = {
               ...headers,
@@ -587,26 +837,27 @@ export class EnhancedRetryStrategies {
               'Cache-Control': 'no-cache',
               'Pragma': 'no-cache'
             };
-            
+
             const rangeController = new AbortController();
             const rangeTimeoutId = setTimeout(() => rangeController.abort(), 8000); // Longer timeout
-            
+
             const rangeResponse = await fetch(url, {
               method: 'GET',
               signal: rangeController.signal,
               headers: rangeHeaders,
               redirect: 'follow'
             });
-            
+
             clearTimeout(rangeTimeoutId);
-            
+
             if (rangeResponse.ok || rangeResponse.status === 206) {
               const content = await rangeResponse.text();
-              
+
               console.log(`🔄 GET_RANGE_FALLBACK_OK (status ${rangeResponse.status}, bytes ${content.length})`);
-              
+
               if (this.isValidContent(content)) {
                 console.log(`✅ GET fallback succeeded for ${url} (${content.length} chars)`);
+                rememberSuccess(rangeResponse.status);
                 return content;
               } else {
                 console.log(`🔄 GET_RANGE_FALLBACK_FAIL (invalid content despite ${content.length} chars)`);
@@ -614,14 +865,14 @@ export class EnhancedRetryStrategies {
             } else {
               console.log(`🔄 GET_RANGE_FALLBACK_FAIL (status ${rangeResponse.status})`);
             }
-            
+
             // Consume body to close connection
             await rangeResponse.arrayBuffer().catch(() => {});
           } catch (rangeError) {
             const rangeErrorMessage = rangeError instanceof Error ? rangeError.message : String(rangeError);
             console.log(`🔄 GET_RANGE_FALLBACK_FAIL (error: ${rangeErrorMessage})`);
           }
-          
+
           return null;
         };
 
@@ -637,17 +888,18 @@ export class EnhancedRetryStrategies {
 
         // Phase 2: Fetch content and validate
         const content = await response.text();
-        
+
         if (this.isValidContent(content)) {
           console.log(`✅ Successfully fetched content from ${url} (${content.length} chars, Hastings mode, attempt ${attempt + 1})`);
+          rememberSuccess(response.status);
           return content;
         }
-        
+
         // Phase 3: Got 200 OK but content is invalid - try GET fallback
         console.log(`⚠️ Got 200 OK but invalid content (${content.length} chars)`);
         const fallbackContent = await tryGetFallbackExpanded('Invalid content despite 200 OK');
         if (fallbackContent) return fallbackContent;
-        
+
         // All fallbacks failed
         throw new Error('INVALID_CONTENT: Received error page or minimal content');
 
@@ -655,20 +907,20 @@ export class EnhancedRetryStrategies {
         context.previousAttempts = attempt;
         const errorMessage = error instanceof Error ? error.message : String(error);
         context.lastError = errorMessage;
-        
+
         console.log(`❌ Attempt ${attempt + 1} failed (Hastings mode): ${errorMessage}`);
-        
+
         // Don't retry on certain errors
         if (this.isFatalError(error)) {
           throw error;
         }
-        
+
         // If this was our last attempt, throw the error
         if (attempt === config.maxRetries) {
           const lastErrorMessage = error instanceof Error ? error.message : String(error);
           throw new Error(`All retry attempts failed (Hastings mode). Last error: ${lastErrorMessage}`);
         }
-        
+
         console.log(`⏳ Retrying in ${Math.round(this.calculateDelay(context, config))}ms...`);
       }
     }
