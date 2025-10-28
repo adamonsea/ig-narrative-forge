@@ -220,17 +220,18 @@ const TopicFeed = () => {
         start.setDate(1);
         start.setHours(0, 0, 0, 0);
         
-        // Use simpler RPC call to avoid TypeScript inference issues
+        // Use correct RPC parameters
         const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_id: topic.id,
+          p_topic_slug: slug,
           p_keywords: null,
-          p_source_domains: null,
+          p_sources: null,
           p_limit: 500,
           p_offset: 0
         });
         
         if (error) {
-          console.warn('Monthly count error:', error);
+          console.error('Monthly count error:', error);
+          if (active) setMonthlyCount(0);
           return;
         }
         

@@ -25,7 +25,7 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, signOut, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     topics: 0,
     articles: 0,
@@ -112,6 +112,20 @@ const Dashboard = () => {
     }
   };
 
+  // Show loading spinner while auth initializes
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Now safely check if user is authenticated
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
