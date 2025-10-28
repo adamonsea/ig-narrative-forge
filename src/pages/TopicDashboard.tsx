@@ -17,6 +17,7 @@ import { KeywordManager } from "@/components/KeywordManager";
 import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
+import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
@@ -776,6 +777,24 @@ const TopicDashboard = () => {
                 <TopicScheduleMonitor 
                   topicId={topic.id}
                   topicName={topic.name}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Content Sources
+                </CardTitle>
+                <CardDescription>
+                  Manage sources, view publication patterns, and monitor source health
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TopicAwareSourceManager 
+                  selectedTopicId={topic.id}
+                  onSourcesChange={loadTopicAndStats}
                 />
               </CardContent>
             </Card>
