@@ -114,6 +114,7 @@ export const UnifiedSourceManager = ({
   const [gatheringAll, setGatheringAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
+  const [showDisabled, setShowDisabled] = useState(false);
   
   // Daily content availability for topic mode
   const { 
@@ -998,6 +999,14 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
+          <Button
+            onClick={() => setShowDisabled(!showDisabled)}
+            variant="outline"
+            size="sm"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            {showDisabled ? 'Hide' : 'Show'} Disabled
+          </Button>
           {mode === 'topic' && topicId && (
             <Button 
               onClick={handleCheckNewContent}
@@ -1175,8 +1184,8 @@ export const UnifiedSourceManager = ({
 
       {/* Sources List */}
       <div className="grid gap-4">
-        {sources.map((source) => (
-          <Card key={source.id} className={hasConnectionIssues(source) ? 'opacity-60 bg-muted/30' : ''}>
+        {sources.filter(s => showDisabled || s.is_active).map((source) => (
+          <Card key={source.id}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -1203,9 +1212,6 @@ export const UnifiedSourceManager = ({
                         {source.stories_published_7d || 0} {source.stories_published_7d === 1 ? 'story' : 'stories'}
                       </Badge>
                     )}
-                    
-                    {/* Processing indicator */}
-                    <ProcessingStatusIndicator sourceId={source.id} />
                   </div>
                   
                   <div className="text-sm text-muted-foreground flex items-center gap-1">
