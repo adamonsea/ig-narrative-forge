@@ -3474,6 +3474,18 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits_summary: {
+        Row: {
+          credits_balance: number | null
+          total_credits_purchased: number | null
+          total_credits_used: number | null
+          transactions_last_30_days: number | null
+          updated_at: string | null
+          usage_last_30_days: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_source_to_topic: {
