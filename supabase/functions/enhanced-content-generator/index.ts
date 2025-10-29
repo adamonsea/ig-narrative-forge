@@ -208,6 +208,7 @@ BRITISH CULTURAL REFERENCES (use sparingly):
 • Class observations: "concerned residents", "stakeholders" (with gentle mockery)
 • British understatement: "not entirely successful", "somewhat problematic"
 • Literary/TV references: Kafka-esque bureaucracy, Yes Minister-style obfuscation
+• Comedic style references: Richard Ayoade's deadpan absurdist observations, Bob Mortimer's surreal mundane humor
 
 STRICT BOUNDARIES:
 ✅ DO: Mock bureaucracy, political double-speak, institutional incompetence, corporate jargon, NIMBYism
