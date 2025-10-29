@@ -34,6 +34,8 @@ interface Topic {
   visits_this_week?: number;
   articles_swiped?: number;
   share_clicks?: number;
+  installs_this_week?: number;
+  installs_total?: number;
   _count?: {
     articles: number;
     sources: number;
@@ -70,7 +72,7 @@ export const TopicManager = () => {
         const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
           // Get accurate stats that match the Arrivals tab UX
           // 1) Multi-tenant articles for this topic
-          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats] = await Promise.all([
+          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats] = await Promise.all([
             supabase.rpc('get_topic_articles_multi_tenant', {
               p_topic_id: topic.id,
               p_status: null,
@@ -102,7 +104,9 @@ export const TopicManager = () => {
             // Get visitor stats
             supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id }),
             // Get interaction stats (swipes and shares)
-            supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 })
+            supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 }),
+            // Get install stats
+            supabase.rpc('get_topic_install_stats', { p_topic_id: topic.id })
           ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
@@ -144,6 +148,7 @@ export const TopicManager = () => {
           const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
           const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
           const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
+          const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
 
           return {
             ...topic,
@@ -153,7 +158,9 @@ export const TopicManager = () => {
             visits_today: visitorData.visits_today || 0,
             visits_this_week: visitorData.visits_this_week || 0,
             articles_swiped: Number(interactionData.articles_swiped) || 0,
-            share_clicks: Number(interactionData.share_clicks) || 0
+            share_clicks: Number(interactionData.share_clicks) || 0,
+            installs_this_week: Number(installData.installs_this_week) || 0,
+            installs_total: Number(installData.installs_total) || 0
           };
       }));
       
@@ -415,6 +422,34 @@ export const TopicManager = () => {
                             </div>
                           </div>
                         </div>
+
+                        {/* Install Stats */}
+                        {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
+                          <div className="space-y-2">
+                            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                              <Plus className="w-3 h-3" />
+                              Installs
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-emerald-500/5 backdrop-blur-sm rounded-lg p-2 border border-emerald-500/20">
+                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                  {topic.installs_this_week || 0}
+                                </div>
+                                <div className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">
+                                  This week
+                                </div>
+                              </div>
+                              <div className="bg-emerald-500/5 backdrop-blur-sm rounded-lg p-2 border border-emerald-500/20">
+                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                  {topic.installs_total || 0}
+                                </div>
+                                <div className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">
+                                  Total
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

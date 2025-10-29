@@ -94,50 +94,92 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicIcon }: AddToHomeSc
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-      
-      // Track PWA installation
-      const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
-      if (!localStorage.getItem('visitor_id')) {
-        localStorage.setItem('visitor_id', visitorId);
-      }
-
-      try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        
-        // Get the topic ID from the URL or use the slug
-        const { data: topicData } = await supabase
-          .from('topics')
-          .select('id')
-          .eq('slug', topicSlug)
-          .single();
-
-        if (topicData?.id) {
-          await supabase.functions.invoke('track-engagement-metric', {
-            body: {
-              topicId: topicData.id,
-              visitorId,
-              metricType: 'pwa_installed',
-              userAgent: navigator.userAgent,
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error tracking PWA install:', error);
-      }
-      
-      setDeferredPrompt(null);
-      setShowPrompt(false);
+    // Get visitor ID and topic data first
+    const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
+    if (!localStorage.getItem('visitor_id')) {
+      localStorage.setItem('visitor_id', visitorId);
     }
-  };
 
-  const handleDismiss = () => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Get the topic ID from the URL or use the slug
+      const { data: topicData } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('slug', topicSlug)
+        .single();
+
+      if (topicData?.id) {
+        // Track the install button click
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId: topicData.id,
+            visitorId,
+            metricType: 'pwa_install_clicked',
+            userAgent: navigator.userAgent,
+          }
+        });
+      }
+
+      // Show the install prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === 'accepted' && topicData?.id) {
+        console.log('User accepted the install prompt');
+        
+        // Track successful installation
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId: topicData.id,
+            visitorId,
+            metricType: 'pwa_installed',
+            userAgent: navigator.userAgent,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error tracking PWA install:', error);
+    }
+    
+    setDeferredPrompt(null);
     setShowPrompt(false);
     localStorage.setItem(`a2hs-dismissed-${topicSlug}`, Date.now().toString());
+  };
+
+  const handleDismiss = async () => {
+    setShowPrompt(false);
+    localStorage.setItem(`a2hs-dismissed-${topicSlug}`, Date.now().toString());
+    
+    // Track dismissal
+    const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
+    if (!localStorage.getItem('visitor_id')) {
+      localStorage.setItem('visitor_id', visitorId);
+    }
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data: topicData } = await supabase
+        .from('topics')
+        .select('id')
+        .eq('slug', topicSlug)
+        .single();
+
+      if (topicData?.id) {
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId: topicData.id,
+            visitorId,
+            metricType: 'pwa_dismissed',
+            userAgent: navigator.userAgent,
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to track dismissal:', error);
+    }
   };
 
   if (!showPrompt) return null;
@@ -170,9 +212,38 @@ export const AddToHomeScreen = ({ topicName, topicSlug, topicIcon }: AddToHomeSc
           </p>
 
           {isIOS ? (
-            <p className="text-xs text-muted-foreground bg-accent p-2 rounded">
+            <div 
+              className="text-xs text-muted-foreground bg-accent p-2 rounded"
+              onClick={async () => {
+                // Track iOS instruction view
+                const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
+                if (!localStorage.getItem('visitor_id')) {
+                  localStorage.setItem('visitor_id', visitorId);
+                }
+                try {
+                  const { supabase } = await import('@/integrations/supabase/client');
+                  const { data: topicData } = await supabase
+                    .from('topics')
+                    .select('id')
+                    .eq('slug', topicSlug)
+                    .single();
+                  if (topicData?.id) {
+                    await supabase.functions.invoke('track-engagement-metric', {
+                      body: {
+                        topicId: topicData.id,
+                        visitorId,
+                        metricType: 'pwa_ios_instructions_viewed',
+                        userAgent: navigator.userAgent,
+                      }
+                    });
+                  }
+                } catch (error) {
+                  console.error('Failed to track iOS view:', error);
+                }
+              }}
+            >
               Tap the Share button <span className="inline-block mx-1">⎙</span> then "Add to Home Screen"
-            </p>
+            </div>
           ) : deferredPrompt ? (
             <Button
               onClick={handleInstallClick}

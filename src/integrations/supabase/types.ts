@@ -3920,6 +3920,13 @@ export type Database = {
           filter_value: string
         }[]
       }
+      get_topic_install_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          installs_this_week: number
+          installs_total: number
+        }[]
+      }
       get_topic_interaction_stats: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {

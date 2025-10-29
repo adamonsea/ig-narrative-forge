@@ -15,21 +15,65 @@ export const EndOfFeedFlow = ({ topicName, topicId, topicSlug, topicIcon }: EndO
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [step, setStep] = useState<'intro' | 'homescreen' | 'notifications'>('intro');
 
-  const handleAddToHomeScreen = () => {
+  const handleAddToHomeScreen = async () => {
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
     
-    if (isIOS) {
-      // For iOS, show instructions
-      alert(`To add ${topicName} to your home screen:\n\n1. Tap the Share button (⎙)\n2. Select "Add to Home Screen"\n3. Tap "Add"`);
-    } else {
-      // For Android/Desktop, trigger install prompt if available
-      const deferredPrompt = (window as any).deferredPrompt;
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {
-          (window as any).deferredPrompt = null;
+    // Track the interaction
+    const visitorId = localStorage.getItem('visitor_id') || `visitor_${Date.now()}_${Math.random()}`;
+    if (!localStorage.getItem('visitor_id')) {
+      localStorage.setItem('visitor_id', visitorId);
+    }
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      if (isIOS) {
+        // Track iOS instruction view
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId,
+            visitorId,
+            metricType: 'pwa_ios_instructions_viewed',
+            userAgent: navigator.userAgent,
+          }
         });
+        
+        // For iOS, show instructions
+        alert(`To add ${topicName} to your home screen:\n\n1. Tap the Share button (⎙)\n2. Select "Add to Home Screen"\n3. Tap "Add"`);
+      } else {
+        // Track install button click
+        await supabase.functions.invoke('track-engagement-metric', {
+          body: {
+            topicId,
+            visitorId,
+            metricType: 'pwa_install_clicked',
+            userAgent: navigator.userAgent,
+          }
+        });
+        
+        // For Android/Desktop, trigger install prompt if available
+        const deferredPrompt = (window as any).deferredPrompt;
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          
+          if (outcome === 'accepted') {
+            // Track successful installation
+            await supabase.functions.invoke('track-engagement-metric', {
+              body: {
+                topicId,
+                visitorId,
+                metricType: 'pwa_installed',
+                userAgent: navigator.userAgent,
+              }
+            });
+          }
+          
+          (window as any).deferredPrompt = null;
+        }
       }
+    } catch (error) {
+      console.error('Failed to track A2HS interaction:', error);
     }
     
     // Move to next step

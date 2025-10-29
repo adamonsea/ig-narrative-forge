@@ -22,7 +22,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!['notification_enabled', 'pwa_installed'].includes(metricType)) {
+    const validMetricTypes = [
+      'notification_enabled',
+      'pwa_installed',
+      'pwa_install_clicked',
+      'pwa_ios_instructions_viewed',
+      'pwa_dismissed'
+    ];
+
+    if (!validMetricTypes.includes(metricType)) {
       return new Response(
         JSON.stringify({ error: 'Invalid metric type' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
