@@ -23,6 +23,10 @@ export class FastTrackScraper {
     this.retryStrategy = new EnhancedRetryStrategies();
   }
 
+  async quickDiagnosis(url: string) {
+    return await this.retryStrategy.quickAccessibilityCheck(url);
+  }
+
   async scrapeContent(feedUrl: string, sourceId: string, options: any = {}): Promise<ScrapingResult> {
     console.log(`🚀 FastTrackScraper.scrapeContent called for ${feedUrl}`);
     
@@ -108,6 +112,8 @@ export class FastTrackScraper {
         errors.push('Partial GET requests rejected – escalate to full GET with warm-up before parsing.');
       } else if (accessibilityResult.diagnosis === 'alternate-route') {
         errors.push('Primary route blocked – retry with AMP/mobile alternates or screenshot fallback.');
+      } else if (accessibilityResult.diagnosis === 'residential-required') {
+        errors.push('Source blocks datacenter probes – reuse residential-style IP headers or browser fallback.');
       }
 
       return {

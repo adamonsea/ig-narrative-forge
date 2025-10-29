@@ -23,6 +23,7 @@ export type AccessibilityDiagnosis =
   | 'partial-get-blocked'
   | 'cookie-required'
   | 'alternate-route'
+  | 'residential-required'
   | 'full-block'
   | 'network-block'
   | 'unknown';
@@ -50,6 +51,13 @@ type WarmupHint = {
     strategy: AlternateRouteStrategy;
     lastSuccess: number;
   };
+  residentialIpHint?: {
+    sampleIp: string;
+    country?: string;
+    lastTried: number;
+    lastSuccess?: number;
+    reason?: string;
+  };
 };
 
 export class EnhancedRetryStrategies {
@@ -73,6 +81,14 @@ export class EnhancedRetryStrategies {
   ];
 
   private dynamicWarmupDomains = new Map<string, WarmupHint>();
+  private residentialIpPools: Record<string, string[]> = {
+    gb: ['82.29.17.84', '86.21.94.120', '94.11.34.200', '109.158.123.40', '188.29.56.22'],
+    ie: ['86.40.16.210', '109.76.23.144', '87.198.64.33'],
+    au: ['58.96.132.71', '123.3.45.19', '110.175.98.142'],
+    ca: ['99.238.101.77', '142.118.64.211', '104.222.132.45'],
+    us: ['73.142.88.214', '67.165.23.44', '24.12.156.201'],
+    default: ['98.142.110.77', '70.45.112.88', '24.104.56.201']
+  };
 
   private getCurrentUserAgent(attempt: number): string {
     return this.userAgents[attempt % this.userAgents.length];
@@ -202,6 +218,13 @@ export class EnhancedRetryStrategies {
         strategy: AlternateRouteStrategy;
         lastSuccess?: number;
       };
+      residentialIpHint?: {
+        sampleIp: string;
+        country?: string;
+        lastTried: number;
+        lastSuccess?: number;
+        reason?: string;
+      };
     }
   ): void {
     const previous = this.dynamicWarmupDomains.get(domainKey);
@@ -219,8 +242,59 @@ export class EnhancedRetryStrategies {
             strategy: info.alternateRoute.strategy,
             lastSuccess: info.alternateRoute.lastSuccess ?? Date.now()
           }
-        : previous?.alternateRoute
+        : previous?.alternateRoute,
+      residentialIpHint: info.residentialIpHint
+        ? {
+            sampleIp: info.residentialIpHint.sampleIp,
+            country: info.residentialIpHint.country ?? previous?.residentialIpHint?.country,
+            lastTried: info.residentialIpHint.lastTried,
+            lastSuccess: info.residentialIpHint.lastSuccess ?? previous?.residentialIpHint?.lastSuccess,
+            reason: info.residentialIpHint.reason ?? previous?.residentialIpHint?.reason
+          }
+        : previous?.residentialIpHint
     });
+  }
+
+  private inferCountryFromHost(hostname: string): string | undefined {
+    const lowerHost = hostname.toLowerCase();
+
+    if (/(\.uk)$/.test(lowerHost) || /(\.co\.uk|\.org\.uk|\.gov\.uk)$/.test(lowerHost)) {
+      return 'gb';
+    }
+
+    if (/(\.ie)$/.test(lowerHost)) {
+      return 'ie';
+    }
+
+    if (/(\.au)$/.test(lowerHost) || /(\.com\.au)$/.test(lowerHost)) {
+      return 'au';
+    }
+
+    if (/(\.ca)$/.test(lowerHost)) {
+      return 'ca';
+    }
+
+    if (/(\.nz)$/.test(lowerHost)) {
+      return 'nz';
+    }
+
+    if (/(\.us)$/.test(lowerHost) || lowerHost.endsWith('.com')) {
+      return 'us';
+    }
+
+    return undefined;
+  }
+
+  private pickResidentialIp(countryHint?: string): { ip: string; country: string } | null {
+    const normalized = countryHint?.toLowerCase();
+    const pool = (normalized && this.residentialIpPools[normalized]) || this.residentialIpPools.default;
+
+    if (!pool || pool.length === 0) {
+      return null;
+    }
+
+    const ip = pool[Math.floor(Math.random() * pool.length)];
+    return { ip, country: normalized ?? 'default' };
   }
 
   private applyAlternateRoute(url: string, strategy: AlternateRouteStrategy): string | null {

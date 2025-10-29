@@ -298,6 +298,25 @@ serve(async (req) => {
         try {
           console.log(`🔄 Scraping source: ${source.source_name} (${source.normalizedUrl})`);
 
+          // Log diagnosis before scraping
+          const diagnosisCheck = await scraper.quickDiagnosis(source.normalizedUrl);
+          if (diagnosisCheck) {
+            await supabase.from('system_logs').insert({
+              level: diagnosisCheck.diagnosis === 'ok' ? 'info' : 'warning',
+              category: 'scraping_diagnosis',
+              message: `Source diagnosis: ${diagnosisCheck.diagnosis}`,
+              metadata: {
+                source_id: source.source_id,
+                source_name: source.source_name,
+                url: source.normalizedUrl,
+                diagnosis: diagnosisCheck.diagnosis,
+                blocking_server: diagnosisCheck.blockingServer,
+                response_time: diagnosisCheck.responseTime,
+                error: diagnosisCheck.error
+              }
+            });
+          }
+
           // Execute scraping with ultra-aggressive settings for test mode
           const scrapeResult = await scraper.scrapeContent(
             source.normalizedUrl,
