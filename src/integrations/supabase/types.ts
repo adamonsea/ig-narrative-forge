@@ -3528,6 +3528,8 @@ export type Database = {
       cleanup_existing_duplicates: { Args: never; Returns: Json }
       cleanup_expired_community_insights: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      cleanup_old_scraped_urls: { Args: never; Returns: undefined }
+      cleanup_old_system_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_legacy_sources: { Args: never; Returns: Json }
       cleanup_orphaned_sources: { Args: never; Returns: Json }
       cleanup_parliamentary_stories_for_topic: {

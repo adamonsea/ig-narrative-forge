@@ -36,23 +36,65 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-# Core Functions
+# ========================================
+# CORE PRODUCTION FUNCTIONS
+# ========================================
+
+# Public-facing functions
 [functions.secure-newsletter-signup]
+verify_jwt = false
+
+[functions.topic-manifest]
+verify_jwt = false
+
+[functions.generate-og-image]
+verify_jwt = false
+
+[functions.track-engagement-metric]
+verify_jwt = false
+
+# Content scraping & extraction
+[functions.universal-scraper]
+verify_jwt = false
+
+[functions.unified-scraper]
+verify_jwt = false
+
+[functions.multi-tenant-scraper]
+verify_jwt = false
+
+[functions.universal-topic-scraper]
+verify_jwt = false
+
+[functions.universal-topic-automation]
+verify_jwt = false
+
+[functions.topic-aware-scraper]
+verify_jwt = false
+
+[functions.content-extractor]
+verify_jwt = false
+
+[functions.content-extractor-multi-tenant]
+verify_jwt = false
+
+[functions.discover-article-urls]
 verify_jwt = false
 
 [functions.hybrid-scraper]
 verify_jwt = false
 
-[functions.story-illustrator]
-verify_jwt = true
-
-[functions.universal-scraper]
+[functions.intelligent-scraper]
 verify_jwt = false
 
-[functions.content-generator]
+[functions.beautiful-soup-scraper]
 verify_jwt = false
 
-[functions.image-generator]
+[functions.screenshot-ai-scraper]
+verify_jwt = false
+
+# Content processing
+[functions.enhanced-content-generator]
 verify_jwt = false
 
 [functions.content-quality-analyzer]
@@ -61,6 +103,13 @@ verify_jwt = false
 [functions.duplicate-detector]
 verify_jwt = false
 
+[functions.duplicate-prevention-scraper]
+verify_jwt = false
+
+[functions.sentiment-detector]
+verify_jwt = false
+
+# Queue & job processing
 [functions.queue-processor]
 verify_jwt = false
 
@@ -70,16 +119,36 @@ verify_jwt = false
 [functions.automated-scheduler]
 verify_jwt = false
 
-[functions.scrape-monitor]
+[functions.eezee-automation-service]
 verify_jwt = false
 
-[functions.health-check]
+# Story operations
+[functions.story-illustrator]
+verify_jwt = true
+
+[functions.auto-illustrate-stories]
 verify_jwt = false
 
-[functions.reset-stuck-processing]
+[functions.select-story-cover]
+verify_jwt = true
+
+[functions.delete-cover-option]
+verify_jwt = true
+
+[functions.delete-story-illustration]
+verify_jwt = true
+
+[functions.delete-story-cascade]
+verify_jwt = true
+
+[functions.promote-topic-article]
 verify_jwt = false
 
-[functions.test-image-generator]
+[functions.publish-ready-stories]
+verify_jwt = false
+
+# Image generation
+[functions.image-generator]
 verify_jwt = false
 
 [functions.nebius-image-generator]
@@ -91,90 +160,7 @@ verify_jwt = false
 [functions.midjourney-image-generator]
 verify_jwt = false
 
-[functions.topic-aware-scraper]
-verify_jwt = false
-
-[functions.keyword-rescan-trigger]
-verify_jwt = false
-
-[functions.mark-article-discarded]
-verify_jwt = false
-
-[functions.recover-orphaned-urls]
-verify_jwt = false
-
-[functions.suggest-content-sources]
-verify_jwt = false
-
-[functions.validate-content-source]
-verify_jwt = false
-
-[functions.beautiful-soup-scraper]
-verify_jwt = false
-
-[functions.test-beautiful-soup]
-verify_jwt = false
-
-[functions.ai-scraper-recovery]
-verify_jwt = false
-
-[functions.enhanced-source-validator]
-verify_jwt = false
-
-[functions.emergency-source-fix]
-verify_jwt = false
-
-[functions.intelligent-scraper]
-verify_jwt = false
-
-[functions.test-scraper-fix]
-verify_jwt = false
-
-[functions.emergency-rescore-articles]
-verify_jwt = false
-
-[functions.fix-topic-keywords]
-verify_jwt = false
-
-[functions.universal-platform-fix]
-verify_jwt = false
-
-[functions.schedule-recovery]
-verify_jwt = false
-
-[functions.screenshot-ai-scraper]
-verify_jwt = false
-
-[functions.reddit-community-processor]
-verify_jwt = false
-
-[functions.reddit-community-scheduler]
-verify_jwt = false
-
-[functions.uk-parliament-collector]
-verify_jwt = false
-
-[functions.parliamentary-weekly-backfill]
-verify_jwt = false
-
-[functions.backfill-parliamentary-metadata]
-verify_jwt = false
-
-[functions.select-story-cover]
-verify_jwt = true
-
-[functions.delete-cover-option]
-verify_jwt = true
-
-[functions.sentiment-detector]
-verify_jwt = false
-
-[functions.sentiment-card-scheduler]
-verify_jwt = false
-
-[functions.track-engagement-metric]
-verify_jwt = false
-
+# Roundups & notifications
 [functions.generate-daily-roundup]
 verify_jwt = false
 
@@ -184,23 +170,230 @@ verify_jwt = false
 [functions.send-story-notification]
 verify_jwt = false
 
-[functions.topic-manifest]
+[functions.automated-roundup-notifier]
+verify_jwt = false
+
+# Parliamentary data
+[functions.uk-parliament-collector]
+verify_jwt = false
+
+[functions.fetch-current-mps]
+verify_jwt = false
+
+[functions.auto-detect-regional-mps]
+verify_jwt = false
+
+# Sentiment & community
+[functions.sentiment-card-scheduler]
+verify_jwt = false
+
+[functions.reddit-community-processor]
+verify_jwt = false
+
+[functions.reddit-community-scheduler]
+verify_jwt = false
+
+# Monitoring & recovery
+[functions.health-check]
+verify_jwt = false
+
+[functions.scrape-monitor]
+verify_jwt = false
+
+[functions.source-health-monitor]
+verify_jwt = false
+
+[functions.daily-content-monitor]
 verify_jwt = false
 
 [functions.auto-recover-stuck-stories]
 verify_jwt = false
 
-[functions.cleanup-offtracking-parliamentary-votes]
+[functions.reset-stuck-processing]
 verify_jwt = false
 
-[functions.generate-og-image]
+[functions.error-logger]
 verify_jwt = false
 
-[functions.suggest-regional-keywords]
+# Analytics
+[functions.analytics-dashboard]
+verify_jwt = false
+
+# Cleanup (scheduled via cron)
+[functions.cleanup-temp-uploads]
+verify_jwt = false
+
+[functions.duplicate-cleanup]
+verify_jwt = false
+
+[functions.source-cleanup]
+verify_jwt = false
+
+# ========================================
+# ADMIN/MAINTENANCE FUNCTIONS (JWT Required)
+# ========================================
+
+[functions.test-image-generator]
+verify_jwt = true
+
+[functions.test-scraper-fix]
+verify_jwt = true
+
+[functions.test-beautiful-soup]
+verify_jwt = true
+
+[functions.test-screenshot-minimal]
+verify_jwt = true
+
+[functions.test-processing-pipeline]
+verify_jwt = true
+
+[functions.test-content-generator]
+verify_jwt = true
+
+[functions.emergency-scrape-fix]
+verify_jwt = true
+
+[functions.emergency-scrape-test]
+verify_jwt = true
+
+[functions.emergency-source-fix]
+verify_jwt = true
+
+[functions.fix-topic-keywords]
+verify_jwt = true
+
+[functions.fix-future-dated-article]
+verify_jwt = true
+
+[functions.ai-scraper-recovery]
+verify_jwt = true
+
+[functions.enhanced-source-validator]
+verify_jwt = true
+
+[functions.validate-content-source]
+verify_jwt = true
+
+[functions.validate-and-fix-sources]
+verify_jwt = true
+
+[functions.validate-parliamentary-completeness]
+verify_jwt = true
+
+[functions.source-link-validator]
+verify_jwt = true
+
+[functions.universal-platform-fix]
+verify_jwt = true
+
+[functions.schedule-recovery]
+verify_jwt = true
+
+[functions.backfill-parliamentary-metadata]
 verify_jwt = true
 
 [functions.backfill-keyword-analytics]
 verify_jwt = true
 
+[functions.backfill-story-linkage]
+verify_jwt = true
+
+[functions.backfill-discarded-articles]
+verify_jwt = true
+
+[functions.parliamentary-weekly-backfill]
+verify_jwt = true
+
+[functions.source-metrics-backfill]
+verify_jwt = true
+
+[functions.cleanup-invalid-parliamentary-mentions]
+verify_jwt = true
+
+[functions.cleanup-misplaced-articles]
+verify_jwt = true
+
+[functions.cleanup-offtracking-parliamentary-votes]
+verify_jwt = true
+
+[functions.cleanup-parliamentary-test-data]
+verify_jwt = true
+
+[functions.cleanup-stale-source-errors]
+verify_jwt = true
+
+[functions.clear-old-events]
+verify_jwt = true
+
+[functions.bulk-cleanup-articles]
+verify_jwt = true
+
+[functions.auto-cleanup-duplicates]
+verify_jwt = true
+
+[functions.auto-deactivate-failing-sources]
+verify_jwt = true
+
+[functions.dedupe-topic-stories]
+verify_jwt = true
+
+[functions.pipeline-cleanup]
+verify_jwt = true
+
+[functions.recover-orphaned-urls]
+verify_jwt = true
+
+[functions.mark-article-discarded]
+verify_jwt = true
+
+[functions.keyword-rescan-trigger]
+verify_jwt = true
+
+[functions.suggest-content-sources]
+verify_jwt = true
+
+[functions.suggest-keywords]
+verify_jwt = true
+
+[functions.suggest-regional-elements]
+verify_jwt = true
+
+[functions.suggest-regional-keywords]
+verify_jwt = true
+
+[functions.re-extract-articles]
+verify_jwt = true
+
 [functions.extract-content-from-upload]
+verify_jwt = true
+
+[functions.update-source-metrics]
+verify_jwt = true
+
+[functions.sync-topic-source-feed-urls]
+verify_jwt = true
+
+[functions.clean-slate-migration]
+verify_jwt = true
+
+[functions.phase2-verification]
+verify_jwt = true
+
+[functions.waitlist-signup]
+verify_jwt = true
+
+[functions.ai-event-generator]
+verify_jwt = true
+
+[functions.api-event-collector]
+verify_jwt = true
+
+[functions.automated-event-scheduler]
+verify_jwt = true
+
+[functions.social-media-publisher]
+verify_jwt = true
+
+[functions.sitemap-xml]
 verify_jwt = true

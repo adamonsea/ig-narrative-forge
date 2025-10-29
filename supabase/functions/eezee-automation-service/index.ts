@@ -399,11 +399,43 @@ serve(async (req) => {
       console.log(`✅ Automation complete: ${userArticlesGathered} articles gathered, ${userStoriesGenerated} stories queued`);
 
     } catch (automationError) {
-      console.error(`❌ Error processing automation:`, automationError);
+      const errorMessage = automationError instanceof Error ? automationError.message : String(automationError);
+      const errorStack = automationError instanceof Error ? automationError.stack : undefined;
+      
+      console.error(`❌ Error processing automation:`, {
+        error: errorMessage,
+        stack: errorStack,
+        userId: targetUserId,
+        targetTopics,
+        forceRun,
+        dryRun
+      });
+      
+      // Enhanced error logging
+      await supabase.from('system_logs').insert({
+        log_type: 'automation_error',
+        message: `Automation service failed for user ${targetUserId || 'global'}`,
+        metadata: {
+          error: errorMessage,
+          stack: errorStack,
+          userId: targetUserId,
+          targetTopics,
+          forceRun,
+          dryRun,
+          timestamp: new Date().toISOString()
+        }
+      }).catch(logErr => console.error('Failed to log error:', logErr));
+      
       userResults.push({
         userId: targetUserId || 'global',
         success: false,
-        error: automationError instanceof Error ? automationError.message : String(automationError)
+        error: errorMessage,
+        errorDetails: {
+          stack: errorStack,
+          targetTopics,
+          forceRun,
+          dryRun
+        }
       });
     }
 
@@ -536,14 +568,21 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    // Log the error
+    // Log the error with enhanced context
     try {
       await supabase
         .from('system_logs')
         .insert({
           level: 'error',
           message: `eezee News Automation Service failed: ${error instanceof Error ? error.message : String(error)}`,
-          context: errorResponse,
+          context: {
+            ...errorResponse,
+            stack: error instanceof Error ? error.stack : undefined,
+            error_category: error instanceof Error && error.message.includes('automation_config') ? 'config_error' :
+                           error instanceof Error && error.message.includes('topics') ? 'topic_error' :
+                           error instanceof Error && error.message.includes('scrape') ? 'scraper_error' :
+                           'unknown'
+          },
           function_name: 'eezee-automation-service'
         });
     } catch (logError) {

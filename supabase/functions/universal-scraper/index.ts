@@ -381,7 +381,7 @@ serve(async (req) => {
       console.error('❌ Enhanced fallback system exception:', fallbackError);
     }
     
-    // Log error event with more context
+    // Log error event with more context and diagnosis
     try {
       const dbOps = new DatabaseOperations(supabase);
       await dbOps.logSystemEvent(
@@ -392,10 +392,28 @@ serve(async (req) => {
           stack: error instanceof Error ? error.stack : undefined,
           sourceId: sourceId || 'unknown',
           feedUrl: feedUrl || 'unknown',
-          region: region || 'unknown'
+          region: region || 'unknown',
+          duration_ms: Date.now() - startTime,
+          error_category: error instanceof Error && error.message.includes('residential') ? 'ip_blocked' :
+                         error instanceof Error && error.message.includes('timeout') ? 'timeout' :
+                         error instanceof Error && error.message.includes('404') ? 'not_found' :
+                         'unknown',
+          timestamp: new Date().toISOString()
         },
         'universal-scraper'
       );
+      
+      // Also update source error tracking
+      if (sourceId) {
+        await supabase
+          .from('content_sources')
+          .update({
+            last_error: error instanceof Error ? error.message : String(error),
+            last_error_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sourceId);
+      }
     } catch (logError) {
       console.error('❌ Failed to log error:', logError);
     }
