@@ -105,21 +105,23 @@ serve(async (req) => {
 
     // Determine credit cost based on model - streamlined to working models only
     const getModelConfig = (modelName: string) => {
+      const stylePrefix = "Sharp contemporary editorial illustration. Professional graphic journalism. Sophisticated adult audience. NOT cartoon, NOT childlike, NOT whimsical. ";
+      
       switch (modelName) {
         case 'gemini-image':
-          return { credits: 1, cost: 0.039, provider: 'gemini' };
+          return { credits: 1, cost: 0.039, provider: 'gemini', stylePrefix };
         case 'gpt-image-1':
-          return { credits: 8, cost: 0.06, provider: 'openai' };
+          return { credits: 8, cost: 0.06, provider: 'openai', stylePrefix };
         case 'ideogram':
-          return { credits: 3, cost: 0.08, provider: 'ideogram' }; // Optimized with smaller size
+          return { credits: 3, cost: 0.08, provider: 'ideogram', stylePrefix }; // Optimized with smaller size
         case 'dall-e-3':
-          return { credits: 5, cost: 0.04, provider: 'openai' };
+          return { credits: 5, cost: 0.04, provider: 'openai', stylePrefix };
         case 'flux-schnell':
-          return { credits: 2, cost: 0.01, provider: 'huggingface' };
+          return { credits: 2, cost: 0.01, provider: 'huggingface', stylePrefix };
         case 'nebius-flux':
-          return { credits: 1, cost: 0.0013, provider: 'nebius' }; // Cheapest option
+          return { credits: 1, cost: 0.0013, provider: 'nebius', stylePrefix }; // Cheapest option
         default:
-          return { credits: 5, cost: 0.04, provider: 'openai' };
+          return { credits: 5, cost: 0.04, provider: 'openai', stylePrefix };
       }
     };
 
@@ -261,7 +263,9 @@ Focus on concrete visual details from the FULL narrative that would make an illu
     }
 
     // Generate optimized illustration prompt with subject-first structure
-    const illustrationPrompt = `Create a contemporary editorial cartoon illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
+    const illustrationPrompt = `${modelConfig.stylePrefix}
+
+Create a contemporary editorial cartoon illustration. NO TEXT, NO WORDS, NO LETTERS, NO SENTENCES, NO PHRASES anywhere in the image.
 
 SUBJECT MATTER - PRIMARY FOCUS (analyzed from full story):
 ${subjectMatter}
@@ -273,7 +277,10 @@ VISUAL CONCEPT:
 Illustrate the core subject identified above, drawing primarily from the opening narrative while using later details for background context. Show the story through varied character expressions and body language - different people respond differently to the same situation. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings, character interactions) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
 STYLE & COMPOSITION:
-Modern editorial illustration with clean pen and ink aesthetic. Hand-drawn quality with confident, expressive linework. Contemporary and fresh, not retro or dated. Clean black ink on pure white (#FFFFFF) background. Minimal shading with strategic spot blacks for impact. Clear, bold linework with modern sensibility. Witty and intelligent but accessible. Simple, immediately readable composition. Spatial relationships: Maintain clear physical boundaries between figures and environment. If a character's lower body is visible, ensure proper grounding with natural contact points.
+Sharp, sophisticated editorial illustration with bold graphic clarity. Professional linework with architectural precision and confident execution. Contemporary graphic journalism aesthetic - serious, intelligent, and visually authoritative. Clean black ink (#000000) on pure white (#FFFFFF) background. Strategic use of solid blacks and negative space for dramatic impact and readability. Strong compositional structure with deliberate visual hierarchy. Spatial relationships: Maintain clear physical boundaries between figures and environment. If a character's lower body is visible, ensure proper grounding with natural contact points.
+
+VISUAL MATURITY:
+Graphic design sophistication: treat this as editorial journalism for educated adult readers, not children's content. Sharp angles and deliberate geometric shapes where appropriate. Restrained, purposeful line weight variation. Professional illustration quality seen in Financial Times, New York Times, or The Economist. Avoid: rounded "friendly" shapes, exaggerated cartoon proportions, whimsical styling, overly playful aesthetics, comic book styling, animation-style rendering.
 
 TONE GUIDANCE:
 ${storyTone.toUpperCase()} - ${expressionInstruction}
@@ -282,10 +289,10 @@ DIVERSITY PRINCIPLES:
 - Ensure representation reflects contemporary diverse society naturally within the scene context
 - Avoid defaulting to homogeneous demographics; include varied ages, ethnicities, and styles when depicting people
 
-Line work: Drawn with skilled confidence - lines that feel certain and expressive but naturally hand-drawn. Contemporary illustration style, not geometric or mechanical. Fresh and current aesthetic.
+Line work: Drawn with skilled confidence - lines that feel certain and deliberate. Sharp, professional execution with contemporary graphic journalism aesthetic. Fresh and current, with editorial weight and authority.
 
-CHARACTER VARIETY (when depicting people):
-Show natural diversity in how different people respond to the situation - varied body language, different expressions, multiple perspectives within the scene. Avoid uniform reactions; real scenes have variety in posture, gesture, and emotional response.
+CHARACTER PORTRAYAL (when depicting people):
+Adults depicted with realistic proportions and mature body language. Serious facial structure appropriate for news illustration - avoid caricature unless specifically editorial/satirical. Natural diversity in posture, gesture, and response while maintaining visual sophistication. Show varied reactions, but maintain professional illustration quality. Reference: contemporary editorial illustration for serious journalism (NYT Opinion section, The Guardian Long Reads, Financial Times visual style).
 
 ANATOMICAL CORRECTNESS:
 When figures are partially visible in frame, ensure all visible body parts follow natural physics:
@@ -296,9 +303,14 @@ When figures are partially visible in frame, ensure all visible body parts follo
 
 If showing a person from waist-up, knees-up, or any cropped view: this is perfectly fine for composition. But if their feet/legs ARE visible in the frame, they must be drawn with correct spatial relationship to the ground.
 
+EXPLICIT STYLE EXCLUSIONS:
+DO NOT create: cartoon illustrations, children's book art, whimsical styling, rounded "cute" aesthetics, exaggerated proportions, comic book styling, playful line work, juvenile visual language, simplified shapes for kids, friendly rounded characters, animation-style rendering, hand-drawn "sketch" quality, expressive casual linework.
+
+INSTEAD: Create sharp, professional editorial graphics suitable for serious journalism aimed at educated adult readers. Think visual Op-Ed illustration, not Sunday comics. Professional graphic journalism, not entertainment cartoon.
+
 CRITICAL: The illustration must be immediately recognizable as being about THIS specific story's subject matter. Prioritize subject-specific visual elements over generic scene-setting.
 
-Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, overly complex hatching, mechanical precision, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.`;
+Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, overly complex hatching, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
