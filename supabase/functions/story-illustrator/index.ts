@@ -278,17 +278,18 @@ Story headline: "${story.title}"
 VISUAL CONCEPT:
 Illustrate the core subject identified above, drawing primarily from the opening narrative while using later details for background context. Show the story through varied character expressions and body language - different people respond differently to the same situation. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings, character interactions) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
-STYLE & COMPOSITION:
-Bold outline-driven editorial cartoon - confident black ink contours define all shapes with minimal interior detail. Think David Levine's NYT caricature economy, Edel Rodriguez's bold political poster clarity, Ben Shahn's social realist line work. Clean line art for ADULT readers: sophisticated observational drawing with line weight variation for emphasis (thick/thin outlines), solid black shadow shapes (no hatching). Pure black (#000000) on white (#FFFFFF). Visual clarity through outline confidence and strategic solid blacks, not rendering detail.
+          STYLE & COMPOSITION:
+          Bold outline-driven editorial cartoon with DRAMATIC LINE WEIGHT VARIATION (essential for hand-drawn personality). Channel the ARTISTIC PERSONALITY of master editorial cartoonists: David Levine's confident NYT caricature strokes (thick to thin), Ronald Searle's expressive British wit (nervous energy in linework), Ralph Steadman's controlled chaos (bold decisive marks), Ben Shahn's social realist confidence. Draw with the ENERGY of a skilled editorial cartoonist working on deadline - some lines THICK and bold, others THIN and delicate. Pure black (#000000) on white (#FFFFFF). Solid black shadow shapes (no hatching/crosshatching).
 
-RENDERING RESTRAINT - CRITICAL REQUIREMENTS:
-- ✅ ALLOWED: Bold outlines, solid black shadow shapes, line weight variation (thick/thin borders)
-- ❌ FORBIDDEN: Hatching, crosshatching, stippling, texture lines, shading strokes, parallel lines for tone, diagonal lines for shadows, decorative pen strokes
-- Clothing: Outline only, NO fabric texture
-- Hair: Simple outline shapes, NO individual strand detail
-- Faces: Outline features, NO shaded modeling
-- Backgrounds: Simple outlines or solid blacks, NO textured surfaces
-- If it's not an outline or a solid black shape, DON'T DRAW IT
+RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
+          No shading. No hatching. No crosshatching. No stippling. No texture. No gradients. Just VARIED-WEIGHT black outlines and solid black fills. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION and confident hand-drawn energy.
+          
+          STROKE WEIGHT HIERARCHY (thickest to thinnest):
+          1. Main foreground figure outlines: THICK bold strokes (3-4x baseline weight) - commanding presence
+          2. Important objects/focal points: MEDIUM-THICK strokes (2-3x baseline) - visual emphasis
+          3. Secondary elements: MEDIUM strokes (1.5-2x baseline) - supporting cast
+          4. Background elements: THIN strokes (0.5-1x baseline) - atmospheric depth
+          5. Delicate details (facial features, hands): THIN elegant strokes (0.3-0.5x baseline) - precision and sophistication
 
 VISUAL MATURITY:
 Editorial cartoon sophistication for adult readers - the artistic confidence and visual intelligence of a master newspaper cartoonist. Hand-drawn artistry with purpose and skill, not playful whimsy. Think Op-Ed illustration, political cartooning for grown-ups, visual journalism with personality and craft. Professional editorial cartoon quality referencing masters of the form. Avoid: childish proportions, juvenile styling, cute rounded aesthetics meant for kids, animation character design, generic vector graphics, sterile digital output.
@@ -300,7 +301,18 @@ DIVERSITY PRINCIPLES:
 - Ensure representation reflects contemporary diverse society naturally within the scene context
 - Avoid defaulting to homogeneous demographics; include varied ages, ethnicities, and styles when depicting people
 
-Line work: Bold, decisive editorial cartoon linework - vary line thickness for visual hierarchy and emphasis, but maintain economy. Sharp observational drawing quality (not rounded children's comic style). Think Op-Ed illustration masters: confident pen control, adult facial structure, journalistic sophistication. NO decorative strokes. NO texture. NO shading lines inside shapes.
+          Line work: DRAMATIC line weight variation is the key to personality - maintain economy of ELEMENTS but EXPLOSIVE variety in LINE WEIGHT. Some lines THICK and confident (foreground figures), others THIN and delicate (background, fine details). Sharp observational drawing quality (not rounded children's comic style). Think Op-Ed illustration masters: confident pen control with NATURAL HAND ENERGY, adult facial structure, journalistic sophistication. NO decorative strokes. NO texture. NO shading lines inside shapes.
+          
+          LINE WEIGHT DYNAMICS (create depth and personality through stroke contrast):
+          ❌ STERILE: All lines same weight → computer-generated uniformity → lifeless
+          ✅ PERSONALITY: Foreground figures THICK bold strokes (3-4x baseline) → Middle ground MEDIUM strokes (1.5-2x) → Background THIN strokes (0.5-1x) → Delicate facial features THIN elegant lines (0.3-0.5x) → FEELS HAND-DRAWN BY A MASTER
+          
+          HUMAN HAND QUALITIES (inject organic energy):
+          • Slight line wobble in long strokes (not mechanical ruler-straight)
+          • Natural taper at stroke ends (confident pen lift)
+          • Lines that "breathe" - not robotic consistency
+          • Vary pressure: heavy confident strokes vs. light delicate touches
+          • Natural hand tremor in detail work (adds authenticity)
 
 CHARACTER PORTRAYAL (when depicting people):
 Sharp, observational drawing of mature adults - NOT rounded children's comic faces. Think David Levine caricature intelligence, editorial cartoon sophistication, visual journalism. Adults depicted with realistic proportions, angular facial structure where appropriate, mature body language. Avoid: rounded "friendly" faces from adventure comics, simplified children's book character design, cute proportions. Serious facial structure appropriate for news illustration - avoid caricature unless specifically editorial/satirical. Natural diversity in posture, gesture, and response while maintaining visual sophistication. Show varied reactions, but maintain professional illustration quality. Reference: contemporary editorial illustration for serious journalism (NYT Opinion section, The Guardian Long Reads, Financial Times visual style).
@@ -323,7 +335,7 @@ CRITICAL: The illustration must be immediately recognizable as being about THIS 
 
 Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, excessive rendering with decorative hatching, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.
 
-FINAL REMINDER: This is a CLEAN LINE DRAWING. Outlines and solid blacks ONLY. Zero hatching. Zero crosshatching. Zero stippling. Zero texture strokes. If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
+FINAL REMINDER: This is a CLEAN LINE DRAWING with DRAMATIC LINE WEIGHT VARIATION. Pure black and white only. THICK bold strokes for foreground figures → THIN delicate lines for background details. Bold black outlines with NATURAL HAND ENERGY (slight wobble, organic taper, breathing lines - not robotic uniformity). Solid black shadows. Zero hatching. Zero crosshatching. Zero stippling. Zero texture fills. Zero gradients. Human hand energy, not computer-generated uniformity. Think: "What would David Levine or Ronald Searle draw with VARIED-WEIGHT black ink strokes and solid black fills - confident, expressive, ALIVE with artistic personality?" If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
