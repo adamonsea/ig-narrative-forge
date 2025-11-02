@@ -279,10 +279,12 @@ VISUAL CONCEPT:
 Illustrate the core subject identified above, drawing primarily from the opening narrative while using later details for background context. Show the story through varied character expressions and body language - different people respond differently to the same situation. The scene should immediately communicate what this story is about through specific visual elements (objects, activities, settings, character interactions) rather than generic representations. Focus on the unique aspects that distinguish this story.
 
           STYLE & COMPOSITION:
-          Bold outline-driven editorial cartoon with DRAMATIC LINE WEIGHT VARIATION (essential for hand-drawn personality). Channel the ARTISTIC PERSONALITY of master editorial cartoonists: David Levine's confident NYT caricature strokes (thick to thin), Ronald Searle's expressive British wit (nervous energy in linework), Ralph Steadman's controlled chaos (bold decisive marks), Ben Shahn's social realist confidence. Draw with the ENERGY of a skilled editorial cartoonist working on deadline - some lines THICK and bold, others THIN and delicate. Pure black (#000000) on white (#FFFFFF). Solid black shadow shapes (no hatching/crosshatching).
+          Bold outline-driven editorial cartoon with DRAMATIC LINE WEIGHT VARIATION (essential for hand-drawn personality). Channel the ARTISTIC PERSONALITY of master editorial cartoonists: David Levine's confident NYT caricature strokes (thick to thin), Ronald Searle's expressive British wit (nervous energy in linework), Ralph Steadman's controlled chaos (bold decisive marks), Ben Shahn's social realist confidence. Draw with the ENERGY of a skilled editorial cartoonist working on deadline - some lines THICK and bold, others THIN and delicate. 
+          
+          TWO-COLOR PRINT AESTHETIC: Primary black ink (#000000) for all linework + fine halftone texture, PLUS bright mint green (#58FFBC) as spot color for offset background blobs/shapes. Think risograph or screen print - the green sits BEHIND/AROUND the black line art as organic blob shapes (not filling outlined areas precisely, but offset like imperfect registration). White (#FFFFFF) background. Reference PRINT AESTHETIC: Risograph zine style, vintage screen print posters, punk DIY print culture, Japanese risograph posters. Think: organic offset color registration, fine halftone grain in black areas, bold spot color blobs. Solid black shadow shapes (no hatching/crosshatching).
 
 RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
-          No shading. No hatching. No crosshatching. No stippling. No texture. No gradients. Just VARIED-WEIGHT black outlines and solid black fills. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION and confident hand-drawn energy.
+          No shading. No hatching. No crosshatching. No stippling. No gradients. Just VARIED-WEIGHT black outlines, solid black fills, fine halftone texture in black areas, and bright green offset blobs. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION, confident hand-drawn energy, halftone grain texture, and strategic green spot color placement.
           
           STROKE WEIGHT HIERARCHY (thickest to thinnest):
           1. Main foreground figure outlines: THICK bold strokes (3-4x baseline weight) - commanding presence
@@ -290,6 +292,22 @@ RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
           3. Secondary elements: MEDIUM strokes (1.5-2x baseline) - supporting cast
           4. Background elements: THIN strokes (0.5-1x baseline) - atmospheric depth
           5. Delicate details (facial features, hands): THIN elegant strokes (0.3-0.5x baseline) - precision and sophistication
+
+          HALFTONE TEXTURE APPLICATION:
+          - Apply fine mechanical halftone dot pattern to BLACK areas ONLY (not green areas)
+          - Texture density: 60-80 LPI (lines per inch) - fine but visible grain
+          - Use halftone dots in: shadow fills, clothing texture, background fill areas, architectural surfaces
+          - Halftone creates TONAL VARIATION within black ink without crosshatching
+          - Think vintage newsprint or risograph texture quality
+          - Green areas remain SOLID flat color (no halftone in green)
+
+          GREEN SPOT COLOR (#58FFBC) - OFFSET BLOB PLACEMENT:
+          - Use bright mint green as BACKGROUND accent color - organic blob shapes that sit behind the main black line art
+          - Green blobs should be: irregular organic shapes, slightly offset from the main subjects (like screen print registration drift), 2-4 large organic blobs per composition
+          - Placement strategy: Behind key subjects as "halos" or surrounding environmental elements, peek out from behind figures/objects, create depth by sitting in mid-ground or background
+          - GREEN DOES NOT: Fill inside black outlines precisely, color every element, outline objects exactly
+          - Think: Japanese risograph posters, punk gig posters, DIY screen print aesthetic - the green adds POP but feels hand-printed and slightly imperfect
+          - Balance: 60-70% black + halftone texture, 20-30% green blobs, 10-20% white space
 
 VISUAL MATURITY:
 Editorial cartoon sophistication for adult readers - the artistic confidence and visual intelligence of a master newspaper cartoonist. Hand-drawn artistry with purpose and skill, not playful whimsy. Think Op-Ed illustration, political cartooning for grown-ups, visual journalism with personality and craft. Professional editorial cartoon quality referencing masters of the form. Avoid: childish proportions, juvenile styling, cute rounded aesthetics meant for kids, animation character design, generic vector graphics, sterile digital output.
@@ -335,7 +353,14 @@ CRITICAL: The illustration must be immediately recognizable as being about THIS 
 
 Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, excessive rendering with decorative hatching, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.
 
-FINAL REMINDER: This is a CLEAN LINE DRAWING with DRAMATIC LINE WEIGHT VARIATION. Pure black and white only. THICK bold strokes for foreground figures → THIN delicate lines for background details. Bold black outlines with NATURAL HAND ENERGY (slight wobble, organic taper, breathing lines - not robotic uniformity). Solid black shadows. Zero hatching. Zero crosshatching. Zero stippling. Zero texture fills. Zero gradients. Human hand energy, not computer-generated uniformity. Think: "What would David Levine or Ronald Searle draw with VARIED-WEIGHT black ink strokes and solid black fills - confident, expressive, ALIVE with artistic personality?" If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
+TWO-COLOR COMPOSITION EXAMPLES:
+          ✅ CORRECT: Black line drawing of figure → Green organic blob behind their shoulder + another green blob in background → Black halftone texture in their clothing → Result: feels like hand-printed poster
+          ✅ CORRECT: Black line art of scene → Large green blob offset to left side touching edge of frame → Medium green blob peeking behind central object → Black fine halftone in shadow areas
+          ❌ WRONG: Green filling inside every outlined shape like a coloring book
+          ❌ WRONG: Green gradients or blended effects
+          ❌ WRONG: More than 4-5 green blobs (should be strategic, not everywhere)
+
+          FINAL REMINDER: This is a TWO-COLOR PRINT ILLUSTRATION with DRAMATIC LINE WEIGHT VARIATION. TWO COLORS ONLY: Black (#000000) with fine halftone texture for linework and tonal areas + Bright mint green (#58FFBC) as offset background blobs. No other colors. No gradients. Green sits BEHIND black line art like imperfect print registration. THICK bold strokes for foreground figures → THIN delicate lines for background details. Bold black outlines with NATURAL HAND ENERGY (slight wobble, organic taper, breathing lines - not robotic uniformity). Solid black shadows with fine halftone grain texture. Zero hatching. Zero crosshatching. Zero stippling beyond halftone dots. Human hand energy, not computer-generated uniformity. Think: "What would David Levine or Ronald Searle draw as a two-color risograph poster with VARIED-WEIGHT black ink strokes, fine halftone texture, and strategic green blobs - confident, expressive, ALIVE with artistic personality?" If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
