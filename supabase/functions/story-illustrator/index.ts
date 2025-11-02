@@ -281,10 +281,10 @@ Illustrate the core subject identified above, drawing primarily from the opening
           STYLE & COMPOSITION:
           Bold outline-driven editorial cartoon with DRAMATIC LINE WEIGHT VARIATION (essential for hand-drawn personality). Channel the ARTISTIC PERSONALITY of master editorial cartoonists: David Levine's confident NYT caricature strokes (thick to thin), Ronald Searle's expressive British wit (nervous energy in linework), Ralph Steadman's controlled chaos (bold decisive marks), Ben Shahn's social realist confidence. Draw with the ENERGY of a skilled editorial cartoonist working on deadline - some lines THICK and bold, others THIN and delicate. 
           
-          TWO-COLOR PRINT AESTHETIC: Primary black ink (#000000) for all linework + fine halftone texture, PLUS bright mint green (#58FFBC) as spot color for offset background blobs/shapes. Think risograph or screen print - the green sits BEHIND/AROUND the black line art as organic blob shapes (not filling outlined areas precisely, but offset like imperfect registration). White (#FFFFFF) background. Reference PRINT AESTHETIC: Risograph zine style, vintage screen print posters, punk DIY print culture, Japanese risograph posters. Think: organic offset color registration, fine halftone grain in black areas, bold spot color blobs. Solid black shadow shapes (no hatching/crosshatching).
+          TWO-COLOR PRINT AESTHETIC: Primary black ink (#000000) for all linework + MANDATORY fine halftone texture, PLUS minimal bright mint green (#58FFBC) as SPARSE highlight accents only (10-15% coverage maximum). White (#FFFFFF) background. Reference PRINT AESTHETIC: Risograph zine style, vintage screen print posters, punk DIY print culture. Solid black shadow shapes (no hatching/crosshatching).
 
 RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
-          No shading. No hatching. No crosshatching. No stippling. No gradients. Just VARIED-WEIGHT black outlines, solid black fills, fine halftone texture in black areas, and bright green offset blobs. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION, confident hand-drawn energy, halftone grain texture, and strategic green spot color placement.
+          No shading. No hatching. No crosshatching. No stippling. No gradients. Just VARIED-WEIGHT black outlines, solid black fills, MANDATORY visible halftone texture in shadows/mid-tones, and minimal green highlight accents. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION, confident hand-drawn energy, halftone grain texture, and sparse strategic green pops.
           
           STROKE WEIGHT HIERARCHY (thickest to thinnest):
           1. Main foreground figure outlines: THICK bold strokes (3-4x baseline weight) - commanding presence
@@ -293,21 +293,22 @@ RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
           4. Background elements: THIN strokes (0.5-1x baseline) - atmospheric depth
           5. Delicate details (facial features, hands): THIN elegant strokes (0.3-0.5x baseline) - precision and sophistication
 
-          HALFTONE TEXTURE APPLICATION:
-          - Apply fine mechanical halftone dot pattern to BLACK areas ONLY (not green areas)
-          - Texture density: 60-80 LPI (lines per inch) - fine but visible grain
-          - Use halftone dots in: shadow fills, clothing texture, background fill areas, architectural surfaces
-          - Halftone creates TONAL VARIATION within black ink without crosshatching
-          - Think vintage newsprint or risograph texture quality
+          HALFTONE TEXTURE - CRITICAL REQUIREMENT (MUST BE VISIBLE):
+          - YOU MUST apply fine mechanical halftone dot pattern to ALL shadow areas and mid-tones
+          - Texture density: 60-80 LPI (lines per inch) - fine but CLEARLY VISIBLE grain texture
+          - PRIMARY USE: Shadow emphasis - use halftone dots to create depth in shadows, darker areas, recessed spaces
+          - Apply halftone to: ALL shadow fills (under objects, behind figures, in clothing folds), mid-tone areas for tonal variation, background fill areas for atmosphere, architectural shadow surfaces
+          - Halftone is NOT optional - it MUST appear in the final image as visible dot texture in shadow/mid-tone areas
+          - Think vintage newsprint reproduction or risograph shadow printing - the dots should be apparent
+          - Contrast: Pure white highlights → Light halftone mid-tones → Dense halftone shadows → Solid black deepest darks
           - Green areas remain SOLID flat color (no halftone in green)
 
-          GREEN SPOT COLOR (#58FFBC) - OFFSET BLOB PLACEMENT:
-          - Use bright mint green as BACKGROUND accent color - organic blob shapes that sit behind the main black line art
-          - Green blobs should be: irregular organic shapes, slightly offset from the main subjects (like screen print registration drift), 2-4 large organic blobs per composition
-          - Placement strategy: Behind key subjects as "halos" or surrounding environmental elements, peek out from behind figures/objects, create depth by sitting in mid-ground or background
-          - GREEN DOES NOT: Fill inside black outlines precisely, color every element, outline objects exactly
-          - Think: Japanese risograph posters, punk gig posters, DIY screen print aesthetic - the green adds POP but feels hand-printed and slightly imperfect
-          - Balance: 60-70% black + halftone texture, 20-30% green blobs, 10-20% white space
+          GREEN SPOT COLOR (#58FFBC) - MINIMAL HIGHLIGHT ACCENTS ONLY:
+          - Use bright mint green SPARINGLY - only 1-3 small accent areas per composition (10-15% coverage maximum)
+          - Green is for HIGHLIGHTS only: small accent blobs that catch the eye, strategic pops behind key focal points, minimal environmental accents
+          - Keep green shapes: small to medium size only (not large blobs), irregular organic shapes, slightly offset from black linework (imperfect registration feel)
+          - GREEN RESTRAINT: Less is more - the illustration should read as black + halftone texture with just a few strategic green pops
+          - GREEN DOES NOT: Fill large areas, appear everywhere, become the dominant color element
 
 VISUAL MATURITY:
 Editorial cartoon sophistication for adult readers - the artistic confidence and visual intelligence of a master newspaper cartoonist. Hand-drawn artistry with purpose and skill, not playful whimsy. Think Op-Ed illustration, political cartooning for grown-ups, visual journalism with personality and craft. Professional editorial cartoon quality referencing masters of the form. Avoid: childish proportions, juvenile styling, cute rounded aesthetics meant for kids, animation character design, generic vector graphics, sterile digital output.
@@ -354,13 +355,14 @@ CRITICAL: The illustration must be immediately recognizable as being about THIS 
 Avoid: Dated aesthetics, retro styling (unless story-specific), generic "people in front of building" compositions, excessive rendering with decorative hatching, limbs merging with surfaces, legs sinking into ground, feet disappearing into floors, anatomically impossible spatial relationships between figures and environment, body parts fading into backgrounds.
 
 TWO-COLOR COMPOSITION EXAMPLES:
-          ✅ CORRECT: Black line drawing of figure → Green organic blob behind their shoulder + another green blob in background → Black halftone texture in their clothing → Result: feels like hand-printed poster
-          ✅ CORRECT: Black line art of scene → Large green blob offset to left side touching edge of frame → Medium green blob peeking behind central object → Black fine halftone in shadow areas
-          ❌ WRONG: Green filling inside every outlined shape like a coloring book
-          ❌ WRONG: Green gradients or blended effects
-          ❌ WRONG: More than 4-5 green blobs (should be strategic, not everywhere)
+          ✅ CORRECT: Black line drawing of figure → VISIBLE halftone dot texture in shadow areas under chin, in clothing folds → 1 small green accent blob behind shoulder → 1 tiny green highlight on background element → Result: black linework + textured shadows + minimal green pops
+          ✅ CORRECT: Black line art of scene → Dense halftone dots in ALL shadow areas (clearly visible dot pattern) → 2 small green accent shapes strategically placed → White highlights → Halftone texture is CLEARLY VISIBLE as dot pattern
+          ❌ WRONG: Green covering 30%+ of the image (use 10-15% maximum)
+          ❌ WRONG: No visible halftone texture in shadows (halftone MUST be apparent)
+          ❌ WRONG: Green gradients or green filling outlined areas precisely
+          ❌ WRONG: More than 3-4 green accents (should be minimal, strategic highlights only)
 
-          FINAL REMINDER: This is a TWO-COLOR PRINT ILLUSTRATION with DRAMATIC LINE WEIGHT VARIATION. TWO COLORS ONLY: Black (#000000) with fine halftone texture for linework and tonal areas + Bright mint green (#58FFBC) as offset background blobs. No other colors. No gradients. Green sits BEHIND black line art like imperfect print registration. THICK bold strokes for foreground figures → THIN delicate lines for background details. Bold black outlines with NATURAL HAND ENERGY (slight wobble, organic taper, breathing lines - not robotic uniformity). Solid black shadows with fine halftone grain texture. Zero hatching. Zero crosshatching. Zero stippling beyond halftone dots. Human hand energy, not computer-generated uniformity. Think: "What would David Levine or Ronald Searle draw as a two-color risograph poster with VARIED-WEIGHT black ink strokes, fine halftone texture, and strategic green blobs - confident, expressive, ALIVE with artistic personality?" If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
+          FINAL REMINDER: This is a TWO-COLOR PRINT ILLUSTRATION with DRAMATIC LINE WEIGHT VARIATION. TWO COLORS ONLY: Black (#000000) with MANDATORY VISIBLE fine halftone texture in shadows/mid-tones + Minimal bright mint green (#58FFBC) as sparse highlight accents (1-3 small areas only, 10-15% coverage maximum). No other colors. No gradients. THICK bold strokes for foreground figures → THIN delicate lines for background details. Bold black outlines with NATURAL HAND ENERGY (slight wobble, organic taper, breathing lines - not robotic uniformity). Solid black shadows with VISIBLE fine halftone grain texture in mid-tones and shadow areas - the halftone dots MUST be apparent. Zero hatching. Zero crosshatching. Zero stippling beyond halftone dots. Human hand energy, not computer-generated uniformity. Think: "What would David Levine or Ronald Searle draw as a two-color risograph poster with VARIED-WEIGHT black ink strokes, VISIBLE fine halftone texture emphasizing shadows, and minimal strategic green highlight pops - confident, expressive, ALIVE with artistic personality?" If you add decorative pen detail inside outlined shapes, you have failed the assignment.`;
 
     // Generate image based on selected model
     const startTime = Date.now()
