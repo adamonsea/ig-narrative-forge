@@ -13,14 +13,20 @@ export interface ImageModel {
 
 export const imageModels: ImageModel[] = [
   {
-    id: 'gpt-image-1',
+    id: 'gpt-image-1-high',
     name: 'Premium',
-    credits: 8,
+    credits: 10,
+    provider: 'openai'
+  },
+  {
+    id: 'gpt-image-1-medium',
+    name: 'Creative',
+    credits: 5,
     provider: 'openai'
   },
   {
     id: 'gemini-image',
-    name: 'Standard',
+    name: 'Budget',
     credits: 1,
     provider: 'lovable-gemini'
   }

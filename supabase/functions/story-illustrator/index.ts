@@ -27,7 +27,55 @@ serve(async (req) => {
       }
     )
 
-    const { storyId, model = 'gpt-image-1' } = await req.json()
+    const { storyId, model = 'gpt-image-1-medium' } = await req.json()
+    
+    // Model configuration mapping
+    interface ModelConfig {
+      provider: 'openai' | 'lovable-gemini' | 'replicate-flux';
+      quality?: 'high' | 'medium' | 'low';
+      credits: number;
+      cost: number;
+      stylePrefix: string;
+    }
+    
+    const modelConfigs: Record<string, ModelConfig> = {
+      'gpt-image-1-high': {
+        provider: 'openai',
+        quality: 'high',
+        credits: 10,
+        cost: 0.04,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-1-medium': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 5,
+        cost: 0.02,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gemini-image': {
+        provider: 'lovable-gemini',
+        credits: 1,
+        cost: 0.001,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      // Legacy support
+      'gpt-image-1': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 5,
+        cost: 0.02,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'flux-dev': {
+        provider: 'replicate-flux',
+        credits: 3,
+        cost: 0.025,
+        stylePrefix: 'cinematic and editorial style, '
+      }
+    }
+    
+    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-1-medium']
 
     if (!storyId) {
       return new Response(
@@ -730,7 +778,7 @@ Before you generate, confirm:
           prompt: illustrationPrompt,
           n: 1,
           size: '1024x1024', // Valid size for gpt-image-1
-          quality: 'medium', // Balanced quality and cost
+          quality: modelConfig.quality || 'medium', // Dynamic quality based on tier
           output_format: 'webp', // Smaller file size
           output_compression: 80
         }),
@@ -759,12 +807,8 @@ Before you generate, confirm:
 
     generationTime = Date.now() - startTime
     
-    // Calculate actual cost based on model and settings
-    let estimatedCost = modelConfig.cost;
-    if (modelConfig.provider === 'openai') {
-      // Updated costs for 1024x1024 low quality: ~$0.02 per image
-      estimatedCost = 0.02;
-    }
+    // Calculate actual cost based on model configuration
+    const estimatedCost = modelConfig.cost;
 
     // Track API usage and cost for analytics (skip if user lacks permission)
     try {
