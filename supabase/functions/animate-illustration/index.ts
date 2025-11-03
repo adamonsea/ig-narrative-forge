@@ -87,10 +87,10 @@ serve(async (req) => {
       console.log('✅ Credits deducted:', ANIMATION_CREDIT_COST);
     }
 
-    // Fetch story to get tone for motion prompt
+    // Fetch story to get title and tone for content-aware motion prompt
     const { data: story, error: storyError } = await supabase
       .from('stories')
-      .select('tone')
+      .select('tone, title')
       .eq('id', storyId)
       .single();
 
@@ -102,9 +102,9 @@ serve(async (req) => {
       );
     }
 
-    // Generate camera movement prompt based on story tone
-    const cameraPrompt = getCameraMovementPrompt(story.tone || 'neutral');
-    console.log(`🎬 Camera movement: ${cameraPrompt}`);
+    // Generate content-aware animation prompt based on story title and tone
+    const animationPrompt = getContentAwareAnimationPrompt(story.title, story.tone || 'neutral');
+    console.log(`🎬 Animation prompt: ${animationPrompt}`);
 
     // Call Replicate API with Alibaba Wan 2.2 5b model
     console.log('🚀 Calling Replicate API (Alibaba Wan 2.2 5b)...');
@@ -118,7 +118,7 @@ serve(async (req) => {
       body: JSON.stringify({
         version: 'c92ab4265c9b3b5ea9ac9a87df839ebfd662ee3a820d62c21305bf6501a73fe1',
         input: {
-          prompt: cameraPrompt,
+          prompt: animationPrompt,
           image: staticImageUrl,
           num_frames: 81,
           frames_per_second: 24,
@@ -254,7 +254,72 @@ serve(async (req) => {
 });
 
 /**
- * Generates camera movement prompt based on story tone
+ * Generates content-aware animation prompt based on story title keywords
+ */
+function getContentAwareAnimationPrompt(title: string, tone: string): string {
+  const titleLower = title.toLowerCase();
+  
+  // Construction/roadworks stories
+  if (titleLower.match(/roadwork|construction|building|digger|excavat|demolit/i)) {
+    return 'Heavy machinery operates rhythmically, workers gesture, frustrated pedestrians observe, shopkeepers look on concerned';
+  }
+  
+  // Protest/demonstration stories
+  if (titleLower.match(/protest|demonstrat|march|rally|campaign/i)) {
+    return 'Crowd sways and gestures energetically, signs move, people march forward, passionate speakers gesture';
+  }
+  
+  // Business/retail stories
+  if (titleLower.match(/shop|business|retail|store|trade|customer/i)) {
+    return 'Shopkeeper gestures welcomingly, customers browse and interact, door opens, gentle bustle of commerce';
+  }
+  
+  // Council/meeting stories
+  if (titleLower.match(/council|meeting|debate|hearing|committee/i)) {
+    return 'Officials gesture in discussion, papers shuffle subtly, attendees nod and react, formal deliberation';
+  }
+  
+  // Crime/police stories
+  if (titleLower.match(/crime|police|arrest|theft|burglary|investigation/i)) {
+    return 'Police officers move purposefully, witnesses gesture and point, concerned residents observe, tense atmosphere';
+  }
+  
+  // Education/school stories
+  if (titleLower.match(/school|education|student|teacher|university|pupil/i)) {
+    return 'Students interact and gesture, teachers demonstrate, books and materials handled, learning environment';
+  }
+  
+  // Sports/recreation stories
+  if (titleLower.match(/sport|football|cricket|match|play|recreation|team/i)) {
+    return 'Athletes move dynamically, spectators cheer and gesture, equipment in motion, energetic sporting action';
+  }
+  
+  // Health/hospital stories
+  if (titleLower.match(/hospital|health|medical|doctor|nhs|patient/i)) {
+    return 'Medical staff move with purpose, patients interact gently, equipment used carefully, caring atmosphere';
+  }
+  
+  // Weather/environment stories
+  if (titleLower.match(/weather|storm|flood|wind|rain|climate|snow/i)) {
+    return 'Natural elements move powerfully, people react to conditions, environmental impact visible, dynamic weather';
+  }
+  
+  // Transport/traffic stories
+  if (titleLower.match(/traffic|transport|road|train|bus|railway/i)) {
+    return 'Vehicles move along routes, commuters wait and board, drivers navigate, transit flows';
+  }
+  
+  // Fire/emergency stories
+  if (titleLower.match(/fire|blaze|emergency|rescue|firefighter/i)) {
+    return 'Emergency responders act swiftly, flames flicker, smoke rises, urgent rescue operations';
+  }
+  
+  // Fallback to tone-based movement
+  return getCameraMovementPrompt(tone);
+}
+
+/**
+ * Generates camera movement prompt based on story tone (fallback)
  */
 function getCameraMovementPrompt(tone: string): string {
   const prompts: Record<string, string> = {
