@@ -141,6 +141,9 @@ verify_jwt = true
 [functions.delete-story-illustration]
 verify_jwt = true
 
+[functions.delete-story-animation]
+verify_jwt = true
+
 [functions.delete-story-cascade]
 verify_jwt = true
 

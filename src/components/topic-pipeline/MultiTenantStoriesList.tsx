@@ -161,14 +161,12 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         body: { storyId }
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.success) {
         toast({
-          title: 'Illustration Deleted',
-          description: 'Cover illustration has been removed successfully.',
+          title: 'All Illustrations Deleted',
+          description: 'Both static image and animation have been removed.',
         });
         
         if (onRefresh) {
@@ -184,6 +182,38 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to delete illustration',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAnimation = async (storyId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-story-animation', {
+        body: { storyId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'Animation Deleted',
+          description: 'Animation removed. Static image preserved.',
+        });
+        
+        if (onRefresh) {
+          setTimeout(async () => {
+            await onRefresh();
+          }, 500);
+        }
+      } else {
+        throw new Error(data?.error || 'Failed to delete animation');
+      }
+    } catch (error) {
+      console.error('Error deleting animation:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete animation',
         variant: 'destructive',
       });
     }
@@ -524,18 +554,30 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                                 </>
                               ) : (
                                 <>
-                                  🎬 Animate (2s) - 12 credits
+                                  🎬 Animate (2s) - 2 credits
                                 </>
                               )}
+                            </Button>
+                          )}
+                          {story.animated_illustration_url && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteAnimation(story.id)}
+                              className="text-xs"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Delete Animation
                             </Button>
                           )}
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleDeleteIllustration(story.id)}
-                            className="text-xs text-red-600 hover:text-red-700"
+                            className="text-xs text-red-600 hover:text-red-700 border-red-300"
                           >
-                            Delete
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete All
                           </Button>
                         </div>
                       </div>

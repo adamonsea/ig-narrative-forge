@@ -316,23 +316,34 @@ Title: ${title}
 Content: ${slideContent}
 Tone: ${tone}
 
-REQUIREMENTS:
-- Describe SPECIFIC movements that would naturally occur in this scene
-- Focus on FOREGROUND subjects (people, vehicles, objects, machinery)
+CRITICAL REQUIREMENTS:
+- ONLY animate elements ALREADY VISIBLE in the static image
+- DO NOT introduce any new objects, people, or elements not in the original frame
+- Describe SPECIFIC movements of existing subjects (people, vehicles, objects, machinery)
+- Keep movements subtle and natural to preserve the illustration style
+- Focus on FOREGROUND subjects only
 - Be concrete and action-oriented
 - Match emotional tone: ${tone}
 - Keep under 20 words
-- NO camera movements (zoom, pan, tilt) - describe subject motion only
+- NO camera movements (zoom, pan, tilt)
+- NO new elements entering frame
+
+STYLE PRESERVATION:
+- The animation must maintain the exact visual style of the static image
+- Only existing elements should move
+- Movements should be natural extensions of what's shown
+- Keep the composition and framing identical
 
 GOOD EXAMPLES:
-✅ "Heavy machinery digs rhythmically, frustrated shopkeeper gestures at disruption, concerned pedestrians observe roadwork"
-✅ "Protesters march holding signs aloft, crowd sways energetically, speakers gesture passionately from platform"
-✅ "Firefighters battle blaze actively, water sprays forcefully, onlookers point and react with concern"
-✅ "Council members gesture in heated debate, mayor taps gavel, attendees lean forward attentively"
+✅ "Construction worker in frame gestures, visible machinery arm extends, pedestrian on sidewalk shifts weight"
+✅ "Protesters already shown raise signs higher, crowd sways gently, visible speaker's mouth moves"
+✅ "Firefighter in shot sprays water, visible flames flicker, onlooker's head turns"
+✅ "Council member at table gestures, papers on desk rustle, attendee in frame nods"
 
 BAD EXAMPLES:
-❌ "Camera pans across scene" (no camera movement)
-❌ "Beautiful illustration of a protest" (not describing motion)
+❌ "New protesters enter from sides" (introduces new elements)
+❌ "Cars drive past in background" (adds elements not in frame)
+❌ "Camera pans across scene" (camera movement)
 ❌ "People doing things" (too vague)
 
 Return ONLY the animation prompt, no explanation or preamble.`

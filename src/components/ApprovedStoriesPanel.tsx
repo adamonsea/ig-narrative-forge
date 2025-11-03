@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCredits } from '@/hooks/useCredits';
+import { useAuth } from '@/hooks/useAuth';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
 import { 
@@ -98,6 +99,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   
   const { toast } = useToast();
   const { credits } = useCredits();
+  const { isSuperAdmin } = useAuth();
 
   useEffect(() => {
     loadApprovedStories();
@@ -315,7 +317,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
 
   const handleAnimateIllustration = async (story: Story) => {
     // Check credits (2 credits for ~3-4s animation with Replicate Wan 2.2 5b)
-    if (!credits || credits.credits_balance < 2) {
+    if (!isSuperAdmin && (!credits || credits.credits_balance < 2)) {
       toast({
         title: 'Insufficient Credits',
         description: 'You need 2 credits to animate this illustration.',
@@ -361,6 +363,60 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
         const next = new Set(prev);
         next.delete(story.id);
         return next;
+      });
+    }
+  };
+
+  const handleDeleteIllustration = async (storyId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-story-illustration', {
+        body: { storyId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'All Illustrations Deleted',
+          description: 'Both static image and animation have been removed.',
+        });
+        await loadApprovedStories();
+      } else {
+        throw new Error(data?.error || 'Failed to delete illustration');
+      }
+    } catch (error) {
+      console.error('Error deleting illustration:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete illustration',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAnimation = async (storyId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-story-animation', {
+        body: { storyId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: 'Animation Deleted',
+          description: 'Animation removed. Static image preserved.',
+        });
+        await loadApprovedStories();
+      } else {
+        throw new Error(data?.error || 'Failed to delete animation');
+      }
+    } catch (error) {
+      console.error('Error deleting animation:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete animation',
+        variant: 'destructive',
       });
     }
   };
@@ -550,36 +606,64 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         {/* Show cover illustration if exists */}
                         {story.cover_illustration_url && (
                           <div className="mb-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-medium">Cover Illustration</h4>
-                                {story.animated_illustration_url && (
-                                  <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
-                                    ✨ Animated
-                                  </Badge>
-                                )}
-                              </div>
-                              {story.cover_illustration_url && !story.animated_illustration_url && (
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleAnimateIllustration(story)}
-                                  disabled={generatingIllustrations.has(story.id)}
-                                  className="bg-purple-600 hover:bg-purple-700 text-xs"
-                                >
-                                  {generatingIllustrations.has(story.id) ? (
-                                    <>
-                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                      Animating...
-                                    </>
-                                  ) : (
-                                    <>
-                                      🎬 Animate (2s) - 12 credits
-                                    </>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-medium">Cover Illustration</h4>
+                                  {story.animated_illustration_url && (
+                                    <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
+                                      ✨ Animated
+                                    </Badge>
                                   )}
-                                </Button>
-                              )}
-                            </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <ImageModelSelector
+                                    onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                                    isGenerating={generatingIllustrations.has(story.id)}
+                                    hasExistingImage={false}
+                                    size="sm"
+                                  />
+                                  {story.cover_illustration_url && !story.animated_illustration_url && (
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => handleAnimateIllustration(story)}
+                                      disabled={generatingIllustrations.has(story.id)}
+                                      className="bg-purple-600 hover:bg-purple-700 text-xs"
+                                    >
+                                      {generatingIllustrations.has(story.id) ? (
+                                        <>
+                                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                          Animating...
+                                        </>
+                                      ) : (
+                                        <>
+                                          🎬 Animate (2s) - 2 credits
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                  {story.animated_illustration_url && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteAnimation(story.id)}
+                                      className="text-xs"
+                                    >
+                                      <Trash2 className="w-3 h-3 mr-1" />
+                                      Delete Animation
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteIllustration(story.id)}
+                                    className="text-xs text-red-600 hover:text-red-700 border-red-300"
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete All
+                                  </Button>
+                                </div>
+                              </div>
                             {/* Show both static and animated side by side if animation exists */}
                             <div className={story.animated_illustration_url ? "grid grid-cols-2 gap-4" : ""}>
                               <div className="space-y-2">
