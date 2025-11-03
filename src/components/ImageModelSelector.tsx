@@ -16,24 +16,24 @@ export interface ImageModel {
 export const imageModels: ImageModel[] = [
   {
     id: 'gpt-image-1',
-    name: 'Premium Quality',
-    description: 'OpenAI GPT-Image-1 - Best editorial illustrations with perfect composition',
+    name: 'Premium (8 credits)',
+    description: 'Best editorial illustrations with perfect composition',
     costUsd: 0.06,
     credits: 8,
     provider: 'openai'
   },
   {
     id: 'flux-dev',
-    name: 'Standard Quality (Recommended)',
-    description: 'FLUX.1-dev - Professional editorial quality at mid-tier pricing',
+    name: 'Standard (3 credits)',
+    description: 'Professional editorial quality - recommended for most stories',
     costUsd: 0.025,
     credits: 3,
     provider: 'replicate'
   },
   {
     id: 'gemini-image',
-    name: 'Budget Preview',
-    description: 'Google Gemini - Quick style preview (may vary from final)',
+    name: 'Budget (1 credit)',
+    description: 'Quick style preview - may vary from final',
     costUsd: 0.005,
     credits: 1,
     provider: 'lovable-gemini'
@@ -101,23 +101,13 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
           <DropdownMenuItem
             key={model.id}
             onClick={() => onModelSelect(model)}
-            className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex flex-col items-start gap-1"
+            className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex flex-col items-start gap-2"
           >
             <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-sm">{model.name}</span>
-                <Badge variant="outline" className="text-xs">
-                  {model.provider}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  ${model.costUsd.toFixed(3)}
-                </span>
-                <Badge variant="secondary" className="text-xs">
-                  {model.credits} credits
-                </Badge>
-              </div>
+              <span className="font-medium text-sm">{model.name}</span>
+              <span className="text-xs text-muted-foreground">
+                ${model.costUsd.toFixed(3)}
+              </span>
             </div>
             <p className="text-xs text-muted-foreground text-left w-full">
               {model.description}

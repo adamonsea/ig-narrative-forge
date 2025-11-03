@@ -370,35 +370,38 @@ TWO-COLOR COMPOSITION EXAMPLES:
       console.log('Generating with FLUX.1-dev via Replicate...');
       console.log('🎨 Using FLUX-specific simplified prompt strategy');
       
-      // FLUX-specific simplified prompt - front-loads critical style constraints
-      const fluxPrompt = `STYLE CONSTRAINTS (CRITICAL - MUST FOLLOW):
-- TWO COLORS ONLY: Black ink (#000000) + Mint green (#58FFBC)
-- Black ink outline drawing with VARYING line weights
-- NO photorealism, NO color photography style, NO realistic rendering
-- NO text, letters, signs, words, or speech bubbles anywhere
-- White background with edge-to-edge composition
+      // FLUX-specific prompt with quantified constraints and explicit bans
+      const fluxPrompt = `MANDATORY STYLE RULES (FLUX MUST FOLLOW):
+1. COLORS: Black (#000000) + Mint Green (#58FFBC) ONLY - no orange, no gray fills, no other colors
+2. GREEN LIMIT: Apply mint green to EXACTLY 2-3 small objects maximum (one window, one door, one sign) - NOT on multiple storefronts
+3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
+4. SHADOWS: Solid black fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
+5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
+6. COMPOSITION: Edge-to-edge with white background - NO text anywhere
 
-COMPOSITION:
-${subjectMatter}
+SUBJECT: ${subjectMatter}
 
-Story context: "${story.title}"
+STORY: "${story.title}"
 
-VISUAL EXECUTION:
-- Bold black line work (thick foreground, thin background)
-- Solid black fills for deepest shadows
-- Fine halftone dot texture in mid-tones (VISIBLE dots)
-- Exactly 2-3 small mint green (#58FFBC) accent areas (10-15% coverage max)
-- Simplified forms - avoid architectural details
+VISUAL EXECUTION CHECKLIST:
+✓ Bold black outlines (2-4px weight) defining building shapes
+✓ Solid black shadows under eaves and doorways
+✓ 2-3 small mint green accent elements (e.g. one awning, one door, one window box)
+✓ Simplified building facades - NO individual bricks, NO window frames, NO decorative molding
+✓ Clean white road surface with NO markings
+✓ Maximum 20-30 total line strokes for entire composition
 
 TONE: ${storyTone.toUpperCase()} - ${expressionInstruction}
 
-Style reference: Risograph poster, screen print aesthetic, ligne claire comic style.
+WHAT TO AVOID (CRITICAL):
+❌ Multiple green storefronts (causes visual chaos)
+❌ Window pane dividers and glass reflections
+❌ Brick/tile texture patterns
+❌ Perspective construction lines on roads
+❌ Interior architectural details (molding, frames, panels)
+❌ Any color other than black and mint green (#58FFBC)
 
-CRITICAL VIOLATIONS TO AVOID:
-❌ NO full color rendering (black + green only)
-❌ NO realistic brick textures, gradients, or photographic details
-❌ NO text on signs, shops, or anywhere in image
-❌ NO complex shading beyond halftone dots`;
+Style benchmark: Think flat vector illustration with maximum 30 line strokes total.`;
       
       const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
       if (!REPLICATE_API_KEY) {
