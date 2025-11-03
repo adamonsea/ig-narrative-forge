@@ -14,6 +14,40 @@ import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 // Force cache refresh
 
+// Hook to detect network speed
+const useNetworkSpeed = () => {
+  const [isFastConnection, setIsFastConnection] = useState(true); // Default to true for desktop
+  
+  useEffect(() => {
+    // Check Network Information API
+    const connection = (navigator as any).connection 
+      || (navigator as any).mozConnection 
+      || (navigator as any).webkitConnection;
+    
+    if (!connection) {
+      setIsFastConnection(true); // Desktop fallback - assume fast
+      return;
+    }
+    
+    const checkConnection = () => {
+      const effectiveType = connection.effectiveType; // '4g', '3g', '2g', 'slow-2g'
+      const saveData = connection.saveData; // User enabled data saver
+      
+      // Only load video on 4g or fast 3g without data saver mode
+      const isFast = (effectiveType === '4g' || effectiveType === '3g') && !saveData;
+      setIsFastConnection(isFast);
+    };
+    
+    checkConnection();
+    
+    // Listen for connection changes
+    connection.addEventListener('change', checkConnection);
+    return () => connection.removeEventListener('change', checkConnection);
+  }, []);
+  
+  return isFastConnection;
+};
+
 interface Story {
   id: string;
   title: string;
@@ -67,6 +101,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const { trackShareClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
+  const isFastConnection = useNetworkSpeed(); // Network speed detection
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
@@ -785,7 +820,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           <div className="h-full flex flex-col">
             {/* Cover Illustration - Full card width */}
             <div className="relative w-full h-80 md:h-96 overflow-hidden">
-              {story.animated_illustration_url ? (
+              {story.animated_illustration_url && isFastConnection ? (
                 <video
                   autoPlay
                   loop
@@ -793,7 +828,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                   playsInline
                   poster={story.cover_illustration_url}
                   className="w-full h-full object-cover"
-                  preload="metadata"
+                  preload="none"
                 >
                   <source src={story.animated_illustration_url} type="video/mp4" />
                   {/* Fallback to static image if video fails */}
