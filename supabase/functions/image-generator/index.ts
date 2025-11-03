@@ -51,10 +51,10 @@ serve(async (req) => {
         model: 'gpt-image-1',
         prompt: enhancedPrompt,
         n: 1,
-        size: '1024x1024', // Square format for social media
-        quality: 'high',
+        size: '768x768', // Optimized size for display
+        quality: 'low',
         output_format: 'webp',
-        output_compression: 85
+        output_compression: 80
       }),
     });
 
