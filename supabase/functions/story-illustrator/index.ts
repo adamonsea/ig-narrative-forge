@@ -368,6 +368,37 @@ TWO-COLOR COMPOSITION EXAMPLES:
     if (modelConfig.provider === 'replicate-flux') {
       // FLUX.1-dev via Replicate - Standard quality tier
       console.log('Generating with FLUX.1-dev via Replicate...');
+      console.log('🎨 Using FLUX-specific simplified prompt strategy');
+      
+      // FLUX-specific simplified prompt - front-loads critical style constraints
+      const fluxPrompt = `STYLE CONSTRAINTS (CRITICAL - MUST FOLLOW):
+- TWO COLORS ONLY: Black ink (#000000) + Mint green (#58FFBC)
+- Black ink outline drawing with VARYING line weights
+- NO photorealism, NO color photography style, NO realistic rendering
+- NO text, letters, signs, words, or speech bubbles anywhere
+- White background with edge-to-edge composition
+
+COMPOSITION:
+${subjectMatter}
+
+Story context: "${story.title}"
+
+VISUAL EXECUTION:
+- Bold black line work (thick foreground, thin background)
+- Solid black fills for deepest shadows
+- Fine halftone dot texture in mid-tones (VISIBLE dots)
+- Exactly 2-3 small mint green (#58FFBC) accent areas (10-15% coverage max)
+- Simplified forms - avoid architectural details
+
+TONE: ${storyTone.toUpperCase()} - ${expressionInstruction}
+
+Style reference: Risograph poster, screen print aesthetic, ligne claire comic style.
+
+CRITICAL VIOLATIONS TO AVOID:
+❌ NO full color rendering (black + green only)
+❌ NO realistic brick textures, gradients, or photographic details
+❌ NO text on signs, shops, or anywhere in image
+❌ NO complex shading beyond halftone dots`;
       
       const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
       if (!REPLICATE_API_KEY) {
@@ -384,7 +415,7 @@ TWO-COLOR COMPOSITION EXAMPLES:
         },
         body: JSON.stringify({
           input: {
-            prompt: illustrationPrompt,
+            prompt: fluxPrompt,
             aspect_ratio: '3:2',
             num_outputs: 1,
             num_inference_steps: 28,
