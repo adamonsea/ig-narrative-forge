@@ -3615,20 +3615,28 @@ export type Database = {
         }
         Returns: {
           animated_illustration_url: string
+          article_author: string
           article_id: string
-          author: string
+          article_published_at: string
+          article_title: string
+          article_url: string
+          audience_expertise: string
           cover_illustration_prompt: string
           cover_illustration_url: string
           created_at: string
           id: string
           illustration_generated_at: string
           is_published: boolean
+          shared_content_id: string
           slide_count: number
-          source_format: string
+          slide_type: string
           status: string
-          summary: string
+          story_type: string
           title: string
+          tone: string
+          topic_article_id: string
           updated_at: string
+          writing_style: string
         }[]
       }
       get_article_content_unified: {
