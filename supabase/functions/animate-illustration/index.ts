@@ -108,7 +108,7 @@ serve(async (req) => {
 
     // Call Runway Gen-3 Turbo API
     console.log('🚀 Calling Runway API...');
-    const runwayResponse = await fetch('https://api.runwayml.com/v1/image_to_video', {
+    const runwayResponse = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
@@ -145,7 +145,7 @@ serve(async (req) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
 
-      const statusResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
+      const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${runwayApiKey}`,
           'X-Runway-Version': '2024-11-06'
