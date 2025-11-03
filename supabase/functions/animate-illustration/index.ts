@@ -146,13 +146,12 @@ serve(async (req) => {
         'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: 'f5204bd2302a7e56d42e2afc5f3e082fb98aaabb0e29d4c57c5a87fcee831c15',
+        version: '9c49fe41d6b2a0e62199dc96bee4a9dd3565a4c563f9b80998358f14322c34f6',
         input: {
           image: staticImageUrl,
           prompt: animationPrompt,
-          num_frames: 125,
-          frames_per_second: 25,
-          aspect_ratio: "16:9",
+          video_length: 5,
+          resolution: "720p",
           seed: Math.floor(Math.random() * 1000000)
         }
       })
