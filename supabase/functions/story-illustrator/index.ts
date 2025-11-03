@@ -374,8 +374,8 @@ TWO-COLOR COMPOSITION EXAMPLES:
         throw new Error('REPLICATE_API_KEY not configured');
       }
 
-      // Start generation with FLUX.1-dev
-      const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      // Start generation with FLUX.1-dev (Replicate models endpoint)
+      const createResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${REPLICATE_API_KEY}`,
@@ -383,14 +383,13 @@ TWO-COLOR COMPOSITION EXAMPLES:
           'Prefer': 'wait=60'
         },
         body: JSON.stringify({
-          model: 'black-forest-labs/flux-dev',
           input: {
             prompt: illustrationPrompt,
             aspect_ratio: '3:2',
             num_outputs: 1,
-            guidance: 3.5,
             num_inference_steps: 28,
             output_format: 'png',
+            output_quality: 90,
             go_fast: true
           }
         }),
