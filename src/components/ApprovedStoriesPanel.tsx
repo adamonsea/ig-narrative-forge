@@ -314,11 +314,11 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   };
 
   const handleAnimateIllustration = async (story: Story) => {
-    // Check credits (12 credits for 2-second animation)
-    if (!credits || credits.credits_balance < 12) {
+    // Check credits (2 credits for ~3-4s animation with Replicate Wan 2.2 5b)
+    if (!credits || credits.credits_balance < 2) {
       toast({
         title: 'Insufficient Credits',
-        description: 'You need 12 credits to animate this illustration.',
+        description: 'You need 2 credits to animate this illustration.',
         variant: 'destructive',
       });
       return;

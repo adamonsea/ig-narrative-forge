@@ -108,9 +108,9 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   };
 
   const handleAnimateIllustration = async (story: MultiTenantStory) => {
-    // Check credits (12 credits for 2-second animation)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < 12)) {
-      toast({ title: 'Insufficient Credits', description: 'You need 12 credits to animate this illustration.', variant: 'destructive' });
+    // Check credits (2 credits for ~3-4s animation with Replicate Wan 2.2 5b)
+    if (!isSuperAdmin && (!credits || credits.credits_balance < 2)) {
+      toast({ title: 'Insufficient Credits', description: 'You need 2 credits to animate this illustration.', variant: 'destructive' });
       return;
     }
     
