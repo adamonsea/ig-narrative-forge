@@ -102,9 +102,9 @@ serve(async (req) => {
       );
     }
 
-    // Generate motion intensity based on story tone
-    const motionBucketId = getMotionIntensity(story.tone || 'neutral');
-    console.log(`🎭 Motion intensity (bucket_id): ${motionBucketId}`);
+    // Generate camera movement prompt based on story tone
+    const cameraPrompt = getCameraMovementPrompt(story.tone || 'neutral');
+    console.log(`🎬 Camera movement: ${cameraPrompt}`);
 
     // Call Replicate API with Alibaba Wan 2.2 5b model
     console.log('🚀 Calling Replicate API (Alibaba Wan 2.2 5b)...');
@@ -118,10 +118,12 @@ serve(async (req) => {
       body: JSON.stringify({
         version: 'c92ab4265c9b3b5ea9ac9a87df839ebfd662ee3a820d62c21305bf6501a73fe1',
         input: {
+          prompt: cameraPrompt,
           image: staticImageUrl,
-          motion_bucket_id: motionBucketId,
-          num_frames: 25,
-          fps: 8,
+          num_frames: 81,
+          frames_per_second: 24,
+          aspect_ratio: "16:9",
+          go_fast: true,
           seed: Math.floor(Math.random() * 1000000)
         }
       })
@@ -251,18 +253,18 @@ serve(async (req) => {
   }
 });
 
-function getMotionIntensity(tone: string): number {
-  // Motion bucket ID controls animation intensity (1-255)
-  // Lower = subtle motion, Higher = dramatic motion
-  const motionIntensities: Record<string, number> = {
-    'urgent': 180,        // High motion for urgency
-    'hopeful': 100,       // Moderate gentle motion
-    'somber': 60,         // Subtle slow motion
-    'celebratory': 150,   // Energetic motion
-    'informative': 80,    // Minimal professional motion
-    'conversational': 90, // Relaxed natural motion
-    'neutral': 100        // Balanced default motion
+/**
+ * Generates camera movement prompt based on story tone
+ */
+function getCameraMovementPrompt(tone: string): string {
+  const prompts: Record<string, string> = {
+    'urgent': 'Dynamic camera movement with quick zoom and pan, energetic motion',
+    'celebratory': 'Smooth rising camera movement, gentle rotation, uplifting motion',
+    'somber': 'Slow gentle camera drift, minimal movement, contemplative',
+    'hopeful': 'Gradual forward camera movement, soft pan, inspiring motion',
+    'informative': 'Steady professional camera movement, subtle zoom',
+    'conversational': 'Natural gentle camera movement, slight pan',
+    'neutral': 'Subtle camera movement, slight zoom, natural motion'
   };
-
-  return motionIntensities[tone] || motionIntensities['neutral'];
+  return prompts[tone] || prompts['neutral'];
 }
