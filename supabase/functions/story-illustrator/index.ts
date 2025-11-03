@@ -374,24 +374,24 @@ TWO-COLOR COMPOSITION EXAMPLES:
         throw new Error('REPLICATE_API_KEY not configured');
       }
 
-      // Start generation
+      // Start generation with FLUX.1-dev
       const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${REPLICATE_API_KEY}`,
           'Content-Type': 'application/json',
-          'Prefer': 'wait'
+          'Prefer': 'wait=60'
         },
         body: JSON.stringify({
-          version: '0c0f2097d4c3c8d7e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8',
+          version: 'black-forest-labs/flux-dev',
           input: {
             prompt: illustrationPrompt,
-            width: 1024,
-            height: 1024,
+            aspect_ratio: '1:1',
             num_outputs: 1,
-            guidance_scale: 3.5,
+            guidance: 3.5,
             num_inference_steps: 28,
-            output_format: 'png'
+            output_format: 'png',
+            go_fast: true
           }
         }),
       });
