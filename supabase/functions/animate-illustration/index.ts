@@ -108,7 +108,7 @@ serve(async (req) => {
 
     // Call Runway Gen-3 Turbo API
     console.log('🚀 Calling Runway API...');
-    const runwayResponse = await fetch('https://api.dev.runwayml.com/v1/tasks', {
+    const runwayResponse = await fetch('https://api.runwayml.com/v1/image_to_video', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
@@ -116,19 +116,12 @@ serve(async (req) => {
         'X-Runway-Version': '2024-11-06'
       },
       body: JSON.stringify({
-        taskType: 'gen3a_turbo',
-        internal: false,
-        options: {
-          name: `story-${storyId}-animation`,
-          seconds: FIXED_DURATION,
-          gen3a_turbo: {
-            image_uri: staticImageUrl,
-            text_prompt: motionPrompt,
-            seed: 42,
-            watermark: false,
-            resolution: '1280x768'
-          }
-        }
+        model: 'gen3a_turbo',
+        promptImage: staticImageUrl,
+        promptText: motionPrompt,
+        duration: FIXED_DURATION,
+        ratio: '16:9',
+        watermark: false
       })
     });
 
@@ -152,7 +145,7 @@ serve(async (req) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
 
-      const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+      const statusResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${runwayApiKey}`,
           'X-Runway-Version': '2024-11-06'
@@ -168,10 +161,10 @@ serve(async (req) => {
       console.log(`📊 Task status: ${statusData.status} (attempt ${attempt + 1}/${maxAttempts})`);
 
       if (statusData.status === 'SUCCEEDED') {
-        videoUrl = statusData.output?.[0];
+        videoUrl = statusData.output?.[0] || statusData.outputVideo;
         break;
       } else if (statusData.status === 'FAILED') {
-        throw new Error('Runway task failed: ' + (statusData.failure || 'Unknown error'));
+        throw new Error('Runway task failed: ' + (statusData.failureMessage || statusData.failure || 'Unknown error'));
       }
     }
 
