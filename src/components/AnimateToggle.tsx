@@ -19,6 +19,9 @@ export const AnimateToggle: React.FC<AnimateToggleProps> = ({
   baseCredits
 }) => {
   const totalCredits = baseCredits + (isAnimated ? ANIMATION_CREDITS : 0);
+  const displayText = baseCredits === 0 
+    ? `+${ANIMATION_CREDITS} credits` 
+    : `Total: ${totalCredits} credits`;
 
   return (
     <div className="flex flex-col gap-2 p-3 border rounded-lg bg-muted/30">
@@ -34,12 +37,14 @@ export const AnimateToggle: React.FC<AnimateToggleProps> = ({
           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 cursor-pointer"
         >
           <Sparkles className="w-3 h-3" />
-          Animate (2s) +{ANIMATION_CREDITS} credits
+          Animate (2s)
         </Label>
       </div>
-      <div className="text-xs text-muted-foreground pl-6">
-        Total: <span className="font-semibold">{totalCredits} credits</span>
-      </div>
+      {isAnimated && (
+        <div className="text-xs text-muted-foreground pl-6">
+          {displayText}
+        </div>
+      )}
     </div>
   );
 };

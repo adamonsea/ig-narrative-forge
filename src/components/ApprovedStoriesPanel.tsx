@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCredits } from '@/hooks/useCredits';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
+import { AnimateToggle } from '@/components/AnimateToggle';
 import { 
   CheckCircle2, 
   X, 
@@ -87,6 +88,8 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [animationEnabled, setAnimationEnabled] = useState<Record<string, boolean>>({});
+  const [selectedModels, setSelectedModels] = useState<Record<string, ImageModel>>({});
   const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
     isOpen: boolean; 
     storyId?: string; 
@@ -266,36 +269,77 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
 
+    const shouldAnimate = animationEnabled[story.id] || false;
+    const animationCredits = shouldAnimate ? 12 : 0;
+    const totalCredits = model.credits + animationCredits;
+
     // Check credits
-    if (!credits || credits.credits_balance < model.credits) {
+    if (!credits || credits.credits_balance < totalCredits) {
       toast({
         title: 'Insufficient Credits',
-        description: `You need ${model.credits} credits to generate with ${model.name}.`,
+        description: `You need ${totalCredits} credits (${model.credits} for image + ${animationCredits} for animation).`,
         variant: 'destructive',
       });
       return;
     }
 
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    setSelectedModels(prev => ({ ...prev, [story.id]: model }));
 
     try {
+      // Step 1: Generate static illustration
       const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
-      if (result.success) {
-        toast({
-          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
-          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
-        });
-        
-        // Refresh stories to show the new illustration
-        await loadApprovedStories();
-      } else {
+      if (!result.success) {
         toast({
           title: 'Generation Failed',
           description: result.error || 'Failed to generate illustration',
           variant: 'destructive',
         });
+        return;
       }
+
+      toast({
+        title: shouldAnimate ? 'Illustration Generated - Animating...' : 'Illustration Generated Successfully',
+        description: `Used ${result.credits_used} credits with ${model.name}${shouldAnimate ? '. Creating animation...' : ''}`,
+      });
+
+      // Step 2: If animation enabled, animate the illustration
+      if (shouldAnimate && result.illustration_url) {
+        try {
+          const { data: animateResult, error: animateError } = await supabase.functions.invoke('animate-illustration', {
+            body: {
+              storyId: story.id,
+              staticImageUrl: result.illustration_url
+            }
+          });
+
+          if (animateError) throw animateError;
+
+          if (animateResult?.success) {
+            toast({
+              title: 'Animation Complete!',
+              description: `Used ${animateResult.credits_used} credits for 2s animation. Balance: ${animateResult.new_balance}`,
+            });
+          } else {
+            toast({
+              title: 'Animation Failed',
+              description: animateResult?.error || 'Failed to animate illustration',
+              variant: 'destructive',
+            });
+          }
+        } catch (animError) {
+          console.error('Error animating illustration:', animError);
+          toast({
+            title: 'Animation Error',
+            description: 'Failed to create animation, but static image was saved',
+            variant: 'destructive',
+          });
+        }
+      }
+      
+      // Refresh stories to show the new illustration
+      await loadApprovedStories();
     } catch (error) {
       console.error('Error generating illustration:', error);
       toast({
@@ -467,12 +511,27 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
-                        {/* Story Illustration Button */}
-                        <ImageModelSelector
-                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
-                          isGenerating={generatingIllustrations.has(story.id)}
-                          hasExistingImage={!!story.cover_illustration_url}
-                        />
+                        {/* Story Illustration Controls */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <ImageModelSelector
+                              onModelSelect={(model) => {
+                                setSelectedModels(prev => ({ ...prev, [story.id]: model }));
+                                handleGenerateIllustration(story, model);
+                              }}
+                              isGenerating={generatingIllustrations.has(story.id)}
+                              hasExistingImage={!!story.cover_illustration_url}
+                            />
+                          </div>
+                          {!generatingIllustrations.has(story.id) && (
+                            <AnimateToggle
+                              isAnimated={animationEnabled[story.id] || false}
+                              onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: checked }))}
+                              disabled={false}
+                              baseCredits={0}
+                            />
+                          )}
+                        </div>
                         
                         {/* Carousel generation functionality removed */}
                         <Button
