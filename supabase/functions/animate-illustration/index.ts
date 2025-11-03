@@ -94,7 +94,7 @@ serve(async (req) => {
     // Fetch story to get title and tone for content-aware motion prompt
     const { data: story, error: storyError } = await supabase
       .from('stories')
-      .select('tone, title')
+      .select('tone, title, cover_illustration_prompt')
       .eq('id', storyId)
       .single();
 
@@ -127,7 +127,8 @@ serve(async (req) => {
       animationPrompt = await generateAnimationPromptWithAI(
         story.title,
         slideText,
-        story.tone || 'neutral'
+        story.tone || 'neutral',
+        story.cover_illustration_prompt || undefined
       );
     } else {
       console.log('🔤 Using keyword-based prompt generation (Phase 1)');
@@ -151,7 +152,7 @@ serve(async (req) => {
           image: staticImageUrl,
           num_frames: 81,
           frames_per_second: 24,
-          aspect_ratio: "16:9",
+          aspect_ratio: "3:2",
           go_fast: true,
           seed: Math.floor(Math.random() * 1000000)
         }
@@ -283,12 +284,13 @@ serve(async (req) => {
 });
 
 /**
- * Generates AI-driven animation prompt based on story content (Phase 2)
+ * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED)
  */
 async function generateAnimationPromptWithAI(
   title: string,
   slideContent: string,
-  tone: string
+  tone: string,
+  originalImagePrompt?: string
 ): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
@@ -298,7 +300,12 @@ async function generateAnimationPromptWithAI(
   }
   
   try {
-    console.log('🧠 Generating AI animation prompt...');
+    console.log('🧠 Generating AI animation prompt with enhanced style preservation...');
+    
+    const originalStyleHint = originalImagePrompt 
+      ? `\n\nORIGINAL IMAGE GENERATION PROMPT:\n"${originalImagePrompt}"\n\nThe animation MUST preserve this exact visual style, composition, and aesthetic.`
+      : '';
+    
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -309,47 +316,57 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Generate a 15-20 word animation prompt for image-to-video AI (Alibaba Wan 2.2 5b model).
+          content: `Create a MICRO-ANIMATION prompt for this static illustration. The animation model is Alibaba Wan 2.2 5b (image-to-video).
 
 STORY CONTEXT:
 Title: ${title}
 Content: ${slideContent}
-Tone: ${tone}
+Tone: ${tone}${originalStyleHint}
 
-CRITICAL REQUIREMENTS:
-- ONLY animate elements ALREADY VISIBLE in the static image
-- DO NOT introduce any new objects, people, or elements not in the original frame
-- Describe SPECIFIC movements of existing subjects (people, vehicles, objects, machinery)
-- Keep movements subtle and natural to preserve the illustration style
-- Focus on FOREGROUND subjects only
-- Be concrete and action-oriented
-- Match emotional tone: ${tone}
-- Keep under 20 words
-- NO camera movements (zoom, pan, tilt)
-- NO new elements entering frame
+⚠️ STEP 1: IDENTIFY WHAT'S IN THE IMAGE
+Based on the title and content, identify ONLY the elements that would ALREADY be visible in a static news illustration. Only these can move.
 
-STYLE PRESERVATION:
-- The animation must maintain the exact visual style of the static image
-- Only existing elements should move
-- Movements should be natural extensions of what's shown
-- Keep the composition and framing identical
+🚫 CRITICAL PROHIBITIONS (NEVER INCLUDE):
+❌ NO new people, vehicles, or objects entering the frame
+❌ NO elements moving into view from off-screen or edges
+❌ NO camera movements (zoom, pan, tilt, dolly, tracking)
+❌ NO background changes or new environmental elements
+❌ NO crowd multiplication or adding figures
+❌ NO scene transitions, cuts, or perspective shifts
 
-GOOD EXAMPLES:
-✅ "Construction worker in frame gestures, visible machinery arm extends, pedestrian on sidewalk shifts weight"
-✅ "Protesters already shown raise signs higher, crowd sways gently, visible speaker's mouth moves"
-✅ "Firefighter in shot sprays water, visible flames flicker, onlooker's head turns"
-✅ "Council member at table gestures, papers on desk rustle, attendee in frame nods"
+✅ MICRO-MOVEMENT REQUIREMENTS:
+• ONLY animate elements ALREADY VISIBLE in the frame
+• Movements must be TINY and SUBTLE - micro-gestures only
+• Maximum 1-2 primary subjects can move
+• Movements must feel natural for what's shown
+• Preserve EXACT composition and framing
+• Maintain EXACT visual style (colors, illustration style, line work)
+• Focus on FOREGROUND subjects
+• Keep under 15 words
+• Be hyper-specific about WHICH visible elements move
 
-BAD EXAMPLES:
-❌ "New protesters enter from sides" (introduces new elements)
-❌ "Cars drive past in background" (adds elements not in frame)
-❌ "Camera pans across scene" (camera movement)
-❌ "People doing things" (too vague)
+🎨 STYLE PRESERVATION:
+The animation MUST maintain the flat illustration style, colors, and composition. Think of it like adding a gentle breeze to a painting - only the subjects breathe.
 
-Return ONLY the animation prompt, no explanation or preamble.`
+📝 PROMPT STRUCTURE:
+Use negative prompting format:
+"[describe micro-movements of existing subjects], negative prompt: camera movement, new people entering, zoom, pan, additional figures, scene change"
+
+✅ GOOD EXAMPLES (micro-movements only):
+• "Worker in frame nods slightly, visible machinery arm twitches, pedestrian shifts weight gently, negative prompt: new people, camera zoom"
+• "Protesters shown sway subtly, visible signs tilt slightly, speaker's hands gesture, negative prompt: crowd entering, camera pan"
+• "Council member gestures minimally, papers on desk rustle, attendee in shot nods once, negative prompt: people entering, zoom"
+
+❌ BAD EXAMPLES (introduce new elements):
+• "Protesters march into view" (new elements entering)
+• "Camera slowly zooms out" (camera movement)
+• "More people gather at the scene" (adding new elements)
+• "Cars drive past" (unless cars are prominent in the original frame)
+
+Return ONLY the animation prompt with negative prompts included. No explanation.`
         }],
-        max_tokens: 60,
-        temperature: 0.7
+        max_tokens: 80,
+        temperature: 0.6
       })
     });
     
@@ -361,7 +378,7 @@ Return ONLY the animation prompt, no explanation or preamble.`
     
     const data = await response.json();
     const prompt = data.choices[0].message.content.trim();
-    console.log('✨ AI-generated animation prompt:', prompt);
+    console.log('✨ AI-generated MICRO-ANIMATION prompt:', prompt);
     return prompt;
     
   } catch (error) {
