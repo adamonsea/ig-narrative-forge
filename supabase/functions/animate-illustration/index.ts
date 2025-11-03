@@ -408,17 +408,23 @@ Tone: ${tone}${originalStyleHint}
 Subject Type: ${subjectType}
 Suggested Movement: ${movementTemplate}
 
+🎨 CRITICAL COLOR PRESERVATION (ABSOLUTE REQUIREMENT):
+The image uses a MONOTONE BLACK & WHITE aesthetic with ONLY pops of green (#58ffbc) as accent color.
+✅ MAINTAIN EXACTLY: Black, white, grays, and green (#58ffbc) ONLY
+❌ FORBID: No color shifts, no new colors appearing, no saturation changes, no color grading, no tinting, no warming/cooling
+
 🎬 CINEMAGRAPH AESTHETIC (CRITICAL):
-The goal is a "living photograph" or "cinemagraph" - one single element moves subtly while EVERYTHING else is completely frozen/static. Like a magazine photo that barely comes to life.
+The goal is a "living photograph" or "cinemagraph" - ONE SINGLE FOCAL ELEMENT moves subtly while EVERYTHING ELSE is completely frozen/static. Like a magazine photo that barely comes to life.
 
 🚨 CRITICAL CONSTRAINTS (Wan 2.2 i2v tends to add unwanted motion - use STRONG negative prompts):
 
 POSITIVE PROMPT RULES:
-✅ Animate ONLY the identified subject (${subject})
+✅ Animate ONLY the identified subject (${subject}) - THE SINGLE MOST PROMINENT FOCAL POINT
 ✅ Use words: "barely perceptible", "minimal", "subtle", "slight", "gentle"
 ✅ Specify exactly WHICH visible element moves (e.g., "the councilor's hand", "visible flag on building")
 ✅ Movement must be natural for a 5-second loop
 ✅ Keep under 12 words for the movement description
+✅ NO motion in background, surroundings, or secondary elements
 
 NEGATIVE PROMPT RULES (CRITICAL - Wan 2.2 respects these now):
 ❌ NO camera movement: "no zoom, no pan, no tilt, no dolly, no tracking, no push in, no pull back, static camera"
@@ -426,6 +432,8 @@ NEGATIVE PROMPT RULES (CRITICAL - Wan 2.2 respects these now):
 ❌ NO scene changes: "no background movement, no environment changes, no lighting shifts"
 ❌ NO transformation: "no morphing, no scene transitions, no composition changes"
 ❌ NO multiple subjects moving: "only one element moves, everything else frozen"
+❌ NO color changes: "no color shifts, no new colors, no saturation changes, maintain original color palette"
+❌ NO widespread motion: "no ambient movement, no atmospheric effects, no environmental animation"
 
 MOVEMENT SCALE GUIDE:
 ${subjectType === 'person' ? '• Person: head nod range = 2-3cm, hand gesture = 5-8cm, weight shift = slight lean' : ''}
@@ -434,17 +442,18 @@ ${subjectType === 'building' ? '• Building: flag flutter = small visible movem
 ${subjectType === 'vehicle' ? '• Vehicle: idle vibration = barely visible, exhaust = gentle waft' : ''}
 
 📝 OUTPUT FORMAT (MANDATORY):
-"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background"
+"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background, no color shifts, maintain original colors"
 
-✅ PERFECT EXAMPLES (cinemagraph style):
-• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera"
-• "Worker nods subtly once, all machinery and background frozen, negative prompt: no camera movement, no zoom, no additional workers, no background movement, static camera, no scene change"
-• "Visible flag on building flutters gently, entire structure and surroundings frozen, negative prompt: no camera movement, no zoom, no pan, no background movement, static camera, no new elements"
+✅ PERFECT EXAMPLES (cinemagraph style with color preservation):
+• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera, no color changes, maintain black white green palette"
+• "Worker nods subtly once, all machinery and background frozen, negative prompt: no camera movement, no zoom, no additional workers, no background movement, static camera, no scene change, no color shifts"
+• "Visible flag on building flutters gently, entire structure and surroundings frozen, negative prompt: no camera movement, no zoom, no pan, no background movement, static camera, no new elements, maintain original colors"
 
-❌ AVOID (too much motion):
+❌ AVOID (too much motion or color changes):
 • "Workers move around construction site, machinery operates" - TOO MANY moving elements
 • "Camera pans across busy street scene" - Camera movement forbidden
 • "Protesters march forward into frame" - New elements entering
+• "Scene shifts to warmer tones" - Color changes forbidden
 
 Return ONLY the animation prompt in the exact format above. Include both positive movement AND comprehensive negative prompt.`
         }],
