@@ -353,7 +353,13 @@ function getSubjectMovementTemplate(subjectType: string, subject: string): strin
 }
 
 /**
- * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED with Subject Extraction)
+ * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED with Subject Extraction + Wan 2.2 i2v optimization)
+ * 
+ * Research insights from Wan 2.2 i2v model:
+ * - Negative prompts are now consistently respected (major improvement over 2.1)
+ * - Camera movement is the #1 source of unwanted motion - must explicitly forbid
+ * - Model adds cinematic motion by default - needs strong negative constraints
+ * - "Cinemagraph" / "living photograph" aesthetic: one element moves, rest frozen
  */
 async function generateAnimationPromptWithAI(
   title: string,
@@ -369,7 +375,7 @@ async function generateAnimationPromptWithAI(
   }
   
   try {
-    console.log('🧠 Generating AI animation prompt with subject extraction...');
+    console.log('🧠 Generating AI animation prompt with Wan 2.2 i2v optimization...');
     
     // Extract main subject from the image prompt or title
     const { type: subjectType, subject } = extractMainSubject(title, originalImagePrompt);
@@ -391,7 +397,7 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Create a MICRO-ANIMATION prompt for this static illustration. The animation model is Alibaba Wan 2.2 i2v (image-to-video).
+          content: `Create a CINEMAGRAPH-STYLE MICRO-ANIMATION prompt for this static illustration. Model: Alibaba Wan 2.2 i2v (image-to-video).
 
 STORY CONTEXT:
 Title: ${title}
@@ -402,45 +408,48 @@ Tone: ${tone}${originalStyleHint}
 Subject Type: ${subjectType}
 Suggested Movement: ${movementTemplate}
 
-🚨 CRITICAL: Animate ONLY the single most prominent subject in the frame.
+🎬 CINEMAGRAPH AESTHETIC (CRITICAL):
+The goal is a "living photograph" or "cinemagraph" - one single element moves subtly while EVERYTHING else is completely frozen/static. Like a magazine photo that barely comes to life.
 
-ANIMATION INSTRUCTIONS BY SUBJECT TYPE:
-${subjectType === 'person' ? '• Person: subtle head movement, minimal hand gesture, slight weight shift' : ''}
-${subjectType === 'crowd' ? '• Crowd: closest figure in center sways gently, maximum 1 person moves' : ''}
-${subjectType === 'building' ? '• Building: gentle environmental effects (flags flutter, lights flicker)' : ''}
-${subjectType === 'vehicle' ? '• Vehicle: slight idle vibration, exhaust movement' : ''}
+🚨 CRITICAL CONSTRAINTS (Wan 2.2 i2v tends to add unwanted motion - use STRONG negative prompts):
 
-🚫 CRITICAL PROHIBITIONS (NEVER INCLUDE):
-❌ NO new people, vehicles, or objects entering the frame
-❌ NO elements moving into view from off-screen or edges
-❌ NO camera movements (zoom, pan, tilt, dolly, tracking)
-❌ NO background changes or new environmental elements
-❌ NO crowd multiplication or adding figures
-❌ NO scene transitions, cuts, or perspective shifts
+POSITIVE PROMPT RULES:
+✅ Animate ONLY the identified subject (${subject})
+✅ Use words: "barely perceptible", "minimal", "subtle", "slight", "gentle"
+✅ Specify exactly WHICH visible element moves (e.g., "the councilor's hand", "visible flag on building")
+✅ Movement must be natural for a 5-second loop
+✅ Keep under 12 words for the movement description
 
-✅ MICRO-MOVEMENT REQUIREMENTS:
-• ONLY the identified subject (${subject}) moves - everything else is static
-• Movement should be barely perceptible - like a living photograph
-• Maximum 1 subject moves, background completely still
-• Movements must feel natural for what's shown
-• Preserve EXACT composition and framing
-• Maintain EXACT visual style (colors, illustration style, line work)
-• Keep under 15 words
-• Be hyper-specific about WHICH visible element moves
+NEGATIVE PROMPT RULES (CRITICAL - Wan 2.2 respects these now):
+❌ NO camera movement: "no zoom, no pan, no tilt, no dolly, no tracking, no push in, no pull back, static camera"
+❌ NO new elements: "no people entering, no objects appearing, no elements from off-screen"
+❌ NO scene changes: "no background movement, no environment changes, no lighting shifts"
+❌ NO transformation: "no morphing, no scene transitions, no composition changes"
+❌ NO multiple subjects moving: "only one element moves, everything else frozen"
 
-📝 PROMPT STRUCTURE:
-Use negative prompting format:
-"[describe micro-movement of ${subject}], negative prompt: camera movement, new people entering, zoom, pan, additional figures, scene change, background movement"
+MOVEMENT SCALE GUIDE:
+${subjectType === 'person' ? '• Person: head nod range = 2-3cm, hand gesture = 5-8cm, weight shift = slight lean' : ''}
+${subjectType === 'crowd' ? '• Crowd: ONLY closest figure moves, gentle sway = 1-2cm, NO crowd multiplication' : ''}
+${subjectType === 'building' ? '• Building: flag flutter = small visible movement, window flicker = subtle light change' : ''}
+${subjectType === 'vehicle' ? '• Vehicle: idle vibration = barely visible, exhaust = gentle waft' : ''}
 
-✅ GOOD EXAMPLES (single focal point):
-• "Council member gestures minimally, papers on desk rustle once, negative prompt: new people, camera zoom, crowd entering"
-• "Worker nods slightly while visible machinery arm twitches, negative prompt: camera pan, additional workers, background movement"
-• "Shopkeeper's hands gesture welcomingly, closest customer shifts weight, negative prompt: people entering, camera movement"
+📝 OUTPUT FORMAT (MANDATORY):
+"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background"
 
-Return ONLY the animation prompt with negative prompts included. No explanation.`
+✅ PERFECT EXAMPLES (cinemagraph style):
+• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera"
+• "Worker nods subtly once, all machinery and background frozen, negative prompt: no camera movement, no zoom, no additional workers, no background movement, static camera, no scene change"
+• "Visible flag on building flutters gently, entire structure and surroundings frozen, negative prompt: no camera movement, no zoom, no pan, no background movement, static camera, no new elements"
+
+❌ AVOID (too much motion):
+• "Workers move around construction site, machinery operates" - TOO MANY moving elements
+• "Camera pans across busy street scene" - Camera movement forbidden
+• "Protesters march forward into frame" - New elements entering
+
+Return ONLY the animation prompt in the exact format above. Include both positive movement AND comprehensive negative prompt.`
         }],
-        max_tokens: 80,
-        temperature: 0.6
+        max_tokens: 120,
+        temperature: 0.5
       })
     });
     
@@ -452,7 +461,7 @@ Return ONLY the animation prompt with negative prompts included. No explanation.
     
     const data = await response.json();
     const prompt = data.choices[0].message.content.trim();
-    console.log('✨ AI-generated FOCAL-POINT prompt:', prompt);
+    console.log('✨ AI-generated CINEMAGRAPH prompt:', prompt);
     return prompt;
     
   } catch (error) {
