@@ -1,4 +1,5 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { calculateRegionalRelevance, TopicRegionalConfig } from './region-config.ts'
 
 export interface ArticleData {
   title: string
@@ -53,6 +54,28 @@ export class MultiTenantDatabaseOperations {
     if (topicError || !topic) {
       result.errors.push(`Failed to fetch topic: ${topicError?.message || 'Not found'}`)
       return result
+    }
+
+    // Phase 2: Fetch ALL regional topics for competing region detection
+    let competingTopics: TopicRegionalConfig[] = []
+    if (topic.topic_type === 'regional') {
+      const { data: allRegionalTopics } = await this.supabase
+        .from('topics')
+        .select('id, name, region, competing_regions, keywords, landmarks, postcodes, organizations')
+        .eq('topic_type', 'regional')
+        .eq('is_active', true)
+        .neq('id', topicId)
+      
+      if (allRegionalTopics) {
+        competingTopics = allRegionalTopics.map(t => ({
+          keywords: t.keywords || [],
+          landmarks: t.landmarks || [],
+          postcodes: t.postcodes || [],
+          organizations: t.organizations || [],
+          region_name: t.region || t.name
+        }))
+        console.log(`🗺️ Loaded ${competingTopics.length} competing regional topics for boundary detection`)
+      }
     }
 
     // Keyword Topic Profile: Lenient date handling for keyword-based topics
@@ -137,28 +160,43 @@ export class MultiTenantDatabaseOperations {
       try {
         result.articlesProcessed++
 
-        // Apply topic-specific filtering
-        const relevanceScore = this.calculateRelevanceScore(article, topic)
-        const qualityScore = this.calculateQualityScoreWithRelevance(article, topic)
-
-        // Get source credibility for threshold adjustment
+        // Get source data for credibility and source type
         const { data: sourceData } = await this.supabase
           .from('content_sources')
-          .select('credibility_score')
+          .select('credibility_score, source_type')
           .eq('id', sourceId || '')
           .single()
         
         const credibilityScore = sourceData?.credibility_score || 50
+        const sourceType = sourceData?.source_type || 'national'
+
+        // Phase 1: Apply topic-specific filtering with competing region detection
+        const relevanceScore = this.calculateRelevanceScore(
+          article, 
+          topic, 
+          competingTopics, 
+          sourceType
+        )
+        const qualityScore = this.calculateQualityScoreWithRelevance(article, topic)
         
         // Keyword Topic Profile: Conservative thresholds (40% reduction from regional)
         const qualityThreshold = credibilityScore >= 90 ? 15 : 30
         const relevanceThreshold = isKeywordTopic ? 2 : (topic.topic_type === 'regional' ? 3 : 5)
+        
+        // Phase 3: Hard rejection filter - reject negative or below threshold scores
+        if (relevanceScore < 0) {
+          console.log(`🚫 REJECTED (competing region): "${article.title}"`)
+          console.log(`   - Relevance: ${relevanceScore} (negative score indicates competing region)`)
+          result.duplicatesSkipped++ // Count as skipped
+          continue
+        }
         
         if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
           console.log(`🚫 Skipping article: "${article.title}"`)
           console.log(`   - Relevance: ${relevanceScore}/${relevanceThreshold} (${topic.topic_type})`)
           console.log(`   - Quality: ${qualityScore}/${qualityThreshold} (credibility: ${credibilityScore}%)`)
           console.log(`   - Word count: ${this.calculateWordCount(article.body || '')}`)
+          result.duplicatesSkipped++ // Count as skipped
           continue
         }
         
@@ -342,10 +380,14 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Calculate relevance score based on topic configuration
-   * Generic for all regional and keyword topics
+   * Phase 1: Uses calculateRegionalRelevance for regional topics with competing region detection
    */
-  private calculateRelevanceScore(article: ArticleData, topic: any): number {
-    let score = 0
+  private calculateRelevanceScore(
+    article: ArticleData, 
+    topic: any, 
+    competingTopics: TopicRegionalConfig[] = [],
+    sourceType: string = 'national'
+  ): number {
     const title = (article.title || '').toLowerCase()
     const body = (article.body || '').toLowerCase()
     const keywords = topic.keywords || []
@@ -354,11 +396,37 @@ export class MultiTenantDatabaseOperations {
     // Check negative keywords first (disqualifying)
     for (const negKeyword of negativeKeywords) {
       if (title.includes(negKeyword.toLowerCase()) || body.includes(negKeyword.toLowerCase())) {
-        return 0 // Disqualified
+        console.log(`❌ Negative keyword "${negKeyword}" found - disqualifying article`)
+        return -100 // Strong negative signal
       }
     }
     
-    // Keyword Topic Profile: Higher keyword weight for keyword topics
+    // Phase 1: For REGIONAL topics, use calculateRegionalRelevance with competing region detection
+    if (topic.topic_type === 'regional') {
+      const topicConfig: TopicRegionalConfig = {
+        keywords: keywords,
+        landmarks: topic.landmarks || [],
+        postcodes: topic.postcodes || [],
+        organizations: topic.organizations || [],
+        region_name: topic.region || topic.name
+      }
+      
+      console.log(`🗺️ Using regional relevance calculation for "${topic.region || topic.name}"`)
+      const score = calculateRegionalRelevance(
+        body,
+        title,
+        topicConfig,
+        sourceType,
+        competingTopics,
+        article.source_url
+      )
+      
+      console.log(`📊 Regional relevance score: ${score} for "${article.title?.substring(0, 50)}..."`)
+      return score
+    }
+    
+    // For KEYWORD topics, use simplified scoring
+    let score = 0
     const isKeywordTopic = topic.topic_type === 'keyword'
     const keywordTitleWeight = isKeywordTopic ? 30 : 20
     const keywordBodyWeight = isKeywordTopic ? 15 : 10
@@ -368,43 +436,6 @@ export class MultiTenantDatabaseOperations {
       const keywordLower = keyword.toLowerCase()
       if (title.includes(keywordLower)) score += keywordTitleWeight
       if (body.includes(keywordLower)) score += keywordBodyWeight
-    }
-    
-    // Regional relevance for regional topics
-    if (topic.topic_type === 'regional' && topic.region) {
-      const region = topic.region.toLowerCase()
-      if (title.includes(region)) score += 30
-      if (body.includes(region)) score += 15
-      
-      // Check landmarks, postcodes, organizations
-      const landmarks = topic.landmarks || []
-      const postcodes = topic.postcodes || []
-      const organizations = topic.organizations || []
-      
-      const allLocationItems = landmarks.concat(postcodes).concat(organizations)
-      allLocationItems.forEach((item: any) => {
-        if (title.includes(item.toLowerCase()) || body.includes(item.toLowerCase())) {
-          score += 25
-        }
-      })
-      
-      // Generic local source detection for ANY regional topic
-      const url = article.source_url || ''
-      const localDomains = topic.local_domains || [] // Configurable per topic
-      
-      // Check if URL matches configured local domains OR contains region name
-      const isLocalSource = localDomains.some((domain: string) => url.includes(domain)) ||
-                           url.includes(region)
-      
-      // Apply relevance floor for local sources (generic for all regional topics)
-      if (isLocalSource) {
-        const wordCount = this.calculateWordCount(article.body || '')
-        // If it's a short article from a local source, give it minimum relevance floor
-        if (wordCount < 200 && score < 15) {
-          console.log(`🏗️ Applying ${region} relevance floor: ${score} → 15 for "${article.title?.substring(0, 50)}..."`)
-          score = 15
-        }
-      }
     }
     
     return Math.min(100, Math.max(0, score))
