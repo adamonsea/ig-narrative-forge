@@ -225,6 +225,9 @@ verify_jwt = false
 [functions.analytics-dashboard]
 verify_jwt = false
 
+[functions.openai-usage-tracker]
+verify_jwt = true
+
 # Cleanup (scheduled via cron)
 [functions.cleanup-temp-uploads]
 verify_jwt = false

@@ -729,9 +729,10 @@ Before you generate, confirm:
           model: 'gpt-image-1',
           prompt: illustrationPrompt,
           n: 1,
-          size: '1024x1024',
-          quality: 'high',
-          output_format: 'png'
+          size: '768x768', // Optimized for cost
+          quality: 'low', // 60-70% cost reduction
+          output_format: 'webp', // Smaller file size
+          output_compression: 80
         }),
       });
 
@@ -757,7 +758,13 @@ Before you generate, confirm:
     }
 
     generationTime = Date.now() - startTime
-    const estimatedCost = modelConfig.cost
+    
+    // Calculate actual cost based on model and settings
+    let estimatedCost = modelConfig.cost;
+    if (modelConfig.provider === 'openai') {
+      // Updated costs for 768x768 low quality: ~$0.02 per image
+      estimatedCost = 0.02;
+    }
 
     // Track API usage and cost for analytics (skip if user lacks permission)
     try {
