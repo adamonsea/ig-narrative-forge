@@ -3606,54 +3606,31 @@ export type Database = {
         }[]
       }
       fix_sussex_express_sources: { Args: never; Returns: Json }
-      get_admin_topic_stories:
-        | {
-            Args: { p_topic_id: string }
-            Returns: {
-              article_id: string
-              author: string
-              cover_illustration_url: string
-              created_at: string
-              id: string
-              is_published: boolean
-              slide_count: number
-              source_format: string
-              status: string
-              summary: string
-              title: string
-              updated_at: string
-            }[]
-          }
-        | {
-            Args: {
-              p_limit?: number
-              p_offset?: number
-              p_status?: string
-              p_topic_id: string
-            }
-            Returns: {
-              article_author: string
-              article_id: string
-              article_published_at: string
-              article_title: string
-              article_url: string
-              audience_expertise: string
-              cover_illustration_url: string
-              created_at: string
-              id: string
-              is_published: boolean
-              shared_content_id: string
-              slide_count: number
-              slide_type: string
-              status: string
-              story_type: string
-              title: string
-              tone: string
-              topic_article_id: string
-              updated_at: string
-              writing_style: string
-            }[]
-          }
+      get_admin_topic_stories: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_status?: string
+          p_topic_id: string
+        }
+        Returns: {
+          animated_illustration_url: string
+          article_id: string
+          author: string
+          cover_illustration_prompt: string
+          cover_illustration_url: string
+          created_at: string
+          id: string
+          illustration_generated_at: string
+          is_published: boolean
+          slide_count: number
+          source_format: string
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_article_content_unified: {
         Args: {
           p_article_id?: string
