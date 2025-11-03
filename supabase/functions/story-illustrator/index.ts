@@ -383,10 +383,10 @@ TWO-COLOR COMPOSITION EXAMPLES:
           'Prefer': 'wait=60'
         },
         body: JSON.stringify({
-          version: 'black-forest-labs/flux-dev',
+          model: 'black-forest-labs/flux-dev',
           input: {
             prompt: illustrationPrompt,
-            aspect_ratio: '1:1',
+            aspect_ratio: '3:2',
             num_outputs: 1,
             guidance: 3.5,
             num_inference_steps: 28,
@@ -466,6 +466,33 @@ TWO-COLOR COMPOSITION EXAMPLES:
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
+      // Create simplified Gemini-specific prompt for better style matching
+      const geminiPrompt = `Create a simple black and white editorial cartoon illustration with minimal green highlights.
+
+CRITICAL STYLE RULES (YOU MUST FOLLOW EXACTLY):
+- Black ink outlines ONLY - no shading, no gradients, no realistic rendering
+- Solid black fills for shadows
+- Small dots/halftone pattern in shadow areas
+- ONLY 2-3 tiny spots of mint green color (#58FFBC) as highlights
+- White background
+- Simple clean line drawing - like a newspaper cartoon
+- NO PHOTOREALISM - cartoon style only
+- NO COMPLEX TEXTURES - flat colors only
+
+Subject: ${subjectMatter}
+Story: "${story.title}"
+
+Draw this as a simple editorial cartoon with:
+- Bold black outlines (varying thickness - some thick, some thin)
+- Solid black shadow areas with dot patterns
+- Maximum 3 small green accent spots
+- Clean white background
+- Simple cartoon faces and figures - NOT realistic
+
+Style reference: Simple newspaper political cartoon, ligne claire comic book style, vintage screen print poster.
+
+NO TEXT IN IMAGE. NO WORDS. NO LETTERS.`;
+
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -477,10 +504,14 @@ TWO-COLOR COMPOSITION EXAMPLES:
           messages: [
             {
               role: 'user',
-              content: illustrationPrompt
+              content: geminiPrompt
             }
           ],
-          modalities: ['image', 'text']
+          modalities: ['image', 'text'],
+          response_modalities: ['IMAGE'],
+          image_config: {
+            aspect_ratio: '3:2'
+          }
         }),
       });
 
@@ -498,6 +529,13 @@ TWO-COLOR COMPOSITION EXAMPLES:
       }
 
       const geminiData = await geminiResponse.json();
+      console.log('📊 Gemini generation metadata:', {
+        model: 'google/gemini-2.5-flash-image',
+        requestedAspectRatio: '3:2',
+        promptLength: geminiPrompt.length,
+        estimatedCost: '$0.005',
+        creditsUsed: 1
+      });
       console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2).substring(0, 1000));
 
       // Extract image from response with comprehensive error handling

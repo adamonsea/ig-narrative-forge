@@ -32,8 +32,8 @@ export const imageModels: ImageModel[] = [
   },
   {
     id: 'gemini-image',
-    name: 'Budget Option',
-    description: 'Google Gemini 2.5 Flash - Quick preview generations',
+    name: 'Budget Preview',
+    description: 'Google Gemini - Quick style preview (may vary from final)',
     costUsd: 0.005,
     credits: 1,
     provider: 'lovable-gemini'
