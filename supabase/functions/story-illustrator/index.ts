@@ -500,45 +500,109 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       }
 
       // Create structured Gemini prompt with critical rules first
-      const geminiPrompt = `CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY (read this first before generating):
+      const geminiPrompt = `🔴 ADULT AUDIENCE ONLY - PROFESSIONAL EDITORIAL ILLUSTRATION FOR NEWS PUBLICATION 🔴
 
-1. ABSOLUTELY NO text, words, letters, speech bubbles, thought bubbles, signs with text, labels, or written language anywhere in the image
-2. YOU MUST INCLUDE exactly 2-3 small mint green (#58FFBC) accent areas on BACKGROUND ELEMENTS ONLY (signs, equipment, windows, objects) - NEVER on people's clothing or bodies
-3. COMPOSITION: Edge-to-edge illustration filling the ENTIRE canvas with NO white borders or padding around edges
-4. Style: Bold black ink outlines ONLY - NO crosshatching, NO dense shading, NO decorative interior lines, NO photorealism
-5. Texture: If adding shadow texture, use ONLY very sparse fine dots (10-20 dots maximum per shadow area) - NO heavy patterns
+This illustration will be published in a serious news outlet read by adults (similar to The Guardian, Financial Times, New Yorker, BBC News, Washington Post). Your output will be judged by professional editors.
 
-VISUAL STYLE REQUIREMENTS:
-- Black ink outline drawing with VARYING line weights (some thick, some thin)
-- Solid black fills for deepest shadows
-- Optional: VERY sparse fine dots in mid-tone shadows (maximum 10-20 dots per area)
-- MANDATORY: Exactly 2-3 small irregular shapes filled with bright mint green (#58FFBC) on BACKGROUND ELEMENTS (equipment, signs, windows) NOT on people
-- White background
-- Clean editorial poster aesthetic (NOT comic strip style)
-- Keep faces and figures SIMPLE with minimal detail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSOLUTE REQUIREMENTS (FAILURE = REJECTION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ADULT EDITORIAL STYLE ONLY - NO CARTOON, NO CHILDREN'S BOOK, NO PLAYFUL
+   ❌ REJECT: Rounded cute faces, big eyes, simplified children's book style
+   ✅ REQUIRE: Sophisticated editorial illustration with mature visual language
+   
+2. ABSOLUTELY NO TEXT - Zero tolerance for any written language
+   ❌ Speech bubbles, thought bubbles, signs with words, labels, captions
+   ✅ Pure visual storytelling only
+
+3. MINT GREEN ACCENT RULE - STRICT PLACEMENT
+   ✅ ONLY: 2-3 small (#58FFBC) spots on BACKGROUND objects (signs, equipment, windows, furniture)
+   ❌ NEVER: On people's clothing, skin, hair, or bodies
+   ⚠️  PENALTY: Green on people = instant rejection and wasted generation
+
+4. EDGE-TO-EDGE COMPOSITION - No amateur framing
+   ❌ White borders, padding, margins around image
+   ✅ Subject extends to all four edges of canvas
+
+5. PROFESSIONAL LINE WORK - NOT comic book style
+   ✅ Varying line weights (thick and thin), sophisticated editorial pen work
+   ❌ Uniform lines, decorative crosshatching, dense shading patterns
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VISUAL STYLE MANDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TARGET AESTHETIC: Editorial illustration for serious journalism (NOT entertainment, NOT children's content)
+
+DRAWING TECHNIQUE:
+• Bold black ink outline with sophisticated line weight variation
+• Solid black fills for deepest shadows (strategic placement)
+• MINIMAL texture: If needed, use sparse fine dots (10-20 dots max per area)
+• Clean negative space with confident white areas
+• Adult faces with mature proportions and expressions
+
+COLOR PALETTE:
+• Predominantly black line work on white
+• EXACTLY 2-3 small mint green (#58FFBC) accent shapes
+• Green placement: Background elements ONLY (never on humans)
+• Think: Street signs, equipment panels, window frames, architectural details
+
+FORBIDDEN STYLES (These will cause rejection):
+❌ Cartoon/animated character style
+❌ Children's book illustration aesthetic
+❌ Comic strip/manga style
+❌ Playful/whimsical character design
+❌ Oversimplified cute faces
+❌ Heavy decorative patterns
+❌ Photorealism attempts
+
+REQUIRED AESTHETIC:
+✅ Guardian/New Yorker editorial illustration
+✅ Sophisticated pen and ink editorial work
+✅ Adult news publication visual language
+✅ Professional poster design aesthetic
+✅ Mature visual storytelling
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUBJECT & CONTEXT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STORY: "${story.title}"
+EDITORIAL TONE: ${storyTone.toUpperCase()}
+EXPRESSION: ${expressionInstruction}
 
 SUBJECT TO ILLUSTRATE:
 ${subjectMatter}
 
-STORY CONTEXT: "${story.title}"
+COMPOSITION REQUIREMENTS:
+• Edge-to-edge illustration (no white borders/padding)
+• Strong focal point with clear visual hierarchy
+• Sophisticated use of negative space
+• Professional editorial framing
 
-Draw this as a bold outline illustration with:
-- Strong black line work (varying from thick to thin)
-- Solid black shadow areas (with optional VERY sparse dot texture - 10-20 dots max)
-- EXACTLY 2-3 small mint green accent spots on BACKGROUND objects/equipment (NOT on people)
-- Edge-to-edge composition (no white borders)
-- Clean simplified forms with minimal interior detail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STYLE REFERENCES FOR YOUR INTERNAL GUIDANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-TONE: ${storyTone.toUpperCase()} - ${expressionInstruction}
+Think: The Guardian editorial illustrations, Financial Times weekend illustrations, New Yorker spot illustrations, BBC News graphics, Washington Post opinion page illustrations.
 
-Style references: Screen print poster, Risograph zine aesthetic, ligne claire illustration.
+NOT: Disney, Pixar, children's books, comic strips, manga, animation style.
 
-FINAL REMINDER - CRITICAL VIOLATIONS TO AVOID:
-❌ NO speech bubbles or text of any kind
-❌ NO dense crosshatching or heavy shading
-❌ NO decorative lines inside outlined shapes
-❌ NO green on people's clothing or bodies (background elements only)
-❌ NO white padding/borders around the image`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL QUALITY CHECK BEFORE GENERATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before you generate, confirm:
+✅ This looks like it belongs in The Guardian, not a children's book
+✅ Zero text/words anywhere in the image
+✅ Mint green ONLY on background objects (NOT on people)
+✅ Edge-to-edge composition (no white borders)
+✅ Sophisticated adult editorial aesthetic
+✅ Professional line work with varying weights
+
+⚠️  CRITICAL REMINDER: Any cartoon/childish style = wasted generation and unhappy editors
+⚠️  GREEN ON PEOPLE = Instant rejection and credit waste`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
