@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const FIXED_DURATION = 3; // Alibaba Wan 2.2 5b outputs ~3-4 seconds
+const FIXED_DURATION = 3; // I2VGen-XL outputs ~1 second (16 frames at ~24fps)
 const ANIMATION_CREDIT_COST = 2; // Replicate pricing: $0.01-0.02 per video
 
 // 🔄 FEATURE FLAG: Toggle AI-driven vs keyword-based animation prompts
@@ -76,7 +76,7 @@ serve(async (req) => {
       const { data: creditResult, error: creditError } = await supabase.rpc('deduct_user_credits', {
         p_user_id: user.id,
         p_amount: ANIMATION_CREDIT_COST,
-        p_description: `Animate story illustration (Alibaba Wan 2.2 5b)`,
+        p_description: `Animate story illustration (I2VGen-XL)`,
         p_story_id: storyId
       });
 
@@ -136,8 +136,8 @@ serve(async (req) => {
     }
     console.log(`🎬 Animation prompt: ${animationPrompt}`);
 
-    // Call Replicate API with Alibaba Wan 2.2 5b model
-    console.log('🚀 Calling Replicate API (Alibaba Wan 2.2 5b)...');
+    // Call Replicate API with Alibaba I2VGen-XL model
+    console.log('🚀 Calling Replicate API (Alibaba I2VGen-XL)...');
     const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -146,14 +146,13 @@ serve(async (req) => {
         'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: 'c92ab4265c9b3b5ea9ac9a87df839ebfd662ee3a820d62c21305bf6501a73fe1',
+        version: '5821a338d00033abaaba89080a17eb8783d9a17ed710a6b4246a18e0900ccad4',
         input: {
-          prompt: animationPrompt,
           image: staticImageUrl,
-          num_frames: 81,
-          frames_per_second: 24,
-          aspect_ratio: "16:9",
-          go_fast: true,
+          prompt: animationPrompt,
+          max_frames: 16,
+          num_inference_steps: 50,
+          guidance_scale: 9,
           seed: Math.floor(Math.random() * 1000000)
         }
       })
