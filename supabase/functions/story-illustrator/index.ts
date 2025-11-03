@@ -465,32 +465,44 @@ TWO-COLOR COMPOSITION EXAMPLES:
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
-      // Create simplified Gemini-specific prompt for better style matching
-      const geminiPrompt = `Create a simple black and white editorial cartoon illustration with minimal green highlights.
+      // Create structured Gemini prompt with critical rules first
+      const geminiPrompt = `CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY (read this first before generating):
 
-CRITICAL STYLE RULES (YOU MUST FOLLOW EXACTLY):
-- Black ink outlines ONLY - no shading, no gradients, no realistic rendering
-- Solid black fills for shadows
-- Small dots/halftone pattern in shadow areas
-- ONLY 2-3 tiny spots of mint green color (#58FFBC) as highlights
+1. ABSOLUTELY NO text, words, letters, speech bubbles, thought bubbles, signs with text, labels, or written language anywhere in the image
+2. YOU MUST INCLUDE exactly 2-3 small mint green (#58FFBC) accent areas - this color is MANDATORY and REQUIRED
+3. COMPOSITION: Edge-to-edge illustration filling the ENTIRE canvas with NO white borders or padding around edges
+4. Style: Bold black ink outlines ONLY - NO crosshatching, NO dense shading, NO photorealism
+5. Texture: If adding shadow texture, use ONLY sparse fine dots - NO heavy crosshatch patterns
+
+VISUAL STYLE REQUIREMENTS:
+- Black ink outline drawing with VARYING line weights (some thick, some thin)
+- Solid black fills for deepest shadows
+- Optional: minimal fine dots in mid-tone shadows (very sparse)
+- MANDATORY: Exactly 2-3 small irregular shapes filled with bright mint green (#58FFBC) as accent highlights
 - White background
-- Simple clean line drawing - like a newspaper cartoon
-- NO PHOTOREALISM - cartoon style only
-- NO COMPLEX TEXTURES - flat colors only
+- Clean editorial poster aesthetic (NOT comic strip style)
 
-Subject: ${subjectMatter}
-Story: "${story.title}"
+SUBJECT TO ILLUSTRATE:
+${subjectMatter}
 
-Draw this as a simple editorial cartoon with:
-- Bold black outlines (varying thickness - some thick, some thin)
-- Solid black shadow areas with dot patterns
-- Maximum 3 small green accent spots
-- Clean white background
-- Simple cartoon faces and figures - NOT realistic
+STORY CONTEXT: "${story.title}"
 
-Style reference: Simple newspaper political cartoon, ligne claire comic book style, vintage screen print poster.
+Draw this as a bold outline illustration with:
+- Strong black line work (varying from thick to thin)
+- Solid black shadow areas (with optional sparse dot texture)
+- EXACTLY 2-3 small mint green accent spots (REQUIRED - not optional)
+- Edge-to-edge composition (no white borders)
+- Clean simplified forms (avoid over-detailed rendering)
 
-NO TEXT IN IMAGE. NO WORDS. NO LETTERS.`;
+TONE: ${storyTone.toUpperCase()} - ${expressionInstruction}
+
+Style references: Screen print poster, Risograph zine aesthetic, ligne claire illustration.
+
+FINAL REMINDER - CRITICAL VIOLATIONS TO AVOID:
+❌ NO speech bubbles or text of any kind
+❌ NO dense crosshatching or heavy shading
+❌ NO white padding/borders around the image
+❌ DO NOT forget the mint green accents (they are REQUIRED)`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
