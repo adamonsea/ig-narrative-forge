@@ -7,9 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCredits } from '@/hooks/useCredits';
 import { CreditService } from '@/lib/creditService';
 import { ImageModelSelector, ImageModel } from '@/components/ImageModelSelector';
-import { AnimateToggle } from '@/components/AnimateToggle';
 import { 
-  CheckCircle2, 
+  CheckCircle2,
   X, 
   Eye,
   RotateCcw,
@@ -57,6 +56,7 @@ interface Story {
   cover_illustration_url?: string | null;
   cover_illustration_prompt?: string | null;
   illustration_generated_at?: string | null;
+  animated_illustration_url?: string | null;
   slides: Slide[];
   article?: StoryArticle;
 }
@@ -88,9 +88,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
-  const [animationEnabled, setAnimationEnabled] = useState<Record<string, boolean>>({});
-  const [selectedModels, setSelectedModels] = useState<Record<string, ImageModel>>({});
-  const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
+  const [coverSelectionModal, setCoverSelectionModal] = useState<{
     isOpen: boolean; 
     storyId?: string; 
     storyTitle?: string;
@@ -269,25 +267,19 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const handleGenerateIllustration = async (story: Story, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
 
-    const shouldAnimate = animationEnabled[story.id] || false;
-    const animationCredits = shouldAnimate ? 12 : 0;
-    const totalCredits = model.credits + animationCredits;
-
     // Check credits
-    if (!credits || credits.credits_balance < totalCredits) {
+    if (!credits || credits.credits_balance < model.credits) {
       toast({
         title: 'Insufficient Credits',
-        description: `You need ${totalCredits} credits (${model.credits} for image + ${animationCredits} for animation).`,
+        description: `You need ${model.credits} credits to generate with ${model.name}.`,
         variant: 'destructive',
       });
       return;
     }
 
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
-    setSelectedModels(prev => ({ ...prev, [story.id]: model }));
 
     try {
-      // Step 1: Generate static illustration
       const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
       if (!result.success) {
@@ -300,45 +292,10 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
       }
 
       toast({
-        title: shouldAnimate ? 'Illustration Generated - Animating...' : 'Illustration Generated Successfully',
-        description: `Used ${result.credits_used} credits with ${model.name}${shouldAnimate ? '. Creating animation...' : ''}`,
+        title: 'Illustration Generated Successfully',
+        description: `Used ${result.credits_used} credits with ${model.name}. Balance: ${result.new_balance}`,
       });
 
-      // Step 2: If animation enabled, animate the illustration
-      if (shouldAnimate && result.illustration_url) {
-        try {
-          const { data: animateResult, error: animateError } = await supabase.functions.invoke('animate-illustration', {
-            body: {
-              storyId: story.id,
-              staticImageUrl: result.illustration_url
-            }
-          });
-
-          if (animateError) throw animateError;
-
-          if (animateResult?.success) {
-            toast({
-              title: 'Animation Complete!',
-              description: `Used ${animateResult.credits_used} credits for 2s animation. Balance: ${animateResult.new_balance}`,
-            });
-          } else {
-            toast({
-              title: 'Animation Failed',
-              description: animateResult?.error || 'Failed to animate illustration',
-              variant: 'destructive',
-            });
-          }
-        } catch (animError) {
-          console.error('Error animating illustration:', animError);
-          toast({
-            title: 'Animation Error',
-            description: 'Failed to create animation, but static image was saved',
-            variant: 'destructive',
-          });
-        }
-      }
-      
-      // Refresh stories to show the new illustration
       await loadApprovedStories();
     } catch (error) {
       console.error('Error generating illustration:', error);
@@ -346,6 +303,58 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
         title: 'Error',
         description: 'Failed to generate story illustration',
         variant: 'destructive',
+      });
+    } finally {
+      setGeneratingIllustrations(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
+    }
+  };
+
+  const handleAnimateIllustration = async (story: Story) => {
+    // Check credits (12 credits for 2-second animation)
+    if (!credits || credits.credits_balance < 12) {
+      toast({
+        title: 'Insufficient Credits',
+        description: 'You need 12 credits to animate this illustration.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('animate-illustration', {
+        body: { 
+          storyId: story.id, 
+          staticImageUrl: story.cover_illustration_url 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({ 
+          title: 'Animation Complete!', 
+          description: `Used ${data.credits_used} credits. New balance: ${data.new_balance}` 
+        });
+        await loadApprovedStories();
+      } else {
+        toast({ 
+          title: 'Animation Failed', 
+          description: data?.error || 'Failed to animate illustration', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (e) {
+      console.error('Animation error:', e);
+      toast({ 
+        title: 'Animation Error', 
+        description: 'Failed to create animation', 
+        variant: 'destructive' 
       });
     } finally {
       setGeneratingIllustrations(prev => {
@@ -516,21 +525,12 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                           <div className="flex items-center gap-2">
                             <ImageModelSelector
                               onModelSelect={(model) => {
-                                setSelectedModels(prev => ({ ...prev, [story.id]: model }));
                                 handleGenerateIllustration(story, model);
                               }}
                               isGenerating={generatingIllustrations.has(story.id)}
                               hasExistingImage={!!story.cover_illustration_url}
                             />
                           </div>
-                          {!generatingIllustrations.has(story.id) && (
-                            <AnimateToggle
-                              isAnimated={animationEnabled[story.id] || false}
-                              onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: checked }))}
-                              disabled={false}
-                              baseCredits={0}
-                            />
-                          )}
                         </div>
                         
                         {/* Carousel generation functionality removed */}
@@ -550,7 +550,36 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                         {/* Show cover illustration if exists */}
                         {story.cover_illustration_url && (
                           <div className="mb-3">
-                            <h4 className="text-sm font-medium mb-2">Cover Illustration</h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-medium">Cover Illustration</h4>
+                                {story.animated_illustration_url && (
+                                  <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
+                                    ✨ Animated
+                                  </Badge>
+                                )}
+                              </div>
+                              {story.cover_illustration_url && !story.animated_illustration_url && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleAnimateIllustration(story)}
+                                  disabled={generatingIllustrations.has(story.id)}
+                                  className="bg-purple-600 hover:bg-purple-700 text-xs"
+                                >
+                                  {generatingIllustrations.has(story.id) ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      Animating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      🎬 Animate (2s) - 12 credits
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                             <div className="relative w-full max-w-md">
                               <img
                                 src={story.cover_illustration_url}

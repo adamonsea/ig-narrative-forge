@@ -76,6 +76,7 @@ export interface MultiTenantStory {
   cover_illustration_url?: string;
   cover_illustration_prompt?: string;
   illustration_generated_at?: string;
+  animated_illustration_url?: string;
   slidetype?: string;
   tone?: string;
   writing_style?: string;

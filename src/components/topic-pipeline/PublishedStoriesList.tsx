@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight } from "lucide-react";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { LinkEditor } from "@/components/LinkEditor";
-import { AnimateToggle } from "@/components/AnimateToggle";
 
 interface Link {
   start: number;
@@ -50,6 +49,7 @@ interface PublishedStory {
   cover_illustration_url?: string | null;
   cover_illustration_prompt?: string | null;
   illustration_generated_at?: string | null;
+  animated_illustration_url?: string | null;
   is_parliamentary?: boolean;
 }
 
@@ -77,8 +77,6 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
-  const [animationEnabled, setAnimationEnabled] = useState<Record<string, boolean>>({});
-  const [selectedModels, setSelectedModels] = useState<Record<string, ImageModel>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
@@ -198,6 +196,54 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         title: 'Error',
         description: 'Failed to generate story illustration',
         variant: 'destructive',
+      });
+    } finally {
+      setGeneratingIllustrations(prev => {
+        const next = new Set(prev);
+        next.delete(story.id);
+        return next;
+      });
+    }
+  };
+
+  const handleAnimateIllustration = async (story: PublishedStory) => {
+    // Check credits (12 credits for 2-second animation)
+    if (!isSuperAdmin && (!credits || credits.credits_balance < 12)) {
+      toast({ title: 'Insufficient Credits', description: 'You need 12 credits to animate this illustration.', variant: 'destructive' });
+      return;
+    }
+    
+    setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('animate-illustration', {
+        body: { 
+          storyId: story.id, 
+          staticImageUrl: story.cover_illustration_url 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({ 
+          title: 'Animation Complete!', 
+          description: `Used ${data.credits_used} credits. New balance: ${data.new_balance}` 
+        });
+        onRefresh();
+      } else {
+        toast({ 
+          title: 'Animation Failed', 
+          description: data?.error || 'Failed to animate illustration', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (e) {
+      console.error('Animation error:', e);
+      toast({ 
+        title: 'Animation Error', 
+        description: 'Failed to create animation', 
+        variant: 'destructive' 
       });
     } finally {
       setGeneratingIllustrations(prev => {
@@ -473,20 +519,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               </Button>
 
               {/* Cover Generation Button */}
-              <div className="flex flex-col gap-2">
-                <ImageModelSelector
-                  onModelSelect={(model) => handleGenerateIllustration(story, model)}
-                  isGenerating={generatingIllustrations.has(story.id)}
-                  hasExistingImage={!!story.cover_illustration_url}
-                  size="sm"
-                />
-                <AnimateToggle
-                  isAnimated={animationEnabled[story.id] || false}
-                  onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
-                  disabled={generatingIllustrations.has(story.id)}
-                  baseCredits={selectedModels[story.id]?.credits || 0}
-                />
-              </div>
+              <ImageModelSelector
+                onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                isGenerating={generatingIllustrations.has(story.id)}
+                hasExistingImage={!!story.cover_illustration_url}
+                size="sm"
+              />
 
               <Button
                 variant="outline"
@@ -565,7 +603,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 {story.cover_illustration_url && (
                   <div className="mb-4 bg-muted/30 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium">Cover Illustration</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-medium">Cover Illustration</h4>
+                        {story.animated_illustration_url && (
+                          <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">
+                            ✨ Animated
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <ImageModelSelector
                           onModelSelect={(model) => handleGenerateIllustration(story, model)}
@@ -573,12 +618,26 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                           hasExistingImage={false}
                           size="sm"
                         />
-                        <AnimateToggle
-                          isAnimated={animationEnabled[story.id] || false}
-                          onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
-                          disabled={generatingIllustrations.has(story.id)}
-                          baseCredits={selectedModels[story.id]?.credits || 0}
-                        />
+                        {story.cover_illustration_url && !story.animated_illustration_url && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleAnimateIllustration(story)}
+                            disabled={generatingIllustrations.has(story.id)}
+                            className="bg-purple-600 hover:bg-purple-700 text-xs"
+                          >
+                            {generatingIllustrations.has(story.id) ? (
+                              <>
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                Animating...
+                              </>
+                            ) : (
+                              <>
+                                🎬 Animate (2s) - 12 credits
+                              </>
+                            )}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
