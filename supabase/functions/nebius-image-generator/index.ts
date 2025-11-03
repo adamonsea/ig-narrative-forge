@@ -99,6 +99,7 @@ LAYOUT REQUIREMENTS:
 - Bottom left corner: "${regionName}" (small text, 12pt)
 - Clean white/light background
 - High contrast dark text
+- Optional accent color (use sparingly): bright mint green #58ffbc for subtle highlights or background elements
 
 DESIGN STYLE:
 - Professional editorial news layout
