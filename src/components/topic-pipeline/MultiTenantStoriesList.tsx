@@ -539,19 +539,49 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                           </Button>
                         </div>
                       </div>
-                      <div className="relative w-full max-w-md">
-                        <img
-                          src={story.cover_illustration_url}
-                          alt={`Cover illustration for ${story.title}`}
-                          className="w-full h-48 object-contain bg-white rounded-lg border"
-                          style={{ imageRendering: 'crisp-edges' }}
-                        />
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          Generated: {story.illustration_generated_at ? 
-                            new Date(story.illustration_generated_at).toLocaleString() : 
-                            'Unknown'
-                          }
+                      
+                      {/* Show both static and animated side by side if animation exists */}
+                      <div className={story.animated_illustration_url ? "grid grid-cols-2 gap-4" : ""}>
+                        <div className="space-y-2">
+                          {story.animated_illustration_url && (
+                            <p className="text-xs text-muted-foreground font-medium">Static Image</p>
+                          )}
+                          <div className="relative w-full">
+                            <img
+                              src={story.cover_illustration_url}
+                              alt={`Cover illustration for ${story.title}`}
+                              className="w-full h-48 object-contain bg-white rounded-lg border"
+                              style={{ imageRendering: 'crisp-edges' }}
+                            />
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              Generated: {story.illustration_generated_at ? 
+                                new Date(story.illustration_generated_at).toLocaleString() : 
+                                'Unknown'
+                              }
+                            </div>
+                          </div>
                         </div>
+                        
+                        {/* Show animated video if exists */}
+                        {story.animated_illustration_url && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground font-medium">Animated Video</p>
+                            <div className="relative w-full">
+                              <video
+                                src={story.animated_illustration_url}
+                                poster={story.cover_illustration_url}
+                                className="w-full h-48 object-contain bg-white rounded-lg border"
+                                controls
+                                loop
+                                muted
+                                playsInline
+                              />
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                3 seconds • MP4
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
