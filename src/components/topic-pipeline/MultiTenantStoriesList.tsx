@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { MultiTenantStory } from "@/hooks/useMultiTenantTopicPipeline";
 import SlideEditor from "@/components/SlideEditor";
+import { AnimateToggle } from "@/components/AnimateToggle";
 
 interface MultiTenantStoriesListProps {
   stories: MultiTenantStory[];
@@ -55,6 +56,8 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
+  const [animationEnabled, setAnimationEnabled] = useState<Record<string, boolean>>({});
+  const [selectedModels, setSelectedModels] = useState<Record<string, ImageModel>>({});
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,52 +71,65 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
 
   const handleGenerateIllustration = async (story: MultiTenantStory, model: ImageModel) => {
     if (generatingIllustrations.has(story.id)) return;
+    const shouldAnimate = animationEnabled[story.id] || false;
+    const animationCredits = shouldAnimate ? 12 : 0;
+    const totalCredits = model.credits + animationCredits;
     
     // Check credits (bypass for super admin)
-    if (!isSuperAdmin && (!credits || credits.credits_balance < model.credits)) {
+    if (!isSuperAdmin && (!credits || credits.credits_balance < totalCredits)) {
       toast({
         title: 'Insufficient Credits',
-        description: `You need ${model.credits} credits to generate with ${model.name}.`,
+        description: `You need ${totalCredits} credits (${model.credits} for image${shouldAnimate ? ' + 12 for animation' : ''}).`,
         variant: 'destructive',
       });
       return;
     }
 
     setGeneratingIllustrations(prev => new Set(prev.add(story.id)));
+    setSelectedModels(prev => ({ ...prev, [story.id]: model }));
 
     try {
+      // Generate static illustration
       const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
-      if (result.success) {
-        toast({
-          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
-          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
-        });
-        
-        // Refresh stories to show the new illustration
-        if (onRefresh) {
-          await onRefresh();
-        }
-      } else {
+      if (!result.success) {
         toast({
           title: 'Generation Failed',
           description: result.error || 'Failed to generate illustration',
           variant: 'destructive',
         });
+        return;
       }
+
+      toast({
+        title: shouldAnimate ? 'Illustration Generated - Animating...' : 'Illustration Generated Successfully',
+        description: `Used ${result.credits_used} credits with ${model.name}${shouldAnimate ? '. Creating animation...' : ''}`,
+      });
+
+      // Animate if requested
+      if (shouldAnimate && result.illustration_url) {
+        try {
+          const { data: animateResult, error: animateError } = await supabase.functions.invoke('animate-illustration', {
+            body: { storyId: story.id, staticImageUrl: result.illustration_url }
+          });
+          if (animateError) throw animateError;
+          if (animateResult?.success) {
+            toast({ title: 'Animation Complete!', description: `Used ${animateResult.credits_used} credits. Balance: ${animateResult.new_balance}` });
+          } else {
+            toast({ title: 'Animation Failed', description: animateResult?.error || 'Failed to animate illustration', variant: 'destructive' });
+          }
+        } catch (e) {
+          console.error('Animate error:', e);
+          toast({ title: 'Animation Error', description: 'Failed to create animation, but static image was saved', variant: 'destructive' });
+        }
+      }
+
+      if (onRefresh) await onRefresh();
     } catch (error) {
       console.error('Error generating illustration:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate story illustration',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to generate story illustration', variant: 'destructive' });
     } finally {
-      setGeneratingIllustrations(prev => {
-        const next = new Set(prev);
-        next.delete(story.id);
-        return next;
-      });
+      setGeneratingIllustrations(prev => { const next = new Set(prev); next.delete(story.id); return next; });
     }
   };
 
@@ -397,11 +413,19 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                     
                     {story.status === 'ready' && (
                       <>
-                        <ImageModelSelector
-                          onModelSelect={(model) => handleGenerateIllustration(story, model)}
-                          isGenerating={generatingIllustrations.has(story.id)}
-                          hasExistingImage={!!story.cover_illustration_url}
-                        />
+                        <div className="flex flex-col gap-2">
+                          <ImageModelSelector
+                            onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                            isGenerating={generatingIllustrations.has(story.id)}
+                            hasExistingImage={!!story.cover_illustration_url}
+                          />
+                          <AnimateToggle
+                            isAnimated={animationEnabled[story.id] || false}
+                            onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
+                            disabled={generatingIllustrations.has(story.id)}
+                            baseCredits={selectedModels[story.id]?.credits || 0}
+                          />
+                        </div>
                         
                         <Button
                           size="sm"
@@ -458,12 +482,18 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium">Cover Illustration</h4>
                         <div className="flex gap-2">
-                          <ImageModelSelector
-                            onModelSelect={(model) => handleGenerateIllustration(story, model)}
-                            isGenerating={generatingIllustrations.has(story.id)}
-                            hasExistingImage={false}
-                            size="sm"
-                          />
+                            <ImageModelSelector
+                              onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                              isGenerating={generatingIllustrations.has(story.id)}
+                              hasExistingImage={false}
+                              size="sm"
+                            />
+                            <AnimateToggle
+                              isAnimated={animationEnabled[story.id] || false}
+                              onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
+                              disabled={generatingIllustrations.has(story.id)}
+                              baseCredits={selectedModels[story.id]?.credits || 0}
+                            />
                           <Button
                             size="sm"
                             variant="outline"

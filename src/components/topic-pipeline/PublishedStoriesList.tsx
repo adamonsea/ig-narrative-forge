@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { LinkEditor } from "@/components/LinkEditor";
+import { AnimateToggle } from "@/components/AnimateToggle";
 
 interface Link {
   start: number;
@@ -76,6 +77,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const { toast } = useToast();
   const { credits } = useCredits();
   const { isSuperAdmin } = useAuth();
+  const [animationEnabled, setAnimationEnabled] = useState<Record<string, boolean>>({});
+  const [selectedModels, setSelectedModels] = useState<Record<string, ImageModel>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
@@ -470,12 +473,20 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               </Button>
 
               {/* Cover Generation Button */}
-              <ImageModelSelector
-                onModelSelect={(model) => handleGenerateIllustration(story, model)}
-                isGenerating={generatingIllustrations.has(story.id)}
-                hasExistingImage={!!story.cover_illustration_url}
-                size="sm"
-              />
+              <div className="flex flex-col gap-2">
+                <ImageModelSelector
+                  onModelSelect={(model) => handleGenerateIllustration(story, model)}
+                  isGenerating={generatingIllustrations.has(story.id)}
+                  hasExistingImage={!!story.cover_illustration_url}
+                  size="sm"
+                />
+                <AnimateToggle
+                  isAnimated={animationEnabled[story.id] || false}
+                  onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
+                  disabled={generatingIllustrations.has(story.id)}
+                  baseCredits={selectedModels[story.id]?.credits || 0}
+                />
+              </div>
 
               <Button
                 variant="outline"
@@ -561,6 +572,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                           isGenerating={generatingIllustrations.has(story.id)}
                           hasExistingImage={false}
                           size="sm"
+                        />
+                        <AnimateToggle
+                          isAnimated={animationEnabled[story.id] || false}
+                          onToggle={(checked) => setAnimationEnabled(prev => ({ ...prev, [story.id]: !!checked }))}
+                          disabled={generatingIllustrations.has(story.id)}
+                          baseCredits={selectedModels[story.id]?.credits || 0}
                         />
                         <Button
                           size="sm"
