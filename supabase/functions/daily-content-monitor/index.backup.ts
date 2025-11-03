@@ -39,16 +39,7 @@ Deno.serve(async (req) => {
         topics!inner (
           id,
           name,
-          is_active,
-          topic_type,
-          region,
-          keywords,
-          landmarks,
-          postcodes,
-          organizations,
-          branding_config,
-          negative_keywords,
-          competing_regions
+          is_active
         ),
         content_sources!inner (
           id,
@@ -401,275 +392,36 @@ function normalizeUrl(url: string): string {
 }
 
 async function filterUrlsByTopicRelevance(urls: string[], topic: any, sourceName: string): Promise<string[]> {
-  if (topic.topic_type !== 'regional') {
-    return urls
-  }
-
-  const preferences = extractRegionalFilterPreferences(topic)
-
-  if (preferences.skipFiltering) {
-    console.log(`ℹ️ Skipping regional relevance filter for ${(topic.name || 'unknown topic')} due to configuration override`)
-    return urls
-  }
-
-  if (preferences.allowVariants.length === 0 && preferences.allowIfNoPositiveTerms) {
-    console.warn(`⚠️ No allowlist variants configured for ${(topic.name || 'unknown topic')} - allowing all URLs from ${sourceName}`)
-    return urls
-  }
-
-  const requirePositiveMatch = preferences.requirePositiveMatch ?? (
-    preferences.allowVariants.length > 0 && !preferences.allowOverlap
-  )
-
-  const relevantUrls = urls.filter(url => {
-    const normalizedUrl = url.toLowerCase()
-    const hasAllowMatch = preferences.allowVariants.some(variant => normalizedUrl.includes(variant))
-    const hasBlockMatch = preferences.blockVariants.some(variant => normalizedUrl.includes(variant))
-
-    if (hasBlockMatch && !hasAllowMatch) {
-      return false
-    }
-
-    if (hasAllowMatch) {
-      return true
-    }
-
-    if (!requirePositiveMatch || preferences.allowOverlap) {
-      return !hasBlockMatch
-    }
-
-    return false
-  })
-
-  const topicLabel = (topic.name || topic.region || 'regional topic').toLowerCase()
-  console.log(
-    `🎯 Topic relevance filter for ${topicLabel}: ${relevantUrls.length}/${urls.length} URLs kept (allow variants: ${preferences.allowVariants.length}, block variants: ${preferences.blockVariants.length}, require match: ${requirePositiveMatch})`
-  )
-
-  return relevantUrls
-}
-
-interface RegionalFilterPreferences {
-  allowVariants: string[]
-  blockVariants: string[]
-  allowOverlap: boolean
-  requirePositiveMatch?: boolean
-  allowIfNoPositiveTerms: boolean
-  skipFiltering: boolean
-}
-
-function extractRegionalFilterPreferences(topic: any): RegionalFilterPreferences {
-  const allowTerms = new Set<string>()
-  const blockTerms = new Set<string>()
-
-  addTermsToSet(allowTerms, topic.region)
-  addTermsToSet(allowTerms, topic.keywords)
-  addTermsToSet(allowTerms, topic.landmarks)
-  addTermsToSet(allowTerms, topic.postcodes)
-  addTermsToSet(allowTerms, topic.organizations)
-
-  addTermsToSet(blockTerms, topic.competing_regions)
-  addTermsToSet(blockTerms, topic.negative_keywords)
-
-  const brandingConfig = topic?.branding_config ?? null
-  const regionalFilter = resolveRegionalFilterConfig(brandingConfig)
-
-  if (regionalFilter) {
-    addTermsToSet(allowTerms, regionalFilter.allowTerms)
-    addTermsToSet(allowTerms, regionalFilter.overlapRegions)
-    addTermsToSet(blockTerms, regionalFilter.blockTerms)
-
-    const allowOverlap = toOptionalBoolean(regionalFilter.allowOverlap)
-    const requireExplicit = toOptionalBoolean(regionalFilter.requireExplicitMatch)
-    const allowIfNoMatch = toOptionalBoolean(regionalFilter.allowIfNoMatch)
-    const skipFiltering = toOptionalBoolean(regionalFilter.skipFiltering)
-
-    return {
-      allowVariants: Array.from(allowTerms),
-      blockVariants: Array.from(blockTerms),
-      allowOverlap: allowOverlap ?? false,
-      requirePositiveMatch: requireExplicit,
-      allowIfNoPositiveTerms: allowIfNoMatch ?? true,
-      skipFiltering: skipFiltering ?? false,
-    }
-  }
-
-  return {
-    allowVariants: Array.from(allowTerms),
-    blockVariants: Array.from(blockTerms),
-    allowOverlap: false,
-    allowIfNoPositiveTerms: true,
-    skipFiltering: false,
-  }
-}
-
-interface RegionalFilterConfigInput {
-  allowTerms?: unknown
-  overlapRegions?: unknown
-  blockTerms?: unknown
-  allowOverlap?: unknown
-  requireExplicitMatch?: unknown
-  allowIfNoMatch?: unknown
-  skipFiltering?: unknown
-}
-
-function resolveRegionalFilterConfig(brandingConfig: unknown): RegionalFilterConfigInput | null {
-  if (!brandingConfig) {
-    return null
-  }
-
-  let configObject = brandingConfig
-  if (typeof brandingConfig === 'string') {
-    try {
-      configObject = JSON.parse(brandingConfig)
-    } catch (error) {
-      console.warn('⚠️ Failed to parse branding_config for regional filter overrides:', error)
-      return null
-    }
-  }
-
-  if (typeof configObject !== 'object' || configObject === null) {
-    return null
-  }
-
-  const record = configObject as Record<string, any>
-  const candidate = record.regional_filter || record.regionalFilter || record.regionalFilterConfig
-
-  if (typeof candidate === 'string') {
-    try {
-      return resolveRegionalFilterConfig(JSON.parse(candidate))
-    } catch (error) {
-      console.warn('⚠️ Failed to parse regional filter configuration string:', error)
-      return null
-    }
-  }
-
-  const configSource = candidate && typeof candidate === 'object'
-    ? candidate
-    : isRegionalFilterLike(record)
-      ? record
-      : null
-
-  if (configSource) {
-    return {
-      allowTerms: (configSource.allow_terms ?? configSource.allowTerms ?? configSource.additionalAllowTerms) as unknown,
-      overlapRegions: (configSource.overlap_regions ?? configSource.overlapRegions ?? configSource.additionalRegions) as unknown,
-      blockTerms: (configSource.block_terms ?? configSource.blockTerms ?? configSource.denylist ?? configSource.blocklist) as unknown,
-      allowOverlap: configSource.allow_overlap ?? configSource.allowOverlap,
-      requireExplicitMatch: configSource.require_explicit_match ?? configSource.requireExplicitMatch ?? configSource.strict,
-      allowIfNoMatch: configSource.allow_if_no_match ?? configSource.allowIfNoMatch,
-      skipFiltering: configSource.skip_filtering ?? configSource.skipFiltering ?? configSource.disable,
-    }
-  }
-
-  return null
-}
-
-function isRegionalFilterLike(value: Record<string, any>): boolean {
-  const possibleKeys = [
-    'allow_terms', 'allowTerms', 'additionalAllowTerms',
-    'overlap_regions', 'overlapRegions', 'additionalRegions',
-    'block_terms', 'blockTerms', 'denylist', 'blocklist',
-    'allow_overlap', 'allowOverlap',
-    'require_explicit_match', 'requireExplicitMatch', 'strict',
-    'allow_if_no_match', 'allowIfNoMatch',
-    'skip_filtering', 'skipFiltering', 'disable'
-  ]
-
-  return possibleKeys.some(key => key in value)
-}
-
-function addTermsToSet(target: Set<string>, value: unknown) {
-  const terms = normalizeToStringArray(value)
-  for (const term of terms) {
-    for (const variant of buildTermVariants(term)) {
-      target.add(variant)
-    }
-  }
-}
-
-function normalizeToStringArray(value: unknown): string[] {
-  if (!value) return []
-  if (typeof value === 'string') return [value]
-  if (Array.isArray(value)) {
-    return value
-      .map(item => (typeof item === 'string' ? item : item != null ? String(item) : ''))
-      .filter(Boolean)
-  }
-  return []
-}
-
-function toOptionalBoolean(value: unknown): boolean | undefined {
-  if (typeof value === 'boolean') {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase()
-    if (['true', '1', 'yes', 'y'].includes(normalized)) return true
-    if (['false', '0', 'no', 'n'].includes(normalized)) return false
-  }
-
-  return undefined
-}
-
-function buildTermVariants(term: string, visited: Set<string> = new Set()): string[] {
-  if (!term) return []
-
-  const trimmed = term.trim()
-  if (!trimmed) return []
-
-  const lower = trimmed.toLowerCase()
-  if (visited.has(lower)) {
-    return []
-  }
-
-  visited.add(lower)
-
-  const variants = new Set<string>()
-  const addVariant = (value?: string | null) => {
-    if (!value) return
-    const normalized = value.trim().toLowerCase()
-    if (!normalized) return
-
-    const withoutSpaces = normalized.replace(/\s+/g, '')
-    const hyphenated = normalized.replace(/\s+/g, '-')
-    const withoutApostrophes = normalized.replace(/['']/g, '')
-
-    variants.add(normalized)
-    variants.add(withoutSpaces)
-    variants.add(hyphenated)
-    variants.add(withoutApostrophes)
-    variants.add(withoutApostrophes.replace(/\s+/g, ''))
-    variants.add(withoutApostrophes.replace(/\s+/g, '-'))
-  }
-
-  addVariant(trimmed)
-
-  const segments = trimmed
-    .split(/[,/&]| & | and |[–-]/)
-    .map(part => part.trim())
-    .filter(Boolean)
-
-  for (const segment of segments) {
-    addVariant(segment)
-    if (!visited.has(segment.toLowerCase())) {
-      buildTermVariants(segment, visited).forEach(variant => variants.add(variant))
-    }
-  }
-
-  if (lower.startsWith('st ')) {
-    const remainder = trimmed.slice(3).trim()
-    if (remainder) {
-      addVariant(`st ${remainder}`)
-      addVariant(`st. ${remainder}`)
-      addVariant(`st-${remainder.replace(/\s+/g, '-')}`)
-      addVariant(`saint ${remainder}`)
-      if (!visited.has(remainder.toLowerCase())) {
-        buildTermVariants(remainder, visited).forEach(variant => variants.add(variant))
+  // For regional topics, filter URLs that are likely relevant to the region
+  if (topic.topic_type === 'regional' && topic.region) {
+    const region = topic.region.toLowerCase()
+    const keywords = topic.keywords || []
+    
+    const relevantUrls = urls.filter(url => {
+      const urlLower = url.toLowerCase()
+      
+      // Check if URL contains region name or keywords
+      const hasRegion = urlLower.includes(region)
+      const hasKeyword = keywords.some((keyword: string) => 
+        urlLower.includes(keyword.toLowerCase())
+      )
+      
+      // Special handling for Eastbourne sources
+      if (region === 'eastbourne') {
+        return hasRegion || hasKeyword || 
+               urlLower.includes('/local-news/eastbourne') ||
+               urlLower.includes('/eastbourne-news/') ||
+               urlLower.includes('stone-cross') ||
+               urlLower.includes('polegate')
       }
-    }
+      
+      return hasRegion || hasKeyword
+    })
+    
+    console.log(`🎯 Topic relevance filter: ${relevantUrls.length}/${urls.length} URLs relevant for ${region}`)
+    return relevantUrls
   }
-
-  return Array.from(variants).filter(Boolean)
+  
+  // For keyword topics, return all URLs (filtering happens during scraping)
+  return urls
 }
