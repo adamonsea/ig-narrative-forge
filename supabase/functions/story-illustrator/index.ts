@@ -500,18 +500,19 @@ CRITICAL VIOLATIONS TO AVOID:
       const geminiPrompt = `CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY (read this first before generating):
 
 1. ABSOLUTELY NO text, words, letters, speech bubbles, thought bubbles, signs with text, labels, or written language anywhere in the image
-2. YOU MUST INCLUDE exactly 2-3 small mint green (#58FFBC) accent areas - this color is MANDATORY and REQUIRED
+2. YOU MUST INCLUDE exactly 2-3 small mint green (#58FFBC) accent areas on BACKGROUND ELEMENTS ONLY (signs, equipment, windows, objects) - NEVER on people's clothing or bodies
 3. COMPOSITION: Edge-to-edge illustration filling the ENTIRE canvas with NO white borders or padding around edges
-4. Style: Bold black ink outlines ONLY - NO crosshatching, NO dense shading, NO photorealism
-5. Texture: If adding shadow texture, use ONLY sparse fine dots - NO heavy crosshatch patterns
+4. Style: Bold black ink outlines ONLY - NO crosshatching, NO dense shading, NO decorative interior lines, NO photorealism
+5. Texture: If adding shadow texture, use ONLY very sparse fine dots (10-20 dots maximum per shadow area) - NO heavy patterns
 
 VISUAL STYLE REQUIREMENTS:
 - Black ink outline drawing with VARYING line weights (some thick, some thin)
 - Solid black fills for deepest shadows
-- Optional: minimal fine dots in mid-tone shadows (very sparse)
-- MANDATORY: Exactly 2-3 small irregular shapes filled with bright mint green (#58FFBC) as accent highlights
+- Optional: VERY sparse fine dots in mid-tone shadows (maximum 10-20 dots per area)
+- MANDATORY: Exactly 2-3 small irregular shapes filled with bright mint green (#58FFBC) on BACKGROUND ELEMENTS (equipment, signs, windows) NOT on people
 - White background
 - Clean editorial poster aesthetic (NOT comic strip style)
+- Keep faces and figures SIMPLE with minimal detail
 
 SUBJECT TO ILLUSTRATE:
 ${subjectMatter}
@@ -520,10 +521,10 @@ STORY CONTEXT: "${story.title}"
 
 Draw this as a bold outline illustration with:
 - Strong black line work (varying from thick to thin)
-- Solid black shadow areas (with optional sparse dot texture)
-- EXACTLY 2-3 small mint green accent spots (REQUIRED - not optional)
+- Solid black shadow areas (with optional VERY sparse dot texture - 10-20 dots max)
+- EXACTLY 2-3 small mint green accent spots on BACKGROUND objects/equipment (NOT on people)
 - Edge-to-edge composition (no white borders)
-- Clean simplified forms (avoid over-detailed rendering)
+- Clean simplified forms with minimal interior detail
 
 TONE: ${storyTone.toUpperCase()} - ${expressionInstruction}
 
@@ -532,8 +533,9 @@ Style references: Screen print poster, Risograph zine aesthetic, ligne claire il
 FINAL REMINDER - CRITICAL VIOLATIONS TO AVOID:
 ❌ NO speech bubbles or text of any kind
 ❌ NO dense crosshatching or heavy shading
-❌ NO white padding/borders around the image
-❌ DO NOT forget the mint green accents (they are REQUIRED)`;
+❌ NO decorative lines inside outlined shapes
+❌ NO green on people's clothing or bodies (background elements only)
+❌ NO white padding/borders around the image`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
