@@ -112,7 +112,8 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${runwayApiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Runway-Version': '2024-11-06'
       },
       body: JSON.stringify({
         taskType: 'gen3a_turbo',
@@ -153,7 +154,8 @@ serve(async (req) => {
 
       const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
-          'Authorization': `Bearer ${runwayApiKey}`
+          'Authorization': `Bearer ${runwayApiKey}`,
+          'X-Runway-Version': '2024-11-06'
         }
       });
 
