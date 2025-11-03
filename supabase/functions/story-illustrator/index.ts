@@ -813,13 +813,14 @@ Before you generate, confirm:
 
     const imageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/visuals/${fileName}`
 
-    // Update story with illustration
+    // Update story with illustration (clearing any existing animation)
     const { error: updateError } = await supabase
       .from('stories')
       .update({
         cover_illustration_url: imageUrl,
         cover_illustration_prompt: illustrationPrompt,
-        illustration_generated_at: new Date().toISOString()
+        illustration_generated_at: new Date().toISOString(),
+        animated_illustration_url: null  // Clear animation when new static image is generated
       })
       .eq('id', storyId)
 
