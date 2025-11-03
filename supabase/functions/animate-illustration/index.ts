@@ -9,6 +9,10 @@ const corsHeaders = {
 const FIXED_DURATION = 3; // Alibaba Wan 2.2 5b outputs ~3-4 seconds
 const ANIMATION_CREDIT_COST = 2; // Replicate pricing: $0.01-0.02 per video
 
+// 🔄 FEATURE FLAG: Toggle AI-driven vs keyword-based animation prompts
+// Set to false to rollback to Phase 1 keyword matching
+const USE_AI_PROMPTS = true;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -102,8 +106,33 @@ serve(async (req) => {
       );
     }
 
-    // Generate content-aware animation prompt based on story title and tone
-    const animationPrompt = getContentAwareAnimationPrompt(story.title, story.tone || 'neutral');
+    // Fetch first 3 slides for AI context (if using AI prompts)
+    let slideText = '';
+    if (USE_AI_PROMPTS) {
+      const { data: slides } = await supabase
+        .from('slides')
+        .select('content, slide_number')
+        .eq('story_id', storyId)
+        .order('slide_number', { ascending: true })
+        .limit(3);
+      
+      slideText = slides?.map(s => s.content).join(' ') || '';
+      console.log(`📝 Slide content fetched: ${slideText.substring(0, 100)}...`);
+    }
+
+    // Generate animation prompt (AI-driven or keyword-based)
+    let animationPrompt: string;
+    if (USE_AI_PROMPTS) {
+      console.log('🤖 Using AI-driven prompt generation (Phase 2)');
+      animationPrompt = await generateAnimationPromptWithAI(
+        story.title,
+        slideText,
+        story.tone || 'neutral'
+      );
+    } else {
+      console.log('🔤 Using keyword-based prompt generation (Phase 1)');
+      animationPrompt = getContentAwareAnimationPrompt(story.title, story.tone || 'neutral');
+    }
     console.log(`🎬 Animation prompt: ${animationPrompt}`);
 
     // Call Replicate API with Alibaba Wan 2.2 5b model
@@ -254,7 +283,84 @@ serve(async (req) => {
 });
 
 /**
- * Generates content-aware animation prompt based on story title keywords
+ * Generates AI-driven animation prompt based on story content (Phase 2)
+ */
+async function generateAnimationPromptWithAI(
+  title: string,
+  slideContent: string,
+  tone: string
+): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!LOVABLE_API_KEY) {
+    console.warn('⚠️ LOVABLE_API_KEY not set, falling back to keyword matching');
+    return getContentAwareAnimationPrompt(title, tone);
+  }
+  
+  try {
+    console.log('🧠 Generating AI animation prompt...');
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{
+          role: 'user',
+          content: `Generate a 15-20 word animation prompt for image-to-video AI (Alibaba Wan 2.2 5b model).
+
+STORY CONTEXT:
+Title: ${title}
+Content: ${slideContent}
+Tone: ${tone}
+
+REQUIREMENTS:
+- Describe SPECIFIC movements that would naturally occur in this scene
+- Focus on FOREGROUND subjects (people, vehicles, objects, machinery)
+- Be concrete and action-oriented
+- Match emotional tone: ${tone}
+- Keep under 20 words
+- NO camera movements (zoom, pan, tilt) - describe subject motion only
+
+GOOD EXAMPLES:
+✅ "Heavy machinery digs rhythmically, frustrated shopkeeper gestures at disruption, concerned pedestrians observe roadwork"
+✅ "Protesters march holding signs aloft, crowd sways energetically, speakers gesture passionately from platform"
+✅ "Firefighters battle blaze actively, water sprays forcefully, onlookers point and react with concern"
+✅ "Council members gesture in heated debate, mayor taps gavel, attendees lean forward attentively"
+
+BAD EXAMPLES:
+❌ "Camera pans across scene" (no camera movement)
+❌ "Beautiful illustration of a protest" (not describing motion)
+❌ "People doing things" (too vague)
+
+Return ONLY the animation prompt, no explanation or preamble.`
+        }],
+        max_tokens: 60,
+        temperature: 0.7
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ AI API error:', response.status, errorText);
+      throw new Error(`AI API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const prompt = data.choices[0].message.content.trim();
+    console.log('✨ AI-generated animation prompt:', prompt);
+    return prompt;
+    
+  } catch (error) {
+    console.error('⚠️ AI prompt generation failed, using keyword fallback:', error);
+    return getContentAwareAnimationPrompt(title, tone);
+  }
+}
+
+/**
+ * Generates content-aware animation prompt based on story title keywords (Phase 1 fallback)
  */
 function getContentAwareAnimationPrompt(title: string, tone: string): string {
   const titleLower = title.toLowerCase();
