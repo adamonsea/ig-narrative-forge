@@ -103,25 +103,19 @@ serve(async (req) => {
       return btoa(result);
     };
 
-    // Determine credit cost based on model - streamlined to working models only
+    // Determine credit cost based on model - three-tier structure
     const getModelConfig = (modelName: string) => {
       const stylePrefix = "Sharp contemporary editorial illustration. Professional graphic journalism. Sophisticated adult audience. NOT cartoon, NOT childlike, NOT whimsical. ";
       
       switch (modelName) {
-        case 'gemini-image':
-          return { credits: 1, cost: 0.039, provider: 'gemini', stylePrefix };
         case 'gpt-image-1':
           return { credits: 8, cost: 0.06, provider: 'openai', stylePrefix };
-        case 'ideogram':
-          return { credits: 3, cost: 0.08, provider: 'ideogram', stylePrefix }; // Optimized with smaller size
-        case 'dall-e-3':
-          return { credits: 5, cost: 0.04, provider: 'openai', stylePrefix };
-        case 'flux-schnell':
-          return { credits: 2, cost: 0.01, provider: 'huggingface', stylePrefix };
-        case 'nebius-flux':
-          return { credits: 1, cost: 0.0013, provider: 'nebius', stylePrefix }; // Cheapest option
+        case 'flux-dev':
+          return { credits: 3, cost: 0.025, provider: 'replicate-flux', stylePrefix };
+        case 'gemini-image':
+          return { credits: 1, cost: 0.005, provider: 'lovable-gemini', stylePrefix };
         default:
-          return { credits: 5, cost: 0.04, provider: 'openai', stylePrefix };
+          return { credits: 8, cost: 0.06, provider: 'openai', stylePrefix };
       }
     };
 
@@ -371,25 +365,115 @@ TWO-COLOR COMPOSITION EXAMPLES:
     let imageBase64: string
     let generationTime: number
 
-    if (modelConfig.provider === 'gemini') {
-      // Use Lovable AI Gateway for Gemini image generation
-      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
+    if (modelConfig.provider === 'replicate-flux') {
+      // FLUX.1-dev via Replicate - Standard quality tier
+      console.log('Generating with FLUX.1-dev via Replicate...');
       
-      if (!lovableApiKey) {
-        console.error('LOVABLE_API_KEY not found in environment')
-        throw new Error('Lovable AI is not enabled. Please contact support to enable Lovable AI Gateway for your project.')
+      const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
+      if (!REPLICATE_API_KEY) {
+        throw new Error('REPLICATE_API_KEY not configured');
       }
 
-      console.log('Attempting Gemini image generation via Lovable AI Gateway')
+      // Start generation
+      const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${REPLICATE_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'wait'
+        },
+        body: JSON.stringify({
+          version: '0c0f2097d4c3c8d7e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8e2e9f2f8',
+          input: {
+            prompt: illustrationPrompt,
+            width: 1024,
+            height: 1024,
+            num_outputs: 1,
+            guidance_scale: 3.5,
+            num_inference_steps: 28,
+            output_format: 'png'
+          }
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error('Replicate creation error:', errorText);
+        throw new Error(`Replicate API error: ${createResponse.status}`);
+      }
+
+      const prediction = await createResponse.json();
+      const predictionId = prediction.id;
+      console.log('Replicate prediction started:', predictionId);
+
+      // Poll for completion (max 90 seconds for quality generation)
+      let attempts = 0;
+      const maxAttempts = 90;
+      let finalPrediction;
+
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+          headers: {
+            'Authorization': `Token ${REPLICATE_API_KEY}`,
+          },
+        });
+
+        if (!statusResponse.ok) {
+          throw new Error(`Replicate status check failed: ${statusResponse.status}`);
+        }
+
+        finalPrediction = await statusResponse.json();
+        console.log(`Replicate status (attempt ${attempts + 1}):`, finalPrediction.status);
+
+        if (finalPrediction.status === 'succeeded') {
+          break;
+        } else if (finalPrediction.status === 'failed' || finalPrediction.status === 'canceled') {
+          throw new Error(`Replicate generation failed: ${finalPrediction.error || 'Unknown error'}`);
+        }
+
+        attempts++;
+      }
+
+      if (!finalPrediction || finalPrediction.status !== 'succeeded') {
+        throw new Error('Replicate generation timeout - please try again');
+      }
+
+      // Get image URL from output
+      const imageUrl = finalPrediction.output?.[0];
+      if (!imageUrl) {
+        throw new Error('No image URL in Replicate response');
+      }
+
+      console.log('Fetching generated image from:', imageUrl);
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch generated image: ${imageResponse.status}`);
+      }
+
+      const imageBlob = await imageResponse.blob();
+      const arrayBuffer = await imageBlob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      imageBase64 = safeBase64Encode(uint8Array);
+
+    } else if (modelConfig.provider === 'lovable-gemini') {
+      // Use Lovable AI Gateway for Gemini image generation - Budget tier
+      console.log('Generating with Gemini 2.5 Flash Image via Lovable AI Gateway...');
+      
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        throw new Error('LOVABLE_API_KEY not configured');
+      }
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image-preview',
+          model: 'google/gemini-2.5-flash-image',
           messages: [
             {
               role: 'user',
@@ -398,252 +482,129 @@ TWO-COLOR COMPOSITION EXAMPLES:
           ],
           modalities: ['image', 'text']
         }),
-      })
+      });
 
       if (!geminiResponse.ok) {
-        const errorData = await geminiResponse.text()
-        console.error('Gemini API error response:', geminiResponse.status, errorData)
+        const errorText = await geminiResponse.text();
+        console.error('Gemini API error response:', errorText);
         
-        // Parse error for better messaging
-        try {
-          const errorJson = JSON.parse(errorData)
-          if (errorJson.message?.includes('API key')) {
-            throw new Error('Lovable AI authentication failed. Please verify your project has Lovable AI enabled.')
-          }
-        } catch (e) {
-          // Continue with generic error
+        if (geminiResponse.status === 429) {
+          throw new Error('Gemini rate limit exceeded. Please try again later.');
+        } else if (geminiResponse.status === 402) {
+          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
         }
         
-        throw new Error(`Gemini API error (${geminiResponse.status}): ${errorData}`)
+        throw new Error(`Gemini API error: ${geminiResponse.status} - ${errorText}`);
       }
 
-      const geminiData = await geminiResponse.json()
-      console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2))
+      const geminiData = await geminiResponse.json();
+      console.log('Gemini response structure:', JSON.stringify(geminiData, null, 2).substring(0, 1000));
 
-      const extractImageDataUrl = (data: any): string | null => {
-        const choice = data?.choices?.[0]
-        const message = choice?.message ?? {}
-
-        // Original Lovable gateway format
-        const legacyUrl = message?.images?.[0]?.image_url?.url
-        if (legacyUrl) return legacyUrl
-
-        const possibleContent = Array.isArray(message?.content)
-          ? message.content
-          : Array.isArray(choice?.content)
-            ? choice.content
-            : []
-
-        for (const part of possibleContent) {
-          if (!part) continue
-
-          if (typeof part === 'string' && part.startsWith('data:image')) {
-            return part
-          }
-
-          if (typeof part === 'object') {
-            if (part?.type === 'output_image' && part?.image_base64) {
-              return `data:image/png;base64,${part.image_base64}`
-            }
-
-            if (part?.image_base64) {
-              return `data:image/png;base64,${part.image_base64}`
-            }
-
-            const partUrl = part?.image_url?.url ?? part?.url
-            if (typeof partUrl === 'string') {
-              return partUrl
+      // Extract image from response with comprehensive error handling
+      let base64Data: string | undefined;
+      
+      console.log('Parsing Gemini response. Available keys:', Object.keys(geminiData));
+      
+      // Try different response formats (Gemini API changes frequently)
+      if (geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url) {
+        console.log('Found image in choices[0].message.images[0].image_url.url');
+        base64Data = geminiData.choices[0].message.images[0].image_url.url;
+      } else if (geminiData.choices?.[0]?.message?.content) {
+        console.log('Checking choices[0].message.content for base64');
+        const content = geminiData.choices[0].message.content;
+        if (typeof content === 'string' && content.includes('base64,')) {
+          base64Data = content;
+        } else if (Array.isArray(content)) {
+          // Check if content is an array with image parts
+          for (const part of content) {
+            if (part?.type === 'image_url' && part?.image_url?.url) {
+              base64Data = part.image_url.url;
+              break;
+            } else if (part?.image_base64) {
+              base64Data = `data:image/png;base64,${part.image_base64}`;
+              break;
             }
           }
         }
-
-        const dataArray = Array.isArray(data?.data) ? data.data : []
-        const b64Json = dataArray?.[0]?.b64_json
-        if (typeof b64Json === 'string') {
-          return `data:image/png;base64,${b64Json}`
-        }
-
-        return null
+      } else if (geminiData.data?.[0]?.url) {
+        console.log('Found image in data[0].url');
+        base64Data = geminiData.data[0].url;
+      } else if (geminiData.data?.[0]?.b64_json) {
+        console.log('Found image in data[0].b64_json');
+        base64Data = `data:image/png;base64,${geminiData.data[0].b64_json}`;
+      } else if (geminiData.images?.[0]) {
+        console.log('Found image in images[0]');
+        base64Data = geminiData.images[0];
       }
 
-      const imageDataUrl = extractImageDataUrl(geminiData)
-
-      if (!imageDataUrl) {
-        console.error('No image data in Gemini response:', geminiData)
-        throw new Error('No image data received from Gemini API - response format unexpected')
+      if (!base64Data) {
+        console.error('Could not find image in Gemini response. Full response:', JSON.stringify(geminiData, null, 2));
+        throw new Error('No image data in Gemini response. The API response format may have changed.');
       }
 
-      // Extract base64 from data URL (format: data:image/png;base64,...)
-      imageBase64 = imageDataUrl.includes('base64,') ? imageDataUrl.split(',')[1] : imageDataUrl
-      console.log('Successfully extracted base64 image data from Gemini')
+      console.log('Found base64 data, length:', base64Data.length, 'prefix:', base64Data.substring(0, 50));
+      
+      // Remove data URL prefix if present
+      const base64String = base64Data.includes('base64,') 
+        ? base64Data.split('base64,')[1] 
+        : base64Data;
+
+      console.log('Decoding base64 string of length:', base64String.length);
+
+      // Decode base64 to direct base64 string
+      try {
+        // Validate base64 before assigning
+        atob(base64String); // Test decode
+        imageBase64 = base64String;
+        console.log('Successfully validated image base64');
+      } catch (decodeError) {
+        console.error('Failed to decode base64:', decodeError);
+        throw new Error('Failed to decode Gemini image data');
+      }
     } else if (modelConfig.provider === 'openai') {
+      // OpenAI GPT-Image-1 - Premium quality tier
+      console.log('Generating with OpenAI GPT-Image-1...');
+      
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+      if (!OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY not configured');
+      }
+
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         },
         body: JSON.stringify({
-          model: model,
+          model: 'gpt-image-1',
           prompt: illustrationPrompt,
           n: 1,
-          size: model === 'gpt-image-1' ? '1536x1024' : (model === 'dall-e-3' ? '1792x1024' : '1024x1024'),
-          ...(model === 'gpt-image-1' ? {
-            // GPT-Image-1 specific parameters
-            quality: 'high',
-            output_format: 'png',
-            background: 'opaque'
-          } : {
-            // DALL-E models
-            response_format: 'b64_json',
-            ...(model === 'dall-e-3' ? { quality: 'hd' } : {})
-          })
+          size: '1024x1024',
+          quality: 'high',
+          output_format: 'png'
         }),
-      })
+      });
 
       if (!openaiResponse.ok) {
-        const errorData = await openaiResponse.text()
-        console.error('OpenAI API error:', errorData)
-        throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
+        const errorText = await openaiResponse.text();
+        console.error('OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${openaiResponse.status}`);
       }
 
-      const imageData = await openaiResponse.json()
-      
-      // Handle different response formats
-      if (model === 'gpt-image-1') {
-        // GPT-Image-1 returns base64 directly in different format
-        imageBase64 = imageData.data[0].b64_json || imageData.data[0].image
-      } else {
-        // DALL-E models return b64_json field
-        imageBase64 = imageData.data[0].b64_json
-      }
-      
-      if (!imageBase64) {
-        console.error('No image data received from OpenAI:', imageData)
-        throw new Error('No image data received from OpenAI API')
-      }
-    } else if (modelConfig.provider === 'huggingface') {
-      // FLUX.1-schnell via Hugging Face - smaller dimensions for cost savings
-      const hfResponse = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('HUGGINGFACE_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: illustrationPrompt,
-          parameters: {
-            width: 512,
-            height: 640
-          },
-          options: {
-            wait_for_model: true
-          }
-        }),
-      })
+      const openaiData = await openaiResponse.json();
+      console.log('OpenAI response received');
 
-      if (!hfResponse.ok) {
-        const errorData = await hfResponse.text()
-        console.error('Hugging Face API error:', errorData)
-        throw new Error(`Hugging Face API error: ${hfResponse.statusText}`)
+      // GPT-Image-1 returns base64 by default
+      const base64Data = openaiData.data?.[0]?.b64_json;
+      if (!base64Data) {
+        throw new Error('No image data in OpenAI response');
       }
 
-      const imageBlob = await hfResponse.blob()
-      const arrayBuffer = await imageBlob.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      imageBase64 = safeBase64Encode(uint8Array)
-    } else if (modelConfig.provider === 'ideogram') {
-      // Ideogram API - use smaller aspect ratio setting
-      const ideogramApiKey = Deno.env.get('IDEOGRAM_API_KEY')
-      
-      if (!ideogramApiKey) {
-        throw new Error('Ideogram API key not configured')
-      }
-      
-      console.log('Making Ideogram API request...')
-      
-      const ideogramResponse = await fetch('https://api.ideogram.ai/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-Key': ideogramApiKey,
-        },
-        body: JSON.stringify({
-          image_request: {
-            prompt: illustrationPrompt,
-            aspect_ratio: 'ASPECT_3_2', // 3:2 landscape aspect ratio for editorial style
-            model: 'V_2_TURBO', 
-            magic_prompt_option: 'ON',
-            style_type: 'DESIGN'
-            // Remove resolution parameter - Ideogram will use aspect_ratio automatically
-          }
-        }),
-      })
+      imageBase64 = base64Data;
 
-      console.log('Ideogram response status:', ideogramResponse.status)
-
-      if (!ideogramResponse.ok) {
-        const errorData = await ideogramResponse.text()
-        console.error('Ideogram API error:', ideogramResponse.status, errorData)
-        throw new Error(`Ideogram API error: ${ideogramResponse.status} - ${errorData}`)
-      }
-
-      const ideogramData = await ideogramResponse.json()
-      console.log('Ideogram response:', JSON.stringify(ideogramData, null, 2))
-      
-      if (ideogramData.data && ideogramData.data.length > 0 && ideogramData.data[0].url) {
-        // Download the image and convert to base64
-        const imageResponse = await fetch(ideogramData.data[0].url)
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to download image from Ideogram: ${imageResponse.status}`)
-        }
-        const imageBlob = await imageResponse.blob()
-        const arrayBuffer = await imageBlob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        imageBase64 = safeBase64Encode(uint8Array)
-      } else {
-        console.error('Ideogram unexpected response format:', ideogramData)
-        throw new Error('Ideogram generation failed - no image URL in response')
-      }
-    } else if (modelConfig.provider === 'nebius') {
-      // Nebius Studio - ultra cost-effective FLUX
-      const nebiusResponse = await fetch('https://api.studio.nebius.ai/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('NEBIUS_API_KEY')}`,
-        },
-        body: JSON.stringify({
-          model: 'flux-1.1-pro-ultra',
-          prompt: illustrationPrompt,
-          width: 512,
-          height: 640,
-          num_images: 1,
-          guidance_scale: 3.5,
-          num_inference_steps: 28,
-          seed: Math.floor(Math.random() * 2147483647) // Random seed for variety
-        }),
-      })
-
-      if (!nebiusResponse.ok) {
-        const errorData = await nebiusResponse.text()
-        console.error('Nebius API error:', errorData)
-        throw new Error(`Nebius API error: ${nebiusResponse.statusText}`)
-      }
-
-      const nebiusData = await nebiusResponse.json()
-      if (nebiusData.data && nebiusData.data[0] && nebiusData.data[0].url) {
-        // Download the image and convert to base64
-        const imageResponse = await fetch(nebiusData.data[0].url)
-        const imageBlob = await imageResponse.blob()
-        const arrayBuffer = await imageBlob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        imageBase64 = safeBase64Encode(uint8Array)
-      } else {
-        throw new Error('Nebius generation failed or returned no image')
-      }
     } else {
-      throw new Error(`Model ${model} provider ${modelConfig.provider} not implemented`)
+      throw new Error(`Unsupported provider: ${modelConfig.provider}`);
     }
 
     generationTime = Date.now() - startTime

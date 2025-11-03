@@ -15,44 +15,28 @@ export interface ImageModel {
 
 export const imageModels: ImageModel[] = [
   {
-    id: 'gemini-image',
-    name: 'Gemini Image (FREE)',
-    description: 'Google Gemini 2.5 Flash via Lovable AI - Free until Oct 6',
-    costUsd: 0.00,
-    credits: 1,
-    provider: 'lovable-gemini'
-  },
-  {
     id: 'gpt-image-1',
     name: 'Premium Quality',
-    description: 'OpenAI GPT-Image-1 - Highest quality editorial illustrations',
+    description: 'OpenAI GPT-Image-1 - Best editorial illustrations with perfect composition',
     costUsd: 0.06,
-    credits: 10,
+    credits: 8,
     provider: 'openai'
   },
   {
-    id: 'ideogram',
-    name: 'Premium Editorial',
-    description: 'Ideogram V2 - High quality editorial style illustrations',
-    costUsd: 0.15,
-    credits: 4,
-    provider: 'ideogram'
+    id: 'flux-dev',
+    name: 'Standard Quality (Recommended)',
+    description: 'FLUX.1-dev - Professional editorial quality at mid-tier pricing',
+    costUsd: 0.025,
+    credits: 3,
+    provider: 'replicate'
   },
   {
-    id: 'dall-e-3',
-    name: 'High Quality',
-    description: 'OpenAI DALL-E 3 - Professional quality illustrations',
-    costUsd: 0.04,
-    credits: 5,
-    provider: 'openai'
-  },
-  {
-    id: 'flux-schnell',
-    name: 'Fast Generation',
-    description: 'FLUX.1-schnell via Hugging Face - Quick generation',
-    costUsd: 0.01,
-    credits: 2,
-    provider: 'huggingface'
+    id: 'gemini-image',
+    name: 'Budget Option',
+    description: 'Google Gemini 2.5 Flash - Quick preview generations',
+    costUsd: 0.005,
+    credits: 1,
+    provider: 'lovable-gemini'
   }
 ];
 
