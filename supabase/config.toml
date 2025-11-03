@@ -153,18 +153,11 @@ verify_jwt = false
 [functions.publish-ready-stories]
 verify_jwt = false
 
-# Image generation
-[functions.image-generator]
-verify_jwt = false
-
-[functions.nebius-image-generator]
-verify_jwt = false
-
-[functions.gemini-image-generator]
-verify_jwt = false
-
-[functions.midjourney-image-generator]
-verify_jwt = false
+# Image generation (archived slide visual generators - not in use)
+# [functions.image-generator]
+# [functions.nebius-image-generator]
+# [functions.gemini-image-generator]
+# [functions.midjourney-image-generator]
 
 # Roundups & notifications
 [functions.generate-daily-roundup]
