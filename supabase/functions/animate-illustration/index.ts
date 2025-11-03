@@ -282,7 +282,78 @@ serve(async (req) => {
 });
 
 /**
- * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED)
+ * Extracts the main subject from the original image prompt or story title
+ */
+function extractMainSubject(title: string, imagePrompt?: string): { type: string; subject: string } {
+  const sourceText = (imagePrompt || title).toLowerCase();
+  
+  // Person/People subjects
+  if (sourceText.match(/council member|councillor|official|politician/i)) {
+    return { type: 'person', subject: 'council member' };
+  }
+  if (sourceText.match(/protester|demonstrator|activist/i)) {
+    return { type: 'person', subject: 'protester' };
+  }
+  if (sourceText.match(/worker|builder|construction worker|tradesperson/i)) {
+    return { type: 'person', subject: 'worker' };
+  }
+  if (sourceText.match(/shopkeeper|merchant|shop owner|retailer/i)) {
+    return { type: 'person', subject: 'shopkeeper' };
+  }
+  if (sourceText.match(/teacher|educator|instructor/i)) {
+    return { type: 'person', subject: 'teacher' };
+  }
+  if (sourceText.match(/doctor|nurse|medical staff|healthcare worker/i)) {
+    return { type: 'person', subject: 'medical worker' };
+  }
+  if (sourceText.match(/police|officer|detective/i)) {
+    return { type: 'person', subject: 'police officer' };
+  }
+  if (sourceText.match(/athlete|player|footballer|cricketer/i)) {
+    return { type: 'person', subject: 'athlete' };
+  }
+  
+  // Building/Structure subjects
+  if (sourceText.match(/building|structure|council hall|town hall/i)) {
+    return { type: 'building', subject: 'building' };
+  }
+  if (sourceText.match(/shop|store|business premises/i)) {
+    return { type: 'building', subject: 'shop' };
+  }
+  
+  // Vehicle subjects
+  if (sourceText.match(/digger|excavator|bulldozer|machinery/i)) {
+    return { type: 'vehicle', subject: 'construction machinery' };
+  }
+  if (sourceText.match(/bus|train|vehicle/i)) {
+    return { type: 'vehicle', subject: 'vehicle' };
+  }
+  
+  // Crowd/Group subjects
+  if (sourceText.match(/crowd|group|gathering|assembly/i)) {
+    return { type: 'crowd', subject: 'crowd' };
+  }
+  
+  // Default to generic person
+  return { type: 'person', subject: 'person' };
+}
+
+/**
+ * Generates subject-specific movement templates
+ */
+function getSubjectMovementTemplate(subjectType: string, subject: string): string {
+  const templates: Record<string, string> = {
+    'person': `${subject} in frame nods slightly, minimal hand gesture, subtle weight shift`,
+    'crowd': `closest figure in center of ${subject} sways gently, nearest person shifts weight`,
+    'building': `visible flags on ${subject} flutter gently, window lights flicker subtly`,
+    'vehicle': `${subject} shows slight idle vibration, visible exhaust movement`
+  };
+  
+  return templates[subjectType] || templates['person'];
+}
+
+/**
+ * Generates AI-driven animation prompt based on story content (Phase 2 - ENHANCED with Subject Extraction)
  */
 async function generateAnimationPromptWithAI(
   title: string,
@@ -298,7 +369,13 @@ async function generateAnimationPromptWithAI(
   }
   
   try {
-    console.log('🧠 Generating AI animation prompt with enhanced style preservation...');
+    console.log('🧠 Generating AI animation prompt with subject extraction...');
+    
+    // Extract main subject from the image prompt or title
+    const { type: subjectType, subject } = extractMainSubject(title, originalImagePrompt);
+    const movementTemplate = getSubjectMovementTemplate(subjectType, subject);
+    
+    console.log(`🎯 Extracted subject: ${subject} (type: ${subjectType})`);
     
     const originalStyleHint = originalImagePrompt 
       ? `\n\nORIGINAL IMAGE GENERATION PROMPT:\n"${originalImagePrompt}"\n\nThe animation MUST preserve this exact visual style, composition, and aesthetic.`
@@ -321,8 +398,17 @@ Title: ${title}
 Content: ${slideContent}
 Tone: ${tone}${originalStyleHint}
 
-⚠️ STEP 1: IDENTIFY WHAT'S IN THE IMAGE
-Based on the title and content, identify ONLY the elements that would ALREADY be visible in a static news illustration. Only these can move.
+🎯 IDENTIFIED MAIN SUBJECT: ${subject}
+Subject Type: ${subjectType}
+Suggested Movement: ${movementTemplate}
+
+🚨 CRITICAL: Animate ONLY the single most prominent subject in the frame.
+
+ANIMATION INSTRUCTIONS BY SUBJECT TYPE:
+${subjectType === 'person' ? '• Person: subtle head movement, minimal hand gesture, slight weight shift' : ''}
+${subjectType === 'crowd' ? '• Crowd: closest figure in center sways gently, maximum 1 person moves' : ''}
+${subjectType === 'building' ? '• Building: gentle environmental effects (flags flutter, lights flicker)' : ''}
+${subjectType === 'vehicle' ? '• Vehicle: slight idle vibration, exhaust movement' : ''}
 
 🚫 CRITICAL PROHIBITIONS (NEVER INCLUDE):
 ❌ NO new people, vehicles, or objects entering the frame
@@ -333,33 +419,23 @@ Based on the title and content, identify ONLY the elements that would ALREADY be
 ❌ NO scene transitions, cuts, or perspective shifts
 
 ✅ MICRO-MOVEMENT REQUIREMENTS:
-• ONLY animate elements ALREADY VISIBLE in the frame
-• Movements must be TINY and SUBTLE - micro-gestures only
-• Maximum 1-2 primary subjects can move
+• ONLY the identified subject (${subject}) moves - everything else is static
+• Movement should be barely perceptible - like a living photograph
+• Maximum 1 subject moves, background completely still
 • Movements must feel natural for what's shown
 • Preserve EXACT composition and framing
 • Maintain EXACT visual style (colors, illustration style, line work)
-• Focus on FOREGROUND subjects
 • Keep under 15 words
-• Be hyper-specific about WHICH visible elements move
-
-🎨 STYLE PRESERVATION:
-The animation MUST maintain the flat illustration style, colors, and composition. Think of it like adding a gentle breeze to a painting - only the subjects breathe.
+• Be hyper-specific about WHICH visible element moves
 
 📝 PROMPT STRUCTURE:
 Use negative prompting format:
-"[describe micro-movements of existing subjects], negative prompt: camera movement, new people entering, zoom, pan, additional figures, scene change"
+"[describe micro-movement of ${subject}], negative prompt: camera movement, new people entering, zoom, pan, additional figures, scene change, background movement"
 
-✅ GOOD EXAMPLES (micro-movements only):
-• "Worker in frame nods slightly, visible machinery arm twitches, pedestrian shifts weight gently, negative prompt: new people, camera zoom"
-• "Protesters shown sway subtly, visible signs tilt slightly, speaker's hands gesture, negative prompt: crowd entering, camera pan"
-• "Council member gestures minimally, papers on desk rustle, attendee in shot nods once, negative prompt: people entering, zoom"
-
-❌ BAD EXAMPLES (introduce new elements):
-• "Protesters march into view" (new elements entering)
-• "Camera slowly zooms out" (camera movement)
-• "More people gather at the scene" (adding new elements)
-• "Cars drive past" (unless cars are prominent in the original frame)
+✅ GOOD EXAMPLES (single focal point):
+• "Council member gestures minimally, papers on desk rustle once, negative prompt: new people, camera zoom, crowd entering"
+• "Worker nods slightly while visible machinery arm twitches, negative prompt: camera pan, additional workers, background movement"
+• "Shopkeeper's hands gesture welcomingly, closest customer shifts weight, negative prompt: people entering, camera movement"
 
 Return ONLY the animation prompt with negative prompts included. No explanation.`
         }],
@@ -376,7 +452,7 @@ Return ONLY the animation prompt with negative prompts included. No explanation.
     
     const data = await response.json();
     const prompt = data.choices[0].message.content.trim();
-    console.log('✨ AI-generated MICRO-ANIMATION prompt:', prompt);
+    console.log('✨ AI-generated FOCAL-POINT prompt:', prompt);
     return prompt;
     
   } catch (error) {
