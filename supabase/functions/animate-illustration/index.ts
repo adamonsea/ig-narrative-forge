@@ -90,7 +90,7 @@ serve(async (req) => {
     // Fetch story to get tone for motion prompt
     const { data: story, error: storyError } = await supabase
       .from('stories')
-      .select('tone, headline')
+      .select('tone')
       .eq('id', storyId)
       .single();
 
