@@ -281,7 +281,7 @@ Illustrate the core subject identified above, drawing primarily from the opening
           STYLE & COMPOSITION:
           Bold outline-driven editorial cartoon with DRAMATIC LINE WEIGHT VARIATION (essential for hand-drawn personality). Channel the ARTISTIC PERSONALITY of master editorial cartoonists: David Levine's confident NYT caricature strokes (thick to thin), Ronald Searle's expressive British wit (nervous energy in linework), Ralph Steadman's controlled chaos (bold decisive marks), Ben Shahn's social realist confidence. Draw with the ENERGY of a skilled editorial cartoonist working on deadline - some lines THICK and bold, others THIN and delicate. 
           
-          TWO-COLOR PRINT AESTHETIC: Primary black ink (#000000) for all linework + MANDATORY fine halftone texture, PLUS minimal bright mint green (#58FFBC) as SPARSE highlight accents only (10-15% coverage maximum). White (#FFFFFF) background. Reference PRINT AESTHETIC: Risograph zine style, vintage screen print posters, punk DIY print culture. Solid black shadow shapes (no hatching/crosshatching).
+          TWO-COLOR PRINT AESTHETIC: Primary black ink (#000000) for all linework + MANDATORY fine halftone texture, PLUS minimal bright mint green (#58FFBC) as SPARSE highlight accents only (10-15% coverage maximum). White (#FFFFFF) background. Reference PRINT AESTHETIC: Jon McNaught's duotone screen print storytelling (masterful highlight/shadow balance through limited color), Risograph zine style, vintage screen print posters, punk DIY print culture. Solid black shadow shapes (no hatching/crosshatching).
 
 RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
           No shading. No hatching. No crosshatching. No stippling. No gradients. Just VARIED-WEIGHT black outlines, solid black fills, MANDATORY visible halftone texture in shadows/mid-tones, and minimal green highlight accents. Visual interest comes from DRAMATIC LINE WEIGHT VARIATION, confident hand-drawn energy, halftone grain texture, and sparse strategic green pops.
@@ -294,6 +294,7 @@ RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
           5. Delicate details (facial features, hands): THIN elegant strokes (0.3-0.5x baseline) - precision and sophistication
 
           HALFTONE TEXTURE - CRITICAL REQUIREMENT (MUST BE VISIBLE):
+          - Channel Jon McNaught's approach: halftone texture emphasizes SHADOWS and depth, while green provides HIGHLIGHT pops
           - YOU MUST apply fine mechanical halftone dot pattern to ALL shadow areas and mid-tones
           - Texture density: 60-80 LPI (lines per inch) - fine but CLEARLY VISIBLE grain texture
           - PRIMARY USE: Shadow emphasis - use halftone dots to create depth in shadows, darker areas, recessed spaces
@@ -303,8 +304,9 @@ RENDERING PERSONALITY REQUIREMENTS - CRITICAL:
           - Contrast: Pure white highlights → Light halftone mid-tones → Dense halftone shadows → Solid black deepest darks
           - Green areas remain SOLID flat color (no halftone in green)
 
-          GREEN SPOT COLOR (#58FFBC) - MINIMAL HIGHLIGHT ACCENTS ONLY:
+          GREEN SPOT COLOR (#58FFBC) - MINIMAL HIGHLIGHT ACCENTS ONLY (Jon McNaught duotone method):
           - Use bright mint green SPARINGLY - only 1-3 small accent areas per composition (10-15% coverage maximum)
+          - Think McNaught's second color: strategic highlight placement that tells the story through color contrast
           - Green is for HIGHLIGHTS only: small accent blobs that catch the eye, strategic pops behind key focal points, minimal environmental accents
           - Keep green shapes: small to medium size only (not large blobs), irregular organic shapes, slightly offset from black linework (imperfect registration feel)
           - GREEN RESTRAINT: Less is more - the illustration should read as black + halftone texture with just a few strategic green pops
