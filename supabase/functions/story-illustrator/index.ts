@@ -729,7 +729,7 @@ Before you generate, confirm:
           model: 'gpt-image-1',
           prompt: illustrationPrompt,
           n: 1,
-          size: '768x768', // Optimized for cost
+          size: '1024x1024', // Valid size for gpt-image-1
           quality: 'low', // 60-70% cost reduction
           output_format: 'webp', // Smaller file size
           output_compression: 80
@@ -762,7 +762,7 @@ Before you generate, confirm:
     // Calculate actual cost based on model and settings
     let estimatedCost = modelConfig.cost;
     if (modelConfig.provider === 'openai') {
-      // Updated costs for 768x768 low quality: ~$0.02 per image
+      // Updated costs for 1024x1024 low quality: ~$0.02 per image
       estimatedCost = 0.02;
     }
 
