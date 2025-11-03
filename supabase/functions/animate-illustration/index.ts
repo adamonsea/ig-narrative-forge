@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const FIXED_DURATION = 3; // I2VGen-XL outputs ~1 second (16 frames at ~24fps)
-const ANIMATION_CREDIT_COST = 2; // Replicate pricing: $0.01-0.02 per video
+const FIXED_DURATION = 5; // Alibaba Wan 2.2 i2v outputs ~5 seconds
+const ANIMATION_CREDIT_COST = 2; // Replicate pricing: $0.05-0.11 per video
 
 // 🔄 FEATURE FLAG: Toggle AI-driven vs keyword-based animation prompts
 // Set to false to rollback to Phase 1 keyword matching
@@ -76,7 +76,7 @@ serve(async (req) => {
       const { data: creditResult, error: creditError } = await supabase.rpc('deduct_user_credits', {
         p_user_id: user.id,
         p_amount: ANIMATION_CREDIT_COST,
-        p_description: `Animate story illustration (I2VGen-XL)`,
+        p_description: `Animate story illustration (Wan 2.2 i2v)`,
         p_story_id: storyId
       });
 
@@ -136,8 +136,8 @@ serve(async (req) => {
     }
     console.log(`🎬 Animation prompt: ${animationPrompt}`);
 
-    // Call Replicate API with Alibaba I2VGen-XL model
-    console.log('🚀 Calling Replicate API (Alibaba I2VGen-XL)...');
+    // Call Replicate API with Alibaba Wan 2.2 i2v model
+    console.log('🚀 Calling Replicate API (Alibaba Wan 2.2 i2v)...');
     const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
@@ -146,13 +146,13 @@ serve(async (req) => {
         'Prefer': 'wait=60'
       },
       body: JSON.stringify({
-        version: '5821a338d00033abaaba89080a17eb8783d9a17ed710a6b4246a18e0900ccad4',
+        version: 'f5204bd2302a7e56d42e2afc5f3e082fb98aaabb0e29d4c57c5a87fcee831c15',
         input: {
           image: staticImageUrl,
           prompt: animationPrompt,
-          max_frames: 16,
-          num_inference_steps: 50,
-          guidance_scale: 9,
+          num_frames: 125,
+          frames_per_second: 25,
+          aspect_ratio: "16:9",
           seed: Math.floor(Math.random() * 1000000)
         }
       })
@@ -315,7 +315,7 @@ async function generateAnimationPromptWithAI(
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Create a MICRO-ANIMATION prompt for this static illustration. The animation model is Alibaba Wan 2.2 5b (image-to-video).
+          content: `Create a MICRO-ANIMATION prompt for this static illustration. The animation model is Alibaba Wan 2.2 i2v (image-to-video).
 
 STORY CONTEXT:
 Title: ${title}
