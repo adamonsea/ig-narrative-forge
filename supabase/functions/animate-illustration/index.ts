@@ -152,7 +152,7 @@ serve(async (req) => {
           image: staticImageUrl,
           num_frames: 81,
           frames_per_second: 24,
-          aspect_ratio: "3:2",
+          aspect_ratio: "16:9",
           go_fast: true,
           seed: Math.floor(Math.random() * 1000000)
         }
