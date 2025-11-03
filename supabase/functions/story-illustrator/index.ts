@@ -730,7 +730,7 @@ Before you generate, confirm:
           prompt: illustrationPrompt,
           n: 1,
           size: '1024x1024', // Valid size for gpt-image-1
-          quality: 'low', // 60-70% cost reduction
+          quality: 'medium', // Balanced quality and cost
           output_format: 'webp', // Smaller file size
           output_compression: 80
         }),
