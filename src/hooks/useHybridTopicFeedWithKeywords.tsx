@@ -11,6 +11,7 @@ interface Story {
   created_at: string;
   updated_at: string;
   cover_illustration_url?: string;
+  animated_illustration_url?: string;
   cover_illustration_prompt?: string;
   popularity_data?: {
     period_type: string;
@@ -369,7 +370,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           try {
             const { data: metaData, error: metaError } = await supabase
               .from('stories')
-              .select('id, is_parliamentary, mp_name, mp_party, constituency, tone')
+              .select('id, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
               .in('id', storyIds);
             
             if (!metaError && metaData) {
@@ -379,7 +380,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                   mp_name: meta.mp_name,
                   mp_party: meta.mp_party,
                   constituency: meta.constituency,
-                  tone: meta.tone
+                  tone: meta.tone,
+                  cover_illustration_url: meta.cover_illustration_url,
+                  animated_illustration_url: meta.animated_illustration_url
                 });
               });
               console.debug('🏛️ Fallback: Enriched', metaData.length, 'stories with parliamentary metadata');
@@ -409,7 +412,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             publication_name: story.publication_name || '',
             created_at: story.created_at,
             updated_at: story.updated_at,
-            cover_illustration_url: story.cover_illustration_url,
+            cover_illustration_url: story.cover_illustration_url || meta?.cover_illustration_url,
+            animated_illustration_url: story.animated_illustration_url || meta?.animated_illustration_url,
             cover_illustration_prompt: story.cover_illustration_prompt,
             slides: storySlides,
             is_parliamentary: isParliamentary,
@@ -829,7 +833,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         try {
           const { data: metaData, error: metaError } = await supabase
             .from('stories')
-            .select('id, is_parliamentary, mp_name, mp_party, constituency, tone')
+            .select('id, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
             .in('id', storyIdsForPopularity);
           
           if (!metaError && metaData) {
@@ -839,7 +843,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
                 mp_name: meta.mp_name,
                 mp_party: meta.mp_party,
                 constituency: meta.constituency,
-                tone: meta.tone
+                tone: meta.tone,
+                cover_illustration_url: meta.cover_illustration_url,
+                animated_illustration_url: meta.animated_illustration_url
               });
             });
             console.debug('🏛️ Primary RPC: Enriched', metaData.length, 'stories with parliamentary metadata');
@@ -903,7 +909,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           publication_name: '',
           created_at: story.created_at,
           updated_at: story.created_at,
-          cover_illustration_url: story.cover_illustration_url,
+          cover_illustration_url: story.cover_illustration_url || meta?.cover_illustration_url,
+          animated_illustration_url: story.animated_illustration_url || meta?.animated_illustration_url,
           cover_illustration_prompt: '',
           popularity_data: popularityMap.get(story.id),
           slides: sortedSlides,

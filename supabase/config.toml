@@ -126,6 +126,9 @@ verify_jwt = false
 [functions.story-illustrator]
 verify_jwt = true
 
+[functions.animate-illustration]
+verify_jwt = true
+
 [functions.auto-illustrate-stories]
 verify_jwt = false
 

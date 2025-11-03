@@ -2251,6 +2251,7 @@ export type Database = {
       }
       stories: {
         Row: {
+          animated_illustration_url: string | null
           article_id: string | null
           audience_expertise: string | null
           author: string | null
@@ -2278,6 +2279,7 @@ export type Database = {
           writing_style: string | null
         }
         Insert: {
+          animated_illustration_url?: string | null
           article_id?: string | null
           audience_expertise?: string | null
           author?: string | null
@@ -2305,6 +2307,7 @@ export type Database = {
           writing_style?: string | null
         }
         Update: {
+          animated_illustration_url?: string | null
           article_id?: string | null
           audience_expertise?: string | null
           author?: string | null

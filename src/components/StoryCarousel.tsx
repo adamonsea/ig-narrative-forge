@@ -22,6 +22,7 @@ interface Story {
   created_at: string;
   updated_at: string;
   cover_illustration_url?: string;
+  animated_illustration_url?: string;
   cover_illustration_prompt?: string;
   popularity_data?: {
     period_type: string;
@@ -784,16 +785,40 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           <div className="h-full flex flex-col">
             {/* Cover Illustration - Full card width */}
             <div className="relative w-full h-80 md:h-96 overflow-hidden">
-              <img
-                src={optimizeImageUrl(story.cover_illustration_url, { 
-                  width: 800, 
-                  height: 600, 
-                  quality: 85 
-                }) || story.cover_illustration_url}
-                alt={`Cover illustration for ${story.title}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              {story.animated_illustration_url ? (
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  poster={story.cover_illustration_url}
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                >
+                  <source src={story.animated_illustration_url} type="video/mp4" />
+                  {/* Fallback to static image if video fails */}
+                  <img
+                    src={optimizeImageUrl(story.cover_illustration_url, { 
+                      width: 800, 
+                      height: 600, 
+                      quality: 85 
+                    }) || story.cover_illustration_url}
+                    alt={`Cover illustration for ${story.title}`}
+                    className="w-full h-full object-cover"
+                  />
+                </video>
+              ) : (
+                <img
+                  src={optimizeImageUrl(story.cover_illustration_url, { 
+                    width: 800, 
+                    height: 600, 
+                    quality: 85 
+                  }) || story.cover_illustration_url}
+                  alt={`Cover illustration for ${story.title}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
             </div>
             
             {/* Content below image */}

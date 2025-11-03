@@ -7,8 +7,6 @@ import { ChevronDown, ImageIcon, Loader2 } from 'lucide-react';
 export interface ImageModel {
   id: string;
   name: string;
-  description: string;
-  costUsd: number;
   credits: number;
   provider: string;
 }
@@ -16,25 +14,13 @@ export interface ImageModel {
 export const imageModels: ImageModel[] = [
   {
     id: 'gpt-image-1',
-    name: 'Premium (8 credits)',
-    description: 'Best editorial illustrations with perfect composition',
-    costUsd: 0.06,
+    name: 'Premium',
     credits: 8,
     provider: 'openai'
   },
   {
-    id: 'flux-dev',
-    name: 'Standard (3 credits)',
-    description: 'Professional editorial quality - recommended for most stories',
-    costUsd: 0.025,
-    credits: 3,
-    provider: 'replicate'
-  },
-  {
     id: 'gemini-image',
-    name: 'Budget (1 credit)',
-    description: 'Quick style preview - may vary from final',
-    costUsd: 0.005,
+    name: 'Standard',
     credits: 1,
     provider: 'lovable-gemini'
   }
@@ -91,27 +77,18 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
         className="w-80 bg-background border shadow-lg z-50"
         sideOffset={5}
       >
-        <div className="px-3 py-2 border-b">
-          <h4 className="text-sm font-medium">Choose Image Generation Model</h4>
-          <p className="text-xs text-muted-foreground mt-1">
-            Different models offer various quality, speed, and cost options
-          </p>
-        </div>
         {imageModels.map((model) => (
           <DropdownMenuItem
             key={model.id}
             onClick={() => onModelSelect(model)}
-            className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex flex-col items-start gap-2"
+            className="p-3 cursor-pointer hover:bg-accent focus:bg-accent"
           >
             <div className="flex w-full items-center justify-between">
               <span className="font-medium text-sm">{model.name}</span>
               <span className="text-xs text-muted-foreground">
-                ${model.costUsd.toFixed(3)}
+                {model.credits} credits
               </span>
             </div>
-            <p className="text-xs text-muted-foreground text-left w-full">
-              {model.description}
-            </p>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
