@@ -151,23 +151,7 @@ serve(async (req) => {
       return btoa(result);
     };
 
-    // Determine credit cost based on model - three-tier structure
-    const getModelConfig = (modelName: string) => {
-      const stylePrefix = "Sharp contemporary editorial illustration. Professional graphic journalism. Sophisticated adult audience. NOT cartoon, NOT childlike, NOT whimsical. ";
-      
-      switch (modelName) {
-        case 'gpt-image-1':
-          return { credits: 8, cost: 0.06, provider: 'openai', stylePrefix };
-        case 'flux-dev':
-          return { credits: 3, cost: 0.025, provider: 'replicate-flux', stylePrefix };
-        case 'gemini-image':
-          return { credits: 1, cost: 0.005, provider: 'lovable-gemini', stylePrefix };
-        default:
-          return { credits: 8, cost: 0.06, provider: 'openai', stylePrefix };
-      }
-    };
-
-    const modelConfig = getModelConfig(model);
+    // Model configuration is now defined at the top of the function (line ~77)
 
     // Check if user is super admin (bypass credit deduction)
     const { data: hasAdminRole } = await supabase.rpc('has_role', {
