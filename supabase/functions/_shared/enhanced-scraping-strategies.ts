@@ -239,6 +239,8 @@ export class EnhancedScrapingStrategies {
       };
     }
   }
+
+  private async tryStructuredDataStrategy(): Promise<ScrapingResult> {
     console.log('📋 Attempting structured data extraction...');
     
     try {
