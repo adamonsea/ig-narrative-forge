@@ -73,7 +73,8 @@ serve(async (req) => {
       region: topicData.region,
       landmarks: topicData.landmarks || [],
       postcodes: topicData.postcodes || [],
-      organizations: topicData.organizations || []
+      organizations: topicData.organizations || [],
+      competing_regions: topicData.competing_regions || []
     };
 
     // Get other regional topics for dynamic negative scoring if this is a regional topic
@@ -81,7 +82,7 @@ serve(async (req) => {
     if (topicConfig.topic_type === 'regional') {
       const { data: otherTopics } = await supabase
         .from('topics')
-        .select('region, keywords, landmarks')
+        .select('region, keywords, landmarks, postcodes, organizations, competing_regions')
         .eq('topic_type', 'regional')
         .neq('id', topicId)
         .eq('is_active', true);
@@ -89,8 +90,9 @@ serve(async (req) => {
       otherRegionalTopics = otherTopics?.map(topic => ({
         keywords: topic.keywords || [],
         landmarks: topic.landmarks || [],
-        postcodes: [],
-        organizations: [],
+        postcodes: topic.postcodes || [],
+        organizations: topic.organizations || [],
+        competing_regions: topic.competing_regions || [],
         region_name: topic.region || 'Unknown'
       })) || [];
     }

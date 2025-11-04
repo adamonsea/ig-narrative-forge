@@ -72,6 +72,7 @@ export class MultiTenantDatabaseOperations {
           landmarks: t.landmarks || [],
           postcodes: t.postcodes || [],
           organizations: t.organizations || [],
+          competing_regions: t.competing_regions || [],
           region_name: t.region || t.name
         }))
         console.log(`🗺️ Loaded ${competingTopics.length} competing regional topics for boundary detection`)
@@ -408,6 +409,7 @@ export class MultiTenantDatabaseOperations {
         landmarks: topic.landmarks || [],
         postcodes: topic.postcodes || [],
         organizations: topic.organizations || [],
+        competing_regions: topic.competing_regions || [],
         region_name: topic.region || topic.name
       }
       

@@ -12,6 +12,7 @@ export interface TopicConfig {
   landmarks?: string[];
   postcodes?: string[];
   organizations?: string[];
+  competing_regions?: string[];
 }
 
 export interface ContentScore {
@@ -41,6 +42,7 @@ export function calculateTopicRelevance(
       landmarks: topicConfig.landmarks,
       postcodes: topicConfig.postcodes,
       organizations: topicConfig.organizations,
+      competing_regions: topicConfig.competing_regions,
       region_name: topicConfig.region
     };
     

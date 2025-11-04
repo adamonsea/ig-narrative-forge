@@ -5,6 +5,7 @@ export interface TopicRegionalConfig {
   landmarks?: string[];
   postcodes?: string[];
   organizations?: string[];
+  competing_regions?: string[];
   region_name: string;
 }
 
