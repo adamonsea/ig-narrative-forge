@@ -408,10 +408,13 @@ Tone: ${tone}${originalStyleHint}
 Subject Type: ${subjectType}
 Suggested Movement: ${movementTemplate}
 
-🎨 CRITICAL COLOR PRESERVATION (ABSOLUTE REQUIREMENT):
-The image uses a MONOTONE BLACK & WHITE aesthetic with ONLY pops of green (#58ffbc) as accent color.
-✅ MAINTAIN EXACTLY: Black, white, grays, and green (#58ffbc) ONLY
-❌ FORBID: No color shifts, no new colors appearing, no saturation changes, no color grading, no tinting, no warming/cooling
+🎨 CRITICAL COLOR PRESERVATION (NON-NEGOTIABLE - HIGHEST PRIORITY):
+The source image uses a STRICT BLACK & WHITE + GREEN ACCENT color scheme ONLY.
+✅ PRESERVE EXACT RGB VALUES: Black (#000000), white (#FFFFFF), grays (grayscale), and green (#58ffbc) ONLY
+✅ NO NEW COLORS: Absolutely zero introduction of blues, yellows, reds, purples, oranges, pinks, or any other hues
+✅ NO COLOR MODIFICATION: No color correction, no color grading, no color enhancement, no color harmonization, no saturation adjustment
+✅ MAINTAIN SOURCE IMAGE COLOR PALETTE: Use only colors that exist in the static source image
+❌ STRICTLY FORBIDDEN: Color shifts, new colors appearing, tinting, warming, cooling, vibrancy changes, color bleeding, chromatic aberration, color pops in background elements
 
 🎬 CINEMAGRAPH AESTHETIC (CRITICAL):
 The goal is a "living photograph" or "cinemagraph" - ONE SINGLE FOCAL ELEMENT moves subtly while EVERYTHING ELSE is completely frozen/static. Like a magazine photo that barely comes to life.
@@ -427,13 +430,13 @@ POSITIVE PROMPT RULES:
 ✅ NO motion in background, surroundings, or secondary elements
 
 NEGATIVE PROMPT RULES (CRITICAL - Wan 2.2 respects these now):
-❌ NO camera movement: "no zoom, no pan, no tilt, no dolly, no tracking, no push in, no pull back, static camera"
-❌ NO new elements: "no people entering, no objects appearing, no elements from off-screen"
-❌ NO scene changes: "no background movement, no environment changes, no lighting shifts"
+❌ NO camera movement: "no zoom, no pan, no tilt, no dolly, no tracking, no push in, no pull back, static camera, fixed frame"
+❌ NO new elements: "no people entering, no objects appearing, no elements from off-screen, no particle effects"
+❌ NO scene changes: "no background movement, no environment changes, no lighting shifts, no shadows moving"
 ❌ NO transformation: "no morphing, no scene transitions, no composition changes"
-❌ NO multiple subjects moving: "only one element moves, everything else frozen"
-❌ NO color changes: "no color shifts, no new colors, no saturation changes, maintain original color palette"
-❌ NO widespread motion: "no ambient movement, no atmospheric effects, no environmental animation"
+❌ NO multiple subjects moving: "only one element moves, everything else completely frozen, static background"
+❌ NO color changes (ABSOLUTE PRIORITY): "no color shifts, zero new colors, no saturation changes, no color grading, no color correction, no color enhancement, preserve exact source image color palette, maintain black white green only, no color pops, no chromatic effects, no tinting, no color bleeding"
+❌ NO widespread motion: "no ambient movement, no atmospheric effects, no environmental animation, no particle movement"
 
 MOVEMENT SCALE GUIDE:
 ${subjectType === 'person' ? '• Person: head nod range = 2-3cm, hand gesture = 5-8cm, weight shift = slight lean' : ''}
@@ -442,10 +445,10 @@ ${subjectType === 'building' ? '• Building: flag flutter = small visible movem
 ${subjectType === 'vehicle' ? '• Vehicle: idle vibration = barely visible, exhaust = gentle waft' : ''}
 
 📝 OUTPUT FORMAT (MANDATORY):
-"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background, no color shifts, maintain original colors"
+"[12-word movement description using 'barely perceptible' or 'subtle'], negative prompt: no camera movement, no zoom, no pan, no tilt, no people entering, no background movement, no new elements, no scene change, static camera, frozen background, no color shifts, no new colors, no color grading, no color correction, preserve exact source image colors, maintain black white green palette only, no color pops, no chromatic effects"
 
-✅ PERFECT EXAMPLES (cinemagraph style with color preservation):
-• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera, no color changes, maintain black white green palette"
+✅ PERFECT EXAMPLES (cinemagraph style with strict color preservation):
+• "Council member's hand gestures barely perceptibly, papers on desk completely still, negative prompt: no camera movement, no zoom, no pan, no people entering, no background movement, static camera, no color changes, no new colors, no color grading, preserve exact source colors, maintain black white green only, no color pops"
 • "Worker nods subtly once, all machinery and background frozen, negative prompt: no camera movement, no zoom, no additional workers, no background movement, static camera, no scene change, no color shifts"
 • "Visible flag on building flutters gently, entire structure and surroundings frozen, negative prompt: no camera movement, no zoom, no pan, no background movement, static camera, no new elements, maintain original colors"
 
