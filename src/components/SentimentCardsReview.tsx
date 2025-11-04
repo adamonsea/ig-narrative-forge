@@ -209,7 +209,7 @@ export const SentimentCardsReview = ({ topicId }: SentimentCardsReviewProps) => 
   }, [topicId]);
 
   const needsReviewCards = cards.filter(c => c.needs_review);
-  const publishedCards = cards.filter(c => c.is_published && c.is_visible);
+  const publishedCards = cards.filter(c => c.is_published && c.is_visible && !c.needs_review);
   const hiddenCards = cards.filter(c => c.is_published && !c.is_visible);
 
   const renderCardList = (cardList: SentimentCardData[], showPublishButton = false) => {

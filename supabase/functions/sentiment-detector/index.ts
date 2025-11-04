@@ -13,6 +13,7 @@ interface ArticleData {
   published_at?: string;
   source_url: string;
   regional_relevance_score?: number;
+  slides?: Array<{ content: string }>;
 }
 
 interface KeywordAnalysis {
@@ -197,7 +198,7 @@ serve(async (req) => {
 
     // Analyze keywords and sentiment with enhanced regional focus
     console.log('🤖 Calling DeepSeek API for keyword analysis...');
-    const keywordAnalysis = await analyzeKeywordsAndSentiment(
+    let keywordAnalysis = await analyzeKeywordsAndSentiment(
       contentForAnalysis,
       topicKeywords,
       excludedKeywords,
@@ -206,21 +207,55 @@ serve(async (req) => {
       topic
     );
 
+    const fallbackKeywords = fallbackKeywordExtraction(
+      contentForAnalysis,
+      excludedKeywords,
+      topicName
+    );
+
+    if (fallbackKeywords.length > 0) {
+      const existingPhrases = new Set(keywordAnalysis.map(k => k.phrase.toLowerCase()));
+      for (const fb of fallbackKeywords) {
+        if (!existingPhrases.has(fb.phrase.toLowerCase())) {
+          keywordAnalysis.push(fb);
+        }
+      }
+    }
+
     console.log(`✨ Found ${keywordAnalysis.length} trending keywords`, {
       keywords: keywordAnalysis.map(k => k.phrase).slice(0, 5)
     });
 
     // Update keyword tracking table
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const existingKeywordMap = new Map<string, { tracked_for_cards: boolean }>();
+    if (keywordAnalysis.length > 0) {
+      const uniquePhrases = Array.from(new Set(keywordAnalysis.map(k => k.phrase)));
+      const { data: existingKeywords, error: existingError } = await supabase
+        .from('sentiment_keyword_tracking')
+        .select('keyword_phrase, tracked_for_cards')
+        .eq('topic_id', topicId)
+        .in('keyword_phrase', uniquePhrases);
+
+      if (existingError) {
+        console.error('❌ Error fetching existing keyword tracking:', existingError);
+      } else {
+        for (const record of existingKeywords || []) {
+          existingKeywordMap.set(record.keyword_phrase.toLowerCase(), {
+            tracked_for_cards: record.tracked_for_cards
+          });
+        }
+      }
+    }
 
     for (const keyword of keywordAnalysis) {
       // Calculate trend status
       const currentTrend = keyword.frequency >= 5 ? 'sustained' : 'emerging';
-      
+
       // Upsert keyword tracking
-      await supabase
+      const { error: trackingError } = await supabase
         .from('sentiment_keyword_tracking')
         .upsert({
           topic_id: topicId,
@@ -229,10 +264,34 @@ serve(async (req) => {
           total_mentions: keyword.frequency,
           source_count: keyword.sources.length,
           current_trend: currentTrend,
+          updated_at: now.toISOString(),
         }, {
           onConflict: 'topic_id,keyword_phrase',
           ignoreDuplicates: false
         });
+
+      if (trackingError) {
+        console.error('❌ Error upserting keyword tracking:', trackingError);
+        continue;
+      }
+
+      if (!existingKeywordMap.has(keyword.phrase.toLowerCase())) {
+        console.log(`🔔 New keyword detected: ${keyword.phrase}`);
+        try {
+          const estimatedNotificationScore = calculateEstimatedSentimentScore(keyword);
+          await supabase.functions.invoke('send-story-notification', {
+            body: {
+              topicId,
+              notificationType: 'sentiment',
+              keywordPhrase: keyword.phrase,
+              sentimentScore: estimatedNotificationScore
+            }
+          });
+        } catch (notifyError) {
+          console.error('⚠️ Failed to send sentiment notification:', notifyError);
+        }
+        existingKeywordMap.set(keyword.phrase.toLowerCase(), { tracked_for_cards: false });
+      }
     }
 
     // Mark keywords not seen recently as fading
@@ -244,9 +303,9 @@ serve(async (req) => {
 
     let generatedCards = 0;
 
-    // Generate sentiment cards for keywords with frequency >= 2 and at least 2 sources
+    // Generate sentiment cards for keywords with reasonable support
     for (const keyword of keywordAnalysis) {
-      if (keyword.frequency >= 3 && keyword.sources.length >= 3) {
+      if (keyword.frequency >= 2 && keyword.sources.length >= 2) {
         console.log(`🎯 Evaluating keyword for card: "${keyword.phrase}"`, {
           frequency: keyword.frequency,
           sources: keyword.sources.length,
@@ -269,7 +328,7 @@ serve(async (req) => {
         }
 
         // Calculate estimated sentiment score for comparison
-        const estimatedScore = Math.round((keyword.sentiment_context.positive / Math.max(keyword.frequency, 1)) * 100);
+        const estimatedScore = calculateEstimatedSentimentScore(keyword);
         
         let shouldCreateCard = true;
         let updateReason = 'new_analysis';
@@ -325,7 +384,10 @@ serve(async (req) => {
                   analysis_date: new Date().toISOString().split('T')[0],
                   content_fingerprint: contentFingerprint,
                   previous_sentiment_score: existingCards?.[0]?.sentiment_score || 0,
-                  update_reason: updateReason
+                  update_reason: updateReason,
+                  is_published: true,
+                  needs_review: true,
+                  is_visible: true
                 });
 
               if (insertError) {
@@ -362,7 +424,7 @@ serve(async (req) => {
 
     // Prepare keyword suggestions (keywords that could be added to topic)
     const keywordSuggestions = keywordAnalysis
-      .filter(k => k.frequency >= 3 && k.sources.length >= 3) // Match card generation threshold
+      .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Match card generation threshold
       .filter(k => !topicKeywords.some((tk: any) => 
         tk.toLowerCase().includes(k.phrase.toLowerCase()) || 
         k.phrase.toLowerCase().includes(tk.toLowerCase())
@@ -412,6 +474,144 @@ serve(async (req) => {
     );
   }
 });
+
+function calculateEstimatedSentimentScore(keyword: KeywordAnalysis): number {
+  const positive = keyword.sentiment_context?.positive ?? 0;
+  const negative = keyword.sentiment_context?.negative ?? 0;
+  const denominator = Math.max(keyword.frequency || 0, 1);
+  const rawScore = ((positive - negative) / denominator) * 100;
+  return Math.max(-100, Math.min(100, Math.round(rawScore)));
+}
+
+function fallbackKeywordExtraction(
+  articles: ArticleData[],
+  excludedKeywords: string[],
+  topicName?: string
+): KeywordAnalysis[] {
+  const excludedSet = new Set(excludedKeywords.map(k => k.toLowerCase()));
+  const stopwords = new Set([
+    'the', 'and', 'with', 'from', 'that', 'this', 'have', 'will', 'about', 'there', 'their', 'which',
+    'after', 'before', 'would', 'could', 'should', 'these', 'those', 'into', 'local', 'community',
+    'council', 'councils', 'people', 'update', 'latest', 'today', 'news'
+  ]);
+
+  if (topicName) {
+    topicName.split(/\s+/).forEach(part => stopwords.add(part.toLowerCase()));
+  }
+
+  const positiveWords = new Set(['improve', 'support', 'funding', 'investment', 'win', 'approval', 'progress', 'benefit']);
+  const negativeWords = new Set(['delay', 'issue', 'problem', 'concern', 'opposition', 'criticism', 'challenge', 'risk']);
+
+  const keywordMap = new Map<string, {
+    mentions: number;
+    sources: Map<string, { url: string; title: string; date: string; author?: string }>;
+    positive: number;
+    negative: number;
+  }>();
+
+  const excludedPhrase = (phrase: string) => {
+    const lower = phrase.toLowerCase();
+    if (excludedSet.has(lower)) return true;
+    if (stopwords.has(lower)) return true;
+    const parts = lower.split(' ');
+    return parts.every(part => stopwords.has(part));
+  };
+
+  for (const article of articles) {
+    const slideText = article.slides?.map(slide => slide.content).join(' ') || '';
+    const combinedText = `${article.title || ''}. ${article.body || ''}. ${slideText}`;
+    const candidatePhrases = new Set<string>();
+
+    const phraseRegex = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g;
+    let match: RegExpExecArray | null;
+    while ((match = phraseRegex.exec(article.title || '')) !== null) {
+      candidatePhrases.add(match[1].trim());
+    }
+    while ((match = phraseRegex.exec(article.body || '')) !== null) {
+      candidatePhrases.add(match[1].trim());
+    }
+
+    if (candidatePhrases.size < 5) {
+      const capitalRegex = /\b([A-Z][a-z]{3,})\b/g;
+      let singleMatch: RegExpExecArray | null;
+      while ((singleMatch = capitalRegex.exec(article.title || '')) !== null) {
+        candidatePhrases.add(singleMatch[1]);
+      }
+    }
+
+    for (const phrase of candidatePhrases) {
+      const normalized = phrase.replace(/\s+/g, ' ').trim();
+      if (normalized.length < 4) continue;
+      if (excludedPhrase(normalized)) continue;
+
+      const lower = normalized.toLowerCase();
+      const mentionRegex = new RegExp(lower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      const mentions = combinedText.match(mentionRegex)?.length || 0;
+      if (mentions === 0) continue;
+
+      const sourceKey = article.source_url || `${article.title}-${article.published_at}`;
+      const entry = keywordMap.get(lower) || {
+        mentions: 0,
+        sources: new Map<string, { url: string; title: string; date: string; author?: string }>(),
+        positive: 0,
+        negative: 0
+      };
+
+      entry.mentions += mentions;
+      if (!entry.sources.has(sourceKey)) {
+        entry.sources.set(sourceKey, {
+          url: article.source_url,
+          title: article.title,
+          date: article.published_at || new Date().toISOString(),
+          author: article.author
+        });
+      }
+
+      const sentiment = collectSimpleSentiment(combinedText, lower, positiveWords, negativeWords);
+      entry.positive += sentiment.positive;
+      entry.negative += sentiment.negative;
+
+      keywordMap.set(lower, entry);
+    }
+  }
+
+  return Array.from(keywordMap.entries())
+    .map(([phrase, info]) => ({
+      phrase: phrase.replace(/\b\w/g, char => char.toUpperCase()),
+      frequency: info.mentions,
+      sentiment_context: {
+        positive: info.positive,
+        negative: info.negative,
+        neutral: Math.max(info.mentions - (info.positive + info.negative), 0)
+      },
+      sources: Array.from(info.sources.values())
+        .filter(source => !!source.title && !!source.url)
+        .slice(0, 5)
+    }))
+    .filter(item => item.sources.length >= 1 && item.frequency >= 2)
+    .slice(0, 10);
+}
+
+function collectSimpleSentiment(
+  text: string,
+  phraseLower: string,
+  positiveWords: Set<string>,
+  negativeWords: Set<string>
+): { positive: number; negative: number } {
+  let positive = 0;
+  let negative = 0;
+  const sentences = text.split(/(?<=[.!?])/);
+  for (const sentence of sentences) {
+    if (!sentence) continue;
+    if (!sentence.toLowerCase().includes(phraseLower)) continue;
+    const words = sentence.toLowerCase().split(/[^a-z0-9]+/);
+    for (const word of words) {
+      if (positiveWords.has(word)) positive++;
+      if (negativeWords.has(word)) negative++;
+    }
+  }
+  return { positive, negative };
+}
 
 // Analyze keywords and sentiment using DeepSeek
 async function analyzeKeywordsAndSentiment(

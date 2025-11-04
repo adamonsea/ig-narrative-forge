@@ -12,9 +12,11 @@ const BASE_URL = Deno.env.get('PUBLIC_SITE_URL') || 'https://curatr.pro';
 interface NotificationRequest {
   storyId?: string;
   topicId: string;
-  notificationType?: 'story' | 'daily' | 'weekly';
+  notificationType?: 'story' | 'daily' | 'weekly' | 'sentiment';
   roundupDate?: string;
   weekStart?: string;
+  keywordPhrase?: string;
+  sentimentScore?: number;
 }
 
 interface PushSubscription {
@@ -41,7 +43,9 @@ serve(async (req: Request) => {
       topicId, 
       notificationType = 'story',
       roundupDate,
-      weekStart 
+      weekStart,
+      keywordPhrase,
+      sentimentScore
     }: NotificationRequest = await req.json();
 
     console.log(`📬 Sending ${notificationType} notification for topic ${topicId}`);
@@ -87,6 +91,13 @@ serve(async (req: Request) => {
       title = `This Week in ${topic.name}`;
       body = `Your weekly roundup is ready`;
       url = `${BASE_URL}/feed/${topic.slug}/weekly/${weekStart}`;
+    } else if (notificationType === 'sentiment' && keywordPhrase) {
+      title = `New sentiment signal in ${topic.name}`;
+      const scoreText = typeof sentimentScore === 'number'
+        ? ` (${sentimentScore >= 0 ? '+' : ''}${sentimentScore})`
+        : '';
+      body = `${keywordPhrase}${scoreText} is trending across local coverage.`;
+      url = `${BASE_URL}/feed/${topic.slug}?tab=insights`;
     } else {
       throw new Error('Invalid notification type or missing required parameters');
     }
@@ -95,6 +106,7 @@ serve(async (req: Request) => {
     let notificationFilter = 'instant';
     if (notificationType === 'daily') notificationFilter = 'daily';
     if (notificationType === 'weekly') notificationFilter = 'weekly';
+    if (notificationType === 'sentiment') notificationFilter = 'instant';
 
     // Fetch all active push subscriptions for this topic
     const { data: signups, error: signupsError } = await supabase
