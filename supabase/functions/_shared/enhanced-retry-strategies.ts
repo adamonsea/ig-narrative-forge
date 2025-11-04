@@ -285,6 +285,88 @@ export class EnhancedRetryStrategies {
     return undefined;
   }
 
+  private getAcceptLanguageForCountry(country: string): string {
+    const languageMap: Record<string, string> = {
+      gb: 'en-GB,en;q=0.9',
+      ie: 'en-IE,en;q=0.9,ga;q=0.8',
+      au: 'en-AU,en;q=0.9',
+      ca: 'en-CA,en;q=0.9,fr-CA;q=0.8',
+      us: 'en-US,en;q=0.9',
+      default: 'en-US,en;q=0.9'
+    };
+
+    return languageMap[country] || languageMap.default;
+  }
+
+  private applyRegionalHeaders(headers: Record<string, string>, countryHint?: string): void {
+    if (countryHint) {
+      headers['Accept-Language'] = this.getAcceptLanguageForCountry(countryHint);
+    }
+  }
+
+  private applyStealthHeaders(headers: Record<string, string>): void {
+    // Remove bot-detection headers
+    delete headers['Sec-Fetch-Dest'];
+    delete headers['Sec-Fetch-Mode'];
+    delete headers['Sec-Fetch-Site'];
+    delete headers['Sec-Fetch-User'];
+    console.log('🛡️ Applying stealth header profile (removed Sec-Fetch headers)');
+  }
+
+  private applyResidentialHeaders(headers: Record<string, string>, countryHint?: string): void {
+    const residentialIp = this.pickResidentialIp(countryHint);
+    if (residentialIp) {
+      headers['X-Forwarded-For'] = residentialIp.ip;
+      headers['X-Real-IP'] = residentialIp.ip;
+      headers['Via'] = '1.1 ' + residentialIp.ip;
+      console.log(`🏠 Applying fresh residential IP hint (${residentialIp.country}): ${residentialIp.ip}`);
+    }
+  }
+
+  private shouldUseStealthHeaders(status: number, serverHeader?: string, hostname?: string): boolean {
+    // Use stealth for 403/429 responses
+    if (status === 403 || status === 429) {
+      return true;
+    }
+
+    // Use stealth for known bot-detection servers
+    if (serverHeader) {
+      const lowerServer = serverHeader.toLowerCase();
+      if (lowerServer.includes('envoy') || lowerServer.includes('akamai') || lowerServer.includes('cloudfront')) {
+        return true;
+      }
+    }
+
+    // Use stealth for UK domains (common Newsquest/Akamai pattern)
+    if (hostname && hostname.endsWith('.co.uk')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private shouldUseResidentialIp(status: number, hint?: WarmupHint, hostname?: string): boolean {
+    // Use residential IP for 403 blocks
+    if (status === 403) {
+      return true;
+    }
+
+    // Use residential IP if previously diagnosed as needing it
+    if (hint?.blockProfile?.diagnosis === 'residential-required') {
+      return true;
+    }
+
+    // Use residential IP for UK/IE domains (high Akamai/CDN usage)
+    if (hostname) {
+      const country = this.inferCountryFromHost(hostname);
+      if (country === 'gb' || country === 'ie') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private pickResidentialIp(countryHint?: string): { ip: string; country: string } | null {
     const normalized = countryHint?.toLowerCase();
     const pool = (normalized && this.residentialIpPools[normalized]) || this.residentialIpPools.default;
@@ -638,7 +720,13 @@ export class EnhancedRetryStrategies {
     };
 
     const domainKey = this.getDomainKeyFromUrl(url);
-    const dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+    let dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+
+    const hostname = new URL(url).hostname;
+    const countryHint = this.inferCountryFromHost(hostname);
+
+    let activeCookieHeader = options.cookieHeader || dynamicHint?.cookieHeader;
+    let extraAttemptsGranted = false;
 
     const dynamicAlternate =
       options.allowAlternateRoutes !== false
@@ -667,12 +755,25 @@ export class EnhancedRetryStrategies {
 
         const headers = this.getEnhancedHeaders(requestContext, userAgent);
         
-        if (options.cookieHeader) {
-          headers['Cookie'] = options.cookieHeader;
-        }
+        // Apply regional headers based on country hint
+        this.applyRegionalHeaders(headers, countryHint);
 
-        if (attempt === 0 && dynamicHint?.cookieHeader) {
-          headers['Cookie'] = dynamicHint.cookieHeader;
+        // Apply adaptive headers based on previous attempt results
+        if (attempt > 0 && dynamicHint) {
+          const serverHeader = dynamicHint.blockProfile?.server;
+          const lastStatus = dynamicHint.lastStatus || 0;
+
+          if (this.shouldUseStealthHeaders(lastStatus, serverHeader, hostname)) {
+            this.applyStealthHeaders(headers);
+          }
+
+          if (this.shouldUseResidentialIp(lastStatus, dynamicHint, hostname)) {
+            this.applyResidentialHeaders(headers, countryHint);
+          }
+        }
+        
+        if (activeCookieHeader) {
+          headers['Cookie'] = activeCookieHeader;
         }
         
         // Intelligent delay before request (except first attempt)
@@ -695,6 +796,24 @@ export class EnhancedRetryStrategies {
         });
 
         clearTimeout(timeoutId);
+
+        // Capture cookies from response for mid-flight learning
+        const responseCookies = this.extractCookiesFromHeaders(response.headers);
+        if (responseCookies) {
+          console.log(`🍪 Captured fresh cookie from response`);
+          activeCookieHeader = responseCookies;
+          
+          // Update hint with fresh cookie
+          this.rememberWarmupHint(domainKey, {
+            cookieHeader: responseCookies,
+            reason: 'mid-flight-capture',
+            statusCode: response.status,
+            blockProfile: dynamicHint?.blockProfile
+          });
+          
+          // Refresh dynamicHint reference
+          dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+        }
 
         // Helper function for GET fallback with Range header
         const tryGetFallback = async (reason: string): Promise<string | null> => {
@@ -747,8 +866,49 @@ export class EnhancedRetryStrategies {
 
         // Phase 1: Check for explicit blocking status codes
         if ([401, 403, 405, 406, 429].includes(response.status)) {
+          // Update hint with blocking status
+          const serverHeader = response.headers.get('server');
+          this.rememberWarmupHint(domainKey, {
+            reason: `blocked-${response.status}`,
+            statusCode: response.status,
+            blockProfile: {
+              server: serverHeader || undefined,
+              diagnosis: response.status === 403 ? 'residential-required' : 'cookie-required',
+              details: `Blocked with status ${response.status}`
+            }
+          });
+          
+          // Refresh dynamicHint reference
+          dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+          
+          // Trigger cookie warmup on 403
+          if (response.status === 403 && attempt < config.maxRetries) {
+            console.log(`🍪 Triggering cookie warmup after 403...`);
+            const warmupCookie = await this.performCookieWarmup(url, '403-detected');
+            if (warmupCookie) {
+              activeCookieHeader = warmupCookie;
+              dynamicHint = this.dynamicWarmupDomains.get(domainKey);
+            }
+          }
+          
           const fallbackContent = await tryGetFallback(`${response.status} detected`);
-          if (fallbackContent) return fallbackContent;
+          if (fallbackContent) {
+            // Track successful residential IP usage
+            if (headers['X-Forwarded-For']) {
+              this.rememberWarmupHint(domainKey, {
+                reason: 'residential-success',
+                statusCode: 200,
+                residentialIpHint: {
+                  sampleIp: headers['X-Forwarded-For'],
+                  country: countryHint,
+                  lastTried: Date.now(),
+                  lastSuccess: Date.now(),
+                  reason: `Residential IP bypassed ${response.status}`
+                }
+              });
+            }
+            return fallbackContent;
+          }
         }
 
         if (!response.ok) {
@@ -760,13 +920,37 @@ export class EnhancedRetryStrategies {
         
         if (this.isValidContent(content)) {
           console.log(`✅ Successfully fetched content from ${url} (${content.length} chars, attempt ${attempt + 1})`);
+          
+          // Track successful residential IP usage
+          if (headers['X-Forwarded-For']) {
+            this.rememberWarmupHint(domainKey, {
+              reason: 'residential-success',
+              statusCode: response.status,
+              residentialIpHint: {
+                sampleIp: headers['X-Forwarded-For'],
+                country: countryHint,
+                lastTried: Date.now(),
+                lastSuccess: Date.now(),
+                reason: 'Residential IP succeeded'
+              }
+            });
+          }
+          
           return content;
         }
         
         // Phase 3: Got 200 OK but content is invalid - try GET fallback
         console.log(`⚠️ Got 200 OK but invalid content (${content.length} chars)`);
         const fallbackContent = await tryGetFallback('Invalid content despite 200 OK');
-        if (fallbackContent) return fallbackContent;
+        if (fallbackContent) {
+          // Grant extra attempt if warmup succeeded on last retry
+          if (attempt === config.maxRetries && !extraAttemptsGranted && activeCookieHeader) {
+            console.log(`🔄 Cookie warmup succeeded on last attempt - granting +1 retry`);
+            config.maxRetries++;
+            extraAttemptsGranted = true;
+          }
+          return fallbackContent;
+        }
         
         // All fallbacks failed
         throw new Error('INVALID_CONTENT: Received error page or minimal content');
