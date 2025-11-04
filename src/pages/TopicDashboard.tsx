@@ -84,6 +84,25 @@ interface Topic {
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
 
+interface ScraperSummary {
+  totalSources: number;
+  successfulSources: number;
+  failedSources: number;
+  totalArticlesFound: number;
+  totalArticlesStored: number;
+  totalArticlesSkipped: number;
+  executionTimeMs: number;
+}
+
+interface UniversalScraperResponse {
+  success?: boolean;
+  status?: 'success' | 'partial_success' | 'failure';
+  message?: string;
+  summary?: ScraperSummary;
+  warnings?: string[];
+  errors?: string[];
+}
+
 const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAdmin } = useAuth();
@@ -312,37 +331,55 @@ const TopicDashboard = () => {
 
   const handleStartScraping = async () => {
     if (!topic) return;
-    
+
     setGatheringAll(true);
     setShowGatheringProgress(true);
+    setJobRunId(null);
     try {
-      // Call universal-topic-automation with configured options
-      const response = await supabase.functions.invoke('universal-topic-automation', {
-        body: { 
-          topicIds: [topic.id],
-          force: forceRescrape,
-          dryRun: false,
-          maxAgeDays: maxAgeDays
-        }
-      });
-
-      if (response.error) throw response.error;
-      
-      const jobId = response.data?.jobRunId;
-      if (jobId) {
-        setJobRunId(jobId);
-      }
-      
       toast({
         title: "Scraping Started",
         description: `Gathering content from last ${maxAgeDays} days across all sources`,
       });
-      
+
+      const { data, error } = await supabase.functions.invoke<UniversalScraperResponse>('universal-topic-scraper', {
+        body: {
+          topicId: topic.id,
+          forceRescrape,
+          maxAgeDays
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data) {
+        throw new Error("No response returned from scraping service");
+      }
+
+      if (data.status === 'failure') {
+        throw new Error(data.message || "Scraping failed to complete");
+      }
+
+      const summary = data.summary;
+      if (!summary) {
+        throw new Error("Scraping summary data was missing");
+      }
+
+      const filteredCount = Math.max(summary.totalArticlesFound - summary.totalArticlesStored, 0);
+      const warningsSuffix = data.warnings && data.warnings.length > 0 ? ` • ${data.warnings[0]}` : '';
+
+      toast({
+        title: data.status === 'partial_success' ? "Scraping Completed with Warnings" : "Scraping Complete",
+        description: `Processed ${summary.totalSources} sources • ${summary.totalArticlesStored} added to arrivals queue${filteredCount > 0 ? ` • ${filteredCount} filtered` : ''}${warningsSuffix}`,
+        variant: data.status === 'partial_success' ? "default" : "default"
+      });
+
+      await loadTopicAndStats();
+
       // Refresh stats periodically
       const refreshInterval = setInterval(() => {
         loadTopicAndStats();
       }, 5000);
-      
+
       setTimeout(() => {
         clearInterval(refreshInterval);
         setGatheringAll(false);

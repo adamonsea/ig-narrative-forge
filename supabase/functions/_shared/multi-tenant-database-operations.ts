@@ -293,7 +293,7 @@ export class MultiTenantDatabaseOperations {
     }
 
     // Insert topic-specific article record (only if not discarded)
-    const { error: topicError } = await this.supabase
+    const topicResult = await this.supabase
       .from('topic_articles')
       .upsert({
         shared_content_id: sharedContent.id,
@@ -312,10 +312,11 @@ export class MultiTenantDatabaseOperations {
       }, {
         onConflict: 'shared_content_id,topic_id' // This matches the actual unique constraint
       })
-      .select()
+      .select('id, shared_content_id, topic_id, source_id, processing_status, created_at')
+      .single()
 
     let skipped = false
-    let topicArticle = null
+    const { data: topicArticle, error: topicError } = topicResult
     if (topicError) {
       if (topicError.message.includes('duplicate key') || topicError.message.includes('violates unique constraint')) {
         skipped = true
