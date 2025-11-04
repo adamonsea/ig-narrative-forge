@@ -82,6 +82,8 @@ interface Topic {
   donation_config?: any;
 }
 
+const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
+
 const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user, isAdmin } = useAuth();
@@ -280,6 +282,34 @@ const TopicDashboard = () => {
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [forceRescrape, setForceRescrape] = useState(true);
 
+  useEffect(() => {
+    if (!topic?.id || typeof window === "undefined") return;
+
+    try {
+      const stored = window.localStorage.getItem(`topic-scraping-settings:${topic.id}`);
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored) as { maxAgeDays?: number; forceRescrape?: boolean };
+
+      if (typeof parsed.maxAgeDays === "number" && SCRAPING_WINDOW_OPTIONS.has(parsed.maxAgeDays)) {
+        setMaxAgeDays(parsed.maxAgeDays);
+      }
+
+      if (typeof parsed.forceRescrape === "boolean") {
+        setForceRescrape(parsed.forceRescrape);
+      }
+    } catch (error) {
+      console.warn("Failed to load saved scraping settings", error);
+    }
+  }, [topic?.id]);
+
+  useEffect(() => {
+    if (!topic?.id || typeof window === "undefined") return;
+
+    const payload = JSON.stringify({ maxAgeDays, forceRescrape });
+    window.localStorage.setItem(`topic-scraping-settings:${topic.id}`, payload);
+  }, [topic?.id, maxAgeDays, forceRescrape]);
+
   const handleStartScraping = async () => {
     if (!topic) return;
     
@@ -344,7 +374,10 @@ const TopicDashboard = () => {
       if (error) throw error;
 
       setTopic(prev => prev ? { ...prev, auto_simplify_enabled: newValue } : prev);
-      
+
+      // Refresh topic data to ensure all dependent widgets receive the latest value
+      await loadTopicAndStats();
+
       toast({
         title: "Settings Updated",
         description: `Auto-simplify ${newValue ? 'enabled' : 'disabled'}`,
