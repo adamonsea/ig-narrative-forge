@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
@@ -105,6 +105,15 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     articles: 0,
     queueItems: 0,
     stories: 0
+  });
+
+  // Cache for topic article associations to prevent redundant DB queries
+  const topicArticleCacheRef = useRef<{
+    topicArticleIds: Set<string>;
+    sharedContentIds: Set<string>;
+  }>({
+    topicArticleIds: new Set(),
+    sharedContentIds: new Set(),
   });
 
   // Import multi-tenant actions
@@ -268,6 +277,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       setArticles(allArticles);
+
+      // Update cache with loaded article IDs
+      topicArticleCacheRef.current = {
+        topicArticleIds: new Set(allArticles.map(article => article.id)),
+        sharedContentIds: new Set(
+          allArticles
+            .map(article => article.shared_content_id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+        ),
+      };
+
       // Declare variables for filtered data
       let filteredQueueItems: any[] = [];
       let filteredStories: any[] = [];
@@ -750,102 +770,154 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     }
   }, [selectedTopicId, loadTopicContent, toast]);
 
+  // Smart topic ownership checker with caching
+  const isTopicArticleForSelectedTopic = useCallback(async (
+    topicArticleId?: string | null,
+    sharedContentId?: string | null
+  ) => {
+    if (!selectedTopicId) return false;
+
+    if (topicArticleId) {
+      // Check cache first
+      if (
+        topicArticleCacheRef.current.topicArticleIds.has(topicArticleId) ||
+        stories.some(story => story.topic_article_id === topicArticleId) ||
+        queueItems.some(item => item.topic_article_id === topicArticleId)
+      ) {
+        return true;
+      }
+
+      // Fallback to database query
+      const { data, error } = await supabase
+        .from('topic_articles')
+        .select('topic_id')
+        .eq('id', topicArticleId)
+        .limit(1);
+
+      if (error) {
+        console.error("Error checking topic article association:", error);
+        return false;
+      }
+
+      const belongs = !!(data && data.length > 0 && data[0]?.topic_id === selectedTopicId);
+
+      if (belongs) {
+        topicArticleCacheRef.current.topicArticleIds.add(topicArticleId);
+      }
+
+      return belongs;
+    }
+
+    if (sharedContentId) {
+      // Check cache for shared content
+      if (topicArticleCacheRef.current.sharedContentIds.has(sharedContentId)) {
+        return true;
+      }
+
+      const { data, error } = await supabase
+        .from('topic_articles')
+        .select('id')
+        .eq('shared_content_id', sharedContentId)
+        .eq('topic_id', selectedTopicId)
+        .limit(1);
+
+      if (error) {
+        console.error("Error checking shared content association:", error);
+        return false;
+      }
+
+      const belongs = !!(data && data.length > 0);
+
+      if (belongs) {
+        topicArticleCacheRef.current.sharedContentIds.add(sharedContentId);
+      }
+
+      return belongs;
+    }
+
+    return false;
+  }, [queueItems, selectedTopicId, stories]);
+
+  // Story ownership checker
+  const doesStoryBelongToTopic = useCallback(async (storyRecord: any) => {
+    if (!storyRecord) return false;
+
+    // Check multi-tenant articles
+    if (storyRecord.topic_article_id || storyRecord.shared_content_id) {
+      return isTopicArticleForSelectedTopic(storyRecord.topic_article_id, storyRecord.shared_content_id);
+    }
+
+    // Check legacy articles
+    if (storyRecord.article_id) {
+      if (stories.some(story => story.article_id === storyRecord.article_id)) {
+        return true;
+      }
+
+      const { data, error } = await supabase
+        .from('articles')
+        .select('topic_id')
+        .eq('id', storyRecord.article_id)
+        .limit(1);
+
+      if (error) {
+        console.error("Error checking legacy article association:", error);
+        return false;
+      }
+
+      return !!(data && data.length > 0 && data[0]?.topic_id === selectedTopicId);
+    }
+
+    return false;
+  }, [isTopicArticleForSelectedTopic, selectedTopicId, stories]);
+
   // Load content when topic changes
   useEffect(() => {
+    // Clear cache when topic changes to prevent stale IDs
+    topicArticleCacheRef.current = {
+      topicArticleIds: new Set(),
+      sharedContentIds: new Set(),
+    };
+    
     if (selectedTopicId) {
       loadTopicContent();
     }
   }, [selectedTopicId, loadTopicContent]);
 
-  // Real-time subscriptions for granular updates
+  // Real-time subscriptions with smart topic filtering
   useEffect(() => {
     if (!selectedTopicId) return;
 
     console.log('🔄 Setting up real-time subscriptions for topic:', selectedTopicId);
 
     const channel = supabase
-      .channel('multi-tenant-topic-changes')
+      .channel(`multi-tenant-topic-changes-${selectedTopicId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'topic_articles',
           filter: `topic_id=eq.${selectedTopicId}`
         },
         async (payload) => {
-          console.log('🔄 New topic article detected, refreshing arrivals...', payload);
-          // Reload only articles section
-          loadTopicContent();
+          console.log('🔄 Topic article change detected, refreshing arrivals...', payload);
+          await loadTopicContent();
         }
       )
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'topic_articles',
-          filter: `topic_id=eq.${selectedTopicId}`
-        },
-        async (payload) => {
-          console.log('🔄 Topic article updated, refreshing...', payload);
-          loadTopicContent();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'stories'
         },
         async (payload) => {
-          console.log('🔄 New story detected, checking if for this topic...', payload);
-          const newStory = payload.new as any;
-          
-          // Check if story belongs to this topic
-          if (newStory.topic_article_id) {
-            const { data: topicArticle } = await supabase
-              .from('topic_articles')
-              .select('topic_id')
-              .eq('id', newStory.topic_article_id)
-              .single();
-            
-            if (topicArticle?.topic_id === selectedTopicId) {
-              console.log('✅ Story belongs to this topic, refreshing published queue...');
-              loadTopicContent();
-            }
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'stories'
-        },
-        async (payload) => {
-          console.log('🔄 Story updated, checking if for this topic...', payload);
-          const updatedStory = payload.new as any;
-          
-          // Check if this story is already in our list
-          const existingStory = stories.find(s => s.id === updatedStory.id);
-          if (existingStory) {
-            console.log('✅ Story in our list, refreshing published queue...');
-            loadTopicContent();
-          } else if (updatedStory.topic_article_id) {
-            // Check if story belongs to this topic
-            const { data: topicArticle } = await supabase
-              .from('topic_articles')
-              .select('topic_id')
-              .eq('id', updatedStory.topic_article_id)
-              .single();
-            
-            if (topicArticle?.topic_id === selectedTopicId) {
-              console.log('✅ Updated story belongs to this topic, refreshing...');
-              loadTopicContent();
-            }
+          console.log('🔄 Story change detected, checking if for this topic...', payload);
+          const storyRecord = (payload.new || payload.old) as any;
+
+          if (await doesStoryBelongToTopic(storyRecord)) {
+            console.log('✅ Story belongs to this topic, refreshing story lists...');
+            await loadTopicContent();
           }
         }
       )
@@ -857,12 +929,28 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           table: 'slides'
         },
         async (payload) => {
-          const slide = payload.new as any;
+          const slide = (payload.new || payload.old) as any;
           const existingStory = stories.find(s => s.id === slide?.story_id);
-          
+
           if (existingStory) {
-            console.log('🔄 Slide changed for story in this topic, refreshing...', payload);
-            loadTopicContent();
+            console.log('🔄 Slide change for story in this topic, refreshing...', payload);
+            await loadTopicContent();
+            return;
+          }
+
+          if (slide?.story_id) {
+            const { data, error } = await supabase
+              .from('stories')
+              .select('id, topic_article_id, shared_content_id, article_id')
+              .eq('id', slide.story_id)
+              .limit(1);
+
+            if (!error && data && data.length > 0) {
+              if (await doesStoryBelongToTopic(data[0])) {
+                console.log('✅ Slide belongs to a story for this topic, refreshing...');
+                await loadTopicContent();
+              }
+            }
           }
         }
       )
@@ -874,20 +962,17 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           table: 'content_generation_queue'
         },
         async (payload) => {
-          console.log('🔄 Queue item changed, checking if for this topic...', payload);
-          const queueItem = payload.new as any;
-          
-          if (queueItem?.topic_article_id) {
-            const { data: topicArticle } = await supabase
-              .from('topic_articles')
-              .select('topic_id')
-              .eq('id', queueItem.topic_article_id)
-              .single();
-            
-            if (topicArticle?.topic_id === selectedTopicId) {
-              console.log('✅ Queue item belongs to this topic, refreshing processing queue...');
-              loadTopicContent();
-            }
+          console.log('🔄 Queue item change detected, checking if for this topic...', payload);
+          const queueItem = (payload.new || payload.old) as any;
+
+          if (
+            await isTopicArticleForSelectedTopic(
+              queueItem?.topic_article_id,
+              queueItem?.shared_content_id
+            )
+          ) {
+            console.log('✅ Queue item belongs to this topic, refreshing processing queue...');
+            await loadTopicContent();
           }
         }
       )
@@ -898,7 +983,13 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedTopicId, loadTopicContent, stories]);
+  }, [
+    selectedTopicId,
+    loadTopicContent,
+    doesStoryBelongToTopic,
+    isTopicArticleForSelectedTopic,
+    stories
+  ]);
 
   return {
     // Data
