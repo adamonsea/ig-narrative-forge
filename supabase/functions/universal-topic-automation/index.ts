@@ -165,9 +165,10 @@ serve(async (req) => {
         }
 
         // Update automation settings if they exist
+        let nextRunAt: Date | null = null;
         if (topic.topic_automation_settings?.[0]) {
           const settings = topic.topic_automation_settings[0];
-          const nextRunAt = new Date(now.getTime() + (settings.scrape_frequency_hours * 60 * 60 * 1000));
+          nextRunAt = new Date(now.getTime() + (settings.scrape_frequency_hours * 60 * 60 * 1000));
 
           await supabase
             .from('topic_automation_settings')
@@ -179,15 +180,20 @@ serve(async (req) => {
             .eq('topic_id', topic.id);
         }
 
-        results.push({
+        const result: any = {
           topicId: topic.id,
           topicName: topic.name,
           success: true,
           articlesScraped: scrapeResult?.totalArticles || 0,
           sourcesProcessed: scrapeResult?.sourcesProcessed || 0,
-          nextRunAt: nextRunAt.toISOString(),
           executedAt: now.toISOString()
-        });
+        };
+
+        if (nextRunAt) {
+          result.nextRunAt = nextRunAt.toISOString();
+        }
+
+        results.push(result);
 
         console.log(`✓ ${topic.name}: ${scrapeResult?.totalArticles || 0} articles scraped`);
 
