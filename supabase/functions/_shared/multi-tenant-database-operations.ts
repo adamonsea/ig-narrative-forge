@@ -172,6 +172,9 @@ export class MultiTenantDatabaseOperations {
         const sourceType = sourceData?.source_type || 'national'
 
         // Phase 1: Apply topic-specific filtering with competing region detection
+        console.log(`\n🔍 EVALUATING: "${article.title?.substring(0, 60)}..."`)
+        console.log(`   URL: ${article.source_url}`)
+        
         const relevanceScore = this.calculateRelevanceScore(
           article, 
           topic, 
@@ -184,25 +187,33 @@ export class MultiTenantDatabaseOperations {
         const qualityThreshold = credibilityScore >= 90 ? 15 : 30
         const relevanceThreshold = isKeywordTopic ? 2 : (topic.topic_type === 'regional' ? 3 : 5)
         
+        console.log(`   📊 Scores: Relevance=${relevanceScore}/${relevanceThreshold}, Quality=${qualityScore}/${qualityThreshold}`)
+        console.log(`   📝 Word count: ${this.calculateWordCount(article.body || '')}`)
+        console.log(`   🏷️ Topic type: ${topic.topic_type}, Source credibility: ${credibilityScore}%`)
+        console.log(`   🔑 Keywords in topic: ${(topic.keywords || []).join(', ')}`)
+        
         // Phase 3: Hard rejection filter - reject negative or below threshold scores
         if (relevanceScore < 0) {
-          console.log(`🚫 REJECTED (competing region): "${article.title}"`)
-          console.log(`   - Relevance: ${relevanceScore} (negative score indicates competing region)`)
+          console.log(`   ❌ REJECTED: Competing region detected (score: ${relevanceScore})`)
           result.duplicatesSkipped++ // Count as skipped
           continue
         }
         
         if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
-          console.log(`🚫 Skipping article: "${article.title}"`)
-          console.log(`   - Relevance: ${relevanceScore}/${relevanceThreshold} (${topic.topic_type})`)
-          console.log(`   - Quality: ${qualityScore}/${qualityThreshold} (credibility: ${credibilityScore}%)`)
-          console.log(`   - Word count: ${this.calculateWordCount(article.body || '')}`)
+          console.log(`   ❌ REJECTED: Below threshold`)
+          if (relevanceScore < relevanceThreshold) {
+            console.log(`      - Relevance too low: ${relevanceScore} < ${relevanceThreshold}`)
+          }
+          if (qualityScore < qualityThreshold) {
+            console.log(`      - Quality too low: ${qualityScore} < ${qualityThreshold}`)
+          }
           result.duplicatesSkipped++ // Count as skipped
           continue
         }
         
-        console.log(`✅ Article passed filtering: "${article.title}"`)
-        console.log(`   - Relevance: ${relevanceScore}, Quality: ${qualityScore}, Words: ${this.calculateWordCount(article.body || '')}`)
+        console.log(`   ✅ PASSED: Article accepted for processing`)
+        console.log(`      - Relevance: ${relevanceScore} >= ${relevanceThreshold} ✓`)
+        console.log(`      - Quality: ${qualityScore} >= ${qualityThreshold} ✓`)
 
         // Process article in multi-tenant structure
         const processed = await this.processArticleMultiTenant(
@@ -225,6 +236,16 @@ export class MultiTenantDatabaseOperations {
     }
 
     result.success = result.errors.length === 0 || result.topicArticlesCreated > 0
+    
+    console.log(`\n📊 === FILTERING SUMMARY ===`)
+    console.log(`   Total articles scraped: ${articles.length}`)
+    console.log(`   ✅ Passed recency (${maxAgeDays}d): ${recentArticles.length}`)
+    console.log(`   ✅ Passed suppression: ${allowedArticles.length}`)
+    console.log(`   ✅ ACCEPTED for arrivals: ${result.topicArticlesCreated}`)
+    console.log(`   ❌ REJECTED (low scores): ${result.duplicatesSkipped}`)
+    console.log(`   🆕 New shared content: ${result.newContentCreated}`)
+    console.log(`   ⚠️ Errors: ${result.errors.length}`)
+    
     return result
   }
 
@@ -414,7 +435,11 @@ export class MultiTenantDatabaseOperations {
         region_name: topic.region || topic.name
       }
       
-      console.log(`🗺️ Using regional relevance calculation for "${topic.region || topic.name}"`)
+      console.log(`      🗺️ Regional topic: "${topic.region || topic.name}"`)
+      console.log(`      🔍 Checking keywords: ${keywords.join(', ')}`)
+      console.log(`      📍 Landmarks: ${topicConfig.landmarks?.join(', ') || 'none'}`)
+      console.log(`      📮 Postcodes: ${topicConfig.postcodes?.join(', ') || 'none'}`)
+      
       const score = calculateRegionalRelevance(
         body,
         title,
@@ -424,7 +449,7 @@ export class MultiTenantDatabaseOperations {
         article.source_url
       )
       
-      console.log(`📊 Regional relevance score: ${score} for "${article.title?.substring(0, 50)}..."`)
+      console.log(`      📊 Regional relevance result: ${score}`)
       return score
     }
     
