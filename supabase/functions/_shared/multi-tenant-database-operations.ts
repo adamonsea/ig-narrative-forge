@@ -35,6 +35,9 @@ export class MultiTenantDatabaseOperations {
     sourceId?: string,
     maxAgeDays: number = 7  // Configurable age filter, default 7 days
   ): Promise<MultiTenantResult> {
+    const now = new Date();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
     const result: MultiTenantResult = {
       success: false,
       articlesProcessed: 0,
@@ -82,16 +85,14 @@ export class MultiTenantDatabaseOperations {
     // Keyword Topic Profile: Lenient date handling for keyword-based topics
     const isKeywordTopic = topic.topic_type === 'keyword';
     
-    // Phase 2: Pre-filter articles for configurable recency BEFORE processing
-    const ageThreshold = new Date();
-    ageThreshold.setDate(ageThreshold.getDate() - maxAgeDays);
-    console.log(`🗓️ Phase 2: ${isKeywordTopic ? 'Lenient' : 'Strict'} ${maxAgeDays}-day filter - articles must be newer than ${ageThreshold.toISOString()}`)
+    // Phase 2: Strict date validation and recency filtering
+    console.log(`🗓️ Phase 2: ${isKeywordTopic ? 'Lenient' : 'Strict'} ${maxAgeDays}-day filter - articles must be newer than ${cutoffDate.toISOString()}`)
 
     const recentArticles = articles.filter(article => {
       if (!article.published_at) {
         if (isKeywordTopic) {
           console.log(`🔑 Keyword topic: Substituting missing date for "${article.title?.substring(0, 50)}..."`);
-          article.published_at = new Date().toISOString();
+          article.published_at = now.toISOString();
         } else {
           console.log(`🚫 REJECTED (no date): "${article.title?.substring(0, 50)}..."`)
           return false
@@ -101,29 +102,41 @@ export class MultiTenantDatabaseOperations {
       try {
         const pubDate = new Date(article.published_at)
         
+        // CRITICAL: Reject future dates (scraping errors)
+        if (pubDate > now) {
+          console.log(`🚫 REJECTED (future date ${pubDate.toISOString()}): "${article.title?.substring(0, 50)}..."`)
+          return false
+        }
+        
+        // CRITICAL: Reject dates before 2020 (likely scraping errors)
+        if (pubDate < new Date('2020-01-01')) {
+          console.log(`🚫 REJECTED (invalid date ${pubDate.toISOString()}): "${article.title?.substring(0, 50)}..."`)
+          return false
+        }
+        
         // Handle invalid dates
         if (isNaN(pubDate.getTime())) {
           if (isKeywordTopic) {
             console.log(`🔑 Keyword topic: Fixing invalid date for "${article.title?.substring(0, 50)}..."`);
-            article.published_at = new Date().toISOString();
+            article.published_at = now.toISOString();
           } else {
             console.log(`🚫 REJECTED (invalid date): "${article.title?.substring(0, 50)}..." - date: "${article.published_at}"`)
             return false
           }
         }
 
-        // Recalculate pubDate after potential fix
+        // Check age limit
         const finalPubDate = new Date(article.published_at);
-        const isRecent = finalPubDate >= ageThreshold
+        const isRecent = finalPubDate >= cutoffDate
         if (!isRecent) {
-          const daysOld = Math.floor((Date.now() - finalPubDate.getTime()) / (1000 * 60 * 60 * 24))
+          const daysOld = Math.floor((now.getTime() - finalPubDate.getTime()) / (1000 * 60 * 60 * 24))
           console.log(`🚫 REJECTED (too old): "${article.title?.substring(0, 50)}..." - ${daysOld} days old`)
         }
         return isRecent
       } catch (error) {
         if (isKeywordTopic) {
           console.log(`🔑 Keyword topic: Fixing date parse error for "${article.title?.substring(0, 50)}..."`);
-          article.published_at = new Date().toISOString();
+          article.published_at = now.toISOString();
           return true;
         } else {
           console.log(`🚫 REJECTED (date parse error): "${article.title?.substring(0, 50)}..." - "${article.published_at}"`)
@@ -214,6 +227,25 @@ export class MultiTenantDatabaseOperations {
         console.log(`   ✅ PASSED: Article accepted for processing`)
         console.log(`      - Relevance: ${relevanceScore} >= ${relevanceThreshold} ✓`)
         console.log(`      - Quality: ${qualityScore} >= ${qualityThreshold} ✓`)
+
+        // Check for competing topic linkage (prevent cross-contamination)
+        const { data: existingLinks } = await this.supabase
+          .from('topic_articles')
+          .select('topic_id, regional_relevance_score')
+          .eq('shared_content_id', article.id || '')
+          .neq('topic_id', topicId)
+        
+        if (existingLinks && existingLinks.length > 0) {
+          const hasHigherRelevanceElsewhere = existingLinks.some(
+            link => (link.regional_relevance_score || 0) > relevanceScore
+          )
+          
+          if (hasHigherRelevanceElsewhere) {
+            console.log(`   🔒 REJECTED: Article already linked to another topic with higher relevance`)
+            result.duplicatesSkipped++
+            continue
+          }
+        }
 
         // Process article in multi-tenant structure
         const processed = await this.processArticleMultiTenant(

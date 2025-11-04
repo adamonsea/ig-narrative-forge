@@ -3103,6 +3103,7 @@ export type Database = {
           is_public: boolean | null
           keywords: string[] | null
           landmarks: string[] | null
+          max_article_age_days: number | null
           name: string
           negative_keywords: string[] | null
           organizations: string[] | null
@@ -3143,6 +3144,7 @@ export type Database = {
           is_public?: boolean | null
           keywords?: string[] | null
           landmarks?: string[] | null
+          max_article_age_days?: number | null
           name: string
           negative_keywords?: string[] | null
           organizations?: string[] | null
@@ -3183,6 +3185,7 @@ export type Database = {
           is_public?: boolean | null
           keywords?: string[] | null
           landmarks?: string[] | null
+          max_article_age_days?: number | null
           name?: string
           negative_keywords?: string[] | null
           organizations?: string[] | null

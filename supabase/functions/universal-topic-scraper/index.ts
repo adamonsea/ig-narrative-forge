@@ -134,15 +134,15 @@ serve(async (req) => {
       testMode = false, 
       maxSources = testMode ? 1 : undefined,  // Ultra-aggressive: only 1 source in test mode
       singleSourceMode = false,
-      maxAgeDays = 7  // Default to 7 days, can be overridden to 30 for seed mode
+      maxAgeDays  // Can be overridden, otherwise uses topic setting
     } = await req.json() as UniversalScrapeRequest;
 
-    console.log('Universal Topic Scraper - Starting for topic:', topicId, 'maxAgeDays:', maxAgeDays);
+    console.log('Universal Topic Scraper - Starting for topic:', topicId);
 
     // Initialize standardized response handler
     const standardResponse = new StandardizedScraperResponse();
 
-    // Get topic details
+    // Get topic details including max_article_age_days
     const { data: topic, error: topicError } = await supabase
       .from('topics')
       .select('*')
@@ -152,6 +152,10 @@ serve(async (req) => {
     if (topicError || !topic) {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
+    
+    // Use topic-specific max age if not provided in request
+    const effectiveMaxAgeDays = maxAgeDays ?? topic.max_article_age_days ?? 7;
+    console.log(`Using max article age: ${effectiveMaxAgeDays} days for topic "${topic.name}"`);
 
     // Get topic sources using junction table
     const { data: topicSources, error: sourcesError } = await supabase
@@ -331,12 +335,12 @@ serve(async (req) => {
           );
 
           if (scrapeResult.success && scrapeResult.articles.length > 0) {
-            // Store articles using multi-tenant approach with configurable age filter
+            // Store articles using multi-tenant approach with topic-specific age filter
             const storeResult = await dbOps.storeArticles(
               scrapeResult.articles,
               topicId,
               source.source_id,
-              maxAgeDays  // Pass the maxAgeDays parameter
+              effectiveMaxAgeDays  // Use topic-specific max age
             );
 
             const result: ScraperSourceResult = {
@@ -408,11 +412,12 @@ serve(async (req) => {
                 if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
                   console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
                   
-                  // Store fallback articles
+                  // Store fallback articles with topic-specific age filter
                   const fallbackStoreResult = await dbOps.storeArticles(
                     fallbackResult.data.articles,
                     topicId,
-                    source.source_id
+                    source.source_id,
+                    effectiveMaxAgeDays  // Use topic-specific max age
                   );
 
                   return {
