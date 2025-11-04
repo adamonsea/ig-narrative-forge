@@ -338,42 +338,29 @@ const TopicDashboard = () => {
     try {
       toast({
         title: "Scraping Started",
-        description: `Gathering content from last ${maxAgeDays} days across all sources`,
+        description: `Gathering content from last ${maxAgeDays} days across all sources. This runs asynchronously and may take a few minutes.`,
       });
 
-      const { data, error } = await supabase.functions.invoke<UniversalScraperResponse>('universal-topic-scraper', {
+      const { data, error } = await supabase.functions.invoke('universal-topic-automation', {
         body: {
-          topicId: topic.id,
-          forceRescrape,
+          topicIds: [topic.id],
+          force: forceRescrape,
+          dryRun: false,
           maxAgeDays
         }
       });
 
       if (error) throw error;
 
-      if (!data) {
-        throw new Error("No response returned from scraping service");
+      const jobId = data?.jobRunId;
+      if (jobId) {
+        setJobRunId(jobId);
       }
-
-      if (data.status === 'failure') {
-        throw new Error(data.message || "Scraping failed to complete");
-      }
-
-      const summary = data.summary;
-      if (!summary) {
-        throw new Error("Scraping summary data was missing");
-      }
-
-      const filteredCount = Math.max(summary.totalArticlesFound - summary.totalArticlesStored, 0);
-      const warningsSuffix = data.warnings && data.warnings.length > 0 ? ` • ${data.warnings[0]}` : '';
 
       toast({
-        title: data.status === 'partial_success' ? "Scraping Completed with Warnings" : "Scraping Complete",
-        description: `Processed ${summary.totalSources} sources • ${summary.totalArticlesStored} added to arrivals queue${filteredCount > 0 ? ` • ${filteredCount} filtered` : ''}${warningsSuffix}`,
-        variant: data.status === 'partial_success' ? "default" : "default"
+        title: "Scraping Job Started",
+        description: "Content gathering is running in the background. Dashboard will update automatically.",
       });
-
-      await loadTopicAndStats();
 
       // Refresh stats periodically
       const refreshInterval = setInterval(() => {
