@@ -770,8 +770,23 @@ Before you generate, confirm:
 
       if (!openaiResponse.ok) {
         const errorText = await openaiResponse.text();
-        console.error('OpenAI API error:', errorText);
-        throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+        console.error('OpenAI API error response:', errorText);
+        console.error('Request parameters:', JSON.stringify({
+          model: 'gpt-image-1',
+          size: '1024x1024',
+          quality: modelConfig.quality,
+          output_format: 'webp',
+          output_compression: 80
+        }));
+        
+        // Try to parse error details
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('Parsed error:', JSON.stringify(errorJson, null, 2));
+          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorJson.error?.message || errorText}`);
+        } catch {
+          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+        }
       }
 
       const openaiData = await openaiResponse.json();
