@@ -126,7 +126,6 @@ const TopicDashboard = () => {
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
-  const [backfillingArticles, setBackfillingArticles] = useState(false);
   const { toast } = useToast();
 
   // Set up parliamentary automation when enabled
@@ -385,53 +384,6 @@ const TopicDashboard = () => {
     }
   };
 
-  const handleBackfillArticles = async () => {
-    if (!topic) return;
-
-    setBackfillingArticles(true);
-    try {
-      toast({
-        title: "Surfacing Articles",
-        description: "Scanning for orphaned articles that match your topic...",
-      });
-
-      const { data, error } = await supabase.functions.invoke('backfill-topic-linkage', {
-        body: {
-          topicId: topic.id,
-          maxAgeDays: 30 // Look back 30 days
-        }
-      });
-
-      if (error) throw error;
-
-      const articlesLinked = data?.articlesLinked || 0;
-      
-      if (articlesLinked > 0) {
-        toast({
-          title: "Articles Surfaced",
-          description: `Found and linked ${articlesLinked} relevant article${articlesLinked === 1 ? '' : 's'} to your Arrivals queue.`,
-        });
-        
-        // Refresh dashboard stats
-        await loadTopicAndStats();
-      } else {
-        toast({
-          title: "No New Articles",
-          description: "No orphaned articles found matching your topic criteria.",
-        });
-      }
-      
-    } catch (error) {
-      console.error('Error backfilling articles:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to backfill articles",
-        variant: "destructive"
-      });
-    } finally {
-      setBackfillingArticles(false);
-    }
-  };
 
   const handleAutoSimplifyToggle = async () => {
     if (!topic) return;
@@ -778,21 +730,6 @@ const TopicDashboard = () => {
                     <Play className="w-4 h-4" />
                   )}
                   {gatheringAll ? 'Scraping...' : 'Start Scraping'}
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={handleBackfillArticles}
-                  disabled={backfillingArticles}
-                  className="flex items-center gap-2 w-full sm:w-auto"
-                  size="lg"
-                >
-                  {backfillingArticles ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Database className="w-4 h-4" />
-                  )}
-                  {backfillingArticles ? 'Surfacing...' : 'Surface Missing Articles'}
                 </Button>
                 
                 <Button
