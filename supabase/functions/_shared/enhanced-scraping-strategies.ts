@@ -2,14 +2,58 @@ import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
+import { NewsquestArcClient, NewsquestArcArticle } from './newsquest-arc-client.ts';
 
 export class EnhancedScrapingStrategies {
   private extractor: UniversalContentExtractor;
   private retryStrategy: EnhancedRetryStrategies;
+  private newsquestDomains = new Set([
+    'theargus.co.uk',
+    'sussexexpress.co.uk',
+    'theboltonnews.co.uk',
+    'basingstokegazette.co.uk',
+    'dorsetecho.co.uk',
+    'oxfordmail.co.uk',
+    'worcesternews.co.uk',
+    'wiltsglosstandard.co.uk',
+    'thisisthewestcountry.co.uk'
+  ]);
 
   constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
     this.extractor = new UniversalContentExtractor(baseUrl);
     this.retryStrategy = new EnhancedRetryStrategies();
+  }
+
+  private shouldUseNewsquestArcStrategy(): boolean {
+    try {
+      const hostname = new URL(this.baseUrl).hostname.toLowerCase();
+      const normalized = hostname.replace(/^www\./, '');
+
+      if (this.newsquestDomains.has(normalized)) {
+        return true;
+      }
+
+      const publisher = String(this.sourceInfo?.publisher || this.sourceInfo?.owner || '').toLowerCase();
+      if (publisher.includes('newsquest')) {
+        return true;
+      }
+
+      const tags: unknown = this.sourceInfo?.tags || this.sourceInfo?.labels;
+      if (Array.isArray(tags)) {
+        const hasNewsquestTag = tags.some(tag =>
+          typeof tag === 'string' && tag.toLowerCase().includes('newsquest')
+        );
+        if (hasNewsquestTag) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ Failed to evaluate Newsquest Arc strategy eligibility: ${message}`);
+      return false;
+    }
   }
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
@@ -17,13 +61,19 @@ export class EnhancedScrapingStrategies {
 
     try {
       const aggregatedErrors: string[] = [];
-      const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [
+      const strategies: Array<{ name: string; executor: () => Promise<ScrapingResult> }> = [];
+
+      if (this.shouldUseNewsquestArcStrategy()) {
+        strategies.push({ name: 'newsquest_arc', executor: () => this.tryNewsquestArcStrategy() });
+      }
+
+      strategies.push(
         { name: 'structured_data', executor: () => this.tryStructuredDataStrategy() },
         { name: 'rss', executor: () => this.tryRSSStrategy() },
         { name: 'sitemap', executor: () => this.trySitemapStrategy() },
         { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
         { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
-      ];
+      );
 
       for (const strategy of strategies) {
         const result = await strategy.executor();
@@ -62,7 +112,133 @@ export class EnhancedScrapingStrategies {
     }
   }
 
-  private async tryStructuredDataStrategy(): Promise<ScrapingResult> {
+  private async tryNewsquestArcStrategy(): Promise<ScrapingResult> {
+    console.log('📰 Attempting Newsquest Arc API extraction...');
+
+    try {
+      const base = new URL(this.baseUrl);
+      const hostname = base.hostname.toLowerCase();
+      const sectionPath = this.extractSectionPath(base.pathname);
+
+      if (!sectionPath) {
+        console.log('⚠️ Newsquest Arc strategy skipped: no section path resolved');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['Unable to resolve section path for Arc API'],
+          method: 'api'
+        };
+      }
+
+      const arcSiteCandidate = this.resolveArcSiteSlug(hostname);
+      const client = new NewsquestArcClient(hostname, sectionPath, arcSiteCandidate);
+
+      let stories: NewsquestArcArticle[] = [];
+      try {
+        stories = await client.fetchSectionArticles({ limit: 25 });
+      } catch (apiError) {
+        const apiMessage = apiError instanceof Error ? apiError.message : String(apiError);
+        console.log(`❌ Newsquest Arc API fetch failed: ${apiMessage}`);
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: [apiMessage],
+          method: 'api'
+        };
+      }
+
+      if (!stories.length) {
+        console.log('⚠️ Newsquest Arc API returned no stories');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['Arc API returned no content'],
+          method: 'api'
+        };
+      }
+
+      const articles: ArticleData[] = [];
+
+      for (const story of stories) {
+        const textForMetrics = story.bodyText || this.stripHtmlSafe(story.bodyHtml);
+        const wordCount = this.countWords(textForMetrics);
+
+        if (wordCount < 40) {
+          console.log(`⚠️ Skipping short Arc story (${wordCount} words): ${story.title}`);
+          continue;
+        }
+
+        const regionalRelevance = this.calculateEnhancedRegionalRelevance(
+          textForMetrics,
+          story.title,
+          story.url
+        );
+
+        const qualityScore = Math.min(95, 55 + Math.floor(wordCount / 15));
+
+        const articleBody = story.bodyHtml || `<p>${story.bodyText}</p>`;
+
+        articles.push({
+          title: story.title,
+          body: articleBody,
+          author: story.author,
+          published_at: story.publishedAt,
+          source_url: story.url,
+          image_url: story.imageUrl,
+          word_count: wordCount,
+          regional_relevance_score: regionalRelevance,
+          content_quality_score: qualityScore,
+          processing_status: 'new',
+          import_metadata: {
+            extraction_method: 'newsquest_arc',
+            arc_story_id: story.id,
+            arc_site: story.arcSite,
+            arc_section: story.section,
+            arc_summary: story.summary,
+            scrape_timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      if (!articles.length) {
+        return {
+          success: false,
+          articles: [],
+          articlesFound: stories.length,
+          articlesScraped: 0,
+          errors: ['Arc API provided stories but none passed quality filters'],
+          method: 'api'
+        };
+      }
+
+      console.log(`✅ Newsquest Arc API succeeded with ${articles.length} articles`);
+      return {
+        success: true,
+        articles,
+        articlesFound: stories.length,
+        articlesScraped: articles.length,
+        errors: [],
+        method: 'api'
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Newsquest Arc strategy error: ${message}`);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [message],
+        method: 'api'
+      };
+    }
+  }
     console.log('📋 Attempting structured data extraction...');
     
     try {
@@ -1058,6 +1234,45 @@ export class EnhancedScrapingStrategies {
   private countWords(text: string): number {
     if (!text) return 0;
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  private stripHtmlSafe(html: string): string {
+    if (!html) {
+      return '';
+    }
+
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private extractSectionPath(pathname: string): string | null {
+    if (!pathname) {
+      return null;
+    }
+
+    const normalized = pathname
+      .replace(/\/+/g, '/')
+      .replace(/\/index\.html?$/i, '')
+      .replace(/\/$/, '');
+
+    if (!normalized || normalized === '') {
+      return null;
+    }
+
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
+  }
+
+  private resolveArcSiteSlug(hostname: string): string | undefined {
+    const configured = this.sourceInfo?.arc_site || this.sourceInfo?.arcSite || this.sourceInfo?.site_slug;
+    if (typeof configured === 'string' && configured.trim().length > 0) {
+      return configured.trim();
+    }
+
+    const normalized = hostname.replace(/^www\./, '');
+    if (this.newsquestDomains.has(normalized)) {
+      return normalized.split('.')[0];
+    }
+
+    return undefined;
   }
 
   // Smart RSS feed discovery - try common patterns
