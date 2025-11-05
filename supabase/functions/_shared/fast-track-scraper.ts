@@ -8,6 +8,7 @@ import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
 import { resolveDomainProfile, DomainProfile } from './domain-profiles.ts';
+import { NewsquestArcClient } from './newsquest-arc-client.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 
 export class FastTrackScraper {
@@ -166,7 +167,16 @@ export class FastTrackScraper {
       console.log('🟡 Treating source as accessible due to Newsquest override.');
     }
 
-    // Try structured data extraction first (fastest when available)
+    // Try Newsquest Arc API first if applicable
+    if (this.domainProfile?.family === 'newsquest' && this.domainProfile?.api?.arc_site_slug) {
+      console.log('🎯 Using Newsquest Arc API strategy...');
+      const arcResult = await this.tryNewsquestArcStrategy();
+      if (arcResult.success && arcResult.articles.length > 0) {
+        return arcResult;
+      }
+    }
+    
+    // Try structured data extraction (fastest when available)
     const structuredResult = await this.tryStructuredDataExtraction();
     if (structuredResult.success && structuredResult.articles.length > 0) {
       return structuredResult;
@@ -183,7 +193,87 @@ export class FastTrackScraper {
     return await this.tryFastHTMLStrategy();
   }
 
-  // Removed hardcoded newsquestDomains - now using domain profile system
+  private async tryNewsquestArcStrategy(): Promise<ScrapingResult> {
+    try {
+      if (!this.domainProfile?.api?.arc_site_slug) {
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['No Arc site slug configured'],
+          method: 'arc_api'
+        };
+      }
+
+      const domain = new URL(this.baseUrl).hostname;
+      const sectionPath = this.domainProfile.api.section_fallbacks?.[0] || new URL(this.baseUrl).pathname;
+      
+      console.log(`📡 Initializing Newsquest Arc API client for ${domain} / ${sectionPath}`);
+      
+      const arcClient = new NewsquestArcClient(
+        domain,
+        sectionPath,
+        this.domainProfile.api.arc_site_slug
+      );
+      
+      const arcArticles = await arcClient.fetchSectionArticles({ limit: 20, sortBy: 'published_date' });
+      
+      if (!arcArticles || arcArticles.length === 0) {
+        console.log('⚠️ Arc API returned no articles');
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['Arc API returned no articles'],
+          method: 'arc_api'
+        };
+      }
+
+      console.log(`✅ Arc API returned ${arcArticles.length} articles`);
+      
+      // Transform NewsquestArcArticle[] to ArticleData[]
+      const articles: ArticleData[] = arcArticles.map(arcArticle => ({
+        title: arcArticle.title,
+        body: arcArticle.bodyText || arcArticle.bodyHtml,
+        author: arcArticle.author,
+        published_at: arcArticle.publishedDate,
+        source_url: arcArticle.url,
+        image_url: arcArticle.imageUrl,
+        word_count: arcArticle.wordCount,
+        processing_status: 'new',
+        import_metadata: {
+          extraction_method: 'arc_api',
+          arc_id: arcArticle.id,
+          arc_type: arcArticle.type,
+          scraped_at: new Date().toISOString(),
+          fast_track: true
+        }
+      }));
+
+      return {
+        success: true,
+        articles,
+        articlesFound: arcArticles.length,
+        articlesScraped: articles.length,
+        errors: [],
+        method: 'arc_api'
+      };
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Newsquest Arc API strategy failed:', errorMessage);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'arc_api'
+      };
+    }
+  }
 
   private async tryStructuredDataExtraction(): Promise<ScrapingResult> {
     try {

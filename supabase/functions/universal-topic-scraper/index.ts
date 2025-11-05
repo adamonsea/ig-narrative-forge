@@ -336,12 +336,20 @@ serve(async (req) => {
           );
 
           if (scrapeResult.success && scrapeResult.articles.length > 0) {
+            // Get source scraping config for trusted source bypass
+            const { data: sourceData } = await supabase
+              .from('content_sources')
+              .select('scraping_config')
+              .eq('id', source.source_id)
+              .single();
+            
             // Store articles using multi-tenant approach with topic-specific age filter
             const storeResult = await dbOps.storeArticles(
               scrapeResult.articles,
               topicId,
               source.source_id,
-              effectiveMaxAgeDays  // Use topic-specific max age
+              effectiveMaxAgeDays,  // Use topic-specific max age
+              sourceData?.scraping_config || {}  // Pass scraping config for trusted source bypass
             );
 
             const result: ScraperSourceResult = {
@@ -350,10 +358,14 @@ serve(async (req) => {
               success: true,
               articlesFound: scrapeResult.articlesFound,
               articlesScraped: scrapeResult.articlesScraped,
+              articlesStored: storeResult.articlesStored,
+              rejectedLowRelevance: storeResult.rejectedLowRelevance,
+              rejectedLowQuality: storeResult.rejectedLowQuality,
+              rejectedCompeting: storeResult.rejectedCompeting,
               executionTimeMs: Date.now() - startTime
             };
 
-            console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} articles scraped, ${storeResult.topicArticlesCreated} stored`);
+            console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} scraped, ${storeResult.articlesStored} stored (rejected: ${storeResult.rejectedLowRelevance + storeResult.rejectedLowQuality + storeResult.rejectedCompeting})`);
             return result;
           } else {
             // Check if this is a successful scrape with no new articles vs a failed scrape

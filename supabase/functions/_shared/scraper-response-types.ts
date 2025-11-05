@@ -9,7 +9,11 @@ export interface ScraperSourceResult {
   error?: string;
   articlesFound: number;
   articlesScraped: number;
+  articlesStored?: number;  // Actually stored (after rejections)
   articlesSkipped?: number;
+  rejectedLowRelevance?: number;  // Rejected due to low relevance
+  rejectedLowQuality?: number;  // Rejected due to low quality
+  rejectedCompeting?: number;  // Rejected due to competing region
   executionTimeMs?: number;
   // Phase 1: Add fallback method tracking
   fallbackMethod?: string;
@@ -67,7 +71,7 @@ export class StandardizedScraperResponse {
     }
     
     this.response.summary.totalArticlesFound += result.articlesFound;
-    this.response.summary.totalArticlesStored += result.articlesScraped;
+    this.response.summary.totalArticlesStored += (result.articlesStored || result.articlesScraped);  // Use stored if available
     this.response.summary.totalArticlesSkipped += (result.articlesSkipped || 0);
   }
 

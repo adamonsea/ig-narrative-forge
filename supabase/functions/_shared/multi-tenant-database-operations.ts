@@ -16,9 +16,14 @@ export interface ArticleData {
 export interface MultiTenantResult {
   success: boolean
   articlesProcessed: number
+  articlesScraped: number  // Total articles attempted
+  articlesStored: number  // Successfully stored (topicArticlesCreated)
   newContentCreated: number
   topicArticlesCreated: number
   duplicatesSkipped: number
+  rejectedLowRelevance: number  // Rejected due to low relevance
+  rejectedLowQuality: number  // Rejected due to low quality
+  rejectedCompeting: number  // Rejected due to competing region
   errors: string[]
 }
 
@@ -33,7 +38,8 @@ export class MultiTenantDatabaseOperations {
     articles: ArticleData[],
     topicId: string,
     sourceId?: string,
-    maxAgeDays: number = 7  // Configurable age filter, default 7 days
+    maxAgeDays: number = 7,  // Configurable age filter, default 7 days
+    sourceConfig?: Record<string, any>  // Source scraping configuration
   ): Promise<MultiTenantResult> {
     const now = new Date();
     const cutoffDate = new Date();
@@ -41,10 +47,21 @@ export class MultiTenantDatabaseOperations {
     const result: MultiTenantResult = {
       success: false,
       articlesProcessed: 0,
+      articlesScraped: articles.length,
+      articlesStored: 0,
       newContentCreated: 0,
       topicArticlesCreated: 0,
       duplicatesSkipped: 0,
+      rejectedLowRelevance: 0,
+      rejectedLowQuality: 0,
+      rejectedCompeting: 0,
       errors: []
+    }
+    
+    // Check if this is a trusted source (bypass relevance checks)
+    const isTrustedSource = sourceConfig?.trust_content_relevance === true
+    if (isTrustedSource) {
+      console.log(`🔓 TRUSTED SOURCE: Bypassing relevance/quality thresholds for all articles`)
     }
 
     // Get topic details for filtering
@@ -206,22 +223,28 @@ export class MultiTenantDatabaseOperations {
         console.log(`   🔑 Keywords in topic: ${(topic.keywords || []).join(', ')}`)
         
         // Phase 3: Hard rejection filter - reject negative or below threshold scores
-        if (relevanceScore < 0) {
-          console.log(`   ❌ REJECTED: Competing region detected (score: ${relevanceScore})`)
-          result.duplicatesSkipped++ // Count as skipped
-          continue
-        }
-        
-        if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
-          console.log(`   ❌ REJECTED: Below threshold`)
-          if (relevanceScore < relevanceThreshold) {
-            console.log(`      - Relevance too low: ${relevanceScore} < ${relevanceThreshold}`)
+        // TRUSTED SOURCE BYPASS: Skip all relevance/quality checks
+        if (!isTrustedSource) {
+          if (relevanceScore < 0) {
+            console.log(`   ❌ REJECTED: Competing region detected (score: ${relevanceScore})`)
+            result.rejectedCompeting++
+            continue
           }
-          if (qualityScore < qualityThreshold) {
-            console.log(`      - Quality too low: ${qualityScore} < ${qualityThreshold}`)
+          
+          if (relevanceScore < relevanceThreshold || qualityScore < qualityThreshold) {
+            console.log(`   ❌ REJECTED: Below threshold`)
+            if (relevanceScore < relevanceThreshold) {
+              console.log(`      - Relevance too low: ${relevanceScore} < ${relevanceThreshold}`)
+              result.rejectedLowRelevance++
+            }
+            if (qualityScore < qualityThreshold) {
+              console.log(`      - Quality too low: ${qualityScore} < ${qualityThreshold}`)
+              result.rejectedLowQuality++
+            }
+            continue
           }
-          result.duplicatesSkipped++ // Count as skipped
-          continue
+        } else {
+          console.log(`   ✓ TRUSTED SOURCE: Bypassing relevance/quality checks for "${article.title?.substring(0, 60)}..."`)
         }
         
         console.log(`   ✅ PASSED: Article accepted for processing`)
@@ -257,7 +280,10 @@ export class MultiTenantDatabaseOperations {
         )
 
         if (processed.newContent) result.newContentCreated++
-        if (processed.topicArticle) result.topicArticlesCreated++
+        if (processed.topicArticle) {
+          result.topicArticlesCreated++
+          result.articlesStored++
+        }
         if (processed.skipped) result.duplicatesSkipped++
 
       } catch (error) {
@@ -273,8 +299,11 @@ export class MultiTenantDatabaseOperations {
     console.log(`   Total articles scraped: ${articles.length}`)
     console.log(`   ✅ Passed recency (${maxAgeDays}d): ${recentArticles.length}`)
     console.log(`   ✅ Passed suppression: ${allowedArticles.length}`)
-    console.log(`   ✅ ACCEPTED for arrivals: ${result.topicArticlesCreated}`)
-    console.log(`   ❌ REJECTED (low scores): ${result.duplicatesSkipped}`)
+    console.log(`   ✅ STORED (arrivals): ${result.articlesStored}`)
+    console.log(`   ❌ REJECTED - Competing region: ${result.rejectedCompeting}`)
+    console.log(`   ❌ REJECTED - Low relevance: ${result.rejectedLowRelevance}`)
+    console.log(`   ❌ REJECTED - Low quality: ${result.rejectedLowQuality}`)
+    console.log(`   ⏭️  Duplicates skipped: ${result.duplicatesSkipped}`)
     console.log(`   🆕 New shared content: ${result.newContentCreated}`)
     console.log(`   ⚠️ Errors: ${result.errors.length}`)
     

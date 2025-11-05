@@ -98,7 +98,8 @@ Deno.serve(async (req) => {
           discoveryResult.urls, 
           topicSource.topics,
           (topicSource.content_sources as any)?.source_name || 'Unknown Source',
-          sourceScrapingConfig
+          sourceScrapingConfig,
+          (topicSource.content_sources as any)?.feed_url  // Pass feed URL for local segment extraction
         )
         
         // Check which topic-relevant URLs we've seen before
@@ -328,7 +329,8 @@ async function discoverUrls(feedUrl: string): Promise<DiscoveryResult> {
 
     // Fall back to HTML parsing
     console.log('🌐 Parsing as HTML page')
-    const urls = extractUrlsFromHtml(text, feedUrl)
+    const sourcePath = new URL(feedUrl).pathname
+    const urls = extractUrlsFromHtml(text, feedUrl, sourcePath)
     return {
       urls,
       method: 'html',
@@ -360,12 +362,23 @@ function extractUrlsFromRss(xmlContent: string): string[] {
   return [...new Set(urls)] // Remove duplicates
 }
 
-function extractUrlsFromHtml(htmlContent: string, baseUrl: string): string[] {
+function extractUrlsFromHtml(htmlContent: string, baseUrl: string, sourcePath?: string): string[] {
   const urls: string[] = []
   const domain = new URL(baseUrl).hostname
   
+  // Extract local segment from source path for prioritization
+  let localSegment: string | null = null
+  if (sourcePath) {
+    const pathParts = sourcePath.split('/').filter(Boolean)
+    localSegment = pathParts[pathParts.length - 1] || null
+    console.log(`🎯 Prioritizing URLs containing local segment: "${localSegment}"`)
+  }
+  
   // Look for article links
   const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi
+  
+  const localUrls: string[] = []
+  const otherUrls: string[] = []
   
   let match
   while ((match = linkRegex.exec(htmlContent)) !== null) {
@@ -390,11 +403,24 @@ function extractUrlsFromHtml(htmlContent: string, baseUrl: string): string[] {
          url.includes('/story') ||
          /\/news\/articles\/[a-z0-9]+/.test(url) || // BBC article pattern
          /\/\d{4}\//.test(url))) { // Articles often have year in path
-      urls.push(url)
+      
+      // Prioritize URLs containing local segment
+      if (localSegment && url.toLowerCase().includes(localSegment.toLowerCase())) {
+        localUrls.push(url)
+      } else {
+        otherUrls.push(url)
+      }
     }
   }
   
-  return [...new Set(urls)] // Remove duplicates
+  // Return local URLs first, then others (with limits to avoid generic section pages)
+  const prioritizedUrls = [...new Set([...localUrls.slice(0, 50), ...otherUrls.slice(0, 10)])]
+  
+  if (localSegment && localUrls.length > 0) {
+    console.log(`✅ Found ${localUrls.length} local URLs (containing "${localSegment}"), ${otherUrls.length} other URLs`)
+  }
+  
+  return prioritizedUrls
 }
 
 function normalizeUrl(url: string): string {
@@ -416,7 +442,8 @@ async function filterUrlsByTopicRelevance(
   urls: string[], 
   topic: any, 
   sourceName: string,
-  sourceConfig?: Record<string, any>
+  sourceConfig?: Record<string, any>,
+  feedUrl?: string  // Feed URL for local segment extraction
 ): Promise<string[]> {
   // Phase 1: Trusted source bypass - for BBC topic pages and similar curated sources
   if (sourceConfig?.trust_content_relevance === true) {

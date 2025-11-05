@@ -16,10 +16,10 @@ interface ScrapeResult {
   success: boolean;
   articlesFound?: number;
   articlesScraped?: number;
-  multiTenantStored?: number;
-  rejectedTooOld?: number;
+  articlesStored?: number;  // Actually stored articles
+  rejectedLowRelevance?: number;
   rejectedLowQuality?: number;
-  rejectedDuplicate?: number;
+  rejectedCompeting?: number;
   method?: string;
   error?: string;
 }
@@ -257,18 +257,22 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {result.success && (
                       <>
-                        <Badge variant="secondary">
-                          {result.articlesScraped} scraped
-                        </Badge>
-                        <Badge variant="outline">
-                          {result.multiTenantStored} stored
-                        </Badge>
-                        {(result.rejectedTooOld || 0) > 0 && (
+                        {result.articlesScraped !== undefined && (
+                          <Badge variant="secondary">
+                            {result.articlesScraped} scraped
+                          </Badge>
+                        )}
+                        {result.articlesStored !== undefined && (
+                          <Badge variant={result.articlesStored > 0 ? "default" : "outline"}>
+                            {result.articlesStored} stored
+                          </Badge>
+                        )}
+                        {(result.rejectedLowRelevance || 0) > 0 && (
                           <Badge variant="destructive">
-                            {result.rejectedTooOld} too old
+                            {result.rejectedLowRelevance} low relevance
                           </Badge>
                         )}
                         {(result.rejectedLowQuality || 0) > 0 && (
@@ -276,14 +280,19 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                             {result.rejectedLowQuality} low quality
                           </Badge>
                         )}
-                        {(result.rejectedDuplicate || 0) > 0 && (
-                          <Badge variant="outline" className="text-blue-600">
-                            {result.rejectedDuplicate} duplicate
+                        {(result.rejectedCompeting || 0) > 0 && (
+                          <Badge variant="outline" className="text-orange-600">
+                            {result.rejectedCompeting} competing
                           </Badge>
                         )}
                         {result.method && (
                           <Badge variant="outline">
                             {result.method}
+                          </Badge>
+                        )}
+                        {result.articlesScraped && result.articlesStored === 0 && (
+                          <Badge variant="destructive" className="animate-pulse">
+                            ⚠️ False success - all rejected
                           </Badge>
                         )}
                       </>
