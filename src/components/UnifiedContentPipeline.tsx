@@ -596,6 +596,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   onRefresh={refreshContent}
                   loading={loading}
                   topicSlug={topicSlug}
+                  topicId={selectedTopicId}
                 />
               </CardContent>
             </Card>

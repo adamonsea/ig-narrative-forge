@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,7 @@ interface PublishedStoriesListProps {
   onRefresh: () => void;
   loading?: boolean;
   topicSlug?: string;
+  topicId?: string;
 }
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
@@ -72,7 +73,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   onViewStory,
   onRefresh,
   loading = false,
-  topicSlug
+  topicSlug,
+  topicId
 }) => {
   const { toast } = useToast();
   const { credits } = useCredits();
@@ -92,6 +94,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
   const pageSize = 10;
+  const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
 
   const filteredStories = useMemo(() => {
     if (storyFilter === 'all') return stories;
@@ -106,6 +109,24 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   }, [filteredStories, currentPage, pageSize]);
 
   const totalPages = Math.ceil(filteredStories.length / pageSize);
+
+  // Fetch illustration style when topicId changes
+  useEffect(() => {
+    if (topicId) {
+      const fetchIllustrationStyle = async () => {
+        const { data, error } = await supabase
+          .from('topics')
+          .select('illustration_style')
+          .eq('id', topicId)
+          .single();
+        
+        if (data && !error) {
+          setIllustrationStyle(data.illustration_style || 'editorial_illustrative');
+        }
+      };
+      fetchIllustrationStyle();
+    }
+  }, [topicId]);
 
   const toggleExpanded = (id: string) => {
     setExpanded(prev => {
@@ -555,6 +576,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 onModelSelect={(model) => handleGenerateIllustration(story, model)}
                 isGenerating={generatingIllustrations.has(story.id)}
                 hasExistingImage={!!story.cover_illustration_url}
+                illustrationStyle={illustrationStyle as any}
                 size="sm"
               />
 
@@ -648,6 +670,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                           onModelSelect={(model) => handleGenerateIllustration(story, model)}
                           isGenerating={generatingIllustrations.has(story.id)}
                           hasExistingImage={false}
+                          illustrationStyle={illustrationStyle as any}
                           size="sm"
                         />
                         {story.cover_illustration_url && !story.animated_illustration_url && (

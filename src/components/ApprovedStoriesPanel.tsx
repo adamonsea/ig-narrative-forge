@@ -89,6 +89,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
   const [carouselStatuses, setCarouselStatuses] = useState<Record<string, CarouselStatus>>({});
   const [deletingStories, setDeletingStories] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
   const [coverSelectionModal, setCoverSelectionModal] = useState<{
     isOpen: boolean; 
     storyId?: string; 
@@ -103,6 +104,24 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
 
   useEffect(() => {
     loadApprovedStories();
+  }, [selectedTopicId]);
+
+  // Fetch illustration style when selectedTopicId changes
+  useEffect(() => {
+    if (selectedTopicId) {
+      const fetchIllustrationStyle = async () => {
+        const { data, error } = await supabase
+          .from('topics')
+          .select('illustration_style')
+          .eq('id', selectedTopicId)
+          .single();
+        
+        if (data && !error) {
+          setIllustrationStyle(data.illustration_style || 'editorial_illustrative');
+        }
+      };
+      fetchIllustrationStyle();
+    }
   }, [selectedTopicId]);
 
   const loadApprovedStories = async () => {
@@ -585,6 +604,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                               }}
                               isGenerating={generatingIllustrations.has(story.id)}
                               hasExistingImage={!!story.cover_illustration_url}
+                              illustrationStyle={illustrationStyle as any}
                             />
                           </div>
                         </div>
@@ -621,6 +641,7 @@ export const ApprovedStoriesPanel = ({ selectedTopicId }: ApprovedStoriesPanelPr
                                     isGenerating={generatingIllustrations.has(story.id)}
                                     hasExistingImage={false}
                                     size="sm"
+                                    illustrationStyle={illustrationStyle as any}
                                   />
                                   {story.cover_illustration_url && !story.animated_illustration_url && (
                                     <Button
