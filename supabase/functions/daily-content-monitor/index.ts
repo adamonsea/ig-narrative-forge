@@ -25,12 +25,13 @@ Deno.serve(async (req) => {
 
     // Parse request body for options
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
+    const { topicId } = body
     const autoTriggerScraping = body.autoTriggerScraping ?? true // Default to TRUE for automation
 
     console.log(`🔍 Starting daily content monitoring... (Auto-scraping: ${autoTriggerScraping ? 'ENABLED' : 'DISABLED'})`)
 
-    // Get all active topic-source combinations
-    const { data: topicSources, error: tsError } = await supabase
+    // Get active topic-source combinations (optionally scoped to a single topic to reduce cold-start load)
+    let tsQuery = supabase
       .from('topic_sources')
       .select(`
         topic_id,
@@ -60,6 +61,12 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .eq('topics.is_active', true)
       .eq('content_sources.is_active', true)
+
+    if (topicId) {
+      tsQuery = tsQuery.eq('topic_id', topicId)
+    }
+
+    const { data: topicSources, error: tsError } = await tsQuery
 
     if (tsError) {
       throw new Error(`Failed to fetch topic sources: ${tsError.message}`)
