@@ -31,6 +31,7 @@ import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
+import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicDashboardStats {
   articles: number;
@@ -67,7 +68,7 @@ interface Topic {
   audience_expertise?: 'beginner' | 'intermediate' | 'expert';
   default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
-  illustration_style?: string;
+  illustration_style?: IllustrationStyle;
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
   community_config?: {
@@ -177,6 +178,7 @@ const TopicDashboard = () => {
         negative_keywords: topicData.negative_keywords || [],
         competing_regions: topicData.competing_regions || [],
         default_writing_style: (topicData.default_writing_style as 'journalistic' | 'educational' | 'listicle' | 'story_driven') || 'journalistic',
+        illustration_style: (topicData.illustration_style as IllustrationStyle) || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE,
         community_config: topicData.community_config as any || { subreddits: [], processing_frequency_hours: 24 }
       });
 
@@ -1000,7 +1002,7 @@ const TopicDashboard = () => {
                         currentExpertise={topic.audience_expertise}
                         currentTone={topic.default_tone}
                         currentWritingStyle={topic.default_writing_style}
-                        currentIllustrationStyle={topic.illustration_style as any}
+                        currentIllustrationStyle={topic.illustration_style}
                         currentCommunityEnabled={topic.community_intelligence_enabled}
                         currentCommunityPulseFrequency={topic.community_pulse_frequency}
                         currentCommunityConfig={topic.community_config}
