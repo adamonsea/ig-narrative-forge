@@ -62,6 +62,7 @@ type WarmupHint = {
 };
 
 export class EnhancedRetryStrategies {
+  private domainProfile: any | null = null;
   private newsquestDomains = new Set([
     'sussexexpress.co.uk',
     'theargus.co.uk',
@@ -119,6 +120,13 @@ export class EnhancedRetryStrategies {
         }
       });
     }
+  }
+
+  /**
+   * Set domain profile for this retry strategy instance
+   */
+  setDomainProfile(profile: any): void {
+    this.domainProfile = profile;
   }
 
   private getCurrentUserAgent(attempt: number): string {
@@ -484,7 +492,10 @@ export class EnhancedRetryStrategies {
         }
         case 'newsquest-section-rss': {
           const domainKey = this.getDomainKeyFromHost(urlObj.hostname);
-          if (!this.newsquestDomains.has(domainKey)) {
+          const isNewsquest = this.newsquestDomains.has(domainKey) || 
+                              this.domainProfile?.family === 'newsquest';
+          
+          if (!isNewsquest) {
             return null;
           }
 
@@ -516,8 +527,21 @@ export class EnhancedRetryStrategies {
       'rss-suffix'
     ];
 
-    if (this.newsquestDomains.has(domainKey)) {
+    // Check domain profile first, fallback to hardcoded set
+    const isNewsquest = this.domainProfile?.family === 'newsquest' || 
+                        this.newsquestDomains.has(domainKey);
+    
+    if (isNewsquest) {
       strategies.push('newsquest-section-rss');
+    }
+
+    // Add custom alternate routes from domain profile
+    if (this.domainProfile?.alternateRoutes) {
+      for (const route of this.domainProfile.alternateRoutes) {
+        if (route.strategy && !strategies.includes(route.strategy)) {
+          strategies.push(route.strategy as AlternateRouteStrategy);
+        }
+      }
     }
 
     const seen = new Set<string>();

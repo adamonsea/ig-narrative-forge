@@ -31,7 +31,7 @@ export interface ScrapingResult {
   articlesFound: number;
   articlesScraped: number;
   errors: string[];
-  method: 'rss' | 'html' | 'api' | 'fallback';
+  method: 'rss' | 'html' | 'api' | 'fallback' | 'metadata';
 }
 
 export interface ContentExtractionResult {

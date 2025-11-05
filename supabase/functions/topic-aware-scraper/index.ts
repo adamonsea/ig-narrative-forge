@@ -6,6 +6,7 @@ import { DatabaseOperations } from '../_shared/database-operations.ts';
 import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { calculateTopicRelevance, getRelevanceThreshold, TopicConfig } from '../_shared/hybrid-content-scoring.ts';
 import { TopicRegionalConfig } from '../_shared/region-config.ts';
+import { resolveDomainProfile } from '../_shared/domain-profiles.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,11 +116,28 @@ serve(async (req) => {
     // Use the provided sourceId (source already exists in database)
     const actualSourceId = sourceId;
 
-    // Initialize scraping components with proper constructor parameters
+    // Resolve domain profile for this source
+    console.log('🔍 Resolving domain profile for multi-tenant scraping...');
+    const domainProfile = await resolveDomainProfile(
+      supabase,
+      feedUrl,
+      topicId,
+      topicData.created_by,
+      sourceInfo.scraping_config
+    );
+
+    if (domainProfile && Object.keys(domainProfile).length > 0) {
+      console.log('✅ Domain profile resolved:', JSON.stringify(domainProfile));
+    } else {
+      console.log('ℹ️ No domain profile found, using defaults');
+    }
+
+    // Initialize scraping components with domain profile
     const scrapingStrategies = new EnhancedScrapingStrategies(
       topicConfig.region || 'general', 
       sourceInfo, 
-      feedUrl
+      feedUrl,
+      domainProfile
     );
     const dbOps = new DatabaseOperations(supabase);
     const multiTenantDbOps = new MultiTenantDatabaseOperations(supabase as any);

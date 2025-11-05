@@ -992,6 +992,73 @@ export class UniversalContentExtractor {
     return Array.from(candidates.values());
   }
 
+  /**
+   * Extract metadata from OpenGraph and meta tags as last-resort fallback
+   * Uses already-fetched HTML (no external calls)
+   */
+  extractPageMetadata(html: string, url: string): { title?: string; description?: string; image?: string; author?: string } {
+    const metadata: { title?: string; description?: string; image?: string; author?: string } = {};
+    
+    try {
+      // Extract Open Graph title
+      const ogTitleMatch = html.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']+)["']/i);
+      if (ogTitleMatch) {
+        metadata.title = this.sanitizeString(ogTitleMatch[1], 500);
+      }
+      
+      // Fallback to regular meta title or <title> tag
+      if (!metadata.title) {
+        const metaTitleMatch = html.match(/<meta\s+name=["']title["']\s+content=["']([^"']+)["']/i);
+        if (metaTitleMatch) {
+          metadata.title = this.sanitizeString(metaTitleMatch[1], 500);
+        }
+      }
+      
+      if (!metadata.title) {
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          metadata.title = this.sanitizeString(titleMatch[1], 500);
+        }
+      }
+      
+      // Extract Open Graph description
+      const ogDescMatch = html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']+)["']/i);
+      if (ogDescMatch) {
+        metadata.description = this.sanitizeString(ogDescMatch[1], 1000);
+      }
+      
+      // Fallback to meta description
+      if (!metadata.description) {
+        const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+        if (metaDescMatch) {
+          metadata.description = this.sanitizeString(metaDescMatch[1], 1000);
+        }
+      }
+      
+      // Extract Open Graph image
+      const ogImageMatch = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i);
+      if (ogImageMatch) {
+        const imageUrl = this.normalizeAndValidateUrl(ogImageMatch[1], url);
+        if (imageUrl) {
+          metadata.image = imageUrl;
+        }
+      }
+      
+      // Extract author
+      const authorMatch = html.match(/<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i);
+      if (authorMatch) {
+        metadata.author = this.sanitizeString(authorMatch[1], 200);
+      }
+      
+      console.log(`📄 Extracted metadata: title=${!!metadata.title}, description=${!!metadata.description}, image=${!!metadata.image}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`⚠️ Metadata extraction error: ${errorMessage}`);
+    }
+    
+    return metadata;
+  }
+
   // Enhanced method to try government RSS feed patterns
   async tryGovernmentRSSFeeds(baseUrl: string): Promise<string[]> {
     if (!this.isGovernmentSite) {

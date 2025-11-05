@@ -55,10 +55,11 @@ export class NewsquestArcClient {
   private readonly sectionPath: string;
   private readonly arcSite: string;
 
-  constructor(hostname: string, sectionPath: string, arcSite?: string) {
+  constructor(hostname: string, sectionPath: string, arcSiteOverride?: string) {
     this.hostname = hostname;
     this.sectionPath = sectionPath.startsWith('/') ? sectionPath : `/${sectionPath}`;
-    this.arcSite = arcSite || this.deriveArcSite(hostname);
+    // Use override from domain profile if provided, otherwise derive dynamically
+    this.arcSite = arcSiteOverride || this.deriveArcSite(hostname);
   }
 
   async fetchSectionArticles(options: FetchOptions = {}): Promise<NewsquestArcArticle[]> {
@@ -131,22 +132,21 @@ export class NewsquestArcClient {
     }
   }
 
+  /**
+   * Derives Arc site slug from hostname dynamically
+   * No hardcoded mappings - uses hostname pattern
+   */
   private deriveArcSite(hostname: string): string {
     const normalized = hostname.toLowerCase().replace(/^www\./, '');
-    const explicitMap: Record<string, string> = {
-      'theargus.co.uk': 'theargus',
-      'sussexexpress.co.uk': 'sussexexpress',
-      'thisisthewestcountry.co.uk': 'thisisthewestcountry',
-      'theboltonnews.co.uk': 'theboltonnews',
-      'basingstokegazette.co.uk': 'basingstokegazette'
-    };
-
-    if (explicitMap[normalized]) {
-      return explicitMap[normalized];
-    }
-
+    
+    // Extract the primary part before the first dot (e.g., "sussexexpress" from "sussexexpress.co.uk")
     const [firstPart] = normalized.split('.');
-    return firstPart?.replace(/[^a-z0-9]/g, '') || 'newsquest';
+    
+    // Clean the part to create a valid Arc site slug (lowercase alphanumeric only)
+    const arcSiteSlug = firstPart?.replace(/[^a-z0-9]/g, '') || 'newsquest';
+    
+    console.log(`🔧 Derived Arc site slug: "${arcSiteSlug}" from hostname "${hostname}"`);
+    return arcSiteSlug;
   }
 
   private transformStory(story: ArcStory | null | undefined): NewsquestArcArticle | null {

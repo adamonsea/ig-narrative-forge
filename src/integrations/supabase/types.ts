@@ -1860,6 +1860,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_domain_profiles: {
+        Row: {
+          created_at: string
+          domain_key: string
+          id: string
+          profile: Json
+          tenant_id: string | null
+          topic_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain_key: string
+          id?: string
+          profile?: Json
+          tenant_id?: string | null
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain_key?: string
+          id?: string
+          profile?: Json
+          tenant_id?: string | null
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_domain_profiles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraper_domain_profiles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scraping_automation: {
         Row: {
           created_at: string | null

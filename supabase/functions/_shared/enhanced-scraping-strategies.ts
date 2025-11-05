@@ -7,6 +7,8 @@ import { NewsquestArcClient, NewsquestArcArticle } from './newsquest-arc-client.
 export class EnhancedScrapingStrategies {
   private extractor: UniversalContentExtractor;
   private retryStrategy: EnhancedRetryStrategies;
+  private domainProfile: any | null = null;
+  private primaryHtmlCache: string | null = null;
   private newsquestDomains = new Set([
     'theargus.co.uk',
     'sussexexpress.co.uk',
@@ -30,9 +32,15 @@ export class EnhancedScrapingStrategies {
     ['thisisthewestcountry.co.uk', ['/news/local/', '/news/']]
   ]);
 
-  constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
+  constructor(private region: string, private sourceInfo: any, private baseUrl: string, domainProfile?: any) {
     this.extractor = new UniversalContentExtractor(baseUrl);
     this.retryStrategy = new EnhancedRetryStrategies();
+    this.domainProfile = domainProfile || null;
+    
+    // Pass domain profile to retry strategy
+    if (this.domainProfile) {
+      this.retryStrategy.setDomainProfile(this.domainProfile);
+    }
   }
 
   private shouldUseNewsquestArcStrategy(): boolean {
@@ -40,6 +48,12 @@ export class EnhancedScrapingStrategies {
       const hostname = new URL(this.baseUrl).hostname.toLowerCase();
       const normalized = hostname.replace(/^www\./, '');
 
+      // Check domain profile first
+      if (this.domainProfile?.family === 'newsquest') {
+        return true;
+      }
+
+      // Fallback to hardcoded set
       if (this.newsquestDomains.has(normalized)) {
         return true;
       }
@@ -83,7 +97,8 @@ export class EnhancedScrapingStrategies {
         { name: 'rss', executor: () => this.tryRSSStrategy() },
         { name: 'sitemap', executor: () => this.trySitemapStrategy() },
         { name: 'html', executor: () => this.tryEnhancedHTMLStrategy() },
-        { name: 'discovery', executor: () => this.tryHeuristicDiscovery() }
+        { name: 'discovery', executor: () => this.tryHeuristicDiscovery() },
+        { name: 'metadata', executor: () => this.tryMetadataSnippetStrategy() }
       );
 
       for (const strategy of strategies) {
@@ -91,6 +106,8 @@ export class EnhancedScrapingStrategies {
 
         if (result.success && result.articles.length > 0) {
           console.log(`✅ Strategy ${strategy.name} succeeded with ${result.articles.length} articles`);
+          // Clear cache after successful scrape
+          this.primaryHtmlCache = null;
           return result;
         }
 
@@ -100,6 +117,9 @@ export class EnhancedScrapingStrategies {
 
         console.log(`⚠️ Strategy ${strategy.name} did not yield content, moving to next fallback`);
       }
+
+      // Clear cache if all strategies failed
+      this.primaryHtmlCache = null;
 
       return {
         success: false,
@@ -112,6 +132,8 @@ export class EnhancedScrapingStrategies {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('❌ Top-level scraping error:', errorMessage);
+      // Clear cache on error
+      this.primaryHtmlCache = null;
       return {
         success: false,
         articles: [],
@@ -1293,6 +1315,7 @@ export class EnhancedScrapingStrategies {
   }
 
   private resolveNewsquestSectionPath(base: URL): { sectionPath: string | null; source: string | null } {
+    // Layer 1: Direct path from URL
     const directSection = this.extractSectionPath(base.pathname);
     if (directSection) {
       return { sectionPath: directSection, source: null };
@@ -1309,6 +1332,14 @@ export class EnhancedScrapingStrategies {
       }
     };
 
+    // Layer 2: Domain profile sectionFallbacks (highest priority override)
+    if (this.domainProfile?.sectionFallbacks) {
+      for (const fallback of this.domainProfile.sectionFallbacks) {
+        collectCandidate(fallback, 'domain-profile-fallback');
+      }
+    }
+
+    // Layer 3: Source info configuration
     const directFields = [
       ['arc_section', this.sourceInfo?.arc_section],
       ['arcSection', this.sourceInfo?.arcSection],
@@ -1349,6 +1380,7 @@ export class EnhancedScrapingStrategies {
       }
     }
 
+    // Layer 4: Hardcoded fallbacks (kept for backward compatibility)
     if (this.newsquestSectionFallbacks.has(domainKey)) {
       for (const fallback of this.newsquestSectionFallbacks.get(domainKey) || []) {
         collectCandidate(fallback, 'preseeded-fallback');
@@ -1419,11 +1451,18 @@ export class EnhancedScrapingStrategies {
   }
 
   private resolveArcSiteSlug(hostname: string): string | undefined {
+    // Layer 1: Domain profile arcSite (highest priority)
+    if (this.domainProfile?.arcSite && typeof this.domainProfile.arcSite === 'string') {
+      return this.domainProfile.arcSite.trim();
+    }
+
+    // Layer 2: Source info configuration
     const configured = this.sourceInfo?.arc_site || this.sourceInfo?.arcSite || this.sourceInfo?.site_slug;
     if (typeof configured === 'string' && configured.trim().length > 0) {
       return configured.trim();
     }
 
+    // Layer 3: Hardcoded fallback (kept for backward compatibility)
     const normalized = hostname.replace(/^www\./, '');
     if (this.newsquestDomains.has(normalized)) {
       return normalized.split('.')[0];
@@ -1485,5 +1524,94 @@ export class EnhancedScrapingStrategies {
     }
     
     return validFeeds;
+  }
+
+  /**
+   * Last-resort metadata extraction fallback (uses already-fetched HTML, no external calls)
+   */
+  private async tryMetadataSnippetStrategy(): Promise<ScrapingResult> {
+    console.log('📄 Attempting metadata snippet extraction as last resort...');
+
+    try {
+      // Use cached HTML if available, otherwise fetch
+      let html = this.primaryHtmlCache;
+      
+      if (!html) {
+        console.log('⚠️ No cached HTML available, fetching for metadata extraction...');
+        try {
+          html = await this.retryStrategy.fetchWithEnhancedRetry(this.baseUrl);
+          this.primaryHtmlCache = html;
+        } catch (fetchError) {
+          const fetchMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          return {
+            success: false,
+            articles: [],
+            articlesFound: 0,
+            articlesScraped: 0,
+            errors: [`Metadata fallback failed: ${fetchMessage}`],
+            method: 'metadata'
+          };
+        }
+      }
+
+      const metadata = this.extractor.extractPageMetadata(html, this.baseUrl);
+      
+      if (!metadata.title || !metadata.description) {
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: ['Insufficient metadata available (no title or description)'],
+          method: 'metadata'
+        };
+      }
+
+      // Create a minimal snippet article from metadata
+      const wordCount = this.countWords(metadata.description);
+      const qualityScore = 20; // Low quality for metadata-only content
+      
+      const article: ArticleData = {
+        title: metadata.title,
+        body: `<p>${metadata.description}</p>`,
+        author: metadata.author,
+        published_at: new Date().toISOString(),
+        source_url: this.baseUrl,
+        image_url: metadata.image,
+        word_count: wordCount,
+        regional_relevance_score: 0,
+        content_quality_score: qualityScore,
+        processing_status: 'new',
+        is_snippet: true,
+        snippet_reason: 'metadata_only_fallback',
+        import_metadata: {
+          extraction_method: 'metadata_snippet',
+          has_full_content: false,
+          scrape_timestamp: new Date().toISOString()
+        }
+      };
+
+      console.log(`📄 Extracted metadata snippet: "${metadata.title}" (${wordCount} words in description)`);
+
+      return {
+        success: true,
+        articles: [article],
+        articlesFound: 1,
+        articlesScraped: 1,
+        errors: [],
+        method: 'metadata'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Metadata snippet extraction failed:', errorMessage);
+      return {
+        success: false,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [errorMessage],
+        method: 'metadata'
+      };
+    }
   }
 }
