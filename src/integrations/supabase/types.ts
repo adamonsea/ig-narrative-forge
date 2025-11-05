@@ -3098,6 +3098,7 @@ export type Database = {
           donation_enabled: boolean | null
           events_enabled: boolean | null
           id: string
+          illustration_style: Database["public"]["Enums"]["illustration_style_enum"]
           is_active: boolean | null
           is_archived: boolean | null
           is_public: boolean | null
@@ -3139,6 +3140,7 @@ export type Database = {
           donation_enabled?: boolean | null
           events_enabled?: boolean | null
           id?: string
+          illustration_style?: Database["public"]["Enums"]["illustration_style_enum"]
           is_active?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
@@ -3180,6 +3182,7 @@ export type Database = {
           donation_enabled?: boolean | null
           events_enabled?: boolean | null
           id?: string
+          illustration_style?: Database["public"]["Enums"]["illustration_style_enum"]
           is_active?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
@@ -4236,6 +4239,9 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "superadmin"
       audience_expertise: "beginner" | "intermediate" | "expert"
+      illustration_style_enum:
+        | "editorial_illustrative"
+        | "editorial_photographic"
       mp_detection_confidence: "high" | "medium" | "low"
       tone_type: "formal" | "conversational" | "engaging" | "satirical"
     }
@@ -4367,6 +4373,10 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "superadmin"],
       audience_expertise: ["beginner", "intermediate", "expert"],
+      illustration_style_enum: [
+        "editorial_illustrative",
+        "editorial_photographic",
+      ],
       mp_detection_confidence: ["high", "medium", "low"],
       tone_type: ["formal", "conversational", "engaging", "satirical"],
     },
