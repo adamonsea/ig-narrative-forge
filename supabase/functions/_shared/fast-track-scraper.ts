@@ -7,6 +7,7 @@ import { ScrapingResult, ArticleData } from './types.ts';
 import { UniversalContentExtractor } from './universal-content-extractor.ts';
 import { calculateRegionalRelevance } from './region-config.ts';
 import { EnhancedRetryStrategies } from './enhanced-retry-strategies.ts';
+import { resolveDomainProfile, DomainProfile } from './domain-profiles.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 
 export class FastTrackScraper {
@@ -16,17 +17,7 @@ export class FastTrackScraper {
   private region: string = '';
   private sourceInfo: any = {};
   private baseUrl: string = '';
-  private newsquestDomains = new Set([
-    'sussexexpress.co.uk',
-    'theargus.co.uk',
-    'theboltonnews.co.uk',
-    'basingstokegazette.co.uk',
-    'dorsetecho.co.uk',
-    'oxfordmail.co.uk',
-    'worcesternews.co.uk',
-    'wiltsglosstandard.co.uk',
-    'thisisthewestcountry.co.uk'
-  ]);
+  private domainProfile: DomainProfile | null = null;
 
   constructor(private supabase: any) {
     // Initialize with a placeholder URL - will be updated when needed
@@ -73,6 +64,23 @@ export class FastTrackScraper {
       this.baseUrl = feedUrl;
       this.extractor = new UniversalContentExtractor(feedUrl);
 
+      // Resolve domain profile for this source
+      this.domainProfile = await resolveDomainProfile(
+        this.supabase,
+        feedUrl,
+        source.topic_id,
+        null, // tenantId not used yet
+        source.metadata || {}
+      );
+
+      if (this.domainProfile) {
+        console.log(`🔧 Domain profile resolved for ${source.source_name}:`, {
+          family: this.domainProfile.family,
+          arcSite: this.domainProfile.arcSite,
+          bypassHead: this.domainProfile.accessibility?.bypassHead
+        });
+      }
+
       console.log(`📍 Scraping with region: ${this.region}, source: ${source.source_name}`);
 
       // Execute the existing scraping strategy
@@ -95,11 +103,13 @@ export class FastTrackScraper {
   async executeScrapingStrategy(): Promise<ScrapingResult> {
     console.log(`🚀 Fast-track scraper started for ${this.sourceInfo?.source_name || this.baseUrl}`);
     
-    // Quick accessibility check first
-    const isNewsquest = this.isNewsquestDomain(this.baseUrl);
+    // Quick accessibility check using domain profile hints
+    const shouldBypassHead = this.domainProfile?.accessibility?.bypassHead || false;
+    const domainFamily = this.domainProfile?.family;
+    
     const accessibilityResult = await this.retryStrategy.quickAccessibilityCheck(
       this.baseUrl,
-      isNewsquest ? { bypassHead: true, domainHint: 'newsquest' } : {}
+      shouldBypassHead ? { bypassHead: true, domainHint: domainFamily || 'unknown' } : {}
     );
 
     console.log(
@@ -107,11 +117,13 @@ export class FastTrackScraper {
       (accessibilityResult.blockingServer ? ` (server: ${accessibilityResult.blockingServer})` : '')
     );
 
-    const shouldOverrideBlock = isNewsquest && !accessibilityResult.accessible &&
+    // Override block for newsquest family or any domain with special accessibility config
+    const shouldOverrideBlock = (this.domainProfile?.family === 'newsquest' || shouldBypassHead) && 
+      !accessibilityResult.accessible &&
       accessibilityResult.diagnosis !== 'network-block';
 
     if (shouldOverrideBlock) {
-      console.log('🟡 Newsquest domain flagged as inaccessible, continuing with enhanced retries for snippet fallback.');
+      console.log(`🟡 ${this.domainProfile?.family || 'Special'} domain flagged as inaccessible, continuing with enhanced retries for snippet fallback.`);
     }
 
     if (!accessibilityResult.accessible && !shouldOverrideBlock) {
@@ -171,15 +183,7 @@ export class FastTrackScraper {
     return await this.tryFastHTMLStrategy();
   }
 
-  private isNewsquestDomain(url: string): boolean {
-    try {
-      const hostname = new URL(url).hostname.toLowerCase();
-      const domainKey = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
-      return this.newsquestDomains.has(domainKey);
-    } catch {
-      return false;
-    }
-  }
+  // Removed hardcoded newsquestDomains - now using domain profile system
 
   private async tryStructuredDataExtraction(): Promise<ScrapingResult> {
     try {

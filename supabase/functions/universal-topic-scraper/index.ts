@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import { MultiTenantDatabaseOperations } from '../_shared/multi-tenant-database-operations.ts';
 import { FastTrackScraper } from '../_shared/fast-track-scraper.ts';
 import { StandardizedScraperResponse, ScraperSourceResult } from '../_shared/scraper-response-types.ts';
+import { resolveDomainProfile } from '../_shared/domain-profiles.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
           id,
           source_name,
           feed_url,
-          is_active
+          is_active,
+          scraping_config
         )
       `)
       .eq('is_active', true)
@@ -89,12 +90,15 @@ Deno.serve(async (req) => {
           throw new Error(discoveryResult.error || 'URL discovery failed')
         }
 
+        // Get source scraping config for filtering
+        const sourceScrapingConfig = (topicSource.content_sources as any)?.scraping_config || {}
 
         // Filter URLs for topic relevance (for regional topics)
         const topicRelevantUrls = await filterUrlsByTopicRelevance(
           discoveryResult.urls, 
           topicSource.topics,
-          (topicSource.content_sources as any)?.source_name || 'Unknown Source'
+          (topicSource.content_sources as any)?.source_name || 'Unknown Source',
+          sourceScrapingConfig
         )
         
         // Check which topic-relevant URLs we've seen before
@@ -384,6 +388,7 @@ function extractUrlsFromHtml(htmlContent: string, baseUrl: string): string[] {
         (url.includes('/news/') || 
          url.includes('/article') || 
          url.includes('/story') ||
+         /\/news\/articles\/[a-z0-9]+/.test(url) || // BBC article pattern
          /\/\d{4}\//.test(url))) { // Articles often have year in path
       urls.push(url)
     }
@@ -407,7 +412,18 @@ function normalizeUrl(url: string): string {
   }
 }
 
-async function filterUrlsByTopicRelevance(urls: string[], topic: any, sourceName: string): Promise<string[]> {
+async function filterUrlsByTopicRelevance(
+  urls: string[], 
+  topic: any, 
+  sourceName: string,
+  sourceConfig?: Record<string, any>
+): Promise<string[]> {
+  // Phase 1: Trusted source bypass - for BBC topic pages and similar curated sources
+  if (sourceConfig?.trust_content_relevance === true) {
+    console.log(`✅ Trusting source content relevance for ${sourceName} - bypassing URL filter (${urls.length} URLs passed through)`);
+    return urls;
+  }
+
   if (topic.topic_type !== 'regional') {
     return urls
   }
