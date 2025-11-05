@@ -18,6 +18,17 @@ export class EnhancedScrapingStrategies {
     'wiltsglosstandard.co.uk',
     'thisisthewestcountry.co.uk'
   ]);
+  private newsquestSectionFallbacks = new Map<string, string[]>([
+    ['sussexexpress.co.uk', ['/news/local/hastings', '/news/local/', '/news/']],
+    ['theargus.co.uk', ['/news/local/brighton-and-hove', '/news/local/', '/news/']],
+    ['theboltonnews.co.uk', ['/news/local/', '/news/']],
+    ['basingstokegazette.co.uk', ['/news/local/', '/news/']],
+    ['dorsetecho.co.uk', ['/news/local/', '/news/']],
+    ['oxfordmail.co.uk', ['/news/local/', '/news/']],
+    ['worcesternews.co.uk', ['/news/local/', '/news/']],
+    ['wiltsglosstandard.co.uk', ['/news/local/', '/news/']],
+    ['thisisthewestcountry.co.uk', ['/news/local/', '/news/']]
+  ]);
 
   constructor(private region: string, private sourceInfo: any, private baseUrl: string) {
     this.extractor = new UniversalContentExtractor(baseUrl);
@@ -118,7 +129,7 @@ export class EnhancedScrapingStrategies {
     try {
       const base = new URL(this.baseUrl);
       const hostname = base.hostname.toLowerCase();
-      const sectionPath = this.extractSectionPath(base.pathname);
+      const { sectionPath, source: sectionSource } = this.resolveNewsquestSectionPath(base);
 
       if (!sectionPath) {
         console.log('⚠️ Newsquest Arc strategy skipped: no section path resolved');
@@ -130,6 +141,10 @@ export class EnhancedScrapingStrategies {
           errors: ['Unable to resolve section path for Arc API'],
           method: 'api'
         };
+      }
+
+      if (sectionSource) {
+        console.log(`ℹ️ Using fallback Newsquest section path "${sectionPath}" (source: ${sectionSource})`);
       }
 
       const arcSiteCandidate = this.resolveArcSiteSlug(hostname);
@@ -657,6 +672,8 @@ export class EnhancedScrapingStrategies {
 
     let finalContent = description || '';
     let finalTitle = title;
+    let usedSnippetFallback = false;
+    let snippetReason: string | undefined;
     let extractedContent: any = {
       body: description || '',
       title,
@@ -696,18 +713,26 @@ export class EnhancedScrapingStrategies {
           word_count: this.countWords(description),
           content_quality_score: 60 // Slightly lower quality for RSS-only content
         };
+        usedSnippetFallback = true;
+        snippetReason = 'rss_fallback_after_extraction_error';
       } else {
         console.log(`❌ No RSS description available, skipping article`);
         return null;
       }
     }
-    
+
     // EMERGENCY FIX: Much more lenient validation for initial capture
     const wordCount = this.countWords(finalContent);
     if (!finalContent || wordCount < 3) { // Emergency: Accept anything with 3+ words
       console.log(`❌ Content too short: ${finalTitle.substring(0, 50)}... (${wordCount} words)`);
       return null;
     }
+
+    if (!usedSnippetFallback && description && finalContent === description && wordCount < 120) {
+      usedSnippetFallback = true;
+      snippetReason = 'rss_description_truncated';
+    }
+
     // Calculate enhanced regional relevance
     const regionalRelevance = this.calculateEnhancedRegionalRelevance(
       finalContent,
@@ -726,12 +751,16 @@ export class EnhancedScrapingStrategies {
       regional_relevance_score: regionalRelevance,
       content_quality_score: extractedContent.content_quality_score || 60,
       processing_status: 'new' as const,
+      is_snippet: usedSnippetFallback || undefined,
+      snippet_reason: snippetReason,
       import_metadata: {
         extraction_method: finalContent === description ? 'rss_fallback' : 'enhanced_rss',
         rss_description: description,
         source_domain: this.sourceInfo?.canonical_domain,
         scrape_timestamp: new Date().toISOString(),
-        extractor_version: '2.0'
+        extractor_version: '2.0',
+        is_snippet: usedSnippetFallback,
+        snippet_reason: snippetReason
       }
     };
   }
@@ -1261,6 +1290,132 @@ export class EnhancedScrapingStrategies {
     }
 
     return normalized.startsWith('/') ? normalized : `/${normalized}`;
+  }
+
+  private resolveNewsquestSectionPath(base: URL): { sectionPath: string | null; source: string | null } {
+    const directSection = this.extractSectionPath(base.pathname);
+    if (directSection) {
+      return { sectionPath: directSection, source: null };
+    }
+
+    const hostname = base.hostname.toLowerCase();
+    const domainKey = hostname.replace(/^www\./, '');
+    const candidates: Array<{ value: string; source: string }> = [];
+
+    const collectCandidate = (candidate: unknown, source: string) => {
+      const normalized = this.normalizeSectionCandidate(candidate, base);
+      if (normalized) {
+        candidates.push({ value: normalized, source });
+      }
+    };
+
+    const directFields = [
+      ['arc_section', this.sourceInfo?.arc_section],
+      ['arcSection', this.sourceInfo?.arcSection],
+      ['newsquest_section', this.sourceInfo?.newsquest_section],
+      ['initial_path', this.sourceInfo?.initial_path],
+      ['default_path', this.sourceInfo?.default_path],
+      ['primary_path', this.sourceInfo?.primary_path],
+      ['feed_path', this.sourceInfo?.feed_path]
+    ] as Array<[string, unknown]>;
+
+    for (const [key, value] of directFields) {
+      collectCandidate(value, `sourceInfo.${key}`);
+    }
+
+    const nestedSources = [
+      this.sourceInfo?.metadata,
+      this.sourceInfo?.settings,
+      this.sourceInfo?.config
+    ];
+
+    const nestedKeys = ['arc_section', 'section', 'section_path', 'default_path', 'initial_path'];
+
+    for (const nested of nestedSources) {
+      if (!nested || typeof nested !== 'object') {
+        continue;
+      }
+
+      const scopeName = nested === this.sourceInfo?.metadata
+        ? 'metadata'
+        : nested === this.sourceInfo?.settings
+          ? 'settings'
+          : 'config';
+
+      for (const key of nestedKeys) {
+        if (key in nested) {
+          collectCandidate((nested as Record<string, unknown>)[key], `${scopeName}.${key}`);
+        }
+      }
+    }
+
+    if (this.newsquestSectionFallbacks.has(domainKey)) {
+      for (const fallback of this.newsquestSectionFallbacks.get(domainKey) || []) {
+        collectCandidate(fallback, 'preseeded-fallback');
+      }
+    }
+
+    if (this.newsquestDomains.has(domainKey)) {
+      const slugify = (value: string) =>
+        value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+      const regionSlug = typeof this.region === 'string' ? slugify(this.region) : '';
+      const topicSlug = typeof this.sourceInfo?.topic_name === 'string'
+        ? slugify(this.sourceInfo.topic_name)
+        : '';
+
+      const heuristicCandidates = new Set<string>();
+      if (regionSlug) {
+        heuristicCandidates.add(`/news/local/${regionSlug}`);
+        heuristicCandidates.add(`/news/${regionSlug}`);
+      }
+      if (topicSlug && topicSlug !== regionSlug) {
+        heuristicCandidates.add(`/news/local/${topicSlug}`);
+      }
+      heuristicCandidates.add('/news/local/');
+      heuristicCandidates.add('/news/');
+
+      for (const fallback of heuristicCandidates) {
+        collectCandidate(fallback, 'heuristic');
+      }
+    }
+
+    const seen = new Set<string>();
+    for (const candidate of candidates) {
+      if (seen.has(candidate.value)) {
+        continue;
+      }
+      seen.add(candidate.value);
+      return { sectionPath: candidate.value, source: candidate.source };
+    }
+
+    return { sectionPath: null, source: null };
+  }
+
+  private normalizeSectionCandidate(candidate: unknown, base: URL): string | null {
+    if (typeof candidate !== 'string') {
+      return null;
+    }
+
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    let path = trimmed;
+    try {
+      const maybeUrl = new URL(trimmed, base.origin);
+      if (maybeUrl) {
+        path = maybeUrl.pathname;
+      }
+    } catch {
+      // Ignore invalid URL formats
+    }
+
+    return this.extractSectionPath(path);
   }
 
   private resolveArcSiteSlug(hostname: string): string | undefined {

@@ -20,6 +20,8 @@ export interface ArticleData {
   regional_relevance_score: number;
   content_quality_score: number;
   processing_status: 'new' | 'processing' | 'processed' | 'discarded';
+  is_snippet?: boolean;
+  snippet_reason?: string;
   import_metadata: Record<string, any>;
 }
 

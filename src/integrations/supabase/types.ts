@@ -2523,11 +2523,13 @@ export type Database = {
           created_at: string
           id: string
           import_metadata: Json | null
+          is_snippet: boolean | null
           keyword_matches: string[] | null
           originality_confidence: number | null
           processing_status: string
           regional_relevance_score: number | null
           shared_content_id: string
+          snippet_reason: string | null
           source_id: string | null
           topic_id: string
           updated_at: string
@@ -2537,11 +2539,13 @@ export type Database = {
           created_at?: string
           id?: string
           import_metadata?: Json | null
+          is_snippet?: boolean | null
           keyword_matches?: string[] | null
           originality_confidence?: number | null
           processing_status?: string
           regional_relevance_score?: number | null
           shared_content_id: string
+          snippet_reason?: string | null
           source_id?: string | null
           topic_id: string
           updated_at?: string
@@ -2551,11 +2555,13 @@ export type Database = {
           created_at?: string
           id?: string
           import_metadata?: Json | null
+          is_snippet?: boolean | null
           keyword_matches?: string[] | null
           originality_confidence?: number | null
           processing_status?: string
           regional_relevance_score?: number | null
           shared_content_id?: string
+          snippet_reason?: string | null
           source_id?: string | null
           topic_id?: string
           updated_at?: string

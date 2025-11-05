@@ -16,6 +16,17 @@ export class FastTrackScraper {
   private region: string = '';
   private sourceInfo: any = {};
   private baseUrl: string = '';
+  private newsquestDomains = new Set([
+    'sussexexpress.co.uk',
+    'theargus.co.uk',
+    'theboltonnews.co.uk',
+    'basingstokegazette.co.uk',
+    'dorsetecho.co.uk',
+    'oxfordmail.co.uk',
+    'worcesternews.co.uk',
+    'wiltsglosstandard.co.uk',
+    'thisisthewestcountry.co.uk'
+  ]);
 
   constructor(private supabase: any) {
     // Initialize with a placeholder URL - will be updated when needed
@@ -85,14 +96,25 @@ export class FastTrackScraper {
     console.log(`🚀 Fast-track scraper started for ${this.sourceInfo?.source_name || this.baseUrl}`);
     
     // Quick accessibility check first
-    const accessibilityResult = await this.retryStrategy.quickAccessibilityCheck(this.baseUrl);
+    const isNewsquest = this.isNewsquestDomain(this.baseUrl);
+    const accessibilityResult = await this.retryStrategy.quickAccessibilityCheck(
+      this.baseUrl,
+      isNewsquest ? { bypassHead: true, domainHint: 'newsquest' } : {}
+    );
 
     console.log(
       `🩺 Accessibility diagnosis: ${accessibilityResult.diagnosis}` +
       (accessibilityResult.blockingServer ? ` (server: ${accessibilityResult.blockingServer})` : '')
     );
 
-    if (!accessibilityResult.accessible) {
+    const shouldOverrideBlock = isNewsquest && !accessibilityResult.accessible &&
+      accessibilityResult.diagnosis !== 'network-block';
+
+    if (shouldOverrideBlock) {
+      console.log('🟡 Newsquest domain flagged as inaccessible, continuing with enhanced retries for snippet fallback.');
+    }
+
+    if (!accessibilityResult.accessible && !shouldOverrideBlock) {
       console.log(`❌ Source not accessible: ${accessibilityResult.error}`);
 
       const diagnosisNote = `Source not accessible (${accessibilityResult.diagnosis})` +
@@ -126,7 +148,11 @@ export class FastTrackScraper {
       };
     }
 
-    console.log(`✅ Source accessible (${accessibilityResult.responseTime}ms)`);
+    if (accessibilityResult.accessible) {
+      console.log(`✅ Source accessible (${accessibilityResult.responseTime}ms)`);
+    } else if (shouldOverrideBlock) {
+      console.log('🟡 Treating source as accessible due to Newsquest override.');
+    }
 
     // Try structured data extraction first (fastest when available)
     const structuredResult = await this.tryStructuredDataExtraction();
@@ -143,6 +169,16 @@ export class FastTrackScraper {
     // Fallback to minimal HTML parsing
     console.log('📄 RSS failed, trying fast HTML parsing...');
     return await this.tryFastHTMLStrategy();
+  }
+
+  private isNewsquestDomain(url: string): boolean {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      const domainKey = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+      return this.newsquestDomains.has(domainKey);
+    } catch {
+      return false;
+    }
   }
 
   private async tryStructuredDataExtraction(): Promise<ScrapingResult> {
@@ -394,6 +430,8 @@ export class FastTrackScraper {
     let finalContent = description || '';
     let finalTitle = title;
     let wordCount = this.countWords(finalContent);
+    let usedSnippetFallback = false;
+    let snippetReason: string | undefined;
 
     // Enhanced snippet acceptance logic with regional source prioritization
     const isLikelySnippet = this.isContentSnippet(description || '', title);
@@ -436,8 +474,15 @@ export class FastTrackScraper {
           console.log(`📝 Regional/whitelisted source: Accepting RSS snippet as fallback content`);
           // Mark content as snippet for editor review
           finalContent = `${description}\n\n[Note: This is a content snippet from RSS feed. Full article extraction failed.]`;
+          usedSnippetFallback = true;
+          snippetReason = 'rss_fallback_after_extraction_error';
         }
       }
+    }
+
+    if (!usedSnippetFallback && description && finalContent === description && isLikelySnippet) {
+      usedSnippetFallback = true;
+      snippetReason = 'rss_description_truncated';
     }
 
     // Calculate regional relevance quickly
@@ -453,6 +498,8 @@ export class FastTrackScraper {
       this.sourceInfo?.source_type || 'national'
     );
 
+    wordCount = this.countWords(finalContent);
+
     return {
       title: finalTitle,
       body: finalContent,
@@ -464,12 +511,16 @@ export class FastTrackScraper {
       regional_relevance_score: regionalRelevance,
       content_quality_score: this.calculateFastQualityScore(finalContent, finalTitle),
       processing_status: 'new' as const,
+      is_snippet: usedSnippetFallback || undefined,
+      snippet_reason: snippetReason,
       import_metadata: {
         extraction_method: 'fast_track_rss',
         rss_description: description,
         source_domain: this.sourceInfo?.canonical_domain,
         scrape_timestamp: new Date().toISOString(),
-        extractor_version: '3.0-fast'
+        extractor_version: '3.0-fast',
+        is_snippet: usedSnippetFallback,
+        snippet_reason: snippetReason
       }
     };
   }

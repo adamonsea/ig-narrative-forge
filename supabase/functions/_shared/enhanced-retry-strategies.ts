@@ -33,7 +33,8 @@ type AlternateRouteStrategy =
   | 'amp-query'
   | 'amp-path-prefix'
   | 'mobile-host'
-  | 'rss-suffix';
+  | 'rss-suffix'
+  | 'newsquest-section-rss';
 
 type WarmupBlockProfile = {
   server?: string;
@@ -61,6 +62,17 @@ type WarmupHint = {
 };
 
 export class EnhancedRetryStrategies {
+  private newsquestDomains = new Set([
+    'sussexexpress.co.uk',
+    'theargus.co.uk',
+    'theboltonnews.co.uk',
+    'basingstokegazette.co.uk',
+    'dorsetecho.co.uk',
+    'oxfordmail.co.uk',
+    'worcesternews.co.uk',
+    'wiltsglosstandard.co.uk',
+    'thisisthewestcountry.co.uk'
+  ]);
   private userAgents = [
     // Latest Chrome versions - most common and accepted
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -89,6 +101,25 @@ export class EnhancedRetryStrategies {
     us: ['73.142.88.214', '67.165.23.44', '24.12.156.201'],
     default: ['98.142.110.77', '70.45.112.88', '24.104.56.201']
   };
+
+  constructor() {
+    const now = Date.now();
+    for (const domain of this.newsquestDomains) {
+      this.dynamicWarmupDomains.set(domain, {
+        reason: 'preseeded-newsquest',
+        lastUpdated: now,
+        blockProfile: {
+          server: 'newsquest-edge',
+          diagnosis: 'partial-get-blocked',
+          details: 'Pre-seeded warm-up hint for Newsquest domains'
+        },
+        alternateRoute: {
+          strategy: 'amp-query',
+          lastSuccess: now
+        }
+      });
+    }
+  }
 
   private getCurrentUserAgent(attempt: number): string {
     return this.userAgents[attempt % this.userAgents.length];
@@ -451,6 +482,17 @@ export class EnhancedRetryStrategies {
           urlObj.pathname = `${normalized}rss/`;
           return urlObj.toString();
         }
+        case 'newsquest-section-rss': {
+          const domainKey = this.getDomainKeyFromHost(urlObj.hostname);
+          if (!this.newsquestDomains.has(domainKey)) {
+            return null;
+          }
+
+          const normalizedPath = pathname && pathname !== '/' ? ensureTrailingSlash(pathname) : '/news/';
+          const basePath = normalizedPath === '/' ? '/news/' : normalizedPath;
+          urlObj.pathname = basePath.endsWith('rss/') ? basePath : `${basePath.replace(/\/$/, '')}/rss/`;
+          return urlObj.toString();
+        }
         default:
           return null;
       }
@@ -465,6 +507,7 @@ export class EnhancedRetryStrategies {
     url: string;
     strategy: AlternateRouteStrategy;
   }> {
+    const domainKey = this.getDomainKeyFromUrl(url);
     const strategies: AlternateRouteStrategy[] = [
       'amp-host',
       'amp-query',
@@ -472,6 +515,10 @@ export class EnhancedRetryStrategies {
       'mobile-host',
       'rss-suffix'
     ];
+
+    if (this.newsquestDomains.has(domainKey)) {
+      strategies.push('newsquest-section-rss');
+    }
 
     const seen = new Set<string>();
     const alternates: Array<{ url: string; strategy: AlternateRouteStrategy }> = [];
@@ -1109,7 +1156,10 @@ export class EnhancedRetryStrategies {
   }
 
   // Method to test if a URL is accessible before attempting full scrape
-  async quickAccessibilityCheck(url: string): Promise<{
+  async quickAccessibilityCheck(
+    url: string,
+    options: { bypassHead?: boolean; domainHint?: string } = {}
+  ): Promise<{
     accessible: boolean;
     responseTime: number;
     statusCode?: number;
@@ -1315,8 +1365,76 @@ export class EnhancedRetryStrategies {
         return null;
       }
     };
+    
+    const { bypassHead = false, domainHint } = options;
 
     try {
+      if (bypassHead) {
+        console.log(
+          `🛡️ Quick accessibility: bypassing HEAD for ${domainKey}` +
+          (domainHint ? ` (hint: ${domainHint})` : '')
+        );
+
+        try {
+          const bypassResponse = await performRequest('GET', 6000, {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Range': 'bytes=0-2047'
+          });
+
+          const bypassStatus = bypassResponse.status;
+          const bypassServer = bypassResponse.headers.get('server') || blockingServer;
+          if (bypassServer) {
+            blockingServer = bypassServer;
+          }
+
+          if (bypassResponse.ok || isLikelyAccessible(bypassStatus)) {
+            try {
+              await bypassResponse.arrayBuffer();
+            } catch (_) {
+              // Ignore partial read errors
+            }
+
+            diagnosis = bypassStatus === 206 ? 'partial-get-blocked' : 'ok';
+
+            this.rememberWarmupHint(domainKey, {
+              reason: 'accessibility:bypass-head-success',
+              statusCode: bypassStatus,
+              blockProfile: {
+                server: blockingServer,
+                diagnosis,
+                details: `Bypassed HEAD with direct GET (${bypassStatus})`
+              }
+            });
+
+            return {
+              accessible: true,
+              responseTime: Date.now() - startTime,
+              statusCode: bypassStatus,
+              diagnosis,
+              blockingServer
+            };
+          }
+
+          if (shouldFallbackToGet(bypassStatus)) {
+            const warmupRetry = await attemptWarmupRetry(`bypass-head-get-${bypassStatus}`);
+            if (warmupRetry) {
+              return warmupRetry;
+            }
+          }
+
+          await bypassResponse.arrayBuffer().catch(() => {});
+          lastWarmupFailure = {
+            status: bypassStatus,
+            error: `Direct GET bypass failed with status ${bypassStatus}`
+          };
+        } catch (bypassError) {
+          const message = bypassError instanceof Error ? bypassError.message : String(bypassError);
+          lastWarmupFailure = {
+            error: `Bypass GET error: ${message}`
+          };
+        }
+      }
+
       // First attempt a lightweight HEAD request
       const headResponse = await performRequest('HEAD', 5000);
       const headStatus = headResponse.status;
