@@ -761,10 +761,10 @@ Before you generate, confirm:
           model: 'gpt-image-1',
           prompt: illustrationPrompt,
           n: 1,
-          size: '1024x1024', // Valid size for gpt-image-1
-          quality: modelConfig.quality || 'medium', // Dynamic quality based on tier
+          size: '1536x1024', // Landscape aspect ratio for feed UI
+          quality: modelConfig.quality || 'medium', // Medium balances quality and cost
           output_format: 'webp', // Smaller file size
-          output_compression: 80
+          output_compression: 70 // Reduced for smaller files while maintaining quality
         }),
       });
 
@@ -773,10 +773,10 @@ Before you generate, confirm:
         console.error('OpenAI API error response:', errorText);
         console.error('Request parameters:', JSON.stringify({
           model: 'gpt-image-1',
-          size: '1024x1024',
+          size: '1536x1024',
           quality: modelConfig.quality,
           output_format: 'webp',
-          output_compression: 80
+          output_compression: 70
         }));
         
         // Try to parse error details
