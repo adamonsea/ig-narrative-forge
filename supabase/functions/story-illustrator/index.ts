@@ -461,14 +461,20 @@ ABSOLUTE REQUIREMENTS (FAILURE = REJECTION)
    ❌ Speech bubbles, thought bubbles, signs with words, labels, captions
    ✅ Pure visual storytelling only
 
-3. MINT GREEN ACCENT RULE - STRICT PLACEMENT
-   ✅ ONLY: 2-3 small (#58FFBC) spots on BACKGROUND objects (signs, equipment, windows, furniture)
+3. MINT GREEN ACCENT RULE - STRATEGIC MEANINGFUL PLACEMENT
+   ✅ REQUIRED: Use exactly 1-2 small (#58FFBC) accents on objects RELEVANT to the story
+   ✅ Examples: If story about health → green on medical equipment
+              If story about environment → green on plants/nature elements
+              If story about technology → green on screens/devices
+              If story about transport → green on vehicle details
+   ❌ BANNED: Random placement on unrelated objects
    ❌ NEVER: On people's clothing, skin, hair, or bodies
-   ⚠️  PENALTY: Green on people = instant rejection and wasted generation
+   ⚠️  Green must make thematic sense, not be decorative filler
 
 4. EDGE-TO-EDGE COMPOSITION - No amateur framing
-   ❌ White borders, padding, margins around image
-   ✅ Subject extends to all four edges of canvas
+   ❌ BANNED: White borders, black frames, decorative borders, box outlines around entire image
+   ✅ REQUIRED: Image content bleeds to all four edges naturally
+   ⚠️  The canvas itself has no visible frame or border of any kind
 
 5. PROFESSIONAL LINE WORK - NOT comic book style
    ✅ Varying line weights (thick and thin), sophisticated editorial pen work
@@ -488,10 +494,11 @@ DRAWING TECHNIQUE:
 • Adult faces with mature proportions and expressions
 
 COLOR PALETTE:
-• Predominantly black line work on white
-• EXACTLY 2-3 small mint green (#58FFBC) accent shapes
-• Green placement: Background elements ONLY (never on humans)
-• Think: Street signs, equipment panels, window frames, architectural details
+• Predominantly black line work on white (50%+ negative space)
+• EXACTLY 1-2 small mint green (#58FFBC) accent shapes
+• Green placement: On story-relevant objects ONLY (must make thematic sense)
+• Think strategically: Green should draw eye to something meaningful in the narrative
+• NEVER on people's clothing, skin, hair, or bodies
 
 FORBIDDEN STYLES (These will cause rejection):
 ❌ Cartoon/animated character style
@@ -521,10 +528,18 @@ SUBJECT TO ILLUSTRATE:
 ${subjectMatter}
 
 COMPOSITION REQUIREMENTS:
-• Edge-to-edge illustration (no white borders/padding)
-• Strong focal point with clear visual hierarchy
-• Sophisticated use of negative space
+• SIMPLE AND FOCUSED: 1-3 main subjects maximum (NOT crowd scenes)
+• Edge-to-edge illustration (no borders or frames of any kind)
+• Strong single focal point with clear visual hierarchy
+• Generous negative space (50%+ of image should be white)
+• Minimal background complexity - suggest location, don't detail it
 • Professional editorial framing
+
+FORBIDDEN COMPOSITIONS:
+❌ Crowd scenes with 5+ figures
+❌ Highly detailed backgrounds with many objects
+❌ Busy compositions that lack breathing room
+✅ Simple, iconic, immediately readable imagery
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STYLE REFERENCES FOR YOUR INTERNAL GUIDANCE
@@ -534,6 +549,17 @@ Think: The Guardian editorial illustrations, Financial Times weekend illustratio
 
 NOT: Disney, Pixar, children's books, comic strips, manga, animation style.
 
+COMPOSITION PHILOSOPHY:
+"One person doing one thing" is better than "five people doing five things"
+"A single powerful symbol" beats "a detailed scene"
+"Clean and iconic" trumps "complex and busy"
+
+Good composition: Single protestor with sign, clean background
+Bad composition: Crowd of 20 people in detailed city scene
+
+Good composition: One doctor with stethoscope, minimal hospital suggestion
+Bad composition: Operating room with full surgical team and equipment
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FINAL QUALITY CHECK BEFORE GENERATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -541,13 +567,16 @@ FINAL QUALITY CHECK BEFORE GENERATION
 Before you generate, confirm:
 ✅ This looks like it belongs in The Guardian, not a children's book
 ✅ Zero text/words anywhere in the image
-✅ Mint green ONLY on background objects (NOT on people)
-✅ Edge-to-edge composition (no white borders)
+✅ Mint green ONLY on story-relevant objects (NOT on people)
+✅ 1-3 main subjects maximum - simple and iconic, not busy
+✅ Edge-to-edge composition (no borders or frames of any kind)
 ✅ Sophisticated adult editorial aesthetic
 ✅ Professional line work with varying weights
+✅ 50%+ negative space - not crowded
 
 ⚠️  CRITICAL REMINDER: Any cartoon/childish style = wasted generation and unhappy editors
-⚠️  GREEN ON PEOPLE = Instant rejection and credit waste`;
+⚠️  GREEN ON PEOPLE = Instant rejection and credit waste
+⚠️  BLACK BORDERS/FRAMES = Instant rejection`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
