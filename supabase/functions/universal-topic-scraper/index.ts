@@ -308,8 +308,8 @@ serve(async (req) => {
           console.log(`   ⚠️ Missing sectionPath, extracting from URL...`);
           
           try {
-            const urlObj = new URL(feedUrl);
-            const normalizedPath = normalizeUrlPath(urlObj.pathname);
+        // Reuse the already-normalized urlObj from line 255-257
+        const normalizedPath = urlObj.pathname; // Already normalized
             const arcSite = extractDomainFromUrl(feedUrl).split('.')[0]; // e.g. "theargus"
             
             // Update source with extracted config AND confirmed_arc_section
