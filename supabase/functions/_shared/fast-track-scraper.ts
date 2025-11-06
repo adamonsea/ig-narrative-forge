@@ -288,7 +288,9 @@ export class FastTrackScraper {
         source_url: arcArticle.url,
         image_url: arcArticle.imageUrl,
         word_count: arcArticle.wordCount,
-        processing_status: 'new',
+        regional_relevance_score: 0,
+        content_quality_score: 0,
+        processing_status: 'new' as const,
         import_metadata: {
           extraction_method: 'arc_api',
           arc_id: arcArticle.id,
