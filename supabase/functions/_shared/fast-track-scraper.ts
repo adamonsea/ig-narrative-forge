@@ -202,13 +202,16 @@ export class FastTrackScraper {
 
   private async tryNewsquestArcStrategy(): Promise<ScrapingResult> {
     try {
-      if (!this.domainProfile?.arcSite) {
+      // Prioritize source-specific arcSite, check BEFORE returning
+      const arcSite = this.sourceInfo?.scraping_config?.arcSite || this.domainProfile?.arcSite;
+      
+      if (!arcSite) {
         return {
           success: false,
           articles: [],
           articlesFound: 0,
           articlesScraped: 0,
-          errors: ['No Arc site slug configured'],
+          errors: ['No Arc site slug configured in domain profile or source config'],
           method: 'arc_api'
         };
       }
@@ -228,9 +231,6 @@ export class FastTrackScraper {
         sectionPath = this.domainProfile?.sectionFallbacks?.[0] || urlPath;
         console.log(`🔍 Using ${this.domainProfile?.sectionFallbacks?.[0] ? 'domain fallback' : 'URL path'}: ${sectionPath}`);
       }
-      
-      // Prioritize source-specific arcSite
-      const arcSite = this.sourceInfo?.scraping_config?.arcSite || this.domainProfile?.arcSite;
       
       console.log(`📡 Initializing Newsquest Arc API client for ${domain} / ${sectionPath}`);
       console.log(`   Arc site slug: ${arcSite}`);
