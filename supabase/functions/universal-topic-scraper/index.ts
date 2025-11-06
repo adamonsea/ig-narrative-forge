@@ -166,10 +166,22 @@ serve(async (req) => {
       throw new Error(`Failed to get topic sources: ${sourcesError.message}`);
     }
 
+    console.log(`📋 Fetched ${topicSources?.length || 0} total sources from database for topic: ${topic.name}`);
+    if (topicSources && topicSources.length > 0) {
+      console.log(`📋 Source list: ${topicSources.map((s: any) => `${s.source_name} (${s.source_id})`).join(', ')}`);
+    }
+
     // Filter sources if specific sourceIds provided
     let targetSources = sourceIds 
       ? topicSources.filter((source: any) => sourceIds.includes(source.source_id))
       : topicSources;
+    
+    if (sourceIds && sourceIds.length > 0) {
+      console.log(`🎯 Filtered to ${targetSources.length} specific source(s): ${sourceIds.join(', ')}`);
+      if (targetSources.length > 0) {
+        console.log(`🎯 Target sources: ${targetSources.map((s: any) => s.source_name).join(', ')}`);
+      }
+    }
     
     // Apply maxSources limit for test mode or explicit limit
     if (maxSources && targetSources.length > maxSources) {
@@ -189,7 +201,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing ${targetSources.length} sources for topic: ${topic.name}${testMode ? ' (ULTRA-FAST TEST MODE)' : ''}`);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🔍 DIAGNOSTIC: Starting pre-validation for ${targetSources.length} sources`);
+    console.log(`${'='.repeat(80)}\n`);
 
     const scraper = new FastTrackScraper(supabase);
     const dbOps = new MultiTenantDatabaseOperations(supabase as any);
@@ -200,21 +214,28 @@ serve(async (req) => {
 
     // Pre-filter sources using circuit breaker and quick validation
     const validSources = [];
+    const filterReasons: Record<string, string> = {};
+    
     for (const source of targetSources) {
+      console.log(`\n🔍 PRE-VALIDATION: ${source.source_name} (ID: ${source.source_id})`);
+      console.log(`   URL: ${source.feed_url}`);
+      console.log(`   Status: ${source.is_active ? '✅ Active' : '❌ Inactive'}`);
       let feedUrl = source.feed_url;
       
       // Skip if invalid URL
       if (!feedUrl || typeof feedUrl !== 'string' || feedUrl.trim() === '') {
-        console.log(`⚠️ Skipping ${source.source_name}: Invalid URL`);
+        const reason = 'Invalid or missing feed URL';
+        console.log(`   ❌ FILTERED OUT: ${reason}`);
+        filterReasons[source.source_id] = reason;
         standardResponse.addSourceResult({
           sourceId: source.source_id,
           sourceName: source.source_name,
           success: false,
-          error: 'Invalid or missing feed URL',
+          error: reason,
           articlesFound: 0,
           articlesScraped: 0
         });
-        standardResponse.addWarning(`${source.source_name}: Invalid or missing URL`);
+        standardResponse.addWarning(`${source.source_name}: ${reason}`);
         continue;
       }
 
@@ -226,7 +247,9 @@ serve(async (req) => {
 
       // Circuit breaker check
       if (shouldSkipUrl(feedUrl)) {
-        console.log(`🚫 Skipping ${source.source_name}: Recent failures (circuit breaker)`);
+        const reason = 'Circuit breaker: Recent failures detected';
+        console.log(`   🚫 FILTERED OUT: ${reason}`);
+        filterReasons[source.source_id] = reason;
         standardResponse.addSourceResult({
           sourceId: source.source_id,
           sourceName: source.source_name,
@@ -235,36 +258,43 @@ serve(async (req) => {
           articlesFound: 0,
           articlesScraped: 0
         });
-        standardResponse.addWarning(`${source.source_name}: Skipped due to circuit breaker`);
+        standardResponse.addWarning(`${source.source_name}: ${reason}`);
         continue;
       }
 
       // Quick pre-validation in test mode
       if (testMode) {
-        console.log(`⚡ Quick validation check for ${source.source_name}...`);
+        console.log(`   ⚡ Running quick accessibility check (test mode)...`);
         const isAccessible = await quickUrlCheck(feedUrl, 2000); // 2s timeout
         if (!isAccessible) {
-          console.log(`❌ Quick check failed for ${source.source_name}`);
+          const reason = 'Failed quick accessibility check';
+          console.log(`   ❌ FILTERED OUT: ${reason}`);
+          filterReasons[source.source_id] = reason;
           recordFailure(feedUrl);
           standardResponse.addSourceResult({
             sourceId: source.source_id,
             sourceName: source.source_name,
             success: false,
-            error: 'Failed quick accessibility check',
+            error: reason,
             articlesFound: 0,
             articlesScraped: 0
           });
           continue;
         }
-        console.log(`✅ Quick check passed for ${source.source_name}`);
+        console.log(`   ✅ Quick check passed`);
       }
 
       // Pre-scrape validation: Check Newsquest sources for missing scraping_config
       const newsquestDomains = ['theargus.co.uk', 'sussexexpress.co.uk', 'crawleyobserver.co.uk', 'brightonandhoveindependent.co.uk'];
-      if (newsquestDomains.some(d => feedUrl.includes(d))) {
+      const isNewsquest = newsquestDomains.some(d => feedUrl.includes(d));
+      
+      if (isNewsquest) {
+        console.log(`   📰 Newsquest domain detected`);
         const sourceConfig = source.scraping_config;
+        console.log(`   🔧 Current scraping_config:`, JSON.stringify(sourceConfig, null, 2));
+        
         if (!sourceConfig?.sectionPath) {
-          console.log(`⚠️ Newsquest source "${source.source_name}" missing sectionPath, extracting from URL...`);
+          console.log(`   ⚠️ Missing sectionPath, extracting from URL...`);
           
           try {
             const urlObj = new URL(feedUrl);
@@ -287,7 +317,7 @@ serve(async (req) => {
               .eq('id', source.source_id);
             
             if (!updateError) {
-              console.log(`✅ Auto-configured Arc API for ${source.source_name}: ${extractedPath}`);
+              console.log(`   ✅ Auto-configured Arc API: sectionPath="${extractedPath}", arcSite="${arcSite}"`);
               source.scraping_config = {
                 sectionPath: extractedPath,
                 arcSite,
@@ -295,11 +325,14 @@ serve(async (req) => {
               };
             }
           } catch (extractError) {
-            console.error(`Failed to auto-extract config for ${source.source_name}:`, extractError);
+            console.error(`   ❌ Failed to auto-extract config:`, extractError);
           }
+        } else {
+          console.log(`   ✅ Newsquest config present: sectionPath="${sourceConfig.sectionPath}", arcSite="${sourceConfig.arcSite || 'not set'}"`);
         }
       }
       
+      console.log(`   ✅ PASSED PRE-VALIDATION - Will attempt to scrape`);
       validSources.push({ ...source, normalizedUrl: feedUrl });
     }
     
@@ -312,19 +345,41 @@ serve(async (req) => {
       }
     }
 
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`📊 PRE-VALIDATION SUMMARY:`);
+    console.log(`   Total sources: ${targetSources.length}`);
+    console.log(`   Passed: ${validSources.length}`);
+    console.log(`   Filtered out: ${targetSources.length - validSources.length}`);
+    if (Object.keys(filterReasons).length > 0) {
+      console.log(`\n   Filter reasons:`);
+      for (const [sourceId, reason] of Object.entries(filterReasons)) {
+        const sourceName = targetSources.find((s: any) => s.source_id === sourceId)?.source_name || sourceId;
+        console.log(`   - ${sourceName}: ${reason}`);
+      }
+    }
+    if (validSources.length > 0) {
+      console.log(`\n   ✅ Sources to scrape:`);
+      validSources.forEach((s: any) => {
+        console.log(`   - ${s.source_name} (${s.source_id}): ${s.normalizedUrl}`);
+      });
+    }
+    console.log(`${'='.repeat(80)}\n`);
+
     if (validSources.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
           message: 'No valid sources to scrape after pre-validation',
           topicId,
-          results: []
+          results: [],
+          diagnostics: {
+            totalSources: targetSources.length,
+            filterReasons
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log(`📊 Pre-validation complete: ${validSources.length}/${targetSources.length} sources passed`);
 
     // Process each valid source with aggressive timeouts
     for (const source of validSources) {
@@ -345,13 +400,17 @@ serve(async (req) => {
       }
 
       processedCount++;
-      console.log(`📊 Progress: ${processedCount}/${validSources.length} - Processing: ${source.source_name}`);
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`🔄 SCRAPING [${processedCount}/${validSources.length}]: ${source.source_name}`);
+      console.log(`   Source ID: ${source.source_id}`);
+      console.log(`   URL: ${source.normalizedUrl}`);
+      console.log(`   Config:`, JSON.stringify(source.scraping_config, null, 2));
+      console.log(`${'='.repeat(80)}\n`);
       
       // Ultra-aggressive timeouts for test mode
       const sourceTimeout = testMode ? 8000 : 30000; // 8s test, 30s normal
       const sourcePromise = (async () => {
         try {
-          console.log(`🔄 Scraping source: ${source.source_name} (${source.normalizedUrl})`);
 
           // Log diagnosis before scraping
           const diagnosisCheck = await scraper.quickDiagnosis(source.normalizedUrl);
@@ -415,7 +474,13 @@ serve(async (req) => {
               executionTimeMs: Date.now() - startTime
             };
 
-            console.log(`✅ ${source.source_name}: ${scrapeResult.articlesScraped} scraped, ${storeResult.articlesStored} stored (rejected: ${storeResult.rejectedLowRelevance + storeResult.rejectedLowQuality + storeResult.rejectedCompeting})`);
+            console.log(`\n   ✅ SUCCESS: ${source.source_name}`);
+            console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
+            console.log(`      Articles stored: ${storeResult.articlesStored}`);
+            console.log(`      Rejected (low relevance): ${storeResult.rejectedLowRelevance}`);
+            console.log(`      Rejected (low quality): ${storeResult.rejectedLowQuality}`);
+            console.log(`      Rejected (competing): ${storeResult.rejectedCompeting}`);
+            console.log(`      Method: ${scrapeResult.method || 'unknown'}\n`);
             return result;
           } else {
             // Check if this is a successful scrape with no new articles vs a failed scrape
@@ -523,11 +588,21 @@ serve(async (req) => {
               articlesScraped: 0
             };
 
-            console.log(`❌ ${source.source_name}: ${scrapeResult.errors.join(', ')}`);
+            console.log(`\n   ❌ FAILED: ${source.source_name}`);
+            console.log(`      Errors: ${scrapeResult.errors.join(', ')}`);
+            console.log(`      Articles found: ${scrapeResult.articlesFound}`);
+            console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
+            console.log(`      Method attempted: ${scrapeResult.method || 'unknown'}\n`);
             return result;
           }
         } catch (sourceError) {
-          console.error(`💥 Error scraping ${source.source_name}:`, sourceError);
+          console.error(`\n   💥 EXCEPTION: ${source.source_name}`);
+          console.error(`      Error type: ${sourceError instanceof Error ? sourceError.constructor.name : typeof sourceError}`);
+          console.error(`      Error message: ${sourceError instanceof Error ? sourceError.message : String(sourceError)}`);
+          if (sourceError instanceof Error && sourceError.stack) {
+            console.error(`      Stack trace: ${sourceError.stack}`);
+          }
+          console.error('');
           recordFailure(source.normalizedUrl);
           
           return {
