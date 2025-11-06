@@ -227,11 +227,13 @@ export class FastTrackScraper {
       
       console.log(`📡 Initializing Newsquest Arc API client for ${domain} / ${sectionPath}`);
       console.log(`   Arc site slug: ${this.domainProfile.arcSite}`);
+      console.log(`   Source config:`, this.sourceInfo?.scraping_config);
       
       const arcClient = new NewsquestArcClient(
         domain,
         sectionPath,
-        this.domainProfile.arcSite
+        this.domainProfile.arcSite,
+        this.sourceInfo?.scraping_config // Pass source-specific config
       );
       
       let arcArticles;

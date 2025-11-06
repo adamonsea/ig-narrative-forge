@@ -80,6 +80,13 @@ interface ValidationResult {
     articlesFound: number;
     error?: string;
   };
+  arcInfo?: {
+    arcCompatible: boolean;
+    arcSite?: string;
+    sectionPath?: string;
+    articlesFound?: number;
+    testSuccess?: boolean;
+  };
 }
 
 interface UnifiedSourceManagerProps {
@@ -306,9 +313,12 @@ export const UnifiedSourceManager = ({
       setValidationResult(data);
       
       if (data.success) {
+        const arcMessage = data.arcInfo?.arcCompatible 
+          ? ` (✓ Arc API compatible - fast scraping available)`
+          : '';
         toast({
           title: 'Source Validated',
-          description: 'Source appears to be working correctly',
+          description: `Source appears to be working correctly${arcMessage}`,
         });
       } else {
         toast({
@@ -461,7 +471,17 @@ export const UnifiedSourceManager = ({
             description: `Existing source "${existingSource.source_name}" linked to topic`,
           });
         } else {
-          // Create new source
+          // Create new source with Arc API config if detected
+          const scrapingConfig: any = {};
+          
+          if (validationResult?.arcInfo?.arcCompatible) {
+            scrapingConfig.arcCompatible = true;
+            scrapingConfig.sectionPath = validationResult.arcInfo.sectionPath;
+            scrapingConfig.arcSite = validationResult.arcInfo.arcSite;
+            scrapingConfig.discoveredAt = new Date().toISOString();
+            console.log('✅ Storing Arc API config in source:', scrapingConfig);
+          }
+          
           const sourceData = {
             source_name: newSource.source_name.trim(),
             feed_url: normalizedUrl,
@@ -471,7 +491,8 @@ export const UnifiedSourceManager = ({
             is_active: true,
             is_whitelisted: true,
             is_blacklisted: false,
-            region: currentTopic?.region || region
+            region: currentTopic?.region || region,
+            scraping_config: Object.keys(scrapingConfig).length > 0 ? scrapingConfig : null
             // Note: No topic_id - we use junction table now
           };
 

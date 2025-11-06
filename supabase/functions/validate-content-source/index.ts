@@ -23,12 +23,17 @@ interface ValidationResult {
   articleCount?: number;
   error?: string;
   warnings: string[];
-  suggestedUrl?: string; // Auto-discovered RSS feed URL
-  discoveredFeeds?: string[]; // All discovered RSS feeds
   scraperTest?: {
     success: boolean;
     articlesFound: number;
     error?: string;
+  };
+  arcInfo?: {
+    arcCompatible: boolean;
+    arcSite?: string;
+    sectionPath?: string;
+    articlesFound?: number;
+    testSuccess?: boolean;
   };
 }
 
@@ -224,6 +229,133 @@ async function testRSSFeed(url: string): Promise<{isValidRSS: boolean, articleCo
   }
 }
 
+// Extract section path from URL for Arc API compatibility
+function extractSectionPath(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    
+    // Remove trailing slashes and extract path
+    const cleanPath = pathname.replace(/\/$/, '');
+    
+    // If it's just the root or too short, return null
+    if (!cleanPath || cleanPath === '/' || cleanPath.length < 3) {
+      return null;
+    }
+    
+    return cleanPath;
+  } catch {
+    return null;
+  }
+}
+
+// Detect if domain is Newsquest/Arc-enabled
+function isNewsquestDomain(url: string): { isNewsquest: boolean; arcSite?: string; domain?: string } {
+  try {
+    const domain = new URL(url).hostname.replace('www.', '');
+    
+    // Known Newsquest domains and their Arc site slugs
+    const newsquestDomains: Record<string, string> = {
+      'theargus.co.uk': 'theargus',
+      'sussexexpress.co.uk': 'sussexexpress',
+      'hastingsobserver.co.uk': 'hastingsobserver',
+      'eastbourneherald.co.uk': 'eastbourneherald',
+      'chichester.co.uk': 'chichester'
+    };
+    
+    if (newsquestDomains[domain]) {
+      return {
+        isNewsquest: true,
+        arcSite: newsquestDomains[domain],
+        domain
+      };
+    }
+    
+    // Check for other Newsquest patterns
+    if (domain.includes('newsquest') || domain.endsWith('herald.co.uk') || domain.endsWith('observer.co.uk')) {
+      return {
+        isNewsquest: true,
+        domain
+      };
+    }
+    
+    return { isNewsquest: false };
+  } catch {
+    return { isNewsquest: false };
+  }
+}
+
+// Test Arc API compatibility
+async function testArcApiCompatibility(url: string): Promise<{
+  arcCompatible: boolean;
+  arcSite?: string;
+  sectionPath?: string;
+  articlesFound?: number;
+  testSuccess?: boolean;
+  error?: string;
+}> {
+  const newsquestCheck = isNewsquestDomain(url);
+  
+  if (!newsquestCheck.isNewsquest) {
+    return { arcCompatible: false };
+  }
+  
+  const sectionPath = extractSectionPath(url);
+  
+  if (!sectionPath) {
+    return {
+      arcCompatible: false,
+      error: 'Could not extract section path from URL'
+    };
+  }
+  
+  console.log(`🔍 Testing Arc API: domain=${newsquestCheck.domain}, arcSite=${newsquestCheck.arcSite}, section=${sectionPath}`);
+  
+  // Try to fetch from Arc API
+  try {
+    const arcApiUrl = `https://${newsquestCheck.domain}/pf/api/v3/content/fetch/story-feed-query-with-size?query={"feedOffset":0,"feedSize":5,"includeSections":"${sectionPath}","website":"${newsquestCheck.arcSite}"}`;
+    
+    const response = await fetch(arcApiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0)',
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      return {
+        arcCompatible: false,
+        arcSite: newsquestCheck.arcSite,
+        sectionPath,
+        testSuccess: false,
+        error: `Arc API returned ${response.status}`
+      };
+    }
+    
+    const data = await response.json();
+    const articlesFound = data?.content_elements?.length || 0;
+    
+    console.log(`✅ Arc API test successful: ${articlesFound} articles found`);
+    
+    return {
+      arcCompatible: true,
+      arcSite: newsquestCheck.arcSite,
+      sectionPath,
+      articlesFound,
+      testSuccess: articlesFound > 0
+    };
+  } catch (error) {
+    console.error('Arc API test failed:', error);
+    return {
+      arcCompatible: false,
+      arcSite: newsquestCheck.arcSite,
+      sectionPath,
+      testSuccess: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -266,6 +398,19 @@ serve(async (req) => {
     }
 
     console.log('✅ Source is accessible:', { contentType: result.contentType });
+
+    // Test Arc API compatibility for all sources (Newsquest detection)
+    const arcTest = await testArcApiCompatibility(url);
+    if (arcTest.arcCompatible) {
+      result.arcInfo = arcTest;
+      console.log('🎯 Arc API compatible:', arcTest);
+      
+      if (arcTest.testSuccess && arcTest.articlesFound && arcTest.articlesFound > 0) {
+        result.warnings.push(`✓ Arc API compatible - will use fast scraping (${arcTest.articlesFound} articles found)`);
+      } else {
+        result.warnings.push('Arc API detected but returned no articles - may need section path adjustment');
+      }
+    }
 
     // For RSS sources, validate feed format and discover alternatives if needed
     if (sourceType === 'RSS') {
