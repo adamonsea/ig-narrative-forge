@@ -395,6 +395,25 @@ export const UnifiedSourceManager = ({
       const domain = extractDomainFromUrl(normalizedUrl);
       
       if (mode === 'topic' && topicId) {
+        // Check for duplicate sources with same domain already linked to topic
+        const { data: topicSourcesCheck } = await supabase
+          .rpc('get_topic_sources', { p_topic_id: topicId });
+        
+        const duplicateDomain = topicSourcesCheck?.find((ts: any) => 
+          ts.canonical_domain === domain
+        );
+        
+        if (duplicateDomain) {
+          const useDuplicate = window.confirm(
+            `⚠️ Similar source already exists: "${duplicateDomain.source_name}" (${duplicateDomain.canonical_domain})\n\nWould you like to use the existing source instead of creating a duplicate?`
+          );
+          
+          if (!useDuplicate) {
+            setLoading(false);
+            return;
+          }
+        }
+        
         // First, check if source already exists globally
         const { data: existingSource, error: checkError } = await supabase
           .from('content_sources')

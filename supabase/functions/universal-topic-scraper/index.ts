@@ -259,7 +259,56 @@ serve(async (req) => {
         console.log(`✅ Quick check passed for ${source.source_name}`);
       }
 
+      // Pre-scrape validation: Check Newsquest sources for missing scraping_config
+      const newsquestDomains = ['theargus.co.uk', 'sussexexpress.co.uk', 'crawleyobserver.co.uk', 'brightonandhoveindependent.co.uk'];
+      if (newsquestDomains.some(d => feedUrl.includes(d))) {
+        const sourceConfig = source.source_config;
+        if (!sourceConfig?.sectionPath) {
+          console.log(`⚠️ Newsquest source "${source.source_name}" missing sectionPath, extracting from URL...`);
+          
+          try {
+            const urlObj = new URL(feedUrl);
+            const extractedPath = urlObj.pathname;
+            const arcSite = extractDomainFromUrl(feedUrl).split('.')[0]; // e.g. "theargus"
+            
+            // Update source with extracted config
+            const { error: updateError } = await supabase
+              .from('content_sources')
+              .update({ 
+                scraping_config: { 
+                  sectionPath: extractedPath,
+                  arcSite,
+                  arcCompatible: true,
+                  autoExtracted: true,
+                  extractedAt: new Date().toISOString()
+                }
+              })
+              .eq('id', source.source_id);
+            
+            if (!updateError) {
+              console.log(`✅ Auto-configured Arc API for ${source.source_name}: ${extractedPath}`);
+              source.source_config = {
+                sectionPath: extractedPath,
+                arcSite,
+                arcCompatible: true
+              };
+            }
+          } catch (extractError) {
+            console.error(`Failed to auto-extract config for ${source.source_name}:`, extractError);
+          }
+        }
+      }
+      
       validSources.push({ ...source, normalizedUrl: feedUrl });
+    }
+    
+    // Helper function to extract domain
+    function extractDomainFromUrl(url: string): string {
+      try {
+        return new URL(url).hostname.replace('www.', '');
+      } catch {
+        return 'unknown-domain';
+      }
     }
 
     if (validSources.length === 0) {
