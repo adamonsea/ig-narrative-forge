@@ -17,6 +17,8 @@ export class FastTrackScraper {
   private accessibilityCache = new Map<string, boolean>();
   private region: string = '';
   private sourceInfo: any = {};
+  private sourceId: string = '';
+  private sourceMetadata: Record<string, any> = {};
   private baseUrl: string = '';
   private domainProfile: DomainProfile | null = null;
 
@@ -62,6 +64,11 @@ export class FastTrackScraper {
       // Set up instance variables for this scraping run
       this.region = topicRegion;
       this.sourceInfo = source;
+      this.sourceId = sourceId;
+      this.sourceMetadata = {
+        confirmed_arc_section: source.confirmed_arc_section,
+        ...(source.metadata || {})
+      };
       this.baseUrl = feedUrl;
       this.extractor = new UniversalContentExtractor(feedUrl);
 
@@ -168,7 +175,7 @@ export class FastTrackScraper {
     }
 
     // Try Newsquest Arc API first if applicable
-    if (this.domainProfile?.family === 'newsquest' && this.domainProfile?.api?.arc_site_slug) {
+    if (this.domainProfile?.family === 'newsquest' && this.domainProfile?.arcSite) {
       console.log('🎯 Using Newsquest Arc API strategy...');
       const arcResult = await this.tryNewsquestArcStrategy();
       if (arcResult.success && arcResult.articles.length > 0) {
@@ -195,7 +202,7 @@ export class FastTrackScraper {
 
   private async tryNewsquestArcStrategy(): Promise<ScrapingResult> {
     try {
-      if (!this.domainProfile?.api?.arc_site_slug) {
+      if (!this.domainProfile?.arcSite) {
         return {
           success: false,
           articles: [],
@@ -207,27 +214,66 @@ export class FastTrackScraper {
       }
 
       const domain = new URL(this.baseUrl).hostname;
-      const sectionPath = this.domainProfile.api.section_fallbacks?.[0] || new URL(this.baseUrl).pathname;
+      
+      // Prefer confirmed section path from previous successful scrapes
+      let sectionPath: string;
+      if (this.sourceMetadata?.confirmed_arc_section) {
+        sectionPath = this.sourceMetadata.confirmed_arc_section;
+        console.log(`✅ Using confirmed Arc section: ${sectionPath}`);
+      } else {
+        sectionPath = this.domainProfile.sectionFallbacks?.[0] || new URL(this.baseUrl).pathname;
+        console.log(`🔍 Using fallback section path: ${sectionPath}`);
+      }
       
       console.log(`📡 Initializing Newsquest Arc API client for ${domain} / ${sectionPath}`);
+      console.log(`   Arc site slug: ${this.domainProfile.arcSite}`);
       
       const arcClient = new NewsquestArcClient(
         domain,
         sectionPath,
-        this.domainProfile.api.arc_site_slug
+        this.domainProfile.arcSite
       );
       
-      const arcArticles = await arcClient.fetchSectionArticles({ limit: 20, sortBy: 'published_date' });
+      let arcArticles;
+      let httpStatus = 200;
+      
+      try {
+        arcArticles = await arcClient.fetchSectionArticles({ limit: 20, sortBy: 'published_date' });
+      } catch (fetchError: any) {
+        httpStatus = fetchError.status || 0;
+        console.error(`❌ Arc API HTTP error: ${httpStatus} - ${fetchError.message}`);
+        
+        return {
+          success: false,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: [`Arc API HTTP ${httpStatus}: ${fetchError.message}`],
+          method: 'arc_api',
+          metadata: {
+            arc_http_status: httpStatus,
+            arc_error_type: httpStatus >= 500 ? 'server_error' : httpStatus === 404 ? 'section_not_found' : 'network',
+            arc_section_attempted: sectionPath,
+            arc_site_slug: this.domainProfile.arcSite
+          }
+        };
+      }
       
       if (!arcArticles || arcArticles.length === 0) {
-        console.log('⚠️ Arc API returned no articles');
+        console.log('⚠️ Arc API returned no articles (empty payload)');
         return {
           success: false,
           articles: [],
           articlesFound: 0,
           articlesScraped: 0,
           errors: ['Arc API returned no articles'],
-          method: 'arc_api'
+          method: 'arc_api',
+          metadata: {
+            arc_http_status: httpStatus,
+            arc_error_type: 'empty_payload',
+            arc_section_attempted: sectionPath,
+            arc_site_slug: this.domainProfile.arcSite
+          }
         };
       }
 
@@ -247,10 +293,25 @@ export class FastTrackScraper {
           extraction_method: 'arc_api',
           arc_id: arcArticle.id,
           arc_type: arcArticle.type,
+          arc_section: sectionPath,
+          arc_site_slug: this.domainProfile.arcSite,
           scraped_at: new Date().toISOString(),
           fast_track: true
         }
       }));
+
+      // Persist confirmed section path for future scrapes
+      if (this.sourceId && !this.sourceMetadata?.confirmed_arc_section) {
+        try {
+          await this.supabase
+            .from('content_sources')
+            .update({ confirmed_arc_section: sectionPath })
+            .eq('id', this.sourceId);
+          console.log(`✅ Persisted confirmed Arc section: ${sectionPath}`);
+        } catch (updateError) {
+          console.error('⚠️ Failed to persist confirmed Arc section:', updateError);
+        }
+      }
 
       return {
         success: true,
@@ -258,7 +319,12 @@ export class FastTrackScraper {
         articlesFound: arcArticles.length,
         articlesScraped: articles.length,
         errors: [],
-        method: 'arc_api'
+        method: 'arc_api',
+        metadata: {
+          arc_http_status: httpStatus,
+          arc_section: sectionPath,
+          arc_site_slug: this.domainProfile.arcSite
+        }
       };
       
     } catch (error) {
@@ -270,7 +336,11 @@ export class FastTrackScraper {
         articlesFound: 0,
         articlesScraped: 0,
         errors: [errorMessage],
-        method: 'arc_api'
+        method: 'arc_api',
+        metadata: {
+          arc_error_type: 'unexpected',
+          arc_error_message: errorMessage
+        }
       };
     }
   }

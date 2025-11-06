@@ -539,6 +539,7 @@ export type Database = {
           articles_scraped: number | null
           avg_response_time_ms: number | null
           canonical_domain: string | null
+          confirmed_arc_section: string | null
           consecutive_failures: number | null
           content_type: string | null
           created_at: string | null
@@ -567,6 +568,7 @@ export type Database = {
           articles_scraped?: number | null
           avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          confirmed_arc_section?: string | null
           consecutive_failures?: number | null
           content_type?: string | null
           created_at?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           articles_scraped?: number | null
           avg_response_time_ms?: number | null
           canonical_domain?: string | null
+          confirmed_arc_section?: string | null
           consecutive_failures?: number | null
           content_type?: string | null
           created_at?: string | null
