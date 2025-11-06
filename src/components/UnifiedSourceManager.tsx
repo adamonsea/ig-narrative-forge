@@ -179,10 +179,7 @@ export const UnifiedSourceManager = ({
     loadSources();
     if (mode === 'topic' && topicId) {
       loadTopicInfo(topicId);
-      // Auto-run content availability check on first load
-      setTimeout(() => {
-        runContentMonitor();
-      }, 1000);
+      // Manual content availability check only - auto-run removed to prevent collision with manual scrapes
     }
   }, [mode, topicId, region]);
 
