@@ -294,6 +294,17 @@ serve(async (req) => {
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
 
+    // Define expression instruction based on story tone (used by all providers)
+    const expressionInstruction = storyTone === 'serious' 
+      ? 'realistic and journalistic depiction'
+      : storyTone === 'urgent'
+      ? 'dynamic and impactful composition'
+      : storyTone === 'positive'
+      ? 'optimistic and uplifting visual'
+      : storyTone === 'neutral'
+      ? 'balanced and informative representation'
+      : 'appropriate editorial treatment';
+
     // Generate image based on selected model
     const startTime = Date.now()
     let imageBase64: string
@@ -303,17 +314,6 @@ serve(async (req) => {
       // FLUX.1-dev via Replicate - Standard quality tier
       console.log('Generating with FLUX.1-dev via Replicate...');
       console.log('🎨 Using FLUX-specific simplified prompt strategy');
-      
-      // Define expression instruction based on story tone
-      const expressionInstruction = storyTone === 'serious' 
-        ? 'realistic and journalistic depiction'
-        : storyTone === 'urgent'
-        ? 'dynamic and impactful composition'
-        : storyTone === 'positive'
-        ? 'optimistic and uplifting visual'
-        : storyTone === 'neutral'
-        ? 'balanced and informative representation'
-        : 'appropriate editorial treatment';
       
       // FLUX-specific prompt with quantified constraints and explicit bans
       const fluxPrompt = `MANDATORY STYLE RULES (FLUX MUST FOLLOW):

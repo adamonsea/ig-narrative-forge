@@ -124,7 +124,7 @@ verify_jwt = false
 
 # Story operations
 [functions.story-illustrator]
-verify_jwt = true
+verify_jwt = false
 
 [functions.animate-illustration]
 verify_jwt = true

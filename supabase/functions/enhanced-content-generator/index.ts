@@ -824,7 +824,7 @@ Return in JSON format:
 
     // Trigger carousel image generation (non-blocking)
     try {
-      const { error: carouselError } = await supabase.functions.invoke('story-illustrator', {
+      const { data: illustrationData, error: carouselError } = await supabase.functions.invoke('story-illustrator', {
         body: { 
           storyId,
           forceRegenerate: true,
@@ -833,12 +833,25 @@ Return in JSON format:
       });
       
       if (carouselError) {
-        console.error('❌ Failed to trigger carousel generation:', carouselError);
+        console.error('❌ Failed to trigger carousel generation:', {
+          error: carouselError.message || carouselError,
+          storyId,
+          context: carouselError.context || 'No additional context',
+          status: carouselError.status || 'Unknown status'
+        });
       } else {
-        console.log('🎨 Triggered carousel image generation successfully');
+        console.log('🎨 Triggered carousel image generation successfully:', {
+          storyId,
+          illustrationUrl: illustrationData?.illustration_url,
+          model: illustrationData?.model_used
+        });
       }
     } catch (carouselError) {
-      console.error('❌ Error triggering carousel generation:', carouselError);
+      console.error('❌ Unexpected error in illustration generation:', {
+        error: carouselError instanceof Error ? carouselError.message : String(carouselError),
+        stack: carouselError instanceof Error ? carouselError.stack : undefined,
+        storyId
+      });
     }
 
     return new Response(
