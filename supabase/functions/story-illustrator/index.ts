@@ -493,12 +493,25 @@ DRAWING TECHNIQUE:
 • Clean negative space with confident white areas
 • Adult faces with mature proportions and expressions
 
-COLOR PALETTE:
+COLOR PALETTE - STRICT DUOTONE ONLY:
+• ONLY TWO COLORS PERMITTED: Black (#000000) and mint green (#58FFBC)
+• NO OTHER COLORS: No grays, no beige, no skin tones, no brown, no blue
 • Predominantly black line work on white (50%+ negative space)
 • EXACTLY 1-2 small mint green (#58FFBC) accent shapes
 • Green placement: On story-relevant objects ONLY (must make thematic sense)
 • Think strategically: Green should draw eye to something meaningful in the narrative
 • NEVER on people's clothing, skin, hair, or bodies
+
+❌ BANNED COLORS:
+• Gray shading, gray fills, gray gradients
+• Beige/tan/skin tones
+• Any color other than pure black and #58FFBC
+• Colored picture frames or decorative elements
+
+✅ REQUIRED:
+• People: Black outlines and black fills only (no skin tones)
+• Backgrounds: White or black fills only
+• Accents: Only #58FFBC green on 1-2 story-relevant objects
 
 FORBIDDEN STYLES (These will cause rejection):
 ❌ Cartoon/animated character style
@@ -567,6 +580,7 @@ FINAL QUALITY CHECK BEFORE GENERATION
 Before you generate, confirm:
 ✅ This looks like it belongs in The Guardian, not a children's book
 ✅ Zero text/words anywhere in the image
+✅ STRICT DUOTONE: Only black (#000000) and mint green (#58FFBC) - NO grays, beiges, or skin tones
 ✅ Mint green ONLY on story-relevant objects (NOT on people)
 ✅ 1-3 main subjects maximum - simple and iconic, not busy
 ✅ Edge-to-edge composition (no borders or frames of any kind)
@@ -576,7 +590,8 @@ Before you generate, confirm:
 
 ⚠️  CRITICAL REMINDER: Any cartoon/childish style = wasted generation and unhappy editors
 ⚠️  GREEN ON PEOPLE = Instant rejection and credit waste
-⚠️  BLACK BORDERS/FRAMES = Instant rejection`;
+⚠️  BLACK BORDERS/FRAMES = Instant rejection
+⚠️  ANY COLOR OTHER THAN BLACK + #58FFBC = Instant rejection`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
