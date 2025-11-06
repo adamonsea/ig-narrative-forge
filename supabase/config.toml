@@ -69,6 +69,12 @@ verify_jwt = false
 [functions.universal-topic-automation]
 verify_jwt = false
 
+[functions.topic-automation-monitor]
+verify_jwt = false
+
+[functions.manual-topic-scrape]
+verify_jwt = false
+
 [functions.topic-aware-scraper]
 verify_jwt = false
 

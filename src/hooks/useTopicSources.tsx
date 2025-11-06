@@ -87,6 +87,17 @@ export const useTopicSources = () => {
   ): Promise<boolean> => {
     try {
       setLoading(true);
+      
+      // Update the source to set topic_id if not already set
+      const { error: updateError } = await supabase
+        .from('content_sources')
+        .update({ topic_id: topicId })
+        .eq('id', sourceId)
+        .is('topic_id', null);
+      
+      if (updateError) console.warn('Could not update topic_id:', updateError);
+      
+      // Link source to topic via junction table
       const { error } = await supabase.rpc('add_source_to_topic', {
         p_topic_id: topicId,
         p_source_id: sourceId,
@@ -197,11 +208,12 @@ export const useTopicSources = () => {
     try {
       setLoading(true);
       
-      // Create the source
+      // Create the source with topic_id set
       const { data: newSource, error: createError } = await supabase
         .from('content_sources')
         .insert({
           ...sourceData,
+          topic_id: topicId || null, // Set topic_id directly on source creation
           credibility_score: sourceData.credibility_score || 70,
           content_type: sourceData.content_type || 'news',
           is_active: true,
