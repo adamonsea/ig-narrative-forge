@@ -26,6 +26,13 @@ const recentFailures = new Map<string, { count: number; lastFailed: number }>();
 const FAILURE_THRESHOLD = 3;
 const FAILURE_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
+// Normalize URL path (collapse multiple slashes, ensure single trailing slash)
+function normalizeUrlPath(pathname: string): string {
+  return pathname
+    .replace(/\/{2,}/g, '/') // Collapse multiple slashes
+    .replace(/\/$/, '') + '/'; // Ensure single trailing slash
+}
+
 // Quick URL pre-validation
 async function quickUrlCheck(url: string, timeoutMs: number = 3000): Promise<boolean> {
   const isLikelyAccessible = (status: number) => status >= 200 && status < 400;
@@ -239,11 +246,15 @@ serve(async (req) => {
         continue;
       }
 
-      // Normalize URL
+      // Normalize URL and path
       feedUrl = feedUrl.trim();
       if (!feedUrl.match(/^https?:\/\//)) {
         feedUrl = `https://${feedUrl}`;
       }
+      
+      const urlObj = new URL(feedUrl);
+      urlObj.pathname = normalizeUrlPath(urlObj.pathname);
+      feedUrl = urlObj.toString();
 
       // Circuit breaker check
       if (shouldSkipUrl(feedUrl)) {
@@ -298,7 +309,7 @@ serve(async (req) => {
           
           try {
             const urlObj = new URL(feedUrl);
-            const extractedPath = urlObj.pathname;
+            const normalizedPath = normalizeUrlPath(urlObj.pathname);
             const arcSite = extractDomainFromUrl(feedUrl).split('.')[0]; // e.g. "theargus"
             
             // Update source with extracted config AND confirmed_arc_section
@@ -306,20 +317,20 @@ serve(async (req) => {
               .from('content_sources')
               .update({ 
                 scraping_config: { 
-                  sectionPath: extractedPath,
+                  sectionPath: normalizedPath,
                   arcSite,
                   arcCompatible: true,
                   autoExtracted: true,
                   extractedAt: new Date().toISOString()
                 },
-                confirmed_arc_section: extractedPath
+                confirmed_arc_section: normalizedPath
               })
               .eq('id', source.source_id);
             
             if (!updateError) {
-              console.log(`   ✅ Auto-configured Arc API: sectionPath="${extractedPath}", arcSite="${arcSite}"`);
+              console.log(`   ✅ Auto-configured Arc API: sectionPath="${normalizedPath}", arcSite="${arcSite}"`);
               source.scraping_config = {
-                sectionPath: extractedPath,
+                sectionPath: normalizedPath,
                 arcSite,
                 arcCompatible: true
               };
@@ -332,8 +343,16 @@ serve(async (req) => {
         }
       }
       
+      // Create strict scope metadata for index-only scraping
+      const urlObj = new URL(feedUrl);
+      const strictScope = {
+        host: urlObj.hostname,
+        pathPrefix: normalizeUrlPath(urlObj.pathname)
+      };
+      
       console.log(`   ✅ PASSED PRE-VALIDATION - Will attempt to scrape`);
-      validSources.push({ ...source, normalizedUrl: feedUrl });
+      console.log(`   🔒 Strict scope enabled: host="${strictScope.host}", pathPrefix="${strictScope.pathPrefix}"`);
+      validSources.push({ ...source, normalizedUrl: feedUrl, strictScope });
     }
     
     // Helper function to extract domain
@@ -441,6 +460,7 @@ serve(async (req) => {
               timeout: testMode ? 5000 : 20000, // 5s test, 20s normal
               maxRetries: testMode ? 1 : 3, // Only 1 retry in test mode
               retryDelay: testMode ? 500 : 2000, // 0.5s retry delay in test mode
+              strictScope: source.strictScope, // Pass strict scope for index-only scraping
             }
           );
 
@@ -524,6 +544,14 @@ serve(async (req) => {
             );
             
             if (shouldUseFallback) {
+              // Skip Beautiful Soup fallback when strict scope is active (index-only mode)
+              if (source.strictScope) {
+                console.log(`🔒 FastTrack insufficient (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors})`);
+                console.log(`🔒 Skipping Beautiful Soup fallback - strict scope enabled (index-only mode)`);
+                standardResponse.addSourceResult(result);
+                continue;
+              }
+              
               console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
               
               try {

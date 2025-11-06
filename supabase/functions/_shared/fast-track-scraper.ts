@@ -21,6 +21,7 @@ export class FastTrackScraper {
   private sourceMetadata: Record<string, any> = {};
   private baseUrl: string = '';
   private domainProfile: DomainProfile | null = null;
+  private strictScope?: { host: string; pathPrefix: string };
 
   constructor(private supabase: any) {
     // Initialize with a placeholder URL - will be updated when needed
@@ -71,6 +72,7 @@ export class FastTrackScraper {
       };
       this.baseUrl = feedUrl;
       this.extractor = new UniversalContentExtractor(feedUrl);
+      this.strictScope = options.strictScope;
 
       // Resolve domain profile for this source
       this.domainProfile = await resolveDomainProfile(
@@ -110,6 +112,10 @@ export class FastTrackScraper {
 
   async executeScrapingStrategy(): Promise<ScrapingResult> {
     console.log(`🚀 Fast-track scraper started for ${this.sourceInfo?.source_name || this.baseUrl}`);
+    
+    if (this.strictScope) {
+      console.log(`🔒 Strict scope ON: restricting to pathPrefix="${this.strictScope.pathPrefix}"`);
+    }
     
     // Quick accessibility check using domain profile hints
     const shouldBypassHead = this.domainProfile?.accessibility?.bypassHead || false;
@@ -181,6 +187,34 @@ export class FastTrackScraper {
       if (arcResult.success && arcResult.articles.length > 0) {
         return arcResult;
       }
+      
+      // Under strict scope, if Arc fails, return 0 articles (no generic drift)
+      if (this.strictScope) {
+        console.log('🔒 Arc API returned no articles - ending scrape (strict scope, no generic fallbacks)');
+        return {
+          success: true,
+          articles: [],
+          articlesFound: 0,
+          articlesScraped: 0,
+          errors: [],
+          method: 'arc_api',
+          metadata: { strict_scope_enforced: true }
+        };
+      }
+    }
+    
+    // Skip other strategies if strict scope is active
+    if (this.strictScope) {
+      console.log('🔒 Strict scope active - skipping RSS and HTML fallbacks');
+      return {
+        success: true,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [],
+        method: 'strict_scope',
+        metadata: { strict_scope_enforced: true }
+      };
     }
     
     // Try structured data extraction (fastest when available)
@@ -218,9 +252,12 @@ export class FastTrackScraper {
 
       const domain = new URL(this.baseUrl).hostname;
       
-      // Priority order: scraping_config > confirmed_arc_section > URL > fallbacks
+      // Priority order: strictScope > scraping_config > confirmed_arc_section > URL > fallbacks
       let sectionPath: string;
-      if (this.sourceInfo?.scraping_config?.sectionPath) {
+      if (this.strictScope) {
+        sectionPath = this.strictScope.pathPrefix;
+        console.log(`🔒 Using strict scope path: ${sectionPath}`);
+      } else if (this.sourceInfo?.scraping_config?.sectionPath) {
         sectionPath = this.sourceInfo.scraping_config.sectionPath;
         console.log(`✅ Using source-specific Arc section: ${sectionPath}`);
       } else if (this.sourceMetadata?.confirmed_arc_section) {

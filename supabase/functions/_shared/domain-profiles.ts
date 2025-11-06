@@ -115,6 +115,8 @@ function inferDomainProfile(hostname: string): DomainProfile {
   
   // Common Newsquest domains (fallback if not in database)
   const newsquestPatterns = [
+    /theargus\.co\.uk$/,
+    /sussexexpress\.co\.uk$/,
     /argus\.co\.uk$/,
     /express\.co\.uk$/,
     /gazette\.co\.uk$/,
