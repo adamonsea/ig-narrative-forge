@@ -175,7 +175,7 @@ export class FastTrackScraper {
     }
 
     // Try Newsquest Arc API first if applicable
-    if (this.domainProfile?.family === 'newsquest' && this.domainProfile?.arcSite) {
+    if (this.domainProfile?.family === 'newsquest' || this.sourceInfo?.scraping_config?.arcSite) {
       console.log('🎯 Using Newsquest Arc API strategy...');
       const arcResult = await this.tryNewsquestArcStrategy();
       if (arcResult.success && arcResult.articles.length > 0) {
@@ -215,24 +215,31 @@ export class FastTrackScraper {
 
       const domain = new URL(this.baseUrl).hostname;
       
-      // Prefer confirmed section path from previous successful scrapes
+      // Priority order: scraping_config > confirmed_arc_section > URL > fallbacks
       let sectionPath: string;
-      if (this.sourceMetadata?.confirmed_arc_section) {
+      if (this.sourceInfo?.scraping_config?.sectionPath) {
+        sectionPath = this.sourceInfo.scraping_config.sectionPath;
+        console.log(`✅ Using source-specific Arc section: ${sectionPath}`);
+      } else if (this.sourceMetadata?.confirmed_arc_section) {
         sectionPath = this.sourceMetadata.confirmed_arc_section;
         console.log(`✅ Using confirmed Arc section: ${sectionPath}`);
       } else {
-        sectionPath = this.domainProfile.sectionFallbacks?.[0] || new URL(this.baseUrl).pathname;
-        console.log(`🔍 Using fallback section path: ${sectionPath}`);
+        const urlPath = new URL(this.baseUrl).pathname;
+        sectionPath = this.domainProfile?.sectionFallbacks?.[0] || urlPath;
+        console.log(`🔍 Using ${this.domainProfile?.sectionFallbacks?.[0] ? 'domain fallback' : 'URL path'}: ${sectionPath}`);
       }
       
+      // Prioritize source-specific arcSite
+      const arcSite = this.sourceInfo?.scraping_config?.arcSite || this.domainProfile?.arcSite;
+      
       console.log(`📡 Initializing Newsquest Arc API client for ${domain} / ${sectionPath}`);
-      console.log(`   Arc site slug: ${this.domainProfile.arcSite}`);
+      console.log(`   Arc site slug: ${arcSite}`);
       console.log(`   Source config:`, this.sourceInfo?.scraping_config);
       
       const arcClient = new NewsquestArcClient(
         domain,
         sectionPath,
-        this.domainProfile.arcSite,
+        arcSite,
         this.sourceInfo?.scraping_config // Pass source-specific config
       );
       

@@ -262,7 +262,7 @@ serve(async (req) => {
       // Pre-scrape validation: Check Newsquest sources for missing scraping_config
       const newsquestDomains = ['theargus.co.uk', 'sussexexpress.co.uk', 'crawleyobserver.co.uk', 'brightonandhoveindependent.co.uk'];
       if (newsquestDomains.some(d => feedUrl.includes(d))) {
-        const sourceConfig = source.source_config;
+        const sourceConfig = source.scraping_config;
         if (!sourceConfig?.sectionPath) {
           console.log(`⚠️ Newsquest source "${source.source_name}" missing sectionPath, extracting from URL...`);
           
@@ -271,7 +271,7 @@ serve(async (req) => {
             const extractedPath = urlObj.pathname;
             const arcSite = extractDomainFromUrl(feedUrl).split('.')[0]; // e.g. "theargus"
             
-            // Update source with extracted config
+            // Update source with extracted config AND confirmed_arc_section
             const { error: updateError } = await supabase
               .from('content_sources')
               .update({ 
@@ -281,13 +281,14 @@ serve(async (req) => {
                   arcCompatible: true,
                   autoExtracted: true,
                   extractedAt: new Date().toISOString()
-                }
+                },
+                confirmed_arc_section: extractedPath
               })
               .eq('id', source.source_id);
             
             if (!updateError) {
               console.log(`✅ Auto-configured Arc API for ${source.source_name}: ${extractedPath}`);
-              source.source_config = {
+              source.scraping_config = {
                 sectionPath: extractedPath,
                 arcSite,
                 arcCompatible: true
