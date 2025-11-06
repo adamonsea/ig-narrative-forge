@@ -471,10 +471,13 @@ ABSOLUTE REQUIREMENTS (FAILURE = REJECTION)
    ❌ NEVER: On people's clothing, skin, hair, or bodies
    ⚠️  Green must make thematic sense, not be decorative filler
 
-4. EDGE-TO-EDGE COMPOSITION - No amateur framing
-   ❌ BANNED: White borders, black frames, decorative borders, box outlines around entire image
-   ✅ REQUIRED: Image content bleeds to all four edges naturally
-   ⚠️  The canvas itself has no visible frame or border of any kind
+4. EDGE-TO-EDGE COMPOSITION - ABSOLUTELY NO FRAMING DEVICES
+   ❌❌❌ INSTANT REJECTION: Any border, frame, arch, decorative edge, picture frame effect
+   ❌ BANNED: White borders, black frames, decorative arches, rounded borders, box outlines
+   ❌ BANNED: Ornamental edges, fancy frames, theatrical arch frames, window-like framing
+   ✅ REQUIRED: Image content bleeds to all four edges naturally with no separation
+   ⚠️  The canvas has NO VISIBLE BORDER OR FRAME OF ANY KIND - content to edge
+   ⚠️  DO NOT add decorative framing elements - this is NOT a poster with a border
 
 5. PROFESSIONAL LINE WORK - NOT comic book style
    ✅ Varying line weights (thick and thin), sophisticated editorial pen work
@@ -537,21 +540,39 @@ STORY: "${story.title}"
 EDITORIAL TONE: ${storyTone.toUpperCase()}
 EXPRESSION: ${expressionInstruction}
 
-SUBJECT TO ILLUSTRATE:
+STORY CONTENT TO ILLUSTRATE:
+${slideContent ? slideContent.slice(0, 500) : subjectMatter}
+
+KEY VISUAL SUBJECT:
 ${subjectMatter}
 
-COMPOSITION REQUIREMENTS:
+CRITICAL: Your illustration must be DIRECTLY RELEVANT to this specific story content.
+NOT a generic scene - illustrate THIS PARTICULAR story about "${story.title}".
+
+COMPOSITION REQUIREMENTS - LANDSCAPE FORMAT (3:2 WIDTH:HEIGHT):
+• HORIZONTAL FLOW: Arrange elements LEFT-TO-RIGHT across the width
+• UTILIZE FULL WIDTH: Composition must fill horizontal space (not centered in middle)
+• THINK WIDESCREEN: Cinema framing, panoramic view, NOT book cover or portrait
 • SIMPLE AND FOCUSED: 1-3 main subjects maximum (NOT crowd scenes)
+• AVOID VERTICAL CENTERING: Don't place single subject dead-center with empty sides
 • Edge-to-edge illustration (no borders or frames of any kind)
-• Strong single focal point with clear visual hierarchy
+• Strong focal point with clear visual hierarchy
 • Generous negative space (50%+ of image should be white)
 • Minimal background complexity - suggest location, don't detail it
-• Professional editorial framing
+
+LANDSCAPE COMPOSITION EXAMPLES:
+✅ Good: Person on left, environment elements on right → flows horizontally
+✅ Good: Object/action spreading left-to-right across width
+✅ Good: Offset focal point with supporting elements balancing horizontally
+❌ Bad: Single centered figure with empty space on both sides (portrait thinking)
+❌ Bad: Vertical stack of elements (top-to-bottom layout)
+❌ Bad: Composition that would work better as portrait orientation
 
 FORBIDDEN COMPOSITIONS:
 ❌ Crowd scenes with 5+ figures
 ❌ Highly detailed backgrounds with many objects
 ❌ Busy compositions that lack breathing room
+❌ Centered vertical composition wasting landscape space
 ✅ Simple, iconic, immediately readable imagery
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -582,6 +603,9 @@ Before you generate, confirm:
 ✅ Zero text/words anywhere in the image
 ✅ STRICT DUOTONE: Only black (#000000) and mint green (#58FFBC) - NO grays, beiges, or skin tones
 ✅ Mint green ONLY on story-relevant objects (NOT on people)
+✅ LANDSCAPE COMPOSITION: Elements flow horizontally left-to-right (not centered vertically)
+✅ FILLS HORIZONTAL WIDTH: Uses full landscape space (not centered with empty sides)
+✅ DIRECTLY RELEVANT: This illustration is specifically about "${story.title}" (not generic)
 ✅ 1-3 main subjects maximum - simple and iconic, not busy
 ✅ Edge-to-edge composition (no borders or frames of any kind)
 ✅ Sophisticated adult editorial aesthetic
@@ -590,7 +614,8 @@ Before you generate, confirm:
 
 ⚠️  CRITICAL REMINDER: Any cartoon/childish style = wasted generation and unhappy editors
 ⚠️  GREEN ON PEOPLE = Instant rejection and credit waste
-⚠️  BLACK BORDERS/FRAMES = Instant rejection
+⚠️  BLACK BORDERS/FRAMES/ARCHES = Instant rejection - NO decorative framing devices
+⚠️  CENTERED VERTICAL COMPOSITION = Wasted landscape space
 ⚠️  ANY COLOR OTHER THAN BLACK + #58FFBC = Instant rejection`;
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
