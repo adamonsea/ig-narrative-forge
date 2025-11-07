@@ -549,7 +549,7 @@ serve(async (req) => {
                 console.log(`🔒 FastTrack insufficient (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors})`);
                 console.log(`🔒 Skipping Beautiful Soup fallback - strict scope enabled (index-only mode)`);
                 standardResponse.addSourceResult(result);
-                continue;
+                return result;
               }
               
               console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
