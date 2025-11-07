@@ -103,7 +103,7 @@ export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): strin
   // Extract scene excerpt (first 180 chars to stay within target length)
   const sceneExcerpt = slideContent ? slideContent.substring(0, 180).trim() : subject;
   
-  return `You're creating an editorial illustration for ${publicationName || 'a news publication'} in the style of Guardian, New Yorker, or BBC News editorial cartoons.
+  return `You're creating an editorial illustration for ${publicationName || 'a news publication'} in the style of Jon McNaught, Guardian editorial covers, or New Yorker spot illustrations.
 
 Story: "${storyTitle}" about ${subject}
 
@@ -111,11 +111,13 @@ Visual story: ${sceneExcerpt}
 
 The illustration should feel: ${expressionGuidance} ${tonalGuidance}
 
-Style foundation: Modern editorial cartoon aesthetic with bold black ink linework on predominantly white canvas (60%+ negative space). Include one strategic mint green accent (#58FFBC) on a story-relevant object that makes thematic sense—like medical equipment for health stories, technology for tech stories, plants for environment stories. Never on people.
+Visual Language: Bold editorial cartoon with FLAT COLOR FILLS and clean black outlines—screen print aesthetic, not detailed pen work. Large, simple geometric shapes. Architectural, modernist composition with clear focal points.
 
-Composition: 3:2 landscape format flowing horizontally left-to-right. 1-3 subjects maximum for iconic, immediately readable imagery. Strong focal point with generous breathing room. Edge-to-edge composition with no borders or frames.
+Color Palette: Predominantly white negative space (60%+) with solid black areas and exactly ONE mint green accent (#58FFBC) as flat color block on story-relevant object. NO gradients, textures, or intricate details—clean, bold shapes only.
 
-Capture this specific editorial moment in the story with sophisticated adult aesthetic suitable for serious journalism.`;
+Composition: 3:2 landscape format. 1-3 large iconic forms maximum—prioritize SIMPLE, BOLD shapes over detailed rendering. Strategic negative space for balance and visual breathing room, not random emptiness. Edge-to-edge composition with no borders.
+
+Capture this moment with clean minimalist sophistication—say more with less. Adult editorial aesthetic for serious journalism.`;
 }
 
 /**
