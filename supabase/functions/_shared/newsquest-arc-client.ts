@@ -110,6 +110,9 @@ export class NewsquestArcClient {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
+      console.log(`🌐 Arc API Request: ${url.toString()}`);
+      console.log(`📍 Section: ${this.sectionPath}, Arc Site: ${this.arcSite}`);
+      
       const response = await fetch(url.toString(), {
         method: 'GET',
         headers,
@@ -118,7 +121,54 @@ export class NewsquestArcClient {
       });
 
       if (!response.ok) {
-        throw new Error(`Arc API HTTP ${response.status}`);
+        const errorBody = await response.text().catch(() => 'Unable to read response body');
+        console.error(`❌ Arc API Error ${response.status}:`, errorBody.substring(0, 500));
+        
+        // Try fallback strategies for 404
+        if (response.status === 404) {
+          console.log(`🔄 Attempting Arc API fallback strategies...`);
+          
+          // Try without leading slash
+          if (this.sectionPath.startsWith('/')) {
+            const altPath = this.sectionPath.substring(1);
+            console.log(`🔄 Fallback 1: Trying without leading slash: ${altPath}`);
+            try {
+              const altUrl = new URL(url.toString());
+              altUrl.searchParams.set('section', altPath);
+              const altResponse = await fetch(altUrl.toString(), { method: 'GET', headers, signal });
+              if (altResponse.ok) {
+                console.log(`✅ Fallback 1 succeeded!`);
+                const data = await altResponse.json();
+                const stories: ArcStory[] = Array.isArray(data?.content_elements) ? data.content_elements : [];
+                return stories
+                  .map(story => this.transformStory(story))
+                  .filter((article): article is NewsquestArcArticle => Boolean(article && article.bodyText));
+              }
+            } catch (err) {
+              console.log(`❌ Fallback 1 failed:`, err);
+            }
+          }
+          
+          // Try root section
+          console.log(`🔄 Fallback 2: Trying root section /`);
+          try {
+            const rootUrl = new URL(url.toString());
+            rootUrl.searchParams.set('section', '/');
+            const rootResponse = await fetch(rootUrl.toString(), { method: 'GET', headers, signal });
+            if (rootResponse.ok) {
+              console.log(`✅ Fallback 2 succeeded!`);
+              const data = await rootResponse.json();
+              const stories: ArcStory[] = Array.isArray(data?.content_elements) ? data.content_elements : [];
+              return stories
+                .map(story => this.transformStory(story))
+                .filter((article): article is NewsquestArcArticle => Boolean(article && article.bodyText));
+            }
+          } catch (err) {
+            console.log(`❌ Fallback 2 failed:`, err);
+          }
+        }
+        
+        throw new Error(`Arc API HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
       }
 
       const data = await response.json();

@@ -260,9 +260,14 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                   <div className="flex items-center gap-2 flex-wrap">
                     {result.success && (
                       <>
+                        {result.articlesFound !== undefined && (
+                          <Badge variant="outline" className="bg-muted">
+                            {result.articlesFound} found
+                          </Badge>
+                        )}
                         {result.articlesScraped !== undefined && (
                           <Badge variant="secondary">
-                            {result.articlesScraped} scraped
+                            {result.articlesScraped} qualified
                           </Badge>
                         )}
                         {result.articlesStored !== undefined && (
@@ -272,27 +277,32 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                         )}
                         {(result.rejectedLowRelevance || 0) > 0 && (
                           <Badge variant="destructive">
-                            {result.rejectedLowRelevance} low relevance
+                            -{result.rejectedLowRelevance} relevance
                           </Badge>
                         )}
                         {(result.rejectedLowQuality || 0) > 0 && (
-                          <Badge variant="outline" className="text-yellow-600">
-                            {result.rejectedLowQuality} low quality
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                            -{result.rejectedLowQuality} quality
                           </Badge>
                         )}
                         {(result.rejectedCompeting || 0) > 0 && (
-                          <Badge variant="outline" className="text-orange-600">
-                            {result.rejectedCompeting} competing
+                          <Badge variant="outline" className="text-orange-600 border-orange-600">
+                            -{result.rejectedCompeting} competing
                           </Badge>
                         )}
                         {result.method && (
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="text-xs">
                             {result.method}
+                          </Badge>
+                        )}
+                        {result.articlesFound && result.articlesScraped === 0 && (
+                          <Badge variant="destructive" className="animate-pulse">
+                            ⚠️ All filtered
                           </Badge>
                         )}
                         {result.articlesScraped && result.articlesStored === 0 && (
                           <Badge variant="destructive" className="animate-pulse">
-                            ⚠️ False success - all rejected
+                            ⚠️ All rejected
                           </Badge>
                         )}
                       </>

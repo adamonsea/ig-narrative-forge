@@ -537,18 +537,33 @@ export class FastTrackScraper {
       
       // Look for RSS feeds first
       const feedLinks = this.extractFeedLinks(html, this.baseUrl);
-      for (const feedLink of feedLinks.slice(0, 2)) { // Only try first 2 feeds
+      console.log(`🔍 Discovered ${feedLinks.length} RSS feed(s):`, feedLinks.slice(0, 3));
+      
+      // Try standard WordPress feed paths if no feeds discovered
+      if (feedLinks.length === 0) {
+        const standardFeeds = [
+          new URL('/feed/', this.baseUrl).href,
+          new URL('/rss/', this.baseUrl).href,
+          new URL('/feed/rss/', this.baseUrl).href
+        ];
+        console.log(`🔄 No feeds discovered, trying standard WordPress paths:`, standardFeeds);
+        feedLinks.push(...standardFeeds);
+      }
+      
+      for (const feedLink of feedLinks.slice(0, 3)) { // Try first 3 feeds
         try {
-          console.log(`📡 Trying discovered feed: ${feedLink}`);
+          console.log(`📡 Trying feed: ${feedLink}`);
           const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedLink);
           const result = await this.parseFastRSSContent(rssContent, feedLink);
           if (result.success && result.articles.length > 0) {
-            console.log(`✅ Feed discovery successful: ${result.articles.length} articles`);
+            console.log(`✅ Feed success: ${feedLink} → ${result.articles.length} articles`);
             return { ...result, method: 'rss' };
+          } else {
+            console.log(`⚠️ Feed found no articles: ${feedLink}`);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log(`⚠️ Fast feed failed: ${errorMessage}`);
+          console.log(`❌ Feed failed: ${feedLink} - ${errorMessage}`);
         }
       }
       
@@ -586,14 +601,22 @@ export class FastTrackScraper {
 
     try {
       const itemMatches = rssContent.match(/<item[\s\S]*?<\/item>|<entry[\s\S]*?<\/entry>/gi) || [];
-      console.log(`📄 Found ${itemMatches.length} RSS items (processing max 20)`);
+      console.log(`📄 Found ${itemMatches.length} RSS items in feed (processing max 20)`);
+
+      let qualifiedCount = 0;
+      let rejectedCount = 0;
 
       // Process only first 20 RSS items for speed
       for (const itemMatch of itemMatches.slice(0, 20)) {
         try {
           const article = await this.parseFastRSSItem(itemMatch, feedUrl);
-          if (article && this.isFastQualified(article)) {
-            articles.push(article);
+          if (article) {
+            if (this.isFastQualified(article)) {
+              articles.push(article);
+              qualifiedCount++;
+            } else {
+              rejectedCount++;
+            }
           }
         } catch (error) {
           const parseErrorMessage = error instanceof Error ? error.message : String(error);
@@ -601,6 +624,8 @@ export class FastTrackScraper {
           if (errors.length > 5) break; // Stop after 5 errors
         }
       }
+
+      console.log(`📊 RSS Results: ${qualifiedCount} qualified, ${rejectedCount} rejected from ${itemMatches.length} items`);
 
       return {
         success: articles.length > 0,
@@ -857,14 +882,15 @@ export class FastTrackScraper {
   private isFastQualified(content: any): boolean {
     const isWhitelisted = this.isWhitelistedDomain(this.baseUrl);
     const isRegionalTopic = this.region && this.region.toLowerCase() !== 'global';
+    const titlePreview = content.title?.substring(0, 60) || 'untitled';
     
     // Handle missing dates - more permissive for regional/whitelisted sources
     if (!content.published_at) {
       if (isWhitelisted || isRegionalTopic) {
-        console.log(`🟡 Regional/whitelisted source: Accepting article with missing date - "${content.title?.substring(0, 50)}..."`);
+        console.log(`🟡 ACCEPT (no date, regional): "${titlePreview}"`);
         content.published_at = new Date().toISOString();
       } else {
-        console.log(`🚫 Fast-track REJECT (no date): "${content.title?.substring(0, 50)}..."`);
+        console.log(`🚫 REJECT (no date): "${titlePreview}"`);
         return false;
       }
     }
@@ -877,30 +903,31 @@ export class FastTrackScraper {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         if (pubDate < sevenDaysAgo) {
           const daysOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
-          console.log(`🚫 Fast-track REJECT (too old): "${content.title?.substring(0, 50)}..." - ${daysOld} days old`);
+          console.log(`🚫 REJECT (${daysOld}d old): "${titlePreview}"`);
           return false;
         }
       } else {
         if (isWhitelisted || isRegionalTopic) {
-          console.log(`🟡 Regional/whitelisted source: Fixing invalid date - "${content.title?.substring(0, 50)}..."`);
+          console.log(`🟡 ACCEPT (bad date fixed, regional): "${titlePreview}"`);
           content.published_at = new Date().toISOString();
         } else {
-          console.log(`🚫 Fast-track REJECT (invalid date): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
+          console.log(`🚫 REJECT (invalid date): "${titlePreview}"`);
           return false;
         }
       }
     } catch (error) {
       if (isWhitelisted || isRegionalTopic) {
-        console.log(`🟡 Regional/whitelisted source: Fixing date parse error - "${content.title?.substring(0, 50)}..."`);
+        console.log(`🟡 ACCEPT (date error fixed, regional): "${titlePreview}"`);
         content.published_at = new Date().toISOString();
       } else {
-        console.log(`🚫 Fast-track REJECT (date parse error): "${content.title?.substring(0, 50)}..." - "${content.published_at}"`);
+        console.log(`🚫 REJECT (date parse error): "${titlePreview}"`);
         return false;
       }
     }
 
     // Basic content validation
     if (!content.title && !content.body) {
+      console.log(`🚫 REJECT (no title/body): "${titlePreview}"`);
       return false;
     }
     
@@ -909,13 +936,23 @@ export class FastTrackScraper {
     
     // More permissive requirements for regional/whitelisted sources
     if (isWhitelisted || isRegionalTopic) {
-      console.log(`🟡 Regional/whitelisted qualification: ${wordCount} words, snippet: ${isSnippet}`);
-      // Accept snippets if they have reasonable word count for regional sources
-      return wordCount >= 50 && (wordCount >= 75 || !isSnippet);
+      const passes = wordCount >= 50 && (wordCount >= 75 || !isSnippet);
+      if (passes) {
+        console.log(`✅ ACCEPT (regional, ${wordCount}w, snippet=${isSnippet}): "${titlePreview}"`);
+      } else {
+        console.log(`🚫 REJECT (regional, ${wordCount}w < 50 or snippet): "${titlePreview}"`);
+      }
+      return passes;
     }
     
     // Standard requirements for other domains
-    return wordCount >= 100 && !isSnippet;
+    const passes = wordCount >= 100 && !isSnippet;
+    if (passes) {
+      console.log(`✅ ACCEPT (${wordCount}w): "${titlePreview}"`);
+    } else {
+      console.log(`🚫 REJECT (${wordCount}w < 100 or snippet): "${titlePreview}"`);
+    }
+    return passes;
   }
 
   private calculateFastQualityScore(content: string, title: string): number {
