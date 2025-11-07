@@ -19,6 +19,7 @@ interface UniversalScrapeRequest {
   maxAgeDays?: number;
   // Phase 1: Support single source filtering
   singleSourceMode?: boolean;
+  enforceStrictScope?: boolean; // Opt-in strict scope enforcement
 }
 
 // Circuit breaker for failed URLs (simple in-memory cache)
@@ -142,7 +143,8 @@ serve(async (req) => {
       testMode = false, 
       maxSources = testMode ? 1 : undefined,  // Ultra-aggressive: only 1 source in test mode
       singleSourceMode = false,
-      maxAgeDays  // Can be overridden, otherwise uses topic setting
+      maxAgeDays,  // Can be overridden, otherwise uses topic setting
+      enforceStrictScope = false // Default: allow RSS/HTML fallbacks
     } = await req.json() as UniversalScrapeRequest;
 
     console.log('Universal Topic Scraper - Starting for topic:', topicId);
@@ -343,15 +345,19 @@ serve(async (req) => {
         }
       }
       
-      // Create strict scope metadata for index-only scraping
-      // Reuse urlObj from line 255 (already normalized at line 256)
-      const strictScope = {
+      // Only enable strict scope if explicitly requested
+      const shouldEnforceStrict = !!source.scraping_config?.strictScope || enforceStrictScope;
+      const strictScope = shouldEnforceStrict ? {
         host: urlObj.hostname,
-        pathPrefix: urlObj.pathname  // Already normalized
-      };
+        pathPrefix: urlObj.pathname
+      } : undefined;
       
       console.log(`   ✅ PASSED PRE-VALIDATION - Will attempt to scrape`);
-      console.log(`   🔒 Strict scope enabled: host="${strictScope.host}", pathPrefix="${strictScope.pathPrefix}"`);
+      if (shouldEnforceStrict && strictScope) {
+        console.log(`   🔒 Strict scope enabled: host="${strictScope.host}", pathPrefix="${strictScope.pathPrefix}"`);
+      } else {
+        console.log(`   🌐 RSS/HTML fallbacks enabled (strict scope OFF)`);
+      }
       validSources.push({ ...source, normalizedUrl: feedUrl, strictScope });
     }
     
