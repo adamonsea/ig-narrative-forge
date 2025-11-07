@@ -548,8 +548,7 @@ serve(async (req) => {
               if (source.strictScope) {
                 console.log(`🔒 FastTrack insufficient (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors})`);
                 console.log(`🔒 Skipping Beautiful Soup fallback - strict scope enabled (index-only mode)`);
-                standardResponse.addSourceResult(result);
-                continue; // Continue to next source instead of returning
+                return result; // Return early, outer handler will add to standardResponse
               }
               
               console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
