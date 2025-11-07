@@ -592,9 +592,9 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           prompt: illustrationPrompt,
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
-          quality: modelConfig.quality || 'medium', // Medium balances quality and cost
-          output_format: 'webp', // Smaller file size
-          output_compression: 70 // Reduced for smaller files while maintaining quality
+          quality: modelConfig.quality || 'medium',
+          output_format: 'webp',
+          output_compression: modelConfig.quality === 'high' ? 95 : 75 // Premium gets 95% for full texture, Creative gets 75%
         }),
       });
 
@@ -606,7 +606,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           size: '1536x1024',
           quality: modelConfig.quality,
           output_format: 'webp',
-          output_compression: 70
+          output_compression: modelConfig.quality === 'high' ? 95 : 75
         }));
         
         // Try to parse error details
