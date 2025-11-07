@@ -444,179 +444,27 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
-      // Create structured Gemini prompt with critical rules first
-      const geminiPrompt = `🔴 ADULT AUDIENCE ONLY - PROFESSIONAL EDITORIAL ILLUSTRATION FOR NEWS PUBLICATION 🔴
+      // Import Gemini-specific prompt builder
+      const { buildGeminiIllustrativePrompt, buildGeminiPhotographicPrompt } = await import('../_shared/gemini-prompt-builder.ts');
 
-This illustration will be published in a serious news outlet read by adults (similar to The Guardian, Financial Times, New Yorker, BBC News, Washington Post). Your output will be judged by professional editors.
+      // Generate model-specific prompt leveraging Gemini's world knowledge
+      const geminiPrompt = illustrationStyle === 'editorial_photographic'
+        ? buildGeminiPhotographicPrompt({
+            tone: storyTone,
+            subject: subjectMatter,
+            storyTitle: story.title,
+            slideContent: slideContent || subjectMatter,
+            publicationName: story.topic?.name,
+          })
+        : buildGeminiIllustrativePrompt({
+            tone: storyTone,
+            subject: subjectMatter,
+            storyTitle: story.title,
+            slideContent: slideContent || subjectMatter,
+            publicationName: story.topic?.name,
+          });
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ABSOLUTE REQUIREMENTS (FAILURE = REJECTION)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. ADULT EDITORIAL STYLE ONLY - NO CARTOON, NO CHILDREN'S BOOK, NO PLAYFUL
-   ❌ REJECT: Rounded cute faces, big eyes, simplified children's book style
-   ✅ REQUIRE: Sophisticated editorial illustration with mature visual language
-   
-2. ABSOLUTELY NO TEXT - Zero tolerance for any written language
-   ❌ Speech bubbles, thought bubbles, signs with words, labels, captions
-   ✅ Pure visual storytelling only
-
-3. MINT GREEN ACCENT RULE - STRATEGIC MEANINGFUL PLACEMENT
-   ✅ REQUIRED: Use exactly 1-2 small (#58FFBC) accents on objects RELEVANT to the story
-   ✅ Examples: If story about health → green on medical equipment
-              If story about environment → green on plants/nature elements
-              If story about technology → green on screens/devices
-              If story about transport → green on vehicle details
-   ❌ BANNED: Random placement on unrelated objects
-   ❌ NEVER: On people's clothing, skin, hair, or bodies
-   ⚠️  Green must make thematic sense, not be decorative filler
-
-4. EDGE-TO-EDGE COMPOSITION - ABSOLUTELY NO FRAMING DEVICES
-   ❌❌❌ INSTANT REJECTION: Any border, frame, arch, decorative edge, picture frame effect
-   ❌ BANNED: White borders, black frames, decorative arches, rounded borders, box outlines
-   ❌ BANNED: Ornamental edges, fancy frames, theatrical arch frames, window-like framing
-   ✅ REQUIRED: Image content bleeds to all four edges naturally with no separation
-   ⚠️  The canvas has NO VISIBLE BORDER OR FRAME OF ANY KIND - content to edge
-   ⚠️  DO NOT add decorative framing elements - this is NOT a poster with a border
-
-5. PROFESSIONAL LINE WORK - NOT comic book style
-   ✅ Varying line weights (thick and thin), sophisticated editorial pen work
-   ❌ Uniform lines, decorative crosshatching, dense shading patterns
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VISUAL STYLE MANDATE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TARGET AESTHETIC: Editorial illustration for serious journalism (NOT entertainment, NOT children's content)
-
-DRAWING TECHNIQUE:
-• Bold black ink outline with sophisticated line weight variation
-• Solid black fills for deepest shadows (strategic placement)
-• MINIMAL texture: If needed, use sparse fine dots (10-20 dots max per area)
-• Clean negative space with confident white areas
-• Adult faces with mature proportions and expressions
-
-COLOR PALETTE - STRICT DUOTONE ONLY:
-• ONLY TWO COLORS PERMITTED: Black (#000000) and mint green (#58FFBC)
-• NO OTHER COLORS: No grays, no beige, no skin tones, no brown, no blue
-• Predominantly black line work on white (50%+ negative space)
-• EXACTLY 1-2 small mint green (#58FFBC) accent shapes
-• Green placement: On story-relevant objects ONLY (must make thematic sense)
-• Think strategically: Green should draw eye to something meaningful in the narrative
-• NEVER on people's clothing, skin, hair, or bodies
-
-❌ BANNED COLORS:
-• Gray shading, gray fills, gray gradients
-• Beige/tan/skin tones
-• Any color other than pure black and #58FFBC
-• Colored picture frames or decorative elements
-
-✅ REQUIRED:
-• People: Black outlines and black fills only (no skin tones)
-• Backgrounds: White or black fills only
-• Accents: Only #58FFBC green on 1-2 story-relevant objects
-
-FORBIDDEN STYLES (These will cause rejection):
-❌ Cartoon/animated character style
-❌ Children's book illustration aesthetic
-❌ Comic strip/manga style
-❌ Playful/whimsical character design
-❌ Oversimplified cute faces
-❌ Heavy decorative patterns
-❌ Photorealism attempts
-
-REQUIRED AESTHETIC:
-✅ Guardian/New Yorker editorial illustration
-✅ Sophisticated pen and ink editorial work
-✅ Adult news publication visual language
-✅ Professional poster design aesthetic
-✅ Mature visual storytelling
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SUBJECT & CONTEXT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-STORY: "${story.title}"
-EDITORIAL TONE: ${storyTone.toUpperCase()}
-EXPRESSION: ${expressionInstruction}
-
-STORY CONTENT TO ILLUSTRATE:
-${slideContent ? slideContent.slice(0, 500) : subjectMatter}
-
-KEY VISUAL SUBJECT:
-${subjectMatter}
-
-CRITICAL: Your illustration must be DIRECTLY RELEVANT to this specific story content.
-NOT a generic scene - illustrate THIS PARTICULAR story about "${story.title}".
-
-COMPOSITION REQUIREMENTS - LANDSCAPE FORMAT (3:2 WIDTH:HEIGHT):
-• HORIZONTAL FLOW: Arrange elements LEFT-TO-RIGHT across the width
-• UTILIZE FULL WIDTH: Composition must fill horizontal space (not centered in middle)
-• THINK WIDESCREEN: Cinema framing, panoramic view, NOT book cover or portrait
-• SIMPLE AND FOCUSED: 1-3 main subjects maximum (NOT crowd scenes)
-• AVOID VERTICAL CENTERING: Don't place single subject dead-center with empty sides
-• Edge-to-edge illustration (no borders or frames of any kind)
-• Strong focal point with clear visual hierarchy
-• Generous negative space (50%+ of image should be white)
-• Minimal background complexity - suggest location, don't detail it
-
-LANDSCAPE COMPOSITION EXAMPLES:
-✅ Good: Person on left, environment elements on right → flows horizontally
-✅ Good: Object/action spreading left-to-right across width
-✅ Good: Offset focal point with supporting elements balancing horizontally
-❌ Bad: Single centered figure with empty space on both sides (portrait thinking)
-❌ Bad: Vertical stack of elements (top-to-bottom layout)
-❌ Bad: Composition that would work better as portrait orientation
-
-FORBIDDEN COMPOSITIONS:
-❌ Crowd scenes with 5+ figures
-❌ Highly detailed backgrounds with many objects
-❌ Busy compositions that lack breathing room
-❌ Centered vertical composition wasting landscape space
-✅ Simple, iconic, immediately readable imagery
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-STYLE REFERENCES FOR YOUR INTERNAL GUIDANCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Think: The Guardian editorial illustrations, Financial Times weekend illustrations, New Yorker spot illustrations, BBC News graphics, Washington Post opinion page illustrations.
-
-NOT: Disney, Pixar, children's books, comic strips, manga, animation style.
-
-COMPOSITION PHILOSOPHY:
-"One person doing one thing" is better than "five people doing five things"
-"A single powerful symbol" beats "a detailed scene"
-"Clean and iconic" trumps "complex and busy"
-
-Good composition: Single protestor with sign, clean background
-Bad composition: Crowd of 20 people in detailed city scene
-
-Good composition: One doctor with stethoscope, minimal hospital suggestion
-Bad composition: Operating room with full surgical team and equipment
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FINAL QUALITY CHECK BEFORE GENERATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Before you generate, confirm:
-✅ This looks like it belongs in The Guardian, not a children's book
-✅ Zero text/words anywhere in the image
-✅ STRICT DUOTONE: Only black (#000000) and mint green (#58FFBC) - NO grays, beiges, or skin tones
-✅ Mint green ONLY on story-relevant objects (NOT on people)
-✅ LANDSCAPE COMPOSITION: Elements flow horizontally left-to-right (not centered vertically)
-✅ FILLS HORIZONTAL WIDTH: Uses full landscape space (not centered with empty sides)
-✅ DIRECTLY RELEVANT: This illustration is specifically about "${story.title}" (not generic)
-✅ 1-3 main subjects maximum - simple and iconic, not busy
-✅ Edge-to-edge composition (no borders or frames of any kind)
-✅ Sophisticated adult editorial aesthetic
-✅ Professional line work with varying weights
-✅ 50%+ negative space - not crowded
-
-⚠️  CRITICAL REMINDER: Any cartoon/childish style = wasted generation and unhappy editors
-⚠️  GREEN ON PEOPLE = Instant rejection and credit waste
-⚠️  BLACK BORDERS/FRAMES/ARCHES = Instant rejection - NO decorative framing devices
-⚠️  CENTERED VERTICAL COMPOSITION = Wasted landscape space
-⚠️  ANY COLOR OTHER THAN BLACK + #58FFBC = Instant rejection`;
+      console.log(`📝 Gemini prompt (${geminiPrompt.length} chars):`, geminiPrompt.substring(0, 200) + '...');
 
       const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
