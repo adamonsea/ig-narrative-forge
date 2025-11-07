@@ -97,7 +97,7 @@ export async function extractSubjectMatter(
 }
 
 /**
- * Builds illustrative editorial cartoon prompt (existing style)
+ * Builds illustrative editorial cartoon prompt with print-made aesthetic
  */
 export function buildIllustrativePrompt(
   tone: string,
@@ -110,11 +110,46 @@ export function buildIllustrativePrompt(
     ? 'warm expressions, engaged demeanor'
     : 'neutral expressions, professional demeanor';
 
-  return `Editorial illustration for ${publicationName || 'local news publication'}. Subject: ${subject}. 
-Style: Modern editorial cartoon with bold outlines, flat colors (black, white, mint green #10B981 accents), vector-style illustration. 
-Visual approach: ${expressionGuidance}. Clean, minimalist composition with strong focal point.
-Requirements: Simple, iconic imagery. No text, no speech bubbles. Adult editorial style (not childish). 
-Technical: High contrast, bold lines, limited color palette, suitable for social media carousel cover.`;
+  return `PRINT-MADE EDITORIAL ILLUSTRATION for ${publicationName || 'local news publication'}. Subject: ${subject}
+
+CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
+- FLAT COLOR FILLS with visible print texture and grain (like risograph or screen print)
+- Clean BLACK OUTLINES defining shapes (hand-drawn quality, not digital vector)
+- LIMITED PALETTE: Black, white, mint green (#10B981) accents - printed ink aesthetic
+- PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
+- Slight registration shifts and imperfections (authentic print quality)
+
+COMPOSITION STYLE - Jon McNaught / Edward Hopper Influence:
+- Architectural, modernist composition with LARGE SIMPLE SHAPES
+- Bold geometric forms filling the frame (buildings, landscapes, objects)
+- Strong use of negative space and shadow shapes
+- Cinematic perspective with narrative depth
+
+VISUAL APPROACH: ${expressionGuidance}
+- Human figures simplified to essential shapes (not detailed faces)
+- Environmental storytelling through architecture and setting
+- Mood conveyed through composition and light/shadow balance
+
+PRINT TEXTURE REQUIREMENTS (CRITICAL):
+- Visible grain structure like risograph or linocut
+- Ink texture with slight imperfections and variations
+- Hand-crafted feel, NOT smooth digital rendering
+- Paper substrate visible in lighter areas
+
+TECHNICAL EXECUTION:
+- Bold confident linework (hand-drawn quality)
+- Flat color areas with print texture overlay
+- High contrast with intentional tonal shifts
+- Landscape 3:2 format optimized for editorial cover use
+
+FORBIDDEN ELEMENTS:
+❌ Smooth digital gradients or vector perfection
+❌ Detailed pen work or cross-hatching
+❌ Photorealistic rendering or CGI aesthetics
+❌ Text, speech bubbles, or graphic design elements
+❌ Childish cartoon style
+
+QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary screen print art - authentic, textured, print-made aesthetic suitable for serious editorial publication.`;
 }
 
 /**
