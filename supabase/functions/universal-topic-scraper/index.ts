@@ -344,10 +344,10 @@ serve(async (req) => {
       }
       
       // Create strict scope metadata for index-only scraping
-      const urlObj = new URL(feedUrl);
+      // Reuse urlObj from line 255 (already normalized at line 256)
       const strictScope = {
         host: urlObj.hostname,
-        pathPrefix: normalizeUrlPath(urlObj.pathname)
+        pathPrefix: urlObj.pathname  // Already normalized
       };
       
       console.log(`   ✅ PASSED PRE-VALIDATION - Will attempt to scrape`);
