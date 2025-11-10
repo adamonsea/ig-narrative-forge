@@ -117,6 +117,13 @@ Color Palette: Predominantly white negative space (60%+) with solid black areas 
 
 Composition: 3:2 landscape format. 1-3 large iconic forms maximum—prioritize SIMPLE, BOLD shapes over detailed rendering. Strategic negative space for balance and visual breathing room, not random emptiness. Edge-to-edge composition with no borders.
 
+CRITICAL CONSTRAINTS - ZERO TEXT ALLOWED:
+❌ NO text, typography, letters, words, or numbers of any kind
+❌ NO dates (like "23 NOV"), venue names (like "CONGRESS THEATRE"), or event information
+❌ NOT a poster, flyer, advertisement, title card, or graphic design layout
+❌ NO headlines, captions, labels, or written elements anywhere in the image
+This is pure visual storytelling ONLY—no typographic communication whatsoever.
+
 Capture this moment with clean minimalist sophistication—say more with less. Adult editorial aesthetic for serious journalism.`;
 }
 
