@@ -107,6 +107,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     stories: 0
   });
 
+  // New content indicators for real-time updates
+  const [newArrivals, setNewArrivals] = useState(false);
+  const [newPublished, setNewPublished] = useState(false);
+
   // Cache for topic article associations to prevent redundant DB queries
   const topicArticleCacheRef = useRef<{
     topicArticleIds: Set<string>;
@@ -118,6 +122,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
   // Debounce timer for real-time refreshes
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Previous counts to detect new content
+  const previousCountsRef = useRef<{
+    articles: number;
+    stories: number;
+  }>({ articles: 0, stories: 0 });
 
   // Import multi-tenant actions
   const {
@@ -280,6 +290,19 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       setArticles(allArticles);
+
+      // Detect new arrivals for visual indicator
+      if (previousCountsRef.current.articles > 0 && allArticles.length > previousCountsRef.current.articles) {
+        console.log('🆕 New arrivals detected!', {
+          previous: previousCountsRef.current.articles,
+          current: allArticles.length,
+          new: allArticles.length - previousCountsRef.current.articles
+        });
+        setNewArrivals(true);
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setNewArrivals(false), 5000);
+      }
+      previousCountsRef.current.articles = allArticles.length;
 
       // Update cache with loaded article IDs
       topicArticleCacheRef.current = {
@@ -555,6 +578,20 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       });
 
       setStories(storiesData);
+      
+      // Detect new published stories for visual indicator
+      const publishedStories = storiesData.filter((s: any) => s.is_published && ['ready', 'published'].includes(s.status));
+      if (previousCountsRef.current.stories > 0 && publishedStories.length > previousCountsRef.current.stories) {
+        console.log('🆕 New published stories detected!', {
+          previous: previousCountsRef.current.stories,
+          current: publishedStories.length,
+          new: publishedStories.length - previousCountsRef.current.stories
+        });
+        setNewPublished(true);
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => setNewPublished(false), 5000);
+      }
+      previousCountsRef.current.stories = publishedStories.length;
       
       // Calculate stats using the processed data
       setStats({
@@ -1069,6 +1106,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     
     // Loading states
     loading,
+    
+    // New content indicators
+    newArrivals,
+    newPublished,
+    clearNewArrivals: () => setNewArrivals(false),
+    clearNewPublished: () => setNewPublished(false),
     
     // Functions
     loadTopicContent,

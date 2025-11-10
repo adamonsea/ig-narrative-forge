@@ -18,6 +18,7 @@ import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStori
 import { SentimentCardsReview } from "@/components/SentimentCardsReview";
 import { CommunityPulseReview } from "@/components/CommunityPulseReview";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
+import { NewContentBadge } from "@/components/ui/new-content-badge";
 
 interface Topic {
   id: string;
@@ -75,7 +76,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     promoteTopicArticle,
     processingArticle,
     deletingArticles,
-    animatingArticles
+    animatingArticles,
+    newArrivals,
+    newPublished,
+    clearNewArrivals,
+    clearNewPublished
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   // Multi-tenant actions for additional functionality  
@@ -403,6 +408,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   Auto
                 </Badge>
               )}
+              <NewContentBadge 
+                show={newArrivals} 
+                onDismiss={clearNewArrivals}
+              />
             </div>
           </TabsTrigger>
           <TabsTrigger value="processing" className="flex items-center gap-2">
@@ -429,6 +438,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   {stories.filter(s => s.is_parliamentary).length}
                 </Badge>
               )}
+              <NewContentBadge 
+                show={newPublished} 
+                onDismiss={clearNewPublished}
+              />
             </div>
           </TabsTrigger>
           <TabsTrigger value="insights">
