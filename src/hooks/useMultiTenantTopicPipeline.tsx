@@ -116,6 +116,9 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     sharedContentIds: new Set(),
   });
 
+  // Debounce timer for real-time refreshes
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Import multi-tenant actions
   const {
     processingArticle,
@@ -901,7 +904,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         },
         async (payload) => {
           console.log('🔄 Topic article change detected, refreshing arrivals...', payload);
-          await loadTopicContent();
+          
+          // Debounced refresh
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          debounceTimerRef.current = setTimeout(() => {
+            loadTopicContent();
+          }, 300);
         }
       )
       .on(
@@ -915,9 +925,31 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           console.log('🔄 Story change detected, checking if for this topic...', payload);
           const storyRecord = (payload.new || payload.old) as any;
 
+          // Optimistic check: if story is already in our list, it belongs to us
+          if (storyRecord.id && stories.some(s => s.id === storyRecord.id)) {
+            console.log('✅ Story already in topic list (optimistic), refreshing...');
+            
+            // Debounced refresh
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+            }
+            debounceTimerRef.current = setTimeout(() => {
+              loadTopicContent();
+            }, 300);
+            return;
+          }
+
+          // Otherwise do full async check
           if (await doesStoryBelongToTopic(storyRecord)) {
-            console.log('✅ Story belongs to this topic, refreshing story lists...');
-            await loadTopicContent();
+            console.log('✅ Story belongs to this topic (verified), refreshing story lists...');
+            
+            // Debounced refresh
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+            }
+            debounceTimerRef.current = setTimeout(() => {
+              loadTopicContent();
+            }, 300);
           }
         }
       )
@@ -934,7 +966,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
           if (existingStory) {
             console.log('🔄 Slide change for story in this topic, refreshing...', payload);
-            await loadTopicContent();
+            
+            // Debounced refresh
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+            }
+            debounceTimerRef.current = setTimeout(() => {
+              loadTopicContent();
+            }, 300);
             return;
           }
 
@@ -948,7 +987,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             if (!error && data && data.length > 0) {
               if (await doesStoryBelongToTopic(data[0])) {
                 console.log('✅ Slide belongs to a story for this topic, refreshing...');
-                await loadTopicContent();
+                
+                // Debounced refresh
+                if (debounceTimerRef.current) {
+                  clearTimeout(debounceTimerRef.current);
+                }
+                debounceTimerRef.current = setTimeout(() => {
+                  loadTopicContent();
+                }, 300);
               }
             }
           }
@@ -972,7 +1018,14 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
             )
           ) {
             console.log('✅ Queue item belongs to this topic, refreshing processing queue...');
-            await loadTopicContent();
+            
+            // Debounced refresh
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+            }
+            debounceTimerRef.current = setTimeout(() => {
+              loadTopicContent();
+            }, 300);
           }
         }
       )
@@ -982,6 +1035,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
     return () => {
       supabase.removeChannel(channel);
+      // Clean up debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
   }, [
     selectedTopicId,
@@ -990,6 +1047,18 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     isTopicArticleForSelectedTopic,
     stories
   ]);
+
+  // Fallback polling as safety net (every 30 seconds)
+  useEffect(() => {
+    if (!selectedTopicId) return;
+
+    const pollInterval = setInterval(() => {
+      console.log('🔄 Fallback poll refresh');
+      loadTopicContent();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
+  }, [selectedTopicId, loadTopicContent]);
 
   return {
     // Data
