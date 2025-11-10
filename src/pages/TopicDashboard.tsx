@@ -25,10 +25,11 @@ import { SentimentManager } from "@/components/SentimentManager";
 import { SentimentInsights } from "@/components/SentimentInsights";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
+import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
-import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, ToggleLeft, ToggleRight, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
+import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -388,38 +389,6 @@ const TopicDashboard = () => {
   };
 
 
-  const handleAutoSimplifyToggle = async () => {
-    if (!topic) return;
-    
-    try {
-      const newValue = !topic.auto_simplify_enabled;
-      
-      const { error } = await supabase
-        .from('topics')
-        .update({ auto_simplify_enabled: newValue })
-        .eq('id', topic.id);
-
-      if (error) throw error;
-
-      setTopic(prev => prev ? { ...prev, auto_simplify_enabled: newValue } : prev);
-
-      // Refresh topic data to ensure all dependent widgets receive the latest value
-      await loadTopicAndStats();
-
-      toast({
-        title: "Settings Updated",
-        description: `Auto-simplify ${newValue ? 'enabled' : 'disabled'}`,
-      });
-    } catch (error) {
-      console.error('Error toggling auto-simplify:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update auto-simplify setting",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handlePublishToggle = (newState: boolean) => {
     if (!topic) return;
     
@@ -743,22 +712,6 @@ const TopicDashboard = () => {
                 >
                   {showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options
                 </Button>
-                
-                <div className="flex items-center gap-2 justify-center sm:justify-start ml-auto">
-                  <span className="text-sm text-muted-foreground">Auto-simplify:</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAutoSimplifyToggle}
-                    className="p-1 h-auto"
-                  >
-                    {topic?.auto_simplify_enabled ? (
-                      <ToggleRight className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <ToggleLeft className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
               </div>
 
               {showAdvancedOptions && (
@@ -957,18 +910,7 @@ const TopicDashboard = () => {
                       Writing style: <span className="font-medium capitalize">{topic.default_writing_style || 'Not set'}</span>
                     </p>
                   </div>
-                  <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      Automation
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                    <div className="mt-2 text-lg font-semibold">
-                      {topic.auto_simplify_enabled ? 'Smart summaries on' : 'Manual review'}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Quality threshold: <span className="font-medium">{topic.automation_quality_threshold ?? 'Default'}</span>
-                    </p>
-                  </div>
+                  <AutomationStatusCard topicId={topic.id} />
                   <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       Keyword Coverage
