@@ -40,13 +40,13 @@ const Index = () => {
         <div className="text-center space-y-12 max-w-2xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-8xl font-light tracking-tight text-foreground">
-              Breefly
+              Curatr
             </h1>
             <div className="text-sm text-muted-foreground font-medium tracking-wider uppercase">
               Beta
             </div>
-            <p className="text-lg text-muted-foreground">
-              Turn any topic into a curated feed
+            <p className="text-lg text-muted-foreground max-w-lg mx-auto">
+              AI-powered editorial platform that discovers, curates, and publishes beautiful story feeds from any topic
             </p>
           </div>
           
@@ -67,8 +67,8 @@ const Index = () => {
               </Button>
             )}
             <Button size="lg" variant="ghost" asChild>
-              <Link to="/feed/ai-for-agency">
-                View Demo
+              <Link to="/feed/eastbourne">
+                View Live Feed
               </Link>
             </Button>
           </div>
@@ -76,14 +76,14 @@ const Index = () => {
       </div>
       {/* Features */}
       <div className="container mx-auto px-6 pb-32">
-        <div className="grid md:grid-cols-4 gap-12 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-4 gap-12 max-w-5xl mx-auto">
           <div className="text-center space-y-3">
             <div className="w-8 h-8 mx-auto">
               <Zap className="w-8 h-8 text-foreground" />
             </div>
-            <h3 className="font-medium">Auto-discover</h3>
-            <p className="text-sm text-muted-foreground">
-              AI finds relevant content
+            <h3 className="font-medium">Smart Discovery</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              AI continuously monitors and extracts stories from trusted sources. Automated keyword matching and quality scoring ensure only relevant content reaches your pipeline.
             </p>
           </div>
 
@@ -91,9 +91,9 @@ const Index = () => {
             <div className="w-8 h-8 mx-auto">
               <Eye className="w-8 h-8 text-foreground" />
             </div>
-            <h3 className="font-medium">Simplify</h3>
-            <p className="text-sm text-muted-foreground">
-              Complex topics made clear
+            <h3 className="font-medium">Editorial Polish</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Stories are rewritten for clarity and accessibility. AI generates custom illustrations in editorial style. One-click approval workflow keeps you in control.
             </p>
           </div>
 
@@ -101,9 +101,9 @@ const Index = () => {
             <div className="w-8 h-8 mx-auto">
               <Heart className="w-8 h-8 text-foreground" />
             </div>
-            <h3 className="font-medium">Sentiment</h3>
-            <p className="text-sm text-muted-foreground">
-              Auto-detect emotional tone
+            <h3 className="font-medium">Sentiment Analysis</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Automatic emotional tone detection with visual sentiment cards. Track community pulse and surface trending topics from local conversations.
             </p>
           </div>
 
@@ -111,9 +111,9 @@ const Index = () => {
             <div className="w-8 h-8 mx-auto">
               <Share2 className="w-8 h-8 text-foreground" />
             </div>
-            <h3 className="font-medium">Share</h3>
-            <p className="text-sm text-muted-foreground">
-              Publish beautiful feeds
+            <h3 className="font-medium">Beautiful Publishing</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Stories published as swipeable carousel slides optimized for mobile. Full attribution to source publications. PWA-ready with push notifications.
             </p>
           </div>
         </div>
