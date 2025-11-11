@@ -75,7 +75,7 @@ const Index = () => {
         </div>
       </div>
       {/* Features */}
-      <div className="container mx-auto px-6 pb-32">
+      <div className="container mx-auto px-6 pb-20">
         <div className="grid md:grid-cols-4 gap-12 max-w-5xl mx-auto">
           <div className="text-center space-y-3">
             <div className="w-8 h-8 mx-auto">
@@ -115,6 +115,98 @@ const Index = () => {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Stories published as swipeable carousel slides optimized for mobile. Full attribution to source publications. PWA-ready with push notifications.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow Showcase */}
+      <div className="container mx-auto px-6 pb-32">
+        <div className="max-w-4xl mx-auto space-y-16">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl font-light tracking-tight text-foreground">
+              Editorial Workflow
+            </h2>
+            <p className="text-muted-foreground">
+              From discovery to publishing in four simple steps
+            </p>
+          </div>
+
+          <div className="space-y-12">
+            {/* Step 1: Discover */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-3 order-2 md:order-1">
+                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
+                  Step 1
+                </div>
+                <h3 className="text-2xl font-medium">Discover</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  AI monitors your configured sources and automatically extracts relevant articles based on your keywords. Stories are scored for quality and relevance before entering your pipeline.
+                </p>
+              </div>
+              <div className="order-1 md:order-2 bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
+                <div className="text-center space-y-3">
+                  <Zap className="w-12 h-12 text-pop mx-auto" />
+                  <div className="text-sm text-muted-foreground">Auto-discovery in action</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Curate */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
+                <div className="text-center space-y-3">
+                  <Eye className="w-12 h-12 text-pop mx-auto" />
+                  <div className="text-sm text-muted-foreground">Review & approve stories</div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
+                  Step 2
+                </div>
+                <h3 className="text-2xl font-medium">Curate</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Stories are rewritten for clarity and paired with custom editorial illustrations. Review the queue, approve what fits, and reject what doesn't—you maintain full editorial control.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3: Analyze */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-3 order-2 md:order-1">
+                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
+                  Step 3
+                </div>
+                <h3 className="text-2xl font-medium">Analyze</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Sentiment detection identifies the emotional tone of each story. Track community pulse, surface trending topics, and understand what resonates with your audience.
+                </p>
+              </div>
+              <div className="order-1 md:order-2 bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
+                <div className="text-center space-y-3">
+                  <Heart className="w-12 h-12 text-pop mx-auto" />
+                  <div className="text-sm text-muted-foreground">Sentiment tracking</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Publish */}
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
+                <div className="text-center space-y-3">
+                  <Share2 className="w-12 h-12 text-pop mx-auto" />
+                  <div className="text-sm text-muted-foreground">Beautiful story feeds</div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
+                  Step 4
+                </div>
+                <h3 className="text-2xl font-medium">Publish</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Stories go live as mobile-optimized carousel slides with full attribution. Readers swipe through curated content while original publishers get credit and traffic.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
