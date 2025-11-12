@@ -26,6 +26,7 @@ import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
 import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
+import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
 import { Link } from "react-router-dom";
 
 const TopicFeed = () => {
@@ -44,6 +45,9 @@ const TopicFeed = () => {
   const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
   const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
   const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
+  
+  // Track story views for PWA prompt trigger
+  const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
 
   useEffect(() => {
     const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
@@ -754,7 +758,26 @@ const TopicFeed = () => {
                 items.push(
                   <div
                     key={`story-${story.id}`}
-                    ref={index === lastStoryContentIndex ? lastStoryElementRef : null}
+                    ref={(node) => {
+                      if (index === lastStoryContentIndex) {
+                        lastStoryElementRef(node);
+                      }
+                      // Track story view when it enters viewport
+                      if (node && 'IntersectionObserver' in window) {
+                        const observer = new IntersectionObserver(
+                          (entries) => {
+                            entries.forEach((entry) => {
+                              if (entry.isIntersecting) {
+                                incrementStoriesViewed();
+                                observer.disconnect();
+                              }
+                            });
+                          },
+                          { threshold: 0.5 }
+                        );
+                        observer.observe(node);
+                      }
+                    }}
                   >
                     <StoryCarousel 
                       story={story} 

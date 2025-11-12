@@ -633,7 +633,7 @@ const TopicDashboard = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
             {/* Key Highlights Only */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2">
@@ -677,6 +677,30 @@ const TopicDashboard = () => {
                     <div>
                       <div className="text-2xl font-bold">{stats.pending_articles}</div>
                       <p className="text-sm text-muted-foreground">Available Articles</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🏠</span>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{stats.pwa_installs || 0}</div>
+                      <p className="text-sm text-muted-foreground">PWA Installs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🔔</span>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{stats.notifications_enabled || 0}</div>
+                      <p className="text-sm text-muted-foreground">Subscribers</p>
                     </div>
                   </div>
                 </CardContent>
