@@ -40,6 +40,32 @@ serve(async (req) => {
       // Don't throw - we can still generate sitemap with just topics
     }
 
+    // Fetch all published daily briefings
+    const { data: dailyBriefings, error: dailyError } = await supabase
+      .from('topic_roundups')
+      .select('period_start, updated_at, topics!inner(slug)')
+      .eq('roundup_type', 'daily')
+      .eq('is_published', true)
+      .not('topics.slug', 'is', null)
+      .order('period_start', { ascending: false });
+
+    if (dailyError) {
+      console.error('Error fetching daily briefings:', dailyError);
+    }
+
+    // Fetch all published weekly briefings
+    const { data: weeklyBriefings, error: weeklyError } = await supabase
+      .from('topic_roundups')
+      .select('period_start, updated_at, topics!inner(slug)')
+      .eq('roundup_type', 'weekly')
+      .eq('is_published', true)
+      .not('topics.slug', 'is', null)
+      .order('period_start', { ascending: false });
+
+    if (weeklyError) {
+      console.error('Error fetching weekly briefings:', weeklyError);
+    }
+
     const baseUrl = 'https://curatr.pro';
     const currentDate = new Date().toISOString();
 
@@ -66,7 +92,41 @@ serve(async (req) => {
     <lastmod>${topic.updated_at || currentDate}</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
+  </url>
+  
+  <!-- ${topic.name} Archive Page -->
+  <url>
+    <loc>${baseUrl}/feed/${topic.slug}/archive</loc>
+    <lastmod>${topic.updated_at || currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  
+  <!-- ${topic.name} Briefings Archive -->
+  <url>
+    <loc>${baseUrl}/feed/${topic.slug}/briefings</loc>
+    <lastmod>${topic.updated_at || currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
   </url>`).join('')}
+
+  ${dailyBriefings?.map(briefing => `
+  <!-- Daily Briefing: ${briefing.topics.slug} -->
+  <url>
+    <loc>${baseUrl}/feed/${briefing.topics.slug}/daily/${briefing.period_start}</loc>
+    <lastmod>${briefing.updated_at || briefing.period_start}</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('') || ''}
+
+  ${weeklyBriefings?.map(briefing => `
+  <!-- Weekly Briefing: ${briefing.topics.slug} -->
+  <url>
+    <loc>${baseUrl}/feed/${briefing.topics.slug}/weekly/${briefing.period_start}</loc>
+    <lastmod>${briefing.updated_at || briefing.period_start}</lastmod>
+    <changefreq>never</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('') || ''}
 
   ${stories?.map(story => `
   <!-- Story: ${story.title} -->
