@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
 import StoryPage from "./pages/StoryPage";
+import TopicArchive from "./pages/TopicArchive";
 import DailyRoundupList from "./pages/DailyRoundupList";
 import WeeklyRoundupList from "./pages/WeeklyRoundupList";
 
@@ -65,6 +66,7 @@ const App = () => {
                 
                 {/* New universal routes */}
               <Route path="/feed/:slug" element={<TopicFeed />} />
+              <Route path="/feed/:slug/archive" element={<TopicArchive />} />
               <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
               <Route path="/feed/:slug/daily/:date" element={<DailyRoundupList />} />
               <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />

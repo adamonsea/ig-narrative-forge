@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,7 @@ import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
 import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
+import { Link } from "react-router-dom";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -516,7 +517,7 @@ const TopicFeed = () => {
             ) : null}
 
             {/* Filter button - below subheader, centered */}
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center gap-3 pt-2">
               <TooltipProvider>
                 <Tooltip open={showFilterTip}>
                   <TooltipTrigger asChild>
@@ -537,6 +538,16 @@ const TopicFeed = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              <Link to={`/feed/${slug}/archive`}>
+                <button
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                  aria-label="View archive"
+                >
+                  <Archive className="w-4 h-4" />
+                  <span className="text-sm font-medium">Archive</span>
+                </button>
+              </Link>
             </div>
           </div>
         </div>
