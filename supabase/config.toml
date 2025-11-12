@@ -307,6 +307,9 @@ verify_jwt = true
 [functions.backfill-keyword-analytics]
 verify_jwt = true
 
+[functions.backfill-sentiment-tracking]
+verify_jwt = true
+
 [functions.backfill-story-linkage]
 verify_jwt = true
 
