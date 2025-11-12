@@ -6,7 +6,6 @@ import { DollarSign, Zap, Image, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SourceCleanup } from '@/components/SourceCleanup';
-import { NewsquestArcScraperTest } from '@/components/NewsquestArcScraperTest';
 
 interface ApiUsage {
   id: string;
@@ -265,11 +264,6 @@ export const AdminPanel = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Newsquest Arc Scraper Test */}
-      <div className="mt-8">
-        <NewsquestArcScraperTest />
-      </div>
 
       {/* Source Management & Cleanup */}
       <div className="mt-8">

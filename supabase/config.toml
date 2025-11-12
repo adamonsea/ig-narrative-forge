@@ -260,7 +260,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.newsquest-arc-scraper]
-verify_jwt = true
+verify_jwt = false
 
 [functions.emergency-scrape-fix]
 verify_jwt = true
