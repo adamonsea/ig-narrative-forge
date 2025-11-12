@@ -91,17 +91,18 @@ const TopicArchive = () => {
           } : undefined
         });
 
-        // Get total count - use type assertion to avoid infinite type recursion
+        // Get total count via topic_articles junction table
         const countResult = await (supabase as any)
           .from('stories')
-          .select('id', { count: 'exact', head: true })
-          .eq('topic_id', topicData.id)
+          .select('topic_article_id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
+          .eq('topic_articles.topic_id', topicData.id)
           .eq('is_published', true)
-          .in('status', ['ready', 'published']);
+          .in('status', ['ready', 'published'])
+          .not('topic_article_id', 'is', null);
 
         setTotalCount(countResult.count || 0);
 
-        // Load stories with pagination
+        // Load stories with pagination via topic_articles junction table
         const offset = (page - 1) * STORIES_PER_PAGE;
         const storiesResult = await (supabase as any)
           .from('stories')
@@ -111,14 +112,19 @@ const TopicArchive = () => {
             author,
             cover_illustration_url,
             created_at,
-            article:articles!inner(
-              source_url,
-              published_at
+            topic_article_id,
+            topic_articles!inner(
+              topic_id,
+              article:topic_articles_article_id_fkey(
+                source_url,
+                published_at
+              )
             )
           `)
-          .eq('topic_id', topicData.id)
+          .eq('topic_articles.topic_id', topicData.id)
           .eq('is_published', true)
           .in('status', ['ready', 'published'])
+          .not('topic_article_id', 'is', null)
           .order('created_at', { ascending: false })
           .range(offset, offset + STORIES_PER_PAGE - 1);
 
@@ -127,8 +133,12 @@ const TopicArchive = () => {
           setStories([]);
         } else {
           setStories((storiesResult.data || []).map((s: any) => ({
-            ...s,
-            article: Array.isArray(s.article) ? s.article[0] : s.article
+            id: s.id,
+            title: s.title,
+            author: s.author,
+            cover_illustration_url: s.cover_illustration_url,
+            created_at: s.created_at,
+            article: s.topic_articles?.article || {}
           })));
         }
       } catch (error) {

@@ -541,11 +541,10 @@ const TopicFeed = () => {
 
               <Link to={`/feed/${slug}/archive`}>
                 <button
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                  className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                   aria-label="View archive"
                 >
                   <Archive className="w-4 h-4" />
-                  <span className="text-sm font-medium">Archive</span>
                 </button>
               </Link>
             </div>
