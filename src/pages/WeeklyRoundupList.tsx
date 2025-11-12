@@ -346,8 +346,14 @@ export default function WeeklyRoundupList() {
     );
   }
 
-  const startDate = format(parseISO(roundup.period_start), 'MMMM d');
-  const endDate = format(parseISO(roundup.period_end), 'MMMM d, yyyy');
+  const startDate = parseISO(roundup.period_start);
+  const endDate = parseISO(roundup.period_end);
+  const startDay = format(startDate, 'd');
+  const endDay = format(endDate, 'd');
+  const monthYear = format(startDate, 'MMM');
+  const startDayOfWeek = format(startDate, 'EEE');
+  const endDayOfWeek = format(endDate, 'EEE');
+  const formattedDateRange = `${monthYear} ${startDay}-${endDay} (${startDayOfWeek}-${endDayOfWeek})`;
   const hasActiveFilters = selectedKeywords.length > 0 || selectedLocations.length > 0 || selectedSources.length > 0;
 
   return (
@@ -403,13 +409,13 @@ export default function WeeklyRoundupList() {
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">
               Weekly Briefing
             </p>
-            <h1 className="text-3xl md:text-4xl font-bold">{startDate} - {endDate}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold">{formattedDateRange}</h1>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
                 const shareUrl = `${window.location.origin}/feed/${slug}/weekly/${weekStart}`;
-                const shareText = `${topic.name} Weekly Briefing - ${startDate} - ${endDate}`;
+                const shareText = `${topic.name} Weekly Briefing - ${formattedDateRange}`;
                 if (navigator.share) {
                   navigator.share({
                     title: shareText,

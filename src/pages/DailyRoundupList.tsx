@@ -345,7 +345,7 @@ export default function DailyRoundupList() {
     );
   }
 
-  const formattedDate = format(parseISO(roundup.period_start), 'MMMM d, yyyy');
+  const formattedDate = format(parseISO(roundup.period_start), 'EEE MMM d');
   const hasActiveFilters = selectedKeywords.length > 0 || selectedLocations.length > 0 || selectedSources.length > 0;
 
   return (

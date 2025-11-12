@@ -223,7 +223,7 @@ export default function BriefingsArchive() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {roundups.map((roundup) => {
                         const date = format(parseISO(roundup.period_start), 'yyyy-MM-dd');
-                        const formattedDate = format(parseISO(roundup.period_start), 'MMMM d, yyyy');
+                        const formattedDate = format(parseISO(roundup.period_start), 'EEE MMM d');
                         const storyCount = roundup.story_ids?.length || 0;
 
                         return (
@@ -265,8 +265,14 @@ export default function BriefingsArchive() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {roundups.map((roundup) => {
                         const weekStart = format(parseISO(roundup.period_start), 'yyyy-MM-dd');
-                        const startDate = format(parseISO(roundup.period_start), 'MMM d');
-                        const endDate = format(parseISO(roundup.period_end), 'MMM d, yyyy');
+                        const startDate = parseISO(roundup.period_start);
+                        const endDate = parseISO(roundup.period_end);
+                        const startDay = format(startDate, 'd');
+                        const endDay = format(endDate, 'd');
+                        const monthYear = format(startDate, 'MMM');
+                        const startDayOfWeek = format(startDate, 'EEE');
+                        const endDayOfWeek = format(endDate, 'EEE');
+                        const formattedDate = `${monthYear} ${startDay}-${endDay} (${startDayOfWeek}-${endDayOfWeek})`;
                         const storyCount = roundup.story_ids?.length || 0;
 
                         return (
@@ -277,7 +283,7 @@ export default function BriefingsArchive() {
                             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                               <CardHeader className="pb-3">
                                 <CardTitle className="text-base flex items-start justify-between gap-2">
-                                  <span>{startDate} - {endDate}</span>
+                                  <span>{formattedDate}</span>
                                   <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 </CardTitle>
                                 <CardDescription>
