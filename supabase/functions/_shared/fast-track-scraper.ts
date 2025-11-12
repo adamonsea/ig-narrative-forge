@@ -817,54 +817,115 @@ export class FastTrackScraper {
     
     const articles: ArticleData[] = [];
     const errors: string[] = [];
+    let articleLinks: string[] = [];
 
     try {
-      const articleLinks = this.extractor.extractArticleLinks(html, baseUrl);
-      console.log(`📄 Found ${articleLinks.length} article links (processing max 5)`);
+      // Check if this is an index/category page
+      if (this.isIndexOrCategoryPage(html, baseUrl)) {
+        console.log('📋 Detected index/category page - extracting article links...');
+        articleLinks = this.extractArticleLinksFromIndex(html, baseUrl);
+        console.log(`📄 Found ${articleLinks.length} article links from index page`);
+        
+        // Process the extracted article URLs
+        for (const articleUrl of articleLinks.slice(0, 10)) {
+          try {
+            if (!this.extractor.isAllowedExternalUrl(articleUrl)) {
+              console.log(`⚠️ Skipping blocked URL: ${articleUrl}`);
+              continue;
+            }
 
-      // Only process first 5 articles for speed
-      for (const articleUrl of articleLinks.slice(0, 5)) {
-        try {
-          const extractor = new UniversalContentExtractor(articleUrl);
-          const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(articleUrl);
-          const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
-          
-          if (extractedContent.body && this.isFastQualified(extractedContent)) {
-            const regionalConfig = {
-              keywords: [],
-              region_name: this.region || 'unknown'
-            };
+            const extractor = new UniversalContentExtractor(articleUrl);
+            const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(articleUrl);
+            const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
             
-            const regionalRelevance = calculateRegionalRelevance(
-              extractedContent.body,
-              extractedContent.title,
-              regionalConfig,
-              this.sourceInfo?.source_type || 'national'
-            );
+            if (extractedContent.body && this.isFastQualified(extractedContent)) {
+              const regionalConfig = {
+                keywords: [],
+                region_name: this.region || 'unknown'
+              };
+              
+              const regionalRelevance = calculateRegionalRelevance(
+                extractedContent.body,
+                extractedContent.title,
+                regionalConfig,
+                this.sourceInfo?.source_type || 'national'
+              );
 
-            articles.push({
-              title: extractedContent.title,
-              body: extractedContent.body,
-              author: extractedContent.author,
-              published_at: extractedContent.published_at,
-              source_url: articleUrl,
-              canonical_url: articleUrl,
-              word_count: extractedContent.word_count,
-              regional_relevance_score: regionalRelevance,
-              content_quality_score: extractedContent.content_quality_score,
-              processing_status: 'new' as const,
-              import_metadata: {
-                extraction_method: 'fast_track_html',
-                source_domain: this.sourceInfo?.canonical_domain,
-                scrape_timestamp: new Date().toISOString(),
-                extractor_version: '3.0-fast'
-              }
-            });
+              articles.push({
+                title: extractedContent.title,
+                body: extractedContent.body,
+                author: extractedContent.author,
+                published_at: extractedContent.published_at,
+                source_url: articleUrl,
+                canonical_url: articleUrl,
+                word_count: extractedContent.word_count,
+                regional_relevance_score: regionalRelevance,
+                content_quality_score: extractedContent.content_quality_score,
+                processing_status: 'new' as const,
+                import_metadata: {
+                  extraction_method: 'fast_track_html_index',
+                  source_domain: this.sourceInfo?.canonical_domain,
+                  scrape_timestamp: new Date().toISOString(),
+                  extractor_version: '3.0-fast',
+                  from_index_page: true
+                }
+              });
+            }
+          } catch (error) {
+            const articleErrorMessage = error instanceof Error ? error.message : String(error);
+            errors.push(`Article error: ${articleErrorMessage}`);
+            if (errors.length > 3) break; // Stop after 3 errors
           }
-        } catch (error) {
-          const articleErrorMessage = error instanceof Error ? error.message : String(error);
-          errors.push(`Article error: ${articleErrorMessage}`);
-          if (errors.length > 3) break; // Stop after 3 errors
+        }
+      } else {
+        // Use the original article link extraction for non-index pages
+        articleLinks = this.extractor.extractArticleLinks(html, baseUrl);
+        console.log(`📄 Found ${articleLinks.length} article links (processing max 5)`);
+
+        // Only process first 5 articles for speed
+        for (const articleUrl of articleLinks.slice(0, 5)) {
+          try {
+            const extractor = new UniversalContentExtractor(articleUrl);
+            const articleHtml = await this.retryStrategy.fetchWithEnhancedRetry(articleUrl);
+            const extractedContent = extractor.extractContentFromHTML(articleHtml, articleUrl);
+            
+            if (extractedContent.body && this.isFastQualified(extractedContent)) {
+              const regionalConfig = {
+                keywords: [],
+                region_name: this.region || 'unknown'
+              };
+              
+              const regionalRelevance = calculateRegionalRelevance(
+                extractedContent.body,
+                extractedContent.title,
+                regionalConfig,
+                this.sourceInfo?.source_type || 'national'
+              );
+
+              articles.push({
+                title: extractedContent.title,
+                body: extractedContent.body,
+                author: extractedContent.author,
+                published_at: extractedContent.published_at,
+                source_url: articleUrl,
+                canonical_url: articleUrl,
+                word_count: extractedContent.word_count,
+                regional_relevance_score: regionalRelevance,
+                content_quality_score: extractedContent.content_quality_score,
+                processing_status: 'new' as const,
+                import_metadata: {
+                  extraction_method: 'fast_track_html',
+                  source_domain: this.sourceInfo?.canonical_domain,
+                  scrape_timestamp: new Date().toISOString(),
+                  extractor_version: '3.0-fast'
+                }
+              });
+            }
+          } catch (error) {
+            const articleErrorMessage = error instanceof Error ? error.message : String(error);
+            errors.push(`Article error: ${articleErrorMessage}`);
+            if (errors.length > 3) break; // Stop after 3 errors
+          }
         }
       }
 
@@ -888,6 +949,87 @@ export class FastTrackScraper {
         errors: [htmlErrorMessage],
         method: 'html'
       };
+    }
+  }
+
+  /**
+   * Detect if a page is an index/category page that lists articles
+   */
+  private isIndexOrCategoryPage(html: string, url: string): boolean {
+    const urlPath = url.toLowerCase();
+    
+    // Category indicators in URL
+    const categoryPatterns = [
+      /\/news\/(national|local|crime|business|nostalgia|sport|uk|eastbourne-news)\/$/,
+      /\/local-news\/.+\/$/,
+      /\/category\//,
+      /\/archive\//,
+      /\/section\//
+    ];
+    
+    if (categoryPatterns.some(p => p.test(urlPath))) {
+      console.log('✅ URL pattern indicates index/category page');
+      return true;
+    }
+    
+    // HTML indicators: multiple article links, no main article body
+    const hasMultipleArticleLinks = (html.match(/<article/gi) || []).length > 3;
+    const hasArticleList = html.includes('article-list') || html.includes('story-list') || html.includes('news-list');
+    const lacksMainArticle = !html.includes('class="article-body"') && !html.includes('class="story-body"');
+    
+    if (hasMultipleArticleLinks || (hasArticleList && lacksMainArticle)) {
+      console.log('✅ HTML content indicates index/category page');
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Extract individual article links from an index/category page using domain-specific patterns
+   */
+  private extractArticleLinksFromIndex(html: string, baseUrl: string): string[] {
+    const links: string[] = [];
+    const linkMatches = html.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/gi) || [];
+    
+    // Domain-specific article ID patterns
+    const hostname = new URL(baseUrl).hostname.toLowerCase();
+    let articlePattern: RegExp;
+    
+    if (hostname.includes('theargus') || hostname.includes('sussexexpress') || hostname.includes('newsquest')) {
+      // Newsquest pattern: /news/12345678.article-slug/
+      articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
+      console.log('🎯 Using Newsquest article pattern');
+    } else {
+      // Generic pattern: look for URLs with article/story/post + slug
+      articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
+      console.log('🎯 Using generic article pattern');
+    }
+    
+    for (const linkMatch of linkMatches) {
+      const hrefMatch = /href=["']([^"']+)["']/i.exec(linkMatch);
+      if (hrefMatch) {
+        const url = this.extractor.resolveUrl(hrefMatch[1], baseUrl);
+        
+        if (articlePattern.test(url) && this.isInternalLink(url, baseUrl)) {
+          links.push(url);
+        }
+      }
+    }
+    
+    return [...new Set(links)].slice(0, 15); // Get up to 15 unique articles
+  }
+
+  /**
+   * Check if a URL is internal to the base domain
+   */
+  private isInternalLink(url: string, baseUrl: string): boolean {
+    try {
+      const urlDomain = new URL(url).hostname;
+      const baseDomain = new URL(baseUrl).hostname;
+      return urlDomain === baseDomain || urlDomain === `www.${baseDomain}` || baseDomain === `www.${urlDomain}`;
+    } catch {
+      return false;
     }
   }
 
