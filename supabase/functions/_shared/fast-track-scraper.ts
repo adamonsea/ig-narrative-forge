@@ -576,39 +576,48 @@ export class FastTrackScraper {
       // Use domain-specific strategy for better success
       const html = await this.retryStrategy.fetchWithDomainSpecificStrategy(this.baseUrl);
       
-      // Look for RSS feeds first
-      const feedLinks = this.extractFeedLinks(html, this.baseUrl);
-      console.log(`🔍 Discovered ${feedLinks.length} RSS feed(s):`, feedLinks.slice(0, 3));
+      // Check if RSS should be skipped based on domain profile strategy
+      const strategyConfig = this.domainProfile?.scrapingStrategy;
+      const skipRSS = strategyConfig?.skip?.includes('rss') || false;
       
-      // Try standard WordPress feed paths if no feeds discovered
-      if (feedLinks.length === 0) {
-        const standardFeeds = [
-          new URL('/feed/', this.baseUrl).href,
-          new URL('/rss/', this.baseUrl).href,
-          new URL('/feed/rss/', this.baseUrl).href
-        ];
-        console.log(`🔄 No feeds discovered, trying standard WordPress paths:`, standardFeeds);
-        feedLinks.push(...standardFeeds);
-      }
-      
-      for (const feedLink of feedLinks.slice(0, 3)) { // Try first 3 feeds
-        try {
-          console.log(`📡 Trying feed: ${feedLink}`);
-          const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedLink);
-          const result = await this.parseFastRSSContent(rssContent, feedLink);
-          if (result.success && result.articles.length > 0) {
-            console.log(`✅ Feed success: ${feedLink} → ${result.articles.length} articles`);
-            return { ...result, method: 'rss' };
-          } else {
-            console.log(`⚠️ Feed found no articles: ${feedLink}`);
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log(`❌ Feed failed: ${feedLink} - ${errorMessage}`);
+      if (!skipRSS) {
+        // Look for RSS feeds first (unless RSS is skipped)
+        const feedLinks = this.extractFeedLinks(html, this.baseUrl);
+        console.log(`🔍 Discovered ${feedLinks.length} RSS feed(s):`, feedLinks.slice(0, 3));
+        
+        // Try standard WordPress feed paths if no feeds discovered
+        if (feedLinks.length === 0) {
+          const standardFeeds = [
+            new URL('/feed/', this.baseUrl).href,
+            new URL('/rss/', this.baseUrl).href,
+            new URL('/feed/rss/', this.baseUrl).href
+          ];
+          console.log(`🔄 No feeds discovered, trying standard WordPress paths:`, standardFeeds);
+          feedLinks.push(...standardFeeds);
         }
+        
+        for (const feedLink of feedLinks.slice(0, 3)) { // Try first 3 feeds
+          try {
+            console.log(`📡 Trying feed: ${feedLink}`);
+            const rssContent = await this.retryStrategy.fetchWithDomainSpecificStrategy(feedLink);
+            const result = await this.parseFastRSSContent(rssContent, feedLink);
+            if (result.success && result.articles.length > 0) {
+              console.log(`✅ Feed success: ${feedLink} → ${result.articles.length} articles`);
+              return { ...result, method: 'rss' };
+            } else {
+              console.log(`⚠️ Feed found no articles: ${feedLink}`);
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.log(`❌ Feed failed: ${feedLink} - ${errorMessage}`);
+          }
+        }
+      } else {
+        console.log('⏭️ Skipping RSS feed discovery (per domain profile strategy)');
       }
       
       // Parse HTML articles with strict limits
+      console.log('📄 Parsing HTML for article links...');
       return await this.parseFastHTMLArticles(html, this.baseUrl);
       
     } catch (error) {
