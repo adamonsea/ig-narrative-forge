@@ -180,8 +180,33 @@ export class FastTrackScraper {
       console.log('🟡 Treating source as accessible due to Newsquest override.');
     }
 
-    // Try Newsquest Arc API first if applicable
-    if (this.domainProfile?.family === 'newsquest' || this.sourceInfo?.scraping_config?.arcSite) {
+    // Check for domain-specific scraping strategy preferences
+    const strategyConfig = this.domainProfile?.scrapingStrategy;
+    const skipStrategies = new Set(strategyConfig?.skip || []);
+    const preferredStrategy = strategyConfig?.preferred;
+
+    if (preferredStrategy) {
+      console.log(`🎯 Domain profile prefers "${preferredStrategy}" strategy`, 
+        skipStrategies.size > 0 ? `(skipping: ${Array.from(skipStrategies).join(', ')})` : '');
+    }
+
+    // Execute strategies based on preference
+    if (preferredStrategy === 'html' && !skipStrategies.has('html')) {
+      console.log('📄 Using preferred HTML parsing strategy...');
+      return await this.tryFastHTMLStrategy();
+    }
+
+    if (preferredStrategy === 'rss' && !skipStrategies.has('rss')) {
+      console.log('📰 Using preferred RSS strategy...');
+      const rssResult = await this.tryFastRSSStrategy();
+      if (rssResult.success && rssResult.articles.length > 0) {
+        return rssResult;
+      }
+    }
+
+    // Try Newsquest Arc API if not skipped and applicable
+    if (!skipStrategies.has('arc') && 
+        (this.domainProfile?.family === 'newsquest' || this.sourceInfo?.scraping_config?.arcSite)) {
       console.log('🎯 Using Newsquest Arc API strategy...');
       const arcResult = await this.tryNewsquestArcStrategy();
       if (arcResult.success && arcResult.articles.length > 0) {
@@ -218,20 +243,36 @@ export class FastTrackScraper {
     }
     
     // Try structured data extraction (fastest when available)
-    const structuredResult = await this.tryStructuredDataExtraction();
-    if (structuredResult.success && structuredResult.articles.length > 0) {
-      return structuredResult;
+    if (!skipStrategies.has('html')) {
+      const structuredResult = await this.tryStructuredDataExtraction();
+      if (structuredResult.success && structuredResult.articles.length > 0) {
+        return structuredResult;
+      }
     }
 
-    // Try RSS with reduced processing
-    const rssResult = await this.tryFastRSSStrategy();
-    if (rssResult.success && rssResult.articles.length > 0) {
-      return rssResult;
+    // Try RSS with reduced processing if not already tried
+    if (!skipStrategies.has('rss') && preferredStrategy !== 'rss') {
+      const rssResult = await this.tryFastRSSStrategy();
+      if (rssResult.success && rssResult.articles.length > 0) {
+        return rssResult;
+      }
     }
     
-    // Fallback to minimal HTML parsing
-    console.log('📄 RSS failed, trying fast HTML parsing...');
-    return await this.tryFastHTMLStrategy();
+    // Fallback to minimal HTML parsing if not already tried
+    if (!skipStrategies.has('html') && preferredStrategy !== 'html') {
+      console.log('📄 Fallback to fast HTML parsing...');
+      return await this.tryFastHTMLStrategy();
+    }
+
+    // No strategies left to try
+    return {
+      success: false,
+      articles: [],
+      articlesFound: 0,
+      articlesScraped: 0,
+      errors: ['All configured scraping strategies were skipped or failed'],
+      method: 'none'
+    };
   }
 
   private async tryNewsquestArcStrategy(): Promise<ScrapingResult> {

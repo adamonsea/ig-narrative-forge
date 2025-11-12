@@ -20,6 +20,11 @@ export interface DomainProfile {
     enabled?: boolean;
     delay?: number;
   };
+  scrapingStrategy?: {
+    preferred?: 'arc' | 'rss' | 'html' | 'auto';
+    skip?: ('arc' | 'rss' | 'html')[];
+    timeout?: number;
+  };
 }
 
 export interface DomainProfileSource {
