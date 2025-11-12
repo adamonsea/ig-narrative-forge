@@ -91,90 +91,74 @@ const TopicArchive = () => {
           } : undefined
         });
 
-        // Get stories count for this topic
-        // First get all topic_article IDs (we need this for the count)
-        const topicArticlesCountResult = await supabase
-          .from('topic_articles')
-          .select('id', { count: 'exact', head: true })
-          .eq('topic_id', topicData.id);
-
-        console.log('Topic articles count:', topicArticlesCountResult);
-
-        if (topicArticlesCountResult.error) {
-          console.error('Count error:', topicArticlesCountResult.error);
-          setTotalCount(0);
-          setStories([]);
-          return;
-        }
-
-        // Get the IDs to query stories
+        // Get all topic_article IDs for this topic
         const topicArticlesIdsResult = await supabase
           .from('topic_articles')
           .select('id')
-          .eq('topic_id', topicData.id);
-
-        console.log('Topic article IDs:', topicArticlesIdsResult);
+          .eq('topic_id', topicData.id)
+          .order('created_at', { ascending: false });
 
         if (topicArticlesIdsResult.error || !topicArticlesIdsResult.data?.length) {
-          console.error('IDs error:', topicArticlesIdsResult.error);
+          console.error('Topic articles error:', topicArticlesIdsResult.error);
           setTotalCount(0);
           setStories([]);
+          setLoading(false);
           return;
         }
 
         const topicArticleIds = topicArticlesIdsResult.data.map(ta => ta.id);
 
-        // Count stories that match these topic_article_ids
+        // Count all published stories for this topic
         const storiesCountResult = await supabase
           .from('stories')
           .select('id', { count: 'exact', head: true })
-          .in('topic_article_id', topicArticleIds.slice(0, 100)) // Limit to avoid URL length issues
+          .in('topic_article_id', topicArticleIds)
           .eq('is_published', true)
           .in('status', ['ready', 'published']);
 
-        console.log('Stories count:', storiesCountResult);
         setTotalCount(storiesCountResult.count || 0);
 
-        // Load paginated stories
+        // Load paginated stories with .range()
         const offset = (page - 1) * STORIES_PER_PAGE;
         const storiesResult = await supabase
           .from('stories')
           .select('id, title, author, cover_illustration_url, created_at, topic_article_id')
-          .in('topic_article_id', topicArticleIds.slice(offset, offset + STORIES_PER_PAGE))
+          .in('topic_article_id', topicArticleIds)
           .eq('is_published', true)
           .in('status', ['ready', 'published'])
-          .order('created_at', { ascending: false });
-
-        console.log('Stories result:', storiesResult);
+          .order('created_at', { ascending: false })
+          .range(offset, offset + STORIES_PER_PAGE - 1);
 
         if (storiesResult.error) {
           console.error('Stories error:', storiesResult.error);
           setStories([]);
+        } else if (!storiesResult.data?.length) {
+          setStories([]);
         } else {
-          // For each story, fetch the article data
-          const storiesWithArticles = await Promise.all(
-            (storiesResult.data || []).map(async (story) => {
-              const topicArticleResult = await supabase
-                .from('topic_articles')
-                .select('articles(source_url, published_at)')
-                .eq('id', story.topic_article_id)
-                .single();
+          // Batch fetch article data for all stories
+          const topicArticleIdsInPage = storiesResult.data.map(s => s.topic_article_id);
+          const articlesResult = await supabase
+            .from('topic_articles')
+            .select('id, articles(source_url, published_at)')
+            .in('id', topicArticleIdsInPage);
 
-              const articles = topicArticleResult.data?.articles;
+          const articlesMap = new Map();
+          if (articlesResult.data) {
+            articlesResult.data.forEach(ta => {
+              const articles = (ta as any).articles;
               const article = Array.isArray(articles) ? articles[0] : articles;
-              
-              return {
-                id: story.id,
-                title: story.title,
-                author: story.author,
-                cover_illustration_url: story.cover_illustration_url,
-                created_at: story.created_at,
-                article: article || { source_url: '', published_at: '' }
-              };
-            })
-          );
+              articlesMap.set(ta.id, article || { source_url: '', published_at: '' });
+            });
+          }
 
-          setStories(storiesWithArticles);
+          setStories(storiesResult.data.map((story) => ({
+            id: story.id,
+            title: story.title,
+            author: story.author,
+            cover_illustration_url: story.cover_illustration_url,
+            created_at: story.created_at,
+            article: articlesMap.get(story.topic_article_id) || { source_url: '', published_at: '' }
+          })));
         }
       } catch (error) {
         console.error('Error loading archive:', error);
@@ -244,16 +228,16 @@ const TopicArchive = () => {
           </Link>
         </Button>
 
-        {/* Archive Header */}
-        <header className="mb-12 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Archive className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl sm:text-5xl font-bold">
-              {topic.name} Archive
+        {/* Archive Header - More compact */}
+        <header className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Archive className="w-5 h-5 text-muted-foreground" />
+            <h1 className="text-2xl font-semibold">
+              Archive
             </h1>
           </div>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Browse all {totalCount.toLocaleString()} stories from {topic.name}
+          <p className="text-sm text-muted-foreground">
+            {totalCount.toLocaleString()} {totalCount === 1 ? 'story' : 'stories'}
           </p>
         </header>
 
