@@ -420,19 +420,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     return <>{parts}</>;
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse">
-            <div className="h-32 bg-muted rounded-lg"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (stories.length === 0) {
+  if (stories.length === 0 && !loading) {
     return (
       <div className="text-center py-12">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
@@ -479,29 +467,37 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b pb-2">
-        <Button
-          variant={storyFilter === 'all' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => { setStoryFilter('all'); setCurrentPage(1); }}
-        >
-          All Stories ({stories.length})
-        </Button>
-        <Button
-          variant={storyFilter === 'regular' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => { setStoryFilter('regular'); setCurrentPage(1); }}
-        >
-          Regular ({regularCount})
-        </Button>
-        <Button
-          variant={storyFilter === 'parliamentary' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => { setStoryFilter('parliamentary'); setCurrentPage(1); }}
-        >
-          Parliamentary ({parliamentaryCount})
-        </Button>
+      {/* Filter Tabs with Loading Indicator */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={storyFilter === 'all' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => { setStoryFilter('all'); setCurrentPage(1); }}
+          >
+            All Stories ({stories.length})
+          </Button>
+          <Button
+            variant={storyFilter === 'regular' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => { setStoryFilter('regular'); setCurrentPage(1); }}
+          >
+            Regular ({regularCount})
+          </Button>
+          <Button
+            variant={storyFilter === 'parliamentary' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => { setStoryFilter('parliamentary'); setCurrentPage(1); }}
+          >
+            Parliamentary ({parliamentaryCount})
+          </Button>
+        </div>
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Refreshing...</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">
