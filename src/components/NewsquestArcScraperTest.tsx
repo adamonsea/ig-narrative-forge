@@ -39,7 +39,7 @@ interface ScraperTestResult {
 
 const NEWSQUEST_SOURCES = [
   { id: "019be65d-0075-406c-b572-c66e0528731b", name: "sussexexpress.co.uk", domain: "sussexexpress.co.uk" },
-  { id: "019be65d-d78a-b72a-a002-74e66c45ab19", name: "theargus.co.uk", domain: "theargus.co.uk" }
+  { id: "00094692-8a2a-409c-be6a-3f18b9cf78a9", name: "theargus.co.uk", domain: "theargus.co.uk" }
 ];
 
 export function NewsquestArcScraperTest() {
