@@ -2,7 +2,7 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export interface DomainProfile {
-  family?: 'newsquest' | 'reach' | 'jpi' | 'custom';
+  family?: 'newsquest' | 'reach' | 'jpi' | 'regional_slug' | 'custom';
   arcSite?: string;
   sectionFallbacks?: string[];
   alternateRoutes?: {

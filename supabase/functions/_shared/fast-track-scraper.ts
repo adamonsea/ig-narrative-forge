@@ -996,21 +996,32 @@ export class FastTrackScraper {
     const hostname = new URL(baseUrl).hostname.toLowerCase();
     let articlePattern: RegExp;
     
-    // Newsquest family - all use 6-8 digit ID + slug pattern
-    const newsquestDomains = [
-      'theargus', 'sussexexpress', 'crawleyobserver', 
-      'brightonandhoveindependent', 'hastingsobserver', 'hastingsindependentpress',
-      'newsquest' // Generic newsquest domain
-    ];
-    
-    if (newsquestDomains.some(domain => hostname.includes(domain))) {
+    // Domain-specific patterns based on domain profile family
+    if (this.domainProfile?.family === 'regional_slug') {
+      // Regional slug pattern: long slug-only URLs (e.g., eastsussex.news, sussex.press)
+      articlePattern = /^https?:\/\/[^\/]+\/[a-z0-9-]{20,}\/?$/;
+      console.log('🎯 Using regional_slug article pattern');
+    } else if (this.domainProfile?.family === 'newsquest') {
       // Newsquest pattern: /news/12345678.article-slug/
       articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
       console.log('🎯 Using Newsquest article pattern');
     } else {
-      // Generic pattern: look for URLs with article/story/post + slug
-      articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
-      console.log('🎯 Using generic article pattern');
+      // Newsquest family fallback - all use 6-8 digit ID + slug pattern
+      const newsquestDomains = [
+        'theargus', 'sussexexpress', 'crawleyobserver', 
+        'brightonandhoveindependent', 'hastingsobserver', 'hastingsindependentpress',
+        'newsquest' // Generic newsquest domain
+      ];
+      
+      if (newsquestDomains.some(domain => hostname.includes(domain))) {
+        // Newsquest pattern: /news/12345678.article-slug/
+        articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
+        console.log('🎯 Using Newsquest article pattern (fallback)');
+      } else {
+        // Generic pattern: look for URLs with article/story/post + slug
+        articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
+        console.log('🎯 Using generic article pattern');
+      }
     }
     
     for (const linkMatch of linkMatches) {
