@@ -109,7 +109,7 @@ serve(async (req) => {
 
     console.log('🔍 Fetching published stories...');
     
-    // Try multi-tenant structure first (topic_article_id)
+    // Try multi-tenant structure first (topic_article_id with shared_article_content)
     const { data: multiTenantStories, error: mtError } = await supabase
       .from('stories')
       .select(`
@@ -118,7 +118,7 @@ serve(async (req) => {
         topic_articles!inner (
           topic_id,
           shared_content_id,
-          shared_content!inner (
+          shared_content:shared_article_content!inner (
             title,
             body,
             author,
@@ -128,16 +128,17 @@ serve(async (req) => {
         )
       `)
       .eq('topic_articles.topic_id', topicId)
-      .eq('is_published', true)
-      .in('status', ['ready', 'published'])
-      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .or('is_published.eq.true,status.eq.published')
+      .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false });
 
     let stories = [];
     let contentForAnalysis = [];
+    let queryReason = '';
 
     if (!mtError && multiTenantStories && multiTenantStories.length > 0) {
       console.log(`✅ Found ${multiTenantStories.length} multi-tenant stories`);
+      queryReason = 'multi_tenant_stories';
       stories = multiTenantStories;
       contentForAnalysis = multiTenantStories.map(story => ({
         title: story.topic_articles.shared_content.title,
@@ -149,63 +150,105 @@ serve(async (req) => {
         slides: story.slides
       }));
     } else {
-      // Fallback to legacy structure (article_id)
+      // If multi-tenant query failed or returned 0 results, try direct topic_articles
       if (mtError) {
         console.warn('⚠️ Multi-tenant query error:', mtError);
       }
-      console.log('🔄 Trying legacy structure...');
-      const { data: legacyStories, error: legacyError } = await supabase
-        .from('stories')
+      console.log('🔄 No multi-tenant stories found, trying direct topic_articles query...');
+      
+      const { data: topicArticles, error: taError } = await supabase
+        .from('topic_articles')
         .select(`
           *,
-          slides (content, slide_number),
-          articles!inner (
-            topic_id,
+          shared_article_content!inner (
             title,
             body,
             author,
             published_at,
-            source_url,
-            regional_relevance_score,
-            processing_status
+            source_url
           )
         `)
-        .eq('articles.topic_id', topicId)
-        .eq('is_published', true)
-        .in('status', ['ready', 'published'])
-        .eq('articles.processing_status', 'processed')
-        .gte('articles.regional_relevance_score', 0)
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .eq('topic_id', topicId)
+        .or('status.eq.published,status.eq.approved')
+        .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false });
 
-      if (legacyError) {
-        console.error('❌ Error fetching stories:', legacyError);
-        throw legacyError;
-      }
+      if (!taError && topicArticles && topicArticles.length > 0) {
+        console.log(`✅ Found ${topicArticles.length} topic articles (fallback query)`);
+        queryReason = 'direct_topic_articles';
+        contentForAnalysis = topicArticles.map(article => ({
+          title: article.shared_article_content.title,
+          body: article.shared_article_content.body,
+          author: article.shared_article_content.author,
+          published_at: article.shared_article_content.published_at,
+          source_url: article.shared_article_content.source_url,
+          regional_relevance_score: 100,
+          slides: []
+        }));
+      } else {
+        // Final fallback: legacy structure (article_id)
+        if (taError) {
+          console.warn('⚠️ Topic articles query error:', taError);
+        }
+        console.log('🔄 Trying legacy structure...');
+        const { data: legacyStories, error: legacyError } = await supabase
+          .from('stories')
+          .select(`
+            *,
+            slides (content, slide_number),
+            articles!inner (
+              topic_id,
+              title,
+              body,
+              author,
+              published_at,
+              source_url,
+              regional_relevance_score,
+              processing_status
+            )
+          `)
+          .eq('articles.topic_id', topicId)
+          .or('is_published.eq.true,status.eq.published')
+          .eq('articles.processing_status', 'processed')
+          .gte('articles.regional_relevance_score', 0)
+          .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false });
 
-      console.log(`✅ Found ${legacyStories?.length || 0} legacy stories`);
-      stories = legacyStories || [];
-      contentForAnalysis = stories.map(story => ({
-        title: story.articles.title,
-        body: story.articles.body,
-        author: story.articles.author,
-        published_at: story.articles.published_at,
-        source_url: story.articles.source_url,
-        regional_relevance_score: story.articles.regional_relevance_score,
-        slides: story.slides
-      }));
+        if (legacyError) {
+          console.error('❌ Error fetching stories:', legacyError);
+          throw legacyError;
+        }
+
+        console.log(`✅ Found ${legacyStories?.length || 0} legacy stories`);
+        queryReason = 'legacy_stories';
+        stories = legacyStories || [];
+        contentForAnalysis = stories.map(story => ({
+          title: story.articles.title,
+          body: story.articles.body,
+          author: story.articles.author,
+          published_at: story.articles.published_at,
+          source_url: story.articles.source_url,
+          regional_relevance_score: story.articles.regional_relevance_score,
+          slides: story.slides
+        }));
+      }
     }
 
-    console.log(`✅ Total stories for analysis: ${contentForAnalysis.length}`);
+    console.log(`✅ Total stories for analysis: ${contentForAnalysis.length}`, {
+      queryMethod: queryReason,
+      timeWindow: '45 days'
+    });
 
     if (contentForAnalysis.length === 0) {
       console.warn('⚠️ No published content found for analysis', {
         topicId,
         totalStoriesQueried: stories?.length || 0,
+        queryMethod: queryReason,
         possibleReasons: [
           'No stories with status "ready" or "published"',
           'No articles with processing_status "processed"',
-          'All stories older than 30 days'
+          'All content older than 45 days',
+          'Multi-tenant join may have failed - check shared_article_content relationship'
         ]
       });
       return new Response(
@@ -215,7 +258,14 @@ serve(async (req) => {
           topicId,
           debug: {
             storiesQueried: stories?.length || 0,
-            reason: 'No matching stories found with required status'
+            queryMethod: queryReason || 'unknown',
+            reason: 'No matching stories found with required status',
+            timeWindow: '45 days',
+            suggestedActions: [
+              'Check if topic_articles exist for this topic',
+              'Verify shared_article_content records are linked correctly',
+              'Confirm stories have is_published=true or status=published'
+            ]
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
