@@ -1006,22 +1006,9 @@ export class FastTrackScraper {
       articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
       console.log('🎯 Using Newsquest article pattern');
     } else {
-      // Newsquest family fallback - all use 6-8 digit ID + slug pattern
-      const newsquestDomains = [
-        'theargus', 'sussexexpress', 'crawleyobserver', 
-        'brightonandhoveindependent', 'hastingsobserver', 'hastingsindependentpress',
-        'newsquest' // Generic newsquest domain
-      ];
-      
-      if (newsquestDomains.some(domain => hostname.includes(domain))) {
-        // Newsquest pattern: /news/12345678.article-slug/
-        articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
-        console.log('🎯 Using Newsquest article pattern (fallback)');
-      } else {
-        // Generic pattern: look for URLs with article/story/post + slug
-        articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
-        console.log('🎯 Using generic article pattern');
-      }
+      // Generic pattern: look for URLs with article/story/post + slug
+      articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
+      console.log('🎯 Using generic article pattern');
     }
     
     for (const linkMatch of linkMatches) {
