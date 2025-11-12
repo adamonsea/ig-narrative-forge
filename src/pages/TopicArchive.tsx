@@ -61,7 +61,7 @@ const TopicArchive = () => {
       setLoading(true);
       
       try {
-        // Load topic - use type assertion to avoid infinite type recursion
+        // Load topic
         const topicResult = await (supabase as any)
           .from('topics')
           .select('id, name, slug, description, topic_type, branding_config')
@@ -91,73 +91,91 @@ const TopicArchive = () => {
           } : undefined
         });
 
-        // Get all topic_article IDs for this topic
-        const topicArticlesIdsResult = await supabase
-          .from('topic_articles')
-          .select('id')
-          .eq('topic_id', topicData.id)
-          .order('created_at', { ascending: false });
-
-        if (topicArticlesIdsResult.error || !topicArticlesIdsResult.data?.length) {
-          console.error('Topic articles error:', topicArticlesIdsResult.error);
-          setTotalCount(0);
-          setStories([]);
-          setLoading(false);
-          return;
-        }
-
-        const topicArticleIds = topicArticlesIdsResult.data.map(ta => ta.id);
-
-        // Count all published stories for this topic
-        const storiesCountResult = await supabase
+        // Use join-based count to avoid URL length limits
+        const countResult = await (supabase as any)
           .from('stories')
-          .select('id', { count: 'exact', head: true })
-          .in('topic_article_id', topicArticleIds)
+          .select('id, topic_articles!inner(topic_id)', { head: true, count: 'exact' })
+          .eq('topic_articles.topic_id', topicData.id)
           .eq('is_published', true)
           .in('status', ['ready', 'published']);
 
-        setTotalCount(storiesCountResult.count || 0);
+        const count = countResult.count || 0;
+        setTotalCount(count);
 
-        // Load paginated stories with .range()
+        // Redirect to last page if current page is beyond total pages
+        const calculatedTotalPages = Math.ceil(count / STORIES_PER_PAGE);
+        if (page > calculatedTotalPages && calculatedTotalPages > 0) {
+          setSearchParams({ page: calculatedTotalPages.toString() });
+          return;
+        }
+
+        // Use join-based query with embedded shared_article_content
         const offset = (page - 1) * STORIES_PER_PAGE;
-        const storiesResult = await supabase
+        const storiesResult = await (supabase as any)
           .from('stories')
-          .select('id, title, author, cover_illustration_url, created_at, topic_article_id')
-          .in('topic_article_id', topicArticleIds)
+          .select(`
+            id,
+            title,
+            author,
+            cover_illustration_url,
+            created_at,
+            topic_article_id,
+            topic_articles!inner(
+              topic_id,
+              shared_article_content(
+                url,
+                published_at
+              )
+            )
+          `)
+          .eq('topic_articles.topic_id', topicData.id)
           .eq('is_published', true)
           .in('status', ['ready', 'published'])
           .order('created_at', { ascending: false })
           .range(offset, offset + STORIES_PER_PAGE - 1);
 
         if (storiesResult.error) {
-          console.error('Stories error:', storiesResult.error);
-          setStories([]);
+          console.error('Stories query error:', storiesResult.error);
+          // Fallback to RPC if join query fails
+          const rpcResult = await supabase.rpc('get_stories_unified', {
+            p_topic_id: topicData.id,
+            p_limit: STORIES_PER_PAGE,
+            p_offset: offset
+          });
+
+          if (rpcResult.error) {
+            console.error('RPC fallback error:', rpcResult.error);
+            setStories([]);
+          } else {
+            const rpcStories = (rpcResult.data || [])
+              .filter((s: any) => s.is_published && ['ready', 'published'].includes(s.status))
+              .map((s: any) => ({
+                id: s.id,
+                title: s.title,
+                author: s.author,
+                cover_illustration_url: s.cover_illustration_url,
+                created_at: s.created_at,
+                article: {
+                  source_url: s.article_url || '',
+                  published_at: s.article_published_at || ''
+                }
+              }));
+            setStories(rpcStories);
+          }
         } else if (!storiesResult.data?.length) {
           setStories([]);
         } else {
-          // Batch fetch article data for all stories
-          const topicArticleIdsInPage = storiesResult.data.map(s => s.topic_article_id);
-          const articlesResult = await supabase
-            .from('topic_articles')
-            .select('id, articles(source_url, published_at)')
-            .in('id', topicArticleIdsInPage);
-
-          const articlesMap = new Map();
-          if (articlesResult.data) {
-            articlesResult.data.forEach(ta => {
-              const articles = (ta as any).articles;
-              const article = Array.isArray(articles) ? articles[0] : articles;
-              articlesMap.set(ta.id, article || { source_url: '', published_at: '' });
-            });
-          }
-
-          setStories(storiesResult.data.map((story) => ({
+          // Map embedded shared_article_content to article field
+          setStories(storiesResult.data.map((story: any) => ({
             id: story.id,
             title: story.title,
             author: story.author,
             cover_illustration_url: story.cover_illustration_url,
             created_at: story.created_at,
-            article: articlesMap.get(story.topic_article_id) || { source_url: '', published_at: '' }
+            article: {
+              source_url: story.topic_articles?.shared_article_content?.url || '',
+              published_at: story.topic_articles?.shared_article_content?.published_at || ''
+            }
           })));
         }
       } catch (error) {
@@ -168,7 +186,7 @@ const TopicArchive = () => {
     };
 
     loadArchive();
-  }, [slug, page]);
+  }, [slug, page, setSearchParams]);
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
@@ -228,15 +246,15 @@ const TopicArchive = () => {
           </Link>
         </Button>
 
-        {/* Archive Header - More compact */}
-        <header className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Archive className="w-5 h-5 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold">
+        {/* Archive Header - Discreet */}
+        <header className="mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Archive className="w-4 h-4 text-muted-foreground" />
+            <h1 className="text-base font-medium text-muted-foreground">
               Archive
             </h1>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {totalCount.toLocaleString()} {totalCount === 1 ? 'story' : 'stories'}
           </p>
         </header>
