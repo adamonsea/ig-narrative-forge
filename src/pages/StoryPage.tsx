@@ -7,6 +7,7 @@ import StoryCarousel from "@/components/StoryCarousel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
+import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
 
 interface Story {
   id: string;
@@ -168,6 +169,14 @@ const StoryPage = () => {
         topicSlug={slug}
         topicType={topic.topic_type}
         topicLogoUrl={topic.branding_config?.logo_url}
+      />
+      
+      {/* Article Structured Data for SEO */}
+      <StoryStructuredData
+        story={story}
+        storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
+        topicName={topic.name}
+        position={0}
       />
 
       <div className="max-w-lg mx-auto">
