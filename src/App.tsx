@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SystemErrorBoundary } from "@/components/SystemErrorBoundary";
+import { GlobalSEO } from "@/components/seo/GlobalSEO";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => {
       <AuthProvider>
         <TooltipProvider>
           <SystemErrorBoundary>
+            <GlobalSEO />
             <Toaster />
             <Sonner />
             <BrowserRouter>

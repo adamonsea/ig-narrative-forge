@@ -7,6 +7,12 @@ interface Story {
   author?: string;
   cover_illustration_url?: string;
   slides?: any[];
+  article?: {
+    region?: string;
+    source_url?: string;
+  };
+  mp_name?: string;
+  constituency?: string;
 }
 
 interface StoryStructuredDataProps {
@@ -36,7 +42,29 @@ export const StoryStructuredData = ({
   
   const articleBody = getArticleBody();
   
-  // Generate Article structured data with full content
+  // Extract keywords from content
+  const extractKeywords = (): string[] => {
+    const keywords: string[] = [topicName];
+    if (story.article?.region) keywords.push(story.article.region);
+    if (story.constituency) keywords.push(story.constituency);
+    if (story.mp_name) keywords.push(story.mp_name);
+    return keywords;
+  };
+
+  // Generate mentions from story content
+  const extractMentions = () => {
+    const mentions: any[] = [];
+    if (story.mp_name) {
+      mentions.push({
+        "@type": "Person",
+        "name": story.mp_name,
+        ...(story.constituency && { "workLocation": story.constituency })
+      });
+    }
+    return mentions;
+  };
+
+  // Generate Article structured data with full content and enhanced metadata
   const articleData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -45,6 +73,7 @@ export const StoryStructuredData = ({
     "url": storyUrl,
     "datePublished": story.created_at,
     "dateModified": story.created_at,
+    "inLanguage": "en-GB",
     "author": {
       "@type": "Organization",
       "name": story.author || topicName
@@ -58,8 +87,16 @@ export const StoryStructuredData = ({
       }
     },
     "articleBody": articleBody,
+    "articleSection": topicName,
     "wordCount": articleBody.split(/\s+/).length,
     "position": position,
+    "keywords": extractKeywords().join(', '),
+    "about": {
+      "@type": "Thing",
+      "name": topicName,
+      ...(story.article?.region && { "location": story.article.region })
+    },
+    ...(extractMentions().length > 0 && { "mentions": extractMentions() }),
     ...(story.cover_illustration_url && {
       "image": {
         "@type": "ImageObject",

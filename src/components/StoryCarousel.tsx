@@ -950,7 +950,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   });
 
   return (
-    <div className="flex justify-center px-1 md:px-4">
+    <article 
+      itemScope 
+      itemType="https://schema.org/Article"
+      className="flex justify-center px-1 md:px-4"
+    >
+      <meta itemProp="headline" content={story.title} />
+      <meta itemProp="author" content={story.author || 'Unknown'} />
+      <meta itemProp="datePublished" content={story.created_at} />
       <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} data-story-card data-story-id={story.id}>
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
@@ -1068,6 +1075,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           </div>
         </div>
       </Card>
-    </div>
+    </article>
   );
 }
