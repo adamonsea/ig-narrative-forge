@@ -42,20 +42,41 @@ serve(async (req) => {
       }))
     });
     
+    // Step 1: Get all enabled topics
+    const { data: enabledTopics, error: topicError } = await supabase
+      .from('topic_sentiment_settings')
+      .select('topic_id')
+      .eq('enabled', true);
+
+    if (topicError) {
+      console.error('❌ Error fetching enabled topics:', topicError);
+      throw topicError;
+    }
+
+    const enabledTopicIds = enabledTopics?.map(t => t.topic_id) || [];
+    console.log(`✅ Found ${enabledTopicIds.length} enabled topic(s):`, enabledTopicIds);
+
+    if (enabledTopicIds.length === 0) {
+      console.warn('⚠️ No topics with sentiment enabled');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'No topics with sentiment enabled', 
+          processed: 0,
+          debug: {
+            trackedKeywordsTotal: allTracked?.length || 0
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Step 2: Get due keywords for those enabled topics
     const { data: dueKeywords, error: queryError } = await supabase
       .from('sentiment_keyword_tracking')
-      .select(`
-        id, 
-        topic_id, 
-        keyword_phrase, 
-        total_cards_generated,
-        next_card_due_at,
-        current_trend,
-        last_seen_at,
-        topic_sentiment_settings!inner(enabled)
-      `)
+      .select('id, topic_id, keyword_phrase, total_cards_generated, next_card_due_at, current_trend, last_seen_at')
       .eq('tracked_for_cards', true)
-      .eq('topic_sentiment_settings.enabled', true)
+      .in('topic_id', enabledTopicIds)
       .in('current_trend', ['emerging', 'sustained'])
       .or(`next_card_due_at.is.null,next_card_due_at.lte.${now.toISOString()}`)
       .limit(20);
