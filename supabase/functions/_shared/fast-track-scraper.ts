@@ -497,7 +497,7 @@ export class FastTrackScraper {
   private async tryFastRSSStrategy(): Promise<ScrapingResult> {
     console.log('🔄 Fast RSS parsing...');
     
-    const feedUrl = this.sourceInfo?.feed_url || this.baseUrl;
+    const feedUrl = this.baseUrl; // Always use the topic-specific URL passed to scrapeContent()
     
     try {
       // Use domain-specific strategy for better success rates
