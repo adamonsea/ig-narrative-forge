@@ -356,8 +356,14 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     );
   }
 
-  // Function to highlight whole keywords in text
-  const highlightKeywords = (text: string, keywords: string[]) => {
+  // Multi-color context highlighting for regional relevance review
+  const highlightContentWithContext = (
+    text: string, 
+    regionName: string,
+    landmarks: string[],
+    keywords: string[],
+    organizations: string[]
+  ) => {
     if (!text) return '';
 
     const escapeHtml = (value: string) =>
@@ -369,20 +375,55 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
         .replace(/'/g, '&#39;');
 
     let highlightedText = escapeHtml(text);
+    
+    // Helper to create regex with word boundaries
+    const createRegex = (term: string) => {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const useWordBoundaries = /^[\w-]+$/.test(term.trim());
+      const boundary = useWordBoundaries ? '\\b' : '';
+      return new RegExp(`${boundary}(${escaped})${boundary}`, 'gi');
+    };
 
-    if (!keywords.length) {
-      return highlightedText;
+    // Priority order: Region name > Landmarks > Organizations > Keywords
+    
+    // 1. Region name - BRIGHT GREEN with bold border (strongest signal)
+    if (regionName) {
+      const regex = createRegex(regionName);
+      highlightedText = highlightedText.replace(
+        regex,
+        '<mark class="bg-green-200 text-green-900 px-1.5 py-0.5 rounded font-bold border-2 border-green-500">$1</mark>'
+      );
     }
 
-    keywords.forEach(keyword => {
-      if (keyword && keyword.trim()) {
-        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const useWordBoundaries = /^[\w-]+$/.test(keyword.trim());
-        const boundary = useWordBoundaries ? '\\b' : '';
-        const regex = new RegExp(`${boundary}(${escapedKeyword})${boundary}`, 'gi');
+    // 2. Landmarks - BLUE (strong location anchor)
+    landmarks.forEach(landmark => {
+      if (landmark && landmark.trim()) {
+        const regex = createRegex(landmark);
         highlightedText = highlightedText.replace(
           regex,
-          '<mark class="bg-yellow-200 px-1 rounded">$1</mark>'
+          '<mark class="bg-blue-200 text-blue-900 px-1 rounded font-semibold border border-blue-400">$1</mark>'
+        );
+      }
+    });
+
+    // 3. Organizations - PURPLE (medium-strong regional indicator)
+    organizations.forEach(org => {
+      if (org && org.trim()) {
+        const regex = createRegex(org);
+        highlightedText = highlightedText.replace(
+          regex,
+          '<mark class="bg-purple-200 text-purple-900 px-1 rounded border border-purple-300">$1</mark>'
+        );
+      }
+    });
+
+    // 4. Keywords - PALE YELLOW (weakest, only relevant with context)
+    keywords.forEach(keyword => {
+      if (keyword && keyword.trim()) {
+        const regex = createRegex(keyword);
+        highlightedText = highlightedText.replace(
+          regex,
+          '<mark class="bg-yellow-100 text-yellow-800 px-1 rounded">$1</mark>'
         );
       }
     });
@@ -665,14 +706,68 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {previewArticle?.body && (
-              <div className="prose max-w-none">
+            {/* Multi-signal color legend */}
+            <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-green-200 border-2 border-green-500 rounded font-bold flex items-center justify-center text-[8px]">R</div>
+                <span className="text-xs font-semibold text-green-700">Region Name (Strongest)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-blue-200 border border-blue-400 rounded font-semibold flex items-center justify-center text-[8px]">L</div>
+                <span className="text-xs font-medium text-blue-700">Landmarks</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-purple-200 border border-purple-300 rounded flex items-center justify-center text-[8px]">O</div>
+                <span className="text-xs font-medium text-purple-700">Organizations</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center text-[8px]">K</div>
+                <span className="text-xs text-muted-foreground">Keywords (Generic)</span>
+              </div>
+            </div>
+
+            {/* Article title highlighting */}
+            {previewArticle?.title && (
+              <div className="border-b pb-3">
+                <div className="text-xs font-semibold text-muted-foreground mb-1">HEADLINE</div>
                 <div
-                  className="min-h-[300px] whitespace-pre-wrap font-mono text-sm leading-relaxed border rounded-md p-4 bg-muted/30"
+                  className="text-lg font-semibold leading-tight"
                   dangerouslySetInnerHTML={{
-                    __html: highlightKeywords(previewArticle.body, currentTopicKeywords)
+                    __html: highlightContentWithContext(
+                      previewArticle.title,
+                      currentTopic?.name || '',
+                      currentTopic?.landmarks || [],
+                      currentTopic?.keywords || [],
+                      currentTopic?.organizations || []
+                    )
                   }}
                 />
+              </div>
+            )}
+
+            {/* Body content with position indicators */}
+            {previewArticle?.body && (
+              <div className="relative">
+                {/* Position strength indicator bar */}
+                <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-200 via-green-300 to-amber-200 rounded-l"></div>
+                <div className="absolute -left-20 top-2 text-[10px] text-amber-600 font-medium">Top<br/>(Weak)</div>
+                <div className="absolute -left-20 top-1/2 -translate-y-1/2 text-[10px] text-green-600 font-bold">Mid<br/>(Strong)</div>
+                <div className="absolute -left-20 bottom-2 text-[10px] text-amber-600 font-medium">End<br/>(Weak)</div>
+                
+                <div className="prose max-w-none">
+                  <div
+                    className="min-h-[300px] whitespace-pre-wrap text-sm leading-relaxed border rounded-md p-4 pl-6 bg-muted/30"
+                    dangerouslySetInnerHTML={{
+                      __html: highlightContentWithContext(
+                        previewArticle.body,
+                        currentTopic?.name || '',
+                        currentTopic?.landmarks || [],
+                        currentTopic?.keywords || [],
+                        currentTopic?.organizations || []
+                      )
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
