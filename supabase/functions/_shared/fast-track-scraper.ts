@@ -996,7 +996,14 @@ export class FastTrackScraper {
     const hostname = new URL(baseUrl).hostname.toLowerCase();
     let articlePattern: RegExp;
     
-    if (hostname.includes('theargus') || hostname.includes('sussexexpress') || hostname.includes('newsquest')) {
+    // Newsquest family - all use 6-8 digit ID + slug pattern
+    const newsquestDomains = [
+      'theargus', 'sussexexpress', 'crawleyobserver', 
+      'brightonandhoveindependent', 'hastingsobserver', 'hastingsindependentpress',
+      'newsquest' // Generic newsquest domain
+    ];
+    
+    if (newsquestDomains.some(domain => hostname.includes(domain))) {
       // Newsquest pattern: /news/12345678.article-slug/
       articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
       console.log('🎯 Using Newsquest article pattern');
