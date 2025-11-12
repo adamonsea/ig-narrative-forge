@@ -103,7 +103,10 @@ export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): strin
   // Extract scene excerpt (first 180 chars to stay within target length)
   const sceneExcerpt = slideContent ? slideContent.substring(0, 180).trim() : subject;
   
-  return `You're creating an editorial illustration for ${publicationName || 'a news publication'} in the style of Jon McNaught, Guardian editorial covers, or New Yorker spot illustrations.
+  return `⚠️ ABSOLUTE REQUIREMENT - ZERO TEXT IN IMAGE ⚠️
+NO letters, words, numbers, signs, labels, venue names, dates, or any typographic elements whatsoever. This is NOT a poster or flyer - it is pure visual storytelling without text.
+
+You're creating an editorial illustration for ${publicationName || 'a news publication'} in the style of Jon McNaught, Guardian editorial covers, or New Yorker spot illustrations.
 
 Story: "${storyTitle}" about ${subject}
 
@@ -117,12 +120,8 @@ Color Palette: Predominantly white negative space (60%+) with solid black areas 
 
 Composition: 3:2 landscape format. 1-3 large iconic forms maximum—prioritize SIMPLE, BOLD shapes over detailed rendering. Strategic negative space for balance and visual breathing room, not random emptiness. Edge-to-edge composition with no borders.
 
-CRITICAL CONSTRAINTS - ZERO TEXT ALLOWED:
-❌ NO text, typography, letters, words, or numbers of any kind
-❌ NO dates (like "23 NOV"), venue names (like "CONGRESS THEATRE"), or event information
-❌ NOT a poster, flyer, advertisement, title card, or graphic design layout
-❌ NO headlines, captions, labels, or written elements anywhere in the image
-This is pure visual storytelling ONLY—no typographic communication whatsoever.
+REMINDER - TEXT IS FORBIDDEN:
+If the subject involves signage, buildings, or venues: show them WITHOUT readable text - use blank shapes, geometric patterns, or symbolic representations instead of letters.
 
 Capture this moment with clean minimalist sophistication—say more with less. Adult editorial aesthetic for serious journalism.`;
 }
