@@ -91,55 +91,90 @@ const TopicArchive = () => {
           } : undefined
         });
 
-        // Get total count via topic_articles junction table
-        const countResult = await (supabase as any)
+        // Get stories count for this topic
+        // First get all topic_article IDs (we need this for the count)
+        const topicArticlesCountResult = await supabase
+          .from('topic_articles')
+          .select('id', { count: 'exact', head: true })
+          .eq('topic_id', topicData.id);
+
+        console.log('Topic articles count:', topicArticlesCountResult);
+
+        if (topicArticlesCountResult.error) {
+          console.error('Count error:', topicArticlesCountResult.error);
+          setTotalCount(0);
+          setStories([]);
+          return;
+        }
+
+        // Get the IDs to query stories
+        const topicArticlesIdsResult = await supabase
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicData.id);
+
+        console.log('Topic article IDs:', topicArticlesIdsResult);
+
+        if (topicArticlesIdsResult.error || !topicArticlesIdsResult.data?.length) {
+          console.error('IDs error:', topicArticlesIdsResult.error);
+          setTotalCount(0);
+          setStories([]);
+          return;
+        }
+
+        const topicArticleIds = topicArticlesIdsResult.data.map(ta => ta.id);
+
+        // Count stories that match these topic_article_ids
+        const storiesCountResult = await supabase
           .from('stories')
-          .select('topic_article_id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
-          .eq('topic_articles.topic_id', topicData.id)
+          .select('id', { count: 'exact', head: true })
+          .in('topic_article_id', topicArticleIds.slice(0, 100)) // Limit to avoid URL length issues
           .eq('is_published', true)
-          .in('status', ['ready', 'published'])
-          .not('topic_article_id', 'is', null);
+          .in('status', ['ready', 'published']);
 
-        setTotalCount(countResult.count || 0);
+        console.log('Stories count:', storiesCountResult);
+        setTotalCount(storiesCountResult.count || 0);
 
-        // Load stories with pagination via topic_articles junction table
+        // Load paginated stories
         const offset = (page - 1) * STORIES_PER_PAGE;
-        const storiesResult = await (supabase as any)
+        const storiesResult = await supabase
           .from('stories')
-          .select(`
-            id,
-            title,
-            author,
-            cover_illustration_url,
-            created_at,
-            topic_article_id,
-            topic_articles!inner(
-              topic_id,
-              article:topic_articles_article_id_fkey(
-                source_url,
-                published_at
-              )
-            )
-          `)
-          .eq('topic_articles.topic_id', topicData.id)
+          .select('id, title, author, cover_illustration_url, created_at, topic_article_id')
+          .in('topic_article_id', topicArticleIds.slice(offset, offset + STORIES_PER_PAGE))
           .eq('is_published', true)
           .in('status', ['ready', 'published'])
-          .not('topic_article_id', 'is', null)
-          .order('created_at', { ascending: false })
-          .range(offset, offset + STORIES_PER_PAGE - 1);
+          .order('created_at', { ascending: false });
+
+        console.log('Stories result:', storiesResult);
 
         if (storiesResult.error) {
           console.error('Stories error:', storiesResult.error);
           setStories([]);
         } else {
-          setStories((storiesResult.data || []).map((s: any) => ({
-            id: s.id,
-            title: s.title,
-            author: s.author,
-            cover_illustration_url: s.cover_illustration_url,
-            created_at: s.created_at,
-            article: s.topic_articles?.article || {}
-          })));
+          // For each story, fetch the article data
+          const storiesWithArticles = await Promise.all(
+            (storiesResult.data || []).map(async (story) => {
+              const topicArticleResult = await supabase
+                .from('topic_articles')
+                .select('articles(source_url, published_at)')
+                .eq('id', story.topic_article_id)
+                .single();
+
+              const articles = topicArticleResult.data?.articles;
+              const article = Array.isArray(articles) ? articles[0] : articles;
+              
+              return {
+                id: story.id,
+                title: story.title,
+                author: story.author,
+                cover_illustration_url: story.cover_illustration_url,
+                created_at: story.created_at,
+                article: article || { source_url: '', published_at: '' }
+              };
+            })
+          );
+
+          setStories(storiesWithArticles);
         }
       } catch (error) {
         console.error('Error loading archive:', error);
