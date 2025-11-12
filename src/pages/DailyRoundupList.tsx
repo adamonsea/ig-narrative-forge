@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Filter, Share2 } from "lucide-react";
+import { ArrowLeft, Filter, Share2, LayoutList } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoundupSEO } from "@/components/seo/RoundupSEO";
 import { FilterModal } from "@/components/FilterModal";
@@ -360,15 +360,27 @@ export default function DailyRoundupList() {
       <div className="bg-background border-b border-border sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              asChild
-            >
-              <Link to={`/feed/${slug}`}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Feed
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                asChild
+              >
+                <Link to={`/feed/${slug}`}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Feed
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+              >
+                <Link to={`/feed/${slug}/briefings`}>
+                  <LayoutList className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">All Briefings</span>
+                </Link>
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"

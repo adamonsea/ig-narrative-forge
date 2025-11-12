@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +36,8 @@ const TopicFeed = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showFilterTip, setShowFilterTip] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
+  const [latestDaily, setLatestDaily] = useState<string | null>(null);
+  const [latestWeekly, setLatestWeekly] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [storiesWithSwipes, setStoriesWithSwipes] = useState<Set<string>>(new Set());
@@ -210,7 +212,7 @@ const TopicFeed = () => {
     };
   }, [topic, slug]);
 
-  // Fetch monthly count after we have topic
+  // Fetch monthly count and latest roundups after we have topic
   useEffect(() => {
     let active = true;
     const fetchMonthlyCount = async () => {
@@ -250,6 +252,36 @@ const TopicFeed = () => {
         }).length;
         
         if (active) setMonthlyCount(count);
+
+        // Fetch latest daily roundup
+        const { data: dailyRoundup } = await supabase
+          .from('topic_roundups')
+          .select('period_start')
+          .eq('topic_id', topic.id)
+          .eq('roundup_type', 'daily')
+          .eq('is_published', true)
+          .order('period_start', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (dailyRoundup && active) {
+          setLatestDaily(format(new Date(dailyRoundup.period_start), 'yyyy-MM-dd'));
+        }
+
+        // Fetch latest weekly roundup
+        const { data: weeklyRoundup } = await supabase
+          .from('topic_roundups')
+          .select('period_start')
+          .eq('topic_id', topic.id)
+          .eq('roundup_type', 'weekly')
+          .eq('is_published', true)
+          .order('period_start', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (weeklyRoundup && active) {
+          setLatestWeekly(format(new Date(weeklyRoundup.period_start), 'yyyy-MM-dd'));
+        }
       } catch (e) {
         console.warn('Monthly count fetch failed:', e);
       }
@@ -539,14 +571,63 @@ const TopicFeed = () => {
                 </Tooltip>
               </TooltipProvider>
 
-              <Link to={`/feed/${slug}/archive`}>
-                <button
-                  className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                  aria-label="View archive"
-                >
-                  <Archive className="w-4 h-4" />
-                </button>
-              </Link>
+              {latestDaily && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/feed/${slug}/daily/${latestDaily}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="Today's briefing"
+                        >
+                          <Calendar className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Today's Briefing</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {latestWeekly && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="This week's briefing"
+                        >
+                          <CalendarDays className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>This Week's Briefing</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to={`/feed/${slug}/archive`}>
+                      <button
+                        className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="View archive"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Story Archive</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
