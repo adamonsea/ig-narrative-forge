@@ -491,7 +491,7 @@ const TopicFeed = () => {
             <div className="relative flex items-center justify-center mb-6">
               {/* Centered logo or title */}
               {topic.branding_config?.logo_url ? (
-                <div className="flex justify-center w-full">
+                <div className="flex justify-center w-full animate-fade-in">
                   <div className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl flex justify-center">
                     <img
                       src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
