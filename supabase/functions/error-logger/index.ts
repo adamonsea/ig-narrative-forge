@@ -28,7 +28,25 @@ serve(async (req) => {
       severity = 'medium'
     } = await req.json();
 
-    // Log error using the database function
+    // Check for duplicate error in last 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: existingTickets } = await supabase
+      .from('error_tickets')
+      .select('id')
+      .eq('error_details', errorDetails)
+      .eq('stack_trace', stackTrace)
+      .gte('created_at', tenMinutesAgo)
+      .limit(1);
+
+    if (existingTickets && existingTickets.length > 0) {
+      console.log('Returning existing ticket ID for duplicate error');
+      return new Response(
+        JSON.stringify({ success: true, ticketId: existingTickets[0].id, isDuplicate: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Log new error using the database function
     const { data, error } = await supabase.rpc('log_error_ticket', {
       p_ticket_type: ticketType,
       p_source_info: sourceInfo,
