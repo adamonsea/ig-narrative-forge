@@ -28,6 +28,7 @@ import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
 import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
 import { Link } from "react-router-dom";
+import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -162,37 +163,16 @@ const TopicFeed = () => {
     }
   }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id]);
 
-  // Update favicon and manifest dynamically based on topic branding
+  // Update favicon based on topic branding
+  const branding = topic?.branding_config as any;
+  const faviconUrl = branding?.icon_url || branding?.logo_url;
+  useTopicFavicon(faviconUrl);
+
+  // Update manifest dynamically based on topic
   useEffect(() => {
-    if (!topic?.branding_config) return;
+    if (!slug) return;
 
-    const branding = topic.branding_config as any;
-    const iconUrl = branding.icon_url;
-    const logoUrl = branding.logo_url;
-    const displayIcon = iconUrl || logoUrl;
-
-    if (displayIcon) {
-      // Update favicon
-      let favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (!favicon) {
-        favicon = document.createElement('link');
-        favicon.rel = 'icon';
-        document.head.appendChild(favicon);
-      }
-      favicon.href = displayIcon;
-
-      // Update apple touch icon
-      let appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
-      if (!appleTouchIcon) {
-        appleTouchIcon = document.createElement('link');
-        appleTouchIcon.rel = 'apple-touch-icon';
-        document.head.appendChild(appleTouchIcon);
-      }
-      appleTouchIcon.href = displayIcon;
-    }
-
-    // Update manifest link for PWA
-    if (slug) {
+    try {
       let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
       if (!manifestLink) {
         manifestLink = document.createElement('link');
@@ -200,21 +180,20 @@ const TopicFeed = () => {
         document.head.appendChild(manifestLink);
       }
       manifestLink.href = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/topic-manifest?slug=${slug}`;
+    } catch (error) {
+      console.error('Failed to update manifest:', error);
     }
 
     // Cleanup - restore default on unmount
     return () => {
-      const defaultFavicon = '/placeholder.svg';
-      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (favicon) favicon.href = defaultFavicon;
-      
-      const appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
-      if (appleTouchIcon) appleTouchIcon.href = defaultFavicon;
-      
-      const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-      if (manifestLink) manifestLink.href = '/manifest.json';
+      try {
+        const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+        if (manifestLink) manifestLink.href = '/manifest.json';
+      } catch (error) {
+        console.error('Failed to restore manifest:', error);
+      }
     };
-  }, [topic, slug]);
+  }, [slug]);
 
   // Fetch monthly count and latest roundups after we have topic
   useEffect(() => {

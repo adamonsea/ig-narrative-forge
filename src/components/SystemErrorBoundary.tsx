@@ -30,7 +30,31 @@ export class SystemErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('SystemErrorBoundary caught an error:', error, errorInfo);
     
-    // Log error to system for debugging
+    // Create error signature for deduplication
+    const errorSignature = `${error.message}|${error.stack?.substring(0, 200)}`;
+    const now = Date.now();
+    
+    // Check if we've logged this error recently (within 5 minutes)
+    const recentErrors = sessionStorage.getItem('logged_errors');
+    const errorLog = recentErrors ? JSON.parse(recentErrors) : {};
+    
+    const lastLogged = errorLog[errorSignature];
+    if (lastLogged && (now - lastLogged) < 5 * 60 * 1000) {
+      console.log('Skipping duplicate error log');
+    } else {
+      // Log new or stale error
+      errorLog[errorSignature] = now;
+      sessionStorage.setItem('logged_errors', JSON.stringify(errorLog));
+      
+      // Clean up old entries (older than 10 minutes)
+      Object.keys(errorLog).forEach(key => {
+        if (now - errorLog[key] > 10 * 60 * 1000) {
+          delete errorLog[key];
+        }
+      });
+      sessionStorage.setItem('logged_errors', JSON.stringify(errorLog));
+    }
+    
     this.setState({
       error,
       errorInfo,
