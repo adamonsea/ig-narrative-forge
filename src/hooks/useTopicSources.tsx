@@ -89,13 +89,9 @@ export const useTopicSources = () => {
       setLoading(true);
       
       // Update the source to set topic_id if not already set
-      const { error: updateError } = await supabase
-        .from('content_sources')
-        .update({ topic_id: topicId })
-        .eq('id', sourceId)
-        .is('topic_id', null);
-      
-      if (updateError) console.warn('Could not update topic_id:', updateError);
+      // Removed legacy direct topic_id update on content_sources; we use the topic_sources junction table exclusively
+      // This prevents unique constraint conflicts on (source_name, topic_id)
+
       
       // Link source to topic via junction table
       const { error } = await supabase.rpc('add_source_to_topic', {
