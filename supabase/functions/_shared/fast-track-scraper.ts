@@ -957,6 +957,22 @@ export class FastTrackScraper {
    */
   private isIndexOrCategoryPage(html: string, url: string): boolean {
     const urlPath = url.toLowerCase();
+    const urlObj = new URL(url);
+    
+    // Check domain profile category patterns first (highest priority)
+    if (this.domainProfile?.categoryPatterns && this.domainProfile.categoryPatterns.length > 0) {
+      for (const pattern of this.domainProfile.categoryPatterns) {
+        try {
+          const regex = new RegExp(pattern, 'i');
+          if (regex.test(urlObj.pathname)) {
+            console.log(`✅ Domain profile category pattern matched: ${pattern}`);
+            return true;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Invalid regex pattern in domain profile: ${pattern}`);
+        }
+      }
+    }
     
     // Category indicators in URL
     const categoryPatterns = [
@@ -994,20 +1010,32 @@ export class FastTrackScraper {
     
     // Domain-specific article ID patterns
     const hostname = new URL(baseUrl).hostname.toLowerCase();
-    let articlePattern: RegExp;
+    let articlePatterns: RegExp[] = [];
     
-    // Domain-specific patterns based on domain profile family
+    // Check domain profile for custom article patterns (highest priority)
+    if (this.domainProfile?.articlePatterns && this.domainProfile.articlePatterns.length > 0) {
+      for (const pattern of this.domainProfile.articlePatterns) {
+        try {
+          articlePatterns.push(new RegExp(pattern, 'i'));
+        } catch (error) {
+          console.warn(`⚠️ Invalid regex pattern in domain profile: ${pattern}`);
+        }
+      }
+      console.log(`🎯 Using ${articlePatterns.length} custom article patterns from domain profile`);
+    }
+    
+    // Add fallback patterns based on domain profile family
     if (this.domainProfile?.family === 'regional_slug') {
       // Regional slug pattern: long slug-only URLs (e.g., eastsussex.news, sussex.press)
-      articlePattern = /^https?:\/\/[^\/]+\/[a-z0-9-]{20,}\/?$/;
-      console.log('🎯 Using regional_slug article pattern');
+      articlePatterns.push(/^https?:\/\/[^\/]+\/[a-z0-9-]{20,}\/?$/);
+      console.log('🎯 Added regional_slug article pattern');
     } else if (this.domainProfile?.family === 'newsquest') {
       // Newsquest pattern: /news/12345678.article-slug/
-      articlePattern = /\/news\/\d{6,}\.[^\/]+\/?$/;
-      console.log('🎯 Using Newsquest article pattern');
-    } else {
+      articlePatterns.push(/\/news\/\d{6,}\.[^\/]+\/?$/);
+      console.log('🎯 Added Newsquest article pattern');
+    } else if (articlePatterns.length === 0) {
       // Generic pattern: look for URLs with article/story/post + slug
-      articlePattern = /\/(article|story|post)\/[a-z0-9-]{10,}\/?$/;
+      articlePatterns.push(/\/(article|story|post)\/[a-z0-9-]{10,}\/?$/);
       console.log('🎯 Using generic article pattern');
     }
     
@@ -1015,8 +1043,15 @@ export class FastTrackScraper {
       const hrefMatch = /href=["']([^"']+)["']/i.exec(linkMatch);
       if (hrefMatch) {
         const url = this.extractor.resolveUrl(hrefMatch[1], baseUrl);
+        const urlObj = new URL(url);
         
-        if (articlePattern.test(url) && this.isInternalLink(url, baseUrl)) {
+        // Check if URL matches any article pattern
+        const matchesPattern = articlePatterns.some(pattern => {
+          // Test both full URL and pathname only
+          return pattern.test(url) || pattern.test(urlObj.pathname);
+        });
+        
+        if (matchesPattern && this.isInternalLink(url, baseUrl)) {
           links.push(url);
         }
       }
