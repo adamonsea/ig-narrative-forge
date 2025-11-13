@@ -37,10 +37,13 @@ export class FastTrackScraper {
     console.log(`🚀 FastTrackScraper.scrapeContent called for ${feedUrl}`);
     
     try {
-      // Get source information from database
+      // Get source information from database with topic_id from junction table
       const { data: source, error: sourceError } = await this.supabase
         .from('content_sources')
-        .select('*')
+        .select(`
+          *,
+          topic_sources!inner(topic_id)
+        `)
         .eq('id', sourceId)
         .single();
 
@@ -48,13 +51,16 @@ export class FastTrackScraper {
         throw new Error(`Failed to get source info: ${sourceError?.message}`);
       }
 
+      // Extract topic_id from junction table
+      const topicId = source.topic_sources?.[0]?.topic_id || null;
+
       // Get topic information to determine region
       let topicRegion = 'Global'; // default
-      if (source.topic_id) {
+      if (topicId) {
         const { data: topic } = await this.supabase
           .from('topics')
           .select('region, name')
-          .eq('id', source.topic_id)
+          .eq('id', topicId)
           .single();
         
         if (topic && topic.region) {
@@ -78,7 +84,7 @@ export class FastTrackScraper {
       this.domainProfile = await resolveDomainProfile(
         this.supabase,
         feedUrl,
-        source.topic_id,
+        topicId,
         null, // tenantId not used yet
         source.metadata || {}
       );
