@@ -308,7 +308,44 @@ serve(async (req) => {
       }
     }
 
-    console.log(`✨ Found ${keywordAnalysis.length} trending keywords`, {
+    // Implement balanced keyword selection
+    // Sort keywords into sentiment buckets
+    const highNegative = keywordAnalysis.filter(k => {
+      const total = k.frequency || 0;
+      const negative = k.sentiment_context?.negative ?? 0;
+      return total > 0 && (negative / total) > 0.6;
+    });
+    
+    const highPositive = keywordAnalysis.filter(k => {
+      const total = k.frequency || 0;
+      const positive = k.sentiment_context?.positive ?? 0;
+      const negative = k.sentiment_context?.negative ?? 0;
+      return total > 0 && (positive / total) > 0.6 && (negative / total) < 0.3;
+    });
+    
+    const balanced = keywordAnalysis.filter(k => {
+      const total = k.frequency || 0;
+      const negative = k.sentiment_context?.negative ?? 0;
+      const positive = k.sentiment_context?.positive ?? 0;
+      const negRatio = total > 0 ? negative / total : 0;
+      const posRatio = total > 0 ? positive / total : 0;
+      return negRatio >= 0.3 && negRatio <= 0.6 && posRatio >= 0.3;
+    });
+    
+    // Select top keywords from each bucket (prioritize negative for newsworthiness)
+    const selectedKeywords = [
+      ...highNegative.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 7),
+      ...balanced.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 7),
+      ...highPositive.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 6)
+    ];
+    
+    // Use selected balanced keywords or fallback to top 20 if buckets are empty
+    keywordAnalysis = selectedKeywords.length > 0 ? selectedKeywords : keywordAnalysis.slice(0, 20);
+
+    console.log(`✨ Found ${keywordAnalysis.length} balanced trending keywords`, {
+      highNegative: highNegative.length,
+      balanced: balanced.length,
+      highPositive: highPositive.length,
       keywords: keywordAnalysis.map(k => k.phrase).slice(0, 5)
     });
 
@@ -339,8 +376,19 @@ serve(async (req) => {
     for (const keyword of keywordAnalysis) {
       // Calculate trend status
       const currentTrend = keyword.frequency >= 5 ? 'sustained' : 'emerging';
+      
+      // Calculate sentiment ratio
+      const totalMentions = keyword.frequency || 0;
+      const negativeMentions = keyword.sentiment_context?.negative ?? 0;
+      const sentimentRatio = totalMentions > 0 ? negativeMentions / totalMentions : 0;
+      
+      // Extract source URLs
+      const sourceUrls = keyword.sources.map(s => s.url).filter(Boolean);
+      
+      // Check for controversy (high negative sentiment + reasonable sources)
+      const isControversial = sentimentRatio > 0.6 && keyword.sources.length >= 3;
 
-      // Upsert keyword tracking
+      // Upsert keyword tracking with sentiment breakdown
       const { error: trackingError } = await supabase
         .from('sentiment_keyword_tracking')
         .upsert({
@@ -349,7 +397,13 @@ serve(async (req) => {
           last_seen_at: now.toISOString(),
           total_mentions: keyword.frequency,
           source_count: keyword.sources.length,
+          positive_mentions: keyword.sentiment_context?.positive ?? 0,
+          negative_mentions: keyword.sentiment_context?.negative ?? 0,
+          neutral_mentions: keyword.sentiment_context?.neutral ?? 0,
+          sentiment_ratio: sentimentRatio,
+          source_urls: sourceUrls,
           current_trend: currentTrend,
+          tracked_for_cards: isControversial ? true : undefined, // Auto-track controversial keywords
           updated_at: now.toISOString(),
         }, {
           onConflict: 'topic_id,keyword_phrase',
@@ -738,14 +792,16 @@ CRITICAL: Only extract keywords that are directly relevant to ${topicName}. Reje
 - Community discussions and sentiment
 - Include insights from Reddit, forums, and social media when available
 
+BALANCE REQUIREMENT: Extract 10-20 trending keywords ensuring a mix of POSITIVE and NEGATIVE sentiment. Don't only focus on high-frequency terms - include controversial topics with strong negative sentiment even if they appear less frequently.
+
 Content to analyze:
 ${combinedContent}
 
-Extract 5-10 trending keywords or phrases and for each provide:
+Extract 10-20 trending keywords or phrases and for each provide:
 1. The exact phrase (must be relevant to ${topicName})
 2. How many times it appears or is referenced
 3. Sentiment context (positive mentions, negative mentions, neutral mentions)
-4. Key sources mentioning it (must include at least 4 sources)
+4. Key sources mentioning it (must include at least 3 sources)
 5. Reddit/forum sentiment if available
 
 Return as JSON array with this structure:

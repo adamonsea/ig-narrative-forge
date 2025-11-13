@@ -15,7 +15,6 @@ import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArti
 import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
-import { SentimentCardsReview } from "@/components/SentimentCardsReview";
 import { CommunityPulseReview } from "@/components/CommunityPulseReview";
 import { ApprovedStoriesPanel } from "@/components/ApprovedStoriesPanel";
 import { NewContentBadge } from "@/components/ui/new-content-badge";
@@ -662,8 +661,24 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           {selectedTopicId && (
             <>
               <Card>
-                <CardContent className="pt-6">
-                  <SentimentCardsReview topicId={selectedTopicId} />
+                <CardHeader>
+                  <CardTitle>Sentiment Analysis</CardTitle>
+                  <CardDescription>
+                    Manage sentiment cards and keywords in the Advanced Tools tab
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      const sentimentSection = document.getElementById('sentiment');
+                      if (sentimentSection) {
+                        sentimentSection.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                  >
+                    Go to Sentiment Hub →
+                  </Button>
                 </CardContent>
               </Card>
               

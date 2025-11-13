@@ -21,8 +21,7 @@ import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
-import { SentimentManager } from "@/components/SentimentManager";
-import { SentimentInsights } from "@/components/SentimentInsights";
+import { SentimentHub } from "@/components/SentimentHub";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
@@ -804,24 +803,6 @@ const TopicDashboard = () => {
 
 
           <TabsContent value="content-flow" className="space-y-6">
-            {/* Sentiment Insights - Show when data exists */}
-            {stats.sentiment_cards > 0 && (
-              <SentimentInsights 
-                topicId={topic.id} 
-                isExpanded={false} 
-                onNavigateToSentiment={() => {
-                  setActiveTab("advanced");
-                  // Scroll to sentiment section after tab change
-                  setTimeout(() => {
-                    const sentimentSection = document.getElementById('sentiment-section');
-                    if (sentimentSection) {
-                      sentimentSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }, 100);
-                }}
-              />
-            )}
-            
             {/* Gathering Progress Indicator */}
             {showGatheringProgress && (
               <GatheringProgressIndicator 
@@ -880,24 +861,11 @@ const TopicDashboard = () => {
                 />
               </CardContent>
             </Card>
-
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Sentiment Tracking
-                </CardTitle>
-                <CardDescription>
-                  Auto-discover trending keywords and generate insight cards weekly
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SentimentManager topicId={topic.id} />
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-8">
+            {/* Sentiment Hub - Unified sentiment management */}
+            <SentimentHub topicId={topic.id} />
             <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
