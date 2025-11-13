@@ -373,14 +373,14 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
   };
 
   const getSentimentIcon = (keyword: KeywordTracking) => {
-    const total = keyword.total_mentions;
     const negative = keyword.negative_mentions || 0;
     const positive = keyword.positive_mentions || 0;
-    const negativeRatio = negative / total;
-    const positiveRatio = positive / total;
     
-    if (negativeRatio > 0.5) return <TrendingDown className="h-4 w-4 text-destructive" />;
-    if (positiveRatio > 0.5) return <TrendingUp className="h-4 w-4 text-green-600" />;
+    if (negative > positive) {
+      return <TrendingDown className="h-4 w-4 text-destructive" />;
+    } else if (positive > negative) {
+      return <TrendingUp className="h-4 w-4 text-green-600" />;
+    }
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
@@ -388,19 +388,23 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
     const total = keyword.total_mentions;
     const negative = keyword.negative_mentions || 0;
     const positive = keyword.positive_mentions || 0;
+    
     const negativeRatio = negative / total;
     const positiveRatio = positive / total;
     
-    if (negativeRatio > 0.5) {
-      return <Badge variant="destructive" className="text-xs">🔴 HIGH NEGATIVE</Badge>;
-    } else if (negativeRatio > 0.3) {
-      return <Badge variant="outline" className="text-xs border-orange-500 text-orange-700">🟠 NEGATIVE</Badge>;
-    } else if (positiveRatio > 0.5) {
-      return <Badge variant="default" className="text-xs bg-green-600">🟢 HIGH POSITIVE</Badge>;
-    } else if (positiveRatio > 0.3) {
-      return <Badge variant="outline" className="text-xs border-green-500 text-green-700">🟢 POSITIVE</Badge>;
+    if (negative > positive) {
+      if (negativeRatio > 0.6) {
+        return <Badge variant="destructive">🔴 Strongly Negative</Badge>;
+      }
+      return <Badge variant="outline" className="border-red-500 text-red-700">🔴 Negative</Badge>;
+    } else if (positive > negative) {
+      if (positiveRatio > 0.6) {
+        return <Badge className="bg-green-600">🟢 Strongly Positive</Badge>;
+      }
+      return <Badge variant="outline" className="border-green-500 text-green-700">🟢 Positive</Badge>;
     }
-    return <Badge variant="secondary" className="text-xs">🟠 MIXED</Badge>;
+    
+    return null;
   };
 
   const needsReviewCards = cards.filter(c => c.needs_review);
@@ -474,35 +478,44 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
             </TabsList>
 
             <TabsContent value="keywords" className="space-y-4 mt-4">
-              {keywords.length === 0 ? (
+              {keywords.filter(k => {
+                const neg = k.negative_mentions || 0;
+                const pos = k.positive_mentions || 0;
+                return (neg >= 3 || pos >= 3) && neg !== pos;
+              }).length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No keywords tracked yet. Run an analysis to get started.
+                  No notable keywords yet. Run an analysis to get started.
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {keywords.map(keyword => {
-                    const total = keyword.total_mentions || 0;
-                    const positive = keyword.positive_mentions || 0;
-                    const negative = keyword.negative_mentions || 0;
-                    const neutral = keyword.neutral_mentions || 0;
-                    const ratio = keyword.sentiment_ratio || 0;
-                    
-                    return (
-                      <div 
-                        key={keyword.id} 
-                        className="rounded-lg border border-border/60 bg-background/40 p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              {getSentimentIcon(keyword)}
-                              <span className="font-medium">{keyword.keyword_phrase}</span>
-                              {getSentimentBadge(keyword)}
-                            </div>
-                            
-                            <div className="text-sm text-muted-foreground">
-                              {negative} neg · {neutral} neu · {positive} pos · {keyword.source_count} sources
-                            </div>
+                  {keywords
+                    .filter(keyword => {
+                      const negative = keyword.negative_mentions || 0;
+                      const positive = keyword.positive_mentions || 0;
+                      return (negative >= 3 || positive >= 3) && negative !== positive;
+                    })
+                    .map(keyword => {
+                      const total = keyword.total_mentions || 0;
+                      const positive = keyword.positive_mentions || 0;
+                      const negative = keyword.negative_mentions || 0;
+                      const neutral = keyword.neutral_mentions || 0;
+                      
+                      return (
+                        <div 
+                          key={keyword.id} 
+                          className="rounded-lg border border-border/60 bg-background/40 p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                {getSentimentIcon(keyword)}
+                                <span className="font-medium">{keyword.keyword_phrase}</span>
+                                {getSentimentBadge(keyword)}
+                              </div>
+                              
+                              <div className="text-sm text-muted-foreground">
+                                {negative} negative · {positive} positive · {keyword.source_count} sources
+                              </div>
                             
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
