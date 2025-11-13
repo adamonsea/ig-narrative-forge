@@ -562,6 +562,20 @@ serve(async (req) => {
         ...(topicSettings ? {} : { analysis_frequency_hours: 24 })
       });
 
+    // Snapshot current keywords into history for trend tracking
+    console.log('📸 Creating weekly snapshot for trend tracking...');
+    try {
+      const { error: snapshotError } = await supabase.rpc('snapshot_sentiment_keywords');
+      if (snapshotError) {
+        console.error('Error creating sentiment snapshot:', snapshotError);
+      } else {
+        console.log('✅ Weekly snapshot created successfully');
+      }
+    } catch (snapshotErr) {
+      console.error('Failed to create snapshot:', snapshotErr);
+      // Don't fail the whole operation if snapshot fails
+    }
+
     // Prepare keyword suggestions (keywords that could be added to topic)
     const keywordSuggestions = keywordAnalysis
       .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Match card generation threshold
