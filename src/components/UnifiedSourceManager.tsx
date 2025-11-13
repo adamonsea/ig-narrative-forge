@@ -275,7 +275,42 @@ export const UnifiedSourceManager = ({
           scrape_frequency_hours: null,
         }));
         
-        setSources(transformedSources);
+        // Merge with basic topic sources to ensure we include newly linked sources
+        // and prefer the accurate feed_url from the canonical topic linkage
+        const { data: basicData } = await supabase.rpc('get_topic_sources', { p_topic_id: topicId });
+        const basicTransformed = (basicData || []).map((ts: any) => ({
+          id: ts.source_id,
+          source_name: ts.source_name,
+          feed_url: ts.feed_url,
+          canonical_domain: ts.canonical_domain,
+          is_active: ts.is_active,
+          topic_id: topicId,
+          region: null,
+          content_type: null,
+          is_whitelisted: null,
+          is_blacklisted: null,
+          scrape_frequency_hours: null,
+        }));
+
+        // Build merged list keyed by source id. Start with basic (to keep correct feed_url),
+        // then overlay stats to add metrics without overriding feed_url.
+        const mergedMap = new Map<string, ContentSource>();
+        for (const b of basicTransformed) mergedMap.set(b.id, b);
+        for (const s of transformedSources) {
+          const existing = mergedMap.get(s.id);
+          mergedMap.set(s.id, {
+            ...(existing || s),
+            // keep accurate feed_url from basic when present
+            feed_url: existing?.feed_url ?? s.feed_url,
+            // include stats-specific fields
+            is_gathering: s.is_gathering,
+            stories_published_7d: s.stories_published_7d,
+            stories_published_total: s.stories_published_total,
+            last_story_date: s.last_story_date,
+          });
+        }
+        const merged = Array.from(mergedMap.values());
+        setSources(merged);
       } else {
         // For global mode, show only sources that are actively linked to topics via topic_sources
         if (mode === 'global') {
