@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -25,7 +26,8 @@ import {
   Eye,
   XCircle,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Edit
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 import { StatusIndicator } from '@/components/StatusIndicator';
@@ -114,6 +116,7 @@ export const UnifiedSourceManager = ({
   const [currentTopic, setCurrentTopic] = useState<Topic | null>(null);
   const [showAddForm, setShowAddForm] = useState(externalShowAddForm);
   const [editingSource, setEditingSource] = useState<ContentSource | null>(null);
+  const [editingFeedUrl, setEditingFeedUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -1333,6 +1336,17 @@ export const UnifiedSourceManager = ({
                   )}
                   
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingSource(source);
+                      setEditingFeedUrl(source.feed_url || '');
+                    }}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  
+                  <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteSource(source.id, source.source_name)}
@@ -1389,6 +1403,59 @@ export const UnifiedSourceManager = ({
           </div>
         )}
       </div>
+
+      {/* Edit Feed URL Dialog */}
+      <Dialog open={!!editingSource} onOpenChange={(open) => !open && setEditingSource(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Feed URL</DialogTitle>
+            <DialogDescription>
+              Update the feed URL for {editingSource?.source_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="edit-feed-url">Feed URL</Label>
+              <Input
+                id="edit-feed-url"
+                value={editingFeedUrl}
+                onChange={(e) => setEditingFeedUrl(e.target.value)}
+                placeholder="https://example.com/feed"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSource(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (editingSource && editingFeedUrl.trim()) {
+                  await handleUpdateSource(editingSource.id, { 
+                    feed_url: editingFeedUrl.trim() 
+                  });
+                  toast({
+                    title: 'Feed URL Updated',
+                    description: `${editingSource.source_name} feed URL has been updated`,
+                  });
+                  setEditingSource(null);
+                  loadSources();
+                }
+              }}
+              disabled={!editingFeedUrl.trim() || loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
