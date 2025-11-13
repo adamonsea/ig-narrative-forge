@@ -61,12 +61,12 @@ interface KeywordTracking {
   topic_id: string;
   keyword_phrase: string;
   total_mentions: number;
-  positive_mentions: number;
-  negative_mentions: number;
-  neutral_mentions: number;
-  sentiment_ratio: number;
+  positive_mentions?: number;
+  negative_mentions?: number;
+  neutral_mentions?: number;
+  sentiment_ratio?: number;
   source_count: number;
-  source_urls: string[];
+  source_urls?: string[];
   tracked_for_cards: boolean;
   current_trend: string;
   last_seen_at: string;
@@ -140,7 +140,16 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
         .eq('topic_id', topicId)
         .order('total_mentions', { ascending: false });
 
-      setKeywords(keywordsData || []);
+      // Cast to any since types haven't regenerated yet with new columns
+      const keywords = (keywordsData || []) as any[];
+      setKeywords(keywords.map(kw => ({
+        ...kw,
+        positive_mentions: kw.positive_mentions || 0,
+        negative_mentions: kw.negative_mentions || 0,
+        neutral_mentions: kw.neutral_mentions || 0,
+        sentiment_ratio: kw.sentiment_ratio || 0,
+        source_urls: kw.source_urls || []
+      })));
 
       // Load cards
       const { data: cardsData } = await supabase

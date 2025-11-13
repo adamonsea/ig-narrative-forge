@@ -673,11 +673,6 @@ export const TopicSettings = ({
         {/* Unified Automation Settings */}
         <TopicAutomationSettings topicId={topicId} />
 
-        <Separator />
-
-        {/* Sentiment Card Management */}
-        <SentimentManager topicId={topicId} />
-
         <div className="flex justify-end">
           <Button 
             onClick={handleSave} 
