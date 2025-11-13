@@ -25,6 +25,8 @@ export interface DomainProfile {
     skip?: ('arc' | 'rss' | 'html')[];
     timeout?: number;
   };
+  categoryPatterns?: string[];
+  articlePatterns?: string[];
 }
 
 export interface DomainProfileSource {
