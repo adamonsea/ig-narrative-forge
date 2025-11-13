@@ -12,28 +12,29 @@ interface ArticleData {
   author?: string;
   published_at?: string;
   source_url: string;
-  regional_relevance_score?: number;
   slides?: Array<{ content: string }>;
 }
 
 interface KeywordAnalysis {
   phrase: string;
-  frequency: number;
-  sentiment_context: {
-    positive: number;
-    negative: number;
-    neutral: number;
-  };
+  sentiment_direction: 'positive' | 'negative';
+  mention_count: number;
   sources: Array<{
     url: string;
     title: string;
     date: string;
     author?: string;
+    prominence: number;
   }>;
+  prominent_phrases: string[];
 }
 
+const STRONG_NEGATIVE = ['crisis', 'disaster', 'scandal', 'corruption', 'abuse', 'fraud', 'fatal', 'death', 'killed', 'murder', 'violence', 'assault', 'catastrophe', 'devastation'];
+const NEGATIVE = ['concern', 'worry', 'problem', 'issue', 'risk', 'danger', 'threat', 'accident', 'injury', 'damage', 'loss', 'failure', 'delay', 'criticism', 'oppose', 'reject', 'deny', 'refuse', 'cancel', 'close', 'cut', 'reduce', 'decline', 'fall', 'drop', 'struggle', 'suffer', 'complaint', 'protest'];
+const STRONG_POSITIVE = ['excellence', 'triumph', 'breakthrough', 'revolutionary', 'spectacular', 'outstanding', 'remarkable', 'exceptional', 'brilliant', 'magnificent', 'wonderful', 'fantastic'];
+const POSITIVE = ['success', 'achievement', 'win', 'victory', 'improve', 'growth', 'progress', 'benefit', 'gain', 'increase', 'rise', 'boost', 'support', 'approve', 'praise', 'celebrate', 'honor', 'award', 'launch', 'open', 'expand', 'innovation', 'opportunity', 'community'];
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -43,1007 +44,109 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const deepSeekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
 
-    console.log('🚀 Sentiment Detector Invoked', {
-      timestamp: new Date().toISOString(),
-      hasDeepSeekKey: !!deepSeekApiKey
-    });
-
     if (!deepSeekApiKey) {
-      const error = 'DEEPSEEK_API_KEY not configured - cannot proceed with sentiment analysis';
-      console.error('❌', error);
-      throw new Error(error);
+      throw new Error('DEEPSEEK_API_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const { topic_id: topicId, force_analysis = false } = await req.json();
 
-    const { topic_id: topicId, force_analysis = false, mode } = await req.json();
+    if (!topicId) throw new Error('topic_id is required');
 
-    if (!topicId) {
-      throw new Error('topic_id is required');
-    }
-
-    console.log('📊 Starting sentiment analysis', {
-      topicId,
-      force_analysis,
-      mode: mode || 'full'
-    });
-
-    // Get topic settings and configuration
-    const { data: topicSettings, error: settingsError } = await supabase
-      .from('topic_sentiment_settings')
-      .select('*')
-      .eq('topic_id', topicId)
-      .single();
-
-    if (settingsError && settingsError.code !== 'PGRST116') {
-      console.error('Error fetching sentiment settings:', settingsError);
-      throw settingsError;
-    }
-
-    // Check if analysis should run
+    const { data: topicSettings } = await supabase.from('topic_sentiment_settings').select('*').eq('topic_id', topicId).single();
     if (!topicSettings?.enabled && !force_analysis) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Sentiment analysis not enabled for this topic' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, message: 'Sentiment analysis not enabled' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Get topic info and configuration
-    const { data: topic, error: topicError } = await supabase
-      .from('topics')
-      .select('*')
-      .eq('id', topicId)
-      .single();
+    const { data: topic } = await supabase.from('topics').select('*').eq('id', topicId).single();
+    if (!topic) throw new Error('Topic not found');
 
-    if (topicError) {
-      console.error('Error fetching topic:', topicError);
-      throw topicError;
-    }
-
-    const topicName = topic.name;
-    const topicKeywords = topic.keywords || [];
     const excludedKeywords = topicSettings?.excluded_keywords || [];
 
-    console.log('🔍 Fetching published stories...');
-    
-    // Try multi-tenant structure first (topic_article_id with shared_article_content)
-    const { data: multiTenantStories, error: mtError } = await supabase
-      .from('stories')
-      .select(`
-        *,
-        slides (content, slide_number),
-        topic_articles!inner (
-          topic_id,
-          shared_content_id,
-          shared_content:shared_article_content!inner (
-            title,
-            body,
-            author,
-            published_at,
-            url
-          )
-        )
-      `)
-      .eq('topic_articles.topic_id', topicId)
-      .or('is_published.eq.true,status.eq.published')
-      .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false });
+    // Fetch stories
+    const { data: multiTenantStories } = await supabase.from('stories').select('*, slides (content), topic_articles!inner (shared_content:shared_article_content!inner (title, body, author, published_at, url))').eq('topic_articles.topic_id', topicId).or('is_published.eq.true,status.eq.published').gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(100);
+    const { data: legacyStories } = await supabase.from('stories').select('*, slides (content), articles!inner (title, body, author, published_at, source_url)').eq('articles.topic_id', topicId).or('is_published.eq.true,status.eq.published').gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(100);
 
-    let stories = [];
-    let contentForAnalysis = [];
-    let queryReason = '';
+    const allStories = [...(multiTenantStories || []), ...(legacyStories || [])];
+    const uniqueStories = Array.from(new Map(allStories.map(s => [s.id, s])).values());
 
-    if (!mtError && multiTenantStories && multiTenantStories.length > 0) {
-      console.log(`✅ Found ${multiTenantStories.length} multi-tenant stories`);
-      queryReason = 'multi_tenant_stories';
-      stories = multiTenantStories;
-      contentForAnalysis = multiTenantStories.map(story => ({
-        title: story.topic_articles.shared_content.title,
-        body: story.topic_articles.shared_content.body,
-        author: story.topic_articles.shared_content.author,
-        published_at: story.topic_articles.shared_content.published_at,
-        source_url: story.topic_articles.shared_content.url,
-        regional_relevance_score: 100, // Multi-tenant articles are pre-filtered
-        slides: story.slides
-      }));
-    } else {
-      // If multi-tenant query failed or returned 0 results, try direct topic_articles
-      if (mtError) {
-        console.warn('⚠️ Multi-tenant query error:', mtError);
-      }
-      console.log('🔄 No multi-tenant stories found, trying direct topic_articles query...');
-      
-      const { data: topicArticles, error: taError } = await supabase
-        .from('topic_articles')
-        .select(`
-          *,
-          shared_article_content!inner (
-            title,
-            body,
-            author,
-            published_at,
-            url
-          )
-        `)
-        .eq('topic_id', topicId)
-        .eq('processing_status', 'processed')
-        .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false });
+    const articles: ArticleData[] = uniqueStories.map(story => {
+      const content = story.topic_articles?.[0]?.shared_content?.[0] || story.articles?.[0];
+      return { title: content?.title || '', body: content?.body || '', author: content?.author, published_at: content?.published_at, source_url: content?.url || content?.source_url || '', slides: story.slides || [] };
+    }).filter(a => a.title && a.body);
 
-      if (!taError && topicArticles && topicArticles.length > 0) {
-        console.log(`✅ Found ${topicArticles.length} topic articles (fallback query)`);
-        queryReason = 'direct_topic_articles';
-        contentForAnalysis = topicArticles.map(article => ({
-          title: article.shared_article_content.title,
-          body: article.shared_article_content.body,
-          author: article.shared_article_content.author,
-          published_at: article.shared_article_content.published_at,
-          source_url: article.shared_article_content.url,
-          regional_relevance_score: 100,
-          slides: []
-        }));
-      } else {
-        // Final fallback: legacy structure (article_id)
-        if (taError) {
-          console.warn('⚠️ Topic articles query error:', taError);
-        }
-        console.log('🔄 Trying legacy structure...');
-        const { data: legacyStories, error: legacyError } = await supabase
-          .from('stories')
-          .select(`
-            *,
-            slides (content, slide_number),
-            articles!inner (
-              topic_id,
-              title,
-              body,
-              author,
-              published_at,
-              source_url,
-              regional_relevance_score,
-              processing_status
-            )
-          `)
-          .eq('articles.topic_id', topicId)
-          .or('is_published.eq.true,status.eq.published')
-          .eq('articles.processing_status', 'processed')
-          .gte('articles.regional_relevance_score', 0)
-          .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false });
+    const splitKeywords = await analyzeSplitSentiment(articles, topic.name, excludedKeywords);
 
-        if (legacyError) {
-          console.error('❌ Error fetching stories:', legacyError);
-          throw legacyError;
-        }
+    await supabase.from('sentiment_keyword_tracking').delete().eq('topic_id', topicId);
 
-        console.log(`✅ Found ${legacyStories?.length || 0} legacy stories`);
-        queryReason = 'legacy_stories';
-        stories = legacyStories || [];
-        contentForAnalysis = stories.map(story => ({
-          title: story.articles.title,
-          body: story.articles.body,
-          author: story.articles.author,
-          published_at: story.articles.published_at,
-          source_url: story.articles.source_url,
-          regional_relevance_score: story.articles.regional_relevance_score,
-          slides: story.slides
-        }));
-      }
+    const insertData = splitKeywords.map(kw => ({
+      topic_id: topicId, keyword_phrase: kw.phrase, sentiment_direction: kw.sentiment_direction, total_mentions: kw.mention_count,
+      positive_mentions: kw.sentiment_direction === 'positive' ? kw.mention_count : 0, negative_mentions: kw.sentiment_direction === 'negative' ? kw.mention_count : 0,
+      neutral_mentions: 0, sentiment_ratio: kw.sentiment_direction === 'positive' ? 1.0 : -1.0, source_count: kw.sources.length, tracked_for_cards: false,
+      sources: kw.sources, prominent_phrases: kw.prominent_phrases
+    }));
+
+    if (insertData.length > 0) {
+      await supabase.from('sentiment_keyword_tracking').insert(insertData);
     }
 
-    console.log(`✅ Total stories for analysis: ${contentForAnalysis.length}`, {
-      queryMethod: queryReason,
-      timeWindow: '45 days'
-    });
+    await supabase.from('topic_sentiment_settings').update({ last_run_at: new Date().toISOString() }).eq('topic_id', topicId);
+    await supabase.rpc('snapshot_sentiment_keywords');
 
-    if (contentForAnalysis.length === 0) {
-      console.warn('⚠️ No published content found for analysis', {
-        topicId,
-        totalStoriesQueried: stories?.length || 0,
-        queryMethod: queryReason,
-        possibleReasons: [
-          'No stories with status "ready" or "published"',
-          'No articles with processing_status "processed"',
-          'All content older than 45 days',
-          'Multi-tenant join may have failed - check shared_article_content relationship'
-        ]
-      });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'No published content available for sentiment analysis',
-          topicId,
-          debug: {
-            storiesQueried: stories?.length || 0,
-            queryMethod: queryReason || 'unknown',
-            reason: 'No matching stories found with required status',
-            timeWindow: '45 days',
-            suggestedActions: [
-              'Check if topic_articles exist for this topic',
-              'Verify shared_article_content records are linked correctly',
-              'Confirm stories have is_published=true or status=published'
-            ]
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`📝 Analyzing ${contentForAnalysis.length} published stories`, {
-      titles: contentForAnalysis.slice(0, 3).map(c => c.title)
-    });
-
-    // Create content fingerprint for duplicate detection
-    const contentFingerprint = contentForAnalysis
-      .map(c => `${c.title}-${c.published_at}`)
-      .sort()
-      .join('|');
-
-    // Analyze keywords and sentiment with enhanced regional focus
-    console.log('🤖 Calling DeepSeek API for keyword analysis...');
-    let keywordAnalysis = await analyzeKeywordsAndSentiment(
-      contentForAnalysis,
-      topicKeywords,
-      excludedKeywords,
-      deepSeekApiKey,
-      topicName,
-      topic
-    );
-
-    const fallbackKeywords = fallbackKeywordExtraction(
-      contentForAnalysis,
-      excludedKeywords,
-      topicName
-    );
-
-    if (fallbackKeywords.length > 0) {
-      const existingPhrases = new Set(keywordAnalysis.map(k => k.phrase.toLowerCase()));
-      for (const fb of fallbackKeywords) {
-        if (!existingPhrases.has(fb.phrase.toLowerCase())) {
-          keywordAnalysis.push(fb);
-        }
-      }
-    }
-
-    // Implement balanced keyword selection
-    // Sort keywords into sentiment buckets
-    const highNegative = keywordAnalysis.filter(k => {
-      const total = k.frequency || 0;
-      const negative = k.sentiment_context?.negative ?? 0;
-      return total > 0 && (negative / total) > 0.6;
-    });
-    
-    const highPositive = keywordAnalysis.filter(k => {
-      const total = k.frequency || 0;
-      const positive = k.sentiment_context?.positive ?? 0;
-      const negative = k.sentiment_context?.negative ?? 0;
-      return total > 0 && (positive / total) > 0.6 && (negative / total) < 0.3;
-    });
-    
-    const balanced = keywordAnalysis.filter(k => {
-      const total = k.frequency || 0;
-      const negative = k.sentiment_context?.negative ?? 0;
-      const positive = k.sentiment_context?.positive ?? 0;
-      const negRatio = total > 0 ? negative / total : 0;
-      const posRatio = total > 0 ? positive / total : 0;
-      return negRatio >= 0.3 && negRatio <= 0.6 && posRatio >= 0.3;
-    });
-    
-    // Select top keywords from each bucket (prioritize negative for newsworthiness)
-    const selectedKeywords = [
-      ...highNegative.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 7),
-      ...balanced.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 7),
-      ...highPositive.sort((a, b) => (b.sources.length * b.frequency) - (a.sources.length * a.frequency)).slice(0, 6)
-    ];
-    
-    // Use selected balanced keywords or fallback to top 20 if buckets are empty
-    keywordAnalysis = selectedKeywords.length > 0 ? selectedKeywords : keywordAnalysis.slice(0, 20);
-
-    console.log(`✨ Found ${keywordAnalysis.length} balanced trending keywords`, {
-      highNegative: highNegative.length,
-      balanced: balanced.length,
-      highPositive: highPositive.length,
-      keywords: keywordAnalysis.map(k => k.phrase).slice(0, 5)
-    });
-
-    // Update keyword tracking table
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    const existingKeywordMap = new Map<string, { tracked_for_cards: boolean }>();
-    if (keywordAnalysis.length > 0) {
-      const uniquePhrases = Array.from(new Set(keywordAnalysis.map(k => k.phrase)));
-      const { data: existingKeywords, error: existingError } = await supabase
-        .from('sentiment_keyword_tracking')
-        .select('keyword_phrase, tracked_for_cards')
-        .eq('topic_id', topicId)
-        .in('keyword_phrase', uniquePhrases);
-
-      if (existingError) {
-        console.error('❌ Error fetching existing keyword tracking:', existingError);
-      } else {
-        for (const record of existingKeywords || []) {
-          existingKeywordMap.set(record.keyword_phrase.toLowerCase(), {
-            tracked_for_cards: record.tracked_for_cards
-          });
-        }
-      }
-    }
-
-    for (const keyword of keywordAnalysis) {
-      // Calculate trend status
-      const currentTrend = keyword.frequency >= 5 ? 'sustained' : 'emerging';
-      
-      // Calculate sentiment ratio
-      const totalMentions = keyword.frequency || 0;
-      const negativeMentions = keyword.sentiment_context?.negative ?? 0;
-      const sentimentRatio = totalMentions > 0 ? negativeMentions / totalMentions : 0;
-      
-      // Extract source URLs
-      const sourceUrls = keyword.sources.map(s => s.url).filter(Boolean);
-      
-      // Check for controversy (high negative sentiment + reasonable sources)
-      const isControversial = sentimentRatio > 0.6 && keyword.sources.length >= 3;
-
-      // Upsert keyword tracking with sentiment breakdown
-      const { error: trackingError } = await supabase
-        .from('sentiment_keyword_tracking')
-        .upsert({
-          topic_id: topicId,
-          keyword_phrase: keyword.phrase,
-          last_seen_at: now.toISOString(),
-          total_mentions: keyword.frequency,
-          source_count: keyword.sources.length,
-          positive_mentions: keyword.sentiment_context?.positive ?? 0,
-          negative_mentions: keyword.sentiment_context?.negative ?? 0,
-          neutral_mentions: keyword.sentiment_context?.neutral ?? 0,
-          sentiment_ratio: sentimentRatio,
-          source_urls: sourceUrls,
-          current_trend: currentTrend,
-          tracked_for_cards: isControversial ? true : undefined, // Auto-track controversial keywords
-          updated_at: now.toISOString(),
-        }, {
-          onConflict: 'topic_id,keyword_phrase',
-          ignoreDuplicates: false
-        });
-
-      if (trackingError) {
-        console.error('❌ Error upserting keyword tracking:', trackingError);
-        continue;
-      }
-
-      if (!existingKeywordMap.has(keyword.phrase.toLowerCase())) {
-        console.log(`🔔 New keyword detected: ${keyword.phrase}`);
-        try {
-          const estimatedNotificationScore = calculateEstimatedSentimentScore(keyword);
-          await supabase.functions.invoke('send-story-notification', {
-            body: {
-              topicId,
-              notificationType: 'sentiment',
-              keywordPhrase: keyword.phrase,
-              sentimentScore: estimatedNotificationScore
-            }
-          });
-        } catch (notifyError) {
-          console.error('⚠️ Failed to send sentiment notification:', notifyError);
-        }
-        existingKeywordMap.set(keyword.phrase.toLowerCase(), { tracked_for_cards: false });
-      }
-    }
-
-    // Mark keywords not seen recently as fading
-    await supabase
-      .from('sentiment_keyword_tracking')
-      .update({ current_trend: 'fading' })
-      .eq('topic_id', topicId)
-      .lt('last_seen_at', thirtyDaysAgo.toISOString());
-
-    let generatedCards = 0;
-
-    // Generate sentiment cards for keywords with reasonable support
-    for (const keyword of keywordAnalysis) {
-      if (keyword.frequency >= 2 && keyword.sources.length >= 2) {
-        console.log(`🎯 Evaluating keyword for card: "${keyword.phrase}"`, {
-          frequency: keyword.frequency,
-          sources: keyword.sources.length,
-          sentiment: keyword.sentiment_context
-        });
-        
-        // Check for existing cards in the last 7 days
-        const { data: existingCards, error: checkError } = await supabase
-          .from('sentiment_cards')
-          .select('*')
-          .eq('topic_id', topicId)
-          .eq('keyword_phrase', keyword.phrase)
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (checkError) {
-          console.error('Error checking existing cards:', checkError);
-          continue;
-        }
-
-        // Calculate estimated sentiment score for comparison
-        const estimatedScore = calculateEstimatedSentimentScore(keyword);
-        
-        let shouldCreateCard = true;
-        let updateReason = 'new_analysis';
-
-        if (existingCards && existingCards.length > 0) {
-          const existingCard = existingCards[0];
-          const scoreDifference = Math.abs(estimatedScore - (existingCard.sentiment_score || 0));
-          
-          // Only create new card if significant change or new content
-          if (scoreDifference < 15 && existingCard.content_fingerprint === contentFingerprint) {
-            console.log(`Skipping duplicate card for ${keyword.phrase} - no significant change`);
-            shouldCreateCard = false;
-          } else if (scoreDifference >= 15) {
-            updateReason = 'sentiment_shift';
-          } else if (existingCard.content_fingerprint !== contentFingerprint) {
-            updateReason = 'new_content';
-          }
-        }
-
-        if (shouldCreateCard) {
-          console.log(`🎨 Generating sentiment card`, {
-            keyword: keyword.phrase,
-            reason: updateReason
-          });
-          
-          try {
-            const sentimentCard = await generateSentimentCard(
-              keyword,
-              topicName,
-              deepSeekApiKey,
-              topic
-            );
-
-            if (sentimentCard) {
-              console.log(`✅ Card generated successfully for "${keyword.phrase}"`, {
-                sentiment_score: sentimentCard.sentiment_score,
-                confidence_score: sentimentCard.confidence_score,
-                card_type: sentimentCard.card_type
-              });
-
-              // Insert the sentiment card with duplicate prevention
-              const { error: insertError } = await supabase
-                .from('sentiment_cards')
-                .insert({
-                  topic_id: topicId,
-                  keyword_phrase: keyword.phrase,
-                  content: sentimentCard.content,
-                  sources: keyword.sources,
-                  sentiment_score: sentimentCard.sentiment_score,
-                  confidence_score: sentimentCard.confidence_score,
-                  card_type: sentimentCard.card_type,
-                  slides: sentimentCard.slides || [],
-                  analysis_date: new Date().toISOString().split('T')[0],
-                  content_fingerprint: contentFingerprint,
-                  previous_sentiment_score: existingCards?.[0]?.sentiment_score || 0,
-                  update_reason: updateReason,
-                  is_published: true,
-                  needs_review: true,
-                  is_visible: true
-                });
-
-              if (insertError) {
-                if (insertError.code === '23505') { // Unique constraint violation
-                  console.warn(`⚠️ Duplicate card prevented for "${keyword.phrase}" (already exists today)`);
-                } else {
-                  console.error('❌ Error inserting sentiment card:', insertError);
-                }
-              } else {
-                generatedCards++;
-                console.log(`💾 Card saved to database for "${keyword.phrase}"`);
-              }
-            } else {
-              console.warn(`⚠️ Card generation returned null for "${keyword.phrase}"`);
-            }
-          } catch (cardError) {
-            console.error(`❌ Error during card generation for "${keyword.phrase}":`, cardError);
-          }
-        } else {
-          console.log(`⏭️ Skipping card generation for "${keyword.phrase}" (no significant changes)`);
-        }
-      }
-    }
-
-    // Update last analysis timestamp
-    await supabase
-      .from('topic_sentiment_settings')
-      .upsert({
-        topic_id: topicId,
-        enabled: true,
-        last_analysis_at: new Date().toISOString(),
-        ...(topicSettings ? {} : { analysis_frequency_hours: 24 })
-      });
-
-    // Snapshot current keywords into history for trend tracking
-    console.log('📸 Creating weekly snapshot for trend tracking...');
-    try {
-      const { error: snapshotError } = await supabase.rpc('snapshot_sentiment_keywords');
-      if (snapshotError) {
-        console.error('Error creating sentiment snapshot:', snapshotError);
-      } else {
-        console.log('✅ Weekly snapshot created successfully');
-      }
-    } catch (snapshotErr) {
-      console.error('Failed to create snapshot:', snapshotErr);
-      // Don't fail the whole operation if snapshot fails
-    }
-
-    // Prepare keyword suggestions (keywords that could be added to topic)
-    const keywordSuggestions = keywordAnalysis
-      .filter(k => k.frequency >= 2 && k.sources.length >= 2) // Match card generation threshold
-      .filter(k => !topicKeywords.some((tk: any) => 
-        tk.toLowerCase().includes(k.phrase.toLowerCase()) || 
-        k.phrase.toLowerCase().includes(tk.toLowerCase())
-      )) // Only suggest if not already in topic keywords
-      .slice(0, 8) // Limit to top 8 suggestions
-      .map(k => ({
-        keyword: k.phrase,
-        frequency: k.frequency,
-        confidence: Math.min(95, Math.round((k.frequency / Math.max(contentForAnalysis.length, 1)) * 100 + 50)),
-        sources_count: k.sources.length,
-        sentiment_context: k.sentiment_context
-      }));
-
-    console.log('🎉 Analysis complete!', {
-      stories_analyzed: contentForAnalysis.length,
-      keywords_identified: keywordAnalysis.length,
-      cards_generated: generatedCards,
-      keyword_suggestions: keywordSuggestions.length
-    });
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        topic_id: topicId,
-        stories_analyzed: contentForAnalysis.length,
-        keywords_identified: keywordAnalysis.length,
-        cards_generated: generatedCards,
-        content_fingerprint: contentFingerprint,
-        keyword_suggestions: keywordSuggestions
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: true, keywords_found: splitKeywords.length, articles_analyzed: articles.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
-    console.error('💥 Critical Error in sentiment analysis:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : undefined
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    console.error('❌ Error:', error);
+    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
 
-function calculateEstimatedSentimentScore(keyword: KeywordAnalysis): number {
-  const positive = keyword.sentiment_context?.positive ?? 0;
-  const negative = keyword.sentiment_context?.negative ?? 0;
-  const denominator = Math.max(keyword.frequency || 0, 1);
-  const rawScore = ((positive - negative) / denominator) * 100;
-  return Math.max(-100, Math.min(100, Math.round(rawScore)));
-}
-
-function fallbackKeywordExtraction(
-  articles: ArticleData[],
-  excludedKeywords: string[],
-  topicName?: string
-): KeywordAnalysis[] {
-  const excludedSet = new Set(excludedKeywords.map(k => k.toLowerCase()));
-  const stopwords = new Set([
-    'the', 'and', 'with', 'from', 'that', 'this', 'have', 'will', 'about', 'there', 'their', 'which',
-    'after', 'before', 'would', 'could', 'should', 'these', 'those', 'into', 'local', 'community',
-    'council', 'councils', 'people', 'update', 'latest', 'today', 'news'
-  ]);
-
-  if (topicName) {
-    topicName.split(/\s+/).forEach(part => stopwords.add(part.toLowerCase()));
-  }
-
-  const positiveWords = new Set(['improve', 'support', 'funding', 'investment', 'win', 'approval', 'progress', 'benefit']);
-  const negativeWords = new Set(['delay', 'issue', 'problem', 'concern', 'opposition', 'criticism', 'challenge', 'risk']);
-
-  const keywordMap = new Map<string, {
-    mentions: number;
-    sources: Map<string, { url: string; title: string; date: string; author?: string }>;
-    positive: number;
-    negative: number;
-  }>();
-
-  const excludedPhrase = (phrase: string) => {
-    const lower = phrase.toLowerCase();
-    if (excludedSet.has(lower)) return true;
-    if (stopwords.has(lower)) return true;
-    const parts = lower.split(' ');
-    return parts.every(part => stopwords.has(part));
-  };
-
+async function analyzeSplitSentiment(articles: ArticleData[], topicName: string, excludedKeywords: string[]): Promise<KeywordAnalysis[]> {
+  const keywordMap = new Map();
   for (const article of articles) {
-    const slideText = article.slides?.map(slide => slide.content).join(' ') || '';
-    const combinedText = `${article.title || ''}. ${article.body || ''}. ${slideText}`;
-    const candidatePhrases = new Set<string>();
-
-    const phraseRegex = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g;
-    let match: RegExpExecArray | null;
-    while ((match = phraseRegex.exec(article.title || '')) !== null) {
-      candidatePhrases.add(match[1].trim());
-    }
-    while ((match = phraseRegex.exec(article.body || '')) !== null) {
-      candidatePhrases.add(match[1].trim());
-    }
-
-    if (candidatePhrases.size < 5) {
-      const capitalRegex = /\b([A-Z][a-z]{3,})\b/g;
-      let singleMatch: RegExpExecArray | null;
-      while ((singleMatch = capitalRegex.exec(article.title || '')) !== null) {
-        candidatePhrases.add(singleMatch[1]);
+    const fullText = `${article.title} ${article.body} ${article.slides?.map(s => s.content).join(' ') || ''}`;
+    const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    for (const sentence of sentences) {
+      const words = sentence.toLowerCase().split(/\s+/);
+      for (let i = 0; i < words.length - 1; i++) {
+        const keywords = [
+          `${words[i]} ${words[i + 1]}`.replace(/[^\w\s]/g, '').trim(),
+          i < words.length - 2 ? `${words[i]} ${words[i + 1]} ${words[i + 2]}`.replace(/[^\w\s]/g, '').trim() : ''
+        ].filter(k => k.length > 5 && !excludedKeywords.some(ex => k.includes(ex.toLowerCase())) && !k.includes(topicName.toLowerCase().split(' ')[0]));
+        
+        for (const keyword of keywords) {
+          const sentiment = analyzeSentimentInContext(sentence, keyword);
+          if (sentiment === 'neutral') continue;
+          if (!keywordMap.has(keyword)) keywordMap.set(keyword, { positive: new Map(), negative: new Map(), positiveContexts: [], negativeContexts: [] });
+          const data = keywordMap.get(keyword);
+          const targetMap = sentiment === 'positive' ? data.positive : data.negative;
+          const targetContexts = sentiment === 'positive' ? data.positiveContexts : data.negativeContexts;
+          if (!targetMap.has(article.source_url)) {
+            targetMap.set(article.source_url, { prominence: 1, title: article.title, date: article.published_at || new Date().toISOString(), author: article.author });
+            targetContexts.push(sentence.trim());
+          } else targetMap.get(article.source_url).prominence += 1;
+        }
       }
     }
-
-    for (const phrase of candidatePhrases) {
-      const normalized = phrase.replace(/\s+/g, ' ').trim();
-      if (normalized.length < 4) continue;
-      if (excludedPhrase(normalized)) continue;
-
-      const lower = normalized.toLowerCase();
-      const mentionRegex = new RegExp(lower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-      const mentions = combinedText.match(mentionRegex)?.length || 0;
-      if (mentions === 0) continue;
-
-      const sourceKey = article.source_url || `${article.title}-${article.published_at}`;
-      const entry = keywordMap.get(lower) || {
-        mentions: 0,
-        sources: new Map<string, { url: string; title: string; date: string; author?: string }>(),
-        positive: 0,
-        negative: 0
-      };
-
-      entry.mentions += mentions;
-      if (!entry.sources.has(sourceKey)) {
-        entry.sources.set(sourceKey, {
-          url: article.source_url,
-          title: article.title,
-          date: article.published_at || new Date().toISOString(),
-          author: article.author
-        });
-      }
-
-      const sentiment = collectSimpleSentiment(combinedText, lower, positiveWords, negativeWords);
-      entry.positive += sentiment.positive;
-      entry.negative += sentiment.negative;
-
-      keywordMap.set(lower, entry);
-    }
   }
-
-  return Array.from(keywordMap.entries())
-    .map(([phrase, info]) => ({
-      phrase: phrase.replace(/\b\w/g, char => char.toUpperCase()),
-      frequency: info.mentions,
-      sentiment_context: {
-        positive: info.positive,
-        negative: info.negative,
-        neutral: Math.max(info.mentions - (info.positive + info.negative), 0)
-      },
-      sources: Array.from(info.sources.values())
-        .filter(source => !!source.title && !!source.url)
-        .slice(0, 5)
-    }))
-    .filter(item => item.sources.length >= 1 && item.frequency >= 2)
-    .slice(0, 10);
+  const results: KeywordAnalysis[] = [];
+  for (const [keyword, data] of keywordMap) {
+    if (data.negative.size >= 5) results.push({ phrase: keyword, sentiment_direction: 'negative', mention_count: data.negative.size, sources: Array.from(data.negative.entries()).map(([url, info]) => ({ url, title: info.title, date: info.date, author: info.author, prominence: info.prominence })).sort((a, b) => b.prominence - a.prominence).slice(0, 10), prominent_phrases: [] });
+    if (data.positive.size >= 5) results.push({ phrase: keyword, sentiment_direction: 'positive', mention_count: data.positive.size, sources: Array.from(data.positive.entries()).map(([url, info]) => ({ url, title: info.title, date: info.date, author: info.author, prominence: info.prominence })).sort((a, b) => b.prominence - a.prominence).slice(0, 10), prominent_phrases: [] });
+  }
+  return results.sort((a, b) => b.mention_count - a.mention_count);
 }
 
-function collectSimpleSentiment(
-  text: string,
-  phraseLower: string,
-  positiveWords: Set<string>,
-  negativeWords: Set<string>
-): { positive: number; negative: number } {
-  let positive = 0;
-  let negative = 0;
-  const sentences = text.split(/(?<=[.!?])/);
-  for (const sentence of sentences) {
-    if (!sentence) continue;
-    if (!sentence.toLowerCase().includes(phraseLower)) continue;
-    const words = sentence.toLowerCase().split(/[^a-z0-9]+/);
-    for (const word of words) {
-      if (positiveWords.has(word)) positive++;
-      if (negativeWords.has(word)) negative++;
-    }
-  }
-  return { positive, negative };
-}
-
-// Analyze keywords and sentiment using DeepSeek
-async function analyzeKeywordsAndSentiment(
-  articles: any[],
-  topicKeywords: string[],
-  excludedKeywords: string[],
-  apiKey: string,
-  topicName?: string,
-  topicConfig?: any
-): Promise<KeywordAnalysis[]> {
-  
-  // Combine all content including slides
-  const combinedContent = articles.map(article => {
-    const slideContent = article.slides?.map((s: any) => s.content).join(' ') || '';
-    return `${article.title} ${article.body || ''} ${slideContent}`;
-  }).join('\n\n');
-
-  // Enhanced prompt with regional focus
-  const regionalContext = topicConfig ? `
-Regional Focus: ${topicName}
-Key Locations: ${topicConfig.landmarks?.join(', ') || 'N/A'}
-Local Organizations: ${topicConfig.organizations?.join(', ') || 'N/A'}
-Postcodes/Areas: ${topicConfig.postcodes?.join(', ') || 'N/A'}
-` : '';
-
-  const prompt = `Analyze the following published news content and extract trending keywords/phrases that are generating discussion. This is for the "${topicName}" topic - heavily prioritize terms related to this specific area and community.
-
-${regionalContext}
-
-Topic Keywords: ${topicKeywords.join(', ')}
-Excluded Keywords: ${excludedKeywords.join(', ')} (ignore these completely)
-
-CRITICAL: Only extract keywords that are directly relevant to ${topicName}. Reject any terms about other cities, regions, or places outside this area. Focus on:
-- Local people, businesses, and organizations
-- Local events and developments  
-- Area-specific issues and concerns
-- Local landmarks and places
-- Community discussions and sentiment
-- Include insights from Reddit, forums, and social media when available
-
-BALANCE REQUIREMENT: Extract 10-20 trending keywords ensuring a mix of POSITIVE and NEGATIVE sentiment. Don't only focus on high-frequency terms - include controversial topics with strong negative sentiment even if they appear less frequently.
-
-Content to analyze:
-${combinedContent}
-
-Extract 10-20 trending keywords or phrases and for each provide:
-1. The exact phrase (must be relevant to ${topicName})
-2. How many times it appears or is referenced
-3. Sentiment context (positive mentions, negative mentions, neutral mentions)
-4. Key sources mentioning it (must include at least 3 sources)
-5. Reddit/forum sentiment if available
-
-Return as JSON array with this structure:
-[{
-  "phrase": "exact keyword or phrase",
-  "frequency": number,
-  "sentiment_context": {
-    "positive": number,
-    "negative": number, 
-    "neutral": number
-  },
-  "sources": [{"url": "source_url", "title": "article_title", "date": "date", "author": "author_name"}]
-}]
-
-REJECT any phrases about other locations outside ${topicName}. Only include locally relevant terms.`;
-
-  try {
-    console.log('📡 Calling DeepSeek for keyword analysis...');
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: 'You are a local news sentiment analyst specializing in regional content analysis.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-        max_completion_tokens: 1000
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ DeepSeek API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      throw new Error(`DeepSeek API failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('❌ Invalid DeepSeek response structure:', data);
-      throw new Error('No response from DeepSeek API');
-    }
-
-    console.log('✅ DeepSeek keyword analysis successful');
-
-    // Clean the response content to remove markdown code blocks
-    let content = data.choices[0].message.content.trim();
-    content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    
-    const keywords = JSON.parse(content);
-    
-    // Map to our structure and add source information
-    return keywords.map((kw: any) => ({
-      phrase: kw.phrase,
-      frequency: kw.frequency,
-      sentiment_context: kw.sentiment_context || { positive: 0, negative: 0, neutral: 0 },
-      sources: articles
-        .map(article => {
-          const titleMatch = article.title.toLowerCase().includes(kw.phrase.toLowerCase());
-          const bodyLower = (article.body || '').toLowerCase();
-          const phraseLower = kw.phrase.toLowerCase();
-          
-          // Calculate relevance score
-          let relevanceScore = 0;
-          if (titleMatch) relevanceScore += 10; // Strong signal if in title
-          
-          // Count keyword mentions in body
-          const mentionCount = (bodyLower.match(new RegExp(phraseLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-          relevanceScore += Math.min(mentionCount * 2, 20); // Up to 20 points for mentions
-          
-          // Bonus for high regional relevance
-          if (article.regional_relevance_score && article.regional_relevance_score > 70) {
-            relevanceScore += 5;
-          }
-          
-          return {
-            article,
-            relevanceScore
-          };
-        })
-        .filter(item => {
-          // Must meet minimum relevance threshold
-          if (item.relevanceScore < 10) return false;
-          
-          // Must have valid publication date
-          if (!item.article.published_at) return false;
-          
-          // Must have title
-          if (!item.article.title || item.article.title.length < 10) return false;
-          
-          // Must have sufficient content
-          if (!item.article.body || item.article.body.length < 100) return false;
-          
-          return true;
-        })
-        .sort((a, b) => b.relevanceScore - a.relevanceScore) // Sort by relevance
-        .slice(0, 5) // Take top 5 most relevant
-        .map(item => ({
-          url: item.article.source_url,
-          title: item.article.title,
-          date: item.article.published_at,
-          author: item.article.author
-        }))
-    }));
-    
-  } catch (parseError) {
-    console.error('💥 Failed to analyze keywords:', {
-      error: parseError instanceof Error ? parseError.message : String(parseError),
-      stack: parseError instanceof Error ? parseError.stack : undefined
-    });
-    return [];
-  }
-}
-
-// Generate sentiment card content using DeepSeek
-async function generateSentimentCard(
-  keywordData: KeywordAnalysis,
-  topicName: string,
-  apiKey: string,
-  topicConfig?: any
-): Promise<any | null> {
-  
-  const regionalContext = topicConfig ? `
-Focus on: ${topicName}
-Key Locations: ${topicConfig.landmarks?.join(', ') || 'N/A'}
-Local Organizations: ${topicConfig.organizations?.join(', ') || 'N/A'}
-` : '';
-
-  const prompt = `Create a concise sentiment summary card for the trending topic "${keywordData.phrase}" in ${topicName}.
-
-${regionalContext}
-
-Based on this data:
-- Frequency: ${keywordData.frequency} mentions
-- Positive sentiment: ${keywordData.sentiment_context.positive}
-- Negative sentiment: ${keywordData.sentiment_context.negative}
-- Neutral sentiment: ${keywordData.sentiment_context.neutral}
-- Sources: ${keywordData.sources.length} articles
-
-CRITICAL: This card must be specifically about ${topicName}. Do not include content about other locations or regions.
-
-Create a sentiment card with:
-1. A compelling headline focused on ${topicName} (max 60 chars)
-2. Key statistics about mentions/sentiment in this area over the past week
-3. A representative quote from local sources if available
-4. Brief summary of the local sentiment trend over the past week
-5. External sentiment from local forums/social media/Reddit if relevant
-
-Return as JSON:
-{
-  "content": {
-    "headline": "Brief compelling headline about ${topicName}",
-    "statistics": "X mentions, Y% positive sentiment in ${topicName} this week",
-    "key_quote": "Most relevant quote from local sources",
-    "external_sentiment": "Local social media/forum/Reddit insights if available",
-    "summary": "2-3 sentence summary of the trend in ${topicName} over the past week"
-  },
-  "sentiment_score": 0-100,
-  "confidence_score": 0-100,
-  "card_type": "trend|quote|comparison|timeline"
-}`;
-
-  try {
-    console.log('📡 Calling DeepSeek for card generation...');
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: 'You are a local news analyst creating sentiment cards for regional communities.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.4,
-        max_completion_tokens: 400
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ DeepSeek API error during card generation:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      return null;
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices?.[0]?.message?.content) {
-      console.error('❌ Invalid DeepSeek card response structure:', data);
-      return null;
-    }
-
-    console.log('✅ DeepSeek card generation successful');
-
-    // Clean the response content to remove markdown code blocks
-    let content = data.choices[0].message.content.trim();
-    content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    
-    const cardData = JSON.parse(content);
-    
-    return {
-      content: cardData.content,
-      sentiment_score: cardData.sentiment_score || 0,
-      confidence_score: cardData.confidence_score || 75,
-      card_type: cardData.card_type || 'trend',
-      slides: []
-    };
-    
-  } catch (parseError) {
-    console.error('💥 Failed to generate sentiment card:', {
-      error: parseError instanceof Error ? parseError.message : String(parseError),
-      stack: parseError instanceof Error ? parseError.stack : undefined
-    });
-    return null;
-  }
+function analyzeSentimentInContext(text: string, keyword: string): 'positive' | 'negative' | 'neutral' {
+  const lowerText = text.toLowerCase();
+  const keywordPos = lowerText.indexOf(keyword.toLowerCase());
+  if (keywordPos === -1) return 'neutral';
+  const context = lowerText.slice(Math.max(0, keywordPos - 250), Math.min(lowerText.length, keywordPos + keyword.length + 250));
+  let positiveScore = 0, negativeScore = 0;
+  for (const word of STRONG_NEGATIVE) if (context.includes(word)) negativeScore += 2;
+  for (const word of NEGATIVE) if (context.includes(word)) negativeScore += 1;
+  for (const word of STRONG_POSITIVE) if (context.includes(word)) positiveScore += 2;
+  for (const word of POSITIVE) if (context.includes(word)) positiveScore += 1;
+  if (negativeScore > positiveScore && negativeScore >= 2) return 'negative';
+  if (positiveScore > negativeScore && positiveScore >= 2) return 'positive';
+  return 'neutral';
 }
