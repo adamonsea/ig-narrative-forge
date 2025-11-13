@@ -680,8 +680,11 @@ export const TopicSettings = ({
               expertise === currentExpertise && 
               tone === currentTone && 
               writingStyle === currentWritingStyle && 
+              illustrationStyle === currentIllustrationStyle &&
               communityEnabled === currentCommunityEnabled &&
               communityPulseFrequency === (currentCommunityPulseFrequency || 8) &&
+              processingFrequency === (currentCommunityConfig?.processing_frequency_hours || 24) &&
+              JSON.stringify(subreddits.sort()) === JSON.stringify((currentCommunityConfig?.subreddits || []).sort()) &&
               autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
               automationQualityThreshold === (currentAutomationQualityThreshold || 60) &&
               eventsEnabled === (currentEventsEnabled === true) &&
