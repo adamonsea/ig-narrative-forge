@@ -22,37 +22,46 @@ interface SentimentHistory {
 
 interface TrendsChartProps {
   topicId: string;
-  keywords: Array<{ id: string; keyword_phrase: string }>;
+  keywords: Array<{ id: string; keyword_phrase: string; sentiment_direction?: string }>;
 }
 
 export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) => {
   const [selectedKeyword, setSelectedKeyword] = useState<string>('');
+  const [selectedDirection, setSelectedDirection] = useState<string>('');
   const [historyData, setHistoryData] = useState<SentimentHistory[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (keywords.length > 0 && !selectedKeyword) {
       setSelectedKeyword(keywords[0].keyword_phrase);
+      setSelectedDirection(keywords[0].sentiment_direction || '');
     }
   }, [keywords, selectedKeyword]);
 
   useEffect(() => {
-    if (selectedKeyword) {
+    if (selectedKeyword && selectedDirection) {
       loadHistoryData();
     }
-  }, [selectedKeyword, topicId]);
+  }, [selectedKeyword, selectedDirection, topicId]);
 
   const loadHistoryData = async () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      const query = supabase
         .from('sentiment_keyword_history')
         .select('*')
         .eq('topic_id', topicId)
         .eq('keyword_phrase', selectedKeyword)
         .order('week_start_date', { ascending: true })
-        .limit(12); // Last 12 weeks
+        .limit(12);
+
+      // Add sentiment_direction filter if available
+      if (selectedDirection) {
+        query.eq('sentiment_direction', selectedDirection);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
