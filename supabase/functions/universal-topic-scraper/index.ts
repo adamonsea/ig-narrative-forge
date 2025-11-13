@@ -20,6 +20,7 @@ interface UniversalScrapeRequest {
   // Phase 1: Support single source filtering
   singleSourceMode?: boolean;
   enforceStrictScope?: boolean; // Opt-in strict scope enforcement
+  batchSize?: number; // Number of sources to process in parallel (default: 3)
 }
 
 // Circuit breaker for failed URLs (simple in-memory cache)
@@ -144,7 +145,8 @@ serve(async (req) => {
       maxSources = testMode ? 1 : undefined,  // Ultra-aggressive: only 1 source in test mode
       singleSourceMode = false,
       maxAgeDays,  // Can be overridden, otherwise uses topic setting
-      enforceStrictScope = false // Default: allow RSS/HTML fallbacks
+      enforceStrictScope = false, // Default: allow RSS/HTML fallbacks
+      batchSize = 3 // Process 3 sources at a time by default
     } = await req.json() as UniversalScrapeRequest;
 
     console.log('Universal Topic Scraper - Starting for topic:', topicId);
@@ -406,293 +408,340 @@ serve(async (req) => {
       );
     }
 
-    // Process each valid source with aggressive timeouts
-    for (const source of validSources) {
+    // Process sources in batches to avoid CPU timeout
+    const totalBatches = Math.ceil(validSources.length / batchSize);
+    console.log(`\n📦 Processing ${validSources.length} sources in ${totalBatches} batch(es) of ${batchSize}`);
+    
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       // Early exit condition - check if we're approaching timeout
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime > maxExecutionTime * 0.8) { // Exit at 80% of max time
         console.log(`⏰ Approaching timeout (${elapsedTime}ms), stopping with partial results`);
-        const timeoutResult: ScraperSourceResult = {
-          sourceId: source.source_id,
-          sourceName: source.source_name,
-          success: false,
-          error: 'Stopped due to approaching function timeout',
-          articlesFound: 0,
-          articlesScraped: 0
-        };
-        standardResponse.addSourceResult(timeoutResult);
-        break;
-      }
-
-      processedCount++;
-      console.log(`\n${'='.repeat(80)}`);
-      console.log(`🔄 SCRAPING [${processedCount}/${validSources.length}]: ${source.source_name}`);
-      console.log(`   Source ID: ${source.source_id}`);
-      console.log(`   URL: ${source.normalizedUrl}`);
-      console.log(`   Config:`, JSON.stringify(source.scraping_config, null, 2));
-      console.log(`${'='.repeat(80)}\n`);
-      
-      // Ultra-aggressive timeouts for test mode
-      const sourceTimeout = testMode ? 8000 : 30000; // 8s test, 30s normal
-      const sourcePromise = (async () => {
-        try {
-
-          // Log diagnosis before scraping
-          const diagnosisCheck = await scraper.quickDiagnosis(source.normalizedUrl);
-          if (diagnosisCheck) {
-            await supabase.from('system_logs').insert({
-              level: diagnosisCheck.diagnosis === 'ok' ? 'info' : 'warning',
-              category: 'scraping_diagnosis',
-              message: `Source diagnosis: ${diagnosisCheck.diagnosis}`,
-              metadata: {
-                source_id: source.source_id,
-                source_name: source.source_name,
-                url: source.normalizedUrl,
-                diagnosis: diagnosisCheck.diagnosis,
-                blocking_server: diagnosisCheck.blockingServer,
-                response_time: diagnosisCheck.responseTime,
-                error: diagnosisCheck.error
-              }
-            });
-          }
-
-          // Execute scraping with ultra-aggressive settings for test mode
-          const scrapeResult = await scraper.scrapeContent(
-            source.normalizedUrl,
-            source.source_id,
-            {
-              forceRescrape,
-              userAgent: 'eeZee Universal Topic Scraper/1.0',
-              timeout: testMode ? 5000 : 20000, // 5s test, 20s normal
-              maxRetries: testMode ? 1 : 3, // Only 1 retry in test mode
-              retryDelay: testMode ? 500 : 2000, // 0.5s retry delay in test mode
-              strictScope: source.strictScope, // Pass strict scope for index-only scraping
-            }
-          );
-
-          if (scrapeResult.success && scrapeResult.articles.length > 0) {
-            // Get source scraping config for trusted source bypass
-            const { data: sourceData } = await supabase
-              .from('content_sources')
-              .select('scraping_config')
-              .eq('id', source.source_id)
-              .single();
-            
-            // Store articles using multi-tenant approach with topic-specific age filter
-            const storeResult = await dbOps.storeArticles(
-              scrapeResult.articles,
-              topicId,
-              source.source_id,
-              effectiveMaxAgeDays,  // Use topic-specific max age
-              sourceData?.scraping_config || {}  // Pass scraping config for trusted source bypass
-            );
-
-            const result: ScraperSourceResult = {
-              sourceId: source.source_id,
-              sourceName: source.source_name,
-              success: true,
-              articlesFound: scrapeResult.articlesFound,
-              articlesScraped: scrapeResult.articlesScraped,
-              articlesStored: storeResult.articlesStored,
-              rejectedLowRelevance: storeResult.rejectedLowRelevance,
-              rejectedLowQuality: storeResult.rejectedLowQuality,
-              rejectedCompeting: storeResult.rejectedCompeting,
-              executionTimeMs: Date.now() - startTime
-            };
-
-            console.log(`\n   ✅ SUCCESS: ${source.source_name}`);
-            console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
-            console.log(`      Articles stored: ${storeResult.articlesStored}`);
-            console.log(`      Rejected (low relevance): ${storeResult.rejectedLowRelevance}`);
-            console.log(`      Rejected (low quality): ${storeResult.rejectedLowQuality}`);
-            console.log(`      Rejected (competing): ${storeResult.rejectedCompeting}`);
-            console.log(`      Method: ${scrapeResult.method || 'unknown'}\n`);
-            return result;
-          } else {
-            // Check if this is a successful scrape with no new articles vs a failed scrape
-            const hasAccessibilityErrors = scrapeResult.errors.some(e => 
-              e.includes('Failed to fetch') || 
-              e.includes('Network error') || 
-              e.includes('timeout') ||
-              e.includes('HTTP error')
-            );
-            
-            // If the feed was accessible but just empty, mark as success with 0 articles
-            if (!hasAccessibilityErrors && scrapeResult.articlesFound === 0) {
-              console.log(`✅ ${source.source_name}: Feed accessible but no new articles found`);
-              return {
-                sourceId: source.source_id,
-                sourceName: source.source_name,
-                success: true,
-                articlesFound: 0,
-                articlesScraped: 0,
-                executionTimeMs: Date.now() - startTime
-              } as ScraperSourceResult;
-            }
-
-            // Smarter Beautiful Soup fallback for whitelisted domains
-            const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
-            const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
-              source.normalizedUrl.includes(domain)
-            );
-            
-            // Trigger fallback if:
-            // 1. Zero articles scraped AND has accessibility/content errors, OR
-            // 2. Found many articles (≥10) but scraped very few (<3), OR
-            // 3. High rate of INVALID_CONTENT errors
-            const invalidContentErrors = scrapeResult.errors.filter(e => 
-              e.includes('INVALID_CONTENT') || e.includes('insufficient content')
-            ).length;
-            const shouldUseFallback = isWhitelisted && (
-              (scrapeResult.articlesScraped === 0 && hasAccessibilityErrors) ||
-              (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
-              (invalidContentErrors >= 5)
-            );
-            
-            if (shouldUseFallback) {
-              // Skip Beautiful Soup fallback when strict scope is active (index-only mode)
-              if (source.strictScope) {
-                console.log(`🔒 FastTrack insufficient (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors})`);
-                console.log(`🔒 Skipping Beautiful Soup fallback - strict scope enabled (index-only mode)`);
-                return result; // Return early, outer handler will add to standardResponse
-              }
-              
-              console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
-              
-              try {
-                const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
-                  body: {
-                    feedUrl: source.normalizedUrl,
-                    sourceId: source.source_id,
-                    topicId: topicId,
-                    region: topic.region,
-                    maxArticles: 15 // Capped at 15 for fallback
-                  }
-                });
-
-                if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
-                  console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
-                  
-                  // Store fallback articles with topic-specific age filter
-                  const fallbackStoreResult = await dbOps.storeArticles(
-                    fallbackResult.data.articles,
-                    topicId,
-                    source.source_id,
-                    effectiveMaxAgeDays  // Use topic-specific max age
-                  );
-
-                  return {
-                    sourceId: source.source_id,
-                    sourceName: source.source_name,
-                    success: true,
-                    articlesFound: fallbackResult.data.articlesFound || fallbackResult.data.articles.length,
-                    articlesScraped: fallbackResult.data.articlesScraped || fallbackResult.data.articles.length,
-                    executionTimeMs: Date.now() - startTime,
-                    fallbackMethod: 'beautiful-soup-scraper'
-                  } as ScraperSourceResult;
-                } else if (fallbackResult.data?.success && fallbackResult.data?.articles?.length === 0) {
-                  // Beautiful Soup also found no articles but was successful - this means the source is genuinely empty
-                  console.log(`✅ Beautiful Soup confirms ${source.source_name} has no new articles`);
-                  return {
-                    sourceId: source.source_id,
-                    sourceName: source.source_name,
-                    success: true,
-                    articlesFound: 0,
-                    articlesScraped: 0,
-                    executionTimeMs: Date.now() - startTime,
-                    fallbackMethod: 'beautiful-soup-scraper'
-                  } as ScraperSourceResult;
-                } else {
-                  console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
-                }
-              } catch (fallbackError) {
-                console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
-              }
-            }
-
-            // Only mark as failed if there were actual technical errors
-            recordFailure(source.normalizedUrl);
-            const result: ScraperSourceResult = {
-              sourceId: source.source_id,
-              sourceName: source.source_name,
-              success: false,
-              error: scrapeResult.errors.join(', ') || 'Technical error occurred',
-              articlesFound: 0,
-              articlesScraped: 0
-            };
-
-            console.log(`\n   ❌ FAILED: ${source.source_name}`);
-            console.log(`      Errors: ${scrapeResult.errors.join(', ')}`);
-            console.log(`      Articles found: ${scrapeResult.articlesFound}`);
-            console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
-            console.log(`      Method attempted: ${scrapeResult.method || 'unknown'}\n`);
-            return result;
-          }
-        } catch (sourceError) {
-          console.error(`\n   💥 EXCEPTION: ${source.source_name}`);
-          console.error(`      Error type: ${sourceError instanceof Error ? sourceError.constructor.name : typeof sourceError}`);
-          console.error(`      Error message: ${sourceError instanceof Error ? sourceError.message : String(sourceError)}`);
-          if (sourceError instanceof Error && sourceError.stack) {
-            console.error(`      Stack trace: ${sourceError.stack}`);
-          }
-          console.error('');
-          recordFailure(source.normalizedUrl);
-          
-          return {
+        const remainingSources = validSources.slice(batchIndex * batchSize);
+        for (const source of remainingSources) {
+          const timeoutResult: ScraperSourceResult = {
             sourceId: source.source_id,
             sourceName: source.source_name,
             success: false,
-            error: sourceError instanceof Error ? sourceError.message : String(sourceError),
+            error: 'Skipped due to approaching timeout',
             articlesFound: 0,
             articlesScraped: 0
-          } as ScraperSourceResult;
+          };
+          standardResponse.addSourceResult(timeoutResult);
         }
-      })();
-
-      // Apply timeout to the entire source processing
-      try {
-        const timeoutPromise = new Promise<ScraperSourceResult>((_, reject) => 
-          setTimeout(() => reject(new Error(`Source timeout after ${sourceTimeout}ms`)), sourceTimeout)
-        );
-        
-        const result = await Promise.race([sourcePromise, timeoutPromise]);
-        standardResponse.addSourceResult(result);
-
-        // Update last_scraped_at for successful scrapes (including empty results)
-        if (result.success) {
-          try {
-            const { error: updateError } = await supabase
-              .from('content_sources')
-              .update({
-                articles_scraped: source.articles_scraped + (result.articlesScraped || 0),
-                last_scraped_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', source.source_id);
-
-            if (updateError) {
-              console.error(`❌ Failed to update last_scraped_at for ${source.source_name}:`, updateError);
-            } else {
-              console.log(`✅ Updated last_scraped_at for ${source.source_name}`);
-            }
-          } catch (updateErr) {
-            console.error(`❌ Error updating source metrics for ${source.source_name}:`, updateErr);
-          }
-        }
-      } catch (timeoutError) {
-        console.error(`⏰ Timeout processing ${source.source_name}:`, timeoutError);
-        recordFailure(source.normalizedUrl);
-        const timeoutResult: ScraperSourceResult = {
-          sourceId: source.source_id,
-          sourceName: source.source_name,
-          success: false,
-          error: `Processing timeout: ${timeoutError instanceof Error ? timeoutError.message : String(timeoutError)}`,
-          articlesFound: 0,
-          articlesScraped: 0
-        };
-        standardResponse.addSourceResult(timeoutResult);
-        standardResponse.addError(`${source.source_name}: Processing timeout`);
+        break;
       }
+
+      const batchStart = batchIndex * batchSize;
+      const batchEnd = Math.min(batchStart + batchSize, validSources.length);
+      const batch = validSources.slice(batchStart, batchEnd);
+      
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`📦 BATCH ${batchIndex + 1}/${totalBatches}: Processing ${batch.length} source(s)`);
+      console.log(`   Sources: ${batch.map((s: any) => s.source_name).join(', ')}`);
+      console.log(`${'='.repeat(80)}\n`);
+
+      // Process all sources in this batch in parallel
+      const batchPromises = batch.map(async (source: any) => {
+        processedCount++;
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`🔄 SCRAPING [${processedCount}/${validSources.length}]: ${source.source_name}`);
+        console.log(`   Source ID: ${source.source_id}`);
+        console.log(`   URL: ${source.normalizedUrl}`);
+        console.log(`   Config:`, JSON.stringify(source.scraping_config, null, 2));
+        console.log(`${'='.repeat(80)}\n`);
+        
+        // Ultra-aggressive timeouts for test mode
+        const sourceTimeout = testMode ? 8000 : 30000; // 8s test, 30s normal
+        const sourcePromise = (async () => {
+          try {
+
+            // Log diagnosis before scraping
+            const diagnosisCheck = await scraper.quickDiagnosis(source.normalizedUrl);
+            if (diagnosisCheck) {
+              await supabase.from('system_logs').insert({
+                level: diagnosisCheck.diagnosis === 'ok' ? 'info' : 'warning',
+                category: 'scraping_diagnosis',
+                message: `Source diagnosis: ${diagnosisCheck.diagnosis}`,
+                metadata: {
+                  source_id: source.source_id,
+                  source_name: source.source_name,
+                  url: source.normalizedUrl,
+                  diagnosis: diagnosisCheck.diagnosis,
+                  blocking_server: diagnosisCheck.blockingServer,
+                  response_time: diagnosisCheck.responseTime,
+                  error: diagnosisCheck.error
+                }
+              });
+            }
+
+            // Execute scraping with ultra-aggressive settings for test mode
+            const scrapeResult = await scraper.scrapeContent(
+              source.normalizedUrl,
+              source.source_id,
+              {
+                forceRescrape,
+                userAgent: 'eeZee Universal Topic Scraper/1.0',
+                timeout: testMode ? 5000 : 20000, // 5s test, 20s normal
+                maxRetries: testMode ? 1 : 3, // Only 1 retry in test mode
+                retryDelay: testMode ? 500 : 2000, // 0.5s retry delay in test mode
+                strictScope: source.strictScope, // Pass strict scope for index-only scraping
+              }
+            );
+
+            if (scrapeResult.success && scrapeResult.articles.length > 0) {
+              // Get source scraping config for trusted source bypass
+              const { data: sourceData } = await supabase
+                .from('content_sources')
+                .select('scraping_config')
+                .eq('id', source.source_id)
+                .single();
+              
+              // Store articles using multi-tenant approach with topic-specific age filter
+              const storeResult = await dbOps.storeArticles(
+                scrapeResult.articles,
+                topicId,
+                source.source_id,
+                effectiveMaxAgeDays,  // Use topic-specific max age
+                sourceData?.scraping_config || {}  // Pass scraping config for trusted source bypass
+              );
+
+              const result: ScraperSourceResult = {
+                sourceId: source.source_id,
+                sourceName: source.source_name,
+                success: true,
+                articlesFound: scrapeResult.articlesFound,
+                articlesScraped: scrapeResult.articlesScraped,
+                articlesStored: storeResult.articlesStored,
+                rejectedLowRelevance: storeResult.rejectedLowRelevance,
+                rejectedLowQuality: storeResult.rejectedLowQuality,
+                rejectedCompeting: storeResult.rejectedCompeting,
+                executionTimeMs: Date.now() - startTime
+              };
+
+              console.log(`\n   ✅ SUCCESS: ${source.source_name}`);
+              console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
+              console.log(`      Articles stored: ${storeResult.articlesStored}`);
+              console.log(`      Rejected (low relevance): ${storeResult.rejectedLowRelevance}`);
+              console.log(`      Rejected (low quality): ${storeResult.rejectedLowQuality}`);
+              console.log(`      Rejected (competing): ${storeResult.rejectedCompeting}\n`);
+
+              return result;
+            } else {
+              // Check if this is a successful scrape with no new articles vs a failed scrape
+              const hasAccessibilityErrors = scrapeResult.errors.some(e => 
+                e.includes('Failed to fetch') || 
+                e.includes('Network error') || 
+                e.includes('timeout') ||
+                e.includes('HTTP error')
+              );
+              
+              // If the feed was accessible but just empty, mark as success with 0 articles
+              if (!hasAccessibilityErrors && scrapeResult.articlesFound === 0) {
+                console.log(`✅ ${source.source_name}: Feed accessible but no new articles found`);
+                return {
+                  sourceId: source.source_id,
+                  sourceName: source.source_name,
+                  success: true,
+                  articlesFound: 0,
+                  articlesScraped: 0,
+                  executionTimeMs: Date.now() - startTime
+                } as ScraperSourceResult;
+              }
+
+              // Smarter Beautiful Soup fallback for whitelisted domains
+              const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
+              const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
+                source.normalizedUrl.includes(domain)
+              );
+              
+              // Trigger fallback if:
+              // 1. Zero articles scraped AND has accessibility/content errors, OR
+              // 2. Found many articles (≥10) but scraped very few (<3), OR
+              // 3. High rate of INVALID_CONTENT errors
+              const invalidContentErrors = scrapeResult.errors.filter(e => 
+                e.includes('INVALID_CONTENT') || e.includes('insufficient content')
+              ).length;
+              const shouldUseFallback = isWhitelisted && (
+                (scrapeResult.articlesScraped === 0 && hasAccessibilityErrors) ||
+                (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
+                (invalidContentErrors >= 5)
+              );
+              
+              if (shouldUseFallback) {
+                // Skip Beautiful Soup fallback when strict scope is active (index-only mode)
+                if (source.strictScope) {
+                  console.log(`🔒 FastTrack insufficient (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors})`);
+                  console.log(`🔒 Skipping Beautiful Soup fallback - strict scope enabled (index-only mode)`);
+                  return result; // Return early, outer handler will add to standardResponse
+                }
+                
+                console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
+                
+                try {
+                  const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
+                    body: {
+                      feedUrl: source.normalizedUrl,
+                      sourceId: source.source_id,
+                      topicId: topicId,
+                      region: topic.region,
+                      maxArticles: 15 // Capped at 15 for fallback
+                    }
+                  });
+
+                  if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
+                    console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
+                    
+                    // Store fallback articles with topic-specific age filter
+                    const fallbackStoreResult = await dbOps.storeArticles(
+                      fallbackResult.data.articles,
+                      topicId,
+                      source.source_id,
+                      effectiveMaxAgeDays  // Use topic-specific max age
+                    );
+
+                    return {
+                      sourceId: source.source_id,
+                      sourceName: source.source_name,
+                      success: true,
+                      articlesFound: fallbackResult.data.articles.length,
+                      articlesScraped: fallbackResult.data.articles.length,
+                      articlesStored: fallbackStoreResult.articlesStored,
+                      rejectedLowRelevance: fallbackStoreResult.rejectedLowRelevance,
+                      rejectedLowQuality: fallbackStoreResult.rejectedLowQuality,
+                      rejectedCompeting: fallbackStoreResult.rejectedCompeting,
+                      executionTimeMs: Date.now() - startTime,
+                      fallbackMethod: 'beautiful-soup-scraper'
+                    } as ScraperSourceResult;
+                  } else if (fallbackResult.data?.success && fallbackResult.data?.articles?.length === 0) {
+                    // Beautiful Soup also found no articles but was successful - this means the source is genuinely empty
+                    console.log(`✅ Beautiful Soup confirms ${source.source_name} has no new articles`);
+                    return {
+                      sourceId: source.source_id,
+                      sourceName: source.source_name,
+                      success: true,
+                      articlesFound: 0,
+                      articlesScraped: 0,
+                      executionTimeMs: Date.now() - startTime,
+                      fallbackMethod: 'beautiful-soup-scraper'
+                    } as ScraperSourceResult;
+                  } else {
+                    console.log(`❌ Beautiful Soup fallback also failed for ${source.source_name}`);
+                  }
+                } catch (fallbackError) {
+                  console.log(`❌ Beautiful Soup fallback error for ${source.source_name}: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+                }
+              }
+
+              // Only mark as failed if there were actual technical errors
+              recordFailure(source.normalizedUrl);
+              const result: ScraperSourceResult = {
+                sourceId: source.source_id,
+                sourceName: source.source_name,
+                success: false,
+                error: scrapeResult.errors.join(', ') || 'Technical error occurred',
+                articlesFound: 0,
+                articlesScraped: 0
+              };
+
+              console.log(`\n   ❌ FAILED: ${source.source_name}`);
+              console.log(`      Errors: ${scrapeResult.errors.join(', ')}`);
+              console.log(`      Articles found: ${scrapeResult.articlesFound}`);
+              console.log(`      Articles scraped: ${scrapeResult.articlesScraped}`);
+              console.log(`      Method attempted: ${scrapeResult.method || 'unknown'}\n`);
+              return result;
+            }
+          } catch (sourceError) {
+            console.error(`\n   💥 EXCEPTION: ${source.source_name}`);
+            console.error(`      Error type: ${sourceError instanceof Error ? sourceError.constructor.name : typeof sourceError}`);
+            console.error(`      Error message: ${sourceError instanceof Error ? sourceError.message : String(sourceError)}`);
+            if (sourceError instanceof Error && sourceError.stack) {
+              console.error(`      Stack trace: ${sourceError.stack}`);
+            }
+            console.error('');
+            recordFailure(source.normalizedUrl);
+            
+            return {
+              sourceId: source.source_id,
+              sourceName: source.source_name,
+              success: false,
+              error: sourceError instanceof Error ? sourceError.message : String(sourceError),
+              articlesFound: 0,
+              articlesScraped: 0
+            } as ScraperSourceResult;
+          }
+        })();
+
+        // Apply timeout to the entire source processing
+        try {
+          const timeoutPromise = new Promise<ScraperSourceResult>((_, reject) => 
+            setTimeout(() => reject(new Error(`Source timeout after ${sourceTimeout}ms`)), sourceTimeout)
+          );
+          
+          const result = await Promise.race([sourcePromise, timeoutPromise]);
+
+          // Update last_scraped_at for successful scrapes (including empty results)
+          if (result.success) {
+            try {
+              const { error: updateError } = await supabase
+                .from('content_sources')
+                .update({
+                  articles_scraped: source.articles_scraped + (result.articlesScraped || 0),
+                  last_scraped_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', source.source_id);
+
+              if (updateError) {
+                console.error(`❌ Error updating source metrics for ${source.source_name}:`, updateError);
+              } else {
+                console.log(`✅ Updated last_scraped_at for ${source.source_name}`);
+              }
+            } catch (updateErr) {
+              console.error(`❌ Error updating source metrics for ${source.source_name}:`, updateErr);
+            }
+          }
+          
+          return result;
+        } catch (timeoutError) {
+          console.error(`⏰ Timeout processing ${source.source_name}:`, timeoutError);
+          recordFailure(source.normalizedUrl);
+          const timeoutResult: ScraperSourceResult = {
+            sourceId: source.source_id,
+            sourceName: source.source_name,
+            success: false,
+            error: `Processing timeout: ${timeoutError instanceof Error ? timeoutError.message : String(timeoutError)}`,
+            articlesFound: 0,
+            articlesScraped: 0
+          };
+          return timeoutResult;
+        }
+      });
+
+      // Wait for all sources in this batch to complete
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      // Add all results to the standard response
+      batchResults.forEach((promiseResult, index) => {
+        if (promiseResult.status === 'fulfilled') {
+          standardResponse.addSourceResult(promiseResult.value);
+        } else {
+          const source = batch[index];
+          console.error(`❌ Batch promise rejected for ${source.source_name}:`, promiseResult.reason);
+          standardResponse.addSourceResult({
+            sourceId: source.source_id,
+            sourceName: source.source_name,
+            success: false,
+            error: `Promise rejected: ${promiseResult.reason instanceof Error ? promiseResult.reason.message : String(promiseResult.reason)}`,
+            articlesFound: 0,
+            articlesScraped: 0
+          });
+        }
+      });
+
+      console.log(`\n✅ Batch ${batchIndex + 1}/${totalBatches} complete`);
+      console.log(`   Processed: ${batchResults.filter(r => r.status === 'fulfilled').length}/${batch.length} sources`);
+      console.log(`   Total progress: ${processedCount}/${validSources.length} sources\n`);
     }
 
     console.log(`🏁 Completed processing ${processedCount}/${validSources.length} sources for topic: ${topic.name} in ${Date.now() - startTime}ms`);
