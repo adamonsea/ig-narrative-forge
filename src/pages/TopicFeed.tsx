@@ -404,7 +404,7 @@ const TopicFeed = () => {
                   <img
                     src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
                     alt={`${topic.name} logo`}
-                    className="h-8 w-auto object-contain"
+                    className="h-[34px] w-auto object-contain"
                   />
                 ) : (
                   <div className="flex items-center gap-2">
@@ -495,7 +495,7 @@ const TopicFeed = () => {
                   <img
                     src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
                     alt={`${topic.name} logo`}
-                    className="h-16 sm:h-24 max-w-sm sm:max-w-lg object-contain"
+                    className="h-[68px] sm:h-[103px] max-w-sm sm:max-w-lg object-contain"
                   />
                 </div>
               ) : (
