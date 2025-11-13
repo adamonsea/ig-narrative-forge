@@ -169,7 +169,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
           <div className="flex gap-3">
             <Button
               onClick={() => startUniversalScraping(false)}
-              disabled={isLoading}
+              disabled={isLoading || isAutomating}
               className="flex-1"
             >
               {isLoading ? (
@@ -188,7 +188,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
             <Button
               variant="outline"
               onClick={() => startUniversalScraping(true)}
-              disabled={isLoading}
+              disabled={isLoading || isAutomating}
             >
               Force Rescrape
             </Button>
@@ -196,7 +196,7 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
             <Button
               variant="secondary"
               onClick={testAutomation}
-              disabled={isAutomating}
+              disabled={isLoading || isAutomating}
             >
               {isAutomating ? (
                 <>
