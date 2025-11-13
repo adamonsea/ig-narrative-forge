@@ -123,7 +123,7 @@ serve(async (req) => {
             body,
             author,
             published_at,
-            source_url
+            url
           )
         )
       `)
@@ -145,7 +145,7 @@ serve(async (req) => {
         body: story.topic_articles.shared_content.body,
         author: story.topic_articles.shared_content.author,
         published_at: story.topic_articles.shared_content.published_at,
-        source_url: story.topic_articles.shared_content.source_url,
+        source_url: story.topic_articles.shared_content.url,
         regional_relevance_score: 100, // Multi-tenant articles are pre-filtered
         slides: story.slides
       }));
@@ -165,11 +165,11 @@ serve(async (req) => {
             body,
             author,
             published_at,
-            source_url
+            url
           )
         `)
         .eq('topic_id', topicId)
-        .or('status.eq.published,status.eq.approved')
+        .eq('processing_status', 'processed')
         .gte('created_at', new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false });
 
@@ -181,7 +181,7 @@ serve(async (req) => {
           body: article.shared_article_content.body,
           author: article.shared_article_content.author,
           published_at: article.shared_article_content.published_at,
-          source_url: article.shared_article_content.source_url,
+          source_url: article.shared_article_content.url,
           regional_relevance_score: 100,
           slides: []
         }));
