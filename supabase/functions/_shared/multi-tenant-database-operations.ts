@@ -1,5 +1,6 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { calculateRegionalRelevance, TopicRegionalConfig } from './region-config.ts'
+import { calculateTopicRelevance, TopicConfig } from './hybrid-content-scoring.ts'
 
 export interface ArticleData {
   title: string
@@ -464,7 +465,8 @@ export class MultiTenantDatabaseOperations {
 
   /**
    * Calculate relevance score based on topic configuration
-   * Phase 1: Uses calculateRegionalRelevance for regional topics with competing region detection
+   * Uses unified hybrid scoring system from hybrid-content-scoring.ts
+   * Supports sophisticated keyword matching with variations and context awareness
    */
   private calculateRelevanceScore(
     article: ArticleData, 
@@ -472,62 +474,67 @@ export class MultiTenantDatabaseOperations {
     competingTopics: TopicRegionalConfig[] = [],
     sourceType: string = 'national'
   ): number {
-    const title = (article.title || '').toLowerCase()
-    const body = (article.body || '').toLowerCase()
+    const title = article.title || ''
+    const body = article.body || ''
     const keywords = topic.keywords || []
     const negativeKeywords = topic.negative_keywords || []
     
     // Check negative keywords first (disqualifying)
     for (const negKeyword of negativeKeywords) {
-      if (title.includes(negKeyword.toLowerCase()) || body.includes(negKeyword.toLowerCase())) {
+      const negKeywordLower = negKeyword.toLowerCase()
+      if (title.toLowerCase().includes(negKeywordLower) || body.toLowerCase().includes(negKeywordLower)) {
         console.log(`❌ Negative keyword "${negKeyword}" found - disqualifying article`)
         return -100 // Strong negative signal
       }
     }
     
-    // Phase 1: For REGIONAL topics, use calculateRegionalRelevance with competing region detection
+    // Build TopicConfig for unified scoring
+    const topicConfig: TopicConfig = {
+      id: topic.id,
+      topic_type: topic.topic_type,
+      keywords: keywords,
+      negative_keywords: negativeKeywords,
+      region: topic.region,
+      landmarks: topic.landmarks || [],
+      postcodes: topic.postcodes || [],
+      organizations: topic.organizations || [],
+      competing_regions: topic.competing_regions || []
+    }
+    
+    // Log topic type for debugging
     if (topic.topic_type === 'regional') {
-      const topicConfig: TopicRegionalConfig = {
-        keywords: keywords,
-        landmarks: topic.landmarks || [],
-        postcodes: topic.postcodes || [],
-        organizations: topic.organizations || [],
-        competing_regions: topic.competing_regions || [],
-        region_name: topic.region || topic.name
-      }
-      
       console.log(`      🗺️ Regional topic: "${topic.region || topic.name}"`)
       console.log(`      🔍 Checking keywords: ${keywords.join(', ')}`)
       console.log(`      📍 Landmarks: ${topicConfig.landmarks?.join(', ') || 'none'}`)
       console.log(`      📮 Postcodes: ${topicConfig.postcodes?.join(', ') || 'none'}`)
-      
-      const score = calculateRegionalRelevance(
-        body,
-        title,
-        topicConfig,
-        sourceType,
-        competingTopics,
-        article.source_url
-      )
-      
-      console.log(`      📊 Regional relevance result: ${score}`)
-      return score
+    } else {
+      console.log(`      🔑 Keyword topic: "${topic.name}"`)
+      console.log(`      🔍 Checking ${keywords.length} keywords with sophisticated matching`)
     }
     
-    // For KEYWORD topics, use simplified scoring
-    let score = 0
-    const isKeywordTopic = topic.topic_type === 'keyword'
-    const keywordTitleWeight = isKeywordTopic ? 30 : 20
-    const keywordBodyWeight = isKeywordTopic ? 15 : 10
+    // Use unified hybrid scoring system for ALL topics (regional and keyword)
+    const scoreResult = calculateTopicRelevance(
+      body,
+      title,
+      topicConfig,
+      sourceType,
+      competingTopics,
+      article.source_url
+    )
     
-    // Check positive keywords
-    for (const keyword of keywords) {
-      const keywordLower = keyword.toLowerCase()
-      if (title.includes(keywordLower)) score += keywordTitleWeight
-      if (body.includes(keywordLower)) score += keywordBodyWeight
+    // Enhanced logging with keyword match details
+    if (scoreResult.method === 'keyword' && scoreResult.details.keyword_matches) {
+      const matches = scoreResult.details.keyword_matches
+      if (matches.length > 0) {
+        console.log(`      ✅ Matched keywords: ${matches.map(m => `"${m.keyword}" (${m.count}x)`).join(', ')}`)
+      } else {
+        console.log(`      ❌ No keyword matches found`)
+      }
     }
     
-    return Math.min(100, Math.max(0, score))
+    console.log(`      📊 ${scoreResult.method === 'regional' ? 'Regional' : 'Keyword'} relevance score: ${scoreResult.relevance_score}`)
+    
+    return scoreResult.relevance_score
   }
 
   /**
