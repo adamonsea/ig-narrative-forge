@@ -209,7 +209,7 @@ export const useTopicSources = () => {
         .from('content_sources')
         .insert({
           ...sourceData,
-          topic_id: topicId || null, // Set topic_id directly on source creation
+          // Do not set topic_id here; link via topic_sources junction to avoid unique constraints
           credibility_score: sourceData.credibility_score || 70,
           content_type: sourceData.content_type || 'news',
           is_active: true,
