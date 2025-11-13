@@ -252,6 +252,13 @@ export const UnifiedSourceManager = ({
             scrape_frequency_hours: null,
           }));
 
+          // Sort: active sources first, then alphabetically
+          basicTransformed.sort((a, b) => {
+            if (a.is_active !== b.is_active) {
+              return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
+            }
+            return (a.source_name || '').localeCompare(b.source_name || '');
+          });
           setSources(basicTransformed);
           return;
         }
@@ -310,6 +317,13 @@ export const UnifiedSourceManager = ({
           });
         }
         const merged = Array.from(mergedMap.values());
+        // Sort: active sources first, then alphabetically
+        merged.sort((a, b) => {
+          if (a.is_active !== b.is_active) {
+            return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
+          }
+          return (a.source_name || '').localeCompare(b.source_name || '');
+        });
         setSources(merged);
       } else {
         // For global mode, show only sources that are actively linked to topics via topic_sources
@@ -324,7 +338,13 @@ export const UnifiedSourceManager = ({
             .order('created_at', { ascending: false });
           
           if (error) throw error;
-          setSources(data || []);
+          const sorted = (data || []).sort((a, b) => {
+            if (a.is_active !== b.is_active) {
+              return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
+            }
+            return (a.source_name || '').localeCompare(b.source_name || '');
+          });
+          setSources(sorted);
         } else {
           // For region mode, use original approach (legacy sources not linked to topics)
           let query = supabase.from('content_sources').select('*');
@@ -333,10 +353,16 @@ export const UnifiedSourceManager = ({
             query = query.eq('region', region).is('topic_id', null);
           }
 
-          const { data, error } = await query.order('created_at', { ascending: false });
+          const { data, error } = await query;
 
           if (error) throw error;
-          setSources(data || []);
+          const sorted = (data || []).sort((a, b) => {
+            if (a.is_active !== b.is_active) {
+              return (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0);
+            }
+            return (a.source_name || '').localeCompare(b.source_name || '');
+          });
+          setSources(sorted);
         }
       }
     } catch (error) {
