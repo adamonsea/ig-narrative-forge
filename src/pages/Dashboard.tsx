@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicManager } from "@/components/TopicManager";
-
+import { TopicKeywordUpdater } from "@/components/TopicKeywordUpdater";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -241,6 +241,13 @@ const Dashboard = () => {
           </CollapsibleContent>
         </Collapsible>
 
+
+        {/* Admin Tools */}
+        {isAdmin && (
+          <div className="mb-6">
+            <TopicKeywordUpdater />
+          </div>
+        )}
 
         {/* Main Dashboard Content */}
         <div className="space-y-6">
