@@ -383,17 +383,17 @@ export function getRelevanceThreshold(
     if (sourceType === 'regional') return 12;
     return 15;
   } else {
-    // Keyword topics: MUCH lower thresholds for user-selected sources
+    // Keyword topics: Lower thresholds for niche/specialized topics
     if (isUserSelectedSource) {
       // User-selected sources get the benefit of the doubt
-      if (sourceType === 'hyperlocal') return 4;
-      if (sourceType === 'regional') return 5;
-      return 6; // national - dramatically lowered from 12
+      if (sourceType === 'hyperlocal') return 2;
+      if (sourceType === 'regional') return 3;
+      return 4; // national
     } else {
-      // Non-selected sources use standard thresholds
-      if (sourceType === 'hyperlocal') return 8;
-      if (sourceType === 'regional') return 10;
-      return 12;
+      // Non-selected sources: lenient for niche keyword topics
+      if (sourceType === 'hyperlocal') return 3;
+      if (sourceType === 'regional') return 4;
+      return 5; // national
     }
   }
 }
