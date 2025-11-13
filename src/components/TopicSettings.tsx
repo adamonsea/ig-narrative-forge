@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
+import { SentimentManager } from "@/components/SentimentManager";
 import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESCRIPTIONS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicSettingsProps {
@@ -672,6 +673,11 @@ export const TopicSettings = ({
 
         {/* Unified Automation Settings */}
         <TopicAutomationSettings topicId={topicId} />
+
+        <Separator />
+
+        {/* Sentiment Card Management */}
+        <SentimentManager topicId={topicId} />
 
         <div className="flex justify-end">
           <Button 
