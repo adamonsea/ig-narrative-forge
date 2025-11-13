@@ -405,11 +405,12 @@ export const UnifiedSourceManager = ({
         
         if (duplicateUrl) {
           toast({
-            title: 'Error',
-            description: 'This exact feed URL is already added to this topic',
+            title: 'Already Added',
+            description: `This URL is already linked to this topic. Try a different URL from the same domain (e.g., ${normalizedUrl.replace(/\/[^/]*$/, '/different-section')})`,
             variant: 'destructive',
           });
           setLoading(false);
+          // Keep form open so user can modify the URL
           return;
         }
         
@@ -437,10 +438,12 @@ export const UnifiedSourceManager = ({
 
         if (activeLink) {
           toast({
-            title: 'Source Already Added',
-            description: 'This source is already active for this topic',
+            title: 'Already Added',
+            description: `The URL "${normalizedUrl}" is already linked to this topic as "${existingSource.source_name}"`,
             variant: 'destructive',
           });
+          setLoading(false);
+          // Keep form open so user can modify the URL
           return;
         }
 
