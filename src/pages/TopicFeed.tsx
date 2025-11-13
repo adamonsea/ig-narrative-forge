@@ -491,12 +491,14 @@ const TopicFeed = () => {
             <div className="relative flex items-center justify-center mb-6">
               {/* Centered logo or title */}
               {topic.branding_config?.logo_url ? (
-                <div className="flex justify-center">
-                  <img
-                    src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
-                    alt={`${topic.name} logo`}
-                    className="h-[68px] sm:h-[103px] max-w-sm sm:max-w-lg object-contain"
-                  />
+                <div className="flex justify-center w-full">
+                  <div className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl flex justify-center">
+                    <img
+                      src={`${topic.branding_config.logo_url}?t=${Date.now()}`}
+                      alt={`${topic.name} logo`}
+                      className="h-[68px] sm:h-[103px] object-contain"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
