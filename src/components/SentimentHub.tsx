@@ -372,16 +372,35 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
     }
   };
 
-  const getSentimentIcon = (ratio: number) => {
-    if (ratio > 0.6) return <TrendingDown className="h-4 w-4 text-destructive" />;
-    if (ratio < 0.3) return <TrendingUp className="h-4 w-4 text-green-600" />;
+  const getSentimentIcon = (keyword: KeywordTracking) => {
+    const total = keyword.total_mentions;
+    const negative = keyword.negative_mentions || 0;
+    const positive = keyword.positive_mentions || 0;
+    const negativeRatio = negative / total;
+    const positiveRatio = positive / total;
+    
+    if (negativeRatio > 0.5) return <TrendingDown className="h-4 w-4 text-destructive" />;
+    if (positiveRatio > 0.5) return <TrendingUp className="h-4 w-4 text-green-600" />;
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
-  const getSentimentBadge = (ratio: number) => {
-    if (ratio > 0.6) return <Badge variant="destructive">High Negative</Badge>;
-    if (ratio < 0.3) return <Badge className="bg-green-600">High Positive</Badge>;
-    return <Badge variant="secondary">Balanced</Badge>;
+  const getSentimentBadge = (keyword: KeywordTracking) => {
+    const total = keyword.total_mentions;
+    const negative = keyword.negative_mentions || 0;
+    const positive = keyword.positive_mentions || 0;
+    const negativeRatio = negative / total;
+    const positiveRatio = positive / total;
+    
+    if (negativeRatio > 0.5) {
+      return <Badge variant="destructive" className="text-xs">🔴 HIGH NEGATIVE</Badge>;
+    } else if (negativeRatio > 0.3) {
+      return <Badge variant="outline" className="text-xs border-orange-500 text-orange-700">🟠 NEGATIVE</Badge>;
+    } else if (positiveRatio > 0.5) {
+      return <Badge variant="default" className="text-xs bg-green-600">🟢 HIGH POSITIVE</Badge>;
+    } else if (positiveRatio > 0.3) {
+      return <Badge variant="outline" className="text-xs border-green-500 text-green-700">🟢 POSITIVE</Badge>;
+    }
+    return <Badge variant="secondary" className="text-xs">🟠 MIXED</Badge>;
   };
 
   const needsReviewCards = cards.filter(c => c.needs_review);
@@ -476,13 +495,13 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              {getSentimentIcon(ratio)}
+                              {getSentimentIcon(keyword)}
                               <span className="font-medium">{keyword.keyword_phrase}</span>
-                              {getSentimentBadge(ratio)}
+                              {getSentimentBadge(keyword)}
                             </div>
                             
                             <div className="text-sm text-muted-foreground">
-                              {total} mentions · {keyword.source_count} sources
+                              {negative} neg · {neutral} neu · {positive} pos · {keyword.source_count} sources
                             </div>
                             
                             <div className="flex items-center gap-2">
