@@ -227,7 +227,32 @@ export const UnifiedSourceManager = ({
         }
         
         if (!statsData || statsData.length === 0) {
-          setSources([]);
+          // Fallback: show basic topic sources when stats are not yet available
+          const { data: basicData, error: basicError } = await supabase.rpc('get_topic_sources', {
+            p_topic_id: topicId
+          });
+
+          if (basicError) {
+            console.error('Error loading basic topic sources:', basicError);
+            setSources([]);
+            return;
+          }
+
+          const basicTransformed = (basicData || []).map((ts: any) => ({
+            id: ts.source_id,
+            source_name: ts.source_name,
+            feed_url: ts.feed_url,
+            canonical_domain: ts.canonical_domain,
+            is_active: ts.is_active,
+            topic_id: topicId,
+            region: null,
+            content_type: null,
+            is_whitelisted: null,
+            is_blacklisted: null,
+            scrape_frequency_hours: null,
+          }));
+
+          setSources(basicTransformed);
           return;
         }
 
