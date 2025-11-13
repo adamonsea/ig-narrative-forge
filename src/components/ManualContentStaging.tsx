@@ -113,9 +113,15 @@ export const ManualContentStaging = ({ topicId, onContentProcessed }: ManualCont
       };
 
       updateStatus('extracting', 30);
-      console.log('📁 Processing file from storage:', nextFile.fileName);
+      console.log('📁 Processing file from storage:', {
+        fileName: nextFile.fileName,
+        storageUrl: nextFile.storageUrl,
+        bucket: nextFile.storageBucket,
+        path: nextFile.storagePath
+      });
 
-// Call content extraction function with storage URL + idempotency info
+      // Call content extraction function with storage URL + idempotency info
+      console.log('🔄 Invoking extract-content-from-upload function...');
 const { data: extractResult, error: extractError } = await supabase.functions.invoke(
   'extract-content-from-upload',
   {
@@ -133,7 +139,11 @@ const { data: extractResult, error: extractError } = await supabase.functions.in
   }
 );
 
-      if (extractError) throw new Error(`Extraction failed: ${extractError.message}`);
+      console.log('📥 Extract function response:', { extractResult, extractError });
+      if (extractError) {
+        console.error('❌ Extraction error:', extractError);
+        throw new Error(`Extraction failed: ${extractError.message}`);
+      }
       if (!extractResult?.success) throw new Error(extractResult?.error || 'Extraction failed');
 
       updateStatus('rewriting', 60);
@@ -173,7 +183,14 @@ try {
       }, 1000);
 
     } catch (error: any) {
-      console.error('Error processing file:', error);
+      console.error('❌ Error processing file:', {
+        fileName: nextFile.fileName,
+        error,
+        errorMessage: error?.message || 'Unknown error'
+      });
+      
+      const errorMessage = error?.message || 'Unknown error occurred';
+      const isStorageError = errorMessage.includes('storage') || errorMessage.includes('upload') || errorMessage.includes('signed URL');
       
       setProcessingFiles(prev => prev.map(f => 
         f.id === nextFile.id 
@@ -181,14 +198,16 @@ try {
               ...f, 
               status: 'failed', 
               progress: 0,
-              error: error.message 
+              error: errorMessage
             }
           : f
       ));
 
       toast({
         title: "Processing Failed",
-        description: `Failed to process "${nextFile.fileName}": ${error.message}`,
+        description: isStorageError 
+          ? `Storage error: ${errorMessage}. Check bucket permissions.`
+          : `Failed to process "${nextFile.fileName}": ${errorMessage}`,
         variant: "destructive"
       });
 
@@ -300,18 +319,36 @@ try {
         const storageKey = `${timestamp}-${random}-${fileData.fileName}`;
 
         // Upload to Supabase Storage
+        console.log('📤 Uploading file to storage:', {
+          fileName: fileData.fileName,
+          fileSize: fileData.fileSize,
+          fileType: fileData.fileType,
+          storageKey
+        });
+        
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('temp-uploads')
           .upload(storageKey, originalFile);
 
-        if (uploadError) throw uploadError;
+        console.log('📤 Upload result:', { uploadData, uploadError });
+
+        if (uploadError) {
+          console.error('❌ Storage upload error:', uploadError);
+          throw new Error(`Upload failed: ${uploadError.message}. Check storage permissions.`);
+        }
 
         // Get signed URL for processing
+        console.log('🔗 Creating signed URL for file:', storageKey);
         const { data: urlData } = await supabase.storage
           .from('temp-uploads')
           .createSignedUrl(storageKey, 3600); // 1 hour expiry
 
-        if (!urlData?.signedUrl) throw new Error('Failed to create signed URL');
+        console.log('🔗 Signed URL result:', { hasUrl: !!urlData?.signedUrl });
+
+        if (!urlData?.signedUrl) {
+          console.error('❌ Failed to create signed URL');
+          throw new Error('Failed to create signed URL. Check storage permissions.');
+        }
 
         // Update file with storage URL, bucket/path and set to pending
         setProcessingFiles(prev => prev.map(f => 
@@ -330,14 +367,24 @@ try {
         console.log('✅ File uploaded to storage:', fileData.fileName);
 
       } catch (error: any) {
-        console.error('Upload failed:', error);
+        console.error('❌ Upload failed:', {
+          fileName: fileData.fileName,
+          error,
+          errorMessage: error?.message || 'Unknown error'
+        });
+        
+        const errorMessage = error?.message || 'Unknown error occurred';
+        const isStorageError = errorMessage.includes('storage') || errorMessage.includes('upload') || errorMessage.includes('signed URL') || errorMessage.includes('permissions');
+        
         setProcessingFiles(prev => prev.map(f => 
           f.id === fileData.id 
             ? { 
                 ...f, 
                 status: 'failed' as const, 
                 progress: 0,
-                error: `Upload failed: ${error.message}`
+                error: isStorageError 
+                  ? `Storage error: ${errorMessage}. Check bucket permissions.`
+                  : `Upload failed: ${errorMessage}`
               }
             : f
         ));
