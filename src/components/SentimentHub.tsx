@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { SentimentTrendsChart } from './SentimentTrendsChart';
 
 interface SentimentCardData {
   id: string;
@@ -462,7 +463,7 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="keywords" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="keywords">
                 Tracked Keywords ({keywords.length})
               </TabsTrigger>
@@ -471,6 +472,9 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
                 {needsReviewCards.length > 0 && (
                   <Badge variant="destructive" className="ml-2">{needsReviewCards.length}</Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="trends">
+                Trends
               </TabsTrigger>
               <TabsTrigger value="insights">
                 Insights
@@ -685,6 +689,17 @@ export const SentimentHub: React.FC<SentimentHubProps> = ({ topicId }) => {
                   No sentiment cards yet. Enable tracking for keywords and run analysis.
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="trends" className="space-y-4 mt-4">
+              <SentimentTrendsChart 
+                topicId={topicId} 
+                keywords={keywords.filter(k => {
+                  const neg = k.negative_mentions || 0;
+                  const pos = k.positive_mentions || 0;
+                  return (neg >= 3 || pos >= 3) && neg !== pos;
+                })}
+              />
             </TabsContent>
 
             <TabsContent value="insights" className="space-y-4 mt-4">
