@@ -45,7 +45,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
         .from('topic_automation_settings')
         .select('*')
         .eq('topic_id', topicId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
