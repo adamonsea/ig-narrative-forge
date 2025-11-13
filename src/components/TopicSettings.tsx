@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
-import { SentimentManager } from "@/components/SentimentManager";
 import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESCRIPTIONS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicSettingsProps {
