@@ -41,7 +41,8 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
 
   // Update local state when topic prop changes
   useEffect(() => {
-    setKeywords(topic.keywords || []);
+    const sortedKeywords = [...(topic.keywords || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    setKeywords(sortedKeywords);
     setLandmarks(topic.landmarks || []);
     setPostcodes(topic.postcodes || []);
     setOrganizations(topic.organizations || []);
@@ -51,7 +52,8 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
   useEffect(() => {
     const handleKeywordAdded = () => {
       // Refresh from topic prop - parent will have updated it
-      setKeywords(topic.keywords || []);
+      const sortedKeywords = [...(topic.keywords || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      setKeywords(sortedKeywords);
     };
     
     window.addEventListener('keywordAdded', handleKeywordAdded);
@@ -61,7 +63,7 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
   const addKeyword = async (keywordToAdd?: string) => {
     const keywordValue = keywordToAdd || newKeyword.trim();
     if (keywordValue && !keywords.includes(keywordValue)) {
-      const newKeywords = [...keywords, keywordValue];
+      const newKeywords = [...keywords, keywordValue].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
       setKeywords(newKeywords);
       if (!keywordToAdd) setNewKeyword(''); // Only clear input if manually typed
       
