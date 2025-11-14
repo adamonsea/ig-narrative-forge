@@ -233,7 +233,7 @@ const TopicDashboard = () => {
       // First get published/ready story article IDs
       const { data: publishedStories } = await supabase
         .from('stories')
-        .select('topic_article_id')
+        .select('topic_article_id, topic_articles!inner(topic_id)')
         .eq('topic_articles.topic_id', topicData.id)
         .in('status', ['published', 'ready'])
         .not('topic_article_id', 'is', null);
@@ -275,7 +275,7 @@ const TopicDashboard = () => {
       
       const simplifiedRes = await supabase
         .from('stories')
-        .select('id', { count: 'exact' })
+        .select('id, topic_articles!inner(topic_id)', { count: 'exact' })
         .eq('topic_articles.topic_id', topicData.id)
         .gte('created_at', yesterday.toISOString())
         .not('topic_article_id', 'is', null);
