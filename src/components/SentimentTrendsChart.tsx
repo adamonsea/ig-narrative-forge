@@ -18,6 +18,7 @@ interface SentimentHistory {
   neutral_mentions: number;
   sentiment_ratio: number;
   source_count: number;
+  sentiment_direction?: string;
 }
 
 interface TrendsChartProps {
@@ -48,7 +49,7 @@ export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) =>
     try {
       setLoading(true);
       
-      const query = supabase
+      let query = (supabase as any)
         .from('sentiment_keyword_history')
         .select('*')
         .eq('topic_id', topicId)
@@ -58,14 +59,14 @@ export const SentimentTrendsChart = ({ topicId, keywords }: TrendsChartProps) =>
 
       // Add sentiment_direction filter if available
       if (selectedDirection) {
-        query.eq('sentiment_direction', selectedDirection);
+        query = query.eq('sentiment_direction', selectedDirection);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
       
-      setHistoryData(data || []);
+      setHistoryData((data || []) as SentimentHistory[]);
     } catch (error) {
       console.error('Error loading sentiment history:', error);
     } finally {
