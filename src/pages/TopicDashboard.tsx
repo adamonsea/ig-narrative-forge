@@ -240,6 +240,9 @@ const TopicDashboard = () => {
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
+      console.log('Topic Article IDs count:', topicArticleIds.length);
+      console.log('Fetching stories created after:', yesterday.toISOString());
+      
       let simplifiedRes = { count: 0 };
       if (topicArticleIds.length > 0) {
         const result = await supabase
@@ -248,11 +251,16 @@ const TopicDashboard = () => {
           .in('topic_article_id', topicArticleIds)
           .gte('created_at', yesterday.toISOString());
         
+        console.log('24h stories query result:', result);
+        
         if (result.error) {
           console.error('Error fetching 24h stories:', result.error);
         } else {
           simplifiedRes = result;
+          console.log('24h stories count:', result.count);
         }
+      } else {
+        console.log('No topic article IDs found, skipping 24h stories query');
       }
 
       // Get sentiment cards count
@@ -641,7 +649,7 @@ const TopicDashboard = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
             {/* Key Highlights Only */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <TooltipProvider>
@@ -657,48 +665,6 @@ const TopicDashboard = () => {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Stories created in the last 24 hours</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <CheckCircle className="h-5 w-5 text-chart-1" />
-                          <div>
-                            <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
-                            <p className="text-sm text-muted-foreground">Ready to View</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Finished stories that are ready to publish or already live</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <Settings className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <div className="text-2xl font-bold">{stats.sources}</div>
-                            <p className="text-sm text-muted-foreground">Active Sources</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Content sources actively being monitored for this topic</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -844,7 +810,7 @@ const TopicDashboard = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="automation" className="relative">
-              Automation
+              Sources
               {needsAttention.automation && (
                 <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
                   <AlertCircle className="h-2 w-2" />
