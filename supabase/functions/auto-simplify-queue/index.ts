@@ -67,17 +67,14 @@ Deno.serve(async (req) => {
       
       console.log(`\n🔍 Processing topic: ${topic_id} (threshold: ${quality_threshold}%)`);
 
-      // Fetch recent articles (last 48 hours) that are new and above threshold
-      const cutoffDate = new Date();
-      cutoffDate.setHours(cutoffDate.getHours() - 48);
-
+      // Fetch articles that are new and above threshold
+      // NOTE: No time cutoff - process all 'new' articles regardless of age
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
         .select('id, shared_content_id, content_quality_score, topic_id')
         .eq('topic_id', topic_id)
         .eq('processing_status', 'new')
         .gte('content_quality_score', quality_threshold)
-        .gte('created_at', cutoffDate.toISOString())
         .order('content_quality_score', { ascending: false })
         .limit(maxPerTopic);
 
@@ -133,6 +130,7 @@ Deno.serve(async (req) => {
         const { error: insertError } = await supabase
           .from('content_generation_queue')
           .insert({
+            article_id: article.shared_content_id, // Required: references shared_article_content
             topic_article_id: article.id,
             shared_content_id: article.shared_content_id,
             status: 'pending',
