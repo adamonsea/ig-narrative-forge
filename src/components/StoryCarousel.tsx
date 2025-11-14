@@ -91,11 +91,12 @@ interface StoryCarouselProps {
   storyUrl?: string;
   topicId?: string; // Add topicId for tracking
   storyIndex?: number; // Add story index for "New" flag logic
+  isRoundupView?: boolean; // Flag to indicate if this is a roundup view
   onStorySwipe?: (storyId: string) => void; // Callback when user swipes on a story
   onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
 }
 
-export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, onStorySwipe, onStoryScrolledPast }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, isRoundupView = false, onStorySwipe, onStoryScrolledPast }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
@@ -280,8 +281,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const storyBadges = useMemo<React.ReactNode[]>(() => {
     const badges: React.ReactNode[] = [];
     
-    // Most Popular badge for top 2 stories in roundups
-    if (storyIndex !== undefined && storyIndex < 2) {
+    // Most Popular badge for top 2 stories in roundups only
+    if (isRoundupView && storyIndex !== undefined && storyIndex < 2) {
       badges.push(
         <Badge
           key="most-popular"
@@ -349,7 +350,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
 
     return badges;
-  }, [storyIndex, story.popularity_data, story.article?.published_at, story.created_at]);
+  }, [isRoundupView, storyIndex, story.popularity_data, story.article?.published_at, story.created_at, story.tone]);
 
   const teaserBadge = story.is_teaser ? (
     <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
