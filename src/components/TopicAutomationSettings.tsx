@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Bot, Clock, Zap, Sparkles, Moon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,7 @@ interface AutomationSettings {
   scrape_frequency_hours: number;
   quality_threshold: number;
   illustration_quality_threshold: number;
+  auto_illustrate_in_holiday: boolean;
   is_active: boolean;
 }
 
@@ -32,6 +34,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
   const [scrapeFrequency, setScrapeFrequency] = useState(12);
   const [qualityThreshold, setQualityThreshold] = useState(60);
   const [illustrationThreshold, setIllustrationThreshold] = useState(70);
+  const [autoIllustrateInHoliday, setAutoIllustrateInHoliday] = useState(true);
   
   const [originalSettings, setOriginalSettings] = useState<AutomationSettings | null>(null);
 
@@ -55,11 +58,13 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
         setScrapeFrequency(data.scrape_frequency_hours || 12);
         setQualityThreshold(data.quality_threshold || 60);
         setIllustrationThreshold(data.illustration_quality_threshold || 70);
+        setAutoIllustrateInHoliday(data.auto_illustrate_in_holiday ?? true);
         setOriginalSettings({
           automation_mode: mode,
           scrape_frequency_hours: data.scrape_frequency_hours,
           quality_threshold: data.quality_threshold,
           illustration_quality_threshold: data.illustration_quality_threshold,
+          auto_illustrate_in_holiday: data.auto_illustrate_in_holiday ?? true,
           is_active: data.is_active,
         });
       }
@@ -83,9 +88,10 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
         scrape_frequency_hours: scrapeFrequency,
         quality_threshold: qualityThreshold,
         illustration_quality_threshold: illustrationThreshold,
+        auto_illustrate_in_holiday: autoIllustrateInHoliday,
         is_active: automationMode !== 'manual',
         auto_simplify_enabled: automationMode === 'auto_simplify' || automationMode === 'holiday',
-        auto_illustrate_enabled: automationMode === 'auto_illustrate' || automationMode === 'holiday',
+        auto_illustrate_enabled: automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday),
         updated_at: new Date().toISOString(),
       };
 
@@ -118,7 +124,8 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
     automationMode !== originalSettings.automation_mode ||
     scrapeFrequency !== originalSettings.scrape_frequency_hours ||
     qualityThreshold !== originalSettings.quality_threshold ||
-    illustrationThreshold !== originalSettings.illustration_quality_threshold
+    illustrationThreshold !== originalSettings.illustration_quality_threshold ||
+    autoIllustrateInHoliday !== originalSettings.auto_illustrate_in_holiday
   );
 
   if (loading) {
@@ -162,7 +169,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
       features: [
         `Auto-scrape every ${scrapeFrequency} hours`,
         'Auto story generation',
-        'Auto illustration generation',
+        'Auto illustration (optional)',
         'Minimal manual intervention',
       ],
     },
@@ -257,19 +264,39 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
         )}
 
         {(automationMode === 'auto_illustrate' || automationMode === 'holiday') && (
-          <div className="space-y-2 p-4 border rounded-lg">
-            <Label>Illustration Generation Threshold: {illustrationThreshold}%</Label>
-            <Slider
-              value={[illustrationThreshold]}
-              onValueChange={([value]) => setIllustrationThreshold(value)}
-              min={50}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              Stories with quality scores above this threshold will automatically get illustrations
-            </p>
+          <div className="space-y-4 p-4 border rounded-lg">
+            {automationMode === 'holiday' && (
+              <div className="flex items-center justify-between pb-4 border-b">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-illustrate-holiday">Auto-Illustrate in Holiday Mode</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Generate illustrations automatically while in holiday mode
+                  </p>
+                </div>
+                <Switch
+                  id="auto-illustrate-holiday"
+                  checked={autoIllustrateInHoliday}
+                  onCheckedChange={setAutoIllustrateInHoliday}
+                />
+              </div>
+            )}
+            
+            {(automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday)) && (
+              <div className="space-y-2">
+                <Label>Illustration Generation Threshold: {illustrationThreshold}%</Label>
+                <Slider
+                  value={[illustrationThreshold]}
+                  onValueChange={([value]) => setIllustrationThreshold(value)}
+                  min={50}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Stories with quality scores above this threshold will automatically get illustrations
+                </p>
+              </div>
+            )}
           </div>
         )}
 

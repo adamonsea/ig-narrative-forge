@@ -27,18 +27,36 @@ Deno.serve(async (req) => {
 
     console.log('Auto-illustrate request:', { topicId, storyIds, dryRun, maxIllustrations });
 
-    // Get topic automation settings to check threshold
+    // Get topic automation settings to check threshold and holiday mode illustration setting
     let illustrationThreshold = 70; // Default
+    let shouldIllustrate = true;
     if (topicId) {
       const { data: settings } = await supabase
         .from('topic_automation_settings')
-        .select('illustration_quality_threshold')
+        .select('illustration_quality_threshold, automation_mode, auto_illustrate_in_holiday')
         .eq('topic_id', topicId)
         .single();
       
       if (settings?.illustration_quality_threshold) {
         illustrationThreshold = settings.illustration_quality_threshold;
       }
+      
+      // Check if in holiday mode and if illustrations are disabled
+      if (settings?.automation_mode === 'holiday' && settings?.auto_illustrate_in_holiday === false) {
+        shouldIllustrate = false;
+        console.log('Auto-illustration disabled in holiday mode for topic:', topicId);
+      }
+    }
+
+    if (!shouldIllustrate) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Auto-illustration disabled in holiday mode',
+          skipped: true,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Build query for eligible stories

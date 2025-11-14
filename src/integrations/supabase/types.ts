@@ -2763,6 +2763,7 @@ export type Database = {
       topic_automation_settings: {
         Row: {
           auto_illustrate_enabled: boolean | null
+          auto_illustrate_in_holiday: boolean | null
           auto_simplify_enabled: boolean | null
           automation_mode: string | null
           created_at: string
@@ -2778,6 +2779,7 @@ export type Database = {
         }
         Insert: {
           auto_illustrate_enabled?: boolean | null
+          auto_illustrate_in_holiday?: boolean | null
           auto_simplify_enabled?: boolean | null
           automation_mode?: string | null
           created_at?: string
@@ -2793,6 +2795,7 @@ export type Database = {
         }
         Update: {
           auto_illustrate_enabled?: boolean | null
+          auto_illustrate_in_holiday?: boolean | null
           auto_simplify_enabled?: boolean | null
           automation_mode?: string | null
           created_at?: string
