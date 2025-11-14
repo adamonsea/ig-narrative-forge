@@ -182,8 +182,13 @@ export default function WeeklyRoundupList() {
               engagementScore: engagementMap.get(story.id) || 0
             }));
 
-            // Sort by engagement score (highest first)
-            transformedStories.sort((a, b) => b.engagementScore - a.engagementScore);
+        // Sort by engagement score (highest first), then by created_at (newest first) as fallback
+        transformedStories.sort((a, b) => {
+          if (b.engagementScore !== a.engagementScore) {
+            return b.engagementScore - a.engagementScore;
+          }
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
             
             setStories(transformedStories);
           }

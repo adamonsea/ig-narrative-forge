@@ -122,7 +122,13 @@ serve(async (req) => {
       slides.push({
         type: 'story_preview',
         story_id: story.id,
-        content: `#${index + 1}: ${story.title}`
+        content: `#${index + 1}: ${story.title}`,
+        author: story.author,
+        publication_name: story.publication_name,
+        source_metadata: {
+          author: story.author,
+          publication: story.publication_name
+        }
       });
     });
 
