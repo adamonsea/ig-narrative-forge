@@ -229,35 +229,39 @@ const TopicDashboard = () => {
         .in('topic_article_id', topicArticleIds)
         .in('status', ['ready', 'published']) : { count: 0 };
 
-      // Get actual arrivals count (articles not yet published or queued)
-      // First get published/ready story article IDs
-      const { data: publishedStories } = await supabase
+      // Get actual arrivals count - only 'new' articles not yet queued or published
+      const { data: allNewArticles } = await supabase
+        .from('topic_articles')
+        .select('id, import_metadata')
+        .eq('topic_id', topicData.id)
+        .eq('processing_status', 'new'); // Only count 'new' status as "to process"
+      
+      if (!allNewArticles) {
+        console.error('Failed to fetch topic articles');
+        return;
+      }
+
+      // Get IDs of articles already published or queued
+      const newArticleIds = allNewArticles.map(a => a.id);
+      
+      const { data: allPublishedStories } = await supabase
         .from('stories')
-        .select('topic_article_id, topic_articles!inner(topic_id)')
-        .eq('topic_articles.topic_id', topicData.id)
+        .select('topic_article_id')
         .in('status', ['published', 'ready'])
-        .not('topic_article_id', 'is', null);
+        .in('topic_article_id', newArticleIds);
       
-      const publishedIds = new Set(publishedStories?.map(s => s.topic_article_id) || []);
+      const publishedIds = new Set((allPublishedStories || []).map(s => s.topic_article_id!));
       
-      // Get queued article IDs
       const { data: queuedItems } = await supabase
         .from('content_generation_queue')
         .select('topic_article_id')
         .in('status', ['pending', 'processing'])
-        .not('topic_article_id', 'is', null);
+        .in('topic_article_id', newArticleIds);
       
-      const queuedIds = new Set(queuedItems?.map(q => q.topic_article_id) || []);
+      const queuedIds = new Set((queuedItems || []).map(q => q.topic_article_id!));
       
-      // Now get all articles and filter out published/queued ones
-      const { data: allTopicArticles } = await supabase
-        .from('topic_articles')
-        .select('id, import_metadata')
-        .eq('topic_id', topicData.id)
-        .in('processing_status', ['new', 'processed']);
-      
-      // Filter out parliamentary and already processed articles
-      const availableArticles = (allTopicArticles || []).filter(article => {
+      // Filter out parliamentary, published, and queued articles
+      const availableArticles = allNewArticles.filter(article => {
         const metadata = article.import_metadata as any || {};
         const isParliamentary = metadata.source === 'parliamentary_vote' || 
                                metadata.parliamentary_vote === true ||
