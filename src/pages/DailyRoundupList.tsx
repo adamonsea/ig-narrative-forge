@@ -144,13 +144,32 @@ export default function DailyRoundupList() {
               )
             `)
             .in('id', roundupData.story_ids)
-            .eq('is_published', true)
-            .order('created_at', { ascending: false });
+            .eq('is_published', true);
 
           if (storiesError) {
             console.error('Stories fetch error:', storiesError);
           } else {
-            // Transform the nested data structure
+            // Fetch engagement metrics for all stories
+            const { data: engagementData } = await supabase
+              .from('story_interactions')
+              .select('story_id, interaction_type')
+              .in('story_id', roundupData.story_ids);
+
+            // Calculate engagement scores
+            const engagementMap = new Map<string, number>();
+            (engagementData || []).forEach((interaction: any) => {
+              const score = engagementMap.get(interaction.story_id) || 0;
+              // Weight: shares = 3, swipes = 1, views = 0.5
+              if (interaction.interaction_type === 'share_click') {
+                engagementMap.set(interaction.story_id, score + 3);
+              } else if (interaction.interaction_type === 'swipe') {
+                engagementMap.set(interaction.story_id, score + 1);
+              } else if (interaction.interaction_type === 'view') {
+                engagementMap.set(interaction.story_id, score + 0.5);
+              }
+            });
+
+            // Transform and sort by engagement
             const transformedStories = (storiesData || []).map((story: any) => ({
               ...story,
               updated_at: story.updated_at || story.created_at,
@@ -158,8 +177,13 @@ export default function DailyRoundupList() {
                 source_url: story.article?.shared_content?.source_url || '',
                 region: story.article?.shared_content?.region || '',
                 published_at: story.article?.shared_content?.published_at || story.created_at,
-              }
+              },
+              engagementScore: engagementMap.get(story.id) || 0
             }));
+
+            // Sort by engagement score (highest first)
+            transformedStories.sort((a, b) => b.engagementScore - a.engagementScore);
+            
             setStories(transformedStories);
           }
         }
