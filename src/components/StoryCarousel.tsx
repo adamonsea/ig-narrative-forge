@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download } from 'lucide-react';
+import { Share2, Heart, Download, Pin } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -279,6 +279,20 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
   const storyBadges = useMemo<React.ReactNode[]>(() => {
     const badges: React.ReactNode[] = [];
+    
+    // Most Popular badge for top 2 stories in roundups
+    if (storyIndex !== undefined && storyIndex < 2) {
+      badges.push(
+        <Badge
+          key="most-popular"
+          className="text-xs px-2 py-1 scale-80 origin-left bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 font-semibold flex items-center gap-1"
+        >
+          <Pin className="w-3 h-3" />
+          Most Popular
+        </Badge>
+      );
+      return badges;
+    }
     
     // Add satirical/comment indicator
     if (story.tone === 'satirical') {
