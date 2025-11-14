@@ -240,11 +240,20 @@ const TopicDashboard = () => {
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
-      const simplifiedRes = topicArticleIds.length > 0 ? await supabase
-        .from('stories')
-        .select('id', { count: 'exact' })
-        .in('topic_article_id', topicArticleIds)
-        .gte('created_at', yesterday.toISOString()) : { count: 0 };
+      let simplifiedRes = { count: 0 };
+      if (topicArticleIds.length > 0) {
+        const result = await supabase
+          .from('stories')
+          .select('id', { count: 'exact' })
+          .in('topic_article_id', topicArticleIds)
+          .gte('created_at', yesterday.toISOString());
+        
+        if (result.error) {
+          console.error('Error fetching 24h stories:', result.error);
+        } else {
+          simplifiedRes = result;
+        }
+      }
 
       // Get sentiment cards count
       const sentimentRes = await supabase
@@ -635,73 +644,127 @@ const TopicDashboard = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-green-500" />
-                    <div>
-                      <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
-                      <p className="text-sm text-muted-foreground">Stories (24h)</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <Activity className="h-5 w-5 text-green-500" />
+                          <div>
+                            <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
+                            <p className="text-sm text-muted-foreground">New Stories</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stories created in the last 24 hours</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-chart-1" />
-                    <div>
-                      <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
-                      <p className="text-sm text-muted-foreground">Available Stories</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <CheckCircle className="h-5 w-5 text-chart-1" />
+                          <div>
+                            <div className="text-2xl font-bold text-chart-1">{stats.ready_stories}</div>
+                            <p className="text-sm text-muted-foreground">Ready to View</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Finished stories that are ready to publish or already live</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-2xl font-bold">{stats.sources}</div>
-                      <p className="text-sm text-muted-foreground">Active Sources</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <Settings className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <div className="text-2xl font-bold">{stats.sources}</div>
+                            <p className="text-sm text-muted-foreground">Active Sources</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Content sources actively being monitored for this topic</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-2xl font-bold">{stats.pending_articles}</div>
-                      <p className="text-sm text-muted-foreground">Available Articles</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <div className="text-2xl font-bold">{stats.pending_articles}</div>
+                            <p className="text-sm text-muted-foreground">To Process</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Raw articles gathered from sources, waiting to be turned into stories</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🏠</span>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{stats.pwa_installs || 0}</div>
-                      <p className="text-sm text-muted-foreground">PWA Installs</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <span className="text-xl">🏠</span>
+                          <div>
+                            <div className="text-2xl font-bold text-primary">{stats.pwa_installs || 0}</div>
+                            <p className="text-sm text-muted-foreground">PWA Installs</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Users who added this topic to their home screen</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🔔</span>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{stats.notifications_enabled || 0}</div>
-                      <p className="text-sm text-muted-foreground">Subscribers</p>
-                    </div>
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <span className="text-xl">🔔</span>
+                          <div>
+                            <div className="text-2xl font-bold text-primary">{stats.notifications_enabled || 0}</div>
+                            <p className="text-sm text-muted-foreground">Subscribers</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Users who enabled push notifications for new stories</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardContent>
               </Card>
             </div>
