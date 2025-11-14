@@ -700,13 +700,13 @@ const TopicDashboard = () => {
                         <div className="flex items-center gap-2 cursor-help">
                           <FileText className="h-5 w-5 text-muted-foreground" />
                           <div>
-                            <div className="text-2xl font-bold">{stats.pending_articles}</div>
+                            <div className="text-2xl font-bold">{stats.processing_queue}</div>
                             <p className="text-sm text-muted-foreground">To Process</p>
                           </div>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Raw articles gathered from sources, waiting to be turned into stories</p>
+                        <p>Items currently in the arrivals queue awaiting story generation</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
