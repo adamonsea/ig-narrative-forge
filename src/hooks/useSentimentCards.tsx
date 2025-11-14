@@ -75,7 +75,12 @@ export const useSentimentCards = (topicId?: string) => {
 
       setSentimentCards((data || [])
         .filter(card => {
-          // Only show cards with at least 2 sources
+          // Comparison cards: check comparison_keyword_ids length
+          // Detail cards: check sources length
+          if (card.card_category === 'comparison') {
+            const keywordIds = Array.isArray(card.comparison_keyword_ids) ? card.comparison_keyword_ids : [];
+            return keywordIds.length >= 2;
+          }
           const sources = Array.isArray(card.sources) ? card.sources : [];
           return sources.length >= 2;
         })
