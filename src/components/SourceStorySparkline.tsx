@@ -10,7 +10,7 @@ interface SourceStorySparklineProps {
 
 interface DayData {
   date: string;
-  gathered: number;
+  unpublished: number;
   published: number;
   displayDate: string;
 }
@@ -81,7 +81,7 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
 
         last7Days.push({
           date: dateStr,
-          gathered,
+          unpublished: Math.max(0, gathered - published),
           published,
           displayDate
         });
@@ -104,7 +104,7 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
     );
   }
 
-  const maxCount = Math.max(...data.map(d => d.gathered), 1);
+  const maxCount = Math.max(...data.map(d => d.unpublished + d.published), 1);
 
   return (
     <div className="inline-block w-[120px] h-[40px]">
@@ -115,10 +115,11 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
             content={({ active, payload }) => {
               if (active && payload && payload[0]) {
                 const data = payload[0].payload as DayData;
+                const total = data.unpublished + data.published;
                 return (
                   <div className="bg-popover border border-border rounded px-2 py-1 shadow-lg">
                     <p className="text-xs font-medium">{data.displayDate}</p>
-                    <p className="text-xs text-muted-foreground">Gathered: {data.gathered}</p>
+                    <p className="text-xs text-muted-foreground">Gathered: {total}</p>
                     <p className="text-xs text-primary">Published: {data.published}</p>
                   </div>
                 );
@@ -128,16 +129,18 @@ export const SourceStorySparkline = ({ sourceId, topicId }: SourceStorySparkline
             cursor={false}
           />
           <Bar 
-            dataKey="gathered" 
+            dataKey="unpublished" 
+            stackId="stories"
             fill="hsl(var(--muted))"
-            radius={[2, 2, 0, 0]}
-            maxBarSize={12}
+            radius={[0, 0, 0, 0]}
+            maxBarSize={16}
           />
           <Bar 
             dataKey="published" 
+            stackId="stories"
             fill="hsl(var(--primary))"
             radius={[2, 2, 0, 0]}
-            maxBarSize={12}
+            maxBarSize={16}
           />
         </BarChart>
       </ResponsiveContainer>
