@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -49,6 +50,7 @@ interface ContentSource {
   is_blacklisted: boolean | null;
   scrape_frequency_hours: number | null;
   topic_id: string | null;
+  scraping_config?: any | null;
   is_gathering?: boolean;
   stories_published_7d?: number;
   stories_published_total?: number;
@@ -176,6 +178,8 @@ export const UnifiedSourceManager = ({
     region: region || 'general',
     scrape_frequency_hours: 24,
     content_type: 'news',
+    trustContentRelevance: false,
+    trustedMaxAgeDays: 1,
   });
 
   useEffect(() => {
@@ -589,6 +593,13 @@ export const UnifiedSourceManager = ({
             console.log('✅ Storing Arc API config in source:', scrapingConfig);
           }
           
+          // Add trusted source configuration
+          if (newSource.trustContentRelevance) {
+            scrapingConfig.trust_content_relevance = true;
+            scrapingConfig.trusted_max_age_days = newSource.trustedMaxAgeDays;
+            console.log('🔓 Storing trusted source config:', { trust_content_relevance: true, trusted_max_age_days: newSource.trustedMaxAgeDays });
+          }
+          
           const sourceData = {
             source_name: newSource.source_name.trim(),
             feed_url: normalizedUrl,
@@ -695,6 +706,8 @@ export const UnifiedSourceManager = ({
         region: region || 'general',
         scrape_frequency_hours: 24,
         content_type: 'news',
+        trustContentRelevance: false,
+        trustedMaxAgeDays: 1,
       });
       setShowAddForm(false);
       setValidationResult(null);
@@ -1328,6 +1341,43 @@ export const UnifiedSourceManager = ({
               </div>
             </div>
 
+            <div className="flex items-center space-x-2 pt-4 border-t">
+              <Checkbox
+                id="trust-relevance"
+                checked={newSource.trustContentRelevance}
+                onCheckedChange={(checked) => setNewSource({ ...newSource, trustContentRelevance: checked as boolean })}
+              />
+              <label
+                htmlFor="trust-relevance"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                🔓 Bypass keyword filtering (trusted source)
+              </label>
+            </div>
+            
+            {newSource.trustContentRelevance && (
+              <div className="pt-4 space-y-2">
+                <Label htmlFor="trusted-age">Content Age Window</Label>
+                <Select
+                  value={newSource.trustedMaxAgeDays.toString()}
+                  onValueChange={(value) => setNewSource({ ...newSource, trustedMaxAgeDays: parseInt(value) })}
+                >
+                  <SelectTrigger id="trusted-age">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Last 24 hours</SelectItem>
+                    <SelectItem value="2">Last 48 hours</SelectItem>
+                    <SelectItem value="3">Last 3 days</SelectItem>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                  ⚠️ Trusted sources process ALL content from index pages - keep date range tight to manage volume and costs
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowAddForm(false)}>
                 Cancel
@@ -1365,6 +1415,13 @@ export const UnifiedSourceManager = ({
                     
                     {/* Health Badge with emoji indicators */}
                     {getSourceHealthBadge(source)}
+                    
+                    {/* Trusted source badge */}
+                    {source.scraping_config?.trust_content_relevance && (
+                      <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">
+                        🔓 Trusted ({source.scraping_config.trusted_max_age_days || 1}d)
+                      </Badge>
+                    )}
                     
                     {/* 7-day sparkline chart - only in topic mode */}
                     {mode === 'topic' && topicId && source.is_active && (

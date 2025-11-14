@@ -43,8 +43,19 @@ export class MultiTenantDatabaseOperations {
     sourceConfig?: Record<string, any>  // Source scraping configuration
   ): Promise<MultiTenantResult> {
     const now = new Date();
+    
+    // Check if this is a trusted source (bypass relevance checks)
+    const isTrustedSource = sourceConfig?.trust_content_relevance === true;
+    const trustedMaxAge = sourceConfig?.trusted_max_age_days;
+    
+    // Override maxAgeDays if trusted source specifies tighter window
+    const effectiveMaxAge = isTrustedSource && trustedMaxAge 
+      ? Math.min(maxAgeDays, trustedMaxAge)  // Use whichever is stricter
+      : maxAgeDays;
+    
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+    cutoffDate.setDate(cutoffDate.getDate() - effectiveMaxAge);
+    
     const result: MultiTenantResult = {
       success: false,
       articlesProcessed: 0,
@@ -59,10 +70,9 @@ export class MultiTenantDatabaseOperations {
       errors: []
     }
     
-    // Check if this is a trusted source (bypass relevance checks)
-    const isTrustedSource = sourceConfig?.trust_content_relevance === true
     if (isTrustedSource) {
-      console.log(`🔓 TRUSTED SOURCE: Bypassing relevance/quality thresholds for all articles`)
+      console.log(`🔓 TRUSTED SOURCE: Bypassing relevance/quality thresholds for all articles`);
+      console.log(`   Effective max age: ${effectiveMaxAge} days (topic: ${maxAgeDays}, source: ${trustedMaxAge || 'not set'})`);
     }
 
     // Get topic details for filtering
@@ -104,7 +114,7 @@ export class MultiTenantDatabaseOperations {
     const isKeywordTopic = topic.topic_type === 'keyword';
     
     // Phase 2: Strict date validation and recency filtering
-    console.log(`🗓️ Phase 2: ${isKeywordTopic ? 'Lenient' : 'Strict'} ${maxAgeDays}-day filter - articles must be newer than ${cutoffDate.toISOString()}`)
+    console.log(`🗓️ Phase 2: ${isKeywordTopic ? 'Lenient' : 'Strict'} ${effectiveMaxAge}-day filter - articles must be newer than ${cutoffDate.toISOString()}`)
 
     const recentArticles = articles.filter(article => {
       if (!article.published_at) {

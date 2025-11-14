@@ -22,6 +22,7 @@ export class FastTrackScraper {
   private baseUrl: string = '';
   private domainProfile: DomainProfile | null = null;
   private strictScope?: { host: string; pathPrefix: string };
+  private sourceConfig: Record<string, any> = {};
 
   constructor(private supabase: any) {
     // Initialize with a placeholder URL - will be updated when needed
@@ -76,6 +77,7 @@ export class FastTrackScraper {
         confirmed_arc_section: source.confirmed_arc_section,
         ...(source.metadata || {})
       };
+      this.sourceConfig = source.scraping_config || {};
       this.baseUrl = feedUrl;
       this.extractor = new UniversalContentExtractor(feedUrl);
       this.strictScope = options.strictScope;
@@ -832,8 +834,16 @@ export class FastTrackScraper {
         articleLinks = this.extractArticleLinksFromIndex(html, baseUrl);
         console.log(`📄 Found ${articleLinks.length} article links from index page`);
         
+        // Check if this is a trusted source - process more articles
+        const isTrustedSource = this.sourceConfig?.trust_content_relevance === true;
+        const maxArticles = isTrustedSource ? 30 : 10;
+        
+        if (isTrustedSource) {
+          console.log(`🔓 Trusted source detected - processing up to ${maxArticles} articles from index page`);
+        }
+        
         // Process the extracted article URLs
-        for (const articleUrl of articleLinks.slice(0, 10)) {
+        for (const articleUrl of articleLinks.slice(0, maxArticles)) {
           try {
             if (!this.extractor.isAllowedExternalUrl(articleUrl)) {
               console.log(`⚠️ Skipping blocked URL: ${articleUrl}`);
