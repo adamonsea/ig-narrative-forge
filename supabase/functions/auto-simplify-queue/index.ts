@@ -68,7 +68,6 @@ Deno.serve(async (req) => {
       console.log(`\n🔍 Processing topic: ${topic_id} (threshold: ${quality_threshold}%)`);
 
       // Fetch articles that are new and above threshold
-      // NOTE: No time cutoff - process all 'new' articles regardless of age
       const { data: articles, error: articlesError } = await supabase
         .from('topic_articles')
         .select('id, shared_content_id, content_quality_score, topic_id')
@@ -78,11 +77,7 @@ Deno.serve(async (req) => {
         .order('content_quality_score', { ascending: false })
         .limit(maxPerTopic);
 
-      if (articlesError) {
-        console.error(`❌ Error fetching articles for topic ${topic_id}:`, articlesError);
-        continue;
-      }
-
+      // 3. For qualifying articles, fetch source_urls in batch and find corresponding article_ids
       if (!articles || articles.length === 0) {
         console.log(`  ✨ No qualifying articles for topic ${topic_id}`);
         continue;
@@ -90,8 +85,52 @@ Deno.serve(async (req) => {
 
       console.log(`  📄 Found ${articles.length} qualifying articles`);
 
-      // 3. Check for duplicates and queue
+      // Get all shared_content_ids to fetch source_urls in one query
+      const sharedContentIds = articles.map((a: TopicArticle) => a.shared_content_id);
+      
+      const { data: sharedContent, error: contentError } = await supabase
+        .from('shared_article_content')
+        .select('id, url')
+        .in('id', sharedContentIds);
+
+      if (contentError) {
+        console.error(`❌ Error fetching shared content for topic ${topic_id}:`, contentError);
+        continue;
+      }
+
+      // Create a map of shared_content_id -> url
+      const contentMap = new Map(sharedContent?.map(c => [c.id, c.url]) || []);
+
+      // Get all URLs to find corresponding articles
+      const sourceUrls = Array.from(contentMap.values());
+      
+      const { data: legacyArticles, error: legacyError } = await supabase
+        .from('articles')
+        .select('id, source_url')
+        .in('source_url', sourceUrls);
+
+      if (legacyError) {
+        console.error(`❌ Error fetching legacy articles for topic ${topic_id}:`, legacyError);
+        continue;
+      }
+
+      // Create a map of source_url -> article_id
+      const articleMap = new Map(legacyArticles?.map(a => [a.source_url, a.id]) || []);
+
+      // 4. Check for duplicates and queue
       for (const article of articles as TopicArticle[]) {
+        const sourceUrl = contentMap.get(article.shared_content_id);
+        if (!sourceUrl) {
+          console.log(`  ⏭️  Skipping article ${article.id}: no URL found`);
+          continue;
+        }
+
+        const articleId = articleMap.get(sourceUrl);
+        if (!articleId) {
+          console.log(`  ⏭️  Skipping article ${article.id}: no articles entry`);
+          continue;
+        }
+
         // Check if already queued (by topic_article_id)
         const { data: existingQueue, error: queueCheckError } = await supabase
           .from('content_generation_queue')
@@ -113,7 +152,7 @@ Deno.serve(async (req) => {
         const { data: existingStory, error: storyCheckError } = await supabase
           .from('stories')
           .select('id')
-          .eq('article_id', article.shared_content_id)
+          .eq('article_id', articleId)
           .maybeSingle();
 
         if (storyCheckError && storyCheckError.code !== 'PGRST116') {
@@ -126,11 +165,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // 4. Insert into queue
+        // 4. Insert into queue with all required IDs
         const { error: insertError } = await supabase
           .from('content_generation_queue')
           .insert({
-            article_id: article.shared_content_id, // Required: references shared_article_content
+            article_id: articleId, // Required: references articles table
             topic_article_id: article.id,
             shared_content_id: article.shared_content_id,
             status: 'pending',
