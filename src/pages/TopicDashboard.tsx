@@ -229,39 +229,56 @@ const TopicDashboard = () => {
         .in('topic_article_id', topicArticleIds)
         .in('status', ['ready', 'published']) : { count: 0 };
 
-      // Get arrivals count (new topic_articles)
-      const arrivalsRes = await supabase
+      // Get actual arrivals count (articles not yet published or queued)
+      // First get published/ready story article IDs
+      const { data: publishedStories } = await supabase
+        .from('stories')
+        .select('topic_article_id')
+        .eq('topic_articles.topic_id', topicData.id)
+        .in('status', ['published', 'ready'])
+        .not('topic_article_id', 'is', null);
+      
+      const publishedIds = new Set(publishedStories?.map(s => s.topic_article_id) || []);
+      
+      // Get queued article IDs
+      const { data: queuedItems } = await supabase
+        .from('content_generation_queue')
+        .select('topic_article_id')
+        .in('status', ['pending', 'processing'])
+        .not('topic_article_id', 'is', null);
+      
+      const queuedIds = new Set(queuedItems?.map(q => q.topic_article_id) || []);
+      
+      // Now get all articles and filter out published/queued ones
+      const { data: allTopicArticles } = await supabase
         .from('topic_articles')
-        .select('id', { count: 'exact' })
+        .select('id, import_metadata')
         .eq('topic_id', topicData.id)
-        .eq('processing_status', 'new');
+        .in('processing_status', ['new', 'processed']);
+      
+      // Filter out parliamentary and already processed articles
+      const availableArticles = (allTopicArticles || []).filter(article => {
+        const metadata = article.import_metadata as any || {};
+        const isParliamentary = metadata.source === 'parliamentary_vote' || 
+                               metadata.parliamentary_vote === true ||
+                               metadata.source === 'parliamentary_weekly_roundup';
+        return !isParliamentary && 
+               !publishedIds.has(article.id) && 
+               !queuedIds.has(article.id);
+      });
+      
+      const arrivalsRes = { count: availableArticles.length };
 
-      // Get simplified stories in last 24h
+      // Get stories in last 24h - query directly through topic_articles join
       const yesterday = new Date();
       yesterday.setHours(yesterday.getHours() - 24);
       
-      console.log('Topic Article IDs count:', topicArticleIds.length);
-      console.log('Fetching stories created after:', yesterday.toISOString());
-      
-      let simplifiedRes = { count: 0 };
-      if (topicArticleIds.length > 0) {
-        const result = await supabase
-          .from('stories')
-          .select('id', { count: 'exact' })
-          .in('topic_article_id', topicArticleIds)
-          .gte('created_at', yesterday.toISOString());
-        
-        console.log('24h stories query result:', result);
-        
-        if (result.error) {
-          console.error('Error fetching 24h stories:', result.error);
-        } else {
-          simplifiedRes = result;
-          console.log('24h stories count:', result.count);
-        }
-      } else {
-        console.log('No topic article IDs found, skipping 24h stories query');
-      }
+      const simplifiedRes = await supabase
+        .from('stories')
+        .select('id', { count: 'exact' })
+        .eq('topic_articles.topic_id', topicData.id)
+        .gte('created_at', yesterday.toISOString())
+        .not('topic_article_id', 'is', null);
 
       // Get sentiment cards count
       const sentimentRes = await supabase
