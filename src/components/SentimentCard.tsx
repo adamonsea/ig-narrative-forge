@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, ExternalLink, ArrowUp, ArrowDown } from "luci
 import { useState } from "react";
 import { SwipeCarousel } from "@/components/ui/swipe-carousel";
 import { formatDistanceToNow } from "date-fns";
+import { ComparisonCard } from './ComparisonCard';
 
 interface SentimentSlide {
   type: 'hero' | 'mention-count' | 'trend-graph' | 'references';
@@ -45,8 +46,29 @@ export const SentimentCard = ({
   confidenceScore,
   slides = [],
   createdAt,
-  updatedAt
-}: SentimentCardProps) => {
+  updatedAt,
+  card_category,
+  comparison_keyword_ids,
+  data_window_start,
+  data_window_end
+}: SentimentCardProps & { 
+  card_category?: string; 
+  comparison_keyword_ids?: string[];
+  data_window_start?: string;
+  data_window_end?: string;
+}) => {
+  // Route to ComparisonCard for comparison type
+  if (card_category === 'comparison') {
+    return (
+      <ComparisonCard 
+        content={content}
+        dataWindowStart={data_window_start}
+        dataWindowEnd={data_window_end}
+      />
+    );
+  }
+
+  // Render detail card below
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Check if card was recently updated

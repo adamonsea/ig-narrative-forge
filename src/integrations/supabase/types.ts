@@ -2001,12 +2001,16 @@ export type Database = {
       sentiment_cards: {
         Row: {
           analysis_date: string
+          card_category: string | null
           card_type: string | null
           card_version: number | null
+          comparison_keyword_ids: string[] | null
           confidence_score: number | null
           content: Json
           content_fingerprint: string | null
           created_at: string | null
+          data_window_end: string | null
+          data_window_start: string | null
           display_count: number | null
           id: string
           is_published: boolean | null
@@ -2015,6 +2019,7 @@ export type Database = {
           last_shown_at: string | null
           needs_review: boolean | null
           previous_sentiment_score: number | null
+          sentiment_direction: string | null
           sentiment_score: number | null
           slides: Json | null
           sources: Json
@@ -2024,12 +2029,16 @@ export type Database = {
         }
         Insert: {
           analysis_date?: string
+          card_category?: string | null
           card_type?: string | null
           card_version?: number | null
+          comparison_keyword_ids?: string[] | null
           confidence_score?: number | null
           content?: Json
           content_fingerprint?: string | null
           created_at?: string | null
+          data_window_end?: string | null
+          data_window_start?: string | null
           display_count?: number | null
           id?: string
           is_published?: boolean | null
@@ -2038,6 +2047,7 @@ export type Database = {
           last_shown_at?: string | null
           needs_review?: boolean | null
           previous_sentiment_score?: number | null
+          sentiment_direction?: string | null
           sentiment_score?: number | null
           slides?: Json | null
           sources?: Json
@@ -2047,12 +2057,16 @@ export type Database = {
         }
         Update: {
           analysis_date?: string
+          card_category?: string | null
           card_type?: string | null
           card_version?: number | null
+          comparison_keyword_ids?: string[] | null
           confidence_score?: number | null
           content?: Json
           content_fingerprint?: string | null
           created_at?: string | null
+          data_window_end?: string | null
+          data_window_start?: string | null
           display_count?: number | null
           id?: string
           is_published?: boolean | null
@@ -2061,6 +2075,7 @@ export type Database = {
           last_shown_at?: string | null
           needs_review?: boolean | null
           previous_sentiment_score?: number | null
+          sentiment_direction?: string | null
           sentiment_score?: number | null
           slides?: Json | null
           sources?: Json
@@ -2085,17 +2100,88 @@ export type Database = {
           },
         ]
       }
+      sentiment_keyword_history: {
+        Row: {
+          created_at: string
+          id: string
+          keyword_phrase: string
+          negative_mentions: number
+          neutral_mentions: number
+          positive_mentions: number
+          sentiment_direction: string | null
+          sentiment_ratio: number | null
+          source_count: number
+          topic_id: string
+          total_mentions: number
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyword_phrase: string
+          negative_mentions?: number
+          neutral_mentions?: number
+          positive_mentions?: number
+          sentiment_direction?: string | null
+          sentiment_ratio?: number | null
+          source_count?: number
+          topic_id: string
+          total_mentions?: number
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyword_phrase?: string
+          negative_mentions?: number
+          neutral_mentions?: number
+          positive_mentions?: number
+          sentiment_direction?: string | null
+          sentiment_ratio?: number | null
+          source_count?: number
+          topic_id?: string
+          total_mentions?: number
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_keyword_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sentiment_keyword_history_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sentiment_keyword_tracking: {
         Row: {
           created_at: string | null
           current_trend: string | null
+          discarded_at: string | null
           first_seen_at: string | null
           id: string
           keyword_phrase: string
+          last_auto_resurface_at: string | null
           last_card_generated_at: string | null
           last_seen_at: string | null
+          negative_mentions: number | null
+          neutral_mentions: number | null
           next_card_due_at: string | null
+          positive_mentions: number | null
+          published_at: string | null
+          review_due_at: string | null
+          sentiment_direction: string | null
+          sentiment_ratio: number | null
           source_count: number | null
+          source_urls: string[] | null
+          status: string | null
           topic_id: string
           total_cards_generated: number | null
           total_mentions: number | null
@@ -2105,13 +2191,24 @@ export type Database = {
         Insert: {
           created_at?: string | null
           current_trend?: string | null
+          discarded_at?: string | null
           first_seen_at?: string | null
           id?: string
           keyword_phrase: string
+          last_auto_resurface_at?: string | null
           last_card_generated_at?: string | null
           last_seen_at?: string | null
+          negative_mentions?: number | null
+          neutral_mentions?: number | null
           next_card_due_at?: string | null
+          positive_mentions?: number | null
+          published_at?: string | null
+          review_due_at?: string | null
+          sentiment_direction?: string | null
+          sentiment_ratio?: number | null
           source_count?: number | null
+          source_urls?: string[] | null
+          status?: string | null
           topic_id: string
           total_cards_generated?: number | null
           total_mentions?: number | null
@@ -2121,13 +2218,24 @@ export type Database = {
         Update: {
           created_at?: string | null
           current_trend?: string | null
+          discarded_at?: string | null
           first_seen_at?: string | null
           id?: string
           keyword_phrase?: string
+          last_auto_resurface_at?: string | null
           last_card_generated_at?: string | null
           last_seen_at?: string | null
+          negative_mentions?: number | null
+          neutral_mentions?: number | null
           next_card_due_at?: string | null
+          positive_mentions?: number | null
+          published_at?: string | null
+          review_due_at?: string | null
+          sentiment_direction?: string | null
+          sentiment_ratio?: number | null
           source_count?: number | null
+          source_urls?: string[] | null
+          status?: string | null
           topic_id?: string
           total_cards_generated?: number | null
           total_mentions?: number | null
@@ -2958,30 +3066,36 @@ export type Database = {
       topic_sentiment_settings: {
         Row: {
           analysis_frequency_hours: number | null
+          comparison_cards_enabled: boolean | null
           created_at: string | null
           enabled: boolean | null
           excluded_keywords: string[] | null
           id: string
+          keyword_cards_enabled: boolean | null
           last_analysis_at: string | null
           topic_id: string | null
           updated_at: string | null
         }
         Insert: {
           analysis_frequency_hours?: number | null
+          comparison_cards_enabled?: boolean | null
           created_at?: string | null
           enabled?: boolean | null
           excluded_keywords?: string[] | null
           id?: string
+          keyword_cards_enabled?: boolean | null
           last_analysis_at?: string | null
           topic_id?: string | null
           updated_at?: string | null
         }
         Update: {
           analysis_frequency_hours?: number | null
+          comparison_cards_enabled?: boolean | null
           created_at?: string | null
           enabled?: boolean | null
           excluded_keywords?: string[] | null
           id?: string
+          keyword_cards_enabled?: boolean | null
           last_analysis_at?: string | null
           topic_id?: string | null
           updated_at?: string | null
@@ -4258,6 +4372,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      snapshot_sentiment_keywords: { Args: never; Returns: undefined }
       test_rss_import: { Args: { p_source_name?: string }; Returns: Json }
       test_search_functionality: {
         Args: { p_search_term?: string }
