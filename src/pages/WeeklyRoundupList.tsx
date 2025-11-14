@@ -498,6 +498,7 @@ export default function WeeklyRoundupList() {
                   storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
                   topicId={topic.id}
                   storyIndex={index}
+                  isRoundupView={true}
                 />
               </div>
             ))}
