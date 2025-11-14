@@ -449,6 +449,29 @@ serve(async (req) => {
         console.log(`   Source ID: ${source.source_id}`);
         console.log(`   URL: ${source.normalizedUrl}`);
         console.log(`   Config:`, JSON.stringify(source.scraping_config, null, 2));
+        
+        // Check for trusted source cooldown (6-hour minimum between scrapes)
+        if (source.scraping_config?.trust_content_relevance) {
+          const lastScraped = source.last_scraped_at ? new Date(source.last_scraped_at).getTime() : 0;
+          const hoursSince = (Date.now() - lastScraped) / (1000 * 60 * 60);
+          
+          if (hoursSince < 6 && lastScraped > 0) {
+            console.log(`⏸️ COOLDOWN: Trusted source "${source.source_name}" scraped ${Math.round(hoursSince)}h ago - skipping (6h minimum)`);
+            console.log(`${'='.repeat(80)}\n`);
+            
+            return {
+              sourceId: source.source_id,
+              sourceName: source.source_name,
+              success: false,
+              error: `Cooldown period - last scraped ${Math.round(hoursSince)}h ago`,
+              articlesFound: 0,
+              articlesScraped: 0
+            };
+          }
+          
+          console.log(`✅ Cooldown check passed for trusted source (last scraped ${Math.round(hoursSince)}h ago)`);
+        }
+        
         console.log(`${'='.repeat(80)}\n`);
         
         // Ultra-aggressive timeouts for test mode
