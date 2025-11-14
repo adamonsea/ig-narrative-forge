@@ -119,6 +119,8 @@ export const UnifiedSourceManager = ({
   const [showAddForm, setShowAddForm] = useState(externalShowAddForm);
   const [editingSource, setEditingSource] = useState<ContentSource | null>(null);
   const [editingFeedUrl, setEditingFeedUrl] = useState<string>('');
+  const [editTrustContentRelevance, setEditTrustContentRelevance] = useState(false);
+  const [editTrustedMaxAgeDays, setEditTrustedMaxAgeDays] = useState(1);
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -1486,6 +1488,8 @@ export const UnifiedSourceManager = ({
                     onClick={() => {
                       setEditingSource(source);
                       setEditingFeedUrl(source.feed_url || '');
+                      setEditTrustContentRelevance(source.scraping_config?.trust_content_relevance || false);
+                      setEditTrustedMaxAgeDays(source.scraping_config?.trusted_max_age_days || 1);
                     }}
                   >
                     <Edit className="w-4 h-4" />
@@ -1549,13 +1553,13 @@ export const UnifiedSourceManager = ({
         )}
       </div>
 
-      {/* Edit Feed URL Dialog */}
+      {/* Edit Source Settings Dialog */}
       <Dialog open={!!editingSource} onOpenChange={(open) => !open && setEditingSource(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Feed URL</DialogTitle>
+            <DialogTitle>Edit Source Settings</DialogTitle>
             <DialogDescription>
-              Update the feed URL for {editingSource?.source_name}
+              Update settings for {editingSource?.source_name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1568,6 +1572,58 @@ export const UnifiedSourceManager = ({
                 placeholder="https://example.com/feed"
               />
             </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="edit-trust-relevance"
+                  checked={editTrustContentRelevance}
+                  onCheckedChange={(checked) => setEditTrustContentRelevance(checked as boolean)}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="edit-trust-relevance" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Bypass keyword filtering (Trusted Source)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Process ALL content from this source without keyword matching
+                  </p>
+                </div>
+              </div>
+
+              {editTrustContentRelevance && (
+                <div className="ml-7 space-y-3">
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      ⚠️ Trusted sources process ALL content - keep date range tight
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div>
+                    <Label htmlFor="edit-max-age">Maximum Content Age</Label>
+                    <Select
+                      value={editTrustedMaxAgeDays.toString()}
+                      onValueChange={(value) => setEditTrustedMaxAgeDays(parseInt(value))}
+                    >
+                      <SelectTrigger id="edit-max-age" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Last 24 hours</SelectItem>
+                        <SelectItem value="2">Last 48 hours</SelectItem>
+                        <SelectItem value="3">Last 3 days</SelectItem>
+                        <SelectItem value="7">Last 7 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Only articles published within this timeframe will be processed
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingSource(null)}>
@@ -1577,11 +1633,16 @@ export const UnifiedSourceManager = ({
               onClick={async () => {
                 if (editingSource && editingFeedUrl.trim()) {
                   await handleUpdateSource(editingSource.id, { 
-                    feed_url: editingFeedUrl.trim() 
+                    feed_url: editingFeedUrl.trim(),
+                    scraping_config: {
+                      ...editingSource.scraping_config,
+                      trust_content_relevance: editTrustContentRelevance,
+                      trusted_max_age_days: editTrustedMaxAgeDays
+                    }
                   });
                   toast({
-                    title: 'Feed URL Updated',
-                    description: `${editingSource.source_name} feed URL has been updated`,
+                    title: 'Source Updated',
+                    description: `Settings for ${editingSource.source_name} have been updated`,
                   });
                   setEditingSource(null);
                   loadSources();
