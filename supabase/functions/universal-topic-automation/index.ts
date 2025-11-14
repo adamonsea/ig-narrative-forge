@@ -55,33 +55,35 @@ serve(async (req) => {
       console.log('Created job run:', jobRunId);
     }
 
-    // Get topics that need scraping
-    let topicsQuery = supabase
+    // Get topics with their automation settings using direct query
+    let baseQuery = supabase
       .from('topics')
-      .select(`
-        id,
-        name,
-        is_active,
-        topic_automation_settings (
-          scrape_frequency_hours,
-          is_active,
-          last_run_at,
-          next_run_at
-        )
-      `)
+      .select('id, name, is_active')
       .eq('is_active', true);
-
+    
     if (topicIds && topicIds.length > 0) {
-      topicsQuery = topicsQuery.in('id', topicIds);
+      baseQuery = baseQuery.in('id', topicIds);
+    }
+    
+    const { data: topicsBase, error: topicsError } = await baseQuery;
+
+    if (topicsError || !topicsBase) {
+      throw new Error(`Failed to get topics: ${topicsError?.message}`);
     }
 
-    const { data: topics, error: topicsError } = await topicsQuery;
+    // Fetch automation settings separately
+    const { data: settings } = await supabase
+      .from('topic_automation_settings')
+      .select('*')
+      .in('topic_id', topicsBase.map(t => t.id));
+    
+    // Combine data
+    const topics = topicsBase.map(topic => ({
+      ...topic,
+      topic_automation_settings: settings?.filter(s => s.topic_id === topic.id) || []
+    }));
 
-    if (topicsError) {
-      throw new Error(`Failed to get topics: ${topicsError.message}`);
-    }
-
-    if (!topics || topics.length === 0) {
+    if (topics.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
@@ -93,14 +95,22 @@ serve(async (req) => {
     }
 
     const now = new Date();
+    
+    console.log(`🔍 Checking ${topics.length} topics for automation:`);
+    topics.forEach(t => {
+      console.log(`  - ${t.name}: settings=${JSON.stringify(t.topic_automation_settings)}`);
+    });
+    
     const topicsToScrape = topics.filter(topic => {
       // When force=true, include all active topics regardless of automation settings
       if (force) {
+        console.log(`✅ Force mode - including topic: ${topic.name}`);
         return true;
       }
 
       // Otherwise, only include topics with active automation settings
       if (!topic.topic_automation_settings?.[0]?.is_active) {
+        console.log(`❌ Topic ${topic.name}: automation not active (settings exist: ${!!topic.topic_automation_settings}, array length: ${topic.topic_automation_settings?.length})`);
         return false;
       }
 
@@ -108,7 +118,9 @@ serve(async (req) => {
       
       // Check if it's time to scrape based on schedule
       const nextRunAt = new Date(settings.next_run_at);
-      return now >= nextRunAt;
+      const isDue = now >= nextRunAt;
+      console.log(`🔍 Topic ${topic.name}: next_run=${settings.next_run_at}, now=${now.toISOString()}, isDue=${isDue}`);
+      return isDue;
     });
 
     console.log(`Found ${topicsToScrape.length} topics ready for automated scraping`);
