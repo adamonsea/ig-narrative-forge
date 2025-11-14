@@ -37,13 +37,6 @@ double_confirm_changes = true
 enable_confirmations = false
 
 # ========================================
-# CRON JOBS
-# ========================================
-[cron]
-# Run auto-simplify-queue every 10 minutes to process qualifying articles
-auto_simplify_queue = "*/10 * * * *"
-
-# ========================================
 # CORE PRODUCTION FUNCTIONS
 # ========================================
 
