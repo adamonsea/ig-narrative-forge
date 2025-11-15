@@ -614,12 +614,13 @@ serve(async (req) => {
                   if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
                     console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
                     
-                    // Store fallback articles with topic-specific age filter
+                    // Store fallback articles with topic-specific age filter and source config
                     const fallbackStoreResult = await dbOps.storeArticles(
                       fallbackResult.data.articles,
                       topicId,
                       source.source_id,
-                      effectiveMaxAgeDays  // Use topic-specific max age
+                      effectiveMaxAgeDays,  // Use topic-specific max age
+                      sourceData?.scraping_config || {}  // ✅ CRITICAL: Pass source config for trusted source bypass
                     );
 
                     return {

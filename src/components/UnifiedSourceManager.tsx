@@ -244,19 +244,32 @@ export const UnifiedSourceManager = ({
             return;
           }
 
-          const basicTransformed = (basicData || []).map((ts: any) => ({
-            id: ts.source_id,
-            source_name: ts.source_name,
-            feed_url: ts.feed_url,
-            canonical_domain: ts.canonical_domain,
-            is_active: ts.is_active,
-            topic_id: topicId,
-            region: null,
-            content_type: null,
-            is_whitelisted: null,
-            is_blacklisted: null,
-            scrape_frequency_hours: null,
-          }));
+          // ✅ Fetch full content_sources data to get scraping_config
+          const sourceIds = (basicData || []).map((ts: any) => ts.source_id);
+          const { data: fullSources } = await supabase
+            .from('content_sources')
+            .select('id, scraping_config')
+            .in('id', sourceIds);
+          
+          const sourcesMap = new Map(fullSources?.map(s => [s.id, s]) || []);
+
+          const basicTransformed = (basicData || []).map((ts: any) => {
+            const fullSource = sourcesMap.get(ts.source_id);
+            return {
+              id: ts.source_id,
+              source_name: ts.source_name,
+              feed_url: ts.feed_url,
+              canonical_domain: ts.canonical_domain,
+              is_active: ts.is_active,
+              topic_id: topicId,
+              region: null,
+              content_type: null,
+              is_whitelisted: null,
+              is_blacklisted: null,
+              scrape_frequency_hours: null,
+              scraping_config: fullSource?.scraping_config || {},  // ✅ Include scraping_config
+            };
+          });
 
           // Sort: active sources first, then alphabetically
           basicTransformed.sort((a, b) => {
@@ -289,21 +302,39 @@ export const UnifiedSourceManager = ({
         }));
         
         // Merge with basic topic sources to ensure we include newly linked sources
-        // and prefer the accurate feed_url from the canonical topic linkage
+        // and prefer the accurate feed_url and scraping_config from content_sources
         const { data: basicData } = await supabase.rpc('get_topic_sources', { p_topic_id: topicId });
-        const basicTransformed = (basicData || []).map((ts: any) => ({
-          id: ts.source_id,
-          source_name: ts.source_name,
-          feed_url: ts.feed_url,
-          canonical_domain: ts.canonical_domain,
-          is_active: ts.is_active,
-          topic_id: topicId,
-          region: null,
-          content_type: null,
-          is_whitelisted: null,
-          is_blacklisted: null,
-          scrape_frequency_hours: null,
-        }));
+        
+        // ✅ Fetch full content_sources data to get scraping_config
+        const sourceIds = (basicData || []).map((ts: any) => ts.source_id);
+        const { data: fullSources } = await supabase
+          .from('content_sources')
+          .select('id, scraping_config, consecutive_failures, total_failures, last_failure_at, last_failure_reason')
+          .in('id', sourceIds);
+        
+        const sourcesMap = new Map(fullSources?.map(s => [s.id, s]) || []);
+        
+        const basicTransformed = (basicData || []).map((ts: any) => {
+          const fullSource = sourcesMap.get(ts.source_id);
+          return {
+            id: ts.source_id,
+            source_name: ts.source_name,
+            feed_url: ts.feed_url,
+            canonical_domain: ts.canonical_domain,
+            is_active: ts.is_active,
+            topic_id: topicId,
+            region: null,
+            content_type: null,
+            is_whitelisted: null,
+            is_blacklisted: null,
+            scrape_frequency_hours: null,
+            scraping_config: fullSource?.scraping_config || {},  // ✅ Use scraping_config from content_sources
+            consecutive_failures: fullSource?.consecutive_failures,
+            total_failures: fullSource?.total_failures,
+            last_failure_at: fullSource?.last_failure_at,
+            last_failure_reason: fullSource?.last_failure_reason,
+          };
+        });
 
         // Build merged list keyed by source id. Start with basic (to keep correct feed_url),
         // then overlay stats to add metrics without overriding feed_url.
@@ -737,9 +768,20 @@ export const UnifiedSourceManager = ({
 
       if (error) throw error;
 
+      // ✅ Enhanced success message showing exact trusted state
+      const isTrusted = updates.scraping_config?.trust_content_relevance === true;
+      const ageWindow = updates.scraping_config?.trusted_max_age_days;
+      
+      let description = 'Source updated successfully';
+      if (isTrusted && ageWindow) {
+        description = `✅ Source is now TRUSTED with ${ageWindow}-day bypass active`;
+      } else if (updates.scraping_config?.trust_content_relevance === false) {
+        description = '✅ Source is now UNTRUSTED (keyword filtering enabled)';
+      }
+
       toast({
         title: 'Success',
-        description: 'Source updated successfully',
+        description,
       });
 
       loadSources();
