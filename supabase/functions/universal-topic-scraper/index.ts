@@ -316,28 +316,35 @@ serve(async (req) => {
         const normalizedPath = urlObj.pathname; // Already normalized
             const arcSite = extractDomainFromUrl(feedUrl).split('.')[0]; // e.g. "theargus"
             
-            // Update source with extracted config AND confirmed_arc_section
+            // CRITICAL: Fetch existing config to preserve trust flags
+            const { data: currentSource } = await supabase
+              .from('content_sources')
+              .select('scraping_config')
+              .eq('id', source.source_id)
+              .single();
+            
+            // Merge Arc config with existing config to preserve trust_content_relevance and trusted_max_age_days
+            const mergedConfig = {
+              ...(currentSource?.scraping_config || {}),  // Preserve existing fields
+              sectionPath: normalizedPath,
+              arcSite,
+              arcCompatible: true,
+              autoExtracted: true,
+              extractedAt: new Date().toISOString()
+            };
+            
+            // Update source with merged config AND confirmed_arc_section
             const { error: updateError } = await supabase
               .from('content_sources')
               .update({ 
-                scraping_config: { 
-                  sectionPath: normalizedPath,
-                  arcSite,
-                  arcCompatible: true,
-                  autoExtracted: true,
-                  extractedAt: new Date().toISOString()
-                },
+                scraping_config: mergedConfig,
                 confirmed_arc_section: normalizedPath
               })
               .eq('id', source.source_id);
             
             if (!updateError) {
               console.log(`   ✅ Auto-configured Arc API: sectionPath="${normalizedPath}", arcSite="${arcSite}"`);
-              source.scraping_config = {
-                sectionPath: normalizedPath,
-                arcSite,
-                arcCompatible: true
-              };
+              source.scraping_config = mergedConfig;
             }
           } catch (extractError) {
             console.error(`   ❌ Failed to auto-extract config:`, extractError);
