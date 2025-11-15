@@ -1361,8 +1361,12 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
         if (keywordsLower.length > 0) {
           keywordsLower.forEach(keyword => {
-            if (keyword && combinedText.includes(keyword)) {
-              matches.add(keyword);
+            if (keyword) {
+              const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+              if (wordBoundaryRegex.test(combinedText)) {
+                matches.add(keyword);
+              }
             }
           });
         }
@@ -1594,7 +1598,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         // Check keyword filter
         const keywordMatch = keywords.length === 0 || (() => {
           const text = `${story.title} ${story.slides.map(slide => slide.content).join(' ')}`.toLowerCase();
-          return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+          return keywords.some(keyword => {
+            const escapedKeyword = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+            return wordBoundaryRegex.test(text);
+          });
         })();
 
         // Check source filter
