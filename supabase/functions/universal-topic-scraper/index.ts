@@ -527,6 +527,19 @@ serve(async (req) => {
               }
             );
 
+            // 🔍 DEBUG: Detailed scraping diagnostics
+            console.log(`\n🔍 SCRAPE DIAGNOSTICS for "${source.source_name}":`);
+            console.log(`   URL: ${source.normalizedUrl}`);
+            console.log(`   Success: ${scrapeResult.success}`);
+            console.log(`   Articles Found: ${scrapeResult.articlesFound}`);
+            console.log(`   Articles Scraped: ${scrapeResult.articlesScraped}`);
+            console.log(`   Errors: ${scrapeResult.errors.length > 0 ? JSON.stringify(scrapeResult.errors) : 'None'}`);
+            console.log(`   Scraping Method: ${scrapeResult.method || 'Unknown'}`);
+            console.log(`   Response Status: ${scrapeResult.statusCode || 'N/A'}`);
+            console.log(`   Content Type: ${scrapeResult.contentType || 'N/A'}`);
+            console.log(`   Content Size: ${scrapeResult.contentSize || 'N/A'} bytes`);
+            console.log(`   Processing Time: ${Date.now() - startTime}ms\n`);
+
             if (scrapeResult.success && scrapeResult.articles.length > 0) {
               // Get source scraping config for trusted source bypass
               const { data: sourceData } = await supabase

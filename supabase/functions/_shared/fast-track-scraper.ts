@@ -23,11 +23,32 @@ export class FastTrackScraper {
   private domainProfile: DomainProfile | null = null;
   private strictScope?: { host: string; pathPrefix: string };
   private sourceConfig: Record<string, any> = {};
+  
+  // Diagnostic metadata
+  private lastStatusCode?: number;
+  private lastContentType?: string;
+  private lastContentSize?: number;
 
   constructor(private supabase: any) {
     // Initialize with a placeholder URL - will be updated when needed
     this.extractor = new UniversalContentExtractor('https://example.com');
     this.retryStrategy = new EnhancedRetryStrategies();
+  }
+  
+  // Helper to capture response metadata for diagnostics
+  private captureResponseMetadata(response: Response, content?: string): void {
+    this.lastStatusCode = response.status;
+    this.lastContentType = response.headers.get('content-type') || undefined;
+    this.lastContentSize = content ? new Blob([content]).size : undefined;
+  }
+  
+  // Helper to include diagnostic metadata in results
+  private getDiagnosticMetadata(): { statusCode?: number; contentType?: string; contentSize?: number } {
+    return {
+      statusCode: this.lastStatusCode,
+      contentType: this.lastContentType,
+      contentSize: this.lastContentSize
+    };
   }
 
   async quickDiagnosis(url: string) {
@@ -224,15 +245,16 @@ export class FastTrackScraper {
       // Under strict scope, if Arc fails, return 0 articles (no generic drift)
       if (this.strictScope) {
         console.log('🔒 Arc API returned no articles - ending scrape (strict scope, no generic fallbacks)');
-        return {
-          success: true,
-          articles: [],
-          articlesFound: 0,
-          articlesScraped: 0,
-          errors: [],
-          method: 'arc_api',
-          metadata: { strict_scope_enforced: true }
-        };
+      return {
+        success: true,
+        articles: [],
+        articlesFound: 0,
+        articlesScraped: 0,
+        errors: [],
+        method: 'arc_api',
+        metadata: { strict_scope_enforced: true },
+        ...this.getDiagnosticMetadata()
+      };
       }
     }
     
@@ -246,7 +268,8 @@ export class FastTrackScraper {
         articlesScraped: 0,
         errors: [],
         method: 'strict_scope',
-        metadata: { strict_scope_enforced: true }
+        metadata: { strict_scope_enforced: true },
+        ...this.getDiagnosticMetadata()
       };
     }
     
@@ -279,7 +302,8 @@ export class FastTrackScraper {
       articlesFound: 0,
       articlesScraped: 0,
       errors: ['All configured scraping strategies were skipped or failed'],
-      method: 'none'
+      method: 'none',
+      ...this.getDiagnosticMetadata()
     };
   }
 
@@ -295,7 +319,8 @@ export class FastTrackScraper {
           articlesFound: 0,
           articlesScraped: 0,
           errors: ['No Arc site slug configured in domain profile or source config'],
-          method: 'arc_api'
+          method: 'arc_api',
+          ...this.getDiagnosticMetadata()
         };
       }
 
@@ -572,7 +597,8 @@ export class FastTrackScraper {
         articlesFound: 0,
         articlesScraped: 0,
         errors: [errorMessage],
-        method: 'rss'
+        method: 'rss',
+        ...this.getDiagnosticMetadata()
       };
     }
   }
