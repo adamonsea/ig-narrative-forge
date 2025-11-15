@@ -128,6 +128,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [allContent, setAllContent] = useState<FeedContent[]>([]);
   const [filteredContent, setFilteredContent] = useState<FeedContent[]>([]);
+  
+  // New stories notification state
+  const [hasNewStories, setHasNewStories] = useState(false);
+  const [newStoryCount, setNewStoryCount] = useState(0);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -1934,16 +1938,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           }
           
           if (belongsToTopic) {
-            console.log('✅ Story belongs to current topic, refreshing feed...');
-            toast({
-              title: "New story published",
-              description: newStory.title || "A new story is now available"
-            });
-            
-            // Refresh the feed to include the new story
-            setTimeout(() => {
-              refresh();
-            }, 1000);
+            console.log('✅ Story belongs to current topic, showing new stories button');
+            setNewStoryCount(prev => prev + 1);
+            setHasNewStories(true);
           }
         }
       )
@@ -1981,15 +1978,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             }
             
             if (belongsToTopic) {
-              console.log('✅ Story was published, refreshing feed...');
-              toast({
-                title: "New story published",
-                description: updatedStory.title || "A new story is now available"
-              });
-              
-              setTimeout(() => {
-                refresh();
-              }, 1000);
+              console.log('✅ Story was published, showing new stories button');
+              setNewStoryCount(prev => prev + 1);
+              setHasNewStories(true);
             }
           }
         }
@@ -2048,7 +2039,37 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       hasSetupRealtimeRef.current = false;
       supabase.removeChannel(channel);
     };
-  }, [topic?.id, refresh, queryClient, slug]);
+  }, [topic?.id, slug]);
+
+  // Page Visibility API - Auto-refresh when tab becomes visible after 5+ minutes
+  useEffect(() => {
+    if (!topic) return;
+    
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab became visible again
+        const lastRefreshKey = `feed_last_refresh_${topic.id}`;
+        const lastRefresh = localStorage.getItem(lastRefreshKey);
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        // Only refresh if it's been more than 5 minutes since last refresh
+        if (!lastRefresh || now - parseInt(lastRefresh) > fiveMinutes) {
+          console.log('🔄 Tab visible again after 5+ minutes, auto-refreshing feed...');
+          refresh();
+          localStorage.setItem(lastRefreshKey, now.toString());
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [topic, refresh]);
+
+  // Force re-subscription when topic changes
+  useEffect(() => {
+    hasSetupRealtimeRef.current = false;
+  }, [topic?.id]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -2070,6 +2091,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
     loadMore,
     refresh,
     isLive,
+    
+    // New stories notification
+    hasNewStories,
+    newStoryCount,
+    refreshFromNewStories: () => {
+      setHasNewStories(false);
+      setNewStoryCount(0);
+      refresh();
+    },
     
     // Keyword filtering
     selectedKeywords,
