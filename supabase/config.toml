@@ -125,8 +125,9 @@ verify_jwt = false
 [functions.automated-scheduler]
 verify_jwt = false
 
-[functions.eezee-automation-service]
-verify_jwt = false
+# [functions.eezee-automation-service]
+# verify_jwt = false
+# DISABLED: Causing articles to be auto-discarded - needs debugging
 
 [functions.auto-simplify-queue]
 verify_jwt = false
