@@ -11,8 +11,9 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -92,6 +93,9 @@ const TopicFeed = () => {
     toggleSource,
     removeSource,
     isLive,
+    hasNewStories,
+    newStoryCount,
+    refreshFromNewStories,
     ensureFilterStoryIndexLoaded
   } = useHybridTopicFeedWithKeywords(slug || '');
 
@@ -460,6 +464,21 @@ const TopicFeed = () => {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Instagram-style "New Stories Available" button */}
+      {hasNewStories && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
+          <Button
+            onClick={refreshFromNewStories}
+            className="bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all flex items-center gap-2 px-4 py-2 rounded-full"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="font-medium">
+              {newStoryCount > 1 ? `${newStoryCount} new stories available` : 'New story available'}
+            </span>
+          </Button>
         </div>
       )}
 

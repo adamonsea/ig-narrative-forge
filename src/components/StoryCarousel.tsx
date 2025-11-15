@@ -515,12 +515,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     // Open WhatsApp with pre-filled message
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
     
-    try {
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      console.log('WhatsApp share opened successfully');
-    } catch (error) {
-      console.error('WhatsApp share failed:', error);
-    }
+    // Use location.href instead of window.open to avoid popup blockers
+    window.location.href = whatsappUrl;
+    console.log('WhatsApp share opened successfully');
   };
 
   const handleDownloadImage = () => {
