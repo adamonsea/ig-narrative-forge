@@ -463,17 +463,26 @@ serve(async (req) => {
         const hoursSince = (Date.now() - lastScraped) / (1000 * 60 * 60);
         
         if (hoursSince < scrapeFrequency && lastScraped > 0 && !forceRescrape) {
+          const hoursUntilNext = Math.max(0, scrapeFrequency - hoursSince);
           console.log(`⏸️ COOLDOWN: Source "${source.source_name}" scraped ${Math.round(hoursSince)}h ago - skipping (${scrapeFrequency}h frequency)`);
+          console.log(`   Next scrape available in: ${hoursUntilNext.toFixed(1)}h`);
           console.log(`${'='.repeat(80)}\n`);
           
           return {
             sourceId: source.source_id,
             sourceName: source.source_name,
-            success: false,
-            error: `Cooldown period - last scraped ${Math.round(hoursSince)}h ago (${scrapeFrequency}h frequency)`,
+            success: true, // Changed to true - cooldown is not a failure
+            status: 'skipped_cooldown',
+            message: `Source scraped ${Math.round(hoursSince)}h ago (${scrapeFrequency}h frequency). Next scrape available in ${hoursUntilNext.toFixed(1)}h.`,
+            lastScrapedAgo: `${Math.round(hoursSince)}h ago`,
+            nextScrapeIn: `${hoursUntilNext.toFixed(1)}h`,
             articlesFound: 0,
             articlesScraped: 0
           };
+        }
+        
+        if (forceRescrape) {
+          console.log(`🔓 FORCE RESCRAPE: Bypassing cooldown for "${source.source_name}"`);
         }
         
         console.log(`✅ Cooldown check passed: last scraped ${Math.round(hoursSince)}h ago (${scrapeFrequency}h frequency)`);

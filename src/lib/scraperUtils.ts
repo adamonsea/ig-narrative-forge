@@ -60,6 +60,7 @@ export const createScraperRequestBody = (
     topicId?: string;
     sourceId?: string;
     region?: string;
+    forceRescrape?: boolean;
   }
 ) => {
   // Unified strategy: Universal scraper expects a simple body with topicId
@@ -67,7 +68,7 @@ export const createScraperRequestBody = (
   return {
     topicId: options.topicId,
     sourceIds: options.sourceId ? [options.sourceId] : undefined,
-    forceRescrape: false,
+    forceRescrape: options.forceRescrape || false,
     testMode: false
   };
 };

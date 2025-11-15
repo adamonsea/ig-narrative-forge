@@ -24,6 +24,7 @@ import {
   Download,
   Play,
   RefreshCw,
+  RotateCw,
   Eye,
   XCircle,
   Loader2,
@@ -886,7 +887,7 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const handleScrapeSource = async (source: ContentSource) => {
+  const handleScrapeSource = async (source: ContentSource, options?: { forceRescrape?: boolean }) => {
     if (!source.feed_url) {
       toast({
         title: 'Error',
@@ -900,7 +901,7 @@ export const UnifiedSourceManager = ({
       setGatheringSource(source.id);
       
       toast({
-        title: 'Content Gathering Started',
+        title: options?.forceRescrape ? 'Force Rescrape Started' : 'Content Gathering Started',
         description: `Now gathering articles from ${source.source_name}...`,
       });
 
@@ -908,7 +909,8 @@ export const UnifiedSourceManager = ({
       let requestBody: any = {
         feedUrl: source.feed_url,
         sourceId: source.id,
-        region: source.region || 'general'
+        region: source.region || 'general',
+        forceRescrape: options?.forceRescrape || false
       };
 
       // Use topic-aware scraper if this is a topic source
@@ -917,7 +919,7 @@ export const UnifiedSourceManager = ({
         requestBody = createScraperRequestBody(
           currentTopic.topic_type,
           source.feed_url,
-          { topicId, sourceId: source.id, region: currentTopic.region || source.region }
+          { topicId, sourceId: source.id, region: currentTopic.region || source.region, forceRescrape: options?.forceRescrape || false }
         );
         
         console.log(`🔧 Scraper routing decision for ${source.source_name}:`);
@@ -932,6 +934,18 @@ export const UnifiedSourceManager = ({
       });
 
       if (error) throw error;
+
+      // Handle cooldown skips (not a failure!)
+      if (data?.status === 'skipped_cooldown') {
+        toast({
+          title: '⏸️ Source Recently Scraped',
+          description: data.message || `${source.source_name} was recently scraped. Use force rescrape to bypass cooldown.`,
+          variant: 'default'
+        });
+        loadSources();
+        onSourcesChange();
+        return;
+      }
 
       if (data?.success) {
         const totalFound = data.articlesFound || 0;
@@ -1498,12 +1512,23 @@ export const UnifiedSourceManager = ({
                         size="sm"
                         onClick={() => handleScrapeSource(source)}
                         disabled={gatheringSource === source.id || !source.feed_url}
+                        title="Gather content (respects cooldown)"
                       >
                         {gatheringSource === source.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Play className="w-4 h-4" />
                         )}
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleScrapeSource(source, { forceRescrape: true })}
+                        disabled={gatheringSource === source.id || !source.feed_url}
+                        title="Force rescrape (bypass cooldown)"
+                      >
+                        <RotateCw className="w-4 h-4" />
                       </Button>
                       
                       <Switch
