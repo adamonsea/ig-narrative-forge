@@ -156,6 +156,83 @@ serve(async (req) => {
     };
   }
 
+  // Fetch recent similar stories to provide context
+  async function fetchRecentSimilarStories(
+    supabase: any,
+    topicId: string,
+    newArticleTitle: string,
+    newArticleBody: string,
+    daysBack: number = 7
+  ): Promise<string | null> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+      
+      const { data: recentStories } = await supabase
+        .from('stories')
+        .select(`
+          title,
+          created_at,
+          slides!inner(content)
+        `)
+        .gte('created_at', cutoffDate.toISOString())
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (!recentStories?.length) return null;
+      
+      // Extract key terms from new article
+      const newText = `${newArticleTitle} ${newArticleBody}`.toLowerCase();
+      const newWords = new Set(
+        newText.split(/\s+/)
+          .filter(w => w.length > 4)
+          .filter(w => !['about', 'their', 'which', 'would', 'there', 'being', 'after', 'before', 'under', 'these', 'those'].includes(w))
+      );
+      
+      // Find stories with significant word overlap
+      const similarStories = recentStories
+        .map(story => {
+          const storyText = `${story.title} ${story.slides[0]?.content || ''}`.toLowerCase();
+          const storyWords = new Set(storyText.split(/\s+/));
+          
+          const overlap = [...newWords].filter(w => storyWords.has(w)).length;
+          const similarity = overlap / Math.min(newWords.size, storyWords.size);
+          
+          return { story, similarity };
+        })
+        .filter(({ similarity }) => similarity > 0.3)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 3);
+        
+      if (similarStories.length === 0) return null;
+      
+      const contextLines = similarStories.map(({ story }) => {
+        const date = new Date(story.created_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+        const headline = story.slides[0]?.content || story.title;
+        return `  • "${story.title}" (${date})\n    Headline: "${headline}"`;
+      });
+      
+      return `
+RECENT COVERAGE CONTEXT:
+We recently published ${similarStories.length} ${similarStories.length === 1 ? 'story' : 'stories'} about this topic:
+${contextLines.join('\n')}
+
+CRITICAL INSTRUCTION: 
+The audience has already seen the above coverage. Your task is to identify what is NEW or DIFFERENT in today's article:
+- Is this a REACTION or RESPONSE to the previous incident?
+- Is there a NEW DEVELOPMENT or escalation?
+- Is there a CONSEQUENCE or follow-up?
+- Is there a different STAKEHOLDER weighing in?
+
+DO NOT rehash the basic facts the audience already knows. Lead with the fresh angle or progression.
+`.trim();
+    } catch (error) {
+      console.error('Error fetching recent stories:', error);
+      return null;
+    }
+  }
+
   // Generate slides using DeepSeek
   async function generateSlidesWithDeepSeek(
     article: Article, 
@@ -166,10 +243,28 @@ serve(async (req) => {
     slideType: string,
     slideCount: number,
     publicationName: string,
-    templateGuidance?: string
+    templateGuidance?: string,
+    supabase?: any
   ): Promise<SlideContent[]> {
     try {
+      // Fetch recent similar stories for context
+      let storyHistoryContext = '';
+      if (supabase && article.topic_id) {
+        const context = await fetchRecentSimilarStories(
+          supabase,
+          article.topic_id,
+          article.title,
+          article.body
+        );
+        if (context) {
+          storyHistoryContext = `\n${context}\n`;
+          console.log('📚 Injecting story history context - found similar recent coverage');
+        }
+      }
+
       const prompt = `Create engaging web feed carousel slides for this ${slideType} story.
+
+${storyHistoryContext}
 
 ARTICLE DETAILS:
 Title: ${article.title}
@@ -617,7 +712,8 @@ Return in JSON format:
         finalSlideType,
         targetSlideCount,
         publicationName,
-        templateGuidance
+        templateGuidance,
+        supabase
       );
 
       console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
