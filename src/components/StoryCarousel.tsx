@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download, Pin } from 'lucide-react';
+import { Share2, Heart, Download, Pin, MessageCircle } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,9 +94,11 @@ interface StoryCarouselProps {
   isRoundupView?: boolean; // Flag to indicate if this is a roundup view
   onStorySwipe?: (storyId: string) => void; // Callback when user swipes on a story
   onStoryScrolledPast?: () => void; // Callback when story scrolls out of view
+  topicName?: string; // Topic name for branded WhatsApp share
+  topicSlug?: string; // Topic slug for branded WhatsApp share
 }
 
-export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, isRoundupView = false, onStorySwipe, onStoryScrolledPast }: StoryCarouselProps) {
+export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0, isRoundupView = false, onStorySwipe, onStoryScrolledPast, topicName, topicSlug }: StoryCarouselProps) {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
@@ -481,6 +483,43 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
           variant: "destructive",
         });
       });
+    }
+  };
+
+  const handleWhatsAppShare = async () => {
+    console.log('WhatsApp share clicked for story:', story.id);
+    
+    // Track share click with WhatsApp platform
+    if (topicId) {
+      trackShareClick(story.id, topicId, 'whatsapp');
+    }
+
+    // Build share URL (same logic as handleShare)
+    let shareUrl = storyUrl;
+    if (!shareUrl) {
+      const pathParts = window.location.pathname.split('/');
+      const feedIndex = pathParts.indexOf('feed');
+      if (feedIndex !== -1 && pathParts[feedIndex + 1]) {
+        const currentSlug = pathParts[feedIndex + 1];
+        shareUrl = `${window.location.origin}/feed/${currentSlug}/story/${story.id}`;
+      } else {
+        shareUrl = window.location.href;
+      }
+    }
+
+    // Build branded message
+    const topicNameText = topicName ? `${topicName} | ` : '';
+    const shareText = `${topicNameText}${story.title}`;
+    const whatsappMessage = `${shareText}\n\n${shareUrl}`;
+    
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+    
+    try {
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      console.log('WhatsApp share opened successfully');
+    } catch (error) {
+      console.error('WhatsApp share failed:', error);
     }
   };
 
@@ -1068,6 +1107,15 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
             {/* Action buttons */}
             <div className="flex justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleWhatsAppShare}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                title="Share on WhatsApp"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

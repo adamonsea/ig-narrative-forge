@@ -765,6 +765,8 @@ const TopicFeed = () => {
                       storyUrl={storyShareUrl}
                       topicId={topic?.id}
                       storyIndex={index}
+                      topicName={topic?.name}
+                      topicSlug={slug}
                       onStorySwipe={handleStorySwipe}
                       onStoryScrolledPast={handleStoryScrolledPast}
                     />
@@ -843,6 +845,8 @@ const TopicFeed = () => {
                       storyUrl={`${window.location.origin}/feed/${slug}/parliamentary/${mention.id}`}
                       topicId={topic?.id}
                       storyIndex={index}
+                      topicName={topic?.name}
+                      topicSlug={slug}
                       onStorySwipe={handleStorySwipe}
                       onStoryScrolledPast={handleStoryScrolledPast}
                     />
