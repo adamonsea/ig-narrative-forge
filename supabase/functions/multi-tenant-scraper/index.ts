@@ -173,11 +173,9 @@ function calculateRelevanceScore(article: any, topic: any): number {
   if (!topic.keywords || topic.keywords.length === 0) return 50;
   const content = `${article.title} ${article.body}`.toLowerCase();
   
-  const matches = topic.keywords.filter((keyword: string) => {
-    const escapedKeyword = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
-    return wordBoundaryRegex.test(content);
-  }).length;
+  const matches = topic.keywords.filter((keyword: string) => 
+    content.includes(keyword.toLowerCase())
+  ).length;
   
   return Math.min(100, 20 + (matches * 15));
 }
@@ -241,11 +239,9 @@ function findKeywordMatches(article: any, topic: any): string[] {
   if (!topic.keywords || topic.keywords.length === 0) return [];
   const content = `${article.title} ${article.body}`.toLowerCase();
   
-  return topic.keywords.filter((keyword: string) => {
-    const escapedKeyword = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
-    return wordBoundaryRegex.test(content);
-  });
+  return topic.keywords.filter((keyword: string) => 
+    content.includes(keyword.toLowerCase())
+  );
 }
 
 function generateChecksum(content: string): string {
