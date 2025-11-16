@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
       content: {
         headline: `"${keyword.keyword_phrase}" trending in coverage`,
         summary: `This phrase appeared ${keyword.total_mentions} times across ${keyword.source_count} sources in the last week`,
-        statistics: `${keyword.total_mentions} mentions • ${keyword.source_count} sources`
+        statistics: `${keyword.total_mentions} mentions • ${keyword.source_count} sources`,
+        external_sentiment: (keyword.sentiment_ratio || 0.5) >= 0.5 ? 'positive' : 'negative'
       },
       sources,
       sentiment_score: Math.round((keyword.sentiment_ratio || 0) * 100),
