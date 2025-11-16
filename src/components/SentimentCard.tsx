@@ -135,30 +135,36 @@ export const SentimentCard = ({
   ];
 
   const getSentimentStyle = () => {
-    if (sentimentScore > 20) return {
+    // Prefer explicit sentiment if provided by backend
+    const external = content.external_sentiment?.toLowerCase();
+    const positiveStyle = {
       label: "Positive",
       gradient: "bg-gradient-to-br from-green-50 to-emerald-50",
       border: "border-green-200",
       pillBg: "bg-green-100",
       pillText: "text-green-700",
       pillBorder: "border-green-300"
-    };
-    if (sentimentScore < -20) return {
+    } as const;
+    const negativeStyle = {
       label: "Negative",
       gradient: "bg-gradient-to-br from-red-50 to-rose-50",
       border: "border-red-200",
       pillBg: "bg-red-100",
       pillText: "text-red-700",
       pillBorder: "border-red-300"
-    };
-    return {
-      label: "Neutral",
-      gradient: "bg-gradient-to-br from-orange-50 to-amber-50",
-      border: "border-orange-200",
-      pillBg: "bg-orange-100",
-      pillText: "text-orange-700",
-      pillBorder: "border-orange-300"
-    };
+    } as const;
+
+    if (external === 'positive') return positiveStyle;
+    if (external === 'negative') return negativeStyle;
+
+    // Fallback to score-only binary classification (no neutral)
+    // Supports 0..1, -1..1, 0..100, or -100..100 ranges
+    let score = Number.isFinite(sentimentScore) ? sentimentScore : 0;
+    if (Math.abs(score) <= 1) score = score * 100; // normalize 0..1 or -1..1 to percentage
+
+    // If signed range provided, sign decides; if 0..100, >=50 is positive
+    const isPositive = score > 0 ? true : score < 0 ? false : score >= 50;
+    return isPositive ? positiveStyle : negativeStyle;
   };
 
   const renderSlideContent = (slide: SentimentSlide) => {
