@@ -65,6 +65,8 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
 
   const toggleEnabled = async (checked: boolean) => {
     try {
+      console.log('🔄 Toggling sentiment analysis:', { topicId, checked });
+      
       const { error } = await supabase
         .from('topic_sentiment_settings')
         .upsert({
@@ -73,9 +75,16 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
           comparison_cards_enabled: checked,
           keyword_cards_enabled: checked,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'topic_id'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Upsert error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Toggle successful');
 
       setEnabled(checked);
       toast.success(checked ? 'Sentiment analysis enabled' : 'Sentiment analysis paused');
@@ -92,20 +101,26 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
   const triggerAnalysis = async () => {
     try {
       setTriggering(true);
-      const { error } = await supabase.functions.invoke('sentiment-detector', {
+      console.log('🎯 Triggering sentiment analysis for topic:', topicId);
+      
+      const { data, error } = await supabase.functions.invoke('sentiment-detector', {
         body: { 
           topic_id: topicId,
           force_analysis: true
         }
       });
 
-      if (error) throw error;
-
+      if (error) {
+        console.error('❌ Edge function error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Analysis response:', data);
       toast.success('Analysis triggered successfully');
       await loadData();
     } catch (error) {
-      console.error('Error triggering analysis:', error);
-      toast.error('Failed to trigger analysis');
+      console.error('❌ Error triggering analysis:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to trigger analysis');
     } finally {
       setTriggering(false);
     }
