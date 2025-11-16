@@ -196,12 +196,14 @@ async function analyzeSplitSentiment(
   excludedKeywords: string[],
   topicKeywords: string[]
 ): Promise<KeywordAnalysis[]> {
-  // Combine all exclusion terms
+  // Only exclude explicitly excluded keywords and the topic name itself
   const allExcludedTerms = new Set([
     ...excludedKeywords.map(k => k.toLowerCase()),
-    ...topicKeywords.map(k => k.toLowerCase()),
     topicName.toLowerCase()
   ]);
+  
+  // Keep topic keywords for separate tracking
+  const topicKeywordsLower = topicKeywords.map(k => k.toLowerCase());
   const keywordMap = new Map();
   
   for (const article of articles) {
@@ -223,11 +225,13 @@ async function analyzeSplitSentiment(
           // Exclude common, date/time, and generic news words
           if (COMMON_STOP_WORDS.has(word) || DATE_TIME_STOP.has(word) || GENERIC_NEWS_STOP.has(word)) return false;
 
-          // Not already in topic keywords or excluded terms
+          // Not already in excluded terms
           if (allExcludedTerms.has(word)) return false;
 
           // Check if word is part of any multi-word excluded term
           if (Array.from(allExcludedTerms).some(term => term.includes(word) || word.includes(term))) return false;
+          
+          // Don't exclude topic keywords - we want to track them too
 
           return true;
         });
@@ -281,6 +285,70 @@ async function analyzeSplitSentiment(
   }
   
   console.log(`📊 Extracted ${keywordMap.size} unique single-word keywords after filtering`);
+  
+  // Second pass: Track multi-word topic keywords
+  console.log(`🔍 Analyzing ${topicKeywords.length} configured topic keywords (multi-word)...`);
+  for (const topicKeyword of topicKeywords) {
+    const keywordLower = topicKeyword.toLowerCase();
+    
+    for (const article of articles) {
+      const fullText = `${article.title} ${article.body} ${article.slides?.map(s => s.content).join(' ') || ''}`;
+      const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+      
+      for (const sentence of sentences) {
+        const sentenceLower = sentence.toLowerCase();
+        
+        // Check if this sentence contains the topic keyword
+        if (sentenceLower.includes(keywordLower)) {
+          const sentiment = analyzeSentimentInContext(sentence, keywordLower);
+          if (sentiment === 'neutral') continue;
+          
+          if (!keywordMap.has(topicKeyword)) {
+            keywordMap.set(topicKeyword, {
+              articles: new Map(),
+              sources: new Set(),
+              positiveContexts: [],
+              negativeContexts: []
+            });
+          }
+          
+          const data = keywordMap.get(topicKeyword);
+          
+          // Extract domain from URL
+          let domain = 'unknown';
+          try {
+            domain = new URL(article.source_url).hostname;
+          } catch (e) {
+            domain = article.source_url;
+          }
+          
+          // Track by article ID and sentiment
+          const articleKey = `${article.id}_${sentiment}`;
+          if (!data.articles.has(articleKey)) {
+            data.articles.set(articleKey, {
+              id: article.id,
+              url: article.source_url,
+              title: article.title,
+              date: article.published_at || new Date().toISOString(),
+              author: article.author,
+              prominence: 1,
+              sentiment: sentiment
+            });
+            data.sources.add(domain);
+            
+            const targetContexts = sentiment === 'positive' 
+              ? data.positiveContexts 
+              : data.negativeContexts;
+            targetContexts.push(sentence.trim());
+          } else {
+            data.articles.get(articleKey).prominence += 1;
+          }
+        }
+      }
+    }
+  }
+  console.log(`✅ Total keywords (single + multi-word): ${keywordMap.size}`);
+  
   const results: KeywordAnalysis[] = [];
   for (const [keyword, data] of keywordMap) {
     // Count articles by sentiment
@@ -289,50 +357,95 @@ async function analyzeSplitSentiment(
     const positiveArticles = Array.from(data.articles.values())
       .filter(a => a.sentiment === 'positive');
 
-    // If a word appears across too many articles, it's likely generic – drop it
-    const uniqueDocCount = new Set(Array.from(data.articles.values()).map((a: any) => a.id)).size;
-    const docShare = uniqueDocCount / Math.max(1, articles.length);
-    if (docShare > 0.3) {
-      continue;
-    }
+    // Check if this is a configured topic keyword (case-insensitive)
+    const isTopicKeyword = topicKeywordsLower.includes(keyword.toLowerCase());
     
-    // Require: 4+ different articles AND 3+ different source domains
-    if (negativeArticles.length >= 4 && data.sources.size >= 3) {
-      results.push({
-        phrase: keyword,
-        sentiment_direction: 'negative',
-        mention_count: negativeArticles.length,
-        sources: negativeArticles
-          .map(a => ({
-            url: a.url,
-            title: a.title,
-            date: a.date,
-            author: a.author,
-            prominence: a.prominence
-          }))
-          .sort((a, b) => b.prominence - a.prominence)
-          .slice(0, 10),
-        prominent_phrases: []
-      });
-    }
-    
-    if (positiveArticles.length >= 4 && data.sources.size >= 3) {
-      results.push({
-        phrase: keyword,
-        sentiment_direction: 'positive',
-        mention_count: positiveArticles.length,
-        sources: positiveArticles
-          .map(a => ({
-            url: a.url,
-            title: a.title,
-            date: a.date,
-            author: a.author,
-            prominence: a.prominence
-          }))
-          .sort((a, b) => b.prominence - a.prominence)
-          .slice(0, 10),
-        prominent_phrases: []
-      });
+    // For discovered single-word keywords, apply strict filtering
+    if (!isTopicKeyword) {
+      // If a word appears across too many articles, it's likely generic – drop it
+      const uniqueDocCount = new Set(Array.from(data.articles.values()).map((a: any) => a.id)).size;
+      const docShare = uniqueDocCount / Math.max(1, articles.length);
+      if (docShare > 0.3) {
+        continue;
+      }
+      
+      // Require: 4+ different articles AND 3+ different source domains for discovered keywords
+      if (negativeArticles.length >= 4 && data.sources.size >= 3) {
+        results.push({
+          phrase: keyword,
+          sentiment_direction: 'negative',
+          mention_count: negativeArticles.length,
+          sources: negativeArticles
+            .map(a => ({
+              url: a.url,
+              title: a.title,
+              date: a.date,
+              author: a.author,
+              prominence: a.prominence
+            }))
+            .sort((a, b) => b.prominence - a.prominence)
+            .slice(0, 10),
+          prominent_phrases: []
+        });
+      }
+      
+      if (positiveArticles.length >= 4 && data.sources.size >= 3) {
+        results.push({
+          phrase: keyword,
+          sentiment_direction: 'positive',
+          mention_count: positiveArticles.length,
+          sources: positiveArticles
+            .map(a => ({
+              url: a.url,
+              title: a.title,
+              date: a.date,
+              author: a.author,
+              prominence: a.prominence
+            }))
+            .sort((a, b) => b.prominence - a.prominence)
+            .slice(0, 10),
+          prominent_phrases: []
+        });
+      }
+    } else {
+      // For configured topic keywords, use lower thresholds: 1+ article, 1+ source
+      if (negativeArticles.length >= 1 && data.sources.size >= 1) {
+        results.push({
+          phrase: keyword,
+          sentiment_direction: 'negative',
+          mention_count: negativeArticles.length,
+          sources: negativeArticles
+            .map(a => ({
+              url: a.url,
+              title: a.title,
+              date: a.date,
+              author: a.author,
+              prominence: a.prominence
+            }))
+            .sort((a, b) => b.prominence - a.prominence)
+            .slice(0, 10),
+          prominent_phrases: []
+        });
+      }
+      
+      if (positiveArticles.length >= 1 && data.sources.size >= 1) {
+        results.push({
+          phrase: keyword,
+          sentiment_direction: 'positive',
+          mention_count: positiveArticles.length,
+          sources: positiveArticles
+            .map(a => ({
+              url: a.url,
+              title: a.title,
+              date: a.date,
+              author: a.author,
+              prominence: a.prominence
+            }))
+            .sort((a, b) => b.prominence - a.prominence)
+            .slice(0, 10),
+          prominent_phrases: []
+        });
+      }
     }
   }
   
