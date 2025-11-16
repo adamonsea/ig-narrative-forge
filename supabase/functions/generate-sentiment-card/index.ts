@@ -90,8 +90,83 @@ Deno.serve(async (req) => {
 
     console.log(`Detail card generated for keyword: ${keyword.keyword_phrase}`);
 
+    // Generate comparison card for the topic
+    const { data: allKeywords, error: keywordsError } = await supabase
+      .from('sentiment_keyword_tracking')
+      .select('*')
+      .eq('topic_id', keyword.topic_id)
+      .eq('status', 'published')
+      .gte('total_mentions', 5)
+      .order('total_mentions', { ascending: false });
+
+    if (keywordsError) {
+      console.error('Error fetching keywords for comparison:', keywordsError);
+    }
+
+    let comparisonCard = null;
+    if (allKeywords && allKeywords.length >= 2) {
+      // Split into positive and negative based on sentiment_ratio
+      const positiveKeywords = allKeywords
+        .filter(k => (k.sentiment_ratio || 0) >= 0.6)
+        .slice(0, 5)
+        .map(k => ({ name: k.keyword_phrase, mentions: k.total_mentions }));
+      
+      const negativeKeywords = allKeywords
+        .filter(k => (k.sentiment_ratio || 0) <= 0.4)
+        .slice(0, 5)
+        .map(k => ({ name: k.keyword_phrase, mentions: k.total_mentions }));
+
+      if (positiveKeywords.length > 0 || negativeKeywords.length > 0) {
+        const totalMentions = allKeywords.reduce((sum, k) => sum + (k.total_mentions || 0), 0);
+        const analysisDate = new Date().toISOString().split('T')[0];
+
+        const comparison = {
+          topic_id: keyword.topic_id,
+          keyword_phrase: 'sentiment_comparison',
+          card_category: 'comparison',
+          content: {
+            headline: 'Positive vs Negative Coverage',
+            summary: `Analysis of sentiment trends across ${allKeywords.length} keywords`,
+            statistics: `${totalMentions} total mentions analyzed`,
+            chart_data: {
+              positive: positiveKeywords,
+              negative: negativeKeywords
+            }
+          },
+          sources: [],
+          sentiment_score: 50,
+          confidence_score: 85,
+          analysis_date: analysisDate,
+          card_type: 'comparison',
+          is_published: true,
+          is_visible: true,
+          needs_review: false
+        };
+
+        const { data: insertedComparison, error: comparisonError } = await supabase
+          .from('sentiment_cards')
+          .upsert(comparison, {
+            onConflict: 'topic_id,keyword_phrase,analysis_date',
+            ignoreDuplicates: false
+          })
+          .select()
+          .single();
+
+        if (comparisonError) {
+          console.error('Error creating comparison card:', comparisonError);
+        } else {
+          comparisonCard = insertedComparison;
+          console.log('Comparison card generated');
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, card: insertedCard }),
+      JSON.stringify({ 
+        success: true, 
+        detailCard: insertedCard,
+        comparisonCard 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
