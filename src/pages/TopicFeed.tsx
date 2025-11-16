@@ -889,27 +889,48 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add sentiment card every 6 stories (count stories only)
+              // Add sentiment cards with comparison cards after every 3 keyword cards
               if (storyIndex % 6 === 0 && storyIndex > 0 && sentimentCards.length > 0) {
-                const sentimentIndex = Math.floor((storyIndex - 1) / 6) % sentimentCards.length;
-                const sentimentCard = sentimentCards[sentimentIndex];
+                // Separate comparison and keyword cards
+                const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
+                const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
                 
-                items.push(
-                  <div key={`sentiment-${sentimentCard.id}-${index}`}>
-                    <SentimentCard
-                      id={sentimentCard.id}
-                      keywordPhrase={sentimentCard.keyword_phrase}
-                      content={sentimentCard.content}
-                      sources={sentimentCard.sources}
-                      sentimentScore={sentimentCard.sentiment_score}
-                      confidenceScore={sentimentCard.confidence_score}
-                      analysisDate={sentimentCard.analysis_date}
-                      cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
-                      createdAt={sentimentCard.created_at}
-                      updatedAt={sentimentCard.updated_at}
-                    />
-                  </div>
-                );
+                // Calculate how many sentiment cards have been shown so far
+                const totalSentimentCardsShown = Math.floor((storyIndex - 1) / 6);
+                
+                // Every 4th sentiment card slot should be a comparison card (after 3 keyword cards)
+                const shouldShowComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
+                
+                let sentimentCard;
+                if (shouldShowComparison) {
+                  // Cycle through comparison cards
+                  const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
+                  sentimentCard = comparisonCards[comparisonIndex];
+                } else {
+                  // Cycle through keyword cards (accounting for comparison card slots)
+                  const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
+                  const keywordIndex = keywordSlotsUsed % keywordCards.length;
+                  sentimentCard = keywordCards[keywordIndex];
+                }
+                
+                if (sentimentCard) {
+                  items.push(
+                    <div key={`sentiment-${sentimentCard.id}-${index}`}>
+                      <SentimentCard
+                        id={sentimentCard.id}
+                        keywordPhrase={sentimentCard.keyword_phrase}
+                        content={sentimentCard.content}
+                        sources={sentimentCard.sources}
+                        sentimentScore={sentimentCard.sentiment_score}
+                        confidenceScore={sentimentCard.confidence_score}
+                        analysisDate={sentimentCard.analysis_date}
+                        cardType={sentimentCard.card_type as 'quote' | 'trend' | 'comparison' | 'timeline'}
+                        createdAt={sentimentCard.created_at}
+                        updatedAt={sentimentCard.updated_at}
+                      />
+                    </div>
+                  );
+                }
               }
 
               // Add events accordion every 10 stories (count stories only)
