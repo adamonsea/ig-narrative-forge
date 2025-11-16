@@ -145,11 +145,7 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
   const handleDiscard = async (keywordId: string) => {
     try {
-      // Get the keyword to find its phrase
-      const keyword = keywords.find(k => k.id === keywordId);
-      if (!keyword) throw new Error('Keyword not found');
-
-      // Update keyword status
+      // Just update keyword status - trigger will handle card deletion
       const { error: keywordError } = await supabase
         .from('sentiment_keyword_tracking')
         .update({ status: 'discarded', discarded_at: new Date().toISOString() })
@@ -157,16 +153,7 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
       if (keywordError) throw keywordError;
 
-      // Delete associated sentiment cards
-      const { error: cardError } = await supabase
-        .from('sentiment_cards')
-        .delete()
-        .eq('topic_id', topicId)
-        .eq('keyword_phrase', keyword.keyword_phrase);
-
-      if (cardError) throw cardError;
-
-      toast.success('Keyword and associated cards discarded');
+      toast.success('Keyword discarded');
       loadKeywords();
     } catch (error) {
       console.error('Error discarding keyword:', error);
@@ -176,11 +163,7 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
   const handleHide = async (keywordId: string) => {
     try {
-      // Get the keyword to find its phrase
-      const keyword = keywords.find(k => k.id === keywordId);
-      if (!keyword) throw new Error('Keyword not found');
-
-      // Update keyword status
+      // Just update keyword status - trigger will handle card deletion
       const { error: keywordError } = await supabase
         .from('sentiment_keyword_tracking')
         .update({ status: 'hidden' })
@@ -188,16 +171,7 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
       if (keywordError) throw keywordError;
 
-      // Delete associated sentiment cards
-      const { error: cardError } = await supabase
-        .from('sentiment_cards')
-        .delete()
-        .eq('topic_id', topicId)
-        .eq('keyword_phrase', keyword.keyword_phrase);
-
-      if (cardError) throw cardError;
-
-      toast.success('Keyword and associated cards hidden');
+      toast.success('Keyword hidden');
       loadKeywords();
     } catch (error) {
       console.error('Error hiding keyword:', error);
