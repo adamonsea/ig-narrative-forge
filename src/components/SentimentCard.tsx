@@ -47,6 +47,7 @@ export const SentimentCard = ({
   slides = [],
   createdAt,
   updatedAt,
+  cardType,
   card_category,
   comparison_keyword_ids,
   data_window_start,
@@ -57,11 +58,12 @@ export const SentimentCard = ({
   data_window_start?: string;
   data_window_end?: string;
 }) => {
-  // Route to ComparisonCard for comparison type
-  if (card_category === 'comparison') {
+  // Route to ComparisonCard when detected (by cardType, card_category, or presence of chart_data)
+  const isComparison = cardType === 'comparison' || card_category === 'comparison' || (content as any)?.chart_data;
+  if (isComparison) {
     return (
       <ComparisonCard 
-        content={content}
+        content={content as any}
         dataWindowStart={data_window_start}
         dataWindowEnd={data_window_end}
       />
