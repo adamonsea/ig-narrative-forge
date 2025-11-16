@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       },
       sources: keyword.sources || [],
       sentiment_score: keyword.sentiment_ratio,
-      confidence_score: 0.85,
+      confidence_score: 85,
       analysis_date: new Date().toISOString(),
       card_type: 'trend',
       is_published: true,
