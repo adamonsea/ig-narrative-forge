@@ -176,8 +176,18 @@ const DATE_TIME_STOP = new Set([
 // Other generic news/editorial vocabulary to exclude
 const GENERIC_NEWS_STOP = new Set([
   'editor','editorial','comment','opinion','letters','subscribe','newsletter','advertisement','sponsored',
-  'copyright','privacy','terms','cookie','cookies','homepage','homepage',
-  'datasets','dataset','analysis','analyst','survey','reporting','media'
+  'copyright','privacy','terms','cookie','cookies','homepage',
+  'datasets','dataset','analysis','analyst','survey','reporting','media',
+  // Local/governmental generic terms
+  'meeting','meetings','planning','planner','planners','committee','committees',
+  'councillor','councillors','councilor','councilors','member','members','officer','officers',
+  'policy','policies','strategy','strategies','scheme','schemes','project','projects',
+  // Fundraising and appeals
+  'appeal','appeals','fundraiser','fundraisers','fundraising','charity','charities','donation','donations',
+  // Transport and services (generic)
+  'service','services','parking','motorist','motorists','driver','drivers','bus','buses','train','trains',
+  // Weather and utilities (generic)
+  'weather','storm','storms','rain','flood','floods','power','energy',
 ]);
 
 async function analyzeSplitSentiment(
@@ -282,12 +292,12 @@ async function analyzeSplitSentiment(
     // If a word appears across too many articles, it's likely generic – drop it
     const uniqueDocCount = new Set(Array.from(data.articles.values()).map((a: any) => a.id)).size;
     const docShare = uniqueDocCount / Math.max(1, articles.length);
-    if (docShare >= 0.5) {
+    if (docShare > 0.3) {
       continue;
     }
     
-    // Require: 3+ different articles AND 2+ different source domains
-    if (negativeArticles.length >= 3 && data.sources.size >= 2) {
+    // Require: 4+ different articles AND 3+ different source domains
+    if (negativeArticles.length >= 4 && data.sources.size >= 3) {
       results.push({
         phrase: keyword,
         sentiment_direction: 'negative',
@@ -306,7 +316,7 @@ async function analyzeSplitSentiment(
       });
     }
     
-    if (positiveArticles.length >= 3 && data.sources.size >= 2) {
+    if (positiveArticles.length >= 4 && data.sources.size >= 3) {
       results.push({
         phrase: keyword,
         sentiment_direction: 'positive',
