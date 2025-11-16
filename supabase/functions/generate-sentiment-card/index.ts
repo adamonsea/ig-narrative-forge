@@ -72,7 +72,10 @@ Deno.serve(async (req) => {
 
     const { data: insertedCard, error: insertError } = await supabase
       .from('sentiment_cards')
-      .insert(card)
+      .upsert(card, {
+        onConflict: 'topic_id,keyword_phrase,analysis_date',
+        ignoreDuplicates: false
+      })
       .select()
       .single();
 
