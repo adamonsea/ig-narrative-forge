@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         statistics: `${keyword.total_mentions} mentions • ${keyword.source_count} sources`
       },
       sources: keyword.sources || [],
-      sentiment_score: keyword.sentiment_ratio,
+      sentiment_score: Math.round((keyword.sentiment_ratio || 0) * 100),
       confidence_score: 85,
       analysis_date: new Date().toISOString(),
       card_type: 'trend',
