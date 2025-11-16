@@ -74,33 +74,24 @@ export const useSentimentCards = (topicId?: string) => {
       }
 
       setSentimentCards((data || [])
-        .filter(card => {
-          // Comparison cards: check comparison_keyword_ids length
-          // Detail cards: check sources length
-          if (card.card_category === 'comparison') {
-            const keywordIds = Array.isArray(card.comparison_keyword_ids) ? card.comparison_keyword_ids : [];
-            return keywordIds.length >= 2;
-          }
-          const sources = Array.isArray(card.sources) ? card.sources : [];
-          return sources.length >= 2;
-        })
         .map(card => ({
-        ...card,
-        content: card.content as any,
-        sources: card.sources as any[],
-        slides: card.slides as any[] || [],
-        card_type: card.card_type || 'trend',
-        sentiment_score: card.sentiment_score || 0,
-        confidence_score: card.confidence_score || 0,
-        analysis_date: card.analysis_date || card.created_at || '',
-        is_published: card.is_published || false,
-        is_visible: card.is_visible || false,
-        needs_review: card.needs_review || false,
-        created_at: card.created_at || '',
-        updated_at: card.updated_at || card.created_at || '',
-        display_count: card.display_count || 0,
-        last_shown_at: card.last_shown_at || null
-      })));
+          ...card,
+          content: card.content as any,
+          sources: (Array.isArray(card.sources) ? card.sources : []) as any[],
+          slides: (card.slides as any[]) || [],
+          card_type: card.card_type || 'trend',
+          sentiment_score: card.sentiment_score || 0,
+          confidence_score: card.confidence_score || 0,
+          analysis_date: card.analysis_date || card.created_at || '',
+          is_published: card.is_published || false,
+          is_visible: card.is_visible || false,
+          needs_review: card.needs_review || false,
+          created_at: card.created_at || '',
+          updated_at: card.updated_at || card.created_at || '',
+          display_count: card.display_count || 0,
+          last_shown_at: card.last_shown_at || null
+        }))
+      );
     } catch (err) {
       console.error('Error loading sentiment cards:', err);
       setError(err instanceof Error ? err.message : 'Failed to load sentiment cards');
