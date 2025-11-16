@@ -67,7 +67,7 @@ export const StoryPageSEO = ({
   
   // Prioritize cover illustration for visual appeal, fallback to branded OG image with topic logo
   const imageUrl = story.cover_illustration_url || 
-    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}&topic_name=${encodeURIComponent(topicName)}${topicLogoUrl ? `&logo_url=${encodeURIComponent(topicLogoUrl)}` : ''}`;
+    `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?title=${encodeURIComponent(story.title)}&subtitle=${encodeURIComponent(topicName)}&topic_name=${encodeURIComponent(topicName)}${topicLogoUrl ? `&logo_url=${encodeURIComponent(topicLogoUrl)}` : ''}&v=${Date.now()}`;
   
   const siteName = topicName;
   

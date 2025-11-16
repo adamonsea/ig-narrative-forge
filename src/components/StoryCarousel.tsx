@@ -515,8 +515,16 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     // Open WhatsApp with pre-filled message
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
     
-    // Use location.href instead of window.open to avoid popup blockers
-    window.location.href = whatsappUrl;
+    // Detect mobile for better WhatsApp handling
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // On mobile, use custom URL scheme for native app
+      window.location.href = `whatsapp://send?text=${encodeURIComponent(whatsappMessage)}`;
+    } else {
+      // On desktop, open WhatsApp Web in new tab
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
     console.log('WhatsApp share opened successfully');
   };
 
