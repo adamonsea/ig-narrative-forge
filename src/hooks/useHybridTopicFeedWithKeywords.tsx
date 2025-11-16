@@ -1159,7 +1159,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       setHasMore(pageUniqueStories.length >= STORIES_PER_PAGE);
       
     } catch (error) {
-      console.error('Error loading stories:', error);
+      console.error('❌ Error loading stories:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        slug,
+        page,
+        filtersApplied: {
+          keywords: selectedKeywords?.length || 0,
+          landmarks: selectedLandmarks?.length || 0,
+          organizations: selectedOrganizations?.length || 0,
+          sources: selectedSources?.length || 0
+        }
+      });
       
       // Don't show destructive toast for timeout fallbacks - they're handled gracefully
       const errorMessage = error instanceof Error ? error.message : "Failed to load stories";
@@ -1167,8 +1179,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
       if (!isTimeoutFallback) {
         toast({
-          title: "Error",
-          description: errorMessage,
+          title: "Error Loading Stories",
+          description: `${errorMessage}. Please refresh the page.`,
           variant: "destructive"
         });
       }
