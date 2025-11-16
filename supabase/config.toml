@@ -415,3 +415,7 @@ verify_jwt = true
 
 [functions.sitemap-xml]
 verify_jwt = true
+
+[functions.clear-sentiment-keywords]
+verify_jwt = true
+

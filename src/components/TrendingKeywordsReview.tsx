@@ -183,22 +183,10 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Keywords</CardTitle>
-            <CardDescription>
-              Review and manage detected sentiment keywords
-            </CardDescription>
-          </div>
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={handleClearAll}
-            disabled={loading}
-          >
-            Clear All
-          </Button>
-        </div>
+        <CardTitle>Keywords</CardTitle>
+        <CardDescription>
+          Review and manage detected sentiment keywords
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="pending" className="w-full" onValueChange={loadKeywords}>
