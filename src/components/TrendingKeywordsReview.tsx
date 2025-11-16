@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,6 +51,30 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (enabled) {
+      loadKeywords();
+    }
+
+    const channel = supabase
+      .channel(`sentiment-keywords-${topicId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sentiment_keyword_tracking',
+          filter: `topic_id=eq.${topicId}`
+        },
+        () => loadKeywords()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [topicId, enabled]);
 
   const handlePublish = async (keywordId: string) => {
     try {
