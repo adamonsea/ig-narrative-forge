@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface ArticleData {
+  id: string;
   title: string;
   body: string;
   author?: string;
@@ -97,6 +98,7 @@ serve(async (req) => {
         if (!content) return null;
         
         return {
+          id: ta.id,
           title: content.title || '',
           body: content.body || '',
           author: content.author,
@@ -149,23 +151,101 @@ async function analyzeSplitSentiment(articles: ArticleData[], topicName: string,
         for (const keyword of keywords) {
           const sentiment = analyzeSentimentInContext(sentence, keyword);
           if (sentiment === 'neutral') continue;
-          if (!keywordMap.has(keyword)) keywordMap.set(keyword, { positive: new Map(), negative: new Map(), positiveContexts: [], negativeContexts: [] });
+          
+          if (!keywordMap.has(keyword)) {
+            keywordMap.set(keyword, { 
+              articles: new Map(),
+              sources: new Set(),
+              positiveContexts: [], 
+              negativeContexts: [] 
+            });
+          }
+          
           const data = keywordMap.get(keyword);
-          const targetMap = sentiment === 'positive' ? data.positive : data.negative;
-          const targetContexts = sentiment === 'positive' ? data.positiveContexts : data.negativeContexts;
-          if (!targetMap.has(article.source_url)) {
-            targetMap.set(article.source_url, { prominence: 1, title: article.title, date: article.published_at || new Date().toISOString(), author: article.author });
+          
+          // Extract domain from URL
+          let domain = 'unknown';
+          try {
+            domain = new URL(article.source_url).hostname;
+          } catch (e) {
+            domain = article.source_url;
+          }
+          
+          // Track by article ID and sentiment
+          const articleKey = `${article.id}_${sentiment}`;
+          if (!data.articles.has(articleKey)) {
+            data.articles.set(articleKey, {
+              id: article.id,
+              url: article.source_url,
+              title: article.title,
+              date: article.published_at || new Date().toISOString(),
+              author: article.author,
+              prominence: 1,
+              sentiment: sentiment
+            });
+            data.sources.add(domain);
+            
+            const targetContexts = sentiment === 'positive' 
+              ? data.positiveContexts 
+              : data.negativeContexts;
             targetContexts.push(sentence.trim());
-          } else targetMap.get(article.source_url).prominence += 1;
+          } else {
+            data.articles.get(articleKey).prominence += 1;
+          }
         }
       }
     }
   }
   const results: KeywordAnalysis[] = [];
   for (const [keyword, data] of keywordMap) {
-    if (data.negative.size >= 5) results.push({ phrase: keyword, sentiment_direction: 'negative', mention_count: data.negative.size, sources: Array.from(data.negative.entries()).map(([url, info]) => ({ url, title: info.title, date: info.date, author: info.author, prominence: info.prominence })).sort((a, b) => b.prominence - a.prominence).slice(0, 10), prominent_phrases: [] });
-    if (data.positive.size >= 5) results.push({ phrase: keyword, sentiment_direction: 'positive', mention_count: data.positive.size, sources: Array.from(data.positive.entries()).map(([url, info]) => ({ url, title: info.title, date: info.date, author: info.author, prominence: info.prominence })).sort((a, b) => b.prominence - a.prominence).slice(0, 10), prominent_phrases: [] });
+    // Count articles by sentiment
+    const negativeArticles = Array.from(data.articles.values())
+      .filter(a => a.sentiment === 'negative');
+    const positiveArticles = Array.from(data.articles.values())
+      .filter(a => a.sentiment === 'positive');
+    
+    // Require: 3+ different articles AND 2+ different source domains
+    if (negativeArticles.length >= 3 && data.sources.size >= 2) {
+      results.push({
+        phrase: keyword,
+        sentiment_direction: 'negative',
+        mention_count: negativeArticles.length,
+        sources: negativeArticles
+          .map(a => ({
+            url: a.url,
+            title: a.title,
+            date: a.date,
+            author: a.author,
+            prominence: a.prominence
+          }))
+          .sort((a, b) => b.prominence - a.prominence)
+          .slice(0, 10),
+        prominent_phrases: []
+      });
+    }
+    
+    if (positiveArticles.length >= 3 && data.sources.size >= 2) {
+      results.push({
+        phrase: keyword,
+        sentiment_direction: 'positive',
+        mention_count: positiveArticles.length,
+        sources: positiveArticles
+          .map(a => ({
+            url: a.url,
+            title: a.title,
+            date: a.date,
+            author: a.author,
+            prominence: a.prominence
+          }))
+          .sort((a, b) => b.prominence - a.prominence)
+          .slice(0, 10),
+        prominent_phrases: []
+      });
+    }
   }
+  
+  console.log(`📊 Keyword analysis: ${keywordMap.size} unique phrases found`);
+  console.log(`✅ Keywords meeting threshold (3+ articles, 2+ sources): ${results.length}`);
   return results.sort((a, b) => b.mention_count - a.mention_count);
 }
 
