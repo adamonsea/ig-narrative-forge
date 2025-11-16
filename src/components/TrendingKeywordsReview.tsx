@@ -76,6 +76,23 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
     };
   }, [topicId, enabled]);
 
+  const handleClearAll = async () => {
+    try {
+      const { error } = await supabase
+        .from('sentiment_keyword_tracking')
+        .delete()
+        .eq('topic_id', topicId);
+
+      if (error) throw error;
+
+      toast.success('All keywords cleared');
+      loadKeywords();
+    } catch (error: any) {
+      console.error('Error clearing keywords:', error);
+      toast.error('Failed to clear keywords');
+    }
+  };
+
   const handlePublish = async (keywordId: string) => {
     try {
       // Call edge function to generate detail card
@@ -164,7 +181,27 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
   }
 
   return (
-    <Tabs defaultValue="pending" className="w-full" onValueChange={loadKeywords}>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Keywords</CardTitle>
+            <CardDescription>
+              Review and manage detected sentiment keywords
+            </CardDescription>
+          </div>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleClearAll}
+            disabled={loading}
+          >
+            Clear All
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="pending" className="w-full" onValueChange={loadKeywords}>
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="pending">
           Pending ({pending.length})
@@ -297,5 +334,7 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
         )}
       </TabsContent>
     </Tabs>
+      </CardContent>
+    </Card>
   );
 };
