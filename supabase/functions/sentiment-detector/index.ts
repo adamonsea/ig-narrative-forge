@@ -64,6 +64,10 @@ serve(async (req) => {
 
     const excludedKeywords = topicSettings?.excluded_keywords || [];
 
+    // Load topic keywords to filter against
+    const topicKeywords = topic?.keywords || [];
+    console.log(`🔑 Topic has ${topicKeywords.length} existing keywords to filter against`);
+
     // Fetch topic articles with shared content
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     
@@ -110,7 +114,7 @@ serve(async (req) => {
 
     console.log(`✅ Mapped ${articles.length} valid articles for analysis`);
 
-    const splitKeywords = await analyzeSplitSentiment(articles, topic.name, excludedKeywords);
+    const splitKeywords = await analyzeSplitSentiment(articles, topic.name, excludedKeywords, topicKeywords);
 
     await supabase.from('sentiment_keyword_tracking').delete().eq('topic_id', topicId);
 
@@ -142,33 +146,75 @@ serve(async (req) => {
   }
 });
 
-async function analyzeSplitSentiment(articles: ArticleData[], topicName: string, excludedKeywords: string[]): Promise<KeywordAnalysis[]> {
+// Common stop words to filter out generic terms
+const COMMON_STOP_WORDS = new Set([
+  'said', 'told', 'been', 'have', 'will', 'would', 'could', 'should',
+  'from', 'with', 'about', 'after', 'their', 'were', 'they', 'this',
+  'that', 'which', 'when', 'where', 'what', 'being', 'than',
+  'more', 'most', 'also', 'very', 'just', 'only', 'over', 'such',
+  'some', 'into', 'them', 'then', 'these', 'those', 'people', 'make',
+  'made', 'year', 'years', 'time', 'work', 'first', 'last', 'long',
+  'good', 'well', 'back', 'through', 'much', 'before', 'must', 'under'
+]);
+
+async function analyzeSplitSentiment(
+  articles: ArticleData[], 
+  topicName: string, 
+  excludedKeywords: string[],
+  topicKeywords: string[]
+): Promise<KeywordAnalysis[]> {
+  // Combine all exclusion terms
+  const allExcludedTerms = new Set([
+    ...excludedKeywords.map(k => k.toLowerCase()),
+    ...topicKeywords.map(k => k.toLowerCase()),
+    topicName.toLowerCase()
+  ]);
   const keywordMap = new Map();
+  
   for (const article of articles) {
     const fullText = `${article.title} ${article.body} ${article.slides?.map(s => s.content).join(' ') || ''}`;
     const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    
     for (const sentence of sentences) {
-      const words = sentence.toLowerCase().split(/\s+/);
-      for (let i = 0; i < words.length - 1; i++) {
-        const keywords = [
-          `${words[i]} ${words[i + 1]}`.replace(/[^\w\s]/g, '').trim(),
-          i < words.length - 2 ? `${words[i]} ${words[i + 1]} ${words[i + 2]}`.replace(/[^\w\s]/g, '').trim() : ''
-        ].filter(k => k.length > 5 && !excludedKeywords.some(ex => k.includes(ex.toLowerCase())) && !k.includes(topicName.toLowerCase().split(' ')[0]));
-        
-        for (const keyword of keywords) {
-          const sentiment = analyzeSentimentInContext(sentence, keyword);
-          if (sentiment === 'neutral') continue;
+      // Extract SINGLE WORDS from each sentence
+      const words = sentence.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(word => {
+          // Must be 4+ characters (filters out "the", "and", "but")
+          if (word.length < 4) return false;
           
-          if (!keywordMap.has(keyword)) {
-            keywordMap.set(keyword, { 
+          // Not a common stop word
+          if (COMMON_STOP_WORDS.has(word)) return false;
+          
+          // Not a number
+          if (/^\d+$/.test(word)) return false;
+          
+          // Not already in topic keywords or excluded terms
+          if (allExcludedTerms.has(word)) return false;
+          
+          // Check if word is part of any multi-word excluded term
+          if (Array.from(allExcludedTerms).some(term => 
+            term.includes(word) || word.includes(term)
+          )) return false;
+          
+          return true;
+        });
+
+      for (const word of words) {
+        const sentiment = analyzeSentimentInContext(sentence, word);
+        if (sentiment === 'neutral') continue;
+        
+        if (!keywordMap.has(word)) {
+          keywordMap.set(word, {
               articles: new Map(),
               sources: new Set(),
               positiveContexts: [], 
               negativeContexts: [] 
-            });
-          }
-          
-          const data = keywordMap.get(keyword);
+          });
+        }
+        
+        const data = keywordMap.get(word);
           
           // Extract domain from URL
           let domain = 'unknown';
@@ -196,13 +242,14 @@ async function analyzeSplitSentiment(articles: ArticleData[], topicName: string,
               ? data.positiveContexts 
               : data.negativeContexts;
             targetContexts.push(sentence.trim());
-          } else {
-            data.articles.get(articleKey).prominence += 1;
-          }
+        } else {
+          data.articles.get(articleKey).prominence += 1;
         }
       }
     }
   }
+  
+  console.log(`📊 Extracted ${keywordMap.size} unique single-word keywords after filtering`);
   const results: KeywordAnalysis[] = [];
   for (const [keyword, data] of keywordMap) {
     // Count articles by sentiment
