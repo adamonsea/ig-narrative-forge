@@ -145,13 +145,28 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
   const handleDiscard = async (keywordId: string) => {
     try {
-      const { error } = await supabase
+      // Get the keyword to find its phrase
+      const keyword = keywords.find(k => k.id === keywordId);
+      if (!keyword) throw new Error('Keyword not found');
+
+      // Update keyword status
+      const { error: keywordError } = await supabase
         .from('sentiment_keyword_tracking')
         .update({ status: 'discarded', discarded_at: new Date().toISOString() })
         .eq('id', keywordId);
 
-      if (error) throw error;
-      toast.success('Keyword discarded');
+      if (keywordError) throw keywordError;
+
+      // Delete associated sentiment cards
+      const { error: cardError } = await supabase
+        .from('sentiment_cards')
+        .delete()
+        .eq('topic_id', topicId)
+        .eq('keyword_phrase', keyword.keyword_phrase);
+
+      if (cardError) throw cardError;
+
+      toast.success('Keyword and associated cards discarded');
       loadKeywords();
     } catch (error) {
       console.error('Error discarding keyword:', error);
@@ -161,13 +176,28 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
 
   const handleHide = async (keywordId: string) => {
     try {
-      const { error } = await supabase
+      // Get the keyword to find its phrase
+      const keyword = keywords.find(k => k.id === keywordId);
+      if (!keyword) throw new Error('Keyword not found');
+
+      // Update keyword status
+      const { error: keywordError } = await supabase
         .from('sentiment_keyword_tracking')
         .update({ status: 'hidden' })
         .eq('id', keywordId);
 
-      if (error) throw error;
-      toast.success('Keyword hidden');
+      if (keywordError) throw keywordError;
+
+      // Delete associated sentiment cards
+      const { error: cardError } = await supabase
+        .from('sentiment_cards')
+        .delete()
+        .eq('topic_id', topicId)
+        .eq('keyword_phrase', keyword.keyword_phrase);
+
+      if (cardError) throw cardError;
+
+      toast.success('Keyword and associated cards hidden');
       loadKeywords();
     } catch (error) {
       console.error('Error hiding keyword:', error);
