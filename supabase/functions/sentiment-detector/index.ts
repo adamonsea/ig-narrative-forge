@@ -81,7 +81,6 @@ serve(async (req) => {
         )
       `)
       .eq('topic_id', topicId)
-      .eq('status', 'processed')
       .gte('created_at', thirtyDaysAgo)
       .limit(100);
 
