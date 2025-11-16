@@ -326,6 +326,9 @@ verify_jwt = true
 [functions.source-metrics-backfill]
 verify_jwt = true
 
+[functions.backfill-sentiment-card-sources]
+verify_jwt = false
+
 [functions.cleanup-invalid-parliamentary-mentions]
 verify_jwt = true
 

@@ -50,13 +50,69 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Generate detail card with proper sources from source_urls
+    // Get topic slug for card URLs
+    const { data: topic } = await supabase
+      .from('topics')
+      .select('slug')
+      .eq('id', keyword.topic_id)
+      .single();
+
+    const topicSlug = topic?.slug || 'feed';
+
+    // Enrich sources with real titles and internal card links
     const sourceUrls = Array.isArray(keyword.source_urls) ? keyword.source_urls : [];
-    const sources = sourceUrls.slice(0, 10).map((url: string) => ({
-      url,
-      title: keyword.keyword_phrase,
-      date: new Date().toISOString().split('T')[0]
-    }));
+    const sources = [];
+    
+    for (const url of sourceUrls.slice(0, 10)) {
+      // Lookup article by source_url or canonical_url
+      const { data: article } = await supabase
+        .from('articles')
+        .select('id, title, published_at, topic_id')
+        .or(`source_url.eq.${url},canonical_url.eq.${url}`)
+        .eq('topic_id', keyword.topic_id)
+        .single();
+
+      if (article) {
+        // Try to find a published story for this article
+        const { data: topicArticle } = await supabase
+          .from('topic_articles')
+          .select('id, story_id, stories(id, title)')
+          .eq('article_id', article.id)
+          .eq('topic_id', keyword.topic_id)
+          .not('story_id', 'is', null)
+          .single();
+
+        if (topicArticle?.stories) {
+          // Story exists - use internal card URL
+          sources.push({
+            url,
+            title: topicArticle.stories.title,
+            date: article.published_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            card_url: `/feed/${topicSlug}/story/${topicArticle.stories.id}`,
+            story_id: topicArticle.stories.id
+          });
+        } else {
+          // Article exists but no story yet - use article title, external link
+          sources.push({
+            url,
+            title: article.title,
+            date: article.published_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            card_url: null
+          });
+        }
+      } else {
+        // No article found - use hostname as fallback
+        const hostname = new URL(url).hostname.replace('www.', '');
+        sources.push({
+          url,
+          title: hostname,
+          date: new Date().toISOString().split('T')[0],
+          card_url: null
+        });
+      }
+    }
+
+    console.log(`Enriched ${sources.length} sources for keyword: ${keyword.keyword_phrase}`);
 
     const card = {
       topic_id: keyword.topic_id,
@@ -97,7 +153,7 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('topic_id', keyword.topic_id)
       .eq('status', 'published')
-      .gte('total_mentions', 5)
+      .gte('total_mentions', 3)  // Lowered from 5 to include more keywords
       .order('total_mentions', { ascending: false });
 
     if (keywordsError) {
@@ -106,9 +162,9 @@ Deno.serve(async (req) => {
 
     let comparisonCard = null;
     if (allKeywords && allKeywords.length >= 2) {
-      // Split into positive and negative based on sentiment_ratio
+      // Split into positive and negative with relaxed thresholds
       const positiveKeywords = allKeywords
-        .filter(k => (k.sentiment_ratio || 0) >= 0.6)
+        .filter(k => (k.sentiment_ratio || 0) >= 0.55)  // Relaxed from 0.6
         .slice(0, 5)
         .map(k => ({ 
           keyword: k.keyword_phrase, 
@@ -117,13 +173,15 @@ Deno.serve(async (req) => {
         }));
       
       const negativeKeywords = allKeywords
-        .filter(k => (k.sentiment_ratio || 0) <= 0.4)
+        .filter(k => (k.sentiment_ratio || 0) <= 0.45)  // Relaxed from 0.4
         .slice(0, 5)
         .map(k => ({ 
           keyword: k.keyword_phrase, 
           mentions: k.total_mentions,
           ratio: k.sentiment_ratio || 0
         }));
+
+      console.log(`Comparison card data: ${positiveKeywords.length} positive, ${negativeKeywords.length} negative keywords`);
 
       if (positiveKeywords.length > 0 || negativeKeywords.length > 0) {
         const totalMentions = allKeywords.reduce((sum, k) => sum + (k.total_mentions || 0), 0);
