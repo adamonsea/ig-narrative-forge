@@ -28,6 +28,8 @@ interface SentimentCardProps {
     title: string;
     date: string;
     author?: string;
+    card_url?: string | null;
+    story_id?: string;
   }>;
   sentimentScore: number;
   confidenceScore: number;
@@ -284,27 +286,52 @@ export const SentimentCard = ({
               <h3 className="text-lg font-semibold text-muted-foreground">Sources</h3>
             </div>
             <div className="space-y-3 max-h-80 overflow-y-auto">
-              {sources.slice(0, 4).map((source, index) => (
-                <a
-                  key={index}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-4 rounded-lg border hover:border-primary/30 hover:bg-muted/30 transition-all duration-200 text-left group"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                        {source.title}
+              {sources.slice(0, 4).map((source, index) => {
+                const hasInternalLink = !!source.card_url;
+                
+                return (
+                  <div
+                    key={index}
+                    className="block p-4 rounded-lg border hover:border-primary/30 hover:bg-muted/30 transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        {hasInternalLink ? (
+                          // Internal story link
+                          <a 
+                            href={source.card_url!}
+                            className="text-sm font-medium line-clamp-2 mb-1 hover:text-primary transition-colors block"
+                          >
+                            {source.title}
+                          </a>
+                        ) : (
+                          // External link fallback
+                          <a 
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium line-clamp-2 mb-1 hover:text-primary transition-colors block"
+                          >
+                            {source.title}
+                          </a>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {source.date} {source.author && `• ${source.author}`}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {source.date} {source.author && `• ${source.author}`}
-                      </div>
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 p-1 hover:bg-muted rounded"
+                        title="View original source"
+                      >
+                        <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
+                      </a>
                     </div>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
                   </div>
-                </a>
-              ))}
+                );
+              })}
               {sources.length > 4 && (
                 <div className="text-center text-sm text-muted-foreground py-2">
                   +{sources.length - 4} more sources
