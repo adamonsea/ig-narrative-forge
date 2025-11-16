@@ -109,12 +109,20 @@ Deno.serve(async (req) => {
       const positiveKeywords = allKeywords
         .filter(k => (k.sentiment_ratio || 0) >= 0.6)
         .slice(0, 5)
-        .map(k => ({ name: k.keyword_phrase, mentions: k.total_mentions }));
+        .map(k => ({ 
+          keyword: k.keyword_phrase, 
+          mentions: k.total_mentions,
+          ratio: k.sentiment_ratio || 0
+        }));
       
       const negativeKeywords = allKeywords
         .filter(k => (k.sentiment_ratio || 0) <= 0.4)
         .slice(0, 5)
-        .map(k => ({ name: k.keyword_phrase, mentions: k.total_mentions }));
+        .map(k => ({ 
+          keyword: k.keyword_phrase, 
+          mentions: k.total_mentions,
+          ratio: k.sentiment_ratio || 0
+        }));
 
       if (positiveKeywords.length > 0 || negativeKeywords.length > 0) {
         const totalMentions = allKeywords.reduce((sum, k) => sum + (k.total_mentions || 0), 0);
