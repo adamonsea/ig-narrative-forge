@@ -101,8 +101,25 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
   const triggerAnalysis = async () => {
     try {
       setTriggering(true);
-      console.log('🎯 Triggering sentiment analysis for topic:', topicId);
+      console.log('🎯 Starting sentiment analysis for topic:', topicId);
       
+      // Pre-flight auth check
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError) {
+        console.error('❌ Auth check failed:', authError);
+        toast.error(`Auth error: ${authError.message}`, { duration: 10000 });
+        return;
+      }
+      
+      if (!session) {
+        console.error('❌ No active session');
+        toast.error('Not authenticated - please sign in again', { duration: 10000 });
+        return;
+      }
+      
+      console.log('✅ Auth check passed, user:', session.user.id);
+      
+      // Call edge function
       const { data, error } = await supabase.functions.invoke('sentiment-detector', {
         body: { 
           topic_id: topicId,
@@ -112,15 +129,31 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
 
       if (error) {
         console.error('❌ Edge function error:', error);
+        // Show full error details for mobile debugging
+        const errorDetails = JSON.stringify(error, null, 2);
+        toast.error(`Function error: ${errorDetails}`, { duration: 10000 });
         throw error;
       }
       
       console.log('✅ Analysis response:', data);
-      toast.success('Analysis triggered successfully');
+      
+      // Show detailed success message
+      const articlesCount = data?.articles_analyzed || 0;
+      const keywordsCount = data?.keywords_found || 0;
+      toast.success(`Analysis complete! Analyzed ${articlesCount} articles, found ${keywordsCount} keywords`, { 
+        duration: 5000 
+      });
+      
       await loadData();
     } catch (error) {
-      console.error('❌ Error triggering analysis:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to trigger analysis');
+      console.error('❌ Caught error:', error);
+      
+      // Display full error information for debugging
+      const errorMsg = error instanceof Error 
+        ? `${error.name}: ${error.message}` 
+        : JSON.stringify(error);
+      
+      toast.error(`Failed: ${errorMsg}`, { duration: 10000 });
     } finally {
       setTriggering(false);
     }
