@@ -93,6 +93,40 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
     }
   };
 
+  const handleRegenerateCards = async () => {
+    try {
+      setLoading(true);
+      
+      // Delete all existing sentiment cards for this topic
+      const { error: deleteError } = await supabase
+        .from('sentiment_cards')
+        .delete()
+        .eq('topic_id', topicId);
+
+      if (deleteError) throw deleteError;
+
+      // Get all published keywords
+      const publishedKeywords = keywords.filter(k => k.status === 'published');
+      
+      // Regenerate cards for each published keyword
+      let successCount = 0;
+      for (const keyword of publishedKeywords) {
+        const { error } = await supabase.functions.invoke('generate-sentiment-card', {
+          body: { keywordId: keyword.id }
+        });
+        if (!error) successCount++;
+      }
+
+      toast.success(`Regenerated ${successCount} sentiment cards with sources and comparisons`);
+      loadKeywords();
+    } catch (error: any) {
+      console.error('Error regenerating cards:', error);
+      toast.error('Failed to regenerate cards');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePublish = async (keywordId: string) => {
     try {
       // Call edge function to generate detail card
@@ -183,10 +217,23 @@ export const TrendingKeywordsReview = ({ topicId, enabled }: TrendingKeywordsRev
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Keywords</CardTitle>
-        <CardDescription>
-          Review and manage detected sentiment keywords
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle>Keywords</CardTitle>
+            <CardDescription>
+              Review and manage detected sentiment keywords
+            </CardDescription>
+          </div>
+          <Button 
+            onClick={handleRegenerateCards} 
+            disabled={loading || published.length === 0}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Regenerate Cards
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="pending" className="w-full" onValueChange={loadKeywords}>
