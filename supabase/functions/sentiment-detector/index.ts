@@ -450,7 +450,7 @@ async function analyzeSplitSentiment(
   }
   
   console.log(`📊 Keyword analysis: ${keywordMap.size} unique phrases found`);
-  console.log(`✅ Keywords meeting threshold (3+ articles, 2+ sources): ${results.length}`);
+  console.log(`✅ Keywords meeting threshold: ${results.length}`);
   return results.sort((a, b) => b.mention_count - a.mention_count);
 }
 
