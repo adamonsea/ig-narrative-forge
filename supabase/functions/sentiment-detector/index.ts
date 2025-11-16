@@ -63,17 +63,51 @@ serve(async (req) => {
 
     const excludedKeywords = topicSettings?.excluded_keywords || [];
 
-    // Fetch stories
-    const { data: multiTenantStories } = await supabase.from('stories').select('*, slides (content), topic_articles!inner (shared_content:shared_article_content!inner (title, body, author, published_at, url))').eq('topic_articles.topic_id', topicId).or('is_published.eq.true,status.eq.published').gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(100);
-    const { data: legacyStories } = await supabase.from('stories').select('*, slides (content), articles!inner (title, body, author, published_at, source_url)').eq('articles.topic_id', topicId).or('is_published.eq.true,status.eq.published').gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(100);
+    // Fetch topic articles with shared content
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    console.log(`📊 Fetching articles for topic ${topicId} since ${thirtyDaysAgo}`);
 
-    const allStories = [...(multiTenantStories || []), ...(legacyStories || [])];
-    const uniqueStories = Array.from(new Map(allStories.map(s => [s.id, s])).values());
+    const { data: topicArticles, error: fetchError } = await supabase
+      .from('topic_articles')
+      .select(`
+        id,
+        shared_article_content (
+          title,
+          body,
+          author,
+          published_at,
+          url
+        )
+      `)
+      .eq('topic_id', topicId)
+      .eq('status', 'processed')
+      .gte('created_at', thirtyDaysAgo)
+      .limit(100);
 
-    const articles: ArticleData[] = uniqueStories.map(story => {
-      const content = story.topic_articles?.[0]?.shared_content?.[0] || story.articles?.[0];
-      return { title: content?.title || '', body: content?.body || '', author: content?.author, published_at: content?.published_at, source_url: content?.url || content?.source_url || '', slides: story.slides || [] };
-    }).filter(a => a.title && a.body);
+    if (fetchError) {
+      console.error('❌ Error fetching articles:', fetchError);
+      throw fetchError;
+    }
+
+    console.log(`📊 Found ${topicArticles?.length || 0} processed articles`);
+
+    const articles: ArticleData[] = (topicArticles || [])
+      .map(ta => {
+        const content = ta.shared_article_content;
+        if (!content) return null;
+        
+        return {
+          title: content.title || '',
+          body: content.body || '',
+          author: content.author,
+          published_at: content.published_at,
+          source_url: content.url || ''
+        };
+      })
+      .filter((a): a is ArticleData => a !== null && Boolean(a.title && a.body));
+
+    console.log(`✅ Mapped ${articles.length} valid articles for analysis`);
 
     const splitKeywords = await analyzeSplitSentiment(articles, topic.name, excludedKeywords);
 
