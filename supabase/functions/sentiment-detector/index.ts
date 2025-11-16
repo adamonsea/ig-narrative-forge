@@ -118,11 +118,18 @@ serve(async (req) => {
       topic_id: topicId, keyword_phrase: kw.phrase, sentiment_direction: kw.sentiment_direction, total_mentions: kw.mention_count,
       positive_mentions: kw.sentiment_direction === 'positive' ? kw.mention_count : 0, negative_mentions: kw.sentiment_direction === 'negative' ? kw.mention_count : 0,
       neutral_mentions: 0, sentiment_ratio: kw.sentiment_direction === 'positive' ? 1.0 : -1.0, source_count: kw.sources.length, tracked_for_cards: false,
-      sources: kw.sources, prominent_phrases: kw.prominent_phrases
+      source_urls: kw.sources.map(s => s.url)
     }));
 
     if (insertData.length > 0) {
-      await supabase.from('sentiment_keyword_tracking').insert(insertData);
+      console.log(`💾 Attempting to insert ${insertData.length} keywords...`);
+      const { data, error } = await supabase.from('sentiment_keyword_tracking').insert(insertData);
+      
+      if (error) {
+        console.error('❌ Insert failed:', error);
+        throw error;
+      }
+      console.log(`✅ Successfully inserted ${insertData.length} keywords`);
     }
 
     await supabase.from('topic_sentiment_settings').update({ last_run_at: new Date().toISOString() }).eq('topic_id', topicId);
