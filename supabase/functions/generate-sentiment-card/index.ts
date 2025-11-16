@@ -50,7 +50,14 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Generate detail card
+    // Generate detail card with proper sources from source_urls
+    const sourceUrls = Array.isArray(keyword.source_urls) ? keyword.source_urls : [];
+    const sources = sourceUrls.slice(0, 10).map((url: string) => ({
+      url,
+      title: keyword.keyword_phrase,
+      date: new Date().toISOString().split('T')[0]
+    }));
+
     const card = {
       topic_id: keyword.topic_id,
       keyword_phrase: keyword.keyword_phrase,
@@ -60,7 +67,7 @@ Deno.serve(async (req) => {
         summary: `This phrase appeared ${keyword.total_mentions} times across ${keyword.source_count} sources in the last week`,
         statistics: `${keyword.total_mentions} mentions • ${keyword.source_count} sources`
       },
-      sources: keyword.sources || [],
+      sources,
       sentiment_score: Math.round((keyword.sentiment_ratio || 0) * 100),
       confidence_score: 85,
       analysis_date: new Date().toISOString(),
