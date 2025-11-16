@@ -85,10 +85,20 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
       });
 
     } catch (error) {
-      console.error('Universal scraping error:', error);
+      console.error('❌ Universal scraping error:', error);
+      console.error('Scraping error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        topicId,
+        topicName,
+        maxAgeDays,
+        forceRescrape,
+        timestamp: new Date().toISOString()
+      });
+      
       toast({
         title: "Scraping Failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: "destructive",
       });
     } finally {

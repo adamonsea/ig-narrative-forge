@@ -98,6 +98,8 @@ serve(async (req) => {
 
     // Phase 2: Process User's Automation (or target user if specified)
     const targetUserId = userId || null;
+    let topics: any[] = []; // Declare in outer scope for Phase 6 access
+    
     try {
       console.log(`👤 Processing automation...`);
       
@@ -136,13 +138,15 @@ serve(async (req) => {
         topicsQuery = topicsQuery.in('id', targetTopics);
       }
 
-      const { data: topics, error: topicsError } = await topicsQuery;
+      const { data: topicsData, error: topicsError } = await topicsQuery;
       
       if (topicsError) {
         throw new Error(`Failed to get topics: ${topicsError.message}`);
       }
 
-      if (!topics || topics.length === 0) {
+      topics = topicsData || []; // Assign to outer scope variable
+
+      if (topics.length === 0) {
         console.log(`⏭️ No active topics found`);
         return new Response(JSON.stringify({
           success: true,
