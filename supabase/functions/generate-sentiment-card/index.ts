@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
           topic_id: keyword.topic_id,
           keyword_phrase: 'sentiment_comparison',
           card_category: 'comparison',
+          comparison_keyword_ids: allKeywords.map(k => k.id),
           content: {
             headline: 'Positive vs Negative Coverage',
             summary: `Analysis of sentiment trends across ${allKeywords.length} keywords`,
