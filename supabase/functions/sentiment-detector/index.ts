@@ -154,7 +154,30 @@ const COMMON_STOP_WORDS = new Set([
   'more', 'most', 'also', 'very', 'just', 'only', 'over', 'such',
   'some', 'into', 'them', 'then', 'these', 'those', 'people', 'make',
   'made', 'year', 'years', 'time', 'work', 'first', 'last', 'long',
-  'good', 'well', 'back', 'through', 'much', 'before', 'must', 'under'
+  'good', 'well', 'back', 'through', 'much', 'before', 'must', 'under',
+  // Expanded generic terms that commonly slip through as "keywords"
+  'today','tonight','yesterday','tomorrow','morning','afternoon','evening',
+  'breaking','update','live','news','report','story','article','video','photo',
+  'uk','england','britain','british','local','area','city','town','county','borough',
+  'council','councils','school','schools','college','university','hospital','hospitals',
+  'police','officers','road','roads','street','streets','traffic','service','services',
+  'public','residents','resident','community','people','families','children','parents'
+]);
+
+// Months, days, seasons and other date-like words to drop
+const DATE_TIME_STOP = new Set([
+  'january','february','march','april','may','june','july','august','september','october','november','december',
+  'jan','feb','mar','apr','jun','jul','aug','sep','sept','oct','nov','dec',
+  'monday','tuesday','wednesday','thursday','friday','saturday','sunday',
+  'mon','tue','wed','thu','thur','fri','sat','sun',
+  'spring','summer','autumn','fall','winter'
+]);
+
+// Other generic news/editorial vocabulary to exclude
+const GENERIC_NEWS_STOP = new Set([
+  'editor','editorial','comment','opinion','letters','subscribe','newsletter','advertisement','sponsored',
+  'copyright','privacy','terms','cookie','cookies','homepage','homepage',
+  'datasets','dataset','analysis','analyst','survey','reporting','media'
 ]);
 
 async function analyzeSplitSentiment(
@@ -181,23 +204,21 @@ async function analyzeSplitSentiment(
         .replace(/[^\w\s]/g, ' ')
         .split(/\s+/)
         .filter(word => {
-          // Must be 4+ characters (filters out "the", "and", "but")
-          if (word.length < 4) return false;
-          
-          // Not a common stop word
-          if (COMMON_STOP_WORDS.has(word)) return false;
-          
-          // Not a number
-          if (/^\d+$/.test(word)) return false;
-          
+          // Must be 5+ characters (stricter to avoid generic short words)
+          if (word.length < 5) return false;
+
+          // Letters only (no digits or mixed tokens)
+          if (!/^[a-z]+$/.test(word)) return false;
+
+          // Exclude common, date/time, and generic news words
+          if (COMMON_STOP_WORDS.has(word) || DATE_TIME_STOP.has(word) || GENERIC_NEWS_STOP.has(word)) return false;
+
           // Not already in topic keywords or excluded terms
           if (allExcludedTerms.has(word)) return false;
-          
+
           // Check if word is part of any multi-word excluded term
-          if (Array.from(allExcludedTerms).some(term => 
-            term.includes(word) || word.includes(term)
-          )) return false;
-          
+          if (Array.from(allExcludedTerms).some(term => term.includes(word) || word.includes(term))) return false;
+
           return true;
         });
 
@@ -257,6 +278,13 @@ async function analyzeSplitSentiment(
       .filter(a => a.sentiment === 'negative');
     const positiveArticles = Array.from(data.articles.values())
       .filter(a => a.sentiment === 'positive');
+
+    // If a word appears across too many articles, it's likely generic – drop it
+    const uniqueDocCount = new Set(Array.from(data.articles.values()).map((a: any) => a.id)).size;
+    const docShare = uniqueDocCount / Math.max(1, articles.length);
+    if (docShare >= 0.5) {
+      continue;
+    }
     
     // Require: 3+ different articles AND 2+ different source domains
     if (negativeArticles.length >= 3 && data.sources.size >= 2) {

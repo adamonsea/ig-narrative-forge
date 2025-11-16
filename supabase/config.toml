@@ -417,5 +417,5 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.clear-sentiment-keywords]
-verify_jwt = true
+verify_jwt = false
 
