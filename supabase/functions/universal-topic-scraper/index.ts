@@ -123,6 +123,102 @@ function recordFailure(url: string): void {
   recentFailures.set(url, failure);
 }
 
+// ============= Auto-Learning Functions =============
+
+// Detect domain family pattern for auto-profiling
+function detectDomainFamily(hostname: string): string {
+  // Remove www. prefix for pattern matching
+  const cleanHostname = hostname.replace(/^www\./, '');
+  
+  // Detect common domain patterns
+  if (/\.nub\.news$/.test(cleanHostname)) return 'nub_news';
+  if (/\.gov\.uk$/.test(cleanHostname)) return 'gov_uk';
+  if (/watch\.org\.uk$|watch\.com$/.test(cleanHostname)) return 'watch_network';
+  if (/theargus|sussexexpress|gazette|observer|herald|independent/.test(cleanHostname)) return 'newsquest';
+  if (/\.news$/.test(cleanHostname)) return 'regional_news';
+  if (/\.co\.uk$/.test(cleanHostname)) return 'uk_local';
+  
+  return 'custom';
+}
+
+// Auto-create domain profile after successful Beautiful Soup scrape
+async function autoLearnDomainProfile(
+  supabase: any,
+  options: {
+    hostname: string;
+    topicId: string;
+    sourceId: string;
+    successfulMethod: 'beautiful-soup-scraper' | 'fast-track';
+    articlesFound: number;
+  }
+): Promise<void> {
+  try {
+    const hostname = options.hostname.replace(/^www\./, '');
+    
+    // Check if profile already exists for this topic+domain
+    const { data: existing } = await supabase
+      .from('scraper_domain_profiles')
+      .select('id')
+      .eq('domain_key', hostname)
+      .eq('topic_id', options.topicId)
+      .maybeSingle();
+    
+    if (existing) {
+      console.log(`ℹ️  Domain profile already exists for ${hostname} (topic: ${options.topicId})`);
+      return;
+    }
+    
+    // Detect domain family pattern
+    const family = detectDomainFamily(hostname);
+    
+    // Create optimized profile based on what worked
+    const profile = {
+      family: family,
+      scrapingStrategy: {
+        preferred: 'html',  // Beautiful Soup succeeded
+        skip: ['rss'],      // RSS failed/empty, skip next time
+        timeout: 30000
+      }
+    };
+    
+    // Insert new profile
+    const { error } = await supabase
+      .from('scraper_domain_profiles')
+      .insert({
+        topic_id: options.topicId,
+        domain_key: hostname,
+        profile: profile,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error(`❌ Failed to create domain profile for ${hostname}:`, error);
+      return;
+    }
+    
+    console.log(`🧠 Auto-created domain profile for ${hostname} (family: ${family}, preferred: html)`);
+    
+    // Update source record with successful method
+    await supabase
+      .from('content_sources')
+      .update({
+        scraping_method: 'beautiful-soup-scraper',
+        success_rate: 100  // Fresh start with new method
+      })
+      .eq('id', options.sourceId);
+    
+    console.log(`✅ Updated source ${options.sourceId} to use Beautiful Soup directly`);
+    
+  } catch (error) {
+    console.error('❌ Auto-learning error (non-fatal):', error);
+    // Don't throw - auto-learning failure shouldn't break the scrape
+  }
+}
+
+// ============= End Auto-Learning Functions =============
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -600,22 +696,31 @@ serve(async (req) => {
                 } as ScraperSourceResult;
               }
 
-              // Smarter Beautiful Soup fallback for whitelisted domains
-              const WHITELISTED_DOMAINS = ['theargus.co.uk', 'sussexexpress.co.uk'];
-              const isWhitelisted = WHITELISTED_DOMAINS.some(domain => 
-                source.normalizedUrl.includes(domain)
+              // Smart Beautiful Soup fallback - automatically triggers for empty RSS feeds
+              const hasNetworkErrors = scrapeResult.errors.some(e => 
+                e.includes('timeout') || 
+                e.includes('ECONNREFUSED') || 
+                e.includes('ENOTFOUND') ||
+                e.includes('Failed to fetch') ||
+                e.includes('Network error')
               );
               
               // Trigger fallback if:
-              // 1. Zero articles scraped AND has accessibility/content errors, OR
-              // 2. Found many articles (≥10) but scraped very few (<3), OR
+              // 1. RSS returns 0 articles (genuinely empty, not network issues)
+              // 2. Found many articles (≥10) but scraped very few (<3)
               // 3. High rate of INVALID_CONTENT errors
               const invalidContentErrors = scrapeResult.errors.filter(e => 
                 e.includes('INVALID_CONTENT') || e.includes('insufficient content')
               ).length;
-              const shouldUseFallback = isWhitelisted && (
-                (scrapeResult.articlesScraped === 0 && hasAccessibilityErrors) ||
+              
+              const shouldUseFallback = (
+                // Auto-trigger for empty RSS (not network issues)
+                (scrapeResult.articlesScraped === 0 && 
+                 scrapeResult.articlesFound === 0 && 
+                 !hasNetworkErrors) ||
+                // Poor extraction efficiency
                 (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
+                // High content errors
                 (invalidContentErrors >= 5)
               );
               
@@ -627,7 +732,13 @@ serve(async (req) => {
                   return result; // Return early, outer handler will add to standardResponse
                 }
                 
-                console.log(`🔄 FastTrack insufficient for ${source.source_name} (found: ${scrapeResult.articlesFound}, scraped: ${scrapeResult.articlesScraped}, invalid: ${invalidContentErrors}), trying Beautiful Soup fallback...`);
+                // Enhanced logging for observability
+                console.log(`🔄 Triggering Beautiful Soup fallback for ${source.source_name}:`);
+                console.log(`   - Articles found (RSS): ${scrapeResult.articlesFound}`);
+                console.log(`   - Articles scraped: ${scrapeResult.articlesScraped}`);
+                console.log(`   - Has network errors: ${hasNetworkErrors}`);
+                console.log(`   - Invalid content errors: ${invalidContentErrors}`);
+                console.log(`   - Strict scope: ${source.strictScope}`);
                 
                 try {
                   const fallbackResult = await supabase.functions.invoke('beautiful-soup-scraper', {
@@ -642,6 +753,15 @@ serve(async (req) => {
 
                   if (fallbackResult.data?.success && fallbackResult.data?.articles?.length > 0) {
                     console.log(`✅ Beautiful Soup fallback successful: ${fallbackResult.data.articles.length} articles found`);
+                    
+                    // 🧠 Auto-learn from this success
+                    await autoLearnDomainProfile(supabase, {
+                      hostname: new URL(source.normalizedUrl).hostname,
+                      topicId: topicId,
+                      sourceId: source.source_id,
+                      successfulMethod: 'beautiful-soup-scraper',
+                      articlesFound: fallbackResult.data.articles.length
+                    });
                     
                     // Store fallback articles with topic-specific age filter and source config
                     const fallbackStoreResult = await dbOps.storeArticles(
