@@ -21,15 +21,30 @@ serve(async (req) => {
       return new Response('Missing required parameters', { status: 400 });
     }
 
+    // Detect if request is from a bot/crawler or a real user
+    const userAgent = req.headers.get('user-agent')?.toLowerCase() || '';
+    const isCrawler = /bot|crawler|spider|crawling|facebookexternalhit|whatsapp|twitterbot|linkedinbot|slackbot|pinterest|telegram/i.test(userAgent);
+    
+    // Build redirect URL first
+    let redirectUrl = `https://curatr.pro/feed/${topic}`;
+    if (type === 'story' && id) {
+      redirectUrl = `https://curatr.pro/feed/${topic}/story/${id}`;
+    }
+
+    // If it's a real user (not a crawler), redirect immediately
+    if (!isCrawler) {
+      return Response.redirect(redirectUrl, 302);
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
+    // Fetch topic and story data for OG tags (crawlers only reach here)
     let ogTitle = 'Curated News';
     let ogDescription = 'Stay informed with curated stories';
     let ogImage = '';
-    let redirectUrl = `https://curatr.pro/feed/${topic}`;
     let topicName = '';
     let topicLogo = '';
     let primaryColor = 'rgb(59,130,246)';
