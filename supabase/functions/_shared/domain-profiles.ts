@@ -137,6 +137,27 @@ function inferDomainProfile(hostname: string): DomainProfile {
     profile.accessibility = { bypassHead: true };
   }
   
+  // Nub News domains - prefer HTML parsing with listing path
+  if (hostname.includes('.nub.news')) {
+    profile.family = 'custom';
+    profile.scrapingStrategy = {
+      preferred: 'html',
+      skip: ['rss'], // RSS often empty/broken on nub.news
+      timeout: 15000
+    };
+    profile.accessibility = {
+      bypassHead: false,
+      timeout: 5000
+    };
+    // Use news/local-news listing page for better HTML parsing
+    profile.alternateRoutes = [{
+      route: '/news/local-news',
+      conditions: {
+        urlPattern: /\.nub\.news\/?$/
+      }
+    }];
+  }
+  
   return profile;
 }
 
