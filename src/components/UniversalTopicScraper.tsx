@@ -46,25 +46,58 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
   const [results, setResults] = useState<UniversalScrapeResponse | null>(null);
   const [progress, setProgress] = useState(0);
   const [maxAgeDays, setMaxAgeDays] = useState(7);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>('');
+  const [availableSources, setAvailableSources] = useState<Array<{ id: string; name: string }>>([]);
   const { toast } = useToast();
 
-  const startUniversalScraping = async (forceRescrape = false) => {
+  // Load available sources on mount
+  React.useEffect(() => {
+    const loadSources = async () => {
+      const { data } = await supabase
+        .from('topic_sources')
+        .select('source_id, content_sources(id, source_name)')
+        .eq('topic_id', topicId)
+        .eq('is_active', true);
+      
+      if (data) {
+        const sources = data
+          .filter(ts => ts.content_sources)
+          .map(ts => ({
+            id: ts.content_sources!.id,
+            name: ts.content_sources!.source_name
+          }));
+        setAvailableSources(sources);
+      }
+    };
+    loadSources();
+  }, [topicId]);
+
+  const startUniversalScraping = async (forceRescrape = false, singleSourceMode = false) => {
     setIsLoading(true);
     setResults(null);
     setProgress(0);
 
     try {
+      const isSingleSource = singleSourceMode && selectedSourceId;
       const ageWindowLabel = maxAgeDays === 7 ? 'default' : maxAgeDays === 30 ? 'seed mode' : 'full archive';
+      const sourceName = isSingleSource ? availableSources.find(s => s.id === selectedSourceId)?.name : 'all sources';
+      
       toast({
-        title: "Universal Scraping Started",
-        description: `Scraping all sources for ${topicName} (${ageWindowLabel})...`,
+        title: isSingleSource ? "Single Source Debug Scrape" : "Universal Scraping Started",
+        description: `Scraping ${sourceName} for ${topicName} (${ageWindowLabel})...`,
       });
 
       const { data, error } = await supabase.functions.invoke('universal-topic-scraper', {
         body: {
           topicId,
-          forceRescrape,
-          maxAgeDays
+          forceRescrape: true, // Always force in debug mode
+          maxAgeDays,
+          ...(isSingleSource && {
+            sourceIds: [selectedSourceId],
+            batchSize: 1,
+            enforceStrictScope: false,
+            singleSourceMode: true
+          })
         }
       });
 
@@ -175,11 +208,38 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
             </Select>
             <Info className="h-4 w-4 text-muted-foreground" />
           </div>
+
+          <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+            <Label htmlFor="singleSource" className="text-sm font-medium whitespace-nowrap">
+              Single Source Debug:
+            </Label>
+            <Select
+              value={selectedSourceId}
+              onValueChange={setSelectedSourceId}
+            >
+              <SelectTrigger id="singleSource" className="w-[220px]">
+                <SelectValue placeholder="All sources (normal)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All sources (normal mode)</SelectItem>
+                {availableSources.map(source => (
+                  <SelectItem key={source.id} value={source.id}>
+                    {source.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedSourceId && (
+              <Badge variant="outline" className="text-xs">
+                Debug: Enhanced logs
+              </Badge>
+            )}
+          </div>
           
           <div className="flex gap-3">
             <Button
-              onClick={() => startUniversalScraping(false)}
-              disabled={isLoading || isAutomating}
+              onClick={() => startUniversalScraping(false, false)}
+              disabled={isLoading || isAutomating || !!selectedSourceId}
               className="flex-1"
             >
               {isLoading ? (
@@ -194,41 +254,41 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
                 </>
               )}
             </Button>
-            
             <Button
-              variant="outline"
-              onClick={() => startUniversalScraping(true)}
+              onClick={() => startUniversalScraping(true, !!selectedSourceId)}
               disabled={isLoading || isAutomating}
+              variant={selectedSourceId ? "default" : "outline"}
             >
-              Force Rescrape
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={testAutomation}
-              disabled={isLoading || isAutomating}
-            >
-              {isAutomating ? (
-                <>
-                  <Clock className="mr-2 h-4 w-4 animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                "Test Automation"
-              )}
+              <Zap className="mr-2 h-4 w-4" />
+              {selectedSourceId ? 'Debug Single Source' : 'Force Rescrape'}
             </Button>
           </div>
 
-          {isLoading && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Universal scraping in progress...</span>
-                <span>{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
+          <Button
+            variant="secondary"
+            onClick={testAutomation}
+            disabled={isLoading || isAutomating}
+          >
+            {isAutomating ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Testing...
+              </>
+            ) : (
+              "Test Automation"
+            )}
+          </Button>
         </CardContent>
+
+        {isLoading && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Universal scraping in progress...</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
       </Card>
 
       {results && (

@@ -696,7 +696,7 @@ serve(async (req) => {
                 } as ScraperSourceResult;
               }
 
-              // Smart Beautiful Soup fallback - automatically triggers for empty RSS feeds
+              // Smart Beautiful Soup fallback - ALWAYS attempt unless anti-bot detected
               const hasNetworkErrors = scrapeResult.errors.some(e => 
                 e.includes('timeout') || 
                 e.includes('ECONNREFUSED') || 
@@ -705,19 +705,23 @@ serve(async (req) => {
                 e.includes('Network error')
               );
               
+              // Check for anti-bot responses (403, 429) to avoid loops
+              const hasAntiBotBlock = scrapeResult.errors.some(e =>
+                e.includes('403') || e.includes('429') || e.includes('Forbidden') || e.includes('Too Many Requests')
+              );
+              
               // Trigger fallback if:
-              // 1. RSS returns 0 articles (genuinely empty, not network issues)
+              // 1. RSS returns 0 articles (empty or network issues - we'll try HTML)
               // 2. Found many articles (≥10) but scraped very few (<3)
               // 3. High rate of INVALID_CONTENT errors
+              // BUT: Skip if anti-bot detected (to prevent loops)
               const invalidContentErrors = scrapeResult.errors.filter(e => 
                 e.includes('INVALID_CONTENT') || e.includes('insufficient content')
               ).length;
               
-              const shouldUseFallback = (
-                // Auto-trigger for empty RSS (not network issues)
-                (scrapeResult.articlesScraped === 0 && 
-                 scrapeResult.articlesFound === 0 && 
-                 !hasNetworkErrors) ||
+              const shouldUseFallback = !hasAntiBotBlock && (
+                // Auto-trigger for empty RSS (including network issues)
+                (scrapeResult.articlesScraped === 0 && scrapeResult.articlesFound === 0) ||
                 // Poor extraction efficiency
                 (scrapeResult.articlesFound >= 10 && scrapeResult.articlesScraped < 3) ||
                 // High content errors
