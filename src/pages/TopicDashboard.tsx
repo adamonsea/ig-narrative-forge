@@ -25,6 +25,7 @@ import { SentimentHub } from "@/components/SentimentHub";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
+import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
@@ -953,6 +954,7 @@ const TopicDashboard = () => {
                     </p>
                   </div>
                   <AutomationStatusCard topicId={topic.id} />
+                  <SourceAvailabilitySummary topicId={topic.id} />
                   <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       Keyword Coverage

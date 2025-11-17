@@ -37,6 +37,7 @@ import { GatheringProgressIndicator } from '@/components/GatheringProgressIndica
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
 import { SourceStorySparkline } from '@/components/SourceStorySparkline';
+import { SourceCooldownIndicator } from '@/components/SourceCooldownIndicator';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -50,6 +51,7 @@ interface ContentSource {
   is_whitelisted: boolean | null;
   is_blacklisted: boolean | null;
   scrape_frequency_hours: number | null;
+  last_scraped_at: string | null;
   topic_id: string | null;
   scraping_config?: any | null;
   is_gathering?: boolean;
@@ -268,6 +270,7 @@ export const UnifiedSourceManager = ({
               is_whitelisted: null,
               is_blacklisted: null,
               scrape_frequency_hours: null,
+              last_scraped_at: null,
               scraping_config: fullSource?.scraping_config || {},  // ✅ Include scraping_config
             };
           });
@@ -300,6 +303,7 @@ export const UnifiedSourceManager = ({
           is_whitelisted: null,
           is_blacklisted: null,
           scrape_frequency_hours: null,
+          last_scraped_at: null,
         }));
         
         // Merge with basic topic sources to ensure we include newly linked sources
@@ -310,7 +314,7 @@ export const UnifiedSourceManager = ({
         const sourceIds = (basicData || []).map((ts: any) => ts.source_id);
         const { data: fullSources } = await supabase
           .from('content_sources')
-          .select('id, scraping_config, consecutive_failures, total_failures, last_failure_at, last_failure_reason')
+          .select('id, scraping_config, consecutive_failures, total_failures, last_failure_at, last_failure_reason, last_scraped_at, scrape_frequency_hours')
           .in('id', sourceIds);
         
         const sourcesMap = new Map(fullSources?.map(s => [s.id, s]) || []);
@@ -328,7 +332,8 @@ export const UnifiedSourceManager = ({
             content_type: null,
             is_whitelisted: null,
             is_blacklisted: null,
-            scrape_frequency_hours: null,
+            scrape_frequency_hours: fullSource?.scrape_frequency_hours || null,
+            last_scraped_at: fullSource?.last_scraped_at || null,
             scraping_config: fullSource?.scraping_config || {},  // ✅ Use scraping_config from content_sources
             consecutive_failures: fullSource?.consecutive_failures,
             total_failures: fullSource?.total_failures,
@@ -1123,6 +1128,16 @@ export const UnifiedSourceManager = ({
     return (source.consecutive_failures || 0) >= 3 || source.is_blacklisted || !source.is_active;
   };
 
+  const isSourceOnCooldown = (source: ContentSource): boolean => {
+    if (!source.last_scraped_at || !source.scrape_frequency_hours) {
+      return false;
+    }
+    const lastScraped = new Date(source.last_scraped_at).getTime();
+    const cooldownMs = source.scrape_frequency_hours * 60 * 60 * 1000;
+    const nextAvailable = lastScraped + cooldownMs;
+    return Date.now() < nextAvailable;
+  };
+
   const handleTestSource = async (source: ContentSource) => {
     if (!source.feed_url) return;
     
@@ -1474,6 +1489,14 @@ export const UnifiedSourceManager = ({
                     {/* Health Badge with emoji indicators */}
                     {getSourceHealthBadge(source)}
                     
+                    {/* Cooldown Status */}
+                    <SourceCooldownIndicator 
+                      lastScrapedAt={source.last_scraped_at}
+                      scrapeFrequencyHours={source.scrape_frequency_hours}
+                      compact={false}
+                      showProgress={false}
+                    />
+                    
                     {/* Trusted source badge */}
                     {source.scraping_config?.trust_content_relevance && (
                       <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">
@@ -1511,8 +1534,8 @@ export const UnifiedSourceManager = ({
                         variant="outline"
                         size="sm"
                         onClick={() => handleScrapeSource(source)}
-                        disabled={gatheringSource === source.id || !source.feed_url}
-                        title="Gather content (respects cooldown)"
+                        disabled={gatheringSource === source.id || !source.feed_url || isSourceOnCooldown(source)}
+                        title={isSourceOnCooldown(source) ? "Source on cooldown - use Force Rescrape to override" : "Gather content (respects cooldown)"}
                       >
                         {gatheringSource === source.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
