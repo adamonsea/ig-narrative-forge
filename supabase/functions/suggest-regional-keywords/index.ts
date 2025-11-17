@@ -12,6 +12,14 @@ interface KeywordSuggestion {
   rationale: string;
 }
 
+// Generic keywords that are auto-populated (filter these out from suggestions)
+const GENERIC_KEYWORDS = [
+  'crime', 'police', 'community', 'council', 'planning',
+  'events', 'fire', 'ambulance', 'court', 'development',
+  'housing', 'transport', 'business', 'health', 'education',
+  'schools', 'hospital', 'traffic', 'parking', 'shops'
+];
+
 // Location-specific terms to filter out (should be generic)
 const LOCATION_SPECIFIC_TERMS = [
   'brighton', 'eastbourne', 'worthing', 'lewes', 'seaford', 'newhaven',
@@ -50,6 +58,11 @@ serve(async (req) => {
     const suggestions: KeywordSuggestion[] = (analytics || [])
       .filter(item => {
         const keyword = item.keyword.toLowerCase();
+        
+        // Filter out generic keywords (already auto-populated for regional topics)
+        if (GENERIC_KEYWORDS.includes(keyword)) {
+          return false;
+        }
         
         // Filter out location-specific terms
         if (LOCATION_SPECIFIC_TERMS.some(term => keyword.includes(term))) {

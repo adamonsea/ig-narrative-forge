@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,9 +51,61 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestionPreview, setShowSuggestionPreview] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Auto-populate generic regional keywords when region is set
+  useEffect(() => {
+    if (
+      formData.topic_type === 'regional' && 
+      formData.region && 
+      formData.keywords.length === 0 &&
+      !hasAutoPopulated
+    ) {
+      const regionLower = formData.region.toLowerCase().trim();
+      
+      // Tier 1: Universal keywords
+      const universalKeywords = [
+        'crime', 'police', 'community', 'council', 'planning',
+        'events', 'fire', 'ambulance', 'court', 'development',
+        'housing', 'transport', 'business', 'health', 'education',
+        'schools', 'hospital', 'traffic', 'parking', 'shops'
+      ];
+      
+      // Tier 2: Regional templates with region name
+      const regionalTemplates = [
+        `${regionLower} news`,
+        `${regionLower} community`,
+        `${regionLower} crime`,
+        `${regionLower} council`,
+        `${regionLower} events`,
+        `${regionLower} planning`,
+        `${regionLower} development`,
+        `${regionLower} business`,
+        `${regionLower} town centre`,
+        `${regionLower} high street`,
+        `${regionLower} tourism`,
+        `${regionLower} transport`
+      ];
+      
+      const genericKeywords = [...universalKeywords, ...regionalTemplates];
+      
+      setFormData({
+        ...formData,
+        keywords: genericKeywords
+      });
+      
+      setHasAutoPopulated(true);
+      
+      toast({
+        title: "✨ Keywords auto-populated!",
+        description: `Added ${genericKeywords.length} proven regional keywords. Remove any you don't need or add your own.`,
+        duration: 5000
+      });
+    }
+  }, [formData.topic_type, formData.region, hasAutoPopulated]);
 
   // Generate preview colors when dialog opens
   useEffect(() => {
@@ -166,6 +218,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     if (user) {
       localStorage.removeItem(`topic-draft-${user.id}`);
     }
+  };
+
+  const clearAllKeywords = () => {
+    setFormData({
+      ...formData,
+      keywords: []
+    });
+    setHasAutoPopulated(false);
+    toast({
+      title: "Keywords cleared",
+      description: "All keywords have been removed. You can add your own or let them auto-populate again.",
+    });
   };
 
   const nextStep = () => {
@@ -281,6 +345,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   const handleClose = () => {
     resetForm();
+    setHasAutoPopulated(false);
     onOpenChange(false);
   };
 
@@ -426,6 +491,32 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   Add words that help find relevant content
                 </p>
               </div>
+
+              {/* Auto-populated Keywords Banner */}
+              {formData.topic_type === 'regional' && formData.keywords.length > 0 && hasAutoPopulated && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                  <div className="flex items-start gap-2">
+                    <Wand2 className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-blue-900 dark:text-blue-100 text-sm mb-1">
+                        Generic keywords auto-added
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                        These {formData.keywords.length} keywords work well across regional topics. Remove any that don't fit your focus, or add your own specific keywords.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAllKeywords}
+                        className="h-7 text-xs"
+                      >
+                        Clear all keywords
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Smart Setup for Regional Topics */}
               {formData.topic_type === 'regional' && smartSuggestions.length > 0 && (
