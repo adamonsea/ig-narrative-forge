@@ -37,7 +37,10 @@ import { GatheringProgressIndicator } from '@/components/GatheringProgressIndica
 import { ProcessingStatusIndicator } from '@/components/ProcessingStatusIndicator';
 import { SourceHealthIndicator } from '@/components/SourceHealthIndicator';
 import { SourceStorySparkline } from '@/components/SourceStorySparkline';
-import { SourceCooldownIndicator } from '@/components/SourceCooldownIndicator';
+import { SourceHealthDot } from '@/components/SourceHealthDot';
+import { LiveStoriesCount } from '@/components/LiveStoriesCount';
+import { CooldownMinimal } from '@/components/CooldownMinimal';
+import { SourceActionsMenu } from '@/components/SourceActionsMenu';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -56,6 +59,7 @@ interface ContentSource {
   scraping_config?: any | null;
   is_gathering?: boolean;
   stories_published_7d?: number;
+  stories_gathered_7d?: number;
   stories_published_total?: number;
   last_story_date?: string | null;
   consecutive_failures?: number;
@@ -360,6 +364,31 @@ export const UnifiedSourceManager = ({
           });
         }
         const merged = Array.from(mergedMap.values());
+        
+        // Query for gathered articles count in last 7 days
+        if (topicId) {
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          
+          const { data: gatheredData } = await supabase
+            .from('topic_articles')
+            .select('source_id')
+            .eq('topic_id', topicId)
+            .gte('created_at', sevenDaysAgo.toISOString());
+          
+          // Count articles per source
+          const gatheredCounts = new Map<string, number>();
+          (gatheredData || []).forEach((article) => {
+            const count = gatheredCounts.get(article.source_id) || 0;
+            gatheredCounts.set(article.source_id, count + 1);
+          });
+          
+          // Add gathered counts to merged sources
+          merged.forEach((source) => {
+            source.stories_gathered_7d = gatheredCounts.get(source.id) || 0;
+          });
+        }
+        
         // Sort: active sources first, then alphabetically
         merged.sort((a, b) => {
           if (a.is_active !== b.is_active) {
@@ -1480,129 +1509,107 @@ export const UnifiedSourceManager = ({
       <div className="grid gap-4">
         {sources.filter(s => showDisabled || s.is_active).map((source) => (
           <Card key={source.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold">{source.source_name}</h3>
-                    
-                    {/* Health Badge with emoji indicators */}
-                    {getSourceHealthBadge(source)}
-                    
-                    {/* Cooldown Status */}
-                    <SourceCooldownIndicator 
-                      lastScrapedAt={source.last_scraped_at}
-                      scrapeFrequencyHours={source.scrape_frequency_hours}
-                      compact={false}
-                      showProgress={false}
-                    />
-                    
-                    {/* Trusted source badge */}
-                    {source.scraping_config?.trust_content_relevance && (
-                      <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">
-                        🔓 Trusted ({source.scraping_config.trusted_max_age_days || 1}d)
-                      </Badge>
-                    )}
-                    
-                    {/* 7-day sparkline chart - only in topic mode */}
-                    {mode === 'topic' && topicId && source.is_active && (
-                      <SourceStorySparkline 
-                        sourceId={source.id} 
-                        topicId={topicId}
-                      />
-                    )}
-                    
-                    {/* Stories count badge */}
-                    {mode === 'topic' && (
-                      <Badge variant="outline" className="gap-1">
-                        <BarChart3 className="w-3 h-3" />
-                        {source.stories_published_7d || 0} {source.stories_published_7d === 1 ? 'story' : 'stories'}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Globe className="w-4 h-4" />
-                    <span>{source.canonical_domain}</span>
+            <CardContent className="p-4 sm:p-6">
+              {/* Desktop: Single-row layout */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {/* Left: Health Dot + Name + Domain */}
+                <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                  <SourceHealthDot
+                    isActive={source.is_active || false}
+                    consecutiveFailures={source.consecutive_failures || 0}
+                    totalFailures={source.total_failures || 0}
+                    lastStoryDate={source.last_story_date || null}
+                    storiesPublished7d={source.stories_published_7d || 0}
+                    storiesGathered7d={source.stories_gathered_7d || 0}
+                    lastFailureReason={source.last_failure_reason}
+                    isBlacklisted={source.is_blacklisted || false}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-sm sm:text-base truncate">{source.source_name}</h3>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Globe className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{source.canonical_domain}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {source.is_active && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleScrapeSource(source)}
-                        disabled={gatheringSource === source.id || !source.feed_url || isSourceOnCooldown(source)}
-                        title={isSourceOnCooldown(source) ? "Source on cooldown - use Force Rescrape to override" : "Gather content (respects cooldown)"}
-                      >
-                        {gatheringSource === source.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Play className="w-4 h-4" />
-                        )}
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleScrapeSource(source, { forceRescrape: true })}
-                        disabled={gatheringSource === source.id || !source.feed_url}
-                        title="Force rescrape (bypass cooldown)"
-                      >
-                        <RotateCw className="w-4 h-4" />
-                      </Button>
-                      
-                      <Switch
-                        checked={true}
-                        onCheckedChange={(checked) => handleUpdateSource(source.id, { is_active: checked })}
-                      />
-                    </>
+                {/* Center: Sparkline Chart (most important) */}
+                {mode === 'topic' && topicId && source.is_active && (
+                  <div className="flex-1 min-w-0">
+                    <SourceStorySparkline 
+                      sourceId={source.id} 
+                      topicId={topicId}
+                    />
+                  </div>
+                )}
+
+                {/* Right: Metrics + Actions */}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                  {/* Trusted badge - only show if set */}
+                  {source.scraping_config?.trust_content_relevance && (
+                    <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400 text-xs">
+                      🔓 {source.scraping_config.trusted_max_age_days || 1}d
+                    </Badge>
                   )}
-                  
-                  {!source.is_active && (
+
+                  {/* Live Stories Count */}
+                  {mode === 'topic' && (
+                    <LiveStoriesCount count={source.stories_published_7d || 0} />
+                  )}
+
+                  {/* Cooldown Status */}
+                  <CooldownMinimal
+                    lastScrapedAt={source.last_scraped_at}
+                    scrapeFrequencyHours={source.scrape_frequency_hours}
+                  />
+
+                  {/* Primary Action: Gather Button */}
+                  {source.is_active ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleScrapeSource(source)}
+                      disabled={gatheringSource === source.id || !source.feed_url || isSourceOnCooldown(source)}
+                      title={isSourceOnCooldown(source) ? "Source on cooldown - use Force Rescrape to override" : "Gather content (respects cooldown)"}
+                      className="flex-shrink-0"
+                    >
+                      {gatheringSource === source.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Gather</span>
+                        </>
+                      )}
+                    </Button>
+                  ) : (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => handleReactivateSource(source.id)}
+                      className="flex-shrink-0"
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Reactivate
+                      <Play className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Reactivate</span>
                     </Button>
                   )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
+
+                  {/* Secondary Actions Menu */}
+                  <SourceActionsMenu
+                    sourceId={source.id}
+                    feedUrl={source.feed_url}
+                    isActive={source.is_active || false}
+                    onForceRescrape={() => handleScrapeSource(source, { forceRescrape: true })}
+                    onToggle={(checked) => handleUpdateSource(source.id, { is_active: checked })}
+                    onEdit={() => {
                       setEditingSource(source);
                       setEditingFeedUrl(source.feed_url || '');
                       setEditTrustContentRelevance(source.scraping_config?.trust_content_relevance || false);
                       setEditTrustedMaxAgeDays(source.scraping_config?.trusted_max_age_days || 1);
                     }}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteSource(source.id, source.source_name)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {mode === 'topic' ? 'Remove' : 'Delete'}
-                  </Button>
-                  
-                  {source.feed_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(source.feed_url!, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  )}
+                    onDelete={() => handleDeleteSource(source.id, source.source_name)}
+                    disabled={gatheringSource === source.id}
+                  />
                 </div>
               </div>
 
