@@ -35,6 +35,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
   const [qualityThreshold, setQualityThreshold] = useState(60);
   const [illustrationThreshold, setIllustrationThreshold] = useState(70);
   const [autoIllustrateInHoliday, setAutoIllustrateInHoliday] = useState(true);
+  const [nextRunAt, setNextRunAt] = useState<string | null>(null);
   
   const [originalSettings, setOriginalSettings] = useState<AutomationSettings | null>(null);
 
@@ -59,6 +60,7 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
         setQualityThreshold(data.quality_threshold || 60);
         setIllustrationThreshold(data.illustration_quality_threshold || 70);
         setAutoIllustrateInHoliday(data.auto_illustrate_in_holiday ?? true);
+        setNextRunAt(data.next_run_at);
         setOriginalSettings({
           automation_mode: mode,
           scrape_frequency_hours: data.scrape_frequency_hours,
@@ -84,16 +86,19 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
     setSaving(true);
     try {
       const updates = {
-        automation_mode: automationMode,
-        scrape_frequency_hours: scrapeFrequency,
-        quality_threshold: qualityThreshold,
-        illustration_quality_threshold: illustrationThreshold,
-        auto_illustrate_in_holiday: autoIllustrateInHoliday,
-        is_active: automationMode !== 'manual',
-        auto_simplify_enabled: automationMode === 'auto_simplify' || automationMode === 'holiday',
-        auto_illustrate_enabled: automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday),
-        updated_at: new Date().toISOString(),
-      };
+          automation_mode: automationMode,
+          scrape_frequency_hours: scrapeFrequency,
+          quality_threshold: qualityThreshold,
+          illustration_quality_threshold: illustrationThreshold,
+          auto_illustrate_in_holiday: autoIllustrateInHoliday,
+          is_active: automationMode !== 'manual',
+          auto_simplify_enabled: automationMode === 'auto_simplify' || automationMode === 'holiday',
+          auto_illustrate_enabled: automationMode === 'auto_illustrate' || (automationMode === 'holiday' && autoIllustrateInHoliday),
+          next_run_at: automationMode !== 'manual' 
+            ? new Date(Date.now() + scrapeFrequency * 60 * 60 * 1000).toISOString()
+            : null,
+          updated_at: new Date().toISOString(),
+        };
 
       const { error } = await supabase
         .from('topic_automation_settings')
@@ -297,6 +302,25 @@ export function TopicAutomationSettings({ topicId }: TopicAutomationSettingsProp
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {automationMode !== 'manual' && nextRunAt && (
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Next Automation Run</span>
+              </div>
+              <Badge variant="outline" className="font-mono">
+                {new Date(nextRunAt) > new Date() 
+                  ? `In ${Math.round((new Date(nextRunAt).getTime() - Date.now()) / (1000 * 60 * 60))}h ${Math.round(((new Date(nextRunAt).getTime() - Date.now()) % (1000 * 60 * 60)) / (1000 * 60))}m`
+                  : 'Overdue'}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {new Date(nextRunAt).toLocaleString()}
+            </p>
           </div>
         )}
 
