@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { KeywordSuggestionTool } from "./KeywordSuggestionTool";
 import { RegionalElementsSuggestionTool } from "./RegionalElementsSuggestionTool";
+import { RegionalKeywordAutoPopulate } from "./RegionalKeywordAutoPopulate";
 
 interface Topic {
   id: string;
@@ -474,6 +475,34 @@ export const KeywordManager: React.FC<KeywordManagerProps> = ({ topic, onTopicUp
               existingKeywords={keywords}
             />
           </div>
+
+          {/* Auto-populate for Regional Topics */}
+          {topic.topic_type === 'regional' && (
+            <RegionalKeywordAutoPopulate
+              topicId={topic.id}
+              topicName={topic.name}
+              region={topic.region || topic.name}
+              currentKeywords={keywords}
+              onKeywordsUpdated={async () => {
+                // Refresh topic data
+                const { data: updatedTopic } = await supabase
+                  .from('topics')
+                  .select('*')
+                  .eq('id', topic.id)
+                  .single();
+                
+                if (updatedTopic) {
+                  onTopicUpdate({
+                    ...topic,
+                    keywords: updatedTopic.keywords || [],
+                    landmarks: updatedTopic.landmarks || [],
+                    postcodes: updatedTopic.postcodes || [],
+                    organizations: updatedTopic.organizations || []
+                  });
+                }
+              }}
+            />
+          )}
 
           {/* Regional-specific fields */}
           {topic.topic_type === 'regional' && (

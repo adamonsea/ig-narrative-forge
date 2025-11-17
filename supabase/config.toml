@@ -383,6 +383,9 @@ verify_jwt = true
 [functions.suggest-regional-keywords]
 verify_jwt = true
 
+[functions.auto-populate-regional-keywords]
+verify_jwt = true
+
 [functions.re-extract-articles]
 verify_jwt = true
 
