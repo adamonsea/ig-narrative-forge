@@ -797,6 +797,11 @@ Return in JSON format:
         updated_at: new Date().toISOString()
       };
       
+      // Preserve article image for social sharing if story doesn't have one
+      if (article.image_url && !existingStory.cover_illustration_url) {
+        updateData.cover_illustration_url = article.image_url;
+      }
+      
       // Set multi-tenant fields if this is a multi-tenant context
       if (isMultiTenant) {
         if (topicArticleId && !existingStory.topic_article_id) {
@@ -827,7 +832,8 @@ Return in JSON format:
         is_published: true, // Auto-publish new stories
         tone: effectiveTone,
         audience_expertise: topicExpertise,
-        quality_score: article.content_quality_score // Persist quality score for auto-illustration
+        quality_score: article.content_quality_score, // Persist quality score for auto-illustration
+        cover_illustration_url: article.image_url || null // Preserve original article image for social sharing
       };
       
       // Set appropriate IDs based on context - mutually exclusive
