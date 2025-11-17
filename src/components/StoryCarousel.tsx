@@ -425,18 +425,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       trackShareClick(story.id, topicId, navigator.share ? 'native' : 'clipboard');
     }
 
-    // Use the provided storyUrl or extract slug from current URL as fallback
-    let shareUrl = storyUrl;
-    if (!shareUrl) {
-      const pathParts = window.location.pathname.split('/');
-      const feedIndex = pathParts.indexOf('feed');
-      if (feedIndex !== -1 && pathParts[feedIndex + 1]) {
-        const currentSlug = pathParts[feedIndex + 1];
-        shareUrl = `${window.location.origin}/feed/${currentSlug}/story/${story.id}`;
-      } else {
-        shareUrl = window.location.href; // Fallback to current URL
-      }
-    }
+    // Build slug from current URL
+    const pathParts = window.location.pathname.split('/');
+    const feedIndex = pathParts.indexOf('feed');
+    const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
+    
+    // Use share preview URL for better OG tag support (WhatsApp/Facebook scraping)
+    const functionsBaseUrl = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
+    const shareUrl = `${functionsBaseUrl}/share-page?type=story&id=${story.id}&topic=${currentSlug}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
@@ -494,18 +490,14 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       trackShareClick(story.id, topicId, 'whatsapp');
     }
 
-    // Build share URL (same logic as handleShare)
-    let shareUrl = storyUrl;
-    if (!shareUrl) {
-      const pathParts = window.location.pathname.split('/');
-      const feedIndex = pathParts.indexOf('feed');
-      if (feedIndex !== -1 && pathParts[feedIndex + 1]) {
-        const currentSlug = pathParts[feedIndex + 1];
-        shareUrl = `${window.location.origin}/feed/${currentSlug}/story/${story.id}`;
-      } else {
-        shareUrl = window.location.href;
-      }
-    }
+    // Build slug from current URL
+    const pathParts = window.location.pathname.split('/');
+    const feedIndex = pathParts.indexOf('feed');
+    const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
+
+    // Use share preview URL for proper OG tags (WhatsApp scraping)
+    const functionsBaseUrl = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
+    const shareUrl = `${functionsBaseUrl}/share-page?type=story&id=${story.id}&topic=${currentSlug}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
