@@ -407,7 +407,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             }));
 
           const meta = parliamentaryMetaMap.get(story.id);
-          const isParliamentary = meta?.is_parliamentary || !!(meta?.mp_name || meta?.mp_party || meta?.constituency);
+          const isParliamentary = meta?.is_parliamentary || false;
 
           return {
             id: story.id,
@@ -898,13 +898,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         const constituencyFinal = story.constituency || meta?.constituency;
         const toneFinal = story.tone || meta?.tone;
         
-        // Safety heuristic: set is_parliamentary true if RPC says so OR if MP metadata exists
-        const isParliamentaryFinal = isParliamentaryFromRPC || 
-          meta?.is_parliamentary || 
-          !!(mpNameFinal || mpPartyFinal || constituencyFinal) ||
-          // Additional heuristic: check if story title contains vote-related keywords
-          /voted (aye|no|abstain) on/i.test(story.title) ||
-          /parliament|division|vote/i.test(story.title);
+        // Only trust the explicit is_parliamentary field from the database
+        const isParliamentaryFinal = isParliamentaryFromRPC || meta?.is_parliamentary || false;
 
         return {
           id: story.id,
