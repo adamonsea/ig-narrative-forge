@@ -351,18 +351,31 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           });
 
           if (slidesError) {
-            console.warn('⚠️ Fallback: Failed to load slides via RPC, attempting direct query', slidesError);
-            const { data: fallbackSlides, error: fallbackError } = await supabase
-              .from('slides')
-              .select('id,story_id,slide_number,content,word_count')
-              .in('story_id', storyIds)
-              .order('slide_number', { ascending: true });
+            console.warn('⚠️ Fallback: Failed to load slides via RPC, attempting chunked direct query', slidesError);
+            
+            // Fetch slides in chunks to avoid timeout
+            const chunkSize = 50;
+            const allSlides: any[] = [];
+            
+            for (let i = 0; i < storyIds.length; i += chunkSize) {
+              const chunk = storyIds.slice(i, i + chunkSize);
+              const { data: chunkSlides, error: chunkError } = await supabase
+                .from('slides')
+                .select('id,story_id,slide_number,content,word_count')
+                .in('story_id', chunk)
+                .order('slide_number', { ascending: true });
 
-            if (fallbackError) {
-              throw fallbackError;
+              if (chunkError) {
+                console.warn('⚠️ Failed to fetch slides chunk:', chunkError);
+                continue;
+              }
+
+              if (chunkSlides) {
+                allSlides.push(...chunkSlides);
+              }
             }
 
-            slidesData = fallbackSlides || [];
+            slidesData = allSlides;
           } else {
             slidesData = slides || [];
           }
