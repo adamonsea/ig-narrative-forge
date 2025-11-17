@@ -50,6 +50,9 @@ verify_jwt = false
 [functions.generate-og-image]
 verify_jwt = false
 
+[functions.share-page]
+verify_jwt = false
+
 [functions.track-engagement-metric]
 verify_jwt = false
 
