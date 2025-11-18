@@ -144,9 +144,30 @@ export function SwipeCarousel({
   const prev = () => goTo(index - 1);
   const next = () => goTo(index + 1);
 
+  // Prevent iOS Safari horizontal navigation gestures
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !centerDragArea) return;
+
+    const preventHorizontalGesture = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't prevent on interactive elements
+      if (target.closest('button, a, input, textarea, [role="button"]')) return;
+      
+      // Prevent horizontal browser gestures on touch
+      if (e.touches.length === 1) {
+        e.preventDefault();
+      }
+    };
+
+    viewport.addEventListener('touchstart', preventHorizontalGesture, { passive: false });
+    return () => viewport.removeEventListener('touchstart', preventHorizontalGesture);
+  }, [centerDragArea]);
+
   // Instagram-like gesture: smooth slide-by-slide navigation
-  const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const threshold = width * 0.25; // 25% of width to trigger slide change
+  const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const isMobile = width < 768;
+    const threshold = width * (isMobile ? 0.2 : 0.25); // Easier on mobile
     const swipeDistance = info.offset.x;
     const swipeVelocity = info.velocity.x;
     
@@ -170,7 +191,7 @@ export function SwipeCarousel({
     });
     setIndex(targetIndex);
     return () => controls.stop();
-  };
+  }, [width, index, x, count]);
 
 
   const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
@@ -191,23 +212,42 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full"
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'manipulation'
+          touchAction: centerDragArea ? 'pan-y' : 'manipulation'
         } as React.CSSProperties}
       >
         <motion.div
           className="flex h-full relative"
-          drag={width > 0 && !isDragBlocked ? "x" : false}
-          dragElastic={0.08}
-          dragMomentum
-          dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={{ power: 0.25, timeConstant: 200 }}
-          whileDrag={{ cursor: "grabbing" }}
+          drag={false}
           style={{ x }}
-          onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
-            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
+            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full relative">
               <div className="h-full w-full">{slide}</div>
+              
+              {/* Center drag zone - only active when centerDragArea is enabled */}
+              {centerDragArea && width > 0 && !isDragBlocked && (
+                <motion.div
+                  className="absolute inset-y-0 left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
+                  style={{ 
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
+                  }}
+                  drag="x"
+                  dragElastic={0.15}
+                  dragMomentum
+                  dragConstraints={{ left: -(count - 1) * width, right: 0 }}
+                  dragTransition={{ power: 0.25, timeConstant: 200 }}
+                  onDragEnd={onDragEnd}
+                  // Make it non-blocking for content underneath
+                  onPointerDown={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button, a, input, textarea, [role="button"]')) {
+                      e.stopPropagation();
+                    }
+                  }}
+                />
+              )}
             </div>
           ))}
           
@@ -215,24 +255,24 @@ export function SwipeCarousel({
       </div>
 
       {centerDragArea && (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Left edge click handler for navigation - smaller on mobile */}
+        <div className="absolute inset-0 pointer-events-none z-10">
+          {/* Left edge click handler - blocks drag, allows tap navigation */}
           <div
-            className="absolute inset-y-0 left-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
+            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto"
+            style={{ touchAction: 'auto' }}
             onClick={() => {
               if (index > 0) {
                 prev();
-                console.debug?.('edge-click', 'left', 'prev');
               }
             }}
           />
-          {/* Right edge click handler for navigation - smaller on mobile */}
+          {/* Right edge click handler - blocks drag, allows tap navigation */}
           <div
-            className="absolute inset-y-0 right-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
+            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto"
+            style={{ touchAction: 'auto' }}
             onClick={() => {
               if (index < count - 1) {
                 next();
-                console.debug?.('edge-click', 'right', 'next');
               }
             }}
           />
