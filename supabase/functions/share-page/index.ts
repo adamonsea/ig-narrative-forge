@@ -65,25 +65,36 @@ serve(async (req) => {
     }
 
     if (type === 'story' && id) {
-      // Fetch story data
+      // Fetch story data with first slide
       const { data: storyData } = await supabase
         .from('stories')
         .select(`
           title,
           created_at,
           cover_illustration_url,
-          slides!inner(content)
+          slides!inner(content, slide_number)
         `)
         .eq('id', id)
+        .eq('slides.slide_number', 1)
         .single();
 
       if (storyData) {
-        ogTitle = storyData.title;
-        
-        // Use first slide content as description (truncated)
+        // Extract rewritten headline from first slide content
         if (storyData.slides && storyData.slides.length > 0) {
           const firstSlideContent = storyData.slides[0].content || '';
-          ogDescription = firstSlideContent.substring(0, 150) + '...';
+          
+          // Remove HTML tags and extract first sentence as headline
+          const cleanContent = firstSlideContent.replace(/<[^>]*>/g, '').trim();
+          const firstSentence = cleanContent.split(/[.\n!?]/)[0].trim();
+          
+          // Use extracted headline or fallback to original title
+          ogTitle = firstSentence || storyData.title;
+          
+          // Use remaining content as description (truncated)
+          const remainingContent = cleanContent.substring(firstSentence.length).trim();
+          ogDescription = (remainingContent.substring(0, 150) || cleanContent.substring(0, 150)) + '...';
+        } else {
+          ogTitle = storyData.title;
         }
         
         // Prioritize article cover image, fallback to generated OG image
