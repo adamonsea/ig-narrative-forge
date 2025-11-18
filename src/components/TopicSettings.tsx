@@ -718,6 +718,7 @@ export const TopicSettings = ({
               tone === currentTone && 
               writingStyle === currentWritingStyle && 
               illustrationStyle === currentIllustrationStyle &&
+              illustrationAccentColor === (currentIllustrationAccentColor || '#58FFBC') &&
               communityEnabled === currentCommunityEnabled &&
               communityPulseFrequency === (currentCommunityPulseFrequency || 8) &&
               processingFrequency === (currentCommunityConfig?.processing_frequency_hours || 24) &&
