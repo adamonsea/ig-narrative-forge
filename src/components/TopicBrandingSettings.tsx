@@ -4,14 +4,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Upload, X, Image as ImageIcon, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESCRIPTIONS, type IllustrationStyle } from '@/lib/constants/illustrationStyles';
 
 interface TopicBrandingSettingsProps {
   topic: {
     id: string;
     name: string;
+    illustration_style?: IllustrationStyle;
+    illustration_accent_color?: string;
     branding_config?: {
       logo_url?: string;
       icon_url?: string;
@@ -28,6 +33,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
   const [logoPreview, setLogoPreview] = useState<string>(topic.branding_config?.logo_url || '');
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string>(topic.branding_config?.icon_url || '');
+  const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(topic.illustration_style || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE);
+  const [illustrationAccentColor, setIllustrationAccentColor] = useState<string>(topic.illustration_accent_color || '#58FFBC');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -232,6 +239,8 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
         .from('topics')
         .update({ 
           branding_config: brandingConfig,
+          illustration_style: illustrationStyle,
+          illustration_accent_color: illustrationAccentColor,
           updated_at: new Date().toISOString()
         })
         .eq('id', topic.id);
@@ -385,6 +394,73 @@ export function TopicBrandingSettings({ topic, onUpdate }: TopicBrandingSettings
             <p className="text-xs text-muted-foreground mt-1">
               {subheader.length}/200 characters
             </p>
+          </div>
+
+          {/* Editorial Visual Style Selector */}
+          <div className="border-t pt-6">
+            <div className="space-y-3">
+              <Label htmlFor="illustrationStyle" className="flex items-center gap-2 text-base font-medium">
+                Editorial Visual Style
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p className="text-sm">Choose the visual style for story cover images. This affects available AI models in the Published queue.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </Label>
+              <Select value={illustrationStyle} onValueChange={(value: IllustrationStyle) => setIllustrationStyle(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}>
+                    <div>
+                      <div className="font-medium">{ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}</div>
+                      <div className="text-xs text-muted-foreground">{ILLUSTRATION_STYLE_DESCRIPTIONS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}</div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC}>
+                    <div>
+                      <div className="font-medium">{ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}</div>
+                      <div className="text-xs text-muted-foreground">{ILLUSTRATION_STYLE_DESCRIPTIONS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}</div>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE && (
+              <div className="space-y-2 mt-4">
+                <Label htmlFor="illustrationAccentColor">Illustration Accent Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="illustrationAccentColor"
+                    value={illustrationAccentColor}
+                    onChange={(e) => setIllustrationAccentColor(e.target.value)}
+                    className="h-10 w-20 rounded border border-input cursor-pointer"
+                  />
+                  <Input
+                    value={illustrationAccentColor}
+                    onChange={(e) => setIllustrationAccentColor(e.target.value)}
+                    placeholder="#58FFBC"
+                    className="flex-1 font-mono"
+                    maxLength={7}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIllustrationAccentColor('#58FFBC')}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Preview */}

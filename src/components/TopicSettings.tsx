@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
-import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESCRIPTIONS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicSettingsProps {
   topicId: string;
@@ -33,8 +32,6 @@ interface TopicSettingsProps {
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
   currentEventsEnabled?: boolean;
-  currentIllustrationStyle?: IllustrationStyle;
-  currentIllustrationAccentColor?: string;
   topicType?: string;
   region?: string;
   onUpdate?: () => void;
@@ -52,8 +49,6 @@ export const TopicSettings = ({
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
   currentEventsEnabled,
-  currentIllustrationStyle,
-  currentIllustrationAccentColor,
   topicType,
   region,
   onUpdate 
@@ -61,8 +56,6 @@ export const TopicSettings = ({
   const [expertise, setExpertise] = useState<'beginner' | 'intermediate' | 'expert'>(currentExpertise || 'intermediate');
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
-  const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(currentIllustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE);
-  const [illustrationAccentColor, setIllustrationAccentColor] = useState<string>(currentIllustrationAccentColor || '#58FFBC');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
   const [subreddits, setSubreddits] = useState<string[]>(currentCommunityConfig?.subreddits || []);
@@ -83,8 +76,6 @@ export const TopicSettings = ({
     if (currentExpertise) setExpertise(currentExpertise);
     if (currentTone) setTone(currentTone);
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
-    if (currentIllustrationStyle) setIllustrationStyle(currentIllustrationStyle);
-    if (currentIllustrationAccentColor) setIllustrationAccentColor(currentIllustrationAccentColor);
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
     if (currentCommunityPulseFrequency !== undefined) setCommunityPulseFrequency(currentCommunityPulseFrequency);
     if (currentCommunityConfig?.subreddits) setSubreddits(currentCommunityConfig.subreddits);
@@ -96,7 +87,7 @@ export const TopicSettings = ({
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentIllustrationAccentColor, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -107,8 +98,6 @@ export const TopicSettings = ({
           audience_expertise: expertise,
           default_tone: tone,
           default_writing_style: writingStyle,
-          illustration_style: illustrationStyle,
-          illustration_accent_color: illustrationAccentColor,
           community_intelligence_enabled: communityEnabled,
           community_pulse_frequency: communityPulseFrequency,
           community_config: {
@@ -367,75 +356,6 @@ export const TopicSettings = ({
           </div>
         </div>
 
-        {/* Editorial Visual Style Selector */}
-        <div className="border-t pt-6">
-          <div className="space-y-3">
-            <Label htmlFor="illustrationStyle" className="flex items-center gap-2">
-              Editorial Visual Style
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm">
-                    <p className="text-sm">Choose the visual style for story cover images. This affects available AI models in the Published queue.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
-            <Select value={illustrationStyle} onValueChange={(value: IllustrationStyle) => setIllustrationStyle(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE}>
-                  <div>
-                    <div className="font-medium">{ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}</div>
-                    <div className="text-xs text-muted-foreground">{ILLUSTRATION_STYLE_DESCRIPTIONS[ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE]}</div>
-                  </div>
-                </SelectItem>
-                <SelectItem value={ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC}>
-                  <div>
-                    <div className="font-medium">{ILLUSTRATION_STYLE_LABELS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}</div>
-                    <div className="text-xs text-muted-foreground">{ILLUSTRATION_STYLE_DESCRIPTIONS[ILLUSTRATION_STYLES.EDITORIAL_PHOTOGRAPHIC]}</div>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE && (
-            <div className="space-y-2 mt-4">
-              <Label htmlFor="illustrationAccentColor">Illustration Accent Color</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  id="illustrationAccentColor"
-                  value={illustrationAccentColor}
-                  onChange={(e) => setIllustrationAccentColor(e.target.value)}
-                  className="h-10 w-20 rounded border border-input cursor-pointer"
-                />
-                <Input
-                  value={illustrationAccentColor}
-                  onChange={(e) => setIllustrationAccentColor(e.target.value)}
-                  placeholder="#58FFBC"
-                  className="flex-1 font-mono"
-                  maxLength={7}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIllustrationAccentColor('#58FFBC')}
-                >
-                  Reset
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Choose an accent color for illustrations (1 bold color used per image)
-              </p>
-            </div>
-          )}
-        </div>
 
         {/* Community Intelligence Toggle */}
         <div className="border-t pt-6">
@@ -717,8 +637,6 @@ export const TopicSettings = ({
               expertise === currentExpertise && 
               tone === currentTone && 
               writingStyle === currentWritingStyle && 
-              illustrationStyle === currentIllustrationStyle &&
-              illustrationAccentColor === (currentIllustrationAccentColor || '#58FFBC') &&
               communityEnabled === currentCommunityEnabled &&
               communityPulseFrequency === (currentCommunityPulseFrequency || 8) &&
               processingFrequency === (currentCommunityConfig?.processing_frequency_hours || 24) &&

@@ -988,8 +988,6 @@ const TopicDashboard = () => {
                         currentExpertise={topic.audience_expertise}
                         currentTone={topic.default_tone}
                         currentWritingStyle={topic.default_writing_style}
-                        currentIllustrationStyle={topic.illustration_style}
-                        currentIllustrationAccentColor={(topic as any).illustration_accent_color}
                         currentCommunityEnabled={topic.community_intelligence_enabled}
                         currentCommunityPulseFrequency={topic.community_pulse_frequency}
                         currentCommunityConfig={topic.community_config}
@@ -1021,6 +1019,8 @@ const TopicDashboard = () => {
                         topic={{
                           id: topic.id,
                           name: topic.name,
+                          illustration_style: topic.illustration_style,
+                          illustration_accent_color: (topic as any).illustration_accent_color,
                           branding_config: topic.branding_config
                         }}
                         onUpdate={() => loadTopicAndStats()}
