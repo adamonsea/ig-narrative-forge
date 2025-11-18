@@ -9,6 +9,7 @@ interface GeminiPromptParams {
   storyTitle: string;
   slideContent: string;
   publicationName?: string;
+  accentColor?: string;
 }
 
 /**
@@ -95,7 +96,8 @@ function getMomentGuidance(tone: string): string {
  * Target length: 600-800 characters
  */
 export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): string {
-  const { tone, subject, storyTitle, slideContent, publicationName } = params;
+  const { tone, subject, storyTitle, slideContent, publicationName, accentColor } = params;
+  const colorToUse = accentColor || '#58FFBC';
   
   const expressionGuidance = getExpressionGuidance(tone);
   const tonalGuidance = getTonalGuidance(tone);

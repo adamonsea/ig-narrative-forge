@@ -153,13 +153,14 @@ serve(async (req) => {
     // Determine topic_id from either architecture
     const topicId = (story as any).article?.topic_id || (story as any).topic_article?.topic_id
     
-    // Fetch topic's illustration_style
+    // Fetch topic's illustration_style and illustration_accent_color
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
+    let illustrationAccentColor: string | null = null
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style')
+        .select('illustration_style, illustration_accent_color')
         .eq('id', topicId)
         .single()
       
@@ -170,6 +171,10 @@ serve(async (req) => {
         } else {
           console.warn(`Invalid illustration_style from DB: ${topicData.illustration_style}, using default`)
         }
+      }
+      
+      if (topicData?.illustration_accent_color) {
+        illustrationAccentColor = topicData.illustration_accent_color
       }
     }
 
@@ -289,7 +294,7 @@ serve(async (req) => {
     // Build appropriate prompt based on illustration style
     const illustrationPrompt = illustrationStyle === 'editorial_photographic'
       ? buildPhotographicPrompt(storyTone, subjectMatter, story.title)
-      : buildIllustrativePrompt(storyTone, subjectMatter, story.title)
+      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, illustrationAccentColor || undefined)
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
@@ -456,13 +461,14 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             slideContent: slideContent || subjectMatter,
             publicationName: story.topic?.name,
           })
-        : buildGeminiIllustrativePrompt({
-            tone: storyTone,
-            subject: subjectMatter,
-            storyTitle: story.title,
-            slideContent: slideContent || subjectMatter,
-            publicationName: story.topic?.name,
-          });
+      : buildGeminiIllustrativePrompt({
+          tone: storyTone,
+          subject: subjectMatter,
+          storyTitle: story.title,
+          slideContent: slideContent || subjectMatter,
+          publicationName: story.topic?.name,
+          accentColor: story.topic?.illustration_accent_color,
+        });
 
       console.log(`📝 Gemini prompt (${geminiPrompt.length} chars):`, geminiPrompt.substring(0, 200) + '...');
 
