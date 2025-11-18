@@ -1,6 +1,15 @@
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
+
+// Debounce utility for ResizeObserver
+const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -41,13 +50,21 @@ export function SwipeCarousel({
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
 
-  // measure width
+  // measure width with debouncing for Safari performance
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return;
+    
+    const debouncedSetWidth = debounce((newWidth: number) => {
+      setWidth(newWidth);
+    }, 150);
+    
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) setWidth(Math.floor(entry.contentRect.width));
+      for (const entry of entries) {
+        debouncedSetWidth(Math.floor(entry.contentRect.width));
+      }
     });
+    
     ro.observe(node);
     setWidth(Math.floor(node.getBoundingClientRect().width));
     return () => ro.disconnect();
@@ -58,13 +75,13 @@ export function SwipeCarousel({
     x.set(-index * width);
   }, [width]);
 
-  // animate to index when changed via dots/click
+  // animate to index when changed via dots/click (optimized for Safari)
   useEffect(() => {
     const controls = animate(x, -index * width, {
       type: "spring",
-      stiffness: 520,
-      damping: 46,
-      mass: 0.9,
+      stiffness: 300,
+      damping: 55,
+      mass: 0.7,
     });
     return controls.stop;
   }, [index]);
@@ -105,10 +122,16 @@ export function SwipeCarousel({
         }
       );
       
-      // Mark as shown after animation completes
-      setTimeout(() => {
-        sessionStorage.setItem(sessionKey, 'true');
-      }, 1400);
+      // Mark as shown after animation completes (deferred for Safari performance)
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          sessionStorage.setItem(sessionKey, 'true');
+        }, { timeout: 2000 });
+      } else {
+        setTimeout(() => {
+          sessionStorage.setItem(sessionKey, 'true');
+        }, 1400);
+      }
       
       return () => controls.stop();
     }, 1500);
@@ -138,12 +161,12 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
     
-    // Animate to target slide
+    // Animate to target slide (optimized for Safari)
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      stiffness: 400,
-      damping: 40,
-      mass: 1,
+      stiffness: 280,
+      damping: 50,
+      mass: 0.7,
     });
     setIndex(targetIndex);
     return () => controls.stop();
@@ -165,17 +188,21 @@ export function SwipeCarousel({
     >
       <div 
         ref={viewportRef} 
-        className="overflow-hidden w-full h-full" 
+        className="overflow-hidden w-full h-full"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'manipulation'
+        } as React.CSSProperties}
       >
         <motion.div
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
-          dragElastic={0.12}
+          dragElastic={0.08}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={{ power: 0.35, timeConstant: 260 }}
+          dragTransition={{ power: 0.25, timeConstant: 200 }}
           whileDrag={{ cursor: "grabbing" }}
-          style={{ x, touchAction: "pan-y" }}
+          style={{ x }}
           onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
