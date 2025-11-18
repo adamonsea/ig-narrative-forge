@@ -141,6 +141,7 @@ serve(async (req) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>${ogTitle}</title>
   
   <!-- Primary Meta Tags -->
@@ -220,6 +221,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/html; charset=utf-8',
+        'X-Robots-Tag': 'noindex, nofollow',
         'Cache-Control': 'public, max-age=300', // 5 min cache for social scrapers
       },
     });
