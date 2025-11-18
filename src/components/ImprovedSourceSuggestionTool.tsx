@@ -355,7 +355,12 @@ export const ImprovedSourceSuggestionTool = ({
       const { error: linkError } = await supabase.rpc('add_source_to_topic', {
         p_topic_id: topicId,
         p_source_id: sourceId,
-        p_source_config: {}
+        p_source_config: {
+          feed_url: suggestion.url,
+          added_at: new Date().toISOString(),
+          added_via: 'source_suggestion_tool',
+          created_with_topic: true
+        }
       });
 
       if (linkError) {
