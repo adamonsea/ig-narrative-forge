@@ -118,7 +118,7 @@ The illustration should feel: ${expressionGuidance} ${tonalGuidance}
 
 Visual Language: Bold editorial cartoon with FLAT COLOR FILLS and clean black outlines—screen print aesthetic, not detailed pen work. Large, simple geometric shapes. Architectural, modernist composition with clear focal points.
 
-Color Palette: Predominantly white negative space (60%+) with solid black areas and exactly ONE mint green accent (#58FFBC) as flat color block on story-relevant object. NO gradients, textures, or intricate details—clean, bold shapes only.
+Color Palette: Predominantly white negative space (60%+) with solid black areas and exactly ONE accent color (${colorToUse}) as flat color block on story-relevant object. NO gradients, textures, or intricate details—clean, bold shapes only.
 
 Composition: 3:2 landscape format. 1-3 large iconic forms maximum—prioritize SIMPLE, BOLD shapes over detailed rendering. Strategic negative space for balance and visual breathing room, not random emptiness. Edge-to-edge composition with no borders.
 
