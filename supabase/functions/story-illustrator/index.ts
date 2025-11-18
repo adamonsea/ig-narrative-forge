@@ -467,7 +467,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           storyTitle: story.title,
           slideContent: slideContent || subjectMatter,
           publicationName: story.topic?.name,
-          accentColor: story.topic?.illustration_accent_color,
+          accentColor: illustrationAccentColor,
         });
 
       console.log(`📝 Gemini prompt (${geminiPrompt.length} chars):`, geminiPrompt.substring(0, 200) + '...');
