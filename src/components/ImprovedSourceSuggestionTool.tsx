@@ -199,11 +199,20 @@ export const ImprovedSourceSuggestionTool = ({
         setValidationProgress(prev => ({ ...prev, [suggestion.url]: 100 }));
 
         if (!error && validationResult) {
-          // Update suggestion with validation results
+          // Show toast if better feed was discovered
+          if (validationResult.suggestedUrl && validationResult.suggestedUrl !== suggestion.url) {
+            toast({
+              title: "Better Feed Found",
+              description: `Using discovered RSS feed instead of homepage`,
+            });
+          }
+          
+          // Update suggestion with validation results AND discovered feed URL
           setSuggestions(prev => prev.map(s => 
             s.url === suggestion.url 
               ? {
                   ...s,
+                  url: validationResult.suggestedUrl || s.url, // ✅ Use discovered feed URL with fallback
                   technical_validation: {
                     is_accessible: validationResult.isAccessible || false,
                     is_valid_rss: validationResult.isValidRSS || false,
