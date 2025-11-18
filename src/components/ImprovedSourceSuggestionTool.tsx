@@ -233,31 +233,48 @@ export const ImprovedSourceSuggestionTool = ({
   const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, isLinked: boolean, isActive: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
-    // First, check if source exists in content_sources by URL or domain
+    // Check by URL, domain, OR name+topic combination
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id, source_name, feed_url')
       .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
       .maybeSingle();
 
-    if (!existingSource) {
-      return { exists: false, isLinked: false, isActive: false };
+    if (existingSource) {
+      // Check if this source is linked to the current topic
+      const { data: topicSourceLink } = await supabase
+        .from('topic_sources')
+        .select('is_active')
+        .eq('topic_id', topicId)
+        .eq('source_id', existingSource.id)
+        .maybeSingle();
+
+      return {
+        exists: true,
+        isLinked: !!topicSourceLink,
+        isActive: topicSourceLink?.is_active || false,
+        id: existingSource.id
+      };
     }
 
-    // Check if this source is linked to the current topic
-    const { data: topicSourceLink } = await supabase
+    // Also check if a source with the same name exists for this topic (unique constraint)
+    const { data: existingByName } = await supabase
       .from('topic_sources')
-      .select('is_active')
+      .select('source_id, is_active, content_sources(id, source_name, feed_url)')
       .eq('topic_id', topicId)
-      .eq('source_id', existingSource.id)
+      .eq('content_sources.source_name', suggestion.source_name)
       .maybeSingle();
 
-    return {
-      exists: true,
-      isLinked: !!topicSourceLink,
-      isActive: topicSourceLink?.is_active || false,
-      id: existingSource.id
-    };
+    if (existingByName?.content_sources) {
+      return {
+        exists: true,
+        isLinked: true,
+        isActive: existingByName.is_active || false,
+        id: existingByName.content_sources.id
+      };
+    }
+
+    return { exists: false, isLinked: false, isActive: false };
   };
 
   const addSource = async (suggestion: SourceSuggestion) => {
