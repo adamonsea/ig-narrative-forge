@@ -34,6 +34,7 @@ interface TopicSettingsProps {
   currentParliamentaryTrackingEnabled?: boolean;
   currentEventsEnabled?: boolean;
   currentIllustrationStyle?: IllustrationStyle;
+  currentIllustrationAccentColor?: string;
   topicType?: string;
   region?: string;
   onUpdate?: () => void;
@@ -52,6 +53,7 @@ export const TopicSettings = ({
   currentParliamentaryTrackingEnabled,
   currentEventsEnabled,
   currentIllustrationStyle,
+  currentIllustrationAccentColor,
   topicType,
   region,
   onUpdate 
@@ -60,6 +62,7 @@ export const TopicSettings = ({
   const [tone, setTone] = useState<'formal' | 'conversational' | 'engaging' | 'satirical'>(currentTone || 'conversational');
   const [writingStyle, setWritingStyle] = useState<'journalistic' | 'educational' | 'listicle' | 'story_driven'>(currentWritingStyle || 'journalistic');
   const [illustrationStyle, setIllustrationStyle] = useState<IllustrationStyle>(currentIllustrationStyle || ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE);
+  const [illustrationAccentColor, setIllustrationAccentColor] = useState<string>(currentIllustrationAccentColor || '#58FFBC');
   const [communityEnabled, setCommunityEnabled] = useState<boolean>(currentCommunityEnabled || false);
   const [communityPulseFrequency, setCommunityPulseFrequency] = useState<number>(currentCommunityPulseFrequency || 8);
   const [subreddits, setSubreddits] = useState<string[]>(currentCommunityConfig?.subreddits || []);
@@ -81,6 +84,7 @@ export const TopicSettings = ({
     if (currentTone) setTone(currentTone);
     if (currentWritingStyle) setWritingStyle(currentWritingStyle);
     if (currentIllustrationStyle) setIllustrationStyle(currentIllustrationStyle);
+    if (currentIllustrationAccentColor) setIllustrationAccentColor(currentIllustrationAccentColor);
     if (currentCommunityEnabled !== undefined) setCommunityEnabled(currentCommunityEnabled);
     if (currentCommunityPulseFrequency !== undefined) setCommunityPulseFrequency(currentCommunityPulseFrequency);
     if (currentCommunityConfig?.subreddits) setSubreddits(currentCommunityConfig.subreddits);
@@ -92,7 +96,7 @@ export const TopicSettings = ({
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentIllustrationAccentColor, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -104,6 +108,7 @@ export const TopicSettings = ({
           default_tone: tone,
           default_writing_style: writingStyle,
           illustration_style: illustrationStyle,
+          illustration_accent_color: illustrationAccentColor,
           community_intelligence_enabled: communityEnabled,
           community_pulse_frequency: communityPulseFrequency,
           community_config: {
@@ -398,6 +403,38 @@ export const TopicSettings = ({
               </SelectContent>
             </Select>
           </div>
+
+          {illustrationStyle === ILLUSTRATION_STYLES.EDITORIAL_ILLUSTRATIVE && (
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="illustrationAccentColor">Illustration Accent Color</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  id="illustrationAccentColor"
+                  value={illustrationAccentColor}
+                  onChange={(e) => setIllustrationAccentColor(e.target.value)}
+                  className="h-10 w-20 rounded border border-input cursor-pointer"
+                />
+                <Input
+                  value={illustrationAccentColor}
+                  onChange={(e) => setIllustrationAccentColor(e.target.value)}
+                  placeholder="#58FFBC"
+                  className="flex-1 font-mono"
+                  maxLength={7}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIllustrationAccentColor('#58FFBC')}
+                >
+                  Reset
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Choose an accent color for illustrations (1 bold color used per image)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Community Intelligence Toggle */}
