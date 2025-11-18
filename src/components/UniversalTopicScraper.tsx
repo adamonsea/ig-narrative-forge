@@ -26,12 +26,18 @@ interface ScrapeResult {
 
 interface UniversalScrapeResponse {
   success: boolean;
-  topicId: string;
-  topicName: string;
-  sourcesProcessed: number;
-  successfulSources: number;
-  totalArticles: number;
-  results: ScrapeResult[];
+  status: 'success' | 'partial_success' | 'failure';
+  message: string;
+  summary: {
+    totalSources: number;
+    successfulSources: number;
+    totalArticlesStored: number;
+    articlesScraped: number;
+    articlesRejectedLowRelevance: number;
+    articlesRejectedLowQuality: number;
+    articlesRejectedCompetingRegion: number;
+  };
+  sourceResults: ScrapeResult[];
   error?: string;
 }
 
@@ -108,14 +114,25 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
       setResults(data);
       setProgress(100);
 
+      // Differentiate between actual failures and successful scrapes with 0 articles
       const hasNewContent = (data?.summary?.totalArticlesStored || 0) > 0;
-      toast({
-        title: hasNewContent ? "Content Found" : "No New Content",
-        description: hasNewContent 
-          ? `Found ${data.summary.totalArticlesStored} articles from ${data.summary.successfulSources}/${data.summary.totalSources} sources`
-          : `Checked ${data.summary.totalSources} sources - no new articles found`,
-        variant: hasNewContent ? "success" : "muted",
-      });
+      const isActualFailure = data.status === 'failure' || !data.success;
+      
+      if (isActualFailure) {
+        toast({
+          title: "Scraping Failed",
+          description: data.message || data.error || "Unknown error occurred",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: hasNewContent ? "Content Found" : "No New Content",
+          description: hasNewContent 
+            ? `Found ${data.summary.totalArticlesStored} articles from ${data.summary.successfulSources}/${data.summary.totalSources} sources`
+            : `Checked ${data.summary.totalSources} sources - no new articles found`,
+          variant: hasNewContent ? "success" : "muted",
+        });
+      }
 
     } catch (error) {
       console.error('❌ Universal scraping error:', error);
@@ -296,19 +313,26 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
           <CardHeader>
             <CardTitle>Universal Scraping Results</CardTitle>
             <CardDescription>
-              Scraped {results.totalArticles} articles from {results.successfulSources}/{results.sourcesProcessed} sources
+              Scraped {results.summary.totalArticlesStored} articles from {results.summary.successfulSources}/{results.summary.totalSources} sources
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!results.success && (
+            {results.status === 'failure' && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{results.error}</AlertDescription>
+                <AlertDescription>{results.error || results.message}</AlertDescription>
+              </Alert>
+            )}
+            
+            {results.status === 'partial_success' && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>Some sources failed but others succeeded</AlertDescription>
               </Alert>
             )}
 
             <div className="grid gap-2">
-              {results.results?.map((result, index) => (
+              {results.sourceResults?.map((result, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-3 border rounded-lg"
@@ -385,16 +409,16 @@ export function UniversalTopicScraper({ topicId, topicName }: UniversalTopicScra
             <div className="pt-4 border-t">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold">{results.sourcesProcessed}</div>
+                  <div className="text-2xl font-bold">{results.summary.totalSources}</div>
                   <div className="text-sm text-muted-foreground">Sources Processed</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">{results.successfulSources}</div>
+                  <div className="text-2xl font-bold">{results.summary.successfulSources}</div>
                   <div className="text-sm text-muted-foreground">Successful</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">{results.totalArticles}</div>
-                  <div className="text-sm text-muted-foreground">Articles Found</div>
+                  <div className="text-2xl font-bold">{results.summary.totalArticlesStored}</div>
+                  <div className="text-sm text-muted-foreground">Articles Stored</div>
                 </div>
               </div>
             </div>
