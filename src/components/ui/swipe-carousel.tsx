@@ -227,7 +227,7 @@ export function SwipeCarousel({
               {/* Center drag zone - only active when centerDragArea is enabled */}
               {centerDragArea && width > 0 && !isDragBlocked && (
                 <motion.div
-                  className="absolute inset-y-0 left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
+                  className="absolute top-0 bottom-[80px] left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
                   style={{ 
                     touchAction: 'none',
                     userSelect: 'none',
@@ -239,13 +239,6 @@ export function SwipeCarousel({
                   dragConstraints={{ left: -(count - 1) * width, right: 0 }}
                   dragTransition={{ power: 0.25, timeConstant: 200 }}
                   onDragEnd={onDragEnd}
-                  // Make it non-blocking for content underneath
-                  onPointerDown={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.closest('button, a, input, textarea, [role="button"]')) {
-                      e.stopPropagation();
-                    }
-                  }}
                 />
               )}
             </div>
