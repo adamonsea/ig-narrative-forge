@@ -11,6 +11,28 @@ interface ImageOptimizationOptions {
 }
 
 /**
+ * Detect device performance tier for quality adjustment
+ */
+function getDeviceQualityTier(): number {
+  // Check for iPhone 13+ or equivalent (high-end devices)
+  const isHighEnd = /iPhone1[3-9]|iPhone[2-9][0-9]|iPad Pro/.test(navigator.userAgent);
+  
+  // Check memory (if available)
+  const memory = (navigator as any).deviceMemory;
+  const hasHighMemory = !memory || memory >= 8;
+  
+  // Check cores
+  const cores = navigator.hardwareConcurrency || 4;
+  const hasMultipleCores = cores >= 6;
+  
+  if (isHighEnd || (hasHighMemory && hasMultipleCores)) {
+    return 85; // High quality for newer devices
+  }
+  
+  return 75; // Optimized quality for older devices (Phase 2)
+}
+
+/**
  * Optimizes a Supabase Storage image URL with transformations
  * @param url - The original image URL
  * @param options - Optimization options (width, height, quality, format)
@@ -22,11 +44,11 @@ export function optimizeImageUrl(
 ): string | null {
   if (!url) return null;
 
-  // Default options for feed cover images
+  // Default options for feed cover images (device-aware quality - Phase 2)
   const {
     width = 800,
     height = 600,
-    quality = 80,
+    quality = getDeviceQualityTier(),
     format = 'webp'
   } = options;
 

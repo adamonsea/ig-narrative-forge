@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 // Force cache refresh
 
-// Hook to detect network speed
+// Hook to detect network speed (memoized for Phase 2 optimization)
 const useNetworkSpeed = () => {
   const [isFastConnection, setIsFastConnection] = useState(true); // Default to true for desktop
   
@@ -25,8 +25,7 @@ const useNetworkSpeed = () => {
       || (navigator as any).webkitConnection;
     
     if (!connection) {
-      setIsFastConnection(true); // Desktop fallback - assume fast
-      return;
+      return; // Keep default true for desktop
     }
     
     const checkConnection = () => {
@@ -102,6 +101,13 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  
+  // Debounce tracking calls (Phase 2 optimization)
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const trackDebounced = React.useCallback((trackFn: () => void) => {
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = setTimeout(trackFn, 300);
+  }, []);
   const { trackShareClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
@@ -849,13 +855,20 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
   }, [sortedSlides, story.id]);
   
-  // Create slide components for SwipeCarousel
-  const slideComponents = sortedSlides.map((slide, index) => {
+  // Create slide components for SwipeCarousel with lazy rendering (Phase 2)
+  const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
+    // Lazy render: only render current slide and adjacent slides for performance
+    const shouldRender = Math.abs(index - currentSlideIndex) <= 1;
+    
+    if (!shouldRender) {
+      return <div key={slide.id} className="h-full w-full" style={{ contain: 'layout style paint' }} />;
+    }
+    
     // Check if this is a parliamentary story and render accordingly
     if (isParliamentaryStory) {
       const parliamentaryContent = renderParliamentarySlide(slide, index);
       if (parliamentaryContent) {
-        return <div key={slide.id} className="h-full w-full">{parliamentaryContent}</div>;
+        return <div key={slide.id} className="h-full w-full" style={{ contain: 'layout style paint' }}>{parliamentaryContent}</div>;
       }
     }
     
@@ -865,7 +878,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const isLast = index === validSlides.length - 1;
     
     return (
-      <div key={slide.id} className="h-full w-full">
+      <div key={slide.id} className="h-full w-full" style={{ contain: 'layout style paint' }}>
         {hasImage ? (
           // First slide with image - use flex layout
           <div className="h-full flex flex-col">
@@ -897,12 +910,12 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                 <img
                   src={optimizeImageUrl(story.cover_illustration_url, { 
                     width: 800, 
-                    height: 600, 
-                    quality: 85 
+                    height: 600
                   }) || story.cover_illustration_url}
                   alt={`Cover illustration for ${story.title}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  decoding="async"
                 />
               )}
             </div>
@@ -997,8 +1010,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
            </div>
         )}
       </div>
-    );
-  });
+     );
+  }), [sortedSlides, currentSlideIndex, isParliamentaryStory, story, validSlides.length, isFastConnection]);
 
   return (
     <article 
