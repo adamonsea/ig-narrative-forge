@@ -40,11 +40,28 @@
     touch-action: pan-y;
   }
   
+  /* iOS-specific: Prevent momentum scroll conflicts */
+  @supports (-webkit-touch-callout: none) {
+    .swipe-container {
+      -webkit-overflow-scrolling: auto;
+    }
+  }
+  
   .swipe-content {
     @apply transition-none;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     perspective: 1000px;
+    -webkit-perspective: 1000px;
+  }
+  
+  /* iOS GPU acceleration hints */
+  @supports (-webkit-touch-callout: none) {
+    .swipe-content {
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
   }
 
   .hover-scale {

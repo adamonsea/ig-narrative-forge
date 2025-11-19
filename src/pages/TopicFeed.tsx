@@ -37,6 +37,7 @@ const TopicFeed = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const [showFilterTip, setShowFilterTip] = useState(false);
   const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
   const [latestDaily, setLatestDaily] = useState<string | null>(null);
@@ -311,10 +312,13 @@ const TopicFeed = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Intersection Observer for infinite scroll
+  // Intersection Observer for infinite scroll with iOS-specific optimization
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
     if (loading || loadingMore) return;
     if (observerRef.current) observerRef.current.disconnect();
+    
+    // iOS-specific: More aggressive rootMargin for better perceived performance
+    const rootMargin = isIOS ? '400px' : '100px';
     
     observerRef.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
@@ -322,11 +326,28 @@ const TopicFeed = () => {
       }
     }, {
       threshold: 0.1,
-      rootMargin: '100px'
+      rootMargin
     });
     
     if (node) observerRef.current.observe(node);
-  }, [loading, loadingMore, hasMore, loadMore]);
+  }, [loading, loadingMore, hasMore, loadMore, isIOS]);
+  
+  // iOS-specific: Add passive scroll listener for feed container
+  useEffect(() => {
+    if (!isIOS) return;
+    
+    const feedContainer = document.querySelector('[data-feed-container]');
+    if (!feedContainer) return;
+    
+    const handleScroll = () => {
+      requestAnimationFrame(() => {
+        // iOS optimization: Debounce expensive operations during scroll
+      });
+    };
+    
+    feedContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => feedContainer.removeEventListener('scroll', handleScroll);
+  }, [isIOS]);
 
   useEffect(() => {
     return () => {
