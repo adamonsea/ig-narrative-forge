@@ -116,8 +116,33 @@ export class FastTrackScraper {
         console.log(`🔧 Domain profile resolved for ${source.source_name}:`, {
           family: this.domainProfile.family,
           arcSite: this.domainProfile.arcSite,
-          bypassHead: this.domainProfile.accessibility?.bypassHead
+          bypassHead: this.domainProfile.accessibility?.bypassHead,
+          hasAlternateRoutes: !!this.domainProfile.alternateRoutes,
+          alternateRouteCount: this.domainProfile.alternateRoutes?.length || 0
         });
+        
+        // Apply alternate routes if conditions match
+        if (this.domainProfile.alternateRoutes && this.domainProfile.alternateRoutes.length > 0) {
+          console.log(`🔍 Checking ${this.domainProfile.alternateRoutes.length} alternate route(s) for ${this.baseUrl}`);
+          for (const altRoute of this.domainProfile.alternateRoutes) {
+            console.log(`  - Route: ${altRoute.route}, Pattern: ${altRoute.conditions?.urlPattern}`);
+            if (altRoute.conditions?.urlPattern) {
+              const urlPattern = altRoute.conditions.urlPattern;
+              const matches = urlPattern.test(this.baseUrl);
+              console.log(`  - Pattern test result: ${matches}`);
+              if (matches) {
+                const urlObj = new URL(this.baseUrl);
+                const newUrl = `${urlObj.protocol}//${urlObj.host}${altRoute.route}`;
+                console.log(`🔀 Applying alternate route: ${this.baseUrl} → ${newUrl}`);
+                this.baseUrl = newUrl;
+                this.extractor = new UniversalContentExtractor(newUrl);
+                break;
+              }
+            }
+          }
+        } else {
+          console.log(`ℹ️  No alternate routes configured for this domain profile`);
+        }
       }
 
       console.log(`📍 Scraping with region: ${this.region}, source: ${source.source_name}`);
