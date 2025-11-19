@@ -102,7 +102,8 @@ export async function extractSubjectMatter(
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
-  publicationName?: string
+  publicationName?: string,
+  primaryColor: string = '#10B981'
 ): string {
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
@@ -115,7 +116,7 @@ export function buildIllustrativePrompt(
 CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - FLAT COLOR FILLS with visible print texture and grain (like risograph or screen print)
 - Clean BLACK OUTLINES defining shapes (hand-drawn quality, not digital vector)
-- LIMITED PALETTE: Black, white, mint green (#10B981) accents - printed ink aesthetic
+- LIMITED PALETTE: Black, white, accent color (${primaryColor}) - printed ink aesthetic
 - PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
 - Slight registration shifts and imperfections (authentic print quality)
 
@@ -158,7 +159,8 @@ QUALITY BENCHMARK: Think mid-century editorial illustration meets contemporary s
 export function buildPhotographicPrompt(
   tone: string,
   subject: string,
-  publicationName?: string
+  publicationName?: string,
+  primaryColor?: string
 ): string {
   // Determine lighting guidance based on tone
   const lightingGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')

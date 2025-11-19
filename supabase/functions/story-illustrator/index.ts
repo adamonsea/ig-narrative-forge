@@ -157,13 +157,14 @@ serve(async (req) => {
     // Determine topic_id from either architecture
     const topicId = (story as any).article?.topic_id || (story as any).topic_article?.topic_id
     
-    // Fetch topic's illustration_style
+    // Fetch topic's illustration_style and primary color
     let illustrationStyle: IllustrationStyle = 'editorial_illustrative' // default
+    let primaryColor: string = '#10B981' // default mint green
     
     if (topicId) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('illustration_style')
+        .select('illustration_style, illustration_primary_color')
         .eq('id', topicId)
         .single()
       
@@ -174,6 +175,12 @@ serve(async (req) => {
         } else {
           console.warn(`Invalid illustration_style from DB: ${topicData.illustration_style}, using default`)
         }
+      }
+      
+      // Use topic's primary color if set
+      if (topicData?.illustration_primary_color) {
+        primaryColor = topicData.illustration_primary_color
+        console.log(`Using topic primary color: ${primaryColor}`)
       }
     }
 
@@ -292,8 +299,8 @@ serve(async (req) => {
 
     // Build appropriate prompt based on illustration style
     const illustrationPrompt = illustrationStyle === 'editorial_photographic'
-      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title)
-      : buildIllustrativePrompt(storyTone, subjectMatter, story.title)
+      ? buildPhotographicPrompt(storyTone, subjectMatter, story.title, primaryColor)
+      : buildIllustrativePrompt(storyTone, subjectMatter, story.title, primaryColor)
 
     console.log(`Using ${illustrationStyle} style prompt for model ${model}`)
     console.log('Prompt preview:', illustrationPrompt.substring(0, 200) + '...')
@@ -321,8 +328,8 @@ serve(async (req) => {
       
       // FLUX-specific prompt with quantified constraints and explicit bans
       const fluxPrompt = `MANDATORY STYLE RULES (FLUX MUST FOLLOW):
-1. COLORS: Black (#000000) + Mint Green (#58FFBC) ONLY - no orange, no gray fills, no other colors
-2. GREEN LIMIT: Apply mint green to EXACTLY 2-3 small objects maximum (one window, one door, one sign) - NOT on multiple storefronts
+1. COLORS: Black (#000000) + Primary Accent (${primaryColor}) ONLY - no orange, no gray fills, no other colors
+2. ACCENT LIMIT: Apply primary color to EXACTLY 2-3 small objects maximum (one window, one door, one sign) - NOT on multiple storefronts
 3. LINE WORK: Thick outer contours ONLY - NO window panes, NO brick texture, NO roof tiles, NO interior architectural detail
 4. SHADOWS: Solid black fills ONLY - NO crosshatching, NO halftone dots, NO texture patterns
 5. ROADS: Solid white ONLY - NO perspective lines, NO road markings, NO surface texture
@@ -335,7 +342,7 @@ STORY: "${story.title}"
 VISUAL EXECUTION CHECKLIST:
 ✓ Bold black outlines (2-4px weight) defining building shapes
 ✓ Solid black shadows under eaves and doorways
-✓ 2-3 small mint green accent elements (e.g. one awning, one door, one window box)
+✓ 2-3 small accent elements in ${primaryColor} (e.g. one awning, one door, one window box)
 ✓ Simplified building facades - NO individual bricks, NO window frames, NO decorative molding
 ✓ Clean white road surface with NO markings
 ✓ Maximum 20-30 total line strokes for entire composition
@@ -456,6 +463,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             storyTitle: story.title,
             slideContent: slideContent || subjectMatter,
             publicationName: story.topic?.name,
+            primaryColor
           })
         : buildGeminiIllustrativePrompt({
             tone: storyTone,
@@ -463,6 +471,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             storyTitle: story.title,
             slideContent: slideContent || subjectMatter,
             publicationName: story.topic?.name,
+            primaryColor
           });
 
       console.log(`📝 Gemini prompt (${geminiPrompt.length} chars):`, geminiPrompt.substring(0, 200) + '...');
@@ -651,6 +660,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
                 storyTitle: story.title,
                 slideContent: slideContent || subjectMatter,
                 publicationName: story.topic?.name,
+                primaryColor
               })
             : buildGeminiIllustrativePrompt({
                 tone: storyTone,
@@ -658,6 +668,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
                 storyTitle: story.title,
                 slideContent: slideContent || subjectMatter,
                 publicationName: story.topic?.name,
+                primaryColor
               });
 
           const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
