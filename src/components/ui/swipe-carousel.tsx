@@ -2,6 +2,19 @@ import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
 
+// iOS Detection Hook
+const useIsIOS = () => {
+  const [isIOS, setIsIOS] = useState(false);
+  
+  useEffect(() => {
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const iOSVersion = iOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
+    setIsIOS(iOS && iOSVersion >= 12); // Target iOS 12+
+  }, []);
+  
+  return isIOS;
+};
+
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
   className?: string;
@@ -40,6 +53,25 @@ export function SwipeCarousel({
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
+  const isIOS = useIsIOS();
+
+  // iOS-specific touch optimization
+  useEffect(() => {
+    if (!isIOS || !viewportRef.current) return;
+    
+    const element = viewportRef.current;
+    
+    // Passive touch listeners for iOS scroll performance
+    const handleTouchStart = (e: TouchEvent) => {
+      (e.target as any).__startY = e.touches[0].clientY;
+    };
+    
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
+    
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [isIOS]);
 
   // measure width
   useEffect(() => {
@@ -75,6 +107,11 @@ export function SwipeCarousel({
       onSlideChange(index);
     }
 
+    // iOS-specific haptic feedback on slide change
+    if (isIOS && index > 0 && (navigator as any).vibrate) {
+      (navigator as any).vibrate(10);
+    }
+
     // Track swipe interaction if we have story/topic context and this is a real swipe
     if (storyId && topicId && index > 0 && !hasTrackedSwipe.current) {
       hasTrackedSwipe.current = true;
@@ -84,7 +121,7 @@ export function SwipeCarousel({
         trackSwipe(storyId, topicId, index);
       });
     }
-  }, [index, onSlideChange, storyId, topicId]);
+  }, [index, onSlideChange, storyId, topicId, isIOS]);
 
   // Preview animation effect
   useEffect(() => {
@@ -170,12 +207,27 @@ export function SwipeCarousel({
         <motion.div
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
-          dragElastic={0.12}
+          dragElastic={isIOS ? 0.05 : 0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={{ power: 0.35, timeConstant: 260 }}
+          dragTransition={isIOS 
+            ? { power: 0.4, timeConstant: 200 }
+            : { power: 0.35, timeConstant: 260 }
+          }
           whileDrag={{ cursor: "grabbing" }}
-          style={{ x, touchAction: "pan-y" }}
+          style={{ 
+            x, 
+            touchAction: "pan-y",
+            ...(isIOS ? {
+              willChange: 'transform',
+              transform: 'translate3d(0, 0, 0)',
+              WebkitTransform: 'translate3d(0, 0, 0)',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              WebkitPerspective: 1000,
+              perspective: 1000,
+            } : {})
+          }}
           onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (

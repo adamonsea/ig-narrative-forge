@@ -102,9 +102,32 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isLoved, setIsLoved] = useState(false);
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
   const { trackShareClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
+  
+  // iOS-specific: Preload next slide image for smoother transitions
+  useEffect(() => {
+    if (!isIOS || !story.slides[currentSlideIndex + 1]) return;
+    
+    const nextSlide = story.slides[currentSlideIndex + 1];
+    if (story.cover_illustration_url && currentSlideIndex === 0) {
+      // Preload cover for first slide
+      const img = new Image();
+      img.src = optimizeImageUrl(story.cover_illustration_url, { quality: 80 });
+    }
+  }, [currentSlideIndex, story, isIOS]);
+  
+  // iOS-specific: Use lower quality video for iPhone 12 and below (iOS < 15)
+  const shouldUseVideo = useMemo(() => {
+    if (!isIOS) return isFastConnection && story.animated_illustration_url;
+    
+    // Use static image on iOS < 15 (iPhone 12 baseline)
+    const isOlderIOS = iOSVersion < 15;
+    return !isOlderIOS && isFastConnection && story.animated_illustration_url;
+  }, [isIOS, iOSVersion, isFastConnection, story.animated_illustration_url]);
   
   const [isFirstCard, setIsFirstCard] = useState(false);
   
