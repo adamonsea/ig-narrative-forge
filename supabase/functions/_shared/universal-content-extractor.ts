@@ -124,6 +124,43 @@ const SITE_CONFIGS: Record<string, {
       '.navigation'
     ]
   },
+  // Nub News network - custom selectors for their platform
+  'nub.news': {
+    contentSelectors: [
+      '.article-content',
+      '.story-content',
+      'article .content',
+      '.post-content',
+      'main article',
+      '.entry-content'
+    ],
+    titleSelectors: [
+      'h1.article-title',
+      '.article-header h1',
+      'article h1',
+      'h1'
+    ],
+    authorSelectors: [
+      '.author-name',
+      '.byline',
+      '[rel="author"]',
+      '.article-author'
+    ],
+    excludeSelectors: [
+      '.related-articles',
+      '.sidebar',
+      '.widget',
+      '.comments',
+      '.social-share',
+      'nav',
+      'footer',
+      'header'
+    ],
+    articleLinkPatterns: [
+      /\/news\/local-news\//,
+      /\/news\//
+    ]
+  },
   // Phase 2: Enhanced configuration for Brighton Journal
   'brightonjournal.co.uk': {
     contentSelectors: [
