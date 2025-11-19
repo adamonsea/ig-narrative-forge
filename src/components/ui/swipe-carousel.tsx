@@ -11,17 +11,6 @@ const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
   };
 };
 
-// Device detection utilities
-const isIOS = () => {
-  if (typeof window === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-};
-
-const isAndroid = () => {
-  if (typeof window === 'undefined') return false;
-  return /Android/.test(navigator.userAgent);
-};
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -36,8 +25,6 @@ export type SwipeCarouselProps = {
   topicId?: string;
   // Enhanced animation props
   showPreviewAnimation?: boolean;
-  // Limit drag start to centered area
-  centerDragArea?: boolean;
 };
 
 export function SwipeCarousel({
@@ -51,7 +38,6 @@ export function SwipeCarousel({
   storyId,
   topicId,
   showPreviewAnimation = false,
-  centerDragArea = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -60,7 +46,14 @@ export function SwipeCarousel({
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  const [isDragBlocked, setIsDragBlocked] = useState(false);
+  
+  // Stable dragConstraints ref - prevents recreation on every render
+  const constraintsRef = useRef({ left: 0, right: 0 });
+
+  // Update constraints when dimensions change
+  useEffect(() => {
+    constraintsRef.current = { left: -(count - 1) * width, right: 0 };
+  }, [count, width]);
 
   // measure width with debouncing for Safari performance
   useEffect(() => {
@@ -153,28 +146,7 @@ export function SwipeCarousel({
 
   const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
   const goTo = (i: number) => setIndex(clamp(i));
-  const prev = () => goTo(index - 1);
-  const next = () => goTo(index + 1);
 
-  // Prevent iOS Safari horizontal navigation gestures
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !centerDragArea || !isIOS()) return;
-
-    const preventHorizontalGesture = (e: TouchEvent) => {
-      const target = e.target as HTMLElement;
-      // Don't prevent on interactive elements
-      if (target.closest('button, a, input, textarea, [role="button"]')) return;
-      
-      // Prevent horizontal browser gestures on touch
-      if (e.touches.length === 1) {
-        e.preventDefault();
-      }
-    };
-
-    viewport.addEventListener('touchstart', preventHorizontalGesture, { passive: false });
-    return () => viewport.removeEventListener('touchstart', preventHorizontalGesture);
-  }, [centerDragArea]);
 
   // Instagram-like gesture: smooth slide-by-slide navigation
   const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
@@ -224,70 +196,41 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full"
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          touchAction: centerDragArea ? 'pan-y' : 'auto'
+          touchAction: 'manipulation',
+          overscrollBehaviorX: 'contain',
+          overscrollBehaviorY: 'auto'
         } as React.CSSProperties}
       >
         <motion.div
           className="flex h-full relative"
-          drag={centerDragArea ? false : "x"}
-          dragElastic={centerDragArea ? undefined : 0.15}
-          dragMomentum={centerDragArea ? undefined : true}
-          dragConstraints={centerDragArea ? undefined : { left: -(count - 1) * width, right: 0 }}
-          dragTransition={centerDragArea ? undefined : { power: 0.25, timeConstant: 200 }}
-          onDragEnd={centerDragArea ? undefined : onDragEnd}
+          drag={false}
           style={{ x }}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full relative">
               <div className="h-full w-full">{slide}</div>
               
-              {/* Limited center drag zone - for story cards with CTAs */}
-              {centerDragArea && width > 0 && !isDragBlocked && (
+              {/* Full-screen drag overlay with browser-native gesture detection */}
+              {width > 0 && (
                 <motion.div
-                  className="absolute top-0 bottom-[80px] left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
+                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
                   style={{ 
-                    touchAction: 'pan-x',
+                    touchAction: 'manipulation',
                     userSelect: 'none',
                     WebkitUserSelect: 'none'
                   }}
                   drag="x"
                   dragElastic={0.15}
                   dragMomentum
-                  dragConstraints={{ left: -(count - 1) * width, right: 0 }}
+                  dragConstraints={constraintsRef.current}
                   dragTransition={{ power: 0.25, timeConstant: 200 }}
                   onDragEnd={onDragEnd}
                 />
               )}
             </div>
           ))}
-          
         </motion.div>
       </div>
-
-      {centerDragArea && (
-        <div className="absolute inset-0 pointer-events-none z-10">
-          {/* Left edge click handler - blocks drag, allows tap navigation */}
-          <div
-            className="absolute inset-y-0 left-0 w-[15%] pointer-events-auto"
-            style={{ touchAction: 'auto' }}
-            onClick={() => {
-              if (index > 0) {
-                prev();
-              }
-            }}
-          />
-          {/* Right edge click handler - blocks drag, allows tap navigation */}
-          <div
-            className="absolute inset-y-0 right-0 w-[15%] pointer-events-auto"
-            style={{ touchAction: 'auto' }}
-            onClick={() => {
-              if (index < count - 1) {
-                next();
-              }
-            }}
-          />
-        </div>
-      )}
 
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
