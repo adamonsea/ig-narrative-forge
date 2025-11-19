@@ -224,12 +224,30 @@ export function SwipeCarousel({
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full relative">
               <div className="h-full w-full">{slide}</div>
               
-              {/* Center drag zone - only active when centerDragArea is enabled */}
+              {/* Full-screen drag zone - default mode for sentiment cards and simple carousels */}
+              {!centerDragArea && width > 0 && (
+                <motion.div
+                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
+                  style={{ 
+                    touchAction: 'pan-y',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
+                  }}
+                  drag="x"
+                  dragElastic={0.15}
+                  dragMomentum
+                  dragConstraints={{ left: -(count - 1) * width, right: 0 }}
+                  dragTransition={{ power: 0.25, timeConstant: 200 }}
+                  onDragEnd={onDragEnd}
+                />
+              )}
+
+              {/* Limited center drag zone - for story cards with CTAs */}
               {centerDragArea && width > 0 && !isDragBlocked && (
                 <motion.div
                   className="absolute top-0 bottom-[80px] left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
                   style={{ 
-                    touchAction: 'none',
+                    touchAction: 'pan-y',
                     userSelect: 'none',
                     WebkitUserSelect: 'none'
                   }}
