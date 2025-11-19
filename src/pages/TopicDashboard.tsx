@@ -70,6 +70,7 @@ interface Topic {
   default_tone?: 'formal' | 'conversational' | 'engaging' | 'satirical';
   default_writing_style?: 'journalistic' | 'educational' | 'listicle' | 'story_driven';
   illustration_style?: IllustrationStyle;
+  illustration_primary_color?: string;
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
   community_config?: {
@@ -149,7 +150,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color')
         .eq('slug', slug)
         .single();
 
@@ -1020,6 +1021,7 @@ const TopicDashboard = () => {
                         topic={{
                           id: topic.id,
                           name: topic.name,
+                          illustration_primary_color: topic.illustration_primary_color,
                           branding_config: topic.branding_config
                         }}
                         onUpdate={() => loadTopicAndStats()}
