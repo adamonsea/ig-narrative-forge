@@ -3270,6 +3270,7 @@ export type Database = {
           events_enabled: boolean | null
           id: string
           illustration_accent_color: string | null
+          illustration_primary_color: string | null
           illustration_style: Database["public"]["Enums"]["illustration_style_enum"]
           is_active: boolean | null
           is_archived: boolean | null
@@ -3313,6 +3314,7 @@ export type Database = {
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
+          illustration_primary_color?: string | null
           illustration_style?: Database["public"]["Enums"]["illustration_style_enum"]
           is_active?: boolean | null
           is_archived?: boolean | null
@@ -3356,6 +3358,7 @@ export type Database = {
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
+          illustration_primary_color?: string | null
           illustration_style?: Database["public"]["Enums"]["illustration_style_enum"]
           is_active?: boolean | null
           is_archived?: boolean | null
