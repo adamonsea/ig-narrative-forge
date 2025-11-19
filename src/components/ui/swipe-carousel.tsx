@@ -11,6 +11,18 @@ const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
   };
 };
 
+// Device detection utilities
+const isIOS = () => {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+const isAndroid = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android/.test(navigator.userAgent);
+};
+
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
   className?: string;
@@ -147,7 +159,7 @@ export function SwipeCarousel({
   // Prevent iOS Safari horizontal navigation gestures
   useEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport || !centerDragArea) return;
+    if (!viewport || !centerDragArea || !isIOS()) return;
 
     const preventHorizontalGesture = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -212,42 +224,29 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full"
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          touchAction: centerDragArea ? 'pan-y' : 'manipulation'
+          touchAction: centerDragArea ? 'pan-y' : 'auto'
         } as React.CSSProperties}
       >
         <motion.div
           className="flex h-full relative"
-          drag={false}
+          drag={centerDragArea ? false : "x"}
+          dragElastic={centerDragArea ? undefined : 0.15}
+          dragMomentum={centerDragArea ? undefined : true}
+          dragConstraints={centerDragArea ? undefined : { left: -(count - 1) * width, right: 0 }}
+          dragTransition={centerDragArea ? undefined : { power: 0.25, timeConstant: 200 }}
+          onDragEnd={centerDragArea ? undefined : onDragEnd}
           style={{ x }}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full relative">
               <div className="h-full w-full">{slide}</div>
               
-              {/* Full-screen drag zone - default mode for sentiment cards and simple carousels */}
-              {!centerDragArea && width > 0 && (
-                <motion.div
-                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
-                  style={{ 
-                    touchAction: 'pan-y',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                  }}
-                  drag="x"
-                  dragElastic={0.15}
-                  dragMomentum
-                  dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-                  dragTransition={{ power: 0.25, timeConstant: 200 }}
-                  onDragEnd={onDragEnd}
-                />
-              )}
-
               {/* Limited center drag zone - for story cards with CTAs */}
               {centerDragArea && width > 0 && !isDragBlocked && (
                 <motion.div
                   className="absolute top-0 bottom-[80px] left-[15%] right-[15%] cursor-grab active:cursor-grabbing"
                   style={{ 
-                    touchAction: 'pan-y',
+                    touchAction: 'pan-x',
                     userSelect: 'none',
                     WebkitUserSelect: 'none'
                   }}
