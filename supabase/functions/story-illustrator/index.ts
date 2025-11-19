@@ -6,6 +6,10 @@ import {
   buildIllustrativePrompt, 
   buildPhotographicPrompt 
 } from '../_shared/prompt-helpers.ts'
+import { 
+  buildGeminiIllustrativePrompt, 
+  buildGeminiPhotographicPrompt 
+} from '../_shared/gemini-prompt-builder.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -444,9 +448,6 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
-      // Import Gemini-specific prompt builder
-      const { buildGeminiIllustrativePrompt, buildGeminiPhotographicPrompt } = await import('../_shared/gemini-prompt-builder.ts');
-
       // Generate model-specific prompt leveraging Gemini's world knowledge
       const geminiPrompt = illustrationStyle === 'editorial_photographic'
         ? buildGeminiPhotographicPrompt({
@@ -610,13 +611,102 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         }));
         
         // Try to parse error details
+        let errorJson;
         try {
-          const errorJson = JSON.parse(errorText);
+          errorJson = JSON.parse(errorText);
           console.error('Parsed error:', JSON.stringify(errorJson, null, 2));
-          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorJson.error?.message || errorText}`);
         } catch {
           throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
         }
+
+        // Handle moderation blocks with automatic fallback to Gemini
+        if (errorJson?.error?.code === 'moderation_blocked') {
+          console.warn('⚠️ OpenAI moderation blocked prompt - this appears to be a false positive');
+          console.warn('📝 Blocked prompt preview:', illustrationPrompt.substring(0, 300));
+          
+          // Refund OpenAI credits before falling back
+          if (!isSuperAdmin && creditResult) {
+            console.log('💰 Refunding credits due to moderation block...');
+            await supabase.rpc('add_user_credits', {
+              p_user_id: user.id,
+              p_credits_amount: modelConfig.credits,
+              p_description: `Refund: OpenAI moderation false positive (${model})`,
+              p_story_id: storyId
+            });
+          }
+          
+          // Automatically fall back to Gemini
+          console.log('🔄 Automatically falling back to Gemini image generation...');
+          
+          const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+          if (!LOVABLE_API_KEY) {
+            throw new Error('Cannot fallback: LOVABLE_API_KEY not configured');
+          }
+
+          // Use Gemini-specific prompt
+          const geminiPrompt = illustrationStyle === 'editorial_photographic'
+            ? buildGeminiPhotographicPrompt({
+                tone: storyTone,
+                subject: subjectMatter,
+                storyTitle: story.title,
+                slideContent: slideContent || subjectMatter,
+                publicationName: story.topic?.name,
+              })
+            : buildGeminiIllustrativePrompt({
+                tone: storyTone,
+                subject: subjectMatter,
+                storyTitle: story.title,
+                slideContent: slideContent || subjectMatter,
+                publicationName: story.topic?.name,
+              });
+
+          const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-image',
+              messages: [{
+                role: 'user',
+                content: geminiPrompt
+              }],
+              modalities: ['image', 'text'],
+              response_modalities: ['IMAGE'],
+              image_config: {
+                aspect_ratio: '3:2'
+              }
+            }),
+          });
+
+          if (!geminiResponse.ok) {
+            const geminiErrorText = await geminiResponse.text();
+            console.error('Gemini fallback also failed:', geminiErrorText);
+            throw new Error(`OpenAI moderation blocked and Gemini fallback failed: ${geminiErrorText}`);
+          }
+
+          const geminiData = await geminiResponse.json();
+          const base64Data = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          
+          if (!base64Data || !base64Data.includes('base64,')) {
+            throw new Error('No valid image data in Gemini fallback response');
+          }
+
+          const base64String = base64Data.split('base64,')[1];
+          imageBase64 = base64String;
+          
+          console.log('✅ Successfully generated image using Gemini fallback');
+          
+          // Update generation time and continue with storage
+          generationTime = Date.now() - startTime;
+          
+        } else {
+          // Other OpenAI errors
+          throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorJson.error?.message || errorText}`);
+        }
+      } else {
+        // Success path - extract image normally
       }
 
       const openaiData = await openaiResponse.json();
