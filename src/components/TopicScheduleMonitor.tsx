@@ -240,7 +240,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
       toast({
         title: "Success",
-        description: `Gather completed: ${result?.summary?.totalArticlesStored || 0} articles found`,
+        description: `Gather completed: ${result.totalArticles || 0} articles found`,
       });
 
       fetchTopicData(); // Refresh data
@@ -277,7 +277,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
       
       toast({
         title: "Backfill Complete",
-        description: `Found ${result?.summary?.totalArticlesStored || 0} articles from ${result?.summary?.successfulSources || 0} sources`,
+        description: `Found ${result.totalArticles || 0} articles from ${result.successfulSources || 0} sources`,
       });
 
       fetchTopicData();

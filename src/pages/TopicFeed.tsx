@@ -18,7 +18,6 @@ import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
-import { useStandaloneDetection } from "@/hooks/useStandaloneDetection";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,9 +107,6 @@ const TopicFeed = () => {
 
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
-  
-  // Detect and track PWA standalone launches (iOS homescreen installs)
-  useStandaloneDetection(topic?.id, visitorId);
 
   // Check if user already has notifications enabled for this topic
   useEffect(() => {

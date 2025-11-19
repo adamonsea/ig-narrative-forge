@@ -102,10 +102,8 @@ export async function extractSubjectMatter(
 export function buildIllustrativePrompt(
   tone: string,
   subject: string,
-  publicationName?: string,
-  accentColor?: string
+  publicationName?: string
 ): string {
-  const colorToUse = accentColor || '#58FFBC';
   const expressionGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
     ? 'subtle expressions, thoughtful demeanor'
     : tone.includes('uplifting') || tone.includes('hopeful') || tone.includes('positive')
@@ -117,7 +115,7 @@ export function buildIllustrativePrompt(
 CRITICAL AESTHETIC MANDATE - Screen Print / Risograph Style:
 - FLAT COLOR FILLS with visible print texture and grain (like risograph or screen print)
 - Clean BLACK OUTLINES defining shapes (hand-drawn quality, not digital vector)
-- LIMITED PALETTE: Black, white, accent color (${colorToUse}) - printed ink aesthetic
+- LIMITED PALETTE: Black, white, mint green (#10B981) accents - printed ink aesthetic
 - PAPER TEXTURE visible throughout (like printed on newsprint or art paper)
 - Slight registration shifts and imperfections (authentic print quality)
 

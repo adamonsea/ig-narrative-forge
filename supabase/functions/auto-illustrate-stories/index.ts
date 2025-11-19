@@ -5,30 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// MVP Rate Limiting - prevents abuse while allowing legitimate operations
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(identifier: string, maxPerHour: number = 5): boolean {
-  const now = Date.now();
-  const limit = rateLimitMap.get(identifier);
-  
-  // Reset if past hour or first call
-  if (!limit || now > limit.resetAt) {
-    rateLimitMap.set(identifier, { count: 1, resetAt: now + 3600000 });
-    return true;
-  }
-  
-  // Block if exceeded
-  if (limit.count >= maxPerHour) {
-    console.warn(`Rate limit exceeded for ${identifier}: ${limit.count}/${maxPerHour}`);
-    return false;
-  }
-  
-  // Increment and allow
-  limit.count++;
-  return true;
-}
-
 interface AutoIllustrateRequest {
   topicId?: string;
   storyIds?: string[];
@@ -42,26 +18,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Rate limiting: Allow unlimited for authenticated requests, limit anonymous
-    const hasAuth = req.headers.get('authorization')?.includes('Bearer');
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-    
-    if (!hasAuth && !checkRateLimit(clientIP, 5)) {
-      console.warn(`🚫 Rate limit exceeded from IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          message: 'Maximum 5 requests per hour for unauthenticated calls. Please authenticate or wait.'
-        }), 
-        { 
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

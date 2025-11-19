@@ -1,16 +1,6 @@
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-
-// Debounce utility for ResizeObserver
-const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
-};
-
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -25,6 +15,8 @@ export type SwipeCarouselProps = {
   topicId?: string;
   // Enhanced animation props
   showPreviewAnimation?: boolean;
+  // Limit drag start to centered area
+  centerDragArea?: boolean;
 };
 
 export function SwipeCarousel({
@@ -38,6 +30,7 @@ export function SwipeCarousel({
   storyId,
   topicId,
   showPreviewAnimation = false,
+  centerDragArea = false,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -46,30 +39,15 @@ export function SwipeCarousel({
   const x = useMotionValue(0);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  
-  // Stable dragConstraints ref - prevents recreation on every render
-  const constraintsRef = useRef({ left: 0, right: 0 });
+  const [isDragBlocked, setIsDragBlocked] = useState(false);
 
-  // Update constraints when dimensions change
-  useEffect(() => {
-    constraintsRef.current = { left: -(count - 1) * width, right: 0 };
-  }, [count, width]);
-
-  // measure width with debouncing for Safari performance
+  // measure width
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return;
-    
-    const debouncedSetWidth = debounce((newWidth: number) => {
-      setWidth(newWidth);
-    }, 150);
-    
     const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        debouncedSetWidth(Math.floor(entry.contentRect.width));
-      }
+      for (const entry of entries) setWidth(Math.floor(entry.contentRect.width));
     });
-    
     ro.observe(node);
     setWidth(Math.floor(node.getBoundingClientRect().width));
     return () => ro.disconnect();
@@ -80,13 +58,13 @@ export function SwipeCarousel({
     x.set(-index * width);
   }, [width]);
 
-  // animate to index when changed via dots/click (optimized for Safari)
+  // animate to index when changed via dots/click
   useEffect(() => {
     const controls = animate(x, -index * width, {
       type: "spring",
-      stiffness: 300,
-      damping: 55,
-      mass: 0.7,
+      stiffness: 520,
+      damping: 46,
+      mass: 0.9,
     });
     return controls.stop;
   }, [index]);
@@ -127,16 +105,10 @@ export function SwipeCarousel({
         }
       );
       
-      // Mark as shown after animation completes (deferred for Safari performance)
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(() => {
-          sessionStorage.setItem(sessionKey, 'true');
-        }, { timeout: 2000 });
-      } else {
-        setTimeout(() => {
-          sessionStorage.setItem(sessionKey, 'true');
-        }, 1400);
-      }
+      // Mark as shown after animation completes
+      setTimeout(() => {
+        sessionStorage.setItem(sessionKey, 'true');
+      }, 1400);
       
       return () => controls.stop();
     }, 1500);
@@ -146,12 +118,12 @@ export function SwipeCarousel({
 
   const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
   const goTo = (i: number) => setIndex(clamp(i));
-
+  const prev = () => goTo(index - 1);
+  const next = () => goTo(index + 1);
 
   // Instagram-like gesture: smooth slide-by-slide navigation
-  const onDragEnd = useCallback((_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const isMobile = width < 768;
-    const threshold = width * (isMobile ? 0.2 : 0.25); // Easier on mobile
+  const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const threshold = width * 0.25; // 25% of width to trigger slide change
     const swipeDistance = info.offset.x;
     const swipeVelocity = info.velocity.x;
     
@@ -166,16 +138,16 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
     
-    // Animate to target slide (optimized for Safari)
+    // Animate to target slide
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      stiffness: 280,
-      damping: 50,
-      mass: 0.7,
+      stiffness: 400,
+      damping: 40,
+      mass: 1,
     });
     setIndex(targetIndex);
     return () => controls.stop();
-  }, [width, index, x, count]);
+  };
 
 
   const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
@@ -193,44 +165,52 @@ export function SwipeCarousel({
     >
       <div 
         ref={viewportRef} 
-        className="overflow-hidden w-full h-full"
-        style={{ 
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'manipulation',
-          overscrollBehaviorX: 'contain',
-          overscrollBehaviorY: 'auto'
-        } as React.CSSProperties}
+        className="overflow-hidden w-full h-full" 
       >
         <motion.div
           className="flex h-full relative"
-          drag={false}
-          style={{ x }}
+          drag={width > 0 && !isDragBlocked ? "x" : false}
+          dragElastic={0.12}
+          dragMomentum
+          dragConstraints={{ left: -(count - 1) * width, right: 0 }}
+          dragTransition={{ power: 0.35, timeConstant: 260 }}
+          whileDrag={{ cursor: "grabbing" }}
+          style={{ x, touchAction: "pan-y" }}
+          onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
-            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full relative">
+            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
               <div className="h-full w-full">{slide}</div>
-              
-              {/* Full-screen drag overlay with browser-native gesture detection */}
-              {width > 0 && (
-                <motion.div
-                  className="absolute inset-0 cursor-grab active:cursor-grabbing"
-                  style={{ 
-                    touchAction: 'manipulation',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                  }}
-                  drag="x"
-                  dragElastic={0.15}
-                  dragMomentum
-                  dragConstraints={constraintsRef.current}
-                  dragTransition={{ power: 0.25, timeConstant: 200 }}
-                  onDragEnd={onDragEnd}
-                />
-              )}
             </div>
           ))}
+          
         </motion.div>
       </div>
+
+      {centerDragArea && (
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Left edge click handler for navigation - smaller on mobile */}
+          <div
+            className="absolute inset-y-0 left-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
+            onClick={() => {
+              if (index > 0) {
+                prev();
+                console.debug?.('edge-click', 'left', 'prev');
+              }
+            }}
+          />
+          {/* Right edge click handler for navigation - smaller on mobile */}
+          <div
+            className="absolute inset-y-0 right-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
+            onClick={() => {
+              if (index < count - 1) {
+                next();
+                console.debug?.('edge-click', 'right', 'next');
+              }
+            }}
+          />
+        </div>
+      )}
 
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">

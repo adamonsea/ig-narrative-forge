@@ -199,20 +199,11 @@ export const ImprovedSourceSuggestionTool = ({
         setValidationProgress(prev => ({ ...prev, [suggestion.url]: 100 }));
 
         if (!error && validationResult) {
-          // Show toast if better feed was discovered
-          if (validationResult.suggestedUrl && validationResult.suggestedUrl !== suggestion.url) {
-            toast({
-              title: "Better Feed Found",
-              description: `Using discovered RSS feed instead of homepage`,
-            });
-          }
-          
-          // Update suggestion with validation results AND discovered feed URL
+          // Update suggestion with validation results
           setSuggestions(prev => prev.map(s => 
             s.url === suggestion.url 
               ? {
                   ...s,
-                  url: validationResult.suggestedUrl || s.url, // ✅ Use discovered feed URL with fallback
                   technical_validation: {
                     is_accessible: validationResult.isAccessible || false,
                     is_valid_rss: validationResult.isValidRSS || false,
@@ -233,48 +224,31 @@ export const ImprovedSourceSuggestionTool = ({
   const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, isLinked: boolean, isActive: boolean, id?: string}> => {
     const domain = new URL(suggestion.url).hostname.replace('www.', '');
     
-    // Check by URL, domain, OR name+topic combination
+    // First, check if source exists in content_sources by URL or domain
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id, source_name, feed_url')
       .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
       .maybeSingle();
 
-    if (existingSource) {
-      // Check if this source is linked to the current topic
-      const { data: topicSourceLink } = await supabase
-        .from('topic_sources')
-        .select('is_active')
-        .eq('topic_id', topicId)
-        .eq('source_id', existingSource.id)
-        .maybeSingle();
-
-      return {
-        exists: true,
-        isLinked: !!topicSourceLink,
-        isActive: topicSourceLink?.is_active || false,
-        id: existingSource.id
-      };
+    if (!existingSource) {
+      return { exists: false, isLinked: false, isActive: false };
     }
 
-    // Also check if a source with the same name exists for this topic (unique constraint)
-    const { data: existingByName } = await supabase
+    // Check if this source is linked to the current topic
+    const { data: topicSourceLink } = await supabase
       .from('topic_sources')
-      .select('source_id, is_active, content_sources(id, source_name, feed_url)')
+      .select('is_active')
       .eq('topic_id', topicId)
-      .eq('content_sources.source_name', suggestion.source_name)
+      .eq('source_id', existingSource.id)
       .maybeSingle();
 
-    if (existingByName?.content_sources) {
-      return {
-        exists: true,
-        isLinked: true,
-        isActive: existingByName.is_active || false,
-        id: existingByName.content_sources.id
-      };
-    }
-
-    return { exists: false, isLinked: false, isActive: false };
+    return {
+      exists: true,
+      isLinked: !!topicSourceLink,
+      isActive: topicSourceLink?.is_active || false,
+      id: existingSource.id
+    };
   };
 
   const addSource = async (suggestion: SourceSuggestion) => {
@@ -355,12 +329,7 @@ export const ImprovedSourceSuggestionTool = ({
       const { error: linkError } = await supabase.rpc('add_source_to_topic', {
         p_topic_id: topicId,
         p_source_id: sourceId,
-        p_source_config: {
-          feed_url: suggestion.url,
-          added_at: new Date().toISOString(),
-          added_via: 'source_suggestion_tool',
-          created_with_topic: true
-        }
+        p_source_config: {}
       });
 
       if (linkError) {

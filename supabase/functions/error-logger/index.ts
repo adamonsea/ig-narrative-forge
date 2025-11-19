@@ -6,27 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// MVP Rate Limiting - prevents database flooding
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(identifier: string, maxPerHour: number = 20): boolean {
-  const now = Date.now();
-  const limit = rateLimitMap.get(identifier);
-  
-  if (!limit || now > limit.resetAt) {
-    rateLimitMap.set(identifier, { count: 1, resetAt: now + 3600000 });
-    return true;
-  }
-  
-  if (limit.count >= maxPerHour) {
-    console.warn(`Rate limit exceeded for ${identifier}: ${limit.count}/${maxPerHour}`);
-    return false;
-  }
-  
-  limit.count++;
-  return true;
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -34,25 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    // Rate limiting: Higher limit (20/hour) since legitimate errors happen
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-    
-    if (!checkRateLimit(clientIP, 20)) {
-      console.warn(`🚫 Error logging rate limit exceeded from IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          message: 'Too many error reports from this IP. Maximum 20 per hour.'
-        }), 
-        { 
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
