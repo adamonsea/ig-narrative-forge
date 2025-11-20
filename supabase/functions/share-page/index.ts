@@ -13,9 +13,38 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const type = url.searchParams.get('type'); // 'story' or 'feed'
-    const id = url.searchParams.get('id'); // story id
-    const topic = url.searchParams.get('topic'); // topic slug
+    
+    // Support both old query param format and new path-based format
+    // New format: /story-id (extracts story ID from path)
+    // Old format: ?type=story&id=story-id&topic=topic-slug (backward compatibility)
+    
+    const pathname = url.pathname.replace(/^\//, ''); // Remove leading slash
+    let type = url.searchParams.get('type');
+    let id = url.searchParams.get('id');
+    let topic = url.searchParams.get('topic');
+    
+    // If pathname exists and no query params, treat it as story ID
+    if (pathname && !type && !id) {
+      id = pathname;
+      type = 'story';
+      
+      // Look up topic from story
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      const { data: storyData } = await supabase
+        .from('stories')
+        .select('topic_id, topics!inner(slug)')
+        .eq('id', id)
+        .single();
+      
+      if (storyData && storyData.topics) {
+        topic = storyData.topics.slug;
+      } else {
+        return new Response('Story not found', { status: 404 });
+      }
+    }
     
     if (!type || !topic) {
       return new Response('Missing required parameters', { status: 400 });
