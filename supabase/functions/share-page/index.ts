@@ -36,12 +36,12 @@ serve(async (req) => {
       
       const { data: storyData } = await supabase
         .from('stories')
-        .select('topics!inner(slug)')
+        .select('topic_articles!inner(topics!inner(slug))')
         .eq('id', id)
         .single();
       
-      if (storyData && storyData.topics) {
-        topic = storyData.topics.slug;
+      if (storyData && storyData.topic_articles?.topics) {
+        topic = storyData.topic_articles.topics.slug;
       } else {
         console.error('Story not found for ID:', id);
         return new Response('Story not found', { status: 404 });
