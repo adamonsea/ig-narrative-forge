@@ -461,8 +461,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
     
     // Use share preview URL for better OG tag support (WhatsApp/Facebook scraping)
-    const functionsBaseUrl = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-    const shareUrl = `${functionsBaseUrl}/share-page?type=story&id=${story.id}&topic=${currentSlug}`;
+    const shareUrl = `https://share.curatr.pro?type=story&id=${story.id}&topic=${currentSlug}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
@@ -526,8 +525,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
 
     // Use share preview URL for proper OG tags (WhatsApp scraping)
-    const functionsBaseUrl = 'https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1';
-    const shareUrl = `${functionsBaseUrl}/share-page?type=story&id=${story.id}&topic=${currentSlug}`;
+    const shareUrl = `https://share.curatr.pro?type=story&id=${story.id}&topic=${currentSlug}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
