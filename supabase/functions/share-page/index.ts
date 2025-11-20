@@ -40,8 +40,8 @@ serve(async (req) => {
         .eq('id', id)
         .single();
       
-      if (storyData && storyData.topic_articles?.topics) {
-        topic = storyData.topic_articles.topics.slug;
+      if (storyData && Array.isArray(storyData.topic_articles) && storyData.topic_articles.length > 0) {
+        topic = storyData.topic_articles[0].topics.slug;
       } else {
         console.error('Story not found for ID:', id);
         return new Response('Story not found', { status: 404 });
