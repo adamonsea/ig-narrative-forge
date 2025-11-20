@@ -34,16 +34,28 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      const { data: storyData } = await supabase
+      const { data: storyData, error: storyError } = await supabase
         .from('stories')
         .select('topic_articles!inner(topics!inner(slug))')
         .eq('id', id)
         .single();
       
-      if (storyData && Array.isArray(storyData.topic_articles) && storyData.topic_articles.length > 0) {
-        topic = storyData.topic_articles[0].topics.slug;
-      } else {
-        console.error('Story not found for ID:', id);
+      console.log('Story data:', JSON.stringify(storyData, null, 2));
+      console.log('Story error:', storyError);
+      
+      if (storyData?.topic_articles) {
+        // topic_articles is an array, get first topic's slug
+        const topicArticles = Array.isArray(storyData.topic_articles) 
+          ? storyData.topic_articles 
+          : [storyData.topic_articles];
+        
+        if (topicArticles.length > 0 && topicArticles[0].topics?.slug) {
+          topic = topicArticles[0].topics.slug;
+        }
+      }
+      
+      if (!topic) {
+        console.error('Could not determine topic for story ID:', id);
         return new Response('Story not found', { status: 404 });
       }
     }
