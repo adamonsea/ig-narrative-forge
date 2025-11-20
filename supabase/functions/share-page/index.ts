@@ -260,7 +260,7 @@ serve(async (req) => {
         ...corsHeaders,
         'Content-Type': 'text/html; charset=utf-8',
         'X-Robots-Tag': 'noindex, nofollow',
-        'Cache-Control': 'public, max-age=300', // 5 min cache for social scrapers
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600, must-revalidate', // 1 hour cache, force revalidation
       },
     });
 
