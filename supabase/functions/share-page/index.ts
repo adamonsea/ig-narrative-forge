@@ -28,20 +28,21 @@ serve(async (req) => {
       id = pathname;
       type = 'story';
       
-      // Look up topic from story
+      // Look up topic slug from story - we'll fetch full story data later
       const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
       const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
       const supabase = createClient(supabaseUrl, supabaseKey);
       
       const { data: storyData } = await supabase
         .from('stories')
-        .select('topic_id, topics!inner(slug)')
+        .select('topics!inner(slug)')
         .eq('id', id)
         .single();
       
       if (storyData && storyData.topics) {
         topic = storyData.topics.slug;
       } else {
+        console.error('Story not found for ID:', id);
         return new Response('Story not found', { status: 404 });
       }
     }
@@ -95,7 +96,7 @@ serve(async (req) => {
 
     if (type === 'story' && id) {
       // Fetch story data with first slide
-      const { data: storyData } = await supabase
+      const { data: storyData, error: storyError } = await supabase
         .from('stories')
         .select(`
           title,
@@ -106,6 +107,11 @@ serve(async (req) => {
         .eq('id', id)
         .eq('slides.slide_number', 1)
         .single();
+
+      if (storyError || !storyData) {
+        console.error('Failed to fetch story:', storyError);
+        return new Response('Story not found', { status: 404 });
+      }
 
       if (storyData) {
         // Extract rewritten headline from first slide content
@@ -129,6 +135,7 @@ serve(async (req) => {
         // Prioritize article cover image, fallback to generated OG image
         if (storyData.cover_illustration_url) {
           ogImage = storyData.cover_illustration_url;
+          console.log('Using story cover illustration:', ogImage);
         } else {
           // Fallback to generated OG image with topic branding
           const ogParams = new URLSearchParams({
@@ -140,7 +147,8 @@ serve(async (req) => {
           });
           if (topicLogo) ogParams.set('logo_url', topicLogo);
           
-          ogImage = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?${ogParams.toString()}`;
+          ogImage = `https://fpoywkjgdapgjtdeooak.functions.supabase.co/generate-og-image?${ogParams.toString()}`;
+          console.log('Using generated OG image:', ogImage);
         }
 
         redirectUrl = `https://curatr.pro/feed/${topic}/story/${id}`;
@@ -160,7 +168,8 @@ serve(async (req) => {
       });
       if (topicLogo) ogParams.set('logo_url', topicLogo);
       
-      ogImage = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/generate-og-image?${ogParams.toString()}`;
+      ogImage = `https://fpoywkjgdapgjtdeooak.functions.supabase.co/generate-og-image?${ogParams.toString()}`;
+      console.log('Using feed OG image:', ogImage);
       redirectUrl = `https://curatr.pro/feed/${topic}`;
     }
 
