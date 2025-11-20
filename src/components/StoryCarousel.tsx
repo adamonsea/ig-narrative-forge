@@ -12,26 +12,34 @@ import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
+import { useDeviceOptimizations } from '@/lib/deviceUtils';
 // Force cache refresh
 
-// Hook to detect network speed
+// Hook to detect network speed (adjusted for device tier)
 const useNetworkSpeed = () => {
-  const [isFastConnection, setIsFastConnection] = useState(true); // Default to true for desktop
+  const [isFastConnection, setIsFastConnection] = useState(true);
+  const optimizations = useDeviceOptimizations();
   
   useEffect(() => {
-    // Check Network Information API
     const connection = (navigator as any).connection 
       || (navigator as any).mozConnection 
       || (navigator as any).webkitConnection;
     
     if (!connection) {
-      setIsFastConnection(true); // Desktop fallback - assume fast
+      // On old iOS, be conservative; otherwise assume fast
+      setIsFastConnection(!optimizations.shouldAggressivelyLazyLoadImages);
       return;
     }
     
     const checkConnection = () => {
-      const effectiveType = connection.effectiveType; // '4g', '3g', '2g', 'slow-2g'
-      const saveData = connection.saveData; // User enabled data saver
+      const effectiveType = connection.effectiveType;
+      const saveData = connection.saveData;
+      
+      // On old iOS, always treat as slow for conservative loading
+      if (optimizations.shouldAggressivelyLazyLoadImages) {
+        setIsFastConnection(false);
+        return;
+      }
       
       // Only load video on 4g or fast 3g without data saver mode
       const isFast = (effectiveType === '4g' || effectiveType === '3g') && !saveData;
@@ -40,10 +48,9 @@ const useNetworkSpeed = () => {
     
     checkConnection();
     
-    // Listen for connection changes
     connection.addEventListener('change', checkConnection);
     return () => connection.removeEventListener('change', checkConnection);
-  }, []);
+  }, [optimizations.shouldAggressivelyLazyLoadImages]);
   
   return isFastConnection;
 };

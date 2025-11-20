@@ -1,19 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-
-// iOS Detection Hook
-const useIsIOS = () => {
-  const [isIOS, setIsIOS] = useState(false);
-  
-  useEffect(() => {
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const iOSVersion = iOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
-    setIsIOS(iOS && iOSVersion >= 12); // Target iOS 12+
-  }, []);
-  
-  return isIOS;
-};
+import { useDeviceOptimizations } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -53,11 +41,11 @@ export function SwipeCarousel({
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
-  const isIOS = useIsIOS();
+  const optimizations = useDeviceOptimizations();
 
-  // iOS-specific touch optimization
+  // Device-specific touch optimization (only for mid-range/old iOS)
   useEffect(() => {
-    if (!isIOS || !viewportRef.current) return;
+    if (!optimizations.shouldReduceMotion || !viewportRef.current) return;
     
     const element = viewportRef.current;
     
@@ -71,7 +59,7 @@ export function SwipeCarousel({
     return () => {
       element.removeEventListener('touchstart', handleTouchStart);
     };
-  }, [isIOS]);
+  }, [optimizations.shouldReduceMotion]);
 
   // measure width
   useEffect(() => {
@@ -107,8 +95,8 @@ export function SwipeCarousel({
       onSlideChange(index);
     }
 
-    // iOS-specific haptic feedback on slide change
-    if (isIOS && index > 0 && (navigator as any).vibrate) {
+    // iOS-specific haptic feedback on slide change (all iOS devices)
+    if (optimizations.shouldReduceMotion && index > 0 && (navigator as any).vibrate) {
       (navigator as any).vibrate(10);
     }
 
@@ -121,7 +109,7 @@ export function SwipeCarousel({
         trackSwipe(storyId, topicId, index);
       });
     }
-  }, [index, onSlideChange, storyId, topicId, isIOS]);
+  }, [index, onSlideChange, storyId, topicId, optimizations.shouldReduceMotion]);
 
   // Preview animation effect
   useEffect(() => {
@@ -207,10 +195,10 @@ export function SwipeCarousel({
         <motion.div
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
-          dragElastic={isIOS ? 0.05 : 0.12}
+          dragElastic={optimizations.shouldReduceMotion ? 0.05 : 0.12}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={isIOS 
+          dragTransition={optimizations.shouldReduceMotion
             ? { power: 0.4, timeConstant: 200 }
             : { power: 0.35, timeConstant: 260 }
           }
@@ -218,7 +206,7 @@ export function SwipeCarousel({
           style={{ 
             x, 
             touchAction: "pan-y",
-            ...(isIOS ? {
+            ...(optimizations.shouldReduceMotion ? {
               willChange: 'transform',
               transform: 'translate3d(0, 0, 0)',
               WebkitTransform: 'translate3d(0, 0, 0)',
