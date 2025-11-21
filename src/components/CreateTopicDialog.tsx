@@ -12,7 +12,6 @@ import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X, Sparkles, Loader2, Wand2
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { generateRandomTopicColors } from "@/lib/colorUtils";
 
 interface KeywordSuggestion {
   keyword: string;
@@ -46,7 +45,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   });
   const [keywordInput, setKeywordInput] = useState('');
   const [creating, setCreating] = useState(false);
-  const [previewColors, setPreviewColors] = useState<{gradient: string, border: string} | null>(null);
+  // Removed preview colors - using design system tokens instead
   const [smartSuggestions, setSmartSuggestions] = useState<KeywordSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestionPreview, setShowSuggestionPreview] = useState(false);
@@ -107,13 +106,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     }
   }, [formData.topic_type, formData.region, hasAutoPopulated]);
 
-  // Generate preview colors when dialog opens
-  useEffect(() => {
-    if (open && !previewColors) {
-      const colors = generateRandomTopicColors();
-      setPreviewColors(colors);
-    }
-  }, [open, previewColors]);
+  // Removed preview colors effect - using design system tokens instead
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -339,7 +332,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     });
     setCurrentStep(1);
     setKeywordInput('');
-    setPreviewColors(null); // Reset colors
     clearDraft();
   };
 
@@ -353,21 +345,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-2xl ${previewColors ? previewColors.gradient : ''} ${previewColors ? previewColors.border : ''} border-2`}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+          <DialogTitle className="text-2xl font-bold">
             Create New Topic
-            {previewColors && (
-              <div className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-                <div className="w-3 h-3 bg-gradient-to-br from-current to-current/50 rounded-full"></div>
-                Preview Colors
-              </div>
-            )}
           </DialogTitle>
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-center gap-3 mt-4">
             <Progress value={progress} className="flex-1" />
             <span className="text-sm font-medium text-muted-foreground">
-              {currentStep} of {STEPS.length}
+              {currentStep}/{STEPS.length}
             </span>
           </div>
         </DialogHeader>
@@ -412,27 +398,27 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 <button
                   onClick={() => setFormData({ ...formData, topic_type: 'keyword' })}
-                  className={`p-8 rounded-lg border-2 transition-all ${
+                  className={`p-8 rounded-lg border-2 transition-all hover:shadow-md ${
                     formData.topic_type === 'keyword'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      ? 'border-primary bg-accent'
+                      : 'border-border hover:border-muted-foreground'
                   }`}
                 >
                   <Hash className="w-12 h-12 mx-auto mb-4 text-primary" />
                   <h3 className="text-xl font-semibold mb-2">Interest Topic</h3>
-                  <p className="text-muted-foreground">Based on keywords and themes</p>
+                  <p className="text-sm text-muted-foreground">Based on keywords and themes</p>
                 </button>
                 <button
                   onClick={() => setFormData({ ...formData, topic_type: 'regional', region: formData.name })}
-                  className={`p-8 rounded-lg border-2 transition-all ${
+                  className={`p-8 rounded-lg border-2 transition-all hover:shadow-md ${
                     formData.topic_type === 'regional'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      ? 'border-primary bg-accent'
+                      : 'border-border hover:border-muted-foreground'
                   }`}
                 >
                   <MapPin className="w-12 h-12 mx-auto mb-4 text-primary" />
                   <h3 className="text-xl font-semibold mb-2">Local News</h3>
-                  <p className="text-muted-foreground">Location-based content</p>
+                  <p className="text-sm text-muted-foreground">Location-based content</p>
                 </button>
               </div>
               
@@ -494,14 +480,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
               {/* Auto-populated Keywords Banner */}
               {formData.topic_type === 'regional' && formData.keywords.length > 0 && hasAutoPopulated && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                  <div className="flex items-start gap-2">
-                    <Wand2 className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="p-4 bg-accent rounded-lg border">
+                  <div className="flex items-start gap-3">
+                    <Wand2 className="h-5 w-5 text-pop mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-blue-900 dark:text-blue-100 text-sm mb-1">
+                      <p className="font-medium text-foreground text-sm mb-1">
                         Generic keywords auto-added
                       </p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                      <p className="text-sm text-muted-foreground mb-3">
                         These {formData.keywords.length} keywords work well across regional topics. Remove any that don't fit your focus, or add your own specific keywords.
                       </p>
                       <Button
@@ -509,7 +495,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         variant="outline"
                         size="sm"
                         onClick={clearAllKeywords}
-                        className="h-7 text-xs"
                       >
                         Clear all keywords
                       </Button>
@@ -520,11 +505,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
               {/* Smart Setup for Regional Topics */}
               {formData.topic_type === 'regional' && smartSuggestions.length > 0 && (
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                <div className="bg-accent border rounded-lg p-4 space-y-3">
                   <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <Sparkles className="w-5 h-5 text-pop mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">Smart Setup Available</h3>
+                      <h3 className="font-semibold text-foreground mb-1">Smart Setup Available</h3>
                       <p className="text-sm text-muted-foreground mb-3">
                         Based on successful regional feeds, we can pre-fill {smartSuggestions.length} proven keywords for local news coverage.
                       </p>
@@ -613,7 +598,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-2">
                     {smartSuggestions.map((suggestion) => (
-                      <div key={suggestion.keyword} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                      <div key={suggestion.keyword} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors">
                         <Checkbox
                           checked={selectedSuggestions.includes(suggestion.keyword)}
                           onCheckedChange={(checked) => toggleSuggestion(suggestion.keyword, checked)}
@@ -661,10 +646,10 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <button
                     key={option.value}
                     onClick={() => setFormData({ ...formData, audience_expertise: option.value as any })}
-                    className={`p-6 rounded-lg border-2 transition-all ${
+                    className={`p-6 rounded-lg border-2 transition-all hover:shadow-md ${
                       formData.audience_expertise === option.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        ? 'border-primary bg-accent'
+                        : 'border-border hover:border-muted-foreground'
                     }`}
                   >
                     <div className="text-4xl mb-3">{option.emoji}</div>
@@ -708,7 +693,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             <Button
               onClick={handleCreate}
               disabled={!canProceed() || creating}
-              className="bg-primary hover:bg-primary/90"
             >
               {creating ? 'Creating...' : 'Create Topic'}
             </Button>
