@@ -150,7 +150,7 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold mb-2" style={{ color: '#0a1810' }}>
+            <h1 className="text-4xl font-bold text-foreground mb-2">
               Your topics
             </h1>
             <p className="text-xs text-muted-foreground/60">
