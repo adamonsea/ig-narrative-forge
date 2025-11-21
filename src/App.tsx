@@ -33,17 +33,6 @@ const StoryRedirect = () => {
   return <Navigate to={`/feed/${slug}/story/${storyId}`} replace />;
 };
 
-// Share URL redirect to Supabase edge function
-const ShareRedirect = () => {
-  const { storyId } = useParams<{ storyId: string }>();
-  React.useEffect(() => {
-    if (storyId) {
-      window.location.href = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyId}`;
-    }
-  }, [storyId]);
-  return <div>Redirecting...</div>;
-};
-
 // Create QueryClient with stable configuration
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -77,9 +66,6 @@ const App = () => {
                 {/* Redirect old URL patterns to new universal URLs */}
                 <Route path="/feed/topic/:slug" element={<FeedRedirect />} />
                 <Route path="/feed/topic/:slug/story/:storyId" element={<StoryRedirect />} />
-                
-                {/* Share URL redirect */}
-                <Route path="/s/:storyId" element={<ShareRedirect />} />
                 
                 {/* New universal routes */}
               <Route path="/feed/:slug" element={<TopicFeed />} />
