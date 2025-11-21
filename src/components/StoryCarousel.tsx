@@ -57,6 +57,7 @@ const useNetworkSpeed = () => {
 
 interface Story {
   id: string;
+  slug?: string; // URL-friendly slug for shareable links
   title: string;
   author: string | null;
   publication_name: string | null;
@@ -460,8 +461,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
     
-    // Use verified custom share domain with full edge function path
-    const shareUrl = `https://share.curatr.pro/functions/v1/share-page/${story.id}`;
+    // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
+    const storyIdentifier = (story as any).slug || story.id;
+    const shareUrl = `https://share.curatr.pro/functions/v1/share-page/${storyIdentifier}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
@@ -524,8 +526,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
 
-    // Use verified custom share domain with full edge function path
-    const shareUrl = `https://share.curatr.pro/functions/v1/share-page/${story.id}`;
+    // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
+    const storyIdentifier = (story as any).slug || story.id;
+    const shareUrl = `https://share.curatr.pro/functions/v1/share-page/${storyIdentifier}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
