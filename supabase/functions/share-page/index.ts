@@ -25,7 +25,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Remove leading slash and optionally the function name from pathname
-    const pathname = url.pathname.replace(/^\/share-page\/?/, '').replace(/^\//, '');
+    const pathname = url.pathname
+      .replace(/^\/functions\/v1\/share-page\/?/, '')  // Strip custom domain path first
+      .replace(/^\/share-page\/?/, '')                  // Fallback for legacy format
+      .replace(/^\//, '');                              // Clean up any remaining leading slash
     let type = url.searchParams.get('type');
     let id = url.searchParams.get('id');
     let topic = url.searchParams.get('topic');
