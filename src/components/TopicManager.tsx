@@ -317,30 +317,37 @@ export const TopicManager = () => {
         <div className="grid gap-6">
           {topics.map((topic) => {
             return (
-              <Card 
-                key={topic.id} 
-                className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border hover:border-[hsl(270,100%,68%)]/30 cursor-pointer"
-                onClick={() => navigate(`/dashboard/topic/${topic.slug}`)}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 pr-6">
-                      <div className="flex items-center gap-3 mb-2">
-                        {topic.branding_config?.logo_url && (
-                          <img 
-                            src={topic.branding_config.logo_url} 
-                            alt={`${topic.name} logo`}
-                            className="w-10 h-10 rounded object-cover"
-                          />
-                        )}
-                        <h3 className="text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
-                          {topic.name}
-                        </h3>
+              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border hover:border-[hsl(270,100%,68%)]/30">
+                <Link 
+                  to={`/dashboard/topic/${topic.slug}`}
+                  className="block"
+                  onClick={(e) => {
+                    // Let buttons handle their own clicks
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('[role="button"]')) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 pr-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          {topic.branding_config?.logo_url && (
+                            <img 
+                              src={topic.branding_config.logo_url} 
+                              alt={`${topic.name} logo`}
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          )}
+                          <h3 className="text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
+                            {topic.name}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {topic.description}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {topic.description}
-                      </p>
-                    </div>
                       
                       {/* Stats Section */}
                       <div className="flex flex-col gap-3 min-w-[180px]">
@@ -460,9 +467,9 @@ export const TopicManager = () => {
                         </Badge>
                         
                         <div className="flex items-center gap-2 bg-card/40 backdrop-blur-sm rounded-lg p-2 border border-border/30">
-                          <span className="text-xs font-medium text-muted-foreground">
+                          <div className="text-xs font-medium text-muted-foreground">
                             Status:
-                          </span>
+                          </div>
                           <Badge variant="secondary" className="h-6 px-2 text-xs font-semibold">
                             Published
                           </Badge>
@@ -474,8 +481,7 @@ export const TopicManager = () => {
                               <TooltipTrigger asChild>
                                 <button 
                                   className="p-1 rounded-full hover:bg-card/60 transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                  aria-label="View topic keywords"
+                                  onClick={(e) => e.preventDefault()}
                                 >
                                   <Info className="w-4 h-4 text-muted-foreground" />
                                 </button>
@@ -501,12 +507,13 @@ export const TopicManager = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           asChild
                           className="hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30"
+                          onClick={(e) => e.preventDefault()}
                         >
                           <Link to={`/feed/${topic.slug}`} className="flex items-center gap-2">
                             <ExternalLink className="w-3 h-3" />
@@ -522,10 +529,9 @@ export const TopicManager = () => {
                                 size="sm"
                                 className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-destructive/10 hover:text-destructive p-2"
                                 onClick={(e) => {
-                                  e.stopPropagation();
+                                  e.preventDefault();
                                   handleArchiveTopic(topic.id, topic.name);
                                 }}
-                                aria-label={`Archive ${topic.name}`}
                               >
                                 <Archive className="w-4 h-4" />
                               </Button>
@@ -538,11 +544,12 @@ export const TopicManager = () => {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
+                </Link>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
