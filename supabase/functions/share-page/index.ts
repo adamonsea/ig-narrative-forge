@@ -13,9 +13,12 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    console.log('Share page request URL:', req.url);
-    console.log('Pathname:', url.pathname);
-    console.log('Search params:', url.searchParams.toString());
+    console.log('🔍 Share page request:', {
+      url: req.url,
+      pathname: url.pathname,
+      search: url.searchParams.toString(),
+      userAgent: req.headers.get('user-agent')
+    });
     
     // Support multiple URL formats:
     // 1. Clean slug: /my-story-title
@@ -23,11 +26,40 @@ serve(async (req) => {
     // 3. Legacy: /share-page/story-id or /share-page/my-story-title
     // 4. Query params: ?type=story&id=story-id&topic=topic-slug
     
-    // Use explicit Supabase URL and service role key
-    const supabaseClient = createClient(
-      'https://fpoywkjgdapgjtdeooak.supabase.co',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    console.log('🔑 Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      supabaseUrl: supabaseUrl || 'MISSING',
+      hasServiceRoleKey: !!serviceRoleKey,
+      serviceRoleKeyLength: serviceRoleKey?.length || 0
+    });
+    
+    if (!serviceRoleKey) {
+      console.error('❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set');
+      throw new Error('Server configuration error: Missing service role key');
+    }
+    
+    // Create Supabase client with error handling
+    let supabaseClient;
+    try {
+      supabaseClient = createClient(
+        supabaseUrl || 'https://fpoywkjgdapgjtdeooak.supabase.co',
+        serviceRoleKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          }
+        }
+      );
+      console.log('✅ Supabase client created successfully');
+    } catch (clientError) {
+      console.error('❌ Failed to create Supabase client:', clientError);
+      throw new Error(`Failed to initialize database client: ${clientError.message}`);
+    }
     
     // Remove leading slash and optionally the function name from pathname
     const pathname = url.pathname
@@ -52,6 +84,7 @@ serve(async (req) => {
       
       if (isUuid) {
         // If it looks like a UUID, try UUID first
+        console.log('🔍 Looking up story by UUID:', identifier);
         const { data, error } = await supabaseClient
           .from('stories')
           .select('id, topic_articles!inner(topics!inner(slug))')
@@ -59,8 +92,10 @@ serve(async (req) => {
           .single();
         storyData = data;
         storyError = error;
+        if (error) console.error('❌ UUID lookup error:', error);
       } else {
         // Otherwise try slug lookup
+        console.log('🔍 Looking up story by slug:', identifier);
         const { data, error } = await supabaseClient
           .from('stories')
           .select('id, topic_articles!inner(topics!inner(slug))')
@@ -68,9 +103,15 @@ serve(async (req) => {
           .single();
         storyData = data;
         storyError = error;
+        if (error) console.error('❌ Slug lookup error:', error);
       }
       
-      console.log('Story lookup:', { identifier, isUuid, found: !!storyData });
+      console.log('📊 Story lookup result:', { 
+        identifier, 
+        isUuid, 
+        found: !!storyData,
+        error: storyError ? storyError.message : null 
+      });
       
       if (storyData) {
         id = storyData.id;
@@ -121,11 +162,18 @@ serve(async (req) => {
     let secondaryColor = 'rgb(147,51,234)';
 
     // Fetch topic data for branding
-    const { data: topicData } = await supabaseClient
+    console.log('🔍 Fetching topic data for:', topic);
+    const { data: topicData, error: topicError } = await supabaseClient
       .from('topics')
       .select('name, description, logo_url, primary_color, secondary_color')
       .eq('slug', topic)
       .single();
+    
+    if (topicError) {
+      console.error('❌ Topic lookup error:', topicError);
+    } else {
+      console.log('✅ Topic found:', topicData?.name);
+    }
 
     if (topicData) {
       topicName = topicData.name || '';
@@ -136,6 +184,7 @@ serve(async (req) => {
 
     if (type === 'story' && id) {
       // Fetch story data with first slide
+      console.log('🔍 Fetching story data for ID:', id);
       const { data: storyData, error: storyError } = await supabaseClient
         .from('stories')
         .select(`
@@ -149,9 +198,15 @@ serve(async (req) => {
         .single();
 
       if (storyError || !storyData) {
-        console.error('Failed to fetch story:', storyError);
+        console.error('❌ Failed to fetch story:', storyError);
         return new Response('Story not found', { status: 404 });
       }
+      
+      console.log('✅ Story data fetched:', {
+        title: storyData.title,
+        hasCover: !!storyData.cover_illustration_url,
+        slideCount: storyData.slides?.length || 0
+      });
 
       if (storyData) {
         // Extract rewritten headline from first slide content
@@ -305,9 +360,18 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error generating share page:', error);
+    console.error('❌ CRITICAL ERROR in share-page function:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      cause: error.cause
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Check edge function logs for more information'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
