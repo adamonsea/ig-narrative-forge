@@ -11,6 +11,7 @@ interface DayData {
   date: string;
   swipes: number;
   shares: number;
+  visitors: number;
   displayDate: string;
 }
 
@@ -29,23 +30,31 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
       // Query last 7 days of engagement data
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       
-      const { data: interactions, error } = await supabase
-        .from('story_interactions')
-        .select('interaction_type, created_at')
-        .eq('topic_id', topicId)
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .in('interaction_type', ['swipe', 'share_click']);
+      const [{ data: interactions, error: interactionsError }, { data: visits, error: visitsError }] = await Promise.all([
+        supabase
+          .from('story_interactions')
+          .select('interaction_type, created_at')
+          .eq('topic_id', topicId)
+          .gte('created_at', sevenDaysAgo.toISOString())
+          .in('interaction_type', ['swipe', 'share_click']),
+        supabase
+          .from('feed_visits')
+          .select('visit_date')
+          .eq('topic_id', topicId)
+          .gte('visit_date', sevenDaysAgo.toISOString().split('T')[0])
+      ]);
 
-      if (error) throw error;
+      if (interactionsError) throw interactionsError;
+      if (visitsError) throw visitsError;
 
       // Group by day
-      const dayMap = new Map<string, { swipes: number; shares: number }>();
+      const dayMap = new Map<string, { swipes: number; shares: number; visitors: number }>();
       
       // Initialize all 7 days with zero counts
       for (let i = 0; i < 7; i++) {
         const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const dateKey = date.toISOString().split('T')[0];
-        dayMap.set(dateKey, { swipes: 0, shares: 0 });
+        dayMap.set(dateKey, { swipes: 0, shares: 0, visitors: 0 });
       }
 
       // Count interactions per day
@@ -61,12 +70,21 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
         }
       });
 
+      // Count unique visitors per day
+      (visits || []).forEach((visit) => {
+        const existing = dayMap.get(visit.visit_date);
+        if (existing) {
+          existing.visitors++;
+        }
+      });
+
       // Convert to array and sort by date
       const chartData: DayData[] = Array.from(dayMap.entries())
         .map(([date, counts]) => ({
           date,
           swipes: counts.swipes,
           shares: counts.shares,
+          visitors: counts.visitors,
           displayDate: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
@@ -103,6 +121,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
           <p className="text-xs font-medium">{payload[0].payload.displayDate}</p>
           <p className="text-xs text-primary">Swipes: {payload[0].value}</p>
           <p className="text-xs text-pop">Shares: {payload[1].value}</p>
+          <p className="text-xs" style={{ color: 'hsl(270, 100%, 68%)' }}>Visitors: {payload[2].value}</p>
         </div>
       );
     }
@@ -125,6 +144,13 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
             type="monotone" 
             dataKey="shares" 
             stroke="hsl(var(--pop))"
+            strokeWidth={1.5}
+            dot={false}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="visitors" 
+            stroke="hsl(270, 100%, 68%)"
             strokeWidth={1.5}
             dot={false}
           />
