@@ -460,8 +460,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
     
-    // Use share preview URL for better OG tag support (WhatsApp/Facebook scraping)
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.functions.supabase.co/share-page/${story.id}`;
+    // Use clean short share URL with custom domain
+    const shareUrl = `https://share.curatr.pro/${story.id}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
