@@ -938,7 +938,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             {/* Content below image */}
             <div className="flex-1 flex items-center justify-center p-6 md:p-8">
               <div className="w-full max-w-lg mx-auto text-center flex flex-col h-full justify-center">
-                <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-lexend font-extrabold uppercase text-balance`}>
+                <div className={`leading-relaxed ${getTextSize(slide?.content || '', true)} font-lexend font-[750] uppercase text-balance`}>
                   <div dangerouslySetInnerHTML={createSafeHTML(
                     sanitizeContentWithLinks(slide?.content || 'Content not available', slide?.links),
                     true
@@ -976,7 +976,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             <div className="w-full max-w-lg mx-auto text-center">
                  <div className={`leading-relaxed ${
                   index === 0 
-                  ? `${getTextSize(slide?.content || '', true)} font-lexend font-extrabold uppercase text-balance` 
+                  ? `${getTextSize(slide?.content || '', true)} font-lexend font-[750] uppercase text-balance` 
                   : `${getTextSize(isLast ? mainContent : (slide?.content || ''), false, true)} font-light text-balance`
                 }`}>
                   {/* Main story content with links */}
