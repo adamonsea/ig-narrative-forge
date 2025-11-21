@@ -13,6 +13,9 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
+    console.log('Share page request URL:', req.url);
+    console.log('Pathname:', url.pathname);
+    console.log('Search params:', url.searchParams.toString());
     
     // Support multiple URL formats:
     // 1. Clean slug: /my-story-title
@@ -20,8 +23,9 @@ serve(async (req) => {
     // 3. Legacy: /share-page/story-id or /share-page/my-story-title
     // 4. Query params: ?type=story&id=story-id&topic=topic-slug
     
+    // Use explicit Supabase URL and service role key
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
+      'https://fpoywkjgdapgjtdeooak.supabase.co',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
