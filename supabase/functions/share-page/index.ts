@@ -20,9 +20,10 @@ serve(async (req) => {
     // 3. Legacy: /share-page/story-id or /share-page/my-story-title
     // 4. Query params: ?type=story&id=story-id&topic=topic-slug
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
     // Remove leading slash and optionally the function name from pathname
     const pathname = url.pathname
@@ -47,7 +48,7 @@ serve(async (req) => {
       
       if (isUuid) {
         // If it looks like a UUID, try UUID first
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('stories')
           .select('id, topic_articles!inner(topics!inner(slug))')
           .eq('id', identifier)
@@ -56,7 +57,7 @@ serve(async (req) => {
         storyError = error;
       } else {
         // Otherwise try slug lookup
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('stories')
           .select('id, topic_articles!inner(topics!inner(slug))')
           .eq('slug', identifier)
@@ -116,7 +117,7 @@ serve(async (req) => {
     let secondaryColor = 'rgb(147,51,234)';
 
     // Fetch topic data for branding
-    const { data: topicData } = await supabase
+    const { data: topicData } = await supabaseClient
       .from('topics')
       .select('name, description, logo_url, primary_color, secondary_color')
       .eq('slug', topic)
@@ -131,7 +132,7 @@ serve(async (req) => {
 
     if (type === 'story' && id) {
       // Fetch story data with first slide
-      const { data: storyData, error: storyError } = await supabase
+      const { data: storyData, error: storyError } = await supabaseClient
         .from('stories')
         .select(`
           title,
