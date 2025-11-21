@@ -150,9 +150,12 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-2">
+            <h1 className="text-4xl font-bold mb-2" style={{ color: '#0a1810' }}>
               Your topics
             </h1>
+            <p className="text-xs text-muted-foreground/60">
+              Powered by <span className="font-medium">Curatr.pro</span>
+            </p>
           </div>
           
           {/* User Menu */}
