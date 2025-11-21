@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Zap, Eye, Share2, Heart, ArrowRight, User, LogIn } from 'lucide-react';
+import { Search, Filter, Sparkles, BarChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
@@ -18,197 +17,138 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="absolute top-0 right-0 p-6 z-10">
-        {user ? (
-          <Button size="sm" variant="ghost" asChild>
-            <Link to="/dashboard">
-              <User className="w-4 h-4" />
-            </Link>
-          </Button>
-        ) : (
-          <Button size="sm" variant="ghost" asChild>
-            <Link to="/auth">
-              <LogIn className="w-4 h-4" />
-            </Link>
-          </Button>
-        )}
-      </div>
-
-      {/* Hero Section */}
-      <div className="container mx-auto px-6 py-32 relative">
-        <div className="text-center space-y-12 max-w-2xl mx-auto">
-          <div className="space-y-6">
-            <h1 className="text-8xl font-light tracking-tight text-foreground">
-              Curatr
-            </h1>
-            <div className="text-sm text-muted-foreground font-medium tracking-wider uppercase">
-              Beta
+      {/* Subtle gradient overlay */}
+      <div className="fixed inset-0 bg-gradient-to-b from-background via-background to-muted/10 pointer-events-none" />
+      
+      <div className="relative z-10">
+        <header className="container mx-auto px-6 py-8">
+          <nav className="flex justify-between items-center max-w-7xl mx-auto">
+            <div className="text-3xl font-display font-semibold tracking-tight">Curatr</div>
+            <div>
+              {user ? (
+                <Button asChild size="lg" className="rounded-full">
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+              ) : (
+                <Button asChild variant="ghost" size="lg" className="rounded-full">
+                  <Link to="/auth">Sign in</Link>
+                </Button>
+              )}
             </div>
-            <p className="text-lg text-muted-foreground max-w-lg mx-auto">
-              AI-powered editorial platform that discovers, curates, and publishes beautiful story feeds from any topic
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {user ? (
-              <Button size="lg" asChild>
-                <Link to="/dashboard">
-                  Go to Dashboard
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
+          </nav>
+        </header>
+
+        <main className="container mx-auto px-6">
+          {/* Hero Section */}
+          <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
+            <div className="space-y-6">
+              <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95]">
+                Editorial excellence,<br />simplified
+              </h1>
+              <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed">
+                AI-powered editorial tools that make content curation effortless
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center pt-4">
+              <Button asChild size="lg" className="rounded-full px-8 h-12 text-base">
+                <Link to={user ? "/dashboard" : "/auth"}>Get started</Link>
               </Button>
-            ) : (
-              <Button size="lg" asChild>
-                <Link to="/auth">
-                  Start Now
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
+              <Button asChild variant="outline" size="lg" className="rounded-full px-8 h-12 text-base">
+                <Link to="/feed/eastbourne">View demo</Link>
               </Button>
-            )}
-            <Button size="lg" variant="ghost" asChild>
-              <Link to="/feed/eastbourne">
-                View Live Feed
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-      {/* Features */}
-      <div className="container mx-auto px-6 pb-20">
-        <div className="grid md:grid-cols-4 gap-12 max-w-5xl mx-auto">
-          <div className="text-center space-y-3">
-            <div className="w-8 h-8 mx-auto">
-              <Zap className="w-8 h-8 text-foreground" />
             </div>
-            <h3 className="font-medium">Smart Discovery</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              AI continuously monitors and extracts stories from trusted sources. Automated keyword matching and quality scoring ensure only relevant content reaches your pipeline.
-            </p>
-          </div>
+          </section>
 
-          <div className="text-center space-y-3">
-            <div className="w-8 h-8 mx-auto">
-              <Eye className="w-8 h-8 text-foreground" />
+          {/* Features Grid */}
+          <section className="max-w-7xl mx-auto py-24">
+            <div className="grid md:grid-cols-3 gap-12">
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-muted/50 w-14 h-14 flex items-center justify-center">
+                  <Search className="h-7 w-7 text-foreground" />
+                </div>
+                <h3 className="text-2xl font-semibold tracking-tight">Smart discovery</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Automatically discover and curate content from trusted sources with AI-driven insights
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-muted/50 w-14 h-14 flex items-center justify-center">
+                  <Filter className="h-7 w-7 text-foreground" />
+                </div>
+                <h3 className="text-2xl font-semibold tracking-tight">Advanced curation</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Filter, approve, and manage content with tools designed for editorial excellence
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-muted/50 w-14 h-14 flex items-center justify-center">
+                  <Sparkles className="h-7 w-7 text-foreground" />
+                </div>
+                <h3 className="text-2xl font-semibold tracking-tight">Beautiful publishing</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Transform articles into engaging visual stories with automated generation
+                </p>
+              </div>
             </div>
-            <h3 className="font-medium">Editorial Polish</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Stories are rewritten for clarity and accessibility. AI generates custom illustrations in editorial style. One-click approval workflow keeps you in control.
-            </p>
-          </div>
+          </section>
 
-          <div className="text-center space-y-3">
-            <div className="w-8 h-8 mx-auto">
-              <Heart className="w-8 h-8 text-foreground" />
-            </div>
-            <h3 className="font-medium">Sentiment Analysis</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Automatic emotional tone detection with visual sentiment cards. Track community pulse and surface trending topics from local conversations.
-            </p>
-          </div>
-
-          <div className="text-center space-y-3">
-            <div className="w-8 h-8 mx-auto">
-              <Share2 className="w-8 h-8 text-foreground" />
-            </div>
-            <h3 className="font-medium">Beautiful Publishing</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Stories published as swipeable carousel slides optimized for mobile. Full attribution to source publications. PWA-ready with push notifications.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Workflow Showcase */}
-      <div className="container mx-auto px-6 pb-32">
-        <div className="max-w-4xl mx-auto space-y-16">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl font-light tracking-tight text-foreground">
-              Editorial Workflow
+          {/* Workflow Section */}
+          <section className="max-w-7xl mx-auto py-24">
+            <h2 className="text-5xl font-display font-semibold text-center mb-20 tracking-tight">
+              Your editorial workflow
             </h2>
-            <p className="text-muted-foreground">
-              From discovery to publishing in four simple steps
-            </p>
-          </div>
-
-          <div className="space-y-12">
-            {/* Step 1: Discover */}
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-3 order-2 md:order-1">
-                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
-                  Step 1
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Step 1</div>
+                <div className="rounded-2xl bg-primary/5 w-14 h-14 flex items-center justify-center">
+                  <Search className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="text-2xl font-medium">Discover</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  AI monitors your configured sources and automatically extracts relevant articles based on your keywords. Stories are scored for quality and relevance before entering your pipeline.
+                <h3 className="text-xl font-semibold">Discover</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Connect sources and let AI discover relevant stories automatically
                 </p>
               </div>
-              <div className="order-1 md:order-2 bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
-                <div className="text-center space-y-3">
-                  <Zap className="w-12 h-12 text-pop mx-auto" />
-                  <div className="text-sm text-muted-foreground">Auto-discovery in action</div>
-                </div>
-              </div>
-            </div>
 
-            {/* Step 2: Curate */}
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
-                <div className="text-center space-y-3">
-                  <Eye className="w-12 h-12 text-pop mx-auto" />
-                  <div className="text-sm text-muted-foreground">Review & approve stories</div>
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Step 2</div>
+                <div className="rounded-2xl bg-primary/5 w-14 h-14 flex items-center justify-center">
+                  <Filter className="h-7 w-7 text-primary" />
                 </div>
-              </div>
-              <div className="space-y-3">
-                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
-                  Step 2
-                </div>
-                <h3 className="text-2xl font-medium">Curate</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Stories are rewritten for clarity and paired with custom editorial illustrations. Review the queue, approve what fits, and reject what doesn't—you maintain full editorial control.
+                <h3 className="text-xl font-semibold">Curate</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Review and approve content that meets your editorial standards
                 </p>
               </div>
-            </div>
 
-            {/* Step 3: Analyze */}
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-3 order-2 md:order-1">
-                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
-                  Step 3
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Step 3</div>
+                <div className="rounded-2xl bg-primary/5 w-14 h-14 flex items-center justify-center">
+                  <BarChart className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="text-2xl font-medium">Analyze</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Sentiment detection identifies the emotional tone of each story. Track community pulse, surface trending topics, and understand what resonates with your audience.
+                <h3 className="text-xl font-semibold">Analyze</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Track metrics and understand what resonates with your audience
                 </p>
               </div>
-              <div className="order-1 md:order-2 bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
-                <div className="text-center space-y-3">
-                  <Heart className="w-12 h-12 text-pop mx-auto" />
-                  <div className="text-sm text-muted-foreground">Sentiment tracking</div>
-                </div>
-              </div>
-            </div>
 
-            {/* Step 4: Publish */}
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div className="bg-muted rounded-lg p-8 aspect-video flex items-center justify-center border-2 border-pop/20">
-                <div className="text-center space-y-3">
-                  <Share2 className="w-12 h-12 text-pop mx-auto" />
-                  <div className="text-sm text-muted-foreground">Beautiful story feeds</div>
+              <div className="space-y-4">
+                <div className="text-sm font-medium text-muted-foreground">Step 4</div>
+                <div className="rounded-2xl bg-primary/5 w-14 h-14 flex items-center justify-center">
+                  <Sparkles className="h-7 w-7 text-primary" />
                 </div>
-              </div>
-              <div className="space-y-3">
-                <div className="inline-block px-3 py-1 rounded-full bg-pop/10 text-pop text-xs font-medium">
-                  Step 4
-                </div>
-                <h3 className="text-2xl font-medium">Publish</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Stories go live as mobile-optimized carousel slides with full attribution. Readers swipe through curated content while original publishers get credit and traffic.
+                <h3 className="text-xl font-semibold">Publish</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Transform approved content into beautiful, engaging stories
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          </section>
+
+          {/* Footer spacing */}
+          <div className="h-24" />
+        </main>
       </div>
     </div>
   );
