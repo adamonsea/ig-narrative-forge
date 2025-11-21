@@ -14,10 +14,15 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     
-    // Support both old query param format and new clean path-based format
-    // Clean format: /story-id (short link at root)
-    // Legacy format: /share-page/story-id (backward compatibility)
-    // Old format: ?type=story&id=story-id&topic=topic-slug (backward compatibility)
+    // Support multiple URL formats:
+    // 1. Clean slug: /my-story-title
+    // 2. Clean UUID: /story-uuid
+    // 3. Legacy: /share-page/story-id or /share-page/my-story-title
+    // 4. Query params: ?type=story&id=story-id&topic=topic-slug
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Remove leading slash and optionally the function name from pathname
     const pathname = url.pathname.replace(/^\/share-page\/?/, '').replace(/^\//, '');
@@ -25,38 +30,56 @@ serve(async (req) => {
     let id = url.searchParams.get('id');
     let topic = url.searchParams.get('topic');
     
-    // If pathname exists and no query params, treat it as story ID
+    // If pathname exists and no query params, treat it as story identifier (slug or UUID)
     if (pathname && !type && !id) {
-      id = pathname;
+      const identifier = pathname;
       type = 'story';
       
-      // Look up topic slug from story - we'll fetch full story data later
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      // Try to look up by slug first, then by UUID
+      // Use a query that tries both in one call for efficiency
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
       
-      const { data: storyData, error: storyError } = await supabase
-        .from('stories')
-        .select('topic_articles!inner(topics!inner(slug))')
-        .eq('id', id)
-        .single();
+      let storyData;
+      let storyError;
       
-      console.log('Story data:', JSON.stringify(storyData, null, 2));
-      console.log('Story error:', storyError);
+      if (isUuid) {
+        // If it looks like a UUID, try UUID first
+        const { data, error } = await supabase
+          .from('stories')
+          .select('id, topic_articles!inner(topics!inner(slug))')
+          .eq('id', identifier)
+          .single();
+        storyData = data;
+        storyError = error;
+      } else {
+        // Otherwise try slug lookup
+        const { data, error } = await supabase
+          .from('stories')
+          .select('id, topic_articles!inner(topics!inner(slug))')
+          .eq('slug', identifier)
+          .single();
+        storyData = data;
+        storyError = error;
+      }
       
-      if (storyData?.topic_articles) {
-        // topic_articles is an array, get first topic's slug
-        const topicArticles = Array.isArray(storyData.topic_articles) 
-          ? storyData.topic_articles 
-          : [storyData.topic_articles];
+      console.log('Story lookup:', { identifier, isUuid, found: !!storyData });
+      
+      if (storyData) {
+        id = storyData.id;
         
-        if (topicArticles.length > 0 && topicArticles[0].topics?.slug) {
-          topic = topicArticles[0].topics.slug;
+        if (storyData.topic_articles) {
+          const topicArticles = Array.isArray(storyData.topic_articles) 
+            ? storyData.topic_articles 
+            : [storyData.topic_articles];
+          
+          if (topicArticles.length > 0 && topicArticles[0].topics?.slug) {
+            topic = topicArticles[0].topics.slug;
+          }
         }
       }
       
-      if (!topic) {
-        console.error('Could not determine topic for story ID:', id);
+      if (!topic || !id) {
+        console.error('Could not find story:', identifier);
         return new Response('Story not found', { status: 404 });
       }
     }
@@ -79,11 +102,6 @@ serve(async (req) => {
     if (!isCrawler) {
       return Response.redirect(redirectUrl, 302);
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
 
     // Fetch topic and story data for OG tags (crawlers only reach here)
     let ogTitle = 'Curated News';

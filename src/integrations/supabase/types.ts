@@ -2427,6 +2427,7 @@ export type Database = {
           selected_cover_id: string | null
           shared_content_id: string | null
           slide_type: string | null
+          slug: string | null
           status: string
           title: string
           tone: string | null
@@ -2455,6 +2456,7 @@ export type Database = {
           selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
+          slug?: string | null
           status?: string
           title: string
           tone?: string | null
@@ -2483,6 +2485,7 @@ export type Database = {
           selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
+          slug?: string | null
           status?: string
           title?: string
           tone?: string | null
@@ -3789,6 +3792,10 @@ export type Database = {
         }[]
       }
       fix_sussex_express_sources: { Args: never; Returns: Json }
+      generate_story_slug: {
+        Args: { story_id: string; title_text: string }
+        Returns: string
+      }
       get_admin_topic_stories: {
         Args: {
           p_limit?: number

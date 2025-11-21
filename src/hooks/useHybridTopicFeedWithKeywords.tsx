@@ -387,12 +387,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           try {
             const { data: metaData, error: metaError } = await supabase
               .from('stories')
-              .select('id, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
+              .select('id, slug, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
               .in('id', storyIds);
             
             if (!metaError && metaData) {
               metaData.forEach((meta: any) => {
                 parliamentaryMetaMap.set(meta.id, {
+                  slug: meta.slug,
                   is_parliamentary: meta.is_parliamentary,
                   mp_name: meta.mp_name,
                   mp_party: meta.mp_party,
@@ -424,6 +425,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
           return {
             id: story.id,
+            slug: meta?.slug || story.slug,
             title: story.title,
             author: story.author || 'Unknown',
             publication_name: story.publication_name || '',
@@ -850,12 +852,13 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         try {
           const { data: metaData, error: metaError } = await supabase
             .from('stories')
-            .select('id, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
+            .select('id, slug, is_parliamentary, mp_name, mp_party, constituency, tone, cover_illustration_url, animated_illustration_url')
             .in('id', storyIdsForPopularity);
           
           if (!metaError && metaData) {
             metaData.forEach((meta: any) => {
               parliamentaryMetaMap.set(meta.id, {
+                slug: meta.slug,
                 is_parliamentary: meta.is_parliamentary,
                 mp_name: meta.mp_name,
                 mp_party: meta.mp_party,
@@ -916,6 +919,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
         return {
           id: story.id,
+          slug: meta?.slug || story.slug,
           title: story.title,
           author: 'Unknown',
           publication_name: '',
