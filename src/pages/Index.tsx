@@ -14,9 +14,13 @@ const Index = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-[hsl(270,100%,68%)] via-[hsl(214,50%,9%)] to-[hsl(270,80%,25%)]">
-      {/* Dark purple gradient with ink black transitions */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[hsl(270,100%,68%)]/20 via-[hsl(214,50%,9%)] to-[hsl(270,80%,20%)]/90 pointer-events-none" />
+  return <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+      {/* Organic dark gradient with subtle purple accents */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
+        <div className="absolute bottom-1/4 left-1/3 w-[500px] h-[500px] bg-[hsl(270,100%,68%)] rounded-full blur-[180px] opacity-10" />
+        <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-[hsl(155,100%,67%)] rounded-full blur-[160px] opacity-5" />
+      </div>
       
       <div className="relative z-10">
         <header className="container mx-auto px-6 py-8">
