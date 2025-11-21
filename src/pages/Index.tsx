@@ -2,21 +2,19 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, BarChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-
 const Index = () => {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading
+  } = useAuth();
 
   // Show loading while auth is being determined
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Subtle gradient overlay */}
       <div className="fixed inset-0 bg-gradient-to-b from-background via-background to-muted/10 pointer-events-none" />
       
@@ -25,15 +23,11 @@ const Index = () => {
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
             <div className="text-3xl font-display font-semibold tracking-tight">Curatr</div>
             <div>
-              {user ? (
-                <Button asChild size="lg" className="rounded-full">
+              {user ? <Button asChild size="lg" className="rounded-full">
                   <Link to="/dashboard">Dashboard</Link>
-                </Button>
-              ) : (
-                <Button asChild variant="ghost" size="lg" className="rounded-full">
+                </Button> : <Button asChild variant="ghost" size="lg" className="rounded-full">
                   <Link to="/auth">Sign in</Link>
-                </Button>
-              )}
+                </Button>}
             </div>
           </nav>
         </header>
@@ -46,7 +40,7 @@ const Index = () => {
                 Editorial excellence,<br />simplified
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-2xl mx-auto leading-relaxed">
-                AI-powered editorial tools that make content curation effortless
+                AI-powered editorial tools that make content curation and simplification effortless
               </p>
             </div>
             <div className="flex gap-4 justify-center pt-4">
@@ -88,7 +82,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-2xl font-semibold tracking-tight">Beautiful publishing</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Transform articles into engaging visual stories with automated generation
+                  Transform articles into engaging visual stories with automated generation and gorgeous feeds               
                 </p>
               </div>
             </div>
@@ -150,8 +144,6 @@ const Index = () => {
           <div className="h-24" />
         </main>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
