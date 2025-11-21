@@ -14,9 +14,9 @@ const Index = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-[#0a1810] via-[#0d1f14] to-[#0a1810]">
-      {/* Dark gradient overlay with subtle green tint */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[#0a1810]/90 via-[#0d1f14] to-[#0a1810]/95 pointer-events-none" />
+  return <div className="min-h-screen bg-gradient-to-br from-[hsl(270,100%,68%)] via-[hsl(214,50%,9%)] to-[hsl(270,80%,25%)]">
+      {/* Dark purple gradient with ink black transitions */}
+      <div className="fixed inset-0 bg-gradient-to-b from-[hsl(270,100%,68%)]/20 via-[hsl(214,50%,9%)] to-[hsl(270,80%,20%)]/90 pointer-events-none" />
       
       <div className="relative z-10">
         <header className="container mx-auto px-6 py-8">
@@ -25,9 +25,9 @@ const Index = () => {
               Curatr<span className="text-xl opacity-70">.pro</span>
             </div>
             <div>
-              {user ? <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[#0a1810] hover:bg-[hsl(155,100%,60%)]">
+              {user ? <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
                   <Link to="/dashboard">Dashboard</Link>
-                </Button> : <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-white/10">
+                </Button> : <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
                   <Link to="/auth">Sign in</Link>
                 </Button>}
             </div>
@@ -46,10 +46,10 @@ const Index = () => {
               </p>
             </div>
             <div className="flex gap-4 justify-center pt-4">
-              <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[#0a1810] hover:bg-[hsl(155,100%,60%)]">
+              <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
                 <Link to={user ? "/dashboard" : "/auth"}>Get started</Link>
               </Button>
-              <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-base border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#0a1810]">
+              <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white">
                 <Link to="/feed/eastbourne">View demo</Link>
               </Button>
             </div>
@@ -59,7 +59,7 @@ const Index = () => {
           <section className="max-w-7xl mx-auto py-24">
             <div className="grid md:grid-cols-3 gap-12">
               <div className="space-y-4">
-                <div className="rounded-2xl bg-white/5 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
+                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
                   <Search className="h-7 w-7 text-[hsl(155,100%,67%)]" />
                 </div>
                 <h3 className="text-2xl font-semibold tracking-tight text-white">Smart discovery</h3>
@@ -69,8 +69,8 @@ const Index = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl bg-white/5 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
-                  <Filter className="h-7 w-7 text-[hsl(155,100%,67%)]" />
+                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
+                  <Filter className="h-7 w-7 text-[hsl(270,100%,68%)]" />
                 </div>
                 <h3 className="text-2xl font-semibold tracking-tight text-white">Advanced curation</h3>
                 <p className="text-white/60 leading-relaxed">
@@ -79,7 +79,7 @@ const Index = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl bg-white/5 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
+                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
                   <Sparkles className="h-7 w-7 text-[hsl(155,100%,67%)]" />
                 </div>
                 <h3 className="text-2xl font-semibold tracking-tight text-white">Beautiful publishing</h3>
@@ -98,7 +98,7 @@ const Index = () => {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="space-y-4">
                 <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 1</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
+                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
                   <Search className="h-7 w-7 text-[hsl(155,100%,67%)]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white">Discover</h3>
@@ -108,9 +108,9 @@ const Index = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 2</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
-                  <Filter className="h-7 w-7 text-[hsl(155,100%,67%)]" />
+                <div className="text-sm font-medium text-[hsl(270,100%,68%)]">Step 2</div>
+                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
+                  <Filter className="h-7 w-7 text-[hsl(270,100%,68%)]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white">Curate</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
@@ -120,7 +120,7 @@ const Index = () => {
 
               <div className="space-y-4">
                 <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 3</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
+                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
                   <BarChart className="h-7 w-7 text-[hsl(155,100%,67%)]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white">Analyze</h3>
@@ -130,9 +130,9 @@ const Index = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 4</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/20">
-                  <Sparkles className="h-7 w-7 text-[hsl(155,100%,67%)]" />
+                <div className="text-sm font-medium text-[hsl(270,100%,68%)]">Step 4</div>
+                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
+                  <Sparkles className="h-7 w-7 text-[hsl(270,100%,68%)]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white">Publish</h3>
                 <p className="text-white/60 text-sm leading-relaxed">
