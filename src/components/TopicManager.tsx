@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
+import { EngagementSparkline } from "@/components/EngagementSparkline";
 
 interface Topic {
   id: string;
@@ -377,7 +378,7 @@ export const TopicManager = () => {
                           </div>
                         </div>
                         
-                        {/* Engagement Stats */}
+                        {/* Engagement Stats - Last 7 Days */}
                         <div className="space-y-2">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                             <MousePointer className="w-3 h-3" />
@@ -400,6 +401,15 @@ export const TopicManager = () => {
                                 Shares
                               </div>
                             </div>
+                          </div>
+                          
+                          {/* Trend sparkline */}
+                          <div className="mt-2">
+                            <EngagementSparkline topicId={topic.id} />
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground italic text-center">
+                            Last 7 days
                           </div>
                         </div>
                         
@@ -432,21 +442,21 @@ export const TopicManager = () => {
                         {/* Install Stats */}
                         {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
                           <div className="space-y-2">
-                            <div className="text-xs font-semibold text-[hsl(155,100%,67%)] uppercase tracking-wider flex items-center gap-1">
+                            <div className="text-xs font-semibold text-pop uppercase tracking-wider flex items-center gap-1">
                               <Plus className="w-3 h-3" />
                               Installs
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-[hsl(155,100%,67%)]/5 rounded-lg p-2 border border-[hsl(155,100%,67%)]/20">
-                                <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
+                              <div className="bg-pop/10 rounded-lg p-2 border border-pop/30">
+                                <div className="text-lg font-bold text-pop-foreground">
                                   {topic.installs_this_week || 0}
                                 </div>
-                                <div className="text-xs font-medium text-[hsl(155,100%,67%)]/70">
+                                <div className="text-xs font-medium text-muted-foreground">
                                   This week
                                 </div>
                               </div>
-                              <div className="bg-[hsl(155,100%,67%)]/5 rounded-lg p-2 border border-[hsl(155,100%,67%)]/20">
-                                <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
+                              <div className="bg-pop/10 rounded-lg p-2 border border-pop/30">
+                                <div className="text-lg font-bold text-pop-foreground">
                                   {topic.installs_total || 0}
                                 </div>
                                 <div className="text-xs font-medium text-[hsl(155,100%,67%)]/70">
