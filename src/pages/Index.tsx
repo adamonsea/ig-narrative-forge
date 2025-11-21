@@ -21,7 +21,9 @@ const Index = () => {
       <div className="relative z-10">
         <header className="container mx-auto px-6 py-8">
           <nav className="flex justify-between items-center max-w-7xl mx-auto">
-            <div className="text-3xl font-display font-semibold tracking-tight text-white">Curatr</div>
+            <div className="text-3xl font-display font-semibold tracking-tight text-white">
+              Curatr<span className="text-xl opacity-70">.pro</span>
+            </div>
             <div>
               {user ? <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[#0a1810] hover:bg-[hsl(155,100%,60%)]">
                   <Link to="/dashboard">Dashboard</Link>
