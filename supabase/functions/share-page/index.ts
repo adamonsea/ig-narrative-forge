@@ -20,8 +20,8 @@ serve(async (req) => {
     // 3. Legacy: /share-page/story-id or /share-page/my-story-title
     // 4. Query params: ?type=story&id=story-id&topic=topic-slug
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Remove leading slash and optionally the function name from pathname
