@@ -480,7 +480,7 @@ const TopicDashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold" style={{ color: '#0a1810' }}>Access Denied</h1>
+            <h1 className="text-4xl font-bold text-foreground">Access Denied</h1>
             <p className="text-muted-foreground">
               Please log in to access the topic dashboard.
             </p>
@@ -510,7 +510,7 @@ const TopicDashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold" style={{ color: '#0a1810' }}>Topic Not Found</h1>
+            <h1 className="text-4xl font-bold text-foreground">Topic Not Found</h1>
             <p className="text-muted-foreground">
               The topic you're looking for doesn't exist or you don't have access to it.
             </p>
@@ -570,7 +570,7 @@ const TopicDashboard = () => {
                     <Hash className="w-8 h-8 text-green-500" />
                   )}
                   <div>
-                    <h1 className="text-2xl sm:text-4xl font-bold" style={{ color: '#0a1810' }}>
+                    <h1 className="text-2xl sm:text-4xl font-bold text-foreground">
                       {topic.name}
                     </h1>
                     <div className="flex items-center gap-4 mt-1 flex-wrap">
