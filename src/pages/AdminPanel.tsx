@@ -30,16 +30,20 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8">
+      {/* Fixed brand icon in top left corner */}
+      <div className="fixed top-6 left-6 z-50">
+        <Link to="/dashboard">
+          <img 
+            src="/curatr-icon.png" 
+            alt="Curatr" 
+            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
+          />
+        </Link>
+      </div>
+      
+      <div className="container mx-auto py-8 pl-24">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <Link to="/dashboard" className="flex-shrink-0">
-              <img 
-                src="/curatr-icon.png" 
-                alt="Curatr" 
-                className="w-12 h-12 rounded-lg"
-              />
-            </Link>
             <Button variant="outline" size="sm" asChild>
               <Link to="/dashboard">
                 <ArrowLeft className="h-4 w-4 mr-2" />

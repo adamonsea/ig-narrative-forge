@@ -150,25 +150,27 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      <div className="container mx-auto px-4 py-8">
+      {/* Fixed brand icon in top left corner */}
+      <div className="fixed top-6 left-6 z-50">
+        <Link to="/dashboard">
+          <img 
+            src="/curatr-icon.png" 
+            alt="Curatr" 
+            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
+          />
+        </Link>
+      </div>
+      
+      <div className="container mx-auto px-4 py-8 pl-24">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="flex-shrink-0">
-              <img 
-                src="/curatr-icon.png" 
-                alt="Curatr" 
-                className="w-12 h-12 rounded-lg"
-              />
-            </Link>
-            <div>
-              <h1 className="text-4xl font-bold text-foreground mb-2">
-                Your topics
-              </h1>
-              <p className="text-xs text-muted-foreground/60">
-                Powered by <span className="font-medium">Curatr.pro</span>
-              </p>
-            </div>
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">
+              Your topics
+            </h1>
+            <p className="text-xs text-muted-foreground/60">
+              Powered by <span className="font-medium">Curatr.pro</span>
+            </p>
           </div>
           
           {/* User Menu */}

@@ -536,30 +536,32 @@ const TopicDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      {/* Fixed brand icon in top left corner */}
+      <div className="fixed top-6 left-6 z-50">
+        <Link to="/dashboard">
+          <img 
+            src="/curatr-icon.png" 
+            alt="Curatr" 
+            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
+          />
+        </Link>
+      </div>
+      
+      <div className="container mx-auto px-4 py-8 pl-24">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link to="/dashboard" className="flex-shrink-0">
-            <img 
-              src="/curatr-icon.png" 
-              alt="Curatr" 
-              className="w-10 h-10 rounded-lg"
-            />
-          </Link>
-          <Breadcrumb className="flex-1">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/dashboard">Dashboard</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{topic.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{topic.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         {/* Topic Header */}
         <div className="mb-8">
