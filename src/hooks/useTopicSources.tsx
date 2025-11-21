@@ -126,6 +126,58 @@ export const useTopicSources = () => {
   };
 
   /**
+   * Reactivate a source and trigger test scrape
+   */
+  const reactivateAndTestSource = async (
+    sourceId: string,
+    topicId: string
+  ): Promise<boolean> => {
+    try {
+      setLoading(true);
+      
+      // Reactivate the source
+      const { error: updateError } = await supabase
+        .from('content_sources')
+        .update({ 
+          is_active: true, 
+          consecutive_failures: 0,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', sourceId);
+
+      if (updateError) throw updateError;
+
+      // Trigger test scrape
+      const { data, error: scrapeError } = await supabase.functions.invoke('universal-topic-scraper', {
+        body: {
+          topicId,
+          sourceId,
+          forceRescrape: true
+        }
+      });
+
+      if (scrapeError) throw scrapeError;
+
+      toast({
+        title: 'Source Reactivated',
+        description: `Source reactivated and test scrape initiated. Articles found: ${data?.articlesStored || 0}`,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error reactivating source:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reactivate and test source',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Remove a source from a topic
    */
   const removeSourceFromTopic = async (
@@ -260,6 +312,7 @@ export const useTopicSources = () => {
     addSourceToTopic,
     removeSourceFromTopic,
     getAvailableSources,
-    createSourceAndLinkToTopic
+    createSourceAndLinkToTopic,
+    reactivateAndTestSource
   };
 };
