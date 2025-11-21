@@ -524,8 +524,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
 
-    // Use share preview URL for proper OG tags (WhatsApp scraping)
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.functions.supabase.co/share-page/${story.id}`;
+    // Use clean short share URL with custom domain
+    const shareUrl = `https://share.curatr.pro/${story.id}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
