@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePageFavicon } from "@/hooks/usePageFavicon";
 
 interface DashboardStats {
   topics: number;
@@ -35,6 +36,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const { toast } = useToast();
+  
+  // Set Curatr favicon for dashboard
+  usePageFavicon();
 
   useEffect(() => {
     if (user) {
@@ -149,13 +153,22 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">
-              Your topics
-            </h1>
-            <p className="text-xs text-muted-foreground/60">
-              Powered by <span className="font-medium">Curatr.pro</span>
-            </p>
+          <div className="flex items-center gap-4">
+            <Link to="/dashboard" className="flex-shrink-0">
+              <img 
+                src="/curatr-icon.png" 
+                alt="Curatr" 
+                className="w-12 h-12 rounded-lg"
+              />
+            </Link>
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                Your topics
+              </h1>
+              <p className="text-xs text-muted-foreground/60">
+                Powered by <span className="font-medium">Curatr.pro</span>
+              </p>
+            </div>
           </div>
           
           {/* User Menu */}

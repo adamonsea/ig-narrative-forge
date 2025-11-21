@@ -29,6 +29,7 @@ import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummar
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
+import { usePageFavicon } from "@/hooks/usePageFavicon";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -130,6 +131,9 @@ const TopicDashboard = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const { toast } = useToast();
+  
+  // Set Curatr favicon for topic dashboard (auth page)
+  usePageFavicon();
 
   // Set up parliamentary automation when enabled
   useParliamentaryAutomation({
@@ -534,19 +538,28 @@ const TopicDashboard = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
-        <Breadcrumb className="mb-6">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{topic.name}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <div className="flex items-center gap-4 mb-6">
+          <Link to="/dashboard" className="flex-shrink-0">
+            <img 
+              src="/curatr-icon.png" 
+              alt="Curatr" 
+              className="w-10 h-10 rounded-lg"
+            />
+          </Link>
+          <Breadcrumb className="flex-1">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{topic.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
 
         {/* Topic Header */}
         <div className="mb-8">
