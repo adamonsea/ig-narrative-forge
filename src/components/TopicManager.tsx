@@ -330,18 +330,18 @@ export const TopicManager = () => {
                     }
                   }}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1 pr-6">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                      <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {topic.branding_config?.logo_url && (
                             <img 
                               src={topic.branding_config.logo_url} 
                               alt={`${topic.name} logo`}
-                              className="w-10 h-10 rounded object-cover"
+                              className="w-8 h-8 md:w-10 md:h-10 rounded object-cover"
                             />
                           )}
-                          <h3 className="text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
+                          <h3 className="text-xl md:text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
                             {topic.name}
                           </h3>
                         </div>
@@ -351,129 +351,191 @@ export const TopicManager = () => {
                       </div>
                       
                       {/* Stats Section */}
-                      <div className="flex flex-col gap-3 min-w-[180px]">
-                        {/* Content Generation Stats */}
-                        <div className="space-y-2">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                            <BarChart3 className="w-3 h-3" />
-                            Content
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
-                              <div className="text-lg font-bold text-foreground">
-                                {topic.articles_in_arrivals || 0}
-                              </div>
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Arrivals
-                              </div>
-                            </div>
-                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
-                              <div className="text-lg font-bold text-foreground">
-                                {topic.stories_published_this_week || 0}
-                              </div>
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Stories
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Engagement Stats - Last 7 Days */}
-                        <div className="space-y-2">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                            <MousePointer className="w-3 h-3" />
-                            Engagement
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
-                              <div className="text-lg font-bold text-foreground">
-                                {topic.articles_swiped || 0}
-                              </div>
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Swiped
-                              </div>
-                            </div>
-                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
-                              <div className="text-lg font-bold text-foreground">
-                                {topic.share_clicks || 0}
-                              </div>
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Shares
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Trend sparkline */}
-                          <div className="mt-2">
-                            <EngagementSparkline topicId={topic.id} />
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground italic text-center">
-                            Last 7 days
-                          </div>
-                        </div>
-                        
-                        {/* Visitor Stats */}
-                        <div className="space-y-2">
-                          <div className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider flex items-center gap-1">
-                            <Eye className="w-3 h-3" />
-                            Visitors
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20">
-                              <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
-                                {topic.visits_today || 0}
-                              </div>
-                              <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
-                                Today
-                              </div>
-                            </div>
-                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20">
-                              <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
-                                {topic.visits_this_week || 0}
-                              </div>
-                              <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
-                                This week
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Install Stats */}
-                        {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
+                      <TooltipProvider>
+                        <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[180px]">
+                          {/* Content Generation Stats */}
                           <div className="space-y-2">
-                            <div className="text-xs font-semibold text-pop uppercase tracking-wider flex items-center gap-1">
-                              <Plus className="w-3 h-3" />
-                              Installs
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <BarChart3 className="w-3 h-3" />
+                              Content
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-pop/10 rounded-lg p-2 border border-pop/30">
-                                <div className="text-lg font-bold text-pop-foreground">
-                                  {topic.installs_this_week || 0}
-                                </div>
-                                <div className="text-xs font-medium text-muted-foreground">
-                                  This week
-                                </div>
-                              </div>
-                              <div className="bg-pop/10 rounded-lg p-2 border border-pop/30">
-                                <div className="text-lg font-bold text-pop-foreground">
-                                  {topic.installs_total || 0}
-                                </div>
-                                <div className="text-xs font-medium text-[hsl(155,100%,67%)]/70">
-                                  Total
-                                </div>
-                              </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                    <div className="text-lg font-bold text-foreground">
+                                      {topic.articles_in_arrivals || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Arrivals
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>New articles waiting to be processed</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                    <div className="text-lg font-bold text-foreground">
+                                      {topic.stories_published_this_week || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Stories
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Stories published in the last 7 days</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* Engagement Stats - Last 7 Days */}
+                          <div className="space-y-2">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <MousePointer className="w-3 h-3" />
+                              Engagement
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                    <div className="text-lg font-bold text-foreground">
+                                      {topic.articles_swiped || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Swiped
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Articles swiped through in last 7 days</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                    <div className="text-lg font-bold text-foreground">
+                                      {topic.share_clicks || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Shares
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Share button clicks in last 7 days</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            
+                            {/* Trend sparkline */}
+                            <div className="mt-2">
+                              <EngagementSparkline topicId={topic.id} />
+                            </div>
+                            
+                            <div className="text-xs text-muted-foreground italic text-center">
+                              Last 7 days
+                            </div>
+                          </div>
+                          
+                          {/* Visitor Stats */}
+                          <div className="space-y-2">
+                            <div className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              Visitors
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20 cursor-help">
+                                    <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
+                                      {topic.visits_today || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
+                                      Today
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Unique visitors today</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20 cursor-help">
+                                    <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
+                                      {topic.visits_this_week || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
+                                      This week
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Unique visitors in last 7 days</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+
+                          {/* Install Stats */}
+                          {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
+                            <div className="space-y-2">
+                              <div className="text-xs font-semibold text-pop uppercase tracking-wider flex items-center gap-1">
+                                <Plus className="w-2.5 h-2.5" />
+                                Installs
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
+                                      <div className="text-lg font-bold text-pop-foreground">
+                                        {topic.installs_this_week || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        This week
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>PWA installs in last 7 days</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
+                                      <div className="text-lg font-bold text-pop-foreground">
+                                        {topic.installs_total || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Total
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Total PWA installs since launch</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TooltipProvider>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
                         <Badge variant="outline" className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border-border/50">
                           {topic.topic_type === 'regional' ? <MapPin className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
-                          <span className="font-medium">{topic.topic_type === 'regional' ? 'Regional' : 'General'}</span>
+                          <span className="font-medium text-xs md:text-sm">{topic.topic_type === 'regional' ? 'Regional' : 'General'}</span>
                         </Badge>
                         
                         <div className="flex items-center gap-2 bg-card/40 backdrop-blur-sm rounded-lg p-2 border border-border/30">
@@ -527,7 +589,7 @@ export const TopicManager = () => {
                         >
                           <Link to={`/feed/${topic.slug}`} className="flex items-center gap-2">
                             <ExternalLink className="w-3 h-3" />
-                            Feed
+                            <span className="hidden md:inline">Feed</span>
                           </Link>
                         </Button>
 
