@@ -463,7 +463,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     
     // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
     const storyIdentifier = (story as any).slug || story.id;
-    const shareUrl = `https://curatr.pro/s/${storyIdentifier}`;
+    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
@@ -528,7 +528,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
     // Use story slug for shorter, readable URLs; fallback to UUID for backward compatibility
     const storyIdentifier = (story as any).slug || story.id;
-    const shareUrl = `https://curatr.pro/s/${storyIdentifier}`;
+    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page/${storyIdentifier}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
