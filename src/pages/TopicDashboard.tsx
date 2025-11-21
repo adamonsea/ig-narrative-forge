@@ -600,6 +600,7 @@ const TopicDashboard = () => {
                           id="publish-toggle"
                           checked={topic.is_public}
                           onCheckedChange={handlePublishToggle}
+                          aria-label={`Toggle ${topic.name} publish status`}
                         />
                       </div>
                     </div>
