@@ -2,11 +2,15 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, BarChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageFavicon } from '@/hooks/usePageFavicon';
 const Index = () => {
   const {
     user,
     loading
   } = useAuth();
+  
+  // Set Curatr favicon for home page
+  usePageFavicon();
 
   // Show loading while auth is being determined
   if (loading) {

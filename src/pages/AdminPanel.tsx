@@ -8,9 +8,13 @@ import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { QueueManager } from '@/components/QueueManager';
 import { AutomationDashboard } from '@/components/AutomationDashboard';
 import { supabase } from '@/integrations/supabase/client';
+import { usePageFavicon } from '@/hooks/usePageFavicon';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
+  
+  // Set Curatr favicon for admin panel
+  usePageFavicon();
 
   if (loading) {
     return (
@@ -29,6 +33,13 @@ export default function AdminPanel() {
       <div className="container mx-auto py-8">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
+            <Link to="/dashboard" className="flex-shrink-0">
+              <img 
+                src="/curatr-icon.png" 
+                alt="Curatr" 
+                className="w-12 h-12 rounded-lg"
+              />
+            </Link>
             <Button variant="outline" size="sm" asChild>
               <Link to="/dashboard">
                 <ArrowLeft className="h-4 w-4 mr-2" />

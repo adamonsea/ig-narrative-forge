@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { usePageFavicon } from '@/hooks/usePageFavicon';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,9 @@ const Auth = () => {
   const [waitlistLoading, setWaitlistLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Set Curatr favicon for auth page
+  usePageFavicon();
 
   useEffect(() => {
     // Check if user is already logged in
