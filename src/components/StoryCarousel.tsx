@@ -460,8 +460,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
     
-    // Use Supabase edge function for share URLs
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page?type=story&id=${story.id}&topic=${topicId || currentSlug}`;
+    // Use verified custom share domain for clean, branded URLs
+    const shareUrl = `https://share.curatr.pro/${story.id}`;
     const shareText = `Check out this story: ${story.title}`;
     
     console.log('Share URL:', shareUrl);
@@ -524,8 +524,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     const feedIndex = pathParts.indexOf('feed');
     const currentSlug = (feedIndex !== -1 && pathParts[feedIndex + 1]) ? pathParts[feedIndex + 1] : topicSlug;
 
-    // Use Supabase edge function for share URLs
-    const shareUrl = `https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/share-page?type=story&id=${story.id}&topic=${topicId || currentSlug}`;
+    // Use verified custom share domain for clean, branded URLs
+    const shareUrl = `https://share.curatr.pro/${story.id}`;
 
     // Build branded message
     const topicNameText = topicName ? `${topicName} | ` : '';
