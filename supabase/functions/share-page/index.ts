@@ -14,11 +14,12 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     
-    // Support both old query param format and new path-based format
-    // New format: /share-page/story-id (extracts story ID from path)
+    // Support both old query param format and new clean path-based format
+    // Clean format: /story-id (short link at root)
+    // Legacy format: /share-page/story-id (backward compatibility)
     // Old format: ?type=story&id=story-id&topic=topic-slug (backward compatibility)
     
-    // Remove leading slash and function name from pathname
+    // Remove leading slash and optionally the function name from pathname
     const pathname = url.pathname.replace(/^\/share-page\/?/, '').replace(/^\//, '');
     let type = url.searchParams.get('type');
     let id = url.searchParams.get('id');
