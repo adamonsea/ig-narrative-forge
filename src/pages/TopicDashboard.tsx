@@ -31,7 +31,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicDashboardStats {
@@ -523,9 +522,6 @@ const TopicDashboard = () => {
     );
   }
 
-  const topicGradient = topic ? generateTopicGradient(topic.id) : '';
-  const accentColor = topic ? generateAccentColor(topic.id) : '';
-
   // Progressive disclosure logic
   const hasEnoughArticles = stats.articles > 10;
   const needsAttention = {
@@ -535,7 +531,7 @@ const TopicDashboard = () => {
   };
 
   return (
-    <div className={`min-h-screen ${topicGradient}`}>
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
         <Breadcrumb className="mb-6">
@@ -554,9 +550,9 @@ const TopicDashboard = () => {
 
         {/* Topic Header */}
         <div className="mb-8">
-          <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+          <Card className="bg-card border-border hover:border-[hsl(270,100%,68%)]/30 transition-colors">
             <CardContent className="p-6 relative">
-              <Button variant="outline" asChild className="absolute top-4 right-4 z-10">
+              <Button variant="outline" asChild className="absolute top-4 right-4 z-10 hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30">
                 <Link to={`/feed/${topic.slug}`} target="_blank">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   View Feed
@@ -564,10 +560,16 @@ const TopicDashboard = () => {
               </Button>
               <div className="mobile-card-header mb-4">
                 <div className="flex items-center gap-3">
-                  {topic.topic_type === 'regional' ? (
-                    <MapPin className="w-8 h-8 text-blue-500" />
+                  {topic.branding_config?.logo_url ? (
+                    <img 
+                      src={topic.branding_config.logo_url} 
+                      alt={`${topic.name} logo`}
+                      className="w-12 h-12 rounded object-cover"
+                    />
+                  ) : topic.topic_type === 'regional' ? (
+                    <MapPin className="w-8 h-8 text-[hsl(270,100%,68%)]" />
                   ) : (
-                    <Hash className="w-8 h-8 text-green-500" />
+                    <Hash className="w-8 h-8 text-[hsl(155,100%,67%)]" />
                   )}
                   <div>
                     <h1 className="text-2xl sm:text-4xl font-bold text-foreground">
@@ -575,7 +577,7 @@ const TopicDashboard = () => {
                     </h1>
                     <div className="flex items-center gap-4 mt-1 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Badge variant={topic.is_public ? "default" : "secondary"}>
+                        <Badge variant={topic.is_public ? "default" : "secondary"} className={topic.is_public ? "bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90" : ""}>
                           {topic.is_public ? (
                             <>
                               <Eye className="w-3 h-3 mr-1" />
@@ -761,14 +763,14 @@ const TopicDashboard = () => {
         </Collapsible>
 
         {/* Primary Action Bar - Mobile Responsive */}
-        <Card className={`${accentColor} bg-card/60 backdrop-blur-sm mb-6`}>
+        <Card className="bg-card border-border mb-6">
           <CardContent className="p-4">
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <Button 
                   onClick={handleStartScraping}
                   disabled={gatheringAll}
-                  className="flex items-center gap-2 w-full sm:w-auto"
+                  className="flex items-center gap-2 w-full sm:w-auto bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white"
                   size="lg"
                 >
                   {gatheringAll ? (
@@ -823,7 +825,7 @@ const TopicDashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`grid w-full grid-cols-4 mobile-tabs bg-card/60 backdrop-blur-sm ${accentColor}`}>
+          <TabsList className="grid w-full grid-cols-4 mobile-tabs bg-card">
             <TabsTrigger value="content-flow" className="relative">
               Content Flow
               {needsAttention.contentFlow && (
@@ -879,7 +881,7 @@ const TopicDashboard = () => {
               topicId={topic.id} 
               onContentProcessed={loadTopicAndStats}
             />
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+            <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <UnifiedContentPipeline selectedTopicId={topic.id} />
               </CardContent>
@@ -887,7 +889,7 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+            <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <TopicScheduleMonitor 
                   topicId={topic.id}
@@ -896,7 +898,7 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="w-5 h-5" />
@@ -918,7 +920,7 @@ const TopicDashboard = () => {
           <TabsContent value="advanced" className="space-y-8">
             {/* Sentiment Hub - Unified sentiment management */}
             <SentimentHub topicId={topic.id} />
-            <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="w-5 h-5" />
@@ -1099,7 +1101,7 @@ const TopicDashboard = () => {
 
 
             <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>
-              <Card className={`${accentColor} bg-card/60 backdrop-blur-sm`}>
+              <Card className="bg-card border-border">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                     <CardTitle className="flex items-center justify-between">

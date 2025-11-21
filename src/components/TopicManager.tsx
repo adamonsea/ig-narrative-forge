@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2 } from "lucide-react";
-import { generateTopicGradient, generateAccentColor } from "@/lib/colorUtils";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +35,7 @@ interface Topic {
   share_clicks?: number;
   installs_this_week?: number;
   installs_total?: number;
+  branding_config?: any;
   _count?: {
     articles: number;
     sources: number;
@@ -284,8 +284,8 @@ export const TopicManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <div className="flex items-center justify-end">
+        <Button onClick={() => setShowCreateDialog(true)} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white">
           <Plus className="w-4 h-4 mr-2" />
           Create Topic
         </Button>
@@ -307,7 +307,7 @@ export const TopicManager = () => {
             <p className="text-muted-foreground mb-4">
               Create your first topic to start curating content feeds
             </p>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={() => setShowCreateDialog(true)} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white">
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Topic
             </Button>
@@ -316,11 +316,8 @@ export const TopicManager = () => {
       ) : (
         <div className="grid gap-6">
           {topics.map((topic) => {
-            const gradientClass = generateTopicGradient(topic.id);
-            const accentClass = generateAccentColor(topic.id);
-            
             return (
-              <Card key={topic.id} className={`${gradientClass} border ${accentClass} relative overflow-hidden group hover:shadow-lg transition-all duration-300`}>
+              <Card key={topic.id} className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-card border-border hover:border-[hsl(270,100%,68%)]/30">
                 <Link 
                   to={`/dashboard/topic/${topic.slug}`}
                   className="block"
@@ -335,10 +332,19 @@ export const TopicManager = () => {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1 pr-6">
-                        <h3 className="text-2xl font-bold tracking-tight mb-2 group-hover:text-primary transition-colors">
-                          {topic.name}
-                        </h3>
-                        <p className="text-base font-normal text-muted-foreground leading-relaxed">
+                        <div className="flex items-center gap-3 mb-2">
+                          {topic.branding_config?.logo_url && (
+                            <img 
+                              src={topic.branding_config.logo_url} 
+                              alt={`${topic.name} logo`}
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          )}
+                          <h3 className="text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
+                            {topic.name}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {topic.description}
                         </p>
                       </div>
@@ -352,7 +358,7 @@ export const TopicManager = () => {
                             Content
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
                               <div className="text-lg font-bold text-foreground">
                                 {topic.articles_in_arrivals || 0}
                               </div>
@@ -360,7 +366,7 @@ export const TopicManager = () => {
                                 Arrivals
                               </div>
                             </div>
-                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
                               <div className="text-lg font-bold text-foreground">
                                 {topic.stories_published_this_week || 0}
                               </div>
@@ -378,7 +384,7 @@ export const TopicManager = () => {
                             Engagement
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
                               <div className="text-lg font-bold text-foreground">
                                 {topic.articles_swiped || 0}
                               </div>
@@ -386,7 +392,7 @@ export const TopicManager = () => {
                                 Swiped
                               </div>
                             </div>
-                            <div className="bg-card/60 backdrop-blur-sm rounded-lg p-2 border border-border/50">
+                            <div className="bg-background/50 rounded-lg p-2 border border-border/50">
                               <div className="text-lg font-bold text-foreground">
                                 {topic.share_clicks || 0}
                               </div>
@@ -399,24 +405,24 @@ export const TopicManager = () => {
                         
                         {/* Visitor Stats */}
                         <div className="space-y-2">
-                          <div className="text-xs font-semibold text-primary uppercase tracking-wider flex items-center gap-1">
+                          <div className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider flex items-center gap-1">
                             <Eye className="w-3 h-3" />
                             Visitors
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
-                              <div className="text-lg font-bold text-primary">
+                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20">
+                              <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
                                 {topic.visits_today || 0}
                               </div>
-                              <div className="text-xs font-medium text-primary/70">
+                              <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
                                 Today
                               </div>
                             </div>
-                            <div className="bg-primary/5 backdrop-blur-sm rounded-lg p-2 border border-primary/20">
-                              <div className="text-lg font-bold text-primary">
+                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20">
+                              <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
                                 {topic.visits_this_week || 0}
                               </div>
-                              <div className="text-xs font-medium text-primary/70">
+                              <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
                                 This week
                               </div>
                             </div>
@@ -426,24 +432,24 @@ export const TopicManager = () => {
                         {/* Install Stats */}
                         {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
                           <div className="space-y-2">
-                            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            <div className="text-xs font-semibold text-[hsl(155,100%,67%)] uppercase tracking-wider flex items-center gap-1">
                               <Plus className="w-3 h-3" />
                               Installs
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-emerald-500/5 backdrop-blur-sm rounded-lg p-2 border border-emerald-500/20">
-                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                              <div className="bg-[hsl(155,100%,67%)]/5 rounded-lg p-2 border border-[hsl(155,100%,67%)]/20">
+                                <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
                                   {topic.installs_this_week || 0}
                                 </div>
-                                <div className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">
+                                <div className="text-xs font-medium text-[hsl(155,100%,67%)]/70">
                                   This week
                                 </div>
                               </div>
-                              <div className="bg-emerald-500/5 backdrop-blur-sm rounded-lg p-2 border border-emerald-500/20">
-                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                              <div className="bg-[hsl(155,100%,67%)]/5 rounded-lg p-2 border border-[hsl(155,100%,67%)]/20">
+                                <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
                                   {topic.installs_total || 0}
                                 </div>
-                                <div className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">
+                                <div className="text-xs font-medium text-[hsl(155,100%,67%)]/70">
                                   Total
                                 </div>
                               </div>
@@ -506,10 +512,11 @@ export const TopicManager = () => {
                           variant="outline"
                           size="sm"
                           asChild
-                          className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
+                          className="hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30"
                           onClick={(e) => e.preventDefault()}
                         >
-                          <Link to={`/feed/${topic.slug}`}>
+                          <Link to={`/feed/${topic.slug}`} className="flex items-center gap-2">
+                            <ExternalLink className="w-3 h-3" />
                             Feed
                           </Link>
                         </Button>

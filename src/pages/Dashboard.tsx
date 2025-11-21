@@ -188,7 +188,7 @@ const Dashboard = () => {
             <Button 
               variant="outline" 
               size="sm"
-              className="bg-gradient-to-br from-background/50 to-muted/50 border-border/30 hover:bg-accent"
+              className="hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30"
             >
               <BarChart3 className="h-4 w-4" />
               <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
