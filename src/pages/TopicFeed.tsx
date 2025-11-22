@@ -498,7 +498,7 @@ const TopicFeed = () => {
                   </Tooltip>
                 </TooltipProvider>
 
-                {/* Collection Icons */}
+                {/* Collection Icons - Daily and Weekly only */}
                 {latestDaily && (
                   <Link to={`/feed/${slug}/daily/${latestDaily}`}>
                     <button
@@ -520,15 +520,6 @@ const TopicFeed = () => {
                     </button>
                   </Link>
                 )}
-
-                <Link to={`/feed/${slug}/archive`}>
-                  <button
-                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="View archive"
-                  >
-                    <Archive className="w-4 h-4" />
-                  </button>
-                </Link>
               </div>
 
               {/* Donation Button - Icon Only */}
