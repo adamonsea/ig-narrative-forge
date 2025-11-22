@@ -135,7 +135,9 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
-          <CardTitle className="text-3xl font-bold text-foreground">Breefly</CardTitle>
+          <div className="text-4xl font-display font-semibold tracking-tight text-foreground">
+            Curatr<span className="text-2xl opacity-70">.pro</span>
+          </div>
           <div className="text-xs text-muted-foreground font-medium tracking-wider uppercase">
             Beta
           </div>
