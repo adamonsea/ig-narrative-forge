@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoveRight } from 'lucide-react';
+import { Hand, MoveRight } from 'lucide-react';
 
 interface HandSwipeHintProps {
   topicSlug: string;
@@ -46,10 +46,10 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
           <motion.div
             animate={{ x: [0, 20, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            className="flex items-center gap-2 text-foreground"
+            className="flex items-center gap-3 text-foreground"
           >
-            <span className="text-3xl">👆</span>
-            <MoveRight className="w-8 h-8" />
+            <Hand className="w-12 h-12 text-white" style={{ filter: 'drop-shadow(0 0 2px rgb(126, 34, 206))' }} />
+            <MoveRight className="w-10 h-10 text-white" style={{ filter: 'drop-shadow(0 0 2px rgb(126, 34, 206))' }} />
           </motion.div>
         </motion.div>
       )}
