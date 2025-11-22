@@ -499,27 +499,23 @@ const TopicFeed = () => {
                 </TooltipProvider>
 
                 {/* Collection Icons - Daily and Weekly only */}
-                {latestDaily && (
-                  <Link to={`/feed/${slug}/daily/${latestDaily}`}>
-                    <button
-                      className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                      aria-label="Today's briefing"
-                    >
-                      <Calendar className="w-4 h-4" />
-                    </button>
-                  </Link>
-                )}
+                <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
+                  <button
+                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="Today's briefing"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                </Link>
 
-                {latestWeekly && (
-                  <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
-                    <button
-                      className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                      aria-label="This week's briefing"
-                    >
-                      <CalendarDays className="w-4 h-4" />
-                    </button>
-                  </Link>
-                )}
+                <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
+                  <button
+                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="This week's briefing"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                  </button>
+                </Link>
               </div>
 
               {/* Donation Button - Icon Only */}
@@ -650,27 +646,23 @@ const TopicFeed = () => {
                 <Tooltip open={showCollectionsHint}>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1" onMouseEnter={() => setShowCollectionsHint(false)}>
-                      {latestDaily && (
-                        <Link to={`/feed/${slug}/daily/${latestDaily}`}>
-                          <button
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label="Today's briefing"
-                          >
-                            <Calendar className="w-4 h-4" />
-                          </button>
-                        </Link>
-                      )}
+                      <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="Today's briefing"
+                        >
+                          <Calendar className="w-4 h-4" />
+                        </button>
+                      </Link>
 
-                      {latestWeekly && (
-                        <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
-                          <button
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label="This week's briefing"
-                          >
-                            <CalendarDays className="w-4 h-4" />
-                          </button>
-                        </Link>
-                      )}
+                      <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="This week's briefing"
+                        >
+                          <CalendarDays className="w-4 h-4" />
+                        </button>
+                      </Link>
 
                       <Link to={`/feed/${slug}/archive`}>
                         <button
