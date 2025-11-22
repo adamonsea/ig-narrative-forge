@@ -53,7 +53,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               alt="Curatr" 
               className="h-8 w-8"
             />
-            <span className="text-lg font-semibold text-sidebar-foreground">Curatr</span>
+            <span className="text-xl font-display font-semibold tracking-tight text-sidebar-foreground">Curatr</span>
           </header>
 
           {/* Breadcrumb navigation */}

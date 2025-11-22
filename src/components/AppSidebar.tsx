@@ -48,7 +48,7 @@ export function AppSidebar() {
             className="h-8 w-8 shrink-0"
           />
           {open && (
-            <span className="text-lg font-semibold text-sidebar-foreground">
+            <span className="text-lg font-display font-semibold tracking-tight text-sidebar-foreground">
               Curatr
             </span>
           )}

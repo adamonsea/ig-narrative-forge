@@ -1159,7 +1159,7 @@ const TopicDashboard = () => {
       {/* Subtle Curatr.pro branding */}
       <div className="mt-12 pb-6 text-center">
         <p className="text-xs text-muted-foreground/50">
-          Powered by <span className="font-medium text-muted-foreground/70">Curatr.pro</span>
+          Powered by <span className="font-display font-medium text-muted-foreground/70">Curatr.pro</span>
         </p>
       </div>
         </div>
