@@ -497,6 +497,38 @@ const TopicFeed = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+
+                {/* Collection Icons */}
+                {latestDaily && (
+                  <Link to={`/feed/${slug}/daily/${latestDaily}`}>
+                    <button
+                      className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                      aria-label="Today's briefing"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                  </Link>
+                )}
+
+                {latestWeekly && (
+                  <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
+                    <button
+                      className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                      aria-label="This week's briefing"
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                    </button>
+                  </Link>
+                )}
+
+                <Link to={`/feed/${slug}/archive`}>
+                  <button
+                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                    aria-label="View archive"
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                </Link>
               </div>
 
               {/* Donation Button - Icon Only */}

@@ -43,17 +43,14 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
           transition={{ duration: 0.3 }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
         >
-          <div className="flex flex-col items-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-br from-purple-dark/90 to-purple-bright/90 backdrop-blur-sm shadow-lg border border-white/20">
-            <motion.div
-              animate={{ x: [0, 20, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="flex items-center gap-2 text-white"
-            >
-              <span className="text-2xl">👆</span>
-              <MoveRight className="w-6 h-6" />
-            </motion.div>
-            <p className="text-white text-sm font-medium whitespace-nowrap">Swipe to explore</p>
-          </div>
+          <motion.div
+            animate={{ x: [0, 20, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="flex items-center gap-2 text-foreground"
+          >
+            <span className="text-3xl">👆</span>
+            <MoveRight className="w-8 h-8" />
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
