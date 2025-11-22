@@ -209,6 +209,10 @@ All colors MUST be HSL.
     /* Pop color for highlights and accents */
     --pop: 155 100% 67%;
     --pop-foreground: 146 41% 7%;
+    
+    /* Purple accent colors for badges and highlights */
+    --purple-bright: 270 95% 75%;
+    --purple-dark: 270 80% 45%;
   }
 
   .dark {
@@ -259,6 +263,10 @@ All colors MUST be HSL.
     /* Pop color for highlights and accents (same in dark mode) */
     --pop: 155 100% 67%;
     --pop-foreground: 146 41% 7%;
+    
+    /* Purple accent colors for badges and highlights */
+    --purple-bright: 270 95% 75%;
+    --purple-dark: 270 80% 45%;
   }
 }
 

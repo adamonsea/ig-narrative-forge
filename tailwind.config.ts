@@ -70,6 +70,10 @@ export default {
 				pop: {
 					DEFAULT: 'hsl(var(--pop))',
 					foreground: 'hsl(var(--pop-foreground))'
+				},
+				purple: {
+					bright: 'hsl(var(--purple-bright))',
+					dark: 'hsl(var(--purple-dark))'
 				}
 			},
 			borderRadius: {
