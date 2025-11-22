@@ -49,11 +49,18 @@ export const photographicModels: ImageModel[] = [
     description: 'Highest quality photorealistic images'
   },
   {
-    id: 'flux-1.1-pro',
-    name: 'Standard',
-    credits: 10,
-    provider: 'replicate-flux-pro',
-    description: 'Professional photojournalism quality'
+    id: 'gpt-image-1-medium',
+    name: 'Creative',
+    credits: 5,
+    provider: 'openai',
+    description: 'Balanced quality and cost'
+  },
+  {
+    id: 'gemini-image',
+    name: 'Budget',
+    credits: 1,
+    provider: 'lovable-gemini',
+    description: 'Fast and economical'
   }
 ];
 

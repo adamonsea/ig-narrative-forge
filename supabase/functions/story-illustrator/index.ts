@@ -709,27 +709,23 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           
           console.log('✅ Successfully generated image using Gemini fallback');
           
-          // Update generation time and continue with storage
-          generationTime = Date.now() - startTime;
-          
         } else {
           // Other OpenAI errors
           throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorJson.error?.message || errorText}`);
         }
       } else {
-        // Success path - extract image normally
+        // Success path - parse response
+        const openaiData = await openaiResponse.json();
+        console.log('OpenAI response received');
+
+        // GPT-Image-1 returns base64 by default
+        const base64Data = openaiData.data?.[0]?.b64_json;
+        if (!base64Data) {
+          throw new Error('No image data in OpenAI response');
+        }
+
+        imageBase64 = base64Data;
       }
-
-      const openaiData = await openaiResponse.json();
-      console.log('OpenAI response received');
-
-      // GPT-Image-1 returns base64 by default
-      const base64Data = openaiData.data?.[0]?.b64_json;
-      if (!base64Data) {
-        throw new Error('No image data in OpenAI response');
-      }
-
-      imageBase64 = base64Data;
 
     } else if (modelConfig.provider === 'replicate-flux-pro') {
       // FLUX 1.1 Pro via Replicate - Premium photographic tier
