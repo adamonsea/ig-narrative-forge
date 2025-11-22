@@ -556,7 +556,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             <Separator className="my-4" />
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"

@@ -92,7 +92,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
 
   if (isGenerating) {
     return (
-      <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+      <Badge variant="secondary" className="h-8 px-3 bg-blue-100 text-blue-800 flex items-center gap-1">
         <Loader2 className="w-3 h-3 animate-spin" />
         Generating...
       </Badge>
