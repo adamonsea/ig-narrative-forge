@@ -97,6 +97,35 @@ export default function WeeklyRoundupList() {
 
         setTopic(topicData);
 
+        // Handle "latest" parameter - fetch most recent roundup
+        if (weekStart === 'latest') {
+          const { data: latestRoundup, error: latestError } = await supabase
+            .from('topic_roundups')
+            .select('period_start')
+            .eq('topic_id', topicData.id)
+            .eq('roundup_type', 'weekly')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestError) {
+            console.error('Latest roundup fetch error:', latestError);
+            setLoading(false);
+            return;
+          }
+
+          if (!latestRoundup) {
+            setLoading(false);
+            return;
+          }
+
+          // Redirect to the actual week start date
+          const latestWeekStart = format(parseISO(latestRoundup.period_start), 'yyyy-MM-dd');
+          navigate(`/feed/${slug}/weekly/${latestWeekStart}`, { replace: true });
+          return;
+        }
+
         // Parse week start date
         const weekStartDate = parseISO(weekStart);
         const weekStartFormatted = format(startOfWeek(weekStartDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
