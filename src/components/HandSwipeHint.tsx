@@ -46,10 +46,14 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
           <motion.div
             animate={{ x: [0, 20, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            className="flex items-center gap-3 text-foreground"
+            className="flex items-center gap-3"
           >
-            <Hand className="w-12 h-12 text-white" style={{ filter: 'drop-shadow(0 0 2px rgb(126, 34, 206))' }} />
-            <MoveRight className="w-10 h-10 text-white" style={{ filter: 'drop-shadow(0 0 2px rgb(126, 34, 206))' }} />
+            <div className="bg-white rounded-full p-3 shadow-lg border-2 border-black">
+              <Hand className="w-8 h-8 text-black fill-black" />
+            </div>
+            <div className="bg-white rounded-full p-2.5 shadow-lg border-2 border-black">
+              <MoveRight className="w-7 h-7 text-black" strokeWidth={3} />
+            </div>
           </motion.div>
         </motion.div>
       )}
