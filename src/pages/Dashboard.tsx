@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TopicManager } from "@/components/TopicManager";
-
-
+import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Settings, FileText, Globe, Menu, ChevronDown, LogOut } from "lucide-react";
@@ -149,21 +148,11 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-      {/* Fixed brand icon in top left corner */}
-      <div className="fixed top-6 left-6 z-50">
-        <Link to="/dashboard">
-          <img 
-            src="/curatr-icon.png" 
-            alt="Curatr" 
-            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
-          />
-        </Link>
-      </div>
-      
-      <div className="container mx-auto px-4 py-8 pl-24">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+    <AppLayout>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-foreground mb-2">
               Your topics
@@ -269,7 +258,8 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 
