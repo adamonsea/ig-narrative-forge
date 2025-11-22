@@ -4,6 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { AppLayout } from '@/components/AppLayout';
 import { UnifiedSourceManager } from '@/components/UnifiedSourceManager';
 import { QueueManager } from '@/components/QueueManager';
 import { AutomationDashboard } from '@/components/AutomationDashboard';
@@ -29,21 +30,11 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Fixed brand icon in top left corner */}
-      <div className="fixed top-6 left-6 z-50">
-        <Link to="/dashboard">
-          <img 
-            src="/curatr-icon.png" 
-            alt="Curatr" 
-            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
-          />
-        </Link>
-      </div>
-      
-      <div className="container mx-auto py-8 pl-24">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
+    <AppLayout>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto py-8">
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-4">
             <Button variant="outline" size="sm" asChild>
               <Link to="/dashboard">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -107,5 +98,6 @@ export default function AdminPanel() {
         </Tabs>
       </div>
     </div>
+    </AppLayout>
   );
 }

@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { AppLayout } from "@/components/AppLayout";
 import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { ManualContentStaging } from "@/components/ManualContentStaging";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
@@ -536,21 +537,11 @@ const TopicDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Fixed brand icon in top left corner */}
-      <div className="fixed top-6 left-6 z-50">
-        <Link to="/dashboard">
-          <img 
-            src="/curatr-icon.png" 
-            alt="Curatr" 
-            className="w-14 h-14 rounded-xl hover:opacity-80 transition-opacity"
-          />
-        </Link>
-      </div>
-      
-      <div className="container mx-auto px-4 py-8 pl-24">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb className="mb-6">
+    <AppLayout>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          {/* Breadcrumb Navigation */}
+          <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
@@ -1174,7 +1165,8 @@ const TopicDashboard = () => {
           Powered by <span className="font-medium text-muted-foreground/70">Curatr.pro</span>
         </p>
       </div>
-    </div>
+        </div>
+    </AppLayout>
   );
 };
 
