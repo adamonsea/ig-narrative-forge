@@ -97,6 +97,35 @@ export default function DailyRoundupList() {
 
         setTopic(topicData);
 
+        // Handle "latest" parameter - fetch most recent roundup
+        if (date === 'latest') {
+          const { data: latestRoundup, error: latestError } = await supabase
+            .from('topic_roundups')
+            .select('period_start')
+            .eq('topic_id', topicData.id)
+            .eq('roundup_type', 'daily')
+            .eq('is_published', true)
+            .order('period_start', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestError) {
+            console.error('Latest roundup fetch error:', latestError);
+            setLoading(false);
+            return;
+          }
+
+          if (!latestRoundup) {
+            setLoading(false);
+            return;
+          }
+
+          // Redirect to the actual date
+          const latestDate = format(parseISO(latestRoundup.period_start), 'yyyy-MM-dd');
+          navigate(`/feed/${slug}/daily/${latestDate}`, { replace: true });
+          return;
+        }
+
         // Parse date and fetch roundup
         const dateFormatted = format(parseISO(date), 'yyyy-MM-dd');
         
