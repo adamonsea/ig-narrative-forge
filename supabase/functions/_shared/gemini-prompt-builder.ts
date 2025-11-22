@@ -140,17 +140,16 @@ export function buildGeminiPhotographicPrompt(params: GeminiPromptParams): strin
   // Extract scene excerpt (first 150 chars)
   const sceneExcerpt = slideContent ? slideContent.substring(0, 150).trim() : subject;
   
-  return `Professional photojournalism for ${publicationName || 'a news publication'} covering: "${storyTitle}"
+  return `Cinematic documentary photography for ${publicationName || 'a news publication'} covering: "${storyTitle}"
 
 Subject: ${subject}
 
 The moment: ${momentGuidance} capturing ${sceneExcerpt}
 
-Mood & lighting: ${lightingGuidance}. Authentic photojournalism only—no studio setup, no harsh flash, natural light.
+Cinematic approach: ${lightingGuidance}. Dramatic natural light with strong shadows and atmospheric depth. Gritty documentary realism with visual drama—raw, textured, authentic. No studio setup, no harsh flash, only dramatic natural light.
 
-This is documentary photography in the tradition of BBC News, Reuters, Guardian editorial work. Environmental storytelling showing both subject and context with human scale. 35-85mm perspective for natural field of view, modern DSLR quality with environmental context visible. 3:2 landscape format.
+This is cinematic photojournalism in the tradition of Magnum Photos, Steve McCurry's environmental portraits, Sebastião Salgado's gritty social documentary. Environmental storytelling with dramatic framing, weathered textures, and layered composition showing depth. 35-85mm perspective with slight wide-angle bias for dramatic environmental context, modern DSLR quality with rich tonal range. 3:2 landscape format.
 
-Composition approach: Rule of thirds or balanced framing with clear subject focus and supporting environmental details that provide context. The frame tells a complete story—authentic unposed moment with professional modern standards.
+Composition approach: Dramatic framing with dynamic angles and strong leading lines. Rule of thirds or diagonal composition creating visual tension. Gritty textural details in foreground/background layers. Clear subject with dramatic spatial relationships and environmental drama. Cinematic yet completely authentic—documentary with visual impact.
 
-Zero tolerance for illustration, CGI, or stylization. Pure photorealistic capture only.`;
-}
+Zero tolerance for illustration, CGI, or stylization. Pure photorealistic capture with dramatic composition and gritty authenticity.`;

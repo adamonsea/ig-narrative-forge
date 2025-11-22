@@ -164,48 +164,54 @@ export function buildPhotographicPrompt(
 ): string {
   // Determine lighting guidance based on tone
   const lightingGuidance = tone.includes('serious') || tone.includes('somber') || tone.includes('urgent')
-    ? 'natural overcast daylight or soft indoor lighting, creating subdued atmosphere'
+    ? 'dramatic natural overcast daylight with moody atmospheric depth, creating tension and subdued drama'
     : tone.includes('uplifting') || tone.includes('hopeful') || tone.includes('positive')
-    ? 'warm golden hour light or bright natural daylight, creating optimistic mood'
-    : 'balanced natural daylight or practical indoor lighting';
+    ? 'warm golden hour light with rich contrast and cinematic glow, creating optimistic yet grounded mood'
+    : 'dynamic natural daylight with strong shadows and textural contrast';
 
   // Determine moment/composition guidance
   const momentGuidance = tone.includes('urgent') || tone.includes('tense')
-    ? 'captured mid-action, dynamic composition showing movement and energy'
+    ? 'captured mid-action with dramatic angles, showing raw movement and visceral energy'
     : tone.includes('somber') || tone.includes('reflective')
-    ? 'quiet contemplative moment, still composition with environmental context'
-    : 'candid authentic moment, documentary-style environmental storytelling';
+    ? 'quiet contemplative moment with cinematic framing, environmental storytelling through gritty textures and weathered details'
+    : 'candid authentic moment with dramatic composition, documentary-style environmental storytelling emphasizing raw reality';
 
-  return `Professional editorial photography for ${publicationName || 'news publication'}. Subject: ${subject}.
+  return `Cinematic editorial photography for ${publicationName || 'news publication'}. Subject: ${subject}.
 
-PHOTOREALISTIC MANDATE: Absolutely NO illustration, cartoon, CGI, digital art, or stylized rendering. Must be authentic photojournalism.
+PHOTOREALISTIC MANDATE: Absolutely NO illustration, cartoon, CGI, digital art, or stylized rendering. Must be authentic photojournalism with documentary grit.
 
-LIGHTING: ${lightingGuidance}. No studio lighting, no harsh flash, no artificial effects.
+CINEMATIC DOCUMENTARY STYLE: 
+${lightingGuidance}. Embrace dramatic natural light, strong shadows, and atmospheric depth. Think gritty documentary realism with cinematic composition—not polished studio work. Raw, textured, authentic with visual drama.
 
-DOCUMENTARY MOMENT: ${momentGuidance}. Authentic, unposed, real-world setting.
+DOCUMENTARY MOMENT: ${momentGuidance}. Authentic, unposed, real-world setting with dramatic framing and compelling angles.
+
+VISUAL APPROACH:
+- Gritty realism: weathered surfaces, textured environments, raw authenticity
+- Dramatic composition: dynamic angles, strong leading lines, cinematic framing
+- Environmental drama: atmospheric depth, layered foreground/background, storytelling through setting
+- Natural tension: contrast between light and shadow, dramatic but never artificial
 
 TECHNICAL SPECIFICATIONS:
-- 35-85mm perspective (natural field of view, slight compression)
-- Natural depth of field (environmental context visible)
-- Modern digital camera quality (sharp, clean, professional grade)
-- 3:2 landscape aspect ratio (standard photojournalism format)
+- 35-85mm perspective with slight wide-angle bias for environmental drama
+- Shallow to moderate depth of field for cinematic subject isolation
+- Modern digital camera quality with rich tonal range and textural detail
+- 3:2 landscape aspect ratio (cinematic photojournalism format)
 
 COMPOSITION:
-- Environmental storytelling (show context and setting)
-- Rule of thirds or balanced framing
-- Human scale and relatability
-- Clear subject focus with supporting environmental details
+- Cinematic framing: rule of thirds, dynamic diagonals, dramatic perspective
+- Environmental storytelling with gritty textural details
+- Human scale with dramatic spatial relationships
+- Layered composition showing depth and context
 
-VISUAL STYLE REFERENCE: BBC News photography, Reuters editorial, Guardian photojournalism - modern editorial standards with authentic documentary approach.
+VISUAL STYLE REFERENCE: Steve McCurry's dramatic environmental portraits, Sebastião Salgado's gritty social documentary, Magnum Photos' cinematic realism—dramatic yet authentic, gritty yet beautiful, documentary with visual impact.
 
 QUALITY CONTROL CHECKLIST:
-✓ Real-world setting (not studio, not artificial)
-✓ Natural lighting only
-✓ Photorealistic human features and proportions
-✓ Authentic materials and textures
-✓ Documentary candid moment (not posed)
-✓ Professional news photography aesthetic
-✓ Suitable for serious editorial publication
+✓ Real-world setting with gritty textural authenticity
+✓ Dramatic natural lighting with strong shadows
+✓ Photorealistic with cinematic composition
+✓ Raw materials, weathered textures, environmental drama
+✓ Documentary candid moment with visual tension
+✓ Cinematic photojournalism aesthetic
+✓ Dramatic yet completely realistic
 
-CRITICAL: Must look like it was captured by a professional photojournalist with a DSLR camera. Zero tolerance for illustration, stylization, or artificial rendering.`;
-}
+CRITICAL: Must look like it was captured by a master photojournalist seeking the decisive dramatic moment—cinematic composition with documentary authenticity. Gritty realism with visual drama, never losing believability.`;
