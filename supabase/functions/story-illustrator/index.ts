@@ -830,8 +830,11 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error(`FLUX generation failed: ${fluxResult.error || 'Unknown error'}`);
       }
 
-      // Get the generated image URL
-      const fluxImageUrl = fluxResult.output?.[0];
+      // Get the generated image URL (output can be string or array)
+      const fluxImageUrl = Array.isArray(fluxResult.output) 
+        ? fluxResult.output[0] 
+        : fluxResult.output;
+      
       if (!fluxImageUrl) {
         throw new Error('No image URL in FLUX response');
       }
