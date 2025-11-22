@@ -427,7 +427,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                 </div>
                 
                 <div className="flex flex-col gap-2 min-w-0">
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 sm:flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -467,7 +467,7 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
                     )}
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 sm:flex gap-2">
                     {isStuck(story) && (
                       <Button
                         size="sm"
