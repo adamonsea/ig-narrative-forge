@@ -47,7 +47,7 @@ export default function AdminPanel() {
           <h1 className="text-3xl font-bold text-foreground">Admin Panel</h1>
           <p className="text-muted-foreground">
             Manage system-wide settings and monitor platform health
-            <span className="text-xs ml-2 opacity-60">• Powered by Curatr.pro</span>
+            <span className="text-xs ml-2 opacity-60">• Powered by <span className="font-display">Curatr.pro</span></span>
           </p>
         </div>
 

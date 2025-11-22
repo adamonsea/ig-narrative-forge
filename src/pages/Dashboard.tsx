@@ -158,7 +158,7 @@ const Dashboard = () => {
               Your topics
             </h1>
             <p className="text-xs text-muted-foreground/60">
-              Powered by <span className="font-medium">Curatr.pro</span>
+              Powered by <span className="font-display font-medium">Curatr.pro</span>
             </p>
           </div>
           
