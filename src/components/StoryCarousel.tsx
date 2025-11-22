@@ -13,6 +13,7 @@ import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
+import { HandSwipeHint } from '@/components/HandSwipeHint';
 // Force cache refresh
 
 // Hook to detect network speed (adjusted for device tier)
@@ -1063,6 +1064,9 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
 
           {/* Content Area */}
           <div className="flex-1 relative overflow-hidden">
+            {/* Hand Swipe Hint - only show on first story */}
+            {storyIndex === 0 && topicSlug && <HandSwipeHint topicSlug={topicSlug} />}
+            
             <SwipeCarousel
               slides={slideComponents}
               height="100%"

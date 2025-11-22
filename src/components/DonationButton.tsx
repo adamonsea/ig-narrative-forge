@@ -1,15 +1,17 @@
-import { Heart } from "lucide-react";
+import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DonationButtonProps {
   onClick: () => void;
   buttonText: string;
   topicId: string;
   visitorId: string;
+  iconOnly?: boolean;
 }
 
-export const DonationButton = ({ onClick, buttonText, topicId, visitorId }: DonationButtonProps) => {
+export const DonationButton = ({ onClick, buttonText, topicId, visitorId, iconOnly = false }: DonationButtonProps) => {
   const handleClick = async () => {
     // Track button click
     try {
@@ -26,6 +28,29 @@ export const DonationButton = ({ onClick, buttonText, topicId, visitorId }: Dona
     onClick();
   };
 
+  if (iconOnly) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClick}
+              className="w-9 h-9 p-0"
+              aria-label={buttonText}
+            >
+              <Gift className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{buttonText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <Button
       variant="outline"
@@ -33,7 +58,7 @@ export const DonationButton = ({ onClick, buttonText, topicId, visitorId }: Dona
       onClick={handleClick}
       className="gap-2"
     >
-      <Heart className="h-4 w-4" />
+      <Gift className="h-4 w-4" />
       <span>{buttonText}</span>
     </Button>
   );
