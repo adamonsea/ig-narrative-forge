@@ -215,3 +215,4 @@ QUALITY CONTROL CHECKLIST:
 ✓ Dramatic yet completely realistic
 
 CRITICAL: Must look like it was captured by a master photojournalist seeking the decisive dramatic moment—cinematic composition with documentary authenticity. Gritty realism with visual drama, never losing believability.`;
+}
