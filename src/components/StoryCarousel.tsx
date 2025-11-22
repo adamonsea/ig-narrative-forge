@@ -319,7 +319,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       badges.push(
         <Badge
           key="most-popular"
-          className="text-xs px-2 py-1 scale-80 origin-left bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 font-semibold flex items-center gap-1"
+          className="text-xs px-2 py-1 scale-80 origin-left bg-gradient-to-r from-purple-dark to-purple-bright text-white border-0 font-semibold flex items-center gap-1"
         >
           <Pin className="w-3 h-3" />
           Most Popular
