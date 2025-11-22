@@ -27,7 +27,7 @@ import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfill
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
-import { QuickSourceReactivator } from "@/components/QuickSourceReactivator";
+
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
@@ -1155,9 +1155,6 @@ const TopicDashboard = () => {
         confirmText="Unpublish"
         variant="destructive"
       />
-      
-      {/* Quick source reactivator for testing */}
-      {slug === 'eastbourne' && <QuickSourceReactivator />}
       
       {/* Subtle Curatr.pro branding */}
       <div className="mt-12 pb-6 text-center">
