@@ -18,6 +18,7 @@ export function useTopics() {
         .from("topics")
         .select("id, name, slug, region, topic_type, is_active")
         .eq("is_active", true)
+        .eq("is_archived", false)
         .order("name");
 
       if (error) throw error;

@@ -10,6 +10,8 @@ import { QueueManager } from '@/components/QueueManager';
 import { AutomationDashboard } from '@/components/AutomationDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { ArchivedTopicsCleanup } from '@/components/ArchivedTopicsCleanup';
+import { SourceCleanup } from '@/components/SourceCleanup';
 
 export default function AdminPanel() {
   const { user, loading } = useAuth();
@@ -50,10 +52,11 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="sources">Source Management</TabsTrigger>
             <TabsTrigger value="queue">Queue Manager</TabsTrigger>
             <TabsTrigger value="automation">Topic Automation</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
           
           <TabsContent value="sources" className="mt-6">
@@ -94,6 +97,11 @@ export default function AdminPanel() {
 
           <TabsContent value="automation" className="mt-6">
             <AutomationDashboard />
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="mt-6 space-y-6">
+            <ArchivedTopicsCleanup />
+            <SourceCleanup />
           </TabsContent>
         </Tabs>
       </div>
