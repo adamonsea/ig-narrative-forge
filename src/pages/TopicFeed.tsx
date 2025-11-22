@@ -48,6 +48,8 @@ const TopicFeed = () => {
   const [hasCheckedNotificationStatus, setHasCheckedNotificationStatus] = useState(false);
   const [shouldShowNotificationPrompt, setShouldShowNotificationPrompt] = useState(false);
   const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
+  const [showCollectionsHint, setShowCollectionsHint] = useState(false);
+  const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
   
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
@@ -155,6 +157,24 @@ const TopicFeed = () => {
 
   // Track when user scrolls past stories they've engaged with
   const handleStoryScrolledPast = useCallback(() => {
+    setStoriesScrolledPast(prev => prev + 1);
+    
+    // Show collections hint after scrolling past 2nd story
+    if (storiesScrolledPast === 1 && !showCollectionsHint && slug) {
+      const hintKey = `collections_hint_shown_${slug}`;
+      const hasBeenShown = localStorage.getItem(hintKey);
+      
+      if (!hasBeenShown) {
+        setShowCollectionsHint(true);
+        localStorage.setItem(hintKey, 'true');
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+          setShowCollectionsHint(false);
+        }, 5000);
+      }
+    }
+    
     if (!shouldShowNotificationPrompt || !topic?.id) return;
     if (storiesWithSwipes.size < 2) return;
     
@@ -166,7 +186,7 @@ const TopicFeed = () => {
       localStorage.setItem(`notification_prompt_shown_${topic.id}`, 'true');
       setShouldShowNotificationPrompt(false);
     }
-  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id]);
+  }, [storiesWithSwipes, shouldShowNotificationPrompt, scrollPastStoriesWithSwipes, topic?.id, storiesScrolledPast, showCollectionsHint, slug]);
 
   // Update favicon based on topic branding
   const branding = topic?.branding_config as any;
@@ -445,11 +465,17 @@ const TopicFeed = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowNotificationModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                  className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Manage notifications"
                 >
                   <Bell className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm font-medium">Notify Me</span>
+                  {shouldShowNotificationPrompt && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-background"></span>
+                    </span>
+                  )}
                 </button>
 
                 <TooltipProvider>
@@ -473,13 +499,14 @@ const TopicFeed = () => {
                 </TooltipProvider>
               </div>
 
-              {/* Donation Button */}
+              {/* Donation Button - Icon Only */}
               {topic.donation_enabled && topic.donation_config?.tiers?.length > 0 && (
                 <DonationButton
                   onClick={() => setShowDonationModal(true)}
                   buttonText={topic.donation_config.button_text || "Support"}
                   topicId={topic.id}
                   visitorId={visitorId}
+                  iconOnly
                 />
               )}
 
@@ -596,60 +623,44 @@ const TopicFeed = () => {
                 </Tooltip>
               </TooltipProvider>
 
-              {latestDaily && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/feed/${slug}/daily/${latestDaily}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="Today's briefing"
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>Today's Briefing</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
-              {latestWeekly && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="This week's briefing"
-                        >
-                          <CalendarDays className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>This Week's Briefing</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
               <TooltipProvider>
-                <Tooltip>
+                <Tooltip open={showCollectionsHint}>
                   <TooltipTrigger asChild>
-                    <Link to={`/feed/${slug}/archive`}>
-                      <button
-                        className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                        aria-label="View archive"
-                      >
-                        <Archive className="w-4 h-4" />
-                      </button>
-                    </Link>
+                    <div className="flex items-center gap-1" onMouseEnter={() => setShowCollectionsHint(false)}>
+                      {latestDaily && (
+                        <Link to={`/feed/${slug}/daily/${latestDaily}`}>
+                          <button
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            aria-label="Today's briefing"
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      )}
+
+                      {latestWeekly && (
+                        <Link to={`/feed/${slug}/weekly/${latestWeekly}`}>
+                          <button
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            aria-label="This week's briefing"
+                          >
+                            <CalendarDays className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      )}
+
+                      <Link to={`/feed/${slug}/archive`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="View archive"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </div>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>Story Archive</p>
+                  <TooltipContent side="bottom" className="z-[60]">
+                    <p className="font-medium">Collections</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
