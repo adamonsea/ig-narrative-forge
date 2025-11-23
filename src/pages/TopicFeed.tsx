@@ -989,7 +989,7 @@ const TopicFeed = () => {
                 const insightCard = insightCards[cardIndex];
                 
                 items.push(
-                  <div key={`insight-${insightCard.id}-${index}`}>
+                  <div key={`insight-${insightCard.id}-${index}`} className="w-full max-w-2xl">
                     <AutomatedInsightCard 
                       card={insightCard} 
                       topicSlug={slug}
