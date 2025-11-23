@@ -34,59 +34,59 @@ Deno.serve(async (req) => {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
 
-    // Get top 3 trending stories from last 24 hours
+    // Get all interactions from last 24 hours for this topic
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
-    const { data: trendingStories, error: storiesError } = await supabase
+    const { data: interactions, error: interactionsError } = await supabase
       .from('story_interactions')
-      .select(`
-        story_id,
-        stories!inner(
-          id,
-          title,
-          slug,
-          published_at,
-          article_id,
-          topic_article_id
-        )
-      `)
-      .gte('created_at', twentyFourHoursAgo)
-      .order('created_at', { ascending: false });
+      .select('story_id, topic_id, created_at')
+      .eq('topic_id', topicId)
+      .gte('created_at', twentyFourHoursAgo);
 
-    if (storiesError) {
-      throw new Error(`Failed to fetch trending stories: ${storiesError.message}`);
+    if (interactionsError) {
+      throw new Error(`Failed to fetch interactions: ${interactionsError.message}`);
     }
 
     // Count interactions per story
-    const storyInteractions = new Map<string, { story: any; count: number; latestInteraction: string }>();
-    
-    for (const interaction of trendingStories || []) {
-      if (!interaction.stories) continue;
-      
-      const storyId = interaction.story_id;
-      const existing = storyInteractions.get(storyId);
-      
-      if (existing) {
-        existing.count++;
-      } else {
-        storyInteractions.set(storyId, {
-          story: interaction.stories,
-          count: 1,
-          latestInteraction: interaction.created_at
-        });
-      }
+    const storyCounts = new Map<string, number>();
+    for (const interaction of interactions || []) {
+      const count = storyCounts.get(interaction.story_id) || 0;
+      storyCounts.set(interaction.story_id, count + 1);
     }
 
-    // Filter stories that belong to this topic
-    const topicStories = Array.from(storyInteractions.values()).filter(({ story }) => {
-      // Check both legacy (article_id) and multi-tenant (topic_article_id) paths
-      return story.article_id || story.topic_article_id;
-    });
+    // Get top 3 story IDs by interaction count
+    const topStoryIds = Array.from(storyCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([storyId]) => storyId);
 
-    // Sort by interaction count
-    const top3 = topicStories
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+    if (topStoryIds.length === 0) {
+      console.log(`  No interactions found - skipping card generation`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'No trending stories to display',
+          cardsGenerated: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch the actual story details
+    const { data: stories, error: storiesError } = await supabase
+      .from('stories')
+      .select('id, title, slug, created_at')
+      .in('id', topStoryIds);
+
+    if (storiesError || !stories) {
+      throw new Error(`Failed to fetch stories: ${storiesError?.message}`);
+    }
+
+    // Build top3 with counts
+    const top3 = stories.map(story => ({
+      story,
+      count: storyCounts.get(story.id) || 0
+    }));
 
     console.log(`  Found ${top3.length} trending stories`);
 
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         word_count: 2
       },
       ...top3.map(({ story, count }) => {
-        const timeAgo = getTimeAgo(story.published_at);
+        const timeAgo = getTimeAgo(story.created_at);
         return {
           type: 'content',
           content: `**${story.title}**\n\n🔥 ${count} ${count === 1 ? 'reader' : 'readers'} engaged • Published ${timeAgo}`,
@@ -185,10 +185,10 @@ Deno.serve(async (req) => {
   }
 });
 
-function getTimeAgo(publishedAt: string): string {
+function getTimeAgo(createdAt: string): string {
   const now = Date.now();
-  const published = new Date(publishedAt).getTime();
-  const diffMs = now - published;
+  const created = new Date(createdAt).getTime();
+  const diffMs = now - created;
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffHours / 24);
 
