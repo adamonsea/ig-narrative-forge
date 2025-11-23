@@ -21,8 +21,10 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   };
 
   // Process slide content once and memoize to prevent recalculation on re-renders
+  // Skip the first slide (header) and only use the actual content slides
   const processedSlides = useMemo(() => {
-    return card.slides.map(slide => {
+    const contentSlides = card.slides.slice(1); // Skip first "trending now" header slide
+    return contentSlides.map(slide => {
       // Boost engagement numbers by fixed +15 for testing
       let processedContent = slide.content;
       
@@ -89,9 +91,9 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
         ariaLabel={`${card.headline} insight card`}
       />
       
-      {/* Card type indicator - purple outlined badge at top center */}
+      {/* Card type indicator - purple outlined badge at top center with purple text */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-purple-dark z-10 shadow-sm">
-        <span className="text-xs text-foreground/80 font-medium tracking-wide whitespace-nowrap">
+        <span className="text-xs text-purple-dark font-medium tracking-wide whitespace-nowrap">
           {getCardLabel()}
         </span>
       </div>
