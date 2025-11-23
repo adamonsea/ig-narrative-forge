@@ -428,3 +428,13 @@ verify_jwt = true
 [functions.clear-sentiment-keywords]
 verify_jwt = false
 
+# ========================================
+# AUTOMATED INSIGHT CARDS
+# ========================================
+
+[functions.insight-card-scheduler]
+verify_jwt = false
+
+[functions.generate-story-momentum-cards]
+verify_jwt = false
+

@@ -279,6 +279,75 @@ export type Database = {
           },
         ]
       }
+      automated_insight_cards: {
+        Row: {
+          card_type: string
+          created_at: string | null
+          display_count: number | null
+          display_frequency: number | null
+          headline: string
+          id: string
+          insight_data: Json | null
+          is_published: boolean | null
+          is_visible: boolean | null
+          last_shown_at: string | null
+          relevance_score: number | null
+          slides: Json | null
+          topic_id: string
+          updated_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          card_type: string
+          created_at?: string | null
+          display_count?: number | null
+          display_frequency?: number | null
+          headline: string
+          id?: string
+          insight_data?: Json | null
+          is_published?: boolean | null
+          is_visible?: boolean | null
+          last_shown_at?: string | null
+          relevance_score?: number | null
+          slides?: Json | null
+          topic_id: string
+          updated_at?: string | null
+          valid_until: string
+        }
+        Update: {
+          card_type?: string
+          created_at?: string | null
+          display_count?: number | null
+          display_frequency?: number | null
+          headline?: string
+          id?: string
+          insight_data?: Json | null
+          is_published?: boolean | null
+          is_visible?: boolean | null
+          last_shown_at?: string | null
+          relevance_score?: number | null
+          slides?: Json | null
+          topic_id?: string
+          updated_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automated_insight_cards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automated_insight_cards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carousel_exports: {
         Row: {
           created_at: string
@@ -3256,6 +3325,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           auto_simplify_enabled: boolean | null
+          automated_insights_enabled: boolean | null
           automation_quality_threshold: number | null
           branding_config: Json | null
           community_config: Json | null
@@ -3300,6 +3370,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           auto_simplify_enabled?: boolean | null
+          automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
           branding_config?: Json | null
           community_config?: Json | null
@@ -3344,6 +3415,7 @@ export type Database = {
             | Database["public"]["Enums"]["audience_expertise"]
             | null
           auto_simplify_enabled?: boolean | null
+          automated_insights_enabled?: boolean | null
           automation_quality_threshold?: number | null
           branding_config?: Json | null
           community_config?: Json | null
