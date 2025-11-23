@@ -33,6 +33,7 @@ interface TopicSettingsProps {
   currentAutomationQualityThreshold?: number;
   currentParliamentaryTrackingEnabled?: boolean;
   currentEventsEnabled?: boolean;
+  currentAutomatedInsightsEnabled?: boolean;
   currentIllustrationStyle?: IllustrationStyle;
   topicType?: string;
   region?: string;
@@ -51,6 +52,7 @@ export const TopicSettings = ({
   currentAutomationQualityThreshold,
   currentParliamentaryTrackingEnabled,
   currentEventsEnabled,
+  currentAutomatedInsightsEnabled,
   currentIllustrationStyle,
   topicType,
   region,
@@ -66,6 +68,7 @@ export const TopicSettings = ({
   const [newSubreddit, setNewSubreddit] = useState<string>('');
   const [processingFrequency, setProcessingFrequency] = useState<number>(currentCommunityConfig?.processing_frequency_hours || 24);
   const [eventsEnabled, setEventsEnabled] = useState<boolean>(currentEventsEnabled || false);
+  const [automatedInsightsEnabled, setAutomatedInsightsEnabled] = useState<boolean>(currentAutomatedInsightsEnabled !== false); // Default true
   const [autoSimplifyEnabled, setAutoSimplifyEnabled] = useState<boolean>(currentAutoSimplifyEnabled === true);
   const [automationQualityThreshold, setAutomationQualityThreshold] = useState<number>(currentAutomationQualityThreshold || 60);
   // Parliamentary tracking only available for regional topics
@@ -88,11 +91,12 @@ export const TopicSettings = ({
     if (currentAutoSimplifyEnabled !== undefined) setAutoSimplifyEnabled(currentAutoSimplifyEnabled);
     if (currentAutomationQualityThreshold !== undefined) setAutomationQualityThreshold(currentAutomationQualityThreshold);
     if (currentEventsEnabled !== undefined) setEventsEnabled(currentEventsEnabled);
+    if (currentAutomatedInsightsEnabled !== undefined) setAutomatedInsightsEnabled(currentAutomatedInsightsEnabled);
     // Only allow parliamentary tracking for regional topics
     if (currentParliamentaryTrackingEnabled !== undefined && topicType === 'regional') {
       setParliamentaryTrackingEnabled(currentParliamentaryTrackingEnabled);
     }
-  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentParliamentaryTrackingEnabled]);
+  }, [currentExpertise, currentTone, currentWritingStyle, currentIllustrationStyle, currentCommunityEnabled, currentCommunityPulseFrequency, currentCommunityConfig, currentAutoSimplifyEnabled, currentAutomationQualityThreshold, currentEventsEnabled, currentAutomatedInsightsEnabled, currentParliamentaryTrackingEnabled]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -114,6 +118,7 @@ export const TopicSettings = ({
           auto_simplify_enabled: autoSimplifyEnabled,
           automation_quality_threshold: automationQualityThreshold,
           events_enabled: eventsEnabled,
+          automated_insights_enabled: automatedInsightsEnabled,
           // Only save parliamentary tracking for regional topics
           parliamentary_tracking_enabled: topicType === 'regional' ? parliamentaryTrackingEnabled : false,
           updated_at: new Date().toISOString()
@@ -688,6 +693,7 @@ export const TopicSettings = ({
               autoSimplifyEnabled === (currentAutoSimplifyEnabled === true) &&
               automationQualityThreshold === (currentAutomationQualityThreshold || 60) &&
               eventsEnabled === (currentEventsEnabled === true) &&
+              automatedInsightsEnabled === (currentAutomatedInsightsEnabled !== false) &&
               parliamentaryTrackingEnabled === (currentParliamentaryTrackingEnabled === true)
             )}
           >

@@ -1006,6 +1006,7 @@ const TopicDashboard = () => {
                         currentAutomationQualityThreshold={topic.automation_quality_threshold}
                         currentParliamentaryTrackingEnabled={topic.parliamentary_tracking_enabled}
                         currentEventsEnabled={(topic as any).events_enabled}
+                        currentAutomatedInsightsEnabled={(topic as any).automated_insights_enabled}
                         topicType={topic.topic_type}
                         region={topic.region}
                         onUpdate={() => loadTopicAndStats()}
