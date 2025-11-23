@@ -89,8 +89,8 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
         ariaLabel={`${card.headline} insight card`}
       />
       
-      {/* Card type indicator - subtle badge without icon */}
-      <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
+      {/* Card type indicator - purple outlined badge at top center */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-purple-dark z-10 shadow-sm">
         <span className="text-xs text-foreground/80 font-medium tracking-wide whitespace-nowrap">
           {getCardLabel()}
         </span>
