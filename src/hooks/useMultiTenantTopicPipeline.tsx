@@ -168,6 +168,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       // Get story IDs to filter out articles that are already published or queued for this topic
+      // Use RPC function to avoid URL length limits with large ID lists
       const { data: publishedStoriesData } = await supabase
         .from('stories')
         .select('topic_article_id, topic_articles!inner(topic_id)')
@@ -956,7 +957,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         {
           event: '*',
           schema: 'public',
-          table: 'stories'
+          table: 'stories',
+          filter: `topic_article_id=not.is.null` // Only listen to multi-tenant stories
         },
         async (payload) => {
           console.log('🔄 Story change detected, checking if for this topic...', payload);
