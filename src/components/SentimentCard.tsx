@@ -359,7 +359,7 @@ export const SentimentCard = ({
 
   return (
     <div className="flex justify-center px-4">
-      <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale border-2 ${sentiment.border}`}>
+      <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg border-2 ${sentiment.border}`}>
         <div className={`relative h-[600px] flex flex-col overflow-hidden ${sentiment.gradient}`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/50">
