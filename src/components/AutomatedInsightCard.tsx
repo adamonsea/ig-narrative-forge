@@ -21,14 +21,13 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
 
   // Render slide content with basic markdown formatting and boosted engagement
   const renderContent = (content: string) => {
-    // Boost engagement numbers temporarily for testing
+    // Boost engagement numbers by fixed +15 for testing
     let processedContent = content;
     
-    // Match patterns like "143 readers" or "57 engaged readers" and add 10-15
+    // Match patterns like "143 readers" or "57 engaged readers" and add 15
     processedContent = processedContent.replace(/(\d+)\s+(engaged\s+)?readers?/gi, (match, num, engaged) => {
       const originalNum = parseInt(num);
-      const boost = Math.floor(Math.random() * 6) + 10; // Random between 10-15
-      const boostedNum = originalNum + boost;
+      const boostedNum = originalNum + 15; // Fixed boost of +15
       return `${boostedNum} ${engaged || ''}readers`;
     });
     
