@@ -77,24 +77,21 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   };
 
   return (
-    <Card className="insight-card overflow-hidden border-border/50 bg-gradient-to-br from-background via-background to-muted/30 relative">
+    <Card className="overflow-hidden rounded-2xl border-border/50 bg-card relative h-full">
       <SwipeCarousel
         slides={slideComponents}
         height="100%"
         showDots={false}
+        autoSlide={true}
+        autoSlideInterval={4000}
         ariaLabel={`${card.headline} insight card`}
       />
       
-      {/* Card type indicator */}
-      <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-background/90 backdrop-blur-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="text-primary flex-shrink-0">
-            {getCardIcon()}
-          </span>
-          <span className="text-[10px] md:text-xs text-foreground font-medium tracking-wide whitespace-nowrap">
-            {getCardLabel()}
-          </span>
-        </div>
+      {/* Card type indicator - subtle badge without icon */}
+      <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
+        <span className="text-xs text-foreground/80 font-medium tracking-wide whitespace-nowrap">
+          {getCardLabel()}
+        </span>
       </div>
     </Card>
   );
