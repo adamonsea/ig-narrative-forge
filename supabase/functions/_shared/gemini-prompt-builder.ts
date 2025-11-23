@@ -153,3 +153,4 @@ This is cinematic photojournalism in the tradition of Magnum Photos, Steve McCur
 Composition approach: Dramatic framing with dynamic angles and strong leading lines. Rule of thirds or diagonal composition creating visual tension. Gritty textural details in foreground/background layers. Clear subject with dramatic spatial relationships and environmental drama. Cinematic yet completely authentic—documentary with visual impact.
 
 Zero tolerance for illustration, CGI, or stylization. Pure photorealistic capture with dramatic composition and gritty authenticity.`;
+}
