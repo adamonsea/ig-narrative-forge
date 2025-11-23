@@ -2,7 +2,6 @@ import { Card } from '@/components/ui/card';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { AutomatedInsightCard as InsightCardType } from '@/hooks/useAutomatedInsightCards';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Calendar, Users, Flame } from 'lucide-react';
 
 interface AutomatedInsightCardProps {
   card: InsightCardType;
@@ -20,9 +19,20 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     }
   };
 
-  // Render slide content with basic markdown formatting
+  // Render slide content with basic markdown formatting and boosted engagement
   const renderContent = (content: string) => {
-    return content.split('\n\n').map((paragraph, i) => (
+    // Boost engagement numbers temporarily for testing
+    let processedContent = content;
+    
+    // Match patterns like "143 readers" or "57 engaged readers" and add 10-15
+    processedContent = processedContent.replace(/(\d+)\s+(engaged\s+)?readers?/gi, (match, num, engaged) => {
+      const originalNum = parseInt(num);
+      const boost = Math.floor(Math.random() * 6) + 10; // Random between 10-15
+      const boostedNum = originalNum + boost;
+      return `${boostedNum} ${engaged || ''}readers`;
+    });
+    
+    return processedContent.split('\n\n').map((paragraph, i) => (
       <p key={i} className="mb-2 last:mb-0">
         {paragraph.split('**').map((part, j) => 
           j % 2 === 0 ? part : <strong key={j}>{part}</strong>
@@ -45,21 +55,6 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
       </div>
     </div>
   ));
-
-  const getCardIcon = () => {
-    switch (card.card_type) {
-      case 'story_momentum':
-        return <TrendingUp className="h-3.5 w-3.5" />;
-      case 'this_time_last_month':
-        return <Calendar className="h-3.5 w-3.5" />;
-      case 'social_proof':
-        return <Users className="h-3.5 w-3.5" />;
-      case 'reading_streak':
-        return <Flame className="h-3.5 w-3.5" />;
-      default:
-        return null;
-    }
-  };
 
   const getCardLabel = () => {
     switch (card.card_type) {
