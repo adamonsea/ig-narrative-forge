@@ -86,12 +86,12 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
       />
       
       {/* Card type indicator */}
-      <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-primary">
+      <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-background/90 backdrop-blur-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="text-primary flex-shrink-0">
             {getCardIcon()}
           </span>
-          <span className="text-xs text-foreground font-medium tracking-wide">
+          <span className="text-[10px] md:text-xs text-foreground font-medium tracking-wide whitespace-nowrap">
             {getCardLabel()}
           </span>
         </div>
