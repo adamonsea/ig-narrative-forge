@@ -18,6 +18,9 @@ export type SwipeCarouselProps = {
   showPreviewAnimation?: boolean;
   // Limit drag start to centered area
   centerDragArea?: boolean;
+  // Auto-slide props
+  autoSlide?: boolean;
+  autoSlideInterval?: number; // milliseconds
 };
 
 export function SwipeCarousel({
@@ -32,6 +35,8 @@ export function SwipeCarousel({
   topicId,
   showPreviewAnimation = false,
   centerDragArea = false,
+  autoSlide = false,
+  autoSlideInterval = 5000,
 }: SwipeCarouselProps) {
   const count = slides.length;
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
@@ -140,6 +145,20 @@ export function SwipeCarousel({
     
     return () => clearTimeout(timer);
   }, [showPreviewAnimation, topicId]);
+
+  // Auto-slide effect
+  useEffect(() => {
+    if (!autoSlide || count <= 1) return;
+    
+    const interval = setInterval(() => {
+      setIndex((current) => {
+        // Loop back to start after reaching the end
+        return current >= count - 1 ? 0 : current + 1;
+      });
+    }, autoSlideInterval);
+    
+    return () => clearInterval(interval);
+  }, [autoSlide, autoSlideInterval, count]);
 
   const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
   const goTo = (i: number) => setIndex(clamp(i));
