@@ -50,39 +50,39 @@ export const useAutomatedInsightCards = (topicId: string | undefined, insightsEn
       return (data || []) as AutomatedInsightCard[];
     },
     enabled: !!topicId && insightsEnabled,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes - cards regenerate 3x daily
   });
 };
 
-// Helper function to track card display
-export const trackInsightCardDisplay = async (cardId: string) => {
-  try {
-    // Fetch current display_count first
-    const { data: card, error: fetchError } = await supabase
-      .from('automated_insight_cards')
-      .select('display_count')
-      .eq('id', cardId)
-      .single();
+// Helper function to track card display - fire-and-forget to avoid blocking render
+const trackedCards = new Set<string>();
 
-    if (fetchError || !card) {
-      console.error('Error fetching card:', fetchError);
-      return;
+export const trackInsightCardDisplay = (cardId: string) => {
+  // Only track once per session to avoid excessive DB calls
+  if (trackedCards.has(cardId)) return;
+  trackedCards.add(cardId);
+
+  // Non-blocking async call
+  (async () => {
+    try {
+      const { data: card } = await supabase
+        .from('automated_insight_cards')
+        .select('display_count')
+        .eq('id', cardId)
+        .single();
+
+      if (!card) return;
+
+      await supabase
+        .from('automated_insight_cards')
+        .update({
+          display_count: (card.display_count || 0) + 1,
+          last_shown_at: new Date().toISOString()
+        })
+        .eq('id', cardId);
+    } catch (err) {
+      // Silent fail - tracking shouldn't break UX
+      console.debug('Card tracking skipped:', err);
     }
-
-    // Update with incremented count
-    const { error } = await supabase
-      .from('automated_insight_cards')
-      .update({
-        display_count: (card.display_count || 0) + 1,
-        last_shown_at: new Date().toISOString()
-      })
-      .eq('id', cardId);
-
-    if (error) {
-      console.error('Error tracking card display:', error);
-    }
-  } catch (err) {
-    console.error('Error in trackInsightCardDisplay:', err);
-  }
+  })();
 };
