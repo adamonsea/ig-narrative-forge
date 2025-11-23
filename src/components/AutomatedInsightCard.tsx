@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { AutomatedInsightCard as InsightCardType } from '@/hooks/useAutomatedInsightCards';
 import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Calendar, Users, Flame } from 'lucide-react';
 
 interface AutomatedInsightCardProps {
   card: InsightCardType;
@@ -45,8 +46,38 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     </div>
   ));
 
+  const getCardIcon = () => {
+    switch (card.card_type) {
+      case 'story_momentum':
+        return <TrendingUp className="h-3.5 w-3.5" />;
+      case 'this_time_last_month':
+        return <Calendar className="h-3.5 w-3.5" />;
+      case 'social_proof':
+        return <Users className="h-3.5 w-3.5" />;
+      case 'reading_streak':
+        return <Flame className="h-3.5 w-3.5" />;
+      default:
+        return null;
+    }
+  };
+
+  const getCardLabel = () => {
+    switch (card.card_type) {
+      case 'story_momentum':
+        return 'Trending';
+      case 'this_time_last_month':
+        return 'Flashback';
+      case 'social_proof':
+        return 'Community';
+      case 'reading_streak':
+        return 'Streak';
+      default:
+        return '';
+    }
+  };
+
   return (
-    <Card className="insight-card overflow-hidden border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 relative">
+    <Card className="insight-card overflow-hidden border-border/50 bg-gradient-to-br from-background via-background to-muted/30 relative">
       <SwipeCarousel
         slides={slideComponents}
         height="100%"
@@ -55,13 +86,15 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
       />
       
       {/* Card type indicator */}
-      <div className="absolute top-2 right-2 bg-primary/10 backdrop-blur-sm px-2 py-1 rounded-full z-10">
-        <span className="text-xs text-primary font-medium">
-          {card.card_type === 'story_momentum' && '📈 Trending'}
-          {card.card_type === 'this_time_last_month' && '📅 Flashback'}
-          {card.card_type === 'social_proof' && '👥 Community'}
-          {card.card_type === 'reading_streak' && '🔥 Streak'}
-        </span>
+      <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50 z-10 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-primary">
+            {getCardIcon()}
+          </span>
+          <span className="text-xs text-foreground font-medium tracking-wide">
+            {getCardLabel()}
+          </span>
+        </div>
       </div>
     </Card>
   );
