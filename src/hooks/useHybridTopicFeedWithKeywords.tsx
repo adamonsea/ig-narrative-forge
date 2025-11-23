@@ -57,6 +57,7 @@ interface Topic {
   events_enabled?: boolean;
   community_intelligence_enabled?: boolean;
   community_pulse_frequency?: number;
+  automated_insights_enabled?: boolean;
   branding_config?: {
     logo_url?: string;
     subheader?: string;
@@ -248,7 +249,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       const { data: fullTopicData, error: keywordError } = await supabase
         .from('topics')
-        .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config')
+        .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled')
         .ilike('slug', slug)
         .eq('is_public', true)
         .single();
@@ -259,6 +260,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       let brandingConfig = {};
       let donationEnabled = false;
       let donationConfig: any = { button_text: "Support this feed", tiers: [] };
+      let automatedInsightsEnabled = true;
       if (!keywordError && fullTopicData) {
         topicKeywords = Array.isArray(fullTopicData.keywords) ? fullTopicData.keywords : [];
         topicLandmarks = Array.isArray(fullTopicData.landmarks) ? fullTopicData.landmarks : [];
@@ -266,6 +268,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         brandingConfig = fullTopicData.branding_config || {};
         donationEnabled = fullTopicData.donation_enabled || false;
         donationConfig = (fullTopicData.donation_config as any) || { button_text: "Support this feed", tiers: [] };
+        automatedInsightsEnabled = fullTopicData.automated_insights_enabled ?? true;
       }
 
       const topicObject = {
@@ -278,7 +281,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         created_by: '',
         branding_config: brandingConfig as any,
         donation_enabled: donationEnabled,
-        donation_config: donationConfig as any
+        donation_config: donationConfig as any,
+        automated_insights_enabled: automatedInsightsEnabled
       };
 
       console.log('🔍 loadTopic: Setting topic object:', topicObject);
