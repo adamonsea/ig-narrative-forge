@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { AutomatedInsightCard as InsightCardType } from '@/hooks/useAutomatedInsightCards';
 import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 
 interface AutomatedInsightCardProps {
   card: InsightCardType;
@@ -19,19 +20,26 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     }
   };
 
-  // Render slide content with basic markdown formatting and boosted engagement
-  const renderContent = (content: string) => {
-    // Boost engagement numbers by fixed +15 for testing
-    let processedContent = content;
-    
-    // Match patterns like "143 readers" or "57 engaged readers" and add 15
-    processedContent = processedContent.replace(/(\d+)\s+(engaged\s+)?readers?/gi, (match, num, engaged) => {
-      const originalNum = parseInt(num);
-      const boostedNum = originalNum + 15; // Fixed boost of +15
-      return `${boostedNum} ${engaged || ''}readers`;
+  // Process slide content once and memoize to prevent recalculation on re-renders
+  const processedSlides = useMemo(() => {
+    return card.slides.map(slide => {
+      // Boost engagement numbers by fixed +15 for testing
+      let processedContent = slide.content;
+      
+      // Match patterns like "143 readers" or "57 engaged readers" and add 15
+      processedContent = processedContent.replace(/(\d+)\s+(engaged\s+)?readers?/gi, (match, num, engaged) => {
+        const originalNum = parseInt(num);
+        const boostedNum = originalNum + 15; // Fixed boost of +15
+        return `${boostedNum} ${engaged || ''}readers`;
+      });
+      
+      return processedContent;
     });
-    
-    return processedContent.split('\n\n').map((paragraph, i) => (
+  }, [card.slides]);
+
+  // Render slide content with basic markdown formatting
+  const renderContent = (content: string) => {
+    return content.split('\n\n').map((paragraph, i) => (
       <p key={i} className="mb-2 last:mb-0">
         {paragraph.split('**').map((part, j) => 
           j % 2 === 0 ? part : <strong key={j}>{part}</strong>
@@ -40,8 +48,8 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     ));
   };
 
-  // Create slide components for SwipeCarousel
-  const slideComponents = card.slides.map((slide, index) => (
+  // Create slide components for SwipeCarousel using memoized processed content
+  const slideComponents = processedSlides.map((processedContent, index) => (
     <div 
       key={index} 
       className="h-full flex items-center justify-center p-6 cursor-pointer"
@@ -49,7 +57,7 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
     >
       <div className="w-full max-w-lg">
         <div className="text-center text-foreground">
-          {renderContent(slide.content)}
+          {renderContent(processedContent)}
         </div>
       </div>
     </div>
