@@ -52,7 +52,7 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   const slideComponents = processedSlides.map((processedContent, index) => (
     <div 
       key={index} 
-      className="h-full flex items-center justify-center p-6 cursor-pointer"
+      className="h-full flex items-center justify-center p-6 pt-16 cursor-pointer"
       onClick={() => handleSlideClick(index)}
     >
       <div className="w-full max-w-lg">
