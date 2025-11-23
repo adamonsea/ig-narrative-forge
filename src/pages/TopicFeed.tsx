@@ -30,6 +30,8 @@ import { useCommunityPulseKeywords } from "@/hooks/useCommunityPulseKeywords";
 import { useStoryViewTracker } from "@/hooks/useStoryViewTracker";
 import { Link } from "react-router-dom";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
+import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
+import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -301,6 +303,7 @@ const TopicFeed = () => {
 
   const { sentimentCards } = useSentimentCards(topic?.id);
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
+  const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
 
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
@@ -978,6 +981,24 @@ const TopicFeed = () => {
                     </div>
                   );
                 }
+              }
+
+              // Add automated insight cards every 6 stories (offset by 3 to avoid collisions)
+              if (storyIndex % 6 === 3 && storyIndex > 0 && insightCards.length > 0 && topic?.automated_insights_enabled) {
+                const cardIndex = Math.floor((storyIndex - 3) / 6) % insightCards.length;
+                const insightCard = insightCards[cardIndex];
+                
+                items.push(
+                  <div key={`insight-${insightCard.id}-${index}`}>
+                    <AutomatedInsightCard 
+                      card={insightCard} 
+                      topicSlug={slug}
+                    />
+                  </div>
+                );
+                
+                // Track card display
+                trackInsightCardDisplay(insightCard.id);
               }
 
               // Add events accordion every 10 stories (count stories only)
