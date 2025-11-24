@@ -45,15 +45,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
         
         <div className="flex flex-col flex-1 w-full">
-          {/* Global header with brand and trigger - always visible */}
+          {/* Global header with trigger - always visible */}
           <header className="sticky top-0 z-50 flex h-14 items-center gap-3 border-b border-sidebar-border bg-white dark:bg-sidebar-background px-4 shadow-sm">
             <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent" />
-            <img 
-              src="/curatr-icon.png" 
-              alt="Curatr" 
-              className="h-8 w-8"
-            />
-            <span className="text-xl font-display font-semibold tracking-tight text-sidebar-foreground">Curatr</span>
           </header>
 
           {/* Breadcrumb navigation */}
