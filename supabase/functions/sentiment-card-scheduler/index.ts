@@ -155,7 +155,7 @@ serve(async (req) => {
 
         // Update next generation time for processed keywords
         const keywordsForTopic = dueKeywords.filter(k => k.topic_id === topicId);
-        const nextDueAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+        const nextDueAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
         console.log(`📝 Updating ${keywordsForTopic.length} keyword tracking records`);
 
