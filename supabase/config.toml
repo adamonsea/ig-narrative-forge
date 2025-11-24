@@ -53,6 +53,12 @@ verify_jwt = false
 [functions.reactivate-sources]
 verify_jwt = false
 
+[functions.reactivate-eastbourne-sources]
+verify_jwt = false
+
+[functions.source-health-alerts]
+verify_jwt = false
+
 [functions.share-page]
 verify_jwt = false
 

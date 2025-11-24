@@ -27,6 +27,7 @@ import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfill
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
+import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -963,6 +964,7 @@ const TopicDashboard = () => {
                       Writing style: <span className="font-medium capitalize">{topic.default_writing_style || 'Not set'}</span>
                     </p>
                   </div>
+                  <TopicHealthIndicator topicId={topic.id} topicName={topic.name} />
                   <AutomationStatusCard topicId={topic.id} />
                   <SourceAvailabilitySummary topicId={topic.id} />
                   <div className="rounded-lg border border-border/60 bg-background/40 p-4 shadow-sm">
