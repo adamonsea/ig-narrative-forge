@@ -57,7 +57,7 @@ serve(async (req) => {
       .from('content_sources')
       .select('*')
       .eq('id', sourceId)
-      .single();
+      .maybeSingle();
 
     if (sourceError || !sourceInfo) {
       console.error('❌ Source not found:', sourceError);
@@ -83,7 +83,7 @@ serve(async (req) => {
         .from('topics')
         .select('*')
         .eq('id', topicId)
-        .single();
+        .maybeSingle();
 
       if (topicData && !topicError) {
         topicConfig = {
@@ -124,7 +124,7 @@ serve(async (req) => {
         .eq('topic_type', 'regional')
         .eq('region', region)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (topicData && !topicError) {
         topicId = topicData.id;
