@@ -1563,25 +1563,37 @@ export const UnifiedSourceManager = ({
                     scrapeFrequencyHours={source.scrape_frequency_hours}
                   />
 
-                  {/* Primary Action: Gather Button */}
+                  {/* Primary Action: Gather Button + Force Rescrape */}
                   {source.is_active ? (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleScrapeSource(source)}
-                      disabled={gatheringSource === source.id || !source.feed_url || isSourceOnCooldown(source)}
-                      title={isSourceOnCooldown(source) ? "Source on cooldown - use Force Rescrape to override" : "Gather content (respects cooldown)"}
-                      className="flex-shrink-0"
-                    >
-                      {gatheringSource === source.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Gather</span>
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleScrapeSource(source)}
+                        disabled={gatheringSource === source.id || !source.feed_url || isSourceOnCooldown(source)}
+                        title={isSourceOnCooldown(source) ? "Source on cooldown - use Force Rescrape to override" : "Gather content (respects cooldown)"}
+                        className="flex-shrink-0"
+                      >
+                        {gatheringSource === source.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Gather</span>
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleScrapeSource(source, { forceRescrape: true })}
+                        disabled={gatheringSource === source.id || !source.feed_url}
+                        title="Force rescrape (bypasses cooldown)"
+                        className="flex-shrink-0 px-2"
+                      >
+                        <RotateCw className="w-4 h-4" />
+                      </Button>
+                    </div>
                   ) : (
                     <Button
                       variant="default"
@@ -1599,7 +1611,6 @@ export const UnifiedSourceManager = ({
                     sourceId={source.id}
                     feedUrl={source.feed_url}
                     isActive={source.is_active || false}
-                    onForceRescrape={() => handleScrapeSource(source, { forceRescrape: true })}
                     onToggle={(checked) => handleUpdateSource(source.id, { is_active: checked })}
                     onEdit={() => {
                       setEditingSource(source);
