@@ -6,13 +6,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, RotateCw, ExternalLink, Settings, Trash2 } from "lucide-react";
+import { MoreVertical, ExternalLink, Settings, Trash2, AlertTriangle } from "lucide-react";
 
 interface SourceActionsMenuProps {
   sourceId: string;
   feedUrl: string | null;
   isActive: boolean;
-  onForceRescrape: () => void;
   onToggle: (checked: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -23,7 +22,6 @@ export const SourceActionsMenu = ({
   sourceId,
   feedUrl,
   isActive,
-  onForceRescrape,
   onToggle,
   onEdit,
   onDelete,
@@ -43,15 +41,6 @@ export const SourceActionsMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={onForceRescrape} disabled={!feedUrl || disabled}>
-          <RotateCw className="mr-2 h-4 w-4" />
-          Force Rescrape
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => onToggle(!isActive)}>
-          {isActive ? "Disable Source" : "Enable Source"}
-        </DropdownMenuItem>
-        
         {feedUrl && (
           <DropdownMenuItem asChild>
             <a href={feedUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
@@ -64,6 +53,13 @@ export const SourceActionsMenu = ({
         <DropdownMenuItem onClick={onEdit}>
           <Settings className="mr-2 h-4 w-4" />
           Edit Settings
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuItem onClick={() => onToggle(!isActive)} className="text-orange-600 dark:text-orange-400">
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          {isActive ? "Disable Source" : "Enable Source"}
         </DropdownMenuItem>
         
         <DropdownMenuSeparator />
