@@ -1,9 +1,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const requestSchema = z.object({
+  topicId: z.string().uuid(),
+  visitorId: z.string().max(200),
+  metricType: z.enum([
+    'notification_enabled',
+    'pwa_installed',
+    'pwa_install_clicked',
+    'pwa_ios_instructions_viewed',
+    'pwa_dismissed'
+  ]),
+  userAgent: z.string().max(500).optional()
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,31 +25,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { topicId, visitorId, metricType, userAgent } = await req.json();
+    const body = await req.json();
+    const validated = requestSchema.parse(body);
+    const { topicId, visitorId, metricType, userAgent } = validated;
 
     console.log('Tracking engagement metric:', { topicId, visitorId, metricType });
-
-    if (!topicId || !visitorId || !metricType) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const validMetricTypes = [
-      'notification_enabled',
-      'pwa_installed',
-      'pwa_install_clicked',
-      'pwa_ios_instructions_viewed',
-      'pwa_dismissed'
-    ];
-
-    if (!validMetricTypes.includes(metricType)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid metric type' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
