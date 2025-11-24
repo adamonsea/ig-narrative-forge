@@ -617,6 +617,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_blacklisted: boolean | null
+          is_critical: boolean | null
           is_whitelisted: boolean | null
           last_failure_at: string | null
           last_failure_reason: string | null
@@ -646,6 +647,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_blacklisted?: boolean | null
+          is_critical?: boolean | null
           is_whitelisted?: boolean | null
           last_failure_at?: string | null
           last_failure_reason?: string | null
@@ -675,6 +677,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_blacklisted?: boolean | null
+          is_critical?: boolean | null
           is_whitelisted?: boolean | null
           last_failure_at?: string | null
           last_failure_reason?: string | null
@@ -2473,6 +2476,54 @@ export type Database = {
           validation_status?: string
         }
         Relationships: []
+      }
+      source_status_audit: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          changed_by: string | null
+          id: string
+          metadata: Json | null
+          new_status: boolean
+          old_status: boolean | null
+          source_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          metadata?: Json | null
+          new_status: boolean
+          old_status?: boolean | null
+          source_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          metadata?: Json | null
+          new_status?: boolean
+          old_status?: boolean | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_status_audit_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_status_audit_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources_basic"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stories: {
         Row: {
