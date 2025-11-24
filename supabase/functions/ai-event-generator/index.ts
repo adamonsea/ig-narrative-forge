@@ -1,11 +1,18 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const requestSchema = z.object({
+  topicId: z.string().uuid(),
+  region: z.string().max(100),
+  eventTypes: z.array(z.string().max(50)).min(1).max(10)
+});
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -20,13 +27,10 @@ serve(async (req) => {
   }
 
   try {
-    const { topicId, eventTypes, region } = await req.json();
+    const body = await req.json();
+    const { topicId, eventTypes, region } = requestSchema.parse(body);
     
     console.log('🎪 Generating events for topic:', topicId, 'region:', region, 'types:', eventTypes);
-
-    if (!topicId || !eventTypes || eventTypes.length === 0) {
-      throw new Error('Missing required parameters: topicId and eventTypes');
-    }
 
     // Get topic details
     const { data: topic, error: topicError } = await supabase

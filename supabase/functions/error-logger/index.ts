@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const errorSchema = z.object({
+  ticketType: z.string().max(100),
+  sourceInfo: z.union([z.string().max(500), z.record(z.unknown())]),
+  errorDetails: z.string().max(2000),
+  errorCode: z.string().max(100).optional(),
+  stackTrace: z.string().max(10000).optional(),
+  contextData: z.record(z.unknown()).optional(),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).default('medium')
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,6 +29,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    const body = await req.json();
+    const validated = errorSchema.parse(body);
     const { 
       ticketType, 
       sourceInfo, 
@@ -25,8 +38,8 @@ serve(async (req) => {
       errorCode,
       stackTrace,
       contextData,
-      severity = 'medium'
-    } = await req.json();
+      severity
+    } = validated;
 
     // Check for duplicate error in last 10 minutes
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
