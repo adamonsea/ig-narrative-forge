@@ -93,7 +93,7 @@ interface FilterStoryIndexEntry {
   keywordMatches: string[];
 }
 
-const STORIES_PER_PAGE = 10;
+const STORIES_PER_PAGE = 20; // Increased to load more stories per page
 const DEBOUNCE_DELAY_MS = 0;
 
 // Enhanced Story interface to include parliamentary mentions
@@ -587,7 +587,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       }
 
       // Use a larger raw rows limit - increase when filters active to improve matching
-      const rawLimit = (keywords || sources) ? STORIES_PER_PAGE * 15 : STORIES_PER_PAGE * 8;
+      // Increased multipliers to reduce offset pagination issues at scale
+      const rawLimit = (keywords || sources) ? STORIES_PER_PAGE * 20 : STORIES_PER_PAGE * 10;
       const from = pageNum * rawLimit;
       
       console.log('🔍 Phase 2: Loading stories with filters', { 
