@@ -22,9 +22,12 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   };
 
   // Process slide content once and memoize to prevent recalculation on re-renders
-  // Skip the first slide (header) and only use the actual content slides
+  // Only skip first slide for story_momentum cards with header slides
   const processedSlides = useMemo(() => {
-    const contentSlides = card.slides.slice(1); // Skip first "trending now" header slide
+    const shouldSkipFirst = card.card_type === 'story_momentum' && 
+      card.slides[0]?.type === 'header';
+    
+    const contentSlides = shouldSkipFirst ? card.slides.slice(1) : card.slides;
     return contentSlides.map(slide => {
       // Boost engagement numbers by fixed +15 for testing
       let processedContent = slide.content;
@@ -38,7 +41,7 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
       
       return processedContent;
     });
-  }, [card.slides]);
+  }, [card.slides, card.card_type]);
 
   // Render slide content with basic markdown formatting
   const renderContent = (content: string) => {
