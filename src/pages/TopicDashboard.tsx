@@ -29,6 +29,7 @@ import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
+import { AudienceProgressCard } from "@/components/AudienceProgressCard";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -1055,7 +1056,8 @@ const TopicDashboard = () => {
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-4 pb-4">
+                     <AccordionContent className="px-4 pb-4 space-y-6">
+                      <AudienceProgressCard topicId={topic.id} />
                       <TopicInsightSettings topicId={topic.id} />
                     </AccordionContent>
                   </AccordionItem>
