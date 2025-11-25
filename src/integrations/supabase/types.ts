@@ -3033,6 +3033,54 @@ export type Database = {
           },
         ]
       }
+      topic_insight_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_premium_tier: boolean | null
+          social_proof_enabled: boolean | null
+          story_momentum_enabled: boolean | null
+          this_time_last_month_enabled: boolean | null
+          topic_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_premium_tier?: boolean | null
+          social_proof_enabled?: boolean | null
+          story_momentum_enabled?: boolean | null
+          this_time_last_month_enabled?: boolean | null
+          topic_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_premium_tier?: boolean | null
+          social_proof_enabled?: boolean | null
+          story_momentum_enabled?: boolean | null
+          this_time_last_month_enabled?: boolean | null
+          topic_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_insight_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_insight_settings_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: true
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_memberships: {
         Row: {
           created_at: string | null

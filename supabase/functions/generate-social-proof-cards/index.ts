@@ -1,0 +1,324 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface Slide {
+  type: string;
+  content: string;
+  word_count: number;
+  metadata?: Record<string, any>;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { topicId } = await req.json();
+
+    if (!topicId) {
+      throw new Error('topicId is required');
+    }
+
+    console.log(`[Social Proof] Generating card for topic: ${topicId}`);
+
+    // Fetch topic details
+    const { data: topic, error: topicError } = await supabase
+      .from('topics')
+      .select('name, slug')
+      .eq('id', topicId)
+      .single();
+
+    if (topicError || !topic) {
+      throw new Error(`Topic not found: ${topicError?.message}`);
+    }
+
+    // Get all-time unique readers
+    const { count: totalReaders } = await supabase
+      .from('story_interactions')
+      .select('visitor_id', { count: 'exact', head: true })
+      .eq('topic_id', topicId);
+
+    // Get last 7 days unique readers
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { count: weekReaders } = await supabase
+      .from('story_interactions')
+      .select('visitor_id', { count: 'exact', head: true })
+      .eq('topic_id', topicId)
+      .gte('created_at', sevenDaysAgo.toISOString());
+
+    // Get previous week readers for growth calculation
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    
+    const { count: previousWeekReaders } = await supabase
+      .from('story_interactions')
+      .select('visitor_id', { count: 'exact', head: true })
+      .eq('topic_id', topicId)
+      .gte('created_at', fourteenDaysAgo.toISOString())
+      .lt('created_at', sevenDaysAgo.toISOString());
+
+    const readerGrowth = (weekReaders || 0) - (previousWeekReaders || 0);
+
+    // Get PWA installs
+    const { count: pwaInstalls } = await supabase
+      .from('topic_engagement_metrics')
+      .select('*', { count: 'exact', head: true })
+      .eq('topic_id', topicId)
+      .eq('metric_type', 'pwa_install');
+
+    // Get notification subscribers
+    const { count: notificationSubs } = await supabase
+      .from('topic_engagement_metrics')
+      .select('*', { count: 'exact', head: true })
+      .eq('topic_id', topicId)
+      .eq('metric_type', 'notification_subscription');
+
+    // Get most shared story in last 7 days
+    const { data: topSharedStory } = await supabase
+      .from('story_interactions')
+      .select('story_id, stories!inner(id, title, slug)')
+      .eq('topic_id', topicId)
+      .eq('interaction_type', 'share_click')
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .limit(1000);
+
+    let mostSharedStory = null;
+    let mostSharedCount = 0;
+
+    if (topSharedStory && topSharedStory.length > 0) {
+      const shareCounts: Record<string, { count: number; story: any }> = {};
+      
+      topSharedStory.forEach(interaction => {
+        const storyId = interaction.story_id;
+        if (!shareCounts[storyId]) {
+          shareCounts[storyId] = { count: 0, story: interaction.stories };
+        }
+        shareCounts[storyId].count++;
+      });
+
+      const sortedStories = Object.values(shareCounts).sort((a, b) => b.count - a.count);
+      if (sortedStories.length > 0 && sortedStories[0].count > 0) {
+        mostSharedStory = sortedStories[0].story;
+        mostSharedCount = sortedStories[0].count;
+      }
+    }
+
+    // Calculate peak reading times (hour of day)
+    const { data: hourlyActivity } = await supabase
+      .from('story_interactions')
+      .select('created_at')
+      .eq('topic_id', topicId)
+      .gte('created_at', sevenDaysAgo.toISOString());
+
+    const hourCounts: Record<number, number> = {};
+    
+    if (hourlyActivity) {
+      hourlyActivity.forEach(interaction => {
+        const hour = new Date(interaction.created_at).getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+    }
+
+    const sortedHours = Object.entries(hourCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([hour]) => parseInt(hour));
+
+    const getPeakTimeLabel = (hour: number): string => {
+      if (hour >= 6 && hour < 9) return `Morning (${hour}am)`;
+      if (hour >= 9 && hour < 12) return `Mid-morning (${hour}am)`;
+      if (hour >= 12 && hour < 17) return `Afternoon (${hour > 12 ? hour - 12 : hour}pm)`;
+      if (hour >= 17 && hour < 22) return `Evening (${hour - 12}pm)`;
+      return `Night (${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'am' : 'pm'})`;
+    };
+
+    const peakTimesText = sortedHours.length > 0
+      ? sortedHours.map(getPeakTimeLabel).join(' • ')
+      : 'Throughout the day';
+
+    // Calculate milestone progress
+    const milestones = [50, 100, 250, 500, 1000, 2500, 5000];
+    const nextMilestone = milestones.find(m => m > (totalReaders || 0)) || milestones[milestones.length - 1];
+    const toMilestone = nextMilestone - (totalReaders || 0);
+
+    // Build slides
+    const slides: Slide[] = [
+      {
+        type: 'hook',
+        content: `👥 **Your ${topic.name} Community**`,
+        word_count: 4
+      },
+      {
+        type: 'content',
+        content: `**${totalReaders || 0} ${(totalReaders || 0) === 1 ? 'local stays' : 'locals stay'} informed here**${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} ${readerGrowth === 1 ? 'reader' : 'readers'} this week` : ''}`,
+        word_count: 10
+      }
+    ];
+
+    // Add peak times slide if we have data
+    if (sortedHours.length > 0) {
+      slides.push({
+        type: 'content',
+        content: `🕐 **When locals read**\n\n${peakTimesText}\n\n*You're part of an active community*`,
+        word_count: 12
+      });
+    }
+
+    // Add most shared story if available
+    if (mostSharedStory && mostSharedCount > 0) {
+      slides.push({
+        type: 'content',
+        content: `📤 **Most shared this week**\n\n"${mostSharedStory.title}" — ${mostSharedCount} ${mostSharedCount === 1 ? 'share' : 'shares'}`,
+        word_count: 10,
+        metadata: {
+          storyId: mostSharedStory.id,
+          storySlug: mostSharedStory.slug
+        }
+      });
+    }
+
+    // Add engagement stats if significant
+    if ((pwaInstalls || 0) > 5 || (notificationSubs || 0) > 5) {
+      const engagementParts: string[] = [];
+      if ((pwaInstalls || 0) > 5) engagementParts.push(`📱 ${pwaInstalls} installed the app`);
+      if ((notificationSubs || 0) > 5) engagementParts.push(`🔔 ${notificationSubs} get notifications`);
+      
+      slides.push({
+        type: 'content',
+        content: `**Engaged community**\n\n${engagementParts.join('\n')}`,
+        word_count: 8
+      });
+    }
+
+    // Add milestone CTA if close (within 20% of next milestone)
+    if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) {
+      slides.push({
+        type: 'cta',
+        content: `🏆 **Help us reach ${nextMilestone} readers**\n\nJust ${toMilestone} more ${toMilestone === 1 ? 'local' : 'locals'}!`,
+        word_count: 10,
+        metadata: {
+          ctaType: 'growth_milestone',
+          currentCount: totalReaders,
+          targetCount: nextMilestone
+        }
+      });
+    }
+
+    // Calculate relevance score
+    let relevanceScore = 50; // base score
+    
+    // Higher if growing
+    if (readerGrowth > 0) relevanceScore += 15;
+    
+    // Higher if close to milestone
+    if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) relevanceScore += 20;
+    
+    // Higher if there's a popular shared story
+    if (mostSharedCount > 3) relevanceScore += 15;
+    
+    // Lower if very little activity
+    if ((totalReaders || 0) < 10) relevanceScore -= 20;
+
+    relevanceScore = Math.max(0, Math.min(100, relevanceScore));
+
+    // Set valid until (7 days from now)
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + 7);
+
+    // Check for existing card
+    const { data: existingCard } = await supabase
+      .from('automated_insight_cards')
+      .select('id')
+      .eq('topic_id', topicId)
+      .eq('card_type', 'social_proof')
+      .eq('is_published', true)
+      .gt('valid_until', new Date().toISOString())
+      .single();
+
+    if (existingCard) {
+      console.log(`[Social Proof] Valid card already exists for topic ${topicId}`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Valid card already exists',
+          cardId: existingCard.id
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Insert the card
+    const { data: insertedCard, error: insertError } = await supabase
+      .from('automated_insight_cards')
+      .insert({
+        topic_id: topicId,
+        card_type: 'social_proof',
+        headline: `Your ${topic.name} Community`,
+        slides,
+        insight_data: {
+          totalReaders,
+          weekReaders,
+          readerGrowth,
+          pwaInstalls,
+          notificationSubs,
+          mostSharedStory: mostSharedStory ? {
+            id: mostSharedStory.id,
+            title: mostSharedStory.title,
+            slug: mostSharedStory.slug,
+            shareCount: mostSharedCount
+          } : null,
+          peakHours: sortedHours,
+          nextMilestone,
+          toMilestone
+        },
+        relevance_score: relevanceScore,
+        display_frequency: 12, // Show every ~12 stories
+        valid_until: validUntil.toISOString(),
+        is_published: true,
+        is_visible: true
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    console.log(`[Social Proof] Generated card for ${topic.name}: ${slides.length} slides, relevance ${relevanceScore}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        cardId: insertedCard.id,
+        slides: slides.length,
+        relevanceScore 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('[Social Proof] Error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
