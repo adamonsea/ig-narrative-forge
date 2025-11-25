@@ -444,6 +444,9 @@ verify_jwt = false
 [functions.insight-card-scheduler]
 verify_jwt = false
 
+[functions.generate-social-proof-cards]
+verify_jwt = false
+
 [functions.generate-story-momentum-cards]
 verify_jwt = false
 

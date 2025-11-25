@@ -25,6 +25,7 @@ import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentHub } from "@/components/SentimentHub";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
+import { TopicInsightSettings } from "@/components/TopicInsightSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
@@ -1039,6 +1040,23 @@ const TopicDashboard = () => {
                         }}
                         onUpdate={() => loadTopicAndStats()}
                       />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="insights" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Sparkles className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Automated Insight Cards</p>
+                            <p className="text-xs text-muted-foreground">Control which insight card types appear in your feed</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <TopicInsightSettings topicId={topic.id} />
                     </AccordionContent>
                   </AccordionItem>
 
