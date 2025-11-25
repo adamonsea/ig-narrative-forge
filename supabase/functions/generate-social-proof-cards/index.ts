@@ -153,17 +153,69 @@ serve(async (req) => {
     const nextMilestone = milestones.find(m => m > (totalReaders || 0)) || milestones[milestones.length - 1];
     const toMilestone = nextMilestone - (totalReaders || 0);
 
-    // Build slides
+    // Behaviorally powerful tiered messaging
+    const getMilestoneMessaging = (totalReaders: number, topicName: string, toMilestone: number, nextMilestone: number, readerGrowth: number) => {
+      if (totalReaders < 50) {
+        return {
+          tier: 'founding',
+          hookText: `🌱 You're 1 of only **${totalReaders}** founding members of ${topicName}`,
+          ctaText: 'Share a story to help us grow',
+          shareMessage: `I'm one of the first ${totalReaders} people following ${topicName} news on eeZee — join me!`
+        };
+      } else if (totalReaders < 150) {
+        return {
+          tier: 'early_adopter', 
+          hookText: `📈 **${totalReaders}** locals and counting — you're part of something growing`,
+          ctaText: `Help us reach ${nextMilestone}`,
+          shareMessage: `Join ${totalReaders} locals staying informed about ${topicName} on eeZee`
+        };
+      } else if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) {
+        return {
+          tier: 'near_milestone',
+          hookText: `🏁 Just **${toMilestone}** more ${toMilestone === 1 ? 'local' : 'locals'} until we hit **${nextMilestone}**!`,
+          ctaText: 'Your share could be the one',
+          shareMessage: `Help ${topicName} news reach ${nextMilestone} readers — we're only ${toMilestone} away!`
+        };
+      } else if (totalReaders >= 500) {
+        return {
+          tier: 'established',
+          hookText: `👥 **${totalReaders}** locals trust this feed — you're in good company`,
+          ctaText: 'Share with someone who\'d love it',
+          shareMessage: `${totalReaders} people stay informed about ${topicName} on eeZee`
+        };
+      }
+      // Default growing community
+      return {
+        tier: 'growing',
+        hookText: `💪 **${totalReaders}** people stay informed here${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} this week` : ''}`,
+        ctaText: `${toMilestone} away from ${nextMilestone}`,
+        shareMessage: `Stay informed about ${topicName} with ${totalReaders} other locals on eeZee`
+      };
+    };
+
+    const messaging = getMilestoneMessaging(totalReaders || 0, topic.name, toMilestone, nextMilestone, readerGrowth);
+
+    const getPeakTimeLabel = (hour: number): string => {
+      if (hour >= 6 && hour < 9) return `Morning (${hour}am)`;
+      if (hour >= 9 && hour < 12) return `Mid-morning (${hour}am)`;
+      if (hour >= 12 && hour < 17) return `Afternoon (${hour > 12 ? hour - 12 : hour}pm)`;
+      if (hour >= 17 && hour < 22) return `Evening (${hour - 12}pm)`;
+      return `Night (${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'am' : 'pm'})`;
+    };
+
+    const peakTimesText = sortedHours.length > 0
+      ? sortedHours.map(getPeakTimeLabel).join(' • ')
+      : 'Throughout the day';
+
+    // Build slides with behavioral messaging
     const slides: Slide[] = [
       {
         type: 'hook',
-        content: `👥 **Your ${topic.name} Community**`,
-        word_count: 4
-      },
-      {
-        type: 'content',
-        content: `**${totalReaders || 0} ${(totalReaders || 0) === 1 ? 'local stays' : 'locals stay'} informed here**${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} ${readerGrowth === 1 ? 'reader' : 'readers'} this week` : ''}`,
-        word_count: 10
+        content: messaging.hookText,
+        word_count: messaging.hookText.split(' ').length,
+        metadata: {
+          messagingTier: messaging.tier
+        }
       }
     ];
 
@@ -202,19 +254,19 @@ serve(async (req) => {
       });
     }
 
-    // Add milestone CTA if close (within 20% of next milestone)
-    if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) {
-      slides.push({
-        type: 'cta',
-        content: `🏆 **Help us reach ${nextMilestone} readers**\n\nJust ${toMilestone} more ${toMilestone === 1 ? 'local' : 'locals'}!`,
-        word_count: 10,
-        metadata: {
-          ctaType: 'growth_milestone',
-          currentCount: totalReaders,
-          targetCount: nextMilestone
-        }
-      });
-    }
+    // Add CTA slide with share intent
+    slides.push({
+      type: 'cta',
+      content: `**${messaging.ctaText}**\n\n${messaging.tier === 'founding' ? '🌟 Be part of building something special' : messaging.tier === 'near_milestone' ? '🎯 We\'re so close!' : '💬 Spread the word'}`,
+      word_count: 8,
+      metadata: {
+        ctaType: 'share',
+        shareMessage: messaging.shareMessage,
+        messagingTier: messaging.tier,
+        currentCount: totalReaders,
+        targetCount: messaging.tier !== 'established' ? nextMilestone : undefined
+      }
+    });
 
     // Calculate relevance score
     let relevanceScore = 50; // base score
@@ -281,7 +333,9 @@ serve(async (req) => {
           } : null,
           peakHours: sortedHours,
           nextMilestone,
-          toMilestone
+          toMilestone,
+          messagingTier: messaging.tier,
+          shareMessage: messaging.shareMessage
         },
         relevance_score: relevanceScore,
         display_frequency: 12, // Show every ~12 stories
