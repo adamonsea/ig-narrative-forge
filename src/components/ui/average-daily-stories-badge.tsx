@@ -20,7 +20,7 @@ export const AverageDailyStoriesBadge = ({ average }: AverageDailyStoriesBadgePr
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Average daily stories published from this source</p>
+          <p>Average daily stories published</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
