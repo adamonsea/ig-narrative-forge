@@ -10,13 +10,15 @@ export const AverageDailyStoriesBadge = ({ average }: AverageDailyStoriesBadgePr
   // Show if average is greater than 1 (at least 1 story per day)
   if (average <= 1) return null;
   
+  const roundedAverage = Math.round(average);
+  
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge variant="outline" className="gap-1 text-xs font-normal border-emerald-500 text-emerald-600 dark:text-emerald-400">
             <TrendingUp className="w-3 h-3" />
-            {average.toFixed(1)}/day
+            {roundedAverage} avg. new stories/d
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
