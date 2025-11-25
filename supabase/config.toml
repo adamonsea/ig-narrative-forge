@@ -305,6 +305,9 @@ verify_jwt = true
 [functions.validate-and-fix-sources]
 verify_jwt = true
 
+[functions.update-source-feed-url]
+verify_jwt = false
+
 [functions.validate-parliamentary-completeness]
 verify_jwt = true
 

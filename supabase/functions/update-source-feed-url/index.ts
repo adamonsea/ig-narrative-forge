@@ -16,35 +16,56 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { sourceId, newFeedUrl } = await req.json();
+    const { sourceId, newFeedUrl, scrapingMethod } = await req.json();
 
-    if (!sourceId || !newFeedUrl) {
+    if (!sourceId) {
       return new Response(
-        JSON.stringify({ error: 'sourceId and newFeedUrl are required' }),
+        JSON.stringify({ error: 'sourceId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update the feed URL
+    // Build update object
+    const updates: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (newFeedUrl) {
+      updates.feed_url = newFeedUrl;
+    }
+    
+    if (scrapingMethod) {
+      updates.scraping_method = scrapingMethod;
+    }
+
+    if (!newFeedUrl && !scrapingMethod) {
+      return new Response(
+        JSON.stringify({ error: 'Either newFeedUrl or scrapingMethod must be provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update the source
     const { data, error } = await supabase
       .from('content_sources')
-      .update({ 
-        feed_url: newFeedUrl,
-        updated_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq('id', sourceId)
-      .select('id, source_name, feed_url, canonical_domain')
+      .select('id, source_name, feed_url, scraping_method, canonical_domain')
       .single();
 
     if (error) throw error;
 
-    console.log(`✅ Updated feed URL for ${data.source_name} to ${newFeedUrl}`);
+    const updateMessages = [];
+    if (newFeedUrl) updateMessages.push(`feed URL to ${newFeedUrl}`);
+    if (scrapingMethod) updateMessages.push(`scraping method to ${scrapingMethod}`);
+    
+    console.log(`✅ Updated ${updateMessages.join(' and ')} for ${data.source_name}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         source: data,
-        message: `Feed URL updated successfully for ${data.source_name}`
+        message: `Updated ${updateMessages.join(' and ')} for ${data.source_name}`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
