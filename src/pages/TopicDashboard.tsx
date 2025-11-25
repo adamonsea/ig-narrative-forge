@@ -28,6 +28,7 @@ import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
+import { OrphanedStoriesMonitor } from "@/components/OrphanedStoriesMonitor";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -928,6 +929,10 @@ const TopicDashboard = () => {
           <TabsContent value="advanced" className="space-y-8">
             {/* Sentiment Hub - Unified sentiment management */}
             <SentimentHub topicId={topic.id} />
+            
+            {/* Feed Health Monitor - Diagnose orphaned stories */}
+            <OrphanedStoriesMonitor topicId={topic.id} />
+            
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
