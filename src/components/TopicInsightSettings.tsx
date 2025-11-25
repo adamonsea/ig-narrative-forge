@@ -71,7 +71,10 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
         : 'generate-social-proof-cards';
       
       const { error } = await supabase.functions.invoke(functionName, {
-        body: { topicId }
+        body: { 
+          topicId,
+          forceRegenerate: true
+        }
       });
 
       if (error) throw error;

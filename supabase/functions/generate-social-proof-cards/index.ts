@@ -23,7 +23,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { topicId } = await req.json();
+    const { topicId, forceRegenerate = false } = await req.json();
 
     if (!topicId) {
       throw new Error('topicId is required');
@@ -309,7 +309,7 @@ serve(async (req) => {
       .gt('valid_until', new Date().toISOString())
       .single();
 
-    if (existingCard) {
+    if (existingCard && !forceRegenerate) {
       console.log(`[Social Proof] Valid card already exists for topic ${topicId}`);
       return new Response(
         JSON.stringify({ 
@@ -319,6 +319,19 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // If forceRegenerate, delete existing card
+    if (existingCard && forceRegenerate) {
+      console.log(`[Social Proof] Force regenerating - deleting existing card ${existingCard.id}`);
+      const { error: deleteError } = await supabase
+        .from('automated_insight_cards')
+        .delete()
+        .eq('id', existingCard.id);
+      
+      if (deleteError) {
+        console.error('[Social Proof] Failed to delete existing card:', deleteError);
+      }
     }
 
     // Insert the card
