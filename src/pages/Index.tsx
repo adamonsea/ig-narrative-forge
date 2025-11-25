@@ -49,6 +49,8 @@ const Index = () => {
               <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">
                 Beautiful feeds, any sources, any topic
 
+
+
  
  
   
