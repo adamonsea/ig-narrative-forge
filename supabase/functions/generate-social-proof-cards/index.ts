@@ -136,7 +136,7 @@ serve(async (req) => {
       .slice(0, 3)
       .map(([hour]) => parseInt(hour));
 
-    const getPeakTimeLabel = (hour: number): string => {
+    const formatPeakTime = (hour: number): string => {
       if (hour >= 6 && hour < 9) return `Morning (${hour}am)`;
       if (hour >= 9 && hour < 12) return `Mid-morning (${hour}am)`;
       if (hour >= 12 && hour < 17) return `Afternoon (${hour > 12 ? hour - 12 : hour}pm)`;
@@ -145,7 +145,7 @@ serve(async (req) => {
     };
 
     const peakTimesText = sortedHours.length > 0
-      ? sortedHours.map(getPeakTimeLabel).join(' • ')
+      ? sortedHours.map(formatPeakTime).join(' • ')
       : 'Throughout the day';
 
     // Calculate milestone progress
@@ -160,26 +160,26 @@ serve(async (req) => {
           tier: 'founding',
           hookText: `🌱 You're 1 of only **${totalReaders}** founding members of ${topicName}`,
           ctaText: 'Share a story to help us grow',
-          shareMessage: `I'm one of the first ${totalReaders} people following ${topicName} news on eeZee — join me!`
+          shareMessage: `I'm one of the first ${totalReaders} people following ${topicName} on eeZee — join me!`
         };
       } else if (totalReaders < 150) {
         return {
           tier: 'early_adopter', 
-          hookText: `📈 **${totalReaders}** locals and counting — you're part of something growing`,
+          hookText: `📈 **${totalReaders}** readers and counting — you're part of something growing`,
           ctaText: `Help us reach ${nextMilestone}`,
-          shareMessage: `Join ${totalReaders} locals staying informed about ${topicName} on eeZee`
+          shareMessage: `Join ${totalReaders} readers staying informed about ${topicName} on eeZee`
         };
       } else if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) {
         return {
           tier: 'near_milestone',
-          hookText: `🏁 Just **${toMilestone}** more ${toMilestone === 1 ? 'local' : 'locals'} until we hit **${nextMilestone}**!`,
+          hookText: `🏁 Just **${toMilestone}** more ${toMilestone === 1 ? 'reader' : 'readers'} until we hit **${nextMilestone}**!`,
           ctaText: 'Your share could be the one',
-          shareMessage: `Help ${topicName} news reach ${nextMilestone} readers — we're only ${toMilestone} away!`
+          shareMessage: `Help ${topicName} reach ${nextMilestone} readers — we're only ${toMilestone} away!`
         };
       } else if (totalReaders >= 500) {
         return {
           tier: 'established',
-          hookText: `👥 **${totalReaders}** locals trust this feed — you're in good company`,
+          hookText: `👥 **${totalReaders}** readers trust this feed — you're in good company`,
           ctaText: 'Share with someone who\'d love it',
           shareMessage: `${totalReaders} people stay informed about ${topicName} on eeZee`
         };
@@ -189,23 +189,11 @@ serve(async (req) => {
         tier: 'growing',
         hookText: `💪 **${totalReaders}** people stay informed here${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} this week` : ''}`,
         ctaText: `${toMilestone} away from ${nextMilestone}`,
-        shareMessage: `Stay informed about ${topicName} with ${totalReaders} other locals on eeZee`
+        shareMessage: `Stay informed about ${topicName} with ${totalReaders} other readers on eeZee`
       };
     };
 
     const messaging = getMilestoneMessaging(totalReaders || 0, topic.name, toMilestone, nextMilestone, readerGrowth);
-
-    const getPeakTimeLabel = (hour: number): string => {
-      if (hour >= 6 && hour < 9) return `Morning (${hour}am)`;
-      if (hour >= 9 && hour < 12) return `Mid-morning (${hour}am)`;
-      if (hour >= 12 && hour < 17) return `Afternoon (${hour > 12 ? hour - 12 : hour}pm)`;
-      if (hour >= 17 && hour < 22) return `Evening (${hour - 12}pm)`;
-      return `Night (${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'am' : 'pm'})`;
-    };
-
-    const peakTimesText = sortedHours.length > 0
-      ? sortedHours.map(getPeakTimeLabel).join(' • ')
-      : 'Throughout the day';
 
     // Build slides with behavioral messaging
     const slides: Slide[] = [
@@ -223,7 +211,7 @@ serve(async (req) => {
     if (sortedHours.length > 0) {
       slides.push({
         type: 'content',
-        content: `🕐 **When locals read**\n\n${peakTimesText}\n\n*You're part of an active community*`,
+        content: `🕐 **When readers are active**\n\n${peakTimesText}\n\n*You're part of an active community*`,
         word_count: 12
       });
     }
@@ -350,14 +338,15 @@ serve(async (req) => {
       throw insertError;
     }
 
-    console.log(`[Social Proof] Generated card for ${topic.name}: ${slides.length} slides, relevance ${relevanceScore}`);
+    console.log(`[Social Proof] Generated card for ${topic.name}: ${slides.length} slides, relevance ${relevanceScore}, tier: ${messaging.tier}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         cardId: insertedCard.id,
         slides: slides.length,
-        relevanceScore 
+        relevanceScore,
+        messagingTier: messaging.tier 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
