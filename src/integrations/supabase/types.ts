@@ -4317,13 +4317,19 @@ export type Database = {
         Returns: {
           articles_scraped: number
           canonical_domain: string
+          consecutive_failures: number
           credibility_score: number
           feed_url: string
           is_active: boolean
+          last_failure_reason: string
           last_scraped_at: string
+          scrape_frequency_hours: number
+          scraping_method: string
           source_config: Json
           source_id: string
           source_name: string
+          source_type: string
+          success_rate: number
         }[]
       }
       get_topic_stories: {
