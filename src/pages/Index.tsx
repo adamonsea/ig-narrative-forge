@@ -48,38 +48,6 @@ const Index = () => {
             <div className="space-y-6">
               <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">
                 Beautiful feeds, any sources, any topic
-
-
-
- 
- 
-  
-  
-   
-   
-    
-    
-     
-     
-      
-      
-       
-       
-        
-        
-         
-         
-          
-          
-           
-           
-            
-            
-            
-
-            
-
-            <br />simplified
               </h1>
               <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
                 AI-powered editorial tools making niche content curation, simplification and publishing effortless and engaging    
