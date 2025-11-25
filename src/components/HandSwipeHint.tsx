@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hand, MoveRight } from 'lucide-react';
+import { Pointer } from 'lucide-react';
 
 interface HandSwipeHintProps {
   topicSlug: string;
@@ -44,15 +44,19 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
         >
           <motion.div
-            animate={{ x: [0, 20, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            className="flex items-center gap-3"
+            animate={{ 
+              x: [0, 30, 0],
+              y: [0, -5, 0],
+              rotate: [-15, 15, -15]
+            }}
+            transition={{ 
+              duration: 1.2, 
+              repeat: Infinity, 
+              ease: "easeInOut" 
+            }}
           >
             <div className="bg-white rounded-full p-3 shadow-lg border-2 border-black">
-              <Hand className="w-8 h-8 text-black fill-black" />
-            </div>
-            <div className="bg-white rounded-full p-2.5 shadow-lg border-2 border-black">
-              <MoveRight className="w-7 h-7 text-black" strokeWidth={3} />
+              <Pointer className="w-8 h-8 text-black" />
             </div>
           </motion.div>
         </motion.div>
