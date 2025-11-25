@@ -14,21 +14,15 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
 
   // Handle story navigation from card metadata
   const handleSlideClick = (slideIndex: number) => {
-    // Add 1 to slideIndex because we skip the first header slide in processedSlides
-    const slide = card.slides[slideIndex + 1];
+    const slide = card.slides[slideIndex];
     if (slide?.metadata?.storyId && topicSlug) {
       navigate(`/feed/${topicSlug}/story/${slide.metadata.storyId}`);
     }
   };
 
   // Process slide content once and memoize to prevent recalculation on re-renders
-  // Only skip first slide for story_momentum cards with header slides
   const processedSlides = useMemo(() => {
-    const shouldSkipFirst = card.card_type === 'story_momentum' && 
-      card.slides[0]?.type === 'header';
-    
-    const contentSlides = shouldSkipFirst ? card.slides.slice(1) : card.slides;
-    return contentSlides.map(slide => {
+    return card.slides.map(slide => {
       // Boost engagement numbers by fixed +15 for testing
       let processedContent = slide.content;
       

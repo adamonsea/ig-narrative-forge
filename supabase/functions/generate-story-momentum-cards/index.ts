@@ -102,27 +102,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build slides
-    const slides = [
-      {
-        type: 'hook',
-        content: '📈 **Trending Now**',
-        word_count: 2
-      },
-      ...top3.map(({ story, count }) => {
-        const timeAgo = getTimeAgo(story.created_at);
-        return {
-          type: 'content',
-          content: `**${story.title}**\n\n🔥 ${count} ${count === 1 ? 'reader' : 'readers'} engaged • Published ${timeAgo}`,
-          word_count: story.title.split(' ').length + 10,
-          metadata: {
-            storyId: story.id,
-            storySlug: story.slug,
-            interactions: count
-          }
-        };
-      })
-    ];
+    // Build slides - only story content, no header
+    const slides = top3.map(({ story, count }) => {
+      const timeAgo = getTimeAgo(story.created_at);
+      return {
+        type: 'content',
+        content: `**${story.title}**\n\n🔥 ${count} ${count === 1 ? 'reader' : 'readers'} engaged • Published ${timeAgo}`,
+        word_count: story.title.split(' ').length + 10,
+        metadata: {
+          storyId: story.id,
+          storySlug: story.slug,
+          interactions: count
+        }
+      };
+    });
 
     // Calculate relevance score based on total interactions
     const totalInteractions = top3.reduce((sum, { count }) => sum + count, 0);
