@@ -32,7 +32,6 @@ import { Link } from "react-router-dom";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
 import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
-import { AverageDailyStoriesBadge } from "@/components/ui/average-daily-stories-badge";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -626,7 +625,15 @@ const TopicFeed = () => {
                 </AvatarFallback>
               </Avatar>
             )}
-            {isLive && (
+            {isLive && avgDailyStories > 1 ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live • {Math.round(avgDailyStories)}/day
+              </span>
+            ) : isLive ? (
               <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -634,8 +641,7 @@ const TopicFeed = () => {
                 </span>
                 Live
               </span>
-            )}
-            <AverageDailyStoriesBadge average={avgDailyStories} />
+            ) : null}
           </div>
 
           {/* Topic Header - Clean and minimal with branding support */}
