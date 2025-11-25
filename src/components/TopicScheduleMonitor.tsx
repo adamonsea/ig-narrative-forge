@@ -400,60 +400,7 @@ export const TopicScheduleMonitor: React.FC<TopicScheduleMonitorProps> = ({
 
       {data && (
         <>
-          {/* Stats Overview */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
-                <Settings className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{data.total_sources}</div>
-                <div className="flex items-center mt-1">
-                  {getHealthBadge(data.health_status)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{data.active_sources}</div>
-                <p className="text-xs text-muted-foreground">
-                  {data.active_sources === data.total_sources ? 'All active' : `${data.total_sources - data.active_sources} inactive`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Articles (7d)</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{data.recent_articles}</div>
-                <p className="text-xs text-muted-foreground">Last 7 days</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Success Rate</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {data.sources.length > 0 
-                    ? Math.round(data.sources.reduce((sum, s) => sum + s.success_rate, 0) / data.sources.length)
-                    : 0}%
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
+          {/* Stats removed - keeping analytics on main topic dashboard */}
         </>
       )}
 

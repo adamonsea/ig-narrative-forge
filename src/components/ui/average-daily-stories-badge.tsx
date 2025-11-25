@@ -7,8 +7,8 @@ interface AverageDailyStoriesBadgeProps {
 }
 
 export const AverageDailyStoriesBadge = ({ average }: AverageDailyStoriesBadgeProps) => {
-  // Only show if average is greater than 5
-  if (average <= 5) return null;
+  // Show if average is greater than 1 (at least 1 story per day)
+  if (average <= 1) return null;
   
   return (
     <TooltipProvider>
