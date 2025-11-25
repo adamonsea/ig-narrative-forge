@@ -229,12 +229,23 @@ serve(async (req) => {
       }
     ];
 
-    // Add peak times slide if we have data
+    // Add peak times slide if we have data with tier-appropriate messaging
     if (sortedHours.length > 0) {
+      const peakTimeTaglines = {
+        'founding': `*Be one of the first to shape ${topic.name}'s story*`,
+        'early_adopter': `*Join the momentum — your timing is perfect*`,
+        'growing': `*You're part of a thriving community*`,
+        'near_milestone': `*Every share brings us closer to ${nextMilestone}*`,
+        'established': `*Join ${displayTotalReaders} readers staying informed*`
+      };
+      
       slides.push({
         type: 'content',
-        content: `🕐 **When readers are active**\n\n${peakTimesText}\n\n*You're part of an active community*`,
-        word_count: 12
+        content: `🕐 **When readers are active**\n\n${peakTimesText}\n\n${peakTimeTaglines[messaging.tier as keyof typeof peakTimeTaglines] || peakTimeTaglines['growing']}`,
+        word_count: 12,
+        metadata: {
+          messagingTier: messaging.tier
+        }
       });
     }
 
