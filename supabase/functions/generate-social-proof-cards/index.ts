@@ -42,34 +42,55 @@ serve(async (req) => {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
 
-    // Get all-time unique readers
-    const { count: totalReaders } = await supabase
+    // Display boost utility: adds +15 for small communities, accurate for established ones
+    const getDisplayCount = (actualCount: number): number => {
+      if (actualCount >= 100) return actualCount;
+      return actualCount + 15;
+    };
+
+    // Get all-time unique readers (deduplicate visitor_ids)
+    const { data: allReaders, error: readersError } = await supabase
       .from('story_interactions')
-      .select('visitor_id', { count: 'exact', head: true })
-      .eq('topic_id', topicId);
+      .select('visitor_id')
+      .eq('topic_id', topicId)
+      .neq('visitor_id', '');
+
+    if (readersError) throw readersError;
+    
+    const actualTotalReaders = new Set(allReaders?.map(r => r.visitor_id) || []).size;
+    const displayTotalReaders = getDisplayCount(actualTotalReaders);
 
     // Get last 7 days unique readers
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const { count: weekReaders } = await supabase
+    const { data: weekData, error: weekError } = await supabase
       .from('story_interactions')
-      .select('visitor_id', { count: 'exact', head: true })
+      .select('visitor_id')
       .eq('topic_id', topicId)
-      .gte('created_at', sevenDaysAgo.toISOString());
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .neq('visitor_id', '');
+
+    if (weekError) throw weekError;
+    
+    const actualWeekReaders = new Set(weekData?.map(r => r.visitor_id) || []).size;
 
     // Get previous week readers for growth calculation
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
     
-    const { count: previousWeekReaders } = await supabase
+    const { data: prevWeekData, error: prevWeekError } = await supabase
       .from('story_interactions')
-      .select('visitor_id', { count: 'exact', head: true })
+      .select('visitor_id')
       .eq('topic_id', topicId)
       .gte('created_at', fourteenDaysAgo.toISOString())
-      .lt('created_at', sevenDaysAgo.toISOString());
+      .lt('created_at', sevenDaysAgo.toISOString())
+      .neq('visitor_id', '');
 
-    const readerGrowth = (weekReaders || 0) - (previousWeekReaders || 0);
+    if (prevWeekError) throw prevWeekError;
+    
+    const actualPreviousWeekReaders = new Set(prevWeekData?.map(r => r.visitor_id) || []).size;
+    const readerGrowth = actualWeekReaders - actualPreviousWeekReaders;
 
     // Get PWA installs
     const { count: pwaInstalls } = await supabase
@@ -148,26 +169,27 @@ serve(async (req) => {
       ? sortedHours.map(formatPeakTime).join(' • ')
       : 'Throughout the day';
 
-    // Calculate milestone progress
+    // Calculate milestone progress using ACTUAL count for internal logic
     const milestones = [50, 100, 250, 500, 1000, 2500, 5000];
-    const nextMilestone = milestones.find(m => m > (totalReaders || 0)) || milestones[milestones.length - 1];
-    const toMilestone = nextMilestone - (totalReaders || 0);
+    const nextMilestone = milestones.find(m => m > actualTotalReaders) || milestones[milestones.length - 1];
+    const toMilestone = nextMilestone - actualTotalReaders;
 
-    // Behaviorally powerful tiered messaging
-    const getMilestoneMessaging = (totalReaders: number, topicName: string, toMilestone: number, nextMilestone: number, readerGrowth: number) => {
-      if (totalReaders < 50) {
+    // Behaviorally powerful tiered messaging - uses DISPLAYED count for user-facing text
+    const getMilestoneMessaging = (displayCount: number, actualCount: number, topicName: string, toMilestone: number, nextMilestone: number, readerGrowth: number) => {
+      // Tier logic based on ACTUAL count
+      if (actualCount < 50) {
         return {
           tier: 'founding',
-          hookText: `🌱 You're 1 of only **${totalReaders}** founding members of ${topicName}`,
+          hookText: `🌱 You're 1 of only **${displayCount}** founding members of ${topicName}`,
           ctaText: 'Share a story to help us grow',
-          shareMessage: `I'm one of the first ${totalReaders} people following ${topicName} on eeZee — join me!`
+          shareMessage: `I'm one of the first ${displayCount} people following ${topicName} on eeZee — join me!`
         };
-      } else if (totalReaders < 150) {
+      } else if (actualCount < 150) {
         return {
           tier: 'early_adopter', 
-          hookText: `📈 **${totalReaders}** readers and counting — you're part of something growing`,
+          hookText: `📈 **${displayCount}** readers and counting — you're part of something growing`,
           ctaText: `Help us reach ${nextMilestone}`,
-          shareMessage: `Join ${totalReaders} readers staying informed about ${topicName} on eeZee`
+          shareMessage: `Join ${displayCount} readers staying informed about ${topicName} on eeZee`
         };
       } else if (toMilestone > 0 && toMilestone <= nextMilestone * 0.2) {
         return {
@@ -176,24 +198,24 @@ serve(async (req) => {
           ctaText: 'Your share could be the one',
           shareMessage: `Help ${topicName} reach ${nextMilestone} readers — we're only ${toMilestone} away!`
         };
-      } else if (totalReaders >= 500) {
+      } else if (actualCount >= 500) {
         return {
           tier: 'established',
-          hookText: `👥 **${totalReaders}** readers trust this feed — you're in good company`,
+          hookText: `👥 **${displayCount}** readers trust this feed — you're in good company`,
           ctaText: 'Share with someone who\'d love it',
-          shareMessage: `${totalReaders} people stay informed about ${topicName} on eeZee`
+          shareMessage: `${displayCount} people stay informed about ${topicName} on eeZee`
         };
       }
       // Default growing community
       return {
         tier: 'growing',
-        hookText: `💪 **${totalReaders}** people stay informed here${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} this week` : ''}`,
+        hookText: `💪 **${displayCount}** people stay informed here${readerGrowth > 0 ? `\n\n📈 +${readerGrowth} this week` : ''}`,
         ctaText: `${toMilestone} away from ${nextMilestone}`,
-        shareMessage: `Stay informed about ${topicName} with ${totalReaders} other readers on eeZee`
+        shareMessage: `Stay informed about ${topicName} with ${displayCount} other readers on eeZee`
       };
     };
 
-    const messaging = getMilestoneMessaging(totalReaders || 0, topic.name, toMilestone, nextMilestone, readerGrowth);
+    const messaging = getMilestoneMessaging(displayTotalReaders, actualTotalReaders, topic.name, toMilestone, nextMilestone, readerGrowth);
 
     // Build slides with behavioral messaging
     const slides: Slide[] = [
@@ -242,7 +264,7 @@ serve(async (req) => {
       });
     }
 
-    // Add CTA slide with share intent
+    // Add CTA slide with share intent (uses DISPLAYED count)
     slides.push({
       type: 'cta',
       content: `**${messaging.ctaText}**\n\n${messaging.tier === 'founding' ? '🌟 Be part of building something special' : messaging.tier === 'near_milestone' ? '🎯 We\'re so close!' : '💬 Spread the word'}`,
@@ -251,12 +273,12 @@ serve(async (req) => {
         ctaType: 'share',
         shareMessage: messaging.shareMessage,
         messagingTier: messaging.tier,
-        currentCount: totalReaders,
+        currentCount: displayTotalReaders,
         targetCount: messaging.tier !== 'established' ? nextMilestone : undefined
       }
     });
 
-    // Calculate relevance score
+    // Calculate relevance score (based on ACTUAL count)
     let relevanceScore = 50; // base score
     
     // Higher if growing
@@ -269,7 +291,7 @@ serve(async (req) => {
     if (mostSharedCount > 3) relevanceScore += 15;
     
     // Lower if very little activity
-    if ((totalReaders || 0) < 10) relevanceScore -= 20;
+    if (actualTotalReaders < 10) relevanceScore -= 20;
 
     relevanceScore = Math.max(0, Math.min(100, relevanceScore));
 
@@ -308,8 +330,9 @@ serve(async (req) => {
         headline: `Your ${topic.name} Community`,
         slides,
         insight_data: {
-          totalReaders,
-          weekReaders,
+          actualTotalReaders,
+          displayTotalReaders,
+          weekReaders: actualWeekReaders,
           readerGrowth,
           pwaInstalls,
           notificationSubs,
