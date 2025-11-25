@@ -180,7 +180,7 @@ serve(async (req) => {
       if (actualCount < 50) {
         return {
           tier: 'founding',
-          hookText: `🌱 You're 1 of only **${displayCount}** founding members of ${topicName}`,
+          hookText: `You're one of only **${displayCount}** members of ${topicName} live feed`,
           ctaText: 'Share a story to help us grow',
           shareMessage: `I'm one of the first ${displayCount} people following ${topicName} on eeZee — join me!`
         };
