@@ -32,6 +32,7 @@ import { Link } from "react-router-dom";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
 import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
+import { AverageDailyStoriesBadge } from "@/components/ui/average-daily-stories-badge";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -52,6 +53,7 @@ const TopicFeed = () => {
   const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
   const [showCollectionsHint, setShowCollectionsHint] = useState(false);
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
+  const [avgDailyStories, setAvgDailyStories] = useState<number>(0);
   
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
@@ -112,6 +114,66 @@ const TopicFeed = () => {
 
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
+
+  // Calculate average daily stories for the topic
+  useEffect(() => {
+    if (!topic?.id) return;
+
+    const calculateAvgDailyStories = async () => {
+      // Get first published story date for this topic (legacy system)
+      const { data: legacyFirstStory } = await supabase
+        .from('stories')
+        .select('created_at, articles!inner(topic_id)')
+        .eq('articles.topic_id', topic.id)
+        .in('status', ['ready', 'published'])
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      // Get first published story date for this topic (multi-tenant system)
+      const { data: mtFirstStory } = await supabase
+        .from('stories')
+        .select('created_at, topic_articles!inner(topic_id)')
+        .eq('topic_articles.topic_id', topic.id)
+        .in('status', ['ready', 'published'])
+        .not('topic_article_id', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      // Find the earliest story date
+      const dates = [
+        ...(legacyFirstStory || []),
+        ...(mtFirstStory || [])
+      ].map(s => new Date(s.created_at).getTime());
+
+      if (dates.length === 0) return;
+
+      const firstStoryDate = new Date(Math.min(...dates));
+      const now = new Date();
+      const daysActive = Math.max(1, Math.ceil((now.getTime() - firstStoryDate.getTime()) / (1000 * 60 * 60 * 24)));
+      
+      // Get total published stories count (legacy)
+      const { count: legacyCount } = await supabase
+        .from('stories')
+        .select('id, articles!inner(topic_id)', { count: 'exact', head: true })
+        .eq('articles.topic_id', topic.id)
+        .in('status', ['ready', 'published']);
+
+      // Get total published stories count (multi-tenant)
+      const { count: mtCount } = await supabase
+        .from('stories')
+        .select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
+        .eq('topic_articles.topic_id', topic.id)
+        .in('status', ['ready', 'published'])
+        .not('topic_article_id', 'is', null);
+
+      const totalCount = (legacyCount || 0) + (mtCount || 0);
+      if (totalCount > 0) {
+        setAvgDailyStories(totalCount / daysActive);
+      }
+    };
+
+    calculateAvgDailyStories();
+  }, [topic?.id]);
 
   // Check if user already has notifications enabled for this topic
   useEffect(() => {
@@ -573,6 +635,7 @@ const TopicFeed = () => {
                 Live
               </span>
             )}
+            <AverageDailyStoriesBadge average={avgDailyStories} />
           </div>
 
           {/* Topic Header - Clean and minimal with branding support */}
