@@ -432,7 +432,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.sitemap-xml]
-verify_jwt = true
+verify_jwt = false
 
 [functions.clear-sentiment-keywords]
 verify_jwt = false
