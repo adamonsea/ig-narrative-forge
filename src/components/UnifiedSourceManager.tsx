@@ -41,6 +41,7 @@ import { SourceHealthDot } from '@/components/SourceHealthDot';
 import { LiveStoriesCount } from '@/components/LiveStoriesCount';
 import { CooldownMinimal } from '@/components/CooldownMinimal';
 import { SourceActionsMenu } from '@/components/SourceActionsMenu';
+import { AverageDailyStoriesBadge } from '@/components/ui/average-daily-stories-badge';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
 
 interface ContentSource {
@@ -67,6 +68,7 @@ interface ContentSource {
   last_failure_at?: string | null;
   last_failure_reason?: string | null;
   last_error?: string | null;
+  avg_daily_stories?: number;
 }
 
 interface Topic {
@@ -365,27 +367,47 @@ export const UnifiedSourceManager = ({
         }
         const merged = Array.from(mergedMap.values());
         
-        // Query for gathered articles count in last 7 days
+        // Query for gathered articles count in last 7 days and calculate average daily stories
         if (topicId) {
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           
           const { data: gatheredData } = await supabase
             .from('topic_articles')
-            .select('source_id')
+            .select('source_id, created_at')
             .eq('topic_id', topicId)
             .gte('created_at', sevenDaysAgo.toISOString());
           
           // Count articles per source
           const gatheredCounts = new Map<string, number>();
+          const firstArticleDate = new Map<string, Date>();
+          
           (gatheredData || []).forEach((article) => {
             const count = gatheredCounts.get(article.source_id) || 0;
             gatheredCounts.set(article.source_id, count + 1);
+            
+            // Track first (earliest) article date for this source
+            const articleDate = new Date(article.created_at);
+            const existing = firstArticleDate.get(article.source_id);
+            if (!existing || articleDate < existing) {
+              firstArticleDate.set(article.source_id, articleDate);
+            }
           });
           
-          // Add gathered counts to merged sources
+          // Calculate average daily stories for each source
           merged.forEach((source) => {
-            source.stories_gathered_7d = gatheredCounts.get(source.id) || 0;
+            const gathered = gatheredCounts.get(source.id) || 0;
+            source.stories_gathered_7d = gathered;
+            
+            // Calculate average daily stories
+            if (gathered > 0 && firstArticleDate.has(source.id)) {
+              const firstDate = firstArticleDate.get(source.id)!;
+              const now = new Date();
+              const daysActive = Math.max(1, Math.ceil((now.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
+              source.avg_daily_stories = gathered / daysActive;
+            } else {
+              source.avg_daily_stories = 0;
+            }
           });
         }
         
@@ -1555,6 +1577,11 @@ export const UnifiedSourceManager = ({
                   {/* Live Stories Count */}
                   {mode === 'topic' && (
                     <LiveStoriesCount count={source.stories_published_7d || 0} />
+                  )}
+
+                  {/* Average Daily Stories */}
+                  {mode === 'topic' && source.avg_daily_stories !== undefined && (
+                    <AverageDailyStoriesBadge average={source.avg_daily_stories} />
                   )}
 
                   {/* Cooldown Status */}
