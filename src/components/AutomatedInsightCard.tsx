@@ -14,7 +14,8 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
 
   // Handle story navigation from card metadata
   const handleSlideClick = (slideIndex: number) => {
-    const slide = card.slides[slideIndex];
+    // Add 1 to slideIndex because we skip the first header slide in processedSlides
+    const slide = card.slides[slideIndex + 1];
     if (slide?.metadata?.storyId && topicSlug) {
       navigate(`/feed/${topicSlug}/story/${slide.metadata.storyId}`);
     }
