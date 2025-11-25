@@ -825,6 +825,37 @@ export const UnifiedSourceManager = ({
 
       if (error) throw error;
 
+      // CRITICAL FIX: In topic mode, also update topic_sources.source_config
+      // This ensures the scraper uses the updated feed_url
+      if (mode === 'topic' && topicId && updates.feed_url) {
+        const { data: existingConfig } = await supabase
+          .from('topic_sources')
+          .select('source_config')
+          .eq('topic_id', topicId)
+          .eq('source_id', sourceId)
+          .single();
+
+        const currentConfig = (existingConfig?.source_config as any) || {};
+        const updatedConfig = {
+          ...currentConfig,
+          feed_url: updates.feed_url,
+        };
+
+        const { error: topicSourceError } = await supabase
+          .from('topic_sources')
+          .update({
+            source_config: updatedConfig,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('topic_id', topicId)
+          .eq('source_id', sourceId);
+
+        if (topicSourceError) {
+          console.error('Error updating topic_sources config:', topicSourceError);
+          // Don't throw - content_sources was updated successfully
+        }
+      }
+
       // ✅ Enhanced success message showing exact trusted state
       const isTrusted = updates.scraping_config?.trust_content_relevance === true;
       const ageWindow = updates.scraping_config?.trusted_max_age_days;
