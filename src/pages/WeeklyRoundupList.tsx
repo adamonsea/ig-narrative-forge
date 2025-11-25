@@ -171,6 +171,16 @@ export default function WeeklyRoundupList() {
                 word_count,
                 links,
                 alt_text
+              ),
+              shared_article_content:shared_content_id (
+                url,
+                published_at,
+                source_domain
+              ),
+              article:article_id (
+                source_url,
+                published_at,
+                region
               )
             `)
             .in('id', roundupData.story_ids)
@@ -204,9 +214,9 @@ export default function WeeklyRoundupList() {
               ...story,
               updated_at: story.updated_at || story.created_at,
               article: {
-                source_url: story.article?.shared_content?.source_url || '',
-                region: story.article?.shared_content?.region || '',
-                published_at: story.article?.shared_content?.published_at || story.created_at,
+                source_url: story.shared_article_content?.url || story.article?.source_url || '',
+                region: story.article?.region || 'UK',
+                published_at: story.shared_article_content?.published_at || story.article?.published_at || story.created_at,
               },
               engagementScore: engagementMap.get(story.id) || 0
             }));
