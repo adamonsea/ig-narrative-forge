@@ -50,7 +50,7 @@ const Index = () => {
                 Beautiful feeds, any sources, any topic            <br />simplified
               </h1>
               <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
-                AI-powered editorial tools that make content curation, simplification and publishing effortless
+                AI-powered editorial tools making niche content curation, simplification and publishing effortless and engaging    
               </p>
             </div>
             <div className="flex gap-4 justify-center pt-4">
