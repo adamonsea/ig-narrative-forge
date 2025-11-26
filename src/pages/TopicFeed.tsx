@@ -103,8 +103,8 @@ const TopicFeed = () => {
     (window as any).resetCollectionsHint = () => {
       if (slug) {
         localStorage.removeItem(`collections_hint_shown_${slug}`);
-        setShowCollectionsHint(true);
-        console.log('Collections hint reset - scroll to trigger it again');
+        setShowCollectionsHint(false);
+        console.log('Collections hint reset - will show on next page load');
       }
     };
   }, [slug]);
@@ -216,16 +216,16 @@ const TopicFeed = () => {
     });
   }, [shouldShowNotificationPrompt, topic?.id]);
 
-  // Track when user scrolls past stories they've engaged with
-  const handleStoryScrolledPast = useCallback(() => {
-    setStoriesScrolledPast(prev => prev + 1);
+  // Show collections hint on page load (once per topic)
+  useEffect(() => {
+    if (!slug || showCollectionsHint) return;
     
-    // Show collections hint after scrolling past 2nd story
-    if (storiesScrolledPast === 1 && !showCollectionsHint && slug) {
-      const hintKey = `collections_hint_shown_${slug}`;
-      const hasBeenShown = localStorage.getItem(hintKey);
-      
-      if (!hasBeenShown) {
+    const hintKey = `collections_hint_shown_${slug}`;
+    const hasBeenShown = localStorage.getItem(hintKey);
+    
+    if (!hasBeenShown) {
+      // Show hint after a brief delay to let page settle
+      const timer = setTimeout(() => {
         setShowCollectionsHint(true);
         localStorage.setItem(hintKey, 'true');
         
@@ -233,8 +233,15 @@ const TopicFeed = () => {
         setTimeout(() => {
           setShowCollectionsHint(false);
         }, 5000);
-      }
+      }, 1000);
+      
+      return () => clearTimeout(timer);
     }
+  }, [slug, showCollectionsHint]);
+
+  // Track when user scrolls past stories they've engaged with
+  const handleStoryScrolledPast = useCallback(() => {
+    setStoriesScrolledPast(prev => prev + 1);
     
     if (!shouldShowNotificationPrompt || !topic?.id) return;
     if (storiesWithSwipes.size < 2) return;
