@@ -45,8 +45,7 @@ export const useSwipeMode = (topicId: string) => {
       const topicArticlesQuery = await (supabase as any)
         .from('topic_articles')
         .select('id')
-        .eq('topic_id', topicId)
-        .eq('status', 'approved');
+        .eq('topic_id', topicId);
 
       if (topicArticlesQuery.error) throw topicArticlesQuery.error;
 
