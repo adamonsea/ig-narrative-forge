@@ -72,16 +72,9 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   // Icon scale pulses near threshold
   const iconScale = useTransform(x, [-150, -100, 100, 150], [1.2, 1, 1, 1.2]);
   
-  // Enhanced page curl effects with multi-layer depth
-  const curlRightSize = useTransform(x, [0, 150], [0, 120]); // Bottom-left curl when swiping right
-  const curlLeftSize = useTransform(x, [-150, 0], [120, 0]); // Bottom-right curl when swiping left
-  const curlOpacity = useTransform(x, [-150, -50, 0, 50, 150], [0.85, 0.4, 0, 0.4, 0.85]);
-  
-  // Shadow depth grows with curl
-  const curlShadowIntensity = useTransform(x, [-150, 0, 150], [0.25, 0, 0.25]);
-  
-  // Backside paper visibility
-  const backsideOpacity = useTransform(x, [-150, -50, 0, 50, 150], [0.9, 0.3, 0, 0.3, 0.9]);
+  // Simple page curl effects
+  const rightCurlOpacity = useTransform(x, [0, 100], [0, 0.6]);
+  const leftCurlOpacity = useTransform(x, [-100, 0], [0.6, 0]);
 
   const storyDate = story.article?.published_at
     ? new Date(story.article.published_at)
@@ -206,126 +199,40 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         </motion.div>
       </motion.div>
 
-      {/* Enhanced Page Curl - Bottom Left (appears when swiping right/like) */}
+      {/* Simple Page Curl - Bottom Left (appears when swiping right/liking) */}
       <motion.div
-        style={{ 
-          opacity: curlOpacity,
-          width: curlRightSize,
-          height: curlRightSize,
+        className="absolute bottom-0 left-0 pointer-events-none z-20"
+        style={{
+          width: 60,
+          height: 60,
+          opacity: rightCurlOpacity,
         }}
-        className="absolute bottom-0 left-0 z-20 pointer-events-none"
       >
-        {/* Shadow layer beneath curl */}
-        <motion.div
-          style={{ opacity: curlShadowIntensity }}
-          className="absolute inset-0"
-        >
-          <div 
-            className="w-full h-full"
-            style={{
-              clipPath: 'polygon(0 100%, 100% 100%, 0 0)',
-              background: 'radial-gradient(ellipse at 0% 100%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 30%, transparent 70%)',
-              filter: 'blur(8px)',
-              transform: 'translate(4px, 4px) skew(-2deg, -2deg)',
-            }}
-          />
-        </motion.div>
-        
-        {/* Paper backside (cream/off-white) */}
-        <motion.div
-          style={{ opacity: backsideOpacity }}
-          className="absolute inset-0"
-        >
-          <div 
-            className="w-full h-full"
-            style={{
-              clipPath: 'polygon(0 100%, 100% 100%, 0 0)',
-              background: 'linear-gradient(135deg, hsl(40, 20%, 92%) 0%, hsl(40, 15%, 88%) 100%)',
-              transform: 'translateZ(-1px)',
-            }}
-          />
-        </motion.div>
-        
-        {/* Main curl surface with lighting */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            clipPath: 'path("M 0 100 Q 30 70, 60 50 T 100 0 L 0 0 Z")',
-            background: 'linear-gradient(135deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.04) 40%, rgba(255,255,255,0.95) 70%, rgba(255,255,255,1) 100%)',
-            boxShadow: 'inset 0 -1px 3px rgba(0,0,0,0.1)',
-            transformOrigin: 'bottom left',
-            transform: 'rotateX(8deg) rotateZ(-2deg)',
-          }}
-        />
-        
-        {/* Highlight fold line */}
         <div
           className="absolute inset-0"
           style={{
-            clipPath: 'path("M 0 100 Q 30 70, 60 50 T 100 0 L 98 5 Q 58 52, 28 72 T 0 98 Z")',
-            background: 'linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.6) 55%, transparent 100%)',
+            background: 'linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--card)) 50%, transparent 100%)',
+            clipPath: 'polygon(0 100%, 0 30%, 30% 100%)',
+            boxShadow: '2px 2px 6px rgba(0,0,0,0.2)',
           }}
         />
       </motion.div>
 
-      {/* Enhanced Page Curl - Bottom Right (appears when swiping left/discard) */}
+      {/* Simple Page Curl - Bottom Right (appears when swiping left/discarding) */}
       <motion.div
-        style={{ 
-          opacity: curlOpacity,
-          width: curlLeftSize,
-          height: curlLeftSize,
+        className="absolute bottom-0 right-0 pointer-events-none z-20"
+        style={{
+          width: 60,
+          height: 60,
+          opacity: leftCurlOpacity,
         }}
-        className="absolute bottom-0 right-0 z-20 pointer-events-none"
       >
-        {/* Shadow layer beneath curl */}
-        <motion.div
-          style={{ opacity: curlShadowIntensity }}
-          className="absolute inset-0"
-        >
-          <div 
-            className="w-full h-full"
-            style={{
-              clipPath: 'polygon(100% 100%, 0 100%, 100% 0)',
-              background: 'radial-gradient(ellipse at 100% 100%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 30%, transparent 70%)',
-              filter: 'blur(8px)',
-              transform: 'translate(-4px, 4px) skew(2deg, -2deg)',
-            }}
-          />
-        </motion.div>
-        
-        {/* Paper backside (cream/off-white) */}
-        <motion.div
-          style={{ opacity: backsideOpacity }}
-          className="absolute inset-0"
-        >
-          <div 
-            className="w-full h-full"
-            style={{
-              clipPath: 'polygon(100% 100%, 0 100%, 100% 0)',
-              background: 'linear-gradient(225deg, hsl(40, 20%, 92%) 0%, hsl(40, 15%, 88%) 100%)',
-              transform: 'translateZ(-1px)',
-            }}
-          />
-        </motion.div>
-        
-        {/* Main curl surface with lighting */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            clipPath: 'path("M 100 100 Q 70 70, 40 50 T 0 0 L 100 0 Z")',
-            background: 'linear-gradient(225deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.04) 40%, rgba(255,255,255,0.95) 70%, rgba(255,255,255,1) 100%)',
-            boxShadow: 'inset 0 -1px 3px rgba(0,0,0,0.1)',
-            transformOrigin: 'bottom right',
-            transform: 'rotateX(8deg) rotateZ(2deg)',
-          }}
-        />
-        
-        {/* Highlight fold line */}
         <div
           className="absolute inset-0"
           style={{
-            clipPath: 'path("M 100 100 Q 70 70, 40 50 T 0 0 L 2 5 Q 42 52, 72 72 T 100 98 Z")',
-            background: 'linear-gradient(225deg, transparent 0%, rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.6) 55%, transparent 100%)',
+            background: 'linear-gradient(225deg, hsl(var(--muted)) 0%, hsl(var(--card)) 50%, transparent 100%)',
+            clipPath: 'polygon(100% 100%, 100% 30%, 70% 100%)',
+            boxShadow: '-2px 2px 6px rgba(0,0,0,0.2)',
           }}
         />
       </motion.div>
