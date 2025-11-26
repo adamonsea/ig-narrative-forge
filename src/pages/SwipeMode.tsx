@@ -167,24 +167,59 @@ export default function SwipeMode() {
             {/* Swipe hint animation */}
             <SwipeModeHint />
             
-            {/* Stack effect: cards behind current card */}
+            {/* Show actual next card underneath (if exists) */}
             <div className="absolute inset-0 pointer-events-none">
-              <div 
-                className="absolute inset-0 bg-card border rounded-lg shadow-sm"
-                style={{ 
-                  transform: 'scale(0.95) translateY(10px)',
-                  opacity: 0.5,
-                  zIndex: -2
-                }}
-              />
-              <div 
-                className="absolute inset-0 bg-card border rounded-lg shadow"
-                style={{ 
-                  transform: 'scale(0.97) translateY(5px)',
-                  opacity: 0.7,
-                  zIndex: -1
-                }}
-              />
+              {stories[currentIndex + 1] ? (
+                <>
+                  {/* Next card - visible and realistic */}
+                  <div 
+                    className="absolute inset-0 rounded-lg overflow-hidden"
+                    style={{ 
+                      transform: 'scale(0.95) translateY(8px)',
+                      opacity: 0.6,
+                      zIndex: -1,
+                      filter: 'blur(1.5px)',
+                    }}
+                  >
+                    <PageTurnCard
+                      story={stories[currentIndex + 1]}
+                      onSwipe={() => {}}
+                      onTap={() => {}}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  </div>
+                  
+                  {/* Placeholder card behind next */}
+                  <div 
+                    className="absolute inset-0 bg-card border rounded-lg shadow-sm"
+                    style={{ 
+                      transform: 'scale(0.92) translateY(14px)',
+                      opacity: 0.4,
+                      zIndex: -2
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* Fallback placeholder cards */}
+                  <div 
+                    className="absolute inset-0 bg-card border rounded-lg shadow-sm"
+                    style={{ 
+                      transform: 'scale(0.95) translateY(10px)',
+                      opacity: 0.5,
+                      zIndex: -2
+                    }}
+                  />
+                  <div 
+                    className="absolute inset-0 bg-card border rounded-lg shadow"
+                    style={{ 
+                      transform: 'scale(0.97) translateY(5px)',
+                      opacity: 0.7,
+                      zIndex: -1
+                    }}
+                  />
+                </>
+              )}
             </div>
             
             {/* Preload next card image */}
