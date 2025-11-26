@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, Gamepad2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -585,6 +585,25 @@ const TopicFeed = () => {
                     <TooltipContent>
                       <p className="font-medium">Weekly Briefing</p>
                       <p className="text-xs text-muted-foreground">This week's highlights</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/play/${slug}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="Play mode"
+                        >
+                          <Gamepad2 className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Play Mode</p>
+                      <p className="text-xs text-muted-foreground">Swipe through stories</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
