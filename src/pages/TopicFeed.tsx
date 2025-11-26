@@ -40,8 +40,6 @@ const TopicFeed = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const [showFilterTip, setShowFilterTip] = useState(false);
-  const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
   const [latestDaily, setLatestDaily] = useState<string | null>(null);
   const [latestWeekly, setLatestWeekly] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
@@ -56,17 +54,6 @@ const TopicFeed = () => {
   
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
-
-  useEffect(() => {
-    const dismissed = localStorage.getItem('eezee_filter_tip_dismissed');
-    setShowFilterTip(!dismissed);
-  }, []);
-
-  const openFilterAndDismissTip = () => {
-    localStorage.setItem('eezee_filter_tip_dismissed', '1');
-    setShowFilterTip(false);
-    setIsModalOpen(true);
-  };
 
 
   const {
@@ -305,24 +292,16 @@ const TopicFeed = () => {
         
         if (error) {
           console.error('Monthly count error:', error);
-          if (active) setMonthlyCount(0);
           return;
         }
         
-        // Count unique stories published this month
+        // Count unique stories published this month (no longer displayed but keeping for future use)
         const storyMap = new Map<string, any>();
         (data || []).forEach((row: any) => {
           if (!storyMap.has(row.story_id)) {
             storyMap.set(row.story_id, row);
           }
         });
-        
-        const count = Array.from(storyMap.values()).filter((row: any) => {
-          const d = row.story_created_at ? new Date(row.story_created_at) : null;
-          return d && d >= start;
-        }).length;
-        
-        if (active) setMonthlyCount(count);
 
         // Fetch latest daily roundup
         const { data: dailyRoundup } = await supabase
@@ -542,25 +521,16 @@ const TopicFeed = () => {
                   )}
                 </button>
 
-                <TooltipProvider>
-                  <Tooltip open={showFilterTip}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={openFilterAndDismissTip}
-                        className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                      >
-                        <Filter className="w-4 h-4" />
-                        <span className="hidden sm:inline text-sm font-medium">Filters</span>
-                        {hasActiveFilters && (
-                          <span className="w-2 h-2 bg-primary rounded-full" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="end" className="z-[60] max-w-xs text-center">
-                      <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm font-medium">Filters</span>
+                  {hasActiveFilters && (
+                    <span className="w-2 h-2 bg-primary rounded-full" />
+                  )}
+                </button>
 
                 {/* Collection Icons - Daily and Weekly only */}
                 <TooltipProvider>
@@ -713,26 +683,17 @@ const TopicFeed = () => {
 
             {/* Filter button - below subheader, centered */}
             <div className="flex justify-center gap-3 pt-2">
-              <TooltipProvider>
-                <Tooltip open={showFilterTip}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={openFilterAndDismissTip}
-                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                      aria-label="Open filters"
-                    >
-                      <Filter className="w-4 h-4" />
-                      <span className="text-sm font-medium">Filters</span>
-                      {hasActiveFilters && (
-                        <span className="w-2 h-2 bg-primary rounded-full" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="center" className="z-[60] max-w-xs text-center">
-                    <div className="font-semibold">{(monthlyCount ?? 0).toString()} this month, {topic.name}</div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                aria-label="Open filters"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filters</span>
+                {hasActiveFilters && (
+                  <span className="w-2 h-2 bg-primary rounded-full" />
+                )}
+              </button>
 
               <TooltipProvider>
                 <Tooltip open={showCollectionsHint}>
