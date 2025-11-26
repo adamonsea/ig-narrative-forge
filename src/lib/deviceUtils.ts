@@ -10,6 +10,19 @@ interface PerformanceOptimizations {
   shouldReduceMotion: boolean;
 }
 
+export interface AnimationPresets {
+  dragElastic: number;
+  spring: {
+    stiffness: number;
+    damping: number;
+    mass: number;
+  };
+  dragTransition: {
+    power: number;
+    timeConstant: number;
+  };
+}
+
 /**
  * Detects iOS version from user agent
  */
@@ -120,6 +133,58 @@ export function getDeviceOptimizations(): PerformanceOptimizations {
         shouldUseCSSCarousel: false,
         shouldAggressivelyLazyLoadImages: false,
         shouldReduceMotion: prefersReducedMotion,
+      };
+  }
+}
+
+/**
+ * Gets device-specific animation presets for smooth swiping
+ * Tailored to each device's performance capabilities
+ */
+export function getAnimationPresets(): AnimationPresets {
+  const tier = getDevicePerformanceTier();
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  
+  // If user prefers reduced motion, use gentlest settings
+  if (prefersReducedMotion) {
+    return {
+      dragElastic: 0.05,
+      spring: { stiffness: 180, damping: 30, mass: 1.3 },
+      dragTransition: { power: 0.4, timeConstant: 200 },
+    };
+  }
+  
+  switch (tier) {
+    case 'modern-ios':
+      // Modern devices: snappy and responsive
+      return {
+        dragElastic: 0.15,
+        spring: { stiffness: 450, damping: 40, mass: 0.9 },
+        dragTransition: { power: 0.3, timeConstant: 260 },
+      };
+      
+    case 'mid-range-ios':
+      // Mid-range: smooth and balanced
+      return {
+        dragElastic: 0.10,
+        spring: { stiffness: 300, damping: 35, mass: 1.1 },
+        dragTransition: { power: 0.35, timeConstant: 230 },
+      };
+      
+    case 'old-ios':
+      // Old devices: gentle and smooth to reduce jank
+      return {
+        dragElastic: 0.05,
+        spring: { stiffness: 180, damping: 30, mass: 1.3 },
+        dragTransition: { power: 0.4, timeConstant: 200 },
+      };
+      
+    case 'non-ios':
+      // Android/other: balanced defaults
+      return {
+        dragElastic: 0.12,
+        spring: { stiffness: 400, damping: 38, mass: 1.0 },
+        dragTransition: { power: 0.32, timeConstant: 250 },
       };
   }
 }
