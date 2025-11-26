@@ -160,6 +160,27 @@ export default function SwipeMode() {
           </div>
         ) : currentStory ? (
           <div className="relative h-[600px]">
+            {/* Stack effect: cards behind current card */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div 
+                className="absolute inset-0 bg-card border rounded-lg shadow-sm"
+                style={{ 
+                  transform: 'scale(0.95) translateY(10px)',
+                  opacity: 0.5,
+                  zIndex: -2
+                }}
+              />
+              <div 
+                className="absolute inset-0 bg-card border rounded-lg shadow"
+                style={{ 
+                  transform: 'scale(0.97) translateY(5px)',
+                  opacity: 0.7,
+                  zIndex: -1
+                }}
+              />
+            </div>
+            
+            {/* Current card with animation */}
             <AnimatePresence mode="wait">
               <PageTurnCard
                 key={currentStory.id}
