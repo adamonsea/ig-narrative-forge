@@ -71,8 +71,13 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   
   // Icon scale pulses near threshold
   const iconScale = useTransform(x, [-150, -100, 100, 150], [1.2, 1, 1, 1.2]);
+  
+  // Page curl effects - corner triangles that grow with swipe
+  const curlRightSize = useTransform(x, [0, 150], [0, 80]); // Bottom-left curl when swiping right
+  const curlLeftSize = useTransform(x, [-150, 0], [80, 0]); // Bottom-right curl when swiping left
+  const curlOpacity = useTransform(x, [-150, -50, 0, 50, 150], [0.7, 0.3, 0, 0.3, 0.7]);
 
-  const storyDate = story.article?.published_at 
+  const storyDate = story.article?.published_at
     ? new Date(story.article.published_at)
     : new Date(story.created_at);
 
@@ -193,6 +198,48 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         >
           <Heart className="w-12 h-12 fill-current" strokeWidth={3} />
         </motion.div>
+      </motion.div>
+
+      {/* Page Curl - Bottom Left (appears when swiping right/like) */}
+      <motion.div
+        style={{ 
+          opacity: curlOpacity,
+          width: curlRightSize,
+          height: curlRightSize,
+        }}
+        className="absolute bottom-0 left-0 z-20 pointer-events-none"
+      >
+        <div 
+          className="w-full h-full"
+          style={{
+            clipPath: 'polygon(0 100%, 100% 100%, 0 0)',
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 50%, rgba(255,255,255,0.9) 100%)',
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+            transformOrigin: 'bottom left',
+            transform: 'rotateX(5deg)',
+          }}
+        />
+      </motion.div>
+
+      {/* Page Curl - Bottom Right (appears when swiping left/discard) */}
+      <motion.div
+        style={{ 
+          opacity: curlOpacity,
+          width: curlLeftSize,
+          height: curlLeftSize,
+        }}
+        className="absolute bottom-0 right-0 z-20 pointer-events-none"
+      >
+        <div 
+          className="w-full h-full"
+          style={{
+            clipPath: 'polygon(100% 100%, 0 100%, 100% 0)',
+            background: 'linear-gradient(225deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 50%, rgba(255,255,255,0.9) 100%)',
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+            transformOrigin: 'bottom right',
+            transform: 'rotateX(5deg)',
+          }}
+        />
       </motion.div>
 
       {/* Story Card (matching feed design) */}
