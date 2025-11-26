@@ -41,12 +41,11 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // First get topic_article IDs for this topic (limit to prevent query overflow)
+      // Get ALL topic_article IDs for this topic (no limit)
       const topicArticlesQuery = await (supabase as any)
         .from('topic_articles')
         .select('id')
-        .eq('topic_id', topicId)
-        .limit(200);
+        .eq('topic_id', topicId);
 
       if (topicArticlesQuery.error) throw topicArticlesQuery.error;
 
@@ -59,31 +58,56 @@ export const useSwipeMode = (topicId: string) => {
         return;
       }
 
-      // Get stories for these topic_articles, only with images
-      const storiesQuery = await (supabase as any)
-        .from('stories')
-        .select('id, title, author, cover_illustration_url, created_at, article_id, topic_article_id')
-        .in('topic_article_id', topicArticleIds)
-        .eq('status', 'published')
-        .not('cover_illustration_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(200);
+      // Get ALL stories for these topic_articles, only with images (no limit)
+      // Process in batches if needed due to PostgreSQL IN clause limits
+      const batchSize = 500;
+      let allStories: any[] = [];
+      
+      for (let i = 0; i < topicArticleIds.length; i += batchSize) {
+        const batch = topicArticleIds.slice(i, i + batchSize);
+        const storiesQuery = await (supabase as any)
+          .from('stories')
+          .select('id, title, author, cover_illustration_url, created_at, article_id, topic_article_id')
+          .in('topic_article_id', batch)
+          .eq('status', 'published')
+          .not('cover_illustration_url', 'is', null)
+          .order('created_at', { ascending: false });
 
-      if (storiesQuery.error) throw storiesQuery.error;
+        if (storiesQuery.error) throw storiesQuery.error;
+        allStories = [...allStories, ...(storiesQuery.data || [])];
+      }
 
-      // Get article data for source URLs
-      const articleIds = (storiesQuery.data || []).map((s: any) => s.article_id).filter(Boolean);
-      const articlesQuery: any = await (supabase as any)
-        .from('articles')
-        .select('id, source_url, published_at')
-        .in('id', articleIds);
+      // Get article data for source URLs (batch if needed)
+      const articleIds = allStories.map((s: any) => s.article_id).filter(Boolean);
+      let allArticles: any[] = [];
+      
+      for (let i = 0; i < articleIds.length; i += batchSize) {
+        const batch = articleIds.slice(i, i + batchSize);
+        const articlesQuery: any = await (supabase as any)
+          .from('articles')
+          .select('id, source_url, published_at')
+          .in('id', batch);
+        
+        if (articlesQuery.data) {
+          allArticles = [...allArticles, ...articlesQuery.data];
+        }
+      }
 
-      // Get slides data
-      const storyIds = (storiesQuery.data || []).map((s: any) => s.id);
-      const slidesQuery: any = await (supabase as any)
-        .from('slides')
-        .select('story_id, slide_number, content')
-        .in('story_id', storyIds);
+      // Get slides data (batch if needed)
+      const storyIds = allStories.map((s: any) => s.id);
+      let allSlides: any[] = [];
+      
+      for (let i = 0; i < storyIds.length; i += batchSize) {
+        const batch = storyIds.slice(i, i + batchSize);
+        const slidesQuery: any = await (supabase as any)
+          .from('slides')
+          .select('story_id, slide_number, content')
+          .in('story_id', batch);
+        
+        if (slidesQuery.data) {
+          allSlides = [...allSlides, ...slidesQuery.data];
+        }
+      }
 
       // Filter out already swiped stories
       const swipesQuery: any = await (supabase as any)
@@ -95,11 +119,11 @@ export const useSwipeMode = (topicId: string) => {
       const swipedIds = new Set((swipesQuery.data || []).map((s: any) => s.story_id));
       
       // Combine data (already filtered for images in query)
-      const enrichedStories = (storiesQuery.data || [])
+      const enrichedStories = allStories
         .filter((s: any) => !swipedIds.has(s.id))
         .map((story: any) => {
-          const article = (articlesQuery.data || []).find((a: any) => a.id === story.article_id);
-          const slides = (slidesQuery.data || []).filter((s: any) => s.story_id === story.id);
+          const article = allArticles.find((a: any) => a.id === story.article_id);
+          const slides = allSlides.filter((s: any) => s.story_id === story.id);
           
           return {
             ...story,
