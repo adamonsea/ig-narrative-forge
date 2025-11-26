@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Button } from '@/components/ui/button';
 import { Heart, Loader2 } from 'lucide-react';
 import { StoryCard } from '@/components/StoryCard';
+import { toast } from 'sonner';
 
 interface Story {
   id: string;
@@ -64,6 +65,36 @@ export const LikedStoriesDrawer = ({
               : `${stories.length} liked ${stories.length === 1 ? 'story' : 'stories'}`}
           </SheetDescription>
         </SheetHeader>
+
+        {stories.length > 0 && (
+          <div className="mt-4 pb-4 border-b">
+            <Button
+              onClick={() => {
+                const shareText = `Check out my favourite stories from ${topicSlug}!`;
+                const shareUrl = `${window.location.origin}/feed/${topicSlug}`;
+                
+                if (navigator.share) {
+                  navigator.share({
+                    title: `My Favourites - ${topicSlug}`,
+                    text: shareText,
+                    url: shareUrl
+                  }).catch(() => {
+                    // User cancelled share
+                  });
+                } else {
+                  // Fallback: copy to clipboard
+                  navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+                  toast.success('Link copied to clipboard!');
+                }
+              }}
+              variant="outline"
+              className="w-full gap-2"
+            >
+              <Heart className="w-4 h-4 fill-primary text-primary" />
+              Share Your Favourites
+            </Button>
+          </div>
+        )}
 
         <div className="mt-6">
           {loading ? (
