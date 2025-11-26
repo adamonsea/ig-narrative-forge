@@ -52,6 +52,9 @@ interface TopicDashboardStats {
   pwa_installs?: number;
   donation_button_clicks?: number;
   donation_modal_opens?: number;
+  liked_stories?: number;
+  total_swipes?: number;
+  shared_stories?: number;
 }
 
 interface Topic {
@@ -126,7 +129,10 @@ const TopicDashboard = () => {
     processing_queue: 0,
     ready_stories: 0,
     simplified_stories_24h: 0,
-    sentiment_cards: 0
+    sentiment_cards: 0,
+    liked_stories: 0,
+    total_swipes: 0,
+    shared_stories: 0
   });
   const [loading, setLoading] = useState(true);
   const [dashboardExpanded, setDashboardExpanded] = useState(false);
@@ -319,6 +325,26 @@ const TopicDashboard = () => {
         .eq('topic_id', topicData.id)
         .eq('interaction_type', 'donation_modal_opened');
 
+      // Get swipe mode engagement stats
+      const { count: likedStories } = await supabase
+        .from('story_swipes')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('swipe_type', 'like');
+
+      const { count: totalSwipes } = await supabase
+        .from('story_swipes')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id);
+
+      const { data: sharedStories } = await supabase
+        .from('story_interactions')
+        .select('story_id')
+        .eq('topic_id', topicData.id)
+        .eq('interaction_type', 'share_click');
+      
+      const uniqueSharedStories = new Set(sharedStories?.map(s => s.story_id) || []).size;
+
       setStats({
         articles: articlesRes.count || 0,
         stories: storiesRes.count || 0,
@@ -332,6 +358,9 @@ const TopicDashboard = () => {
         pwa_installs: Number(engagementStats?.[0]?.pwa_installs || 0),
         donation_button_clicks: donationButtonClicks || 0,
         donation_modal_opens: donationModalOpens || 0,
+        liked_stories: likedStories || 0,
+        total_swipes: totalSwipes || 0,
+        shared_stories: uniqueSharedStories,
       });
 
     } catch (error) {
@@ -684,7 +713,7 @@ const TopicDashboard = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 mt-4">
             {/* Key Highlights Only */}
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <TooltipProvider>
@@ -721,6 +750,69 @@ const TopicDashboard = () => {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Items currently in the arrivals queue awaiting story generation</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <span className="text-xl">❤️</span>
+                          <div>
+                            <div className="text-2xl font-bold text-rose-500">{stats.liked_stories || 0}</div>
+                            <p className="text-sm text-muted-foreground">Liked</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stories liked by readers in swipe mode</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <span className="text-xl">👆</span>
+                          <div>
+                            <div className="text-2xl font-bold text-blue-500">{stats.total_swipes || 0}</div>
+                            <p className="text-sm text-muted-foreground">Swiped</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Total swipes (likes + discards) in swipe mode</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-help">
+                          <span className="text-xl">🔗</span>
+                          <div>
+                            <div className="text-2xl font-bold text-purple-500">{stats.shared_stories || 0}</div>
+                            <p className="text-sm text-muted-foreground">Shared</p>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Unique stories that readers have shared</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
