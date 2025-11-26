@@ -118,6 +118,14 @@ export default function SwipeMode() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={resetSwipes}
+              className="gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowLiked(true)}
               className="gap-2"
             >
