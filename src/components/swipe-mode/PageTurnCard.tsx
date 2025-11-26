@@ -17,6 +17,10 @@ interface Story {
     source_url: string;
     published_at?: string | null;
   } | null;
+  slides?: Array<{
+    slide_number: number;
+    content: string;
+  }>;
 }
 
 interface PageTurnCardProps {
@@ -77,7 +81,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
     : null;
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 100;
+    const threshold = 80;
     
     // Capture velocity for throw physics
     dragVelocity.current = { x: info.velocity.x, y: info.velocity.y };
@@ -125,6 +129,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         isDragging.current = true;
       }}
       onDragEnd={handleDragEnd}
+      whileTap={{ scale: 1.02 }}
       whileDrag={{ scale: liftScale }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
       animate={{ 
@@ -155,7 +160,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       {/* Discard Overlay (Gradient) */}
       <motion.div
         style={{ opacity: discardOpacity }}
-        className="absolute inset-0 bg-gradient-to-br from-destructive/30 via-destructive/20 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        className="absolute inset-0 bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
       >
         <motion.div 
           style={{ scale: iconScale }}
@@ -168,7 +173,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       {/* Like Overlay (Gradient) */}
       <motion.div
         style={{ opacity: likeOpacity }}
-        className="absolute inset-0 bg-gradient-to-bl from-primary/30 via-primary/20 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        className="absolute inset-0 bg-gradient-to-bl from-primary/20 via-primary/10 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
       >
         <motion.div 
           style={{ scale: iconScale }}
@@ -178,8 +183,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         </motion.div>
       </motion.div>
 
-      {/* Story Card (matching existing design) */}
-      <Card className="h-full shadow-2xl overflow-hidden border-2">
+      {/* Story Card (matching feed design) */}
+      <Card className="h-full shadow-lg overflow-hidden border">
         {/* Cover Image */}
         {story.cover_illustration_url && (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
@@ -192,24 +197,17 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
           </div>
         )}
 
-        <CardContent className="p-6 space-y-4">
-          {/* Title */}
-          <h2 className="text-2xl font-semibold line-clamp-4 leading-tight">
-            {story.title}
+        <CardContent className="p-4 space-y-3">
+          {/* Title - use slide headline if available */}
+          <h2 className="text-xl font-semibold line-clamp-3 leading-tight">
+            {story.slides?.[0]?.content?.replace(/<[^>]*>/g, '') || story.title}
           </h2>
-
-          {/* Author */}
-          {story.author && (
-            <p className="text-sm text-muted-foreground">
-              by {story.author}
-            </p>
-          )}
 
           {/* Date */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
             <time dateTime={storyDate.toISOString()}>
-              {format(storyDate, 'MMM d, yyyy')}
+              {format(storyDate, 'MMM d')}
             </time>
           </div>
 
@@ -222,19 +220,16 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
           )}
 
           {/* Read Story Button */}
-          <div className="pt-4 border-t">
+          <div className="pt-3 border-t">
             <Button
               onClick={handleReadStory}
               variant="default"
               size="lg"
-              className="w-full gap-2"
+              className="w-full"
             >
-              <BookOpen className="w-4 h-4" />
-              Read Full Story
+              <BookOpen className="w-4 h-4 mr-2" />
+              Read
             </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Swipe left to discard • Swipe right to like
-            </p>
           </div>
         </CardContent>
       </Card>
