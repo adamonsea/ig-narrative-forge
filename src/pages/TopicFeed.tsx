@@ -563,23 +563,43 @@ const TopicFeed = () => {
                 </TooltipProvider>
 
                 {/* Collection Icons - Daily and Weekly only */}
-                <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
-                  <button
-                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="Today's briefing"
-                  >
-                    <Calendar className="w-4 h-4" />
-                  </button>
-                </Link>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="Today's briefing"
+                        >
+                          <Calendar className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Daily Briefing</p>
+                      <p className="text-xs text-muted-foreground">Today's top stories</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-                <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
-                  <button
-                    className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="This week's briefing"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                  </button>
-                </Link>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="This week's briefing"
+                        >
+                          <CalendarDays className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">Weekly Briefing</p>
+                      <p className="text-xs text-muted-foreground">This week's highlights</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Donation Button - Icon Only */}
@@ -747,7 +767,8 @@ const TopicFeed = () => {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="z-[60]">
-                    <p className="font-medium">Collections</p>
+                    <p className="font-medium">Daily & Weekly Briefings</p>
+                    <p className="text-xs text-muted-foreground mt-1">Quick summaries of top stories</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
