@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -92,6 +92,14 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       } else {
         onSwipe('discard');
       }
+    } else {
+      // Snap back to center with spring animation
+      animate(x, 0, {
+        type: "spring",
+        stiffness: animationPresets.spring.stiffness,
+        damping: animationPresets.spring.damping,
+        mass: animationPresets.spring.mass,
+      });
     }
     
     isDragging.current = false;

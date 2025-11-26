@@ -1,7 +1,14 @@
-// Device performance tier detection for iOS optimizations
-// Only applies optimizations to devices that actually need them
+// Device performance tier detection for iOS and Android optimizations
+// Applies graceful degradation based on device capabilities
 
-export type DevicePerformanceTier = 'modern-ios' | 'mid-range-ios' | 'old-ios' | 'non-ios';
+export type DevicePerformanceTier = 
+  | 'modern-ios' 
+  | 'mid-range-ios' 
+  | 'old-ios' 
+  | 'modern-android' 
+  | 'mid-range-android' 
+  | 'legacy-android' 
+  | 'desktop';
 
 interface PerformanceOptimizations {
   shouldUseVirtualWindowing: boolean;
@@ -33,10 +40,26 @@ function getIOSVersion(): number | null {
 }
 
 /**
+ * Detects Android version from user agent
+ */
+function getAndroidVersion(): number | null {
+  const ua = navigator.userAgent;
+  const match = ua.match(/Android (\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+/**
  * Detects if device is iOS
  */
 function isIOSDevice(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
+/**
+ * Detects if device is Android
+ */
+function isAndroidDevice(): boolean {
+  return /Android/.test(navigator.userAgent);
 }
 
 /**
@@ -65,30 +88,78 @@ function estimateDeviceGeneration(iosVersion: number): 'modern' | 'mid-range' | 
 }
 
 /**
+ * Estimates Android device generation based on version and memory
+ */
+function estimateAndroidGeneration(androidVersion: number): 'modern' | 'mid-range' | 'legacy' {
+  const deviceMemory = (navigator as any).deviceMemory;
+  
+  // Modern Android: Android 10+ with good memory
+  if (androidVersion >= 10 && deviceMemory && deviceMemory >= 4) {
+    return 'modern';
+  }
+  
+  // Mid-range: Android 8-9 or moderate memory
+  if (androidVersion >= 8 && androidVersion < 10) {
+    return 'mid-range';
+  }
+  
+  // Legacy: Android 7 or below, or very low memory
+  if (androidVersion < 8 || (deviceMemory && deviceMemory < 3)) {
+    return 'legacy';
+  }
+  
+  // Default to mid-range for safety
+  return 'mid-range';
+}
+
+/**
  * Gets the device performance tier
  */
 export function getDevicePerformanceTier(): DevicePerformanceTier {
-  if (!isIOSDevice()) {
-    return 'non-ios';
-  }
-  
-  const iosVersion = getIOSVersion();
-  
-  // Can't detect iOS version, assume mid-range for safety
-  if (!iosVersion) {
-    return 'mid-range-ios';
-  }
-  
-  const generation = estimateDeviceGeneration(iosVersion);
-  
-  switch (generation) {
-    case 'modern':
-      return 'modern-ios';
-    case 'mid-range':
+  // Check for iOS
+  if (isIOSDevice()) {
+    const iosVersion = getIOSVersion();
+    
+    // Can't detect iOS version, assume mid-range for safety
+    if (!iosVersion) {
       return 'mid-range-ios';
-    case 'old':
-      return 'old-ios';
+    }
+    
+    const generation = estimateDeviceGeneration(iosVersion);
+    
+    switch (generation) {
+      case 'modern':
+        return 'modern-ios';
+      case 'mid-range':
+        return 'mid-range-ios';
+      case 'old':
+        return 'old-ios';
+    }
   }
+  
+  // Check for Android
+  if (isAndroidDevice()) {
+    const androidVersion = getAndroidVersion();
+    
+    // Can't detect Android version, assume mid-range for safety
+    if (!androidVersion) {
+      return 'mid-range-android';
+    }
+    
+    const generation = estimateAndroidGeneration(androidVersion);
+    
+    switch (generation) {
+      case 'modern':
+        return 'modern-android';
+      case 'mid-range':
+        return 'mid-range-android';
+      case 'legacy':
+        return 'legacy-android';
+    }
+  }
+  
+  // Desktop or other devices
+  return 'desktop';
 }
 
 /**
@@ -100,34 +171,37 @@ export function getDeviceOptimizations(): PerformanceOptimizations {
   
   switch (tier) {
     case 'modern-ios':
+    case 'modern-android':
       // Modern devices don't need most optimizations
       return {
         shouldUseVirtualWindowing: false,
         shouldUseCSSCarousel: false,
         shouldAggressivelyLazyLoadImages: false,
-        shouldReduceMotion: prefersReducedMotion, // Only if user preference
+        shouldReduceMotion: prefersReducedMotion,
       };
       
     case 'mid-range-ios':
+    case 'mid-range-android':
       // Mid-range needs some help with memory and rendering
       return {
-        shouldUseVirtualWindowing: true, // Help with memory
-        shouldUseCSSCarousel: false, // Can still handle JS animations
-        shouldAggressivelyLazyLoadImages: true, // Reduce memory pressure
+        shouldUseVirtualWindowing: true,
+        shouldUseCSSCarousel: false,
+        shouldAggressivelyLazyLoadImages: true,
         shouldReduceMotion: prefersReducedMotion,
       };
       
     case 'old-ios':
-      // Old devices need all the help they can get
+    case 'legacy-android':
+      // Old/legacy devices need all the help they can get
       return {
         shouldUseVirtualWindowing: true,
-        shouldUseCSSCarousel: true, // CSS-only for best performance
+        shouldUseCSSCarousel: true,
         shouldAggressivelyLazyLoadImages: true,
         shouldReduceMotion: true, // Always reduce motion
       };
       
-    case 'non-ios':
-      // Android and other devices use default behavior
+    case 'desktop':
+      // Desktop devices use default behavior
       return {
         shouldUseVirtualWindowing: false,
         shouldUseCSSCarousel: false,
@@ -156,6 +230,7 @@ export function getAnimationPresets(): AnimationPresets {
   
   switch (tier) {
     case 'modern-ios':
+    case 'modern-android':
       // Modern devices: snappy and responsive
       return {
         dragElastic: 0.15,
@@ -164,6 +239,7 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'mid-range-ios':
+    case 'mid-range-android':
       // Mid-range: smooth and balanced
       return {
         dragElastic: 0.10,
@@ -172,15 +248,16 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'old-ios':
-      // Old devices: gentle and smooth to reduce jank
+    case 'legacy-android':
+      // Old/legacy devices: gentle and smooth to reduce jank
       return {
         dragElastic: 0.05,
         spring: { stiffness: 180, damping: 30, mass: 1.3 },
         dragTransition: { power: 0.4, timeConstant: 200 },
       };
       
-    case 'non-ios':
-      // Android/other: balanced defaults
+    case 'desktop':
+      // Desktop: balanced and smooth
       return {
         dragElastic: 0.12,
         spring: { stiffness: 400, damping: 38, mass: 1.0 },
@@ -198,10 +275,20 @@ export function useDeviceOptimizations(): PerformanceOptimizations {
   return optimizations;
 }
 
-// For backward compatibility, export a simple iOS check
+// For backward compatibility, export mobile device checks
 export function useIsIOS(): boolean {
   const tier = getDevicePerformanceTier();
-  return tier !== 'non-ios';
+  return tier.includes('ios');
+}
+
+export function useIsAndroid(): boolean {
+  const tier = getDevicePerformanceTier();
+  return tier.includes('android');
+}
+
+export function useIsMobile(): boolean {
+  const tier = getDevicePerformanceTier();
+  return tier !== 'desktop';
 }
 
 // React import for the hook
