@@ -233,8 +233,18 @@ export default function SwipeMode() {
       {currentStory && (
         <Dialog open={fullStoryOpen} onOpenChange={setFullStoryOpen}>
           <DialogContent className="max-w-4xl h-[90vh] overflow-hidden p-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto pb-20">
-              {/* Cover Image - smaller on mobile */}
+            {/* Close button - prominent at top */}
+            <Button
+              onClick={() => setFullStoryOpen(false)}
+              variant="ghost"
+              size="sm"
+              className="absolute top-4 right-4 z-50 gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+            >
+              Close ✕
+            </Button>
+
+            <div className="flex-1 overflow-y-auto pb-24">
+              {/* Cover Image */}
               {currentStory.cover_illustration_url && (
                 <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
                   <img
@@ -245,36 +255,40 @@ export default function SwipeMode() {
                 </div>
               )}
               
-              {/* Story Content */}
-              <div className="p-4 md:p-6 space-y-4">
-                {/* All slides with larger text */}
+              {/* Story Content - more padding, larger text */}
+              <div className="p-6 md:p-8 space-y-6">
                 {currentStory.slides
                   ?.sort((a, b) => a.slide_number - b.slide_number)
                   .map(slide => (
-                    <div key={slide.slide_number} className="prose prose-base md:prose-lg max-w-none">
+                    <div key={slide.slide_number} className="prose prose-lg md:prose-xl max-w-none">
                       <div dangerouslySetInnerHTML={{ __html: slide.content }} />
                     </div>
                   ))}
               </div>
             </div>
             
-            {/* Prominent Source CTA - Fixed at bottom outside scroll */}
+            {/* Prominent Source CTA - Fixed at bottom */}
             {currentStory.article?.source_url && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t">
-                <Button
-                  asChild
-                  size="lg"
-                  className="w-full gap-2"
-                >
-                  <a
-                    href={currentStory.article.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t shadow-lg">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground text-center font-medium">
+                    Read the full story at the source
+                  </p>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="w-full gap-2 text-base font-semibold"
                   >
-                    <ExternalLink className="w-4 h-4" />
-                    Read original at {sourceDomain}
-                  </a>
-                </Button>
+                    <a
+                      href={currentStory.article.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      View at {sourceDomain} →
+                    </a>
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>
