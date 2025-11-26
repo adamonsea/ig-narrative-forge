@@ -131,7 +131,7 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
         </Tooltip>
         <DropdownMenuContent 
           align="end" 
-          className="w-80 bg-background border shadow-lg z-50"
+          className="w-80 bg-popover text-popover-foreground border shadow-lg z-50"
           sideOffset={5}
         >
           <div className="px-3 py-2 text-xs text-muted-foreground border-b">
