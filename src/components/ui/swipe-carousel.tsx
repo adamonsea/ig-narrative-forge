@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { useDeviceOptimizations } from "@/lib/deviceUtils";
+import { useDeviceOptimizations, getAnimationPresets } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -47,6 +47,7 @@ export function SwipeCarousel({
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
   const optimizations = useDeviceOptimizations();
+  const animationPresets = useMemo(() => getAnimationPresets(), []);
 
   // Device-specific touch optimization (only for mid-range/old iOS)
   useEffect(() => {
@@ -87,12 +88,10 @@ export function SwipeCarousel({
   useEffect(() => {
     const controls = animate(x, -index * width, {
       type: "spring",
-      stiffness: 520,
-      damping: 46,
-      mass: 0.9,
+      ...animationPresets.spring,
     });
     return controls.stop;
-  }, [index]);
+  }, [index, animationPresets]);
 
   // notify parent of slide changes and track swipes
   useEffect(() => {
@@ -182,12 +181,10 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
     
-    // Animate to target slide
+    // Animate to target slide with device-specific spring
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      stiffness: 400,
-      damping: 40,
-      mass: 1,
+      ...animationPresets.spring,
     });
     setIndex(targetIndex);
     return () => controls.stop();
@@ -214,13 +211,10 @@ export function SwipeCarousel({
         <motion.div
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
-          dragElastic={optimizations.shouldReduceMotion ? 0.05 : 0.12}
+          dragElastic={animationPresets.dragElastic}
           dragMomentum
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={optimizations.shouldReduceMotion
-            ? { power: 0.4, timeConstant: 200 }
-            : { power: 0.35, timeConstant: 260 }
-          }
+          dragTransition={animationPresets.dragTransition}
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
             x, 

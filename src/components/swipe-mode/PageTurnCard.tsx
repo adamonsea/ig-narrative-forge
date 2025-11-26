@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ExternalLink, Heart, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { useDeviceOptimizations, getAnimationPresets } from '@/lib/deviceUtils';
 
 interface Story {
   id: string;
@@ -27,8 +28,16 @@ interface PageTurnCardProps {
 
 export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: PageTurnCardProps) => {
   const isDragging = useRef(false);
+  const optimizations = useDeviceOptimizations();
+  const animationPresets = useMemo(() => getAnimationPresets(), []);
   const x = useMotionValue(0);
-  const rotateY = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
+  
+  // Use less aggressive 3D rotation on old devices to reduce jank
+  const rotateY = useTransform(
+    x, 
+    [-200, 0, 200], 
+    optimizations.shouldReduceMotion ? [-5, 0, 5] : [-15, 0, 15]
+  );
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
 
   // Overlay opacity for like/discard
@@ -62,16 +71,23 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       key={story.id}
       style={{
         x,
-        rotateY,
+        ...(optimizations.shouldReduceMotion ? {} : { rotateY }), // Disable 3D on old devices
         opacity,
         perspective: 1000,
         transformStyle: 'preserve-3d',
         cursor: 'grab',
+        // GPU acceleration hints for smoother animations
+        willChange: 'transform',
+        transform: 'translate3d(0, 0, 0)',
+        WebkitTransform: 'translate3d(0, 0, 0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
         ...style
       }}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.7}
+      dragElastic={animationPresets.dragElastic}
+      dragTransition={animationPresets.dragTransition}
       onDragStart={() => { isDragging.current = true; }}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
@@ -82,7 +98,15 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         isDragging.current = false;
       }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
-      animate={{ scale: 1, y: 0, opacity: 1 }}
+      animate={{ 
+        scale: 1, 
+        y: 0, 
+        opacity: 1,
+        transition: {
+          type: "spring",
+          ...animationPresets.spring
+        }
+      }}
       exit={
         exitDirection
           ? {
@@ -93,7 +117,6 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
             }
           : undefined
       }
-      transition={{ duration: 0.3 }}
       className="absolute inset-0 touch-none"
     >
       {/* Discard Overlay (Red) */}
