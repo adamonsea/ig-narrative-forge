@@ -1676,6 +1676,33 @@ export type Database = {
         }
         Relationships: []
       }
+      reader_profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          last_active_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          last_active_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          last_active_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       request_logs: {
         Row: {
           created_at: string
@@ -2720,6 +2747,55 @@ export type Database = {
           visitor_id?: string
         }
         Relationships: []
+      }
+      story_swipes: {
+        Row: {
+          created_at: string
+          id: string
+          story_id: string
+          swipe_type: string
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          story_id: string
+          swipe_type: string
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          story_id?: string
+          swipe_type?: string
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_swipes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_swipes_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_swipes_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suggested_keywords: {
         Row: {

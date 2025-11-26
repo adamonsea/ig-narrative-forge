@@ -20,6 +20,7 @@ import TopicArchive from "./pages/TopicArchive";
 import DailyRoundupList from "./pages/DailyRoundupList";
 import WeeklyRoundupList from "./pages/WeeklyRoundupList";
 import BriefingsArchive from "./pages/BriefingsArchive";
+import SwipeMode from "./pages/SwipeMode";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -74,6 +75,9 @@ const App = () => {
               <Route path="/feed/:slug/story/:storyId" element={<StoryPage />} />
               <Route path="/feed/:slug/daily/:date" element={<DailyRoundupList />} />
               <Route path="/feed/:slug/weekly/:weekStart" element={<WeeklyRoundupList />} />
+              
+              {/* Swipe Mode (isolated) */}
+              <Route path="/play/:slug" element={<SwipeMode />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
