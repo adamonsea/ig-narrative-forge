@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ExternalLink, Heart, X } from 'lucide-react';
@@ -20,10 +20,11 @@ interface PageTurnCardProps {
   story: Story;
   onSwipe: (direction: 'like' | 'discard') => void;
   onTap: () => void;
+  exitDirection?: 'left' | 'right' | null;
   style?: React.CSSProperties;
 }
 
-export const PageTurnCard = ({ story, onSwipe, onTap, style }: PageTurnCardProps) => {
+export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: PageTurnCardProps) => {
   const x = useMotionValue(0);
   const rotateY = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
@@ -54,6 +55,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, style }: PageTurnCardProps
 
   return (
     <motion.div
+      key={story.id}
       style={{
         x,
         rotateY,
@@ -68,7 +70,20 @@ export const PageTurnCard = ({ story, onSwipe, onTap, style }: PageTurnCardProps
       dragElastic={0.7}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      onClick={onTap}
+      onTap={onTap}
+      initial={{ scale: 0.9, y: 50, opacity: 0 }}
+      animate={{ scale: 1, y: 0, opacity: 1 }}
+      exit={
+        exitDirection
+          ? {
+              x: exitDirection === 'left' ? -500 : 500,
+              rotate: exitDirection === 'left' ? -20 : 20,
+              opacity: 0,
+              transition: { duration: 0.3, ease: 'easeInOut' }
+            }
+          : undefined
+      }
+      transition={{ duration: 0.3 }}
       className="absolute inset-0 touch-none"
     >
       {/* Discard Overlay (Red) */}
