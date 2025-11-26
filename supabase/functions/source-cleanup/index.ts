@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 interface CleanupRequest {
-  operation: 'cleanup_orphaned' | 'fix_sussex_express' | 'full_cleanup'
+  operation: 'cleanup_orphaned' | 'fix_sussex_express' | 'full_cleanup' | 'delete_except_core_topics'
 }
 
 Deno.serve(async (req) => {
@@ -51,6 +51,93 @@ Deno.serve(async (req) => {
       
       console.log('✅ Orphaned sources cleaned up:', cleanupResult)
       results.push({ operation: 'orphaned_cleanup', result: cleanupResult })
+    }
+
+    if (operation === 'delete_except_core_topics') {
+      console.log('🧹 Deleting sources except Eastbourne, Kenilworth, and Medical device development...')
+      
+      const keepTopicIds = [
+        'd224e606-1a4c-4713-8135-1d30e2d6d0c6', // Eastbourne
+        '79fb5f44-47a3-493e-8b81-3ad8892cf69c', // Kenilworth
+        '3f05c5a3-3196-455d-bff4-e9a9a20b8615'  // Medical device development
+      ]
+      
+      // First get all sources that should be deleted
+      const { data: sourcesToDelete, error: fetchError } = await supabase
+        .from('content_sources')
+        .select('id')
+        .or(`topic_id.not.in.(${keepTopicIds.join(',')}),topic_id.is.null`)
+      
+      if (fetchError) {
+        console.error('❌ Fetch sources failed:', fetchError)
+        throw new Error(`Fetch sources failed: ${fetchError.message}`)
+      }
+      
+      const sourceIdsToDelete = (sourcesToDelete || []).map(s => s.id)
+      console.log(`Found ${sourceIdsToDelete.length} sources to delete`)
+      
+      if (sourceIdsToDelete.length === 0) {
+        results.push({ 
+          operation: 'delete_except_core_topics', 
+          result: { 
+            message: 'No sources to delete',
+            junction_deleted: 0,
+            sources_deleted: 0
+          } 
+        })
+        return
+      }
+      
+      // Delete junction table entries for these sources
+      const { data: junctionDeleted, error: junctionError } = await supabase
+        .from('topic_sources')
+        .delete()
+        .in('source_id', sourceIdsToDelete)
+        .select()
+      
+      if (junctionError) {
+        console.error('❌ Junction table cleanup failed:', junctionError)
+        throw new Error(`Junction table cleanup failed: ${junctionError.message}`)
+      }
+      
+      console.log('✅ Junction table entries deleted:', junctionDeleted?.length || 0)
+      
+      // Nullify source_id on articles before deleting sources
+      const { data: orphanedArticles, error: orphanError } = await supabase
+        .from('articles')
+        .update({ source_id: null })
+        .in('source_id', sourceIdsToDelete)
+        .select('id')
+      
+      if (orphanError) {
+        console.error('❌ Orphaning articles failed:', orphanError)
+        throw new Error(`Orphaning articles failed: ${orphanError.message}`)
+      }
+      
+      console.log('✅ Orphaned articles:', orphanedArticles?.length || 0)
+      
+      // Then delete the sources themselves
+      const { data: deletedSources, error: deleteError } = await supabase
+        .from('content_sources')
+        .delete()
+        .in('id', sourceIdsToDelete)
+        .select()
+      
+      if (deleteError) {
+        console.error('❌ Source deletion failed:', deleteError)
+        throw new Error(`Source deletion failed: ${deleteError.message}`)
+      }
+      
+      console.log('✅ Sources deleted:', deletedSources?.length || 0)
+      results.push({ 
+        operation: 'delete_except_core_topics', 
+        result: { 
+          message: `Deleted ${junctionDeleted?.length || 0} junction entries, orphaned ${orphanedArticles?.length || 0} articles, and deleted ${deletedSources?.length || 0} sources`,
+          junction_deleted: junctionDeleted?.length || 0,
+          articles_orphaned: orphanedArticles?.length || 0,
+          sources_deleted: deletedSources?.length || 0
+        } 
+      })
     }
 
     // Get final source count for comparison
