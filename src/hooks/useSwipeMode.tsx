@@ -41,15 +41,27 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // Get ALL topic_article IDs for this topic (no limit)
-      const topicArticlesQuery = await (supabase as any)
-        .from('topic_articles')
-        .select('id')
-        .eq('topic_id', topicId);
+      // Get ALL topic_article IDs for this topic (paginated to bypass 1000 row default limit)
+      let topicArticleIds: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (topicArticlesQuery.error) throw topicArticlesQuery.error;
+      while (hasMore) {
+        const topicArticlesQuery = await (supabase as any)
+          .from('topic_articles')
+          .select('id')
+          .eq('topic_id', topicId)
+          .range(from, from + pageSize - 1);
 
-      const topicArticleIds = (topicArticlesQuery.data || []).map((ta: any) => ta.id);
+        if (topicArticlesQuery.error) throw topicArticlesQuery.error;
+
+        const pageIds = (topicArticlesQuery.data || []).map((ta: any) => ta.id);
+        topicArticleIds = [...topicArticleIds, ...pageIds];
+        
+        hasMore = pageIds.length === pageSize;
+        from += pageSize;
+      }
       
       if (topicArticleIds.length === 0) {
         setStories([]);
