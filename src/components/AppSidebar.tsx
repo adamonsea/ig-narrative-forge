@@ -1,4 +1,4 @@
-import { Home, Settings, LogOut, MapPin, Tag, ChevronDown } from "lucide-react";
+import { Home, Settings, LogOut, MapPin, Tag, ChevronDown, Gamepad2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -36,6 +36,9 @@ export function AppSidebar() {
   
   // Check if any topic is active to keep the group open
   const hasActiveTopicRoute = topics?.some((t) => isTopicActive(t.slug));
+  
+  // Get first topic for play mode link
+  const firstTopicSlug = topics?.[0]?.slug || 'eastbourne';
 
   return (
     <Sidebar collapsible="icon">
@@ -69,6 +72,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith('/play')}>
+                  <Link to={`/play/${firstTopicSlug}`}>
+                    <Gamepad2 className="h-4 w-4" />
+                    <span>Play Mode</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
