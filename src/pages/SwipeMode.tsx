@@ -6,6 +6,7 @@ import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
+import { SwipeModeHint } from '@/components/swipe-mode/SwipeModeHint';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -26,7 +27,7 @@ export default function SwipeMode() {
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
 
-  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, resetSwipes } = useSwipeMode(topicId || '');
+  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, resetSwipes, stories, currentIndex } = useSwipeMode(topicId || '');
 
   // Expose reset function for testing (accessible via window.resetSwipes())
   useEffect(() => {
@@ -160,6 +161,9 @@ export default function SwipeMode() {
           </div>
         ) : currentStory ? (
           <div className="relative h-[600px]">
+            {/* Swipe hint animation */}
+            <SwipeModeHint />
+            
             {/* Stack effect: cards behind current card */}
             <div className="absolute inset-0 pointer-events-none">
               <div 
@@ -179,6 +183,15 @@ export default function SwipeMode() {
                 }}
               />
             </div>
+            
+            {/* Preload next card image */}
+            {stories[currentIndex + 1]?.cover_illustration_url && (
+              <link 
+                rel="preload" 
+                as="image" 
+                href={stories[currentIndex + 1].cover_illustration_url} 
+              />
+            )}
             
             {/* Current card with animation */}
             <AnimatePresence mode="wait">

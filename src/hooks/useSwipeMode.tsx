@@ -96,6 +96,7 @@ export const useSwipeMode = (topicId: string) => {
       // Combine data
       const enrichedStories = (storiesQuery.data || [])
         .filter((s: any) => !swipedIds.has(s.id))
+        .filter((s: any) => s.cover_illustration_url) // Only show stories with images
         .map((story: any) => {
           const article = (articlesQuery.data || []).find((a: any) => a.id === story.article_id);
           const slides = (slidesQuery.data || []).filter((s: any) => s.story_id === story.id);
@@ -251,6 +252,8 @@ export const useSwipeMode = (topicId: string) => {
     recordSwipe,
     fetchLikedStories,
     refetch: fetchUnswipedStories,
-    resetSwipes
+    resetSwipes,
+    stories,
+    currentIndex
   };
 };
