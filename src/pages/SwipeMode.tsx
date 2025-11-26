@@ -232,8 +232,8 @@ export default function SwipeMode() {
       {/* Full Story Modal */}
       {currentStory && (
         <Dialog open={fullStoryOpen} onOpenChange={setFullStoryOpen}>
-          <DialogContent className="max-w-4xl h-[90vh] overflow-hidden p-0">
-            <div className="h-full overflow-y-auto">
+          <DialogContent className="max-w-4xl h-[90vh] overflow-hidden p-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto pb-20">
               {/* Cover Image - smaller on mobile */}
               {currentStory.cover_illustration_url && (
                 <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
@@ -255,28 +255,28 @@ export default function SwipeMode() {
                       <div dangerouslySetInnerHTML={{ __html: slide.content }} />
                     </div>
                   ))}
-                
-                {/* Prominent Source CTA */}
-                {currentStory.article?.source_url && (
-                  <div className="pt-6 mt-6 border-t sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4">
-                    <Button
-                      asChild
-                      size="lg"
-                      className="w-full gap-2"
-                    >
-                      <a
-                        href={currentStory.article.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Read original at {sourceDomain}
-                      </a>
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
+            
+            {/* Prominent Source CTA - Fixed at bottom outside scroll */}
+            {currentStory.article?.source_url && (
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t">
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full gap-2"
+                >
+                  <a
+                    href={currentStory.article.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Read original at {sourceDomain}
+                  </a>
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

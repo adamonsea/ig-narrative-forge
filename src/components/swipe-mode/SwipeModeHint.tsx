@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hand } from 'lucide-react';
+import { Heart, X } from 'lucide-react';
 
 export const SwipeModeHint = () => {
   const [show, setShow] = useState(true);
@@ -23,20 +23,52 @@ export const SwipeModeHint = () => {
           exit={{ opacity: 0 }}
           className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
         >
+          {/* Discard Left Animation */}
           <motion.div
             animate={{ 
-              x: [-50, 50, 0],
-              opacity: [1, 1, 0]
+              x: [-150, -300],
+              y: [0, 10],
+              rotateZ: [0, -12],
+              opacity: [1, 0]
             }}
             transition={{ 
-              duration: 1.5,
-              ease: "easeInOut",
-              times: [0, 0.5, 1]
+              duration: 1,
+              ease: "easeOut",
+              delay: 0
             }}
-            className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-6 py-3 rounded-full border shadow-lg"
+            className="absolute bg-card border-2 shadow-xl px-8 py-12 rounded-2xl w-64"
           >
-            <Hand className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Swipe to like or discard</span>
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.5, repeat: 1 }}
+              className="absolute top-4 right-4 bg-destructive/20 p-3 rounded-full"
+            >
+              <X className="w-6 h-6 text-destructive" strokeWidth={3} />
+            </motion.div>
+          </motion.div>
+
+          {/* Like Right Animation */}
+          <motion.div
+            animate={{ 
+              x: [150, 300],
+              y: [0, 10],
+              rotateZ: [0, 12],
+              opacity: [1, 0]
+            }}
+            transition={{ 
+              duration: 1,
+              ease: "easeOut",
+              delay: 1.2
+            }}
+            className="absolute bg-card border-2 shadow-xl px-8 py-12 rounded-2xl w-64"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.5, repeat: 1, delay: 1.2 }}
+              className="absolute top-4 right-4 bg-green-500/20 p-3 rounded-full"
+            >
+              <Heart className="w-6 h-6 text-green-500 fill-green-500" strokeWidth={3} />
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
