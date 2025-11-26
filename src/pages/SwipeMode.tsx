@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwipeMode } from '@/hooks/useSwipeMode';
+import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
-import { ArrowLeft, Heart, RotateCcw, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Heart, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -27,17 +28,9 @@ export default function SwipeMode() {
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
 
-  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, resetSwipes, stories, currentIndex } = useSwipeMode(topicId || '');
+  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, stories, currentIndex } = useSwipeMode(topicId || '');
+  const optimizations = useDeviceOptimizations();
 
-  // Expose reset function for testing (accessible via window.resetSwipes())
-  useEffect(() => {
-    if (resetSwipes) {
-      (window as any).resetSwipes = resetSwipes;
-    }
-    return () => {
-      delete (window as any).resetSwipes;
-    };
-  }, [resetSwipes]);
 
   // Fetch topic data
   useEffect(() => {
@@ -144,10 +137,6 @@ export default function SwipeMode() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={refetch} variant="outline" className="gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Refresh
-              </Button>
               <Button onClick={() => setShowLiked(true)} className="gap-2">
                 <Heart className="w-4 h-4" />
                 View Liked ({stats.likeCount})
@@ -155,64 +144,51 @@ export default function SwipeMode() {
             </div>
           </div>
         ) : currentStory ? (
-          <div className="relative h-[600px]">
+          <div className="relative h-[600px]" style={{ zIndex: 1 }}>
             {/* Swipe hint animation */}
             <SwipeModeHint />
             
-            {/* Show actual next card underneath (if exists) */}
-            <div className="absolute inset-0 pointer-events-none">
-              {stories[currentIndex + 1] ? (
-                <>
-                  {/* Next card - visible and realistic */}
-                  <div 
-                    className="absolute inset-0 rounded-lg overflow-hidden"
-                    style={{ 
-                      transform: 'scale(0.95) translateY(8px)',
-                      opacity: 0.6,
-                      zIndex: -1,
-                      filter: 'blur(1.5px)',
-                    }}
-                  >
-                    <PageTurnCard
-                      story={stories[currentIndex + 1]}
-                      onSwipe={() => {}}
-                      onTap={() => {}}
-                      style={{ pointerEvents: 'none' }}
-                    />
+            {/* Show lightweight static preview underneath (if next story exists) */}
+            {stories[currentIndex + 1] && (
+              <>
+                {/* Next card preview - static, lightweight */}
+                <div 
+                  className="absolute inset-0 rounded-lg overflow-hidden bg-card border shadow-sm"
+                  style={{ 
+                    transform: 'scale(0.95) translateY(8px)',
+                    opacity: 0.7,
+                    zIndex: 0,
+                    filter: optimizations.shouldReduceMotion ? 'none' : 'blur(1px)',
+                  }}
+                >
+                  {/* Static preview - just image and skeleton, not full PageTurnCard */}
+                  {stories[currentIndex + 1].cover_illustration_url && (
+                    <div className="w-full aspect-[4/3] bg-muted overflow-hidden">
+                      <img 
+                        src={stories[currentIndex + 1].cover_illustration_url}
+                        alt=""
+                        className="w-full h-full object-cover opacity-80"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div className="p-4 space-y-2">
+                    <div className="h-8 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-1/2" />
                   </div>
-                  
-                  {/* Placeholder card behind next */}
-                  <div 
-                    className="absolute inset-0 bg-card border rounded-lg shadow-sm"
-                    style={{ 
-                      transform: 'scale(0.92) translateY(14px)',
-                      opacity: 0.4,
-                      zIndex: -2
-                    }}
-                  />
-                </>
-              ) : (
-                <>
-                  {/* Fallback placeholder cards */}
-                  <div 
-                    className="absolute inset-0 bg-card border rounded-lg shadow-sm"
-                    style={{ 
-                      transform: 'scale(0.95) translateY(10px)',
-                      opacity: 0.5,
-                      zIndex: -2
-                    }}
-                  />
-                  <div 
-                    className="absolute inset-0 bg-card border rounded-lg shadow"
-                    style={{ 
-                      transform: 'scale(0.97) translateY(5px)',
-                      opacity: 0.7,
-                      zIndex: -1
-                    }}
-                  />
-                </>
-              )}
-            </div>
+                </div>
+                
+                {/* Placeholder card behind next */}
+                <div 
+                  className="absolute inset-0 bg-card border rounded-lg shadow-sm"
+                  style={{ 
+                    transform: 'scale(0.92) translateY(14px)',
+                    opacity: 0.4,
+                    zIndex: -1
+                  }}
+                />
+              </>
+            )}
             
             {/* Preload next card image */}
             {stories[currentIndex + 1]?.cover_illustration_url && (
@@ -223,7 +199,7 @@ export default function SwipeMode() {
               />
             )}
             
-            {/* Current card with animation */}
+            {/* Current card with animation - highest z-index */}
             <AnimatePresence mode="wait">
               <PageTurnCard
                 key={currentStory.id}
@@ -231,6 +207,7 @@ export default function SwipeMode() {
                 onSwipe={handleSwipe}
                 onTap={handleCardTap}
                 exitDirection={exitDirection}
+                style={{ zIndex: 10 }}
               />
             </AnimatePresence>
           </div>
