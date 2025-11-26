@@ -123,11 +123,14 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         ...style
       }}
       drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={animationPresets.dragElastic}
-      dragTransition={animationPresets.dragTransition}
-      onDragStart={() => { 
+      dragConstraints={{ left: -500, right: 500 }}
+      dragElastic={0.2}
+      onDragStart={() => {
         isDragging.current = true;
+      }}
+      onDrag={(_, info) => {
+        // Update x position during drag to follow finger
+        x.set(info.offset.x);
       }}
       onDragEnd={handleDragEnd}
       whileTap={{ scale: 1.02 }}
