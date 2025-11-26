@@ -267,17 +267,31 @@ export default function SwipeMode() {
               </div>
             </div>
             
-            {/* Prominent Source CTA - Fixed at bottom */}
-            {currentStory.article?.source_url && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t shadow-lg">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground text-center font-medium">
-                    Read the full story at the source
-                  </p>
+            {/* Prominent CTAs - Fixed at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t shadow-lg">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground text-center font-medium">
+                  Continue reading
+                </p>
+                
+                {/* View Full Story on Platform */}
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full gap-2 text-base font-semibold"
+                >
+                  <a href={`/feed/${slug}/story/${currentStory.id}`}>
+                    View Full Story
+                  </a>
+                </Button>
+
+                {/* External Source Link */}
+                {currentStory.article?.source_url && (
                   <Button
                     asChild
                     size="lg"
-                    className="w-full gap-2 text-base font-semibold"
+                    variant="outline"
+                    className="w-full gap-2 text-base"
                   >
                     <a
                       href={currentStory.article.source_url}
@@ -285,12 +299,12 @@ export default function SwipeMode() {
                       rel="noopener noreferrer"
                     >
                       <ExternalLink className="w-5 h-5" />
-                      View at {sourceDomain} →
+                      Read at {sourceDomain}
                     </a>
                   </Button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </DialogContent>
         </Dialog>
       )}
