@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
@@ -23,6 +24,7 @@ export default function SwipeMode() {
   const [showLiked, setShowLiked] = useState(false);
   const [fullStoryOpen, setFullStoryOpen] = useState(false);
   const [loadingTopic, setLoadingTopic] = useState(true);
+  const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
 
   const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch } = useSwipeMode(topicId || '');
 
@@ -61,7 +63,12 @@ export default function SwipeMode() {
 
   const handleSwipe = async (direction: 'like' | 'discard') => {
     if (!currentStory) return;
-    await recordSwipe(currentStory.id, direction);
+    setExitDirection(direction === 'like' ? 'right' : 'left');
+    // Small delay to let animation start before recording swipe
+    setTimeout(() => {
+      recordSwipe(currentStory.id, direction);
+      setExitDirection(null);
+    }, 100);
   };
 
   const handleCardTap = () => {
@@ -143,11 +150,15 @@ export default function SwipeMode() {
           </div>
         ) : currentStory ? (
           <div className="relative h-[600px]">
-            <PageTurnCard
-              story={currentStory}
-              onSwipe={handleSwipe}
-              onTap={handleCardTap}
-            />
+            <AnimatePresence mode="wait">
+              <PageTurnCard
+                key={currentStory.id}
+                story={currentStory}
+                onSwipe={handleSwipe}
+                onTap={handleCardTap}
+                exitDirection={exitDirection}
+              />
+            </AnimatePresence>
           </div>
         ) : null}
       </main>
