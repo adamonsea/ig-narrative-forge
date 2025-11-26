@@ -644,12 +644,14 @@ const TopicFeed = () => {
                       <TooltipTrigger asChild>
                         <Link to={`/play/${slug}`}>
                           <button
-                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground ${
-                              showPlayModePulse ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
+                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
                             }`}
                             aria-label="Play mode"
                           >
-                            <Gamepad2 className="w-4 h-4" />
+                            <Gamepad2 className={`w-4 h-4 transition-colors ${
+                              showPlayModePulse ? 'text-primary' : ''
+                            }`} />
                           </button>
                         </Link>
                       </TooltipTrigger>
