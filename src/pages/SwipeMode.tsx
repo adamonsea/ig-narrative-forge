@@ -232,11 +232,11 @@ export default function SwipeMode() {
       {/* Full Story Modal */}
       {currentStory && (
         <Dialog open={fullStoryOpen} onOpenChange={setFullStoryOpen}>
-          <DialogContent className="max-w-4xl h-[90vh] overflow-hidden">
+          <DialogContent className="max-w-4xl h-[90vh] overflow-hidden p-0">
             <div className="h-full overflow-y-auto">
-              {/* Cover Image */}
+              {/* Cover Image - smaller on mobile */}
               {currentStory.cover_illustration_url && (
-                <div className="w-full aspect-video overflow-hidden bg-muted">
+                <div className="w-full aspect-[21/9] md:aspect-video overflow-hidden bg-muted">
                   <img
                     src={currentStory.cover_illustration_url}
                     alt={currentStory.title}
@@ -246,28 +246,33 @@ export default function SwipeMode() {
               )}
               
               {/* Story Content */}
-              <div className="p-6 space-y-4">
-                {/* All slides */}
+              <div className="p-4 md:p-6 space-y-4">
+                {/* All slides with larger text */}
                 {currentStory.slides
                   ?.sort((a, b) => a.slide_number - b.slide_number)
                   .map(slide => (
-                    <div key={slide.slide_number} className="prose prose-sm max-w-none">
+                    <div key={slide.slide_number} className="prose prose-base md:prose-lg max-w-none">
                       <div dangerouslySetInnerHTML={{ __html: slide.content }} />
                     </div>
                   ))}
                 
-                {/* Source Link */}
+                {/* Prominent Source CTA */}
                 {currentStory.article?.source_url && (
-                  <div className="pt-4 border-t">
-                    <a
-                      href={currentStory.article.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                  <div className="pt-6 mt-6 border-t sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4">
+                    <Button
+                      asChild
+                      size="lg"
+                      className="w-full gap-2"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      Read original story at {sourceDomain}
-                    </a>
+                      <a
+                        href={currentStory.article.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Read original at {sourceDomain}
+                      </a>
+                    </Button>
                   </div>
                 )}
               </div>
