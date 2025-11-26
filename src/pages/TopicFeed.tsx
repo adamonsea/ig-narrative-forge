@@ -98,6 +98,17 @@ const TopicFeed = () => {
     }
   }, [isModalOpen, ensureFilterStoryIndexLoaded]);
 
+  // Debug helper for resetting collections hint
+  useEffect(() => {
+    (window as any).resetCollectionsHint = () => {
+      if (slug) {
+        localStorage.removeItem(`collections_hint_shown_${slug}`);
+        setShowCollectionsHint(true);
+        console.log('Collections hint reset - scroll to trigger it again');
+      }
+    };
+  }, [slug]);
+
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
 
