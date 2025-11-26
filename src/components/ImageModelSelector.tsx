@@ -131,26 +131,26 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
         </Tooltip>
         <DropdownMenuContent 
           align="end" 
-          className="w-80 bg-popover text-popover-foreground border shadow-lg z-50"
+          className="w-80 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border shadow-lg z-50"
           sideOffset={5}
         >
-          <div className="px-3 py-2 text-xs text-muted-foreground border-b">
+          <div className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 border-b">
             {styleLabel} Mode
           </div>
           {availableModels.map((model) => (
             <DropdownMenuItem
               key={model.id}
               onClick={() => onModelSelect(model)}
-              className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex-col items-start text-popover-foreground"
+              className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 focus:bg-gray-100 dark:focus:bg-gray-800 flex-col items-start"
             >
               <div className="flex w-full items-center justify-between mb-1">
-                <span className="font-medium text-sm text-popover-foreground">{model.name}</span>
+                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{model.name}</span>
                 <span className="text-xs font-semibold text-primary">
                   {model.credits} credits
                 </span>
               </div>
               {model.description && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
                   {model.description}
                 </span>
               )}
