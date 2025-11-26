@@ -199,7 +199,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
 
         <CardContent className="p-4 space-y-3">
           {/* Title - use slide headline if available */}
-          <h2 className="text-xl font-semibold line-clamp-3 leading-tight">
+          <h2 className="text-2xl font-bold line-clamp-3 leading-tight">
             {story.slides?.[0]?.content?.replace(/<[^>]*>/g, '') || story.title}
           </h2>
 
@@ -220,14 +220,13 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
           )}
 
           {/* Read Story Button */}
-          <div className="pt-3 border-t">
+          <div className="pt-3 border-t flex justify-center">
             <Button
               onClick={handleReadStory}
               variant="default"
               size="lg"
-              className="w-full"
+              className="w-1/3"
             >
-              <BookOpen className="w-4 h-4 mr-2" />
               Read
             </Button>
           </div>

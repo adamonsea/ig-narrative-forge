@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { SwipeCarousel } from '@/components/ui/swipe-carousel';
-import { ArrowLeft, Heart, RotateCcw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Heart, RotateCcw, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -86,14 +86,9 @@ export default function SwipeMode() {
     setFullStoryOpen(true);
   };
 
-  // Full story carousel slides
-  const storySlides = currentStory?.slides
-    ?.sort((a, b) => a.slide_number - b.slide_number)
-    .map(slide => (
-      <div key={slide.slide_number} className="p-6 prose prose-sm max-w-none">
-        <div dangerouslySetInnerHTML={{ __html: slide.content }} />
-      </div>
-    )) || [];
+  const sourceDomain = currentStory?.article?.source_url 
+    ? new URL(currentStory.article.source_url).hostname.replace('www.', '')
+    : null;
 
   if (loadingTopic) {
     return (
@@ -229,13 +224,46 @@ export default function SwipeMode() {
       {/* Full Story Modal */}
       {currentStory && (
         <Dialog open={fullStoryOpen} onOpenChange={setFullStoryOpen}>
-          <DialogContent className="max-w-4xl h-[90vh] p-0 overflow-hidden">
-            <SwipeCarousel
-              slides={storySlides}
-              height="90vh"
-              showDots={true}
-              autoSlide={false}
-            />
+          <DialogContent className="max-w-4xl h-[90vh] overflow-hidden">
+            <div className="h-full overflow-y-auto">
+              {/* Cover Image */}
+              {currentStory.cover_illustration_url && (
+                <div className="w-full aspect-video overflow-hidden bg-muted">
+                  <img
+                    src={currentStory.cover_illustration_url}
+                    alt={currentStory.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
+              {/* Story Content */}
+              <div className="p-6 space-y-4">
+                {/* All slides */}
+                {currentStory.slides
+                  ?.sort((a, b) => a.slide_number - b.slide_number)
+                  .map(slide => (
+                    <div key={slide.slide_number} className="prose prose-sm max-w-none">
+                      <div dangerouslySetInnerHTML={{ __html: slide.content }} />
+                    </div>
+                  ))}
+                
+                {/* Source Link */}
+                {currentStory.article?.source_url && (
+                  <div className="pt-4 border-t">
+                    <a
+                      href={currentStory.article.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Read original story at {sourceDomain}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
