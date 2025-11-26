@@ -13,6 +13,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  signInWithMagicLink: (email: string, displayName?: string, redirectTo?: string) => Promise<{ error: any }>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
 }
@@ -216,6 +217,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithMagicLink = async (email: string, displayName?: string, redirectTo?: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo ? `${window.location.origin}${redirectTo}` : `${window.location.origin}/`,
+          data: displayName ? { display_name: displayName } : undefined
+        }
+      });
+
+      return { error };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -224,6 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signUp,
     signIn,
     signOut,
+    signInWithMagicLink,
     isAdmin: userRole === 'admin' || userRole === 'superadmin',
     isSuperAdmin: userRole === 'superadmin',
   };
