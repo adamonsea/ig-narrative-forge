@@ -41,10 +41,29 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // Fetch ALL stories with images across all topics (not topic-specific)
+      // First get topic_article IDs for this topic (limit to prevent query overflow)
+      const topicArticlesQuery = await (supabase as any)
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .limit(200);
+
+      if (topicArticlesQuery.error) throw topicArticlesQuery.error;
+
+      const topicArticleIds = (topicArticlesQuery.data || []).map((ta: any) => ta.id);
+      
+      if (topicArticleIds.length === 0) {
+        setStories([]);
+        setStats(prev => ({ ...prev, remainingCount: 0 }));
+        setLoading(false);
+        return;
+      }
+
+      // Get stories for these topic_articles, only with images
       const storiesQuery = await (supabase as any)
         .from('stories')
         .select('id, title, author, cover_illustration_url, created_at, article_id, topic_article_id')
+        .in('topic_article_id', topicArticleIds)
         .eq('status', 'published')
         .not('cover_illustration_url', 'is', null)
         .order('created_at', { ascending: false })
@@ -75,7 +94,7 @@ export const useSwipeMode = (topicId: string) => {
 
       const swipedIds = new Set((swipesQuery.data || []).map((s: any) => s.story_id));
       
-      // Combine data
+      // Combine data (already filtered for images in query)
       const enrichedStories = (storiesQuery.data || [])
         .filter((s: any) => !swipedIds.has(s.id))
         .map((story: any) => {
