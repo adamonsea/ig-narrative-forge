@@ -214,9 +214,12 @@ export const useSwipeMode = (topicId: string) => {
   }, [user, topicId]);
 
   useEffect(() => {
-    fetchUnswipedStories();
-    fetchStats();
-  }, [fetchUnswipedStories, fetchStats]);
+    // Only fetch on mount or when topicId changes, not when user authenticates
+    if (topicId && stories.length === 0) {
+      fetchUnswipedStories();
+      fetchStats();
+    }
+  }, [topicId]);
 
   const currentStory = stories[currentIndex] || null;
   const hasMoreStories = currentIndex < stories.length;
