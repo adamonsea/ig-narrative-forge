@@ -199,46 +199,44 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         </motion.div>
       </motion.div>
 
-      {/* Simple Page Curl - Bottom Left (appears when swiping right/liking) */}
+      {/* Simple Page Curl - Bottom Left (appears when swiping right/liking) - OUTSIDE overflow */}
       <motion.div
-        className="absolute bottom-0 left-0 pointer-events-none z-20"
+        className="absolute bottom-0 left-0 pointer-events-none"
         style={{
           width: 60,
           height: 60,
           opacity: rightCurlOpacity,
+          zIndex: 20,
         }}
       >
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 bg-gradient-to-br from-muted via-card to-transparent rounded-tl-lg shadow-md"
           style={{
-            background: 'linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--card)) 50%, transparent 100%)',
             clipPath: 'polygon(0 100%, 0 30%, 30% 100%)',
-            boxShadow: '2px 2px 6px rgba(0,0,0,0.2)',
           }}
         />
       </motion.div>
 
-      {/* Simple Page Curl - Bottom Right (appears when swiping left/discarding) */}
+      {/* Simple Page Curl - Bottom Right (appears when swiping left/discarding) - OUTSIDE overflow */}
       <motion.div
-        className="absolute bottom-0 right-0 pointer-events-none z-20"
+        className="absolute bottom-0 right-0 pointer-events-none"
         style={{
           width: 60,
           height: 60,
           opacity: leftCurlOpacity,
+          zIndex: 20,
         }}
       >
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 bg-gradient-to-bl from-muted via-card to-transparent rounded-tr-lg shadow-md"
           style={{
-            background: 'linear-gradient(225deg, hsl(var(--muted)) 0%, hsl(var(--card)) 50%, transparent 100%)',
             clipPath: 'polygon(100% 100%, 100% 30%, 70% 100%)',
-            boxShadow: '-2px 2px 6px rgba(0,0,0,0.2)',
           }}
         />
       </motion.div>
 
       {/* Story Card (matching feed design) */}
-      <Card className="h-full shadow-lg overflow-hidden border">
+      <Card className="h-full shadow-lg overflow-hidden border relative">
         {/* Cover Image */}
         {story.cover_illustration_url && (
           <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
