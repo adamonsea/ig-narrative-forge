@@ -3114,6 +3114,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_premium_tier: boolean | null
+          play_mode_enabled: boolean | null
           social_proof_enabled: boolean | null
           story_momentum_enabled: boolean | null
           this_time_last_month_enabled: boolean | null
@@ -3124,6 +3125,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_premium_tier?: boolean | null
+          play_mode_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null
@@ -3134,6 +3136,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_premium_tier?: boolean | null
+          play_mode_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null

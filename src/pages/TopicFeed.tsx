@@ -51,6 +51,7 @@ const TopicFeed = () => {
   const [showCollectionsHint, setShowCollectionsHint] = useState(false);
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
   const [avgDailyStories, setAvgDailyStories] = useState<number>(0);
+  const [playModeEnabled, setPlayModeEnabled] = useState(false);
   
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
@@ -170,6 +171,25 @@ const TopicFeed = () => {
     };
 
     calculateAvgDailyStories();
+  }, [topic?.id]);
+
+  // Fetch play mode setting
+  useEffect(() => {
+    if (!topic?.id) return;
+
+    const fetchPlayModeSetting = async () => {
+      const { data } = await supabase
+        .from('topic_insight_settings')
+        .select('play_mode_enabled')
+        .eq('topic_id', topic.id)
+        .single();
+
+      if (data) {
+        setPlayModeEnabled(data.play_mode_enabled || false);
+      }
+    };
+
+    fetchPlayModeSetting();
   }, [topic?.id]);
 
   // Check if user already has notifications enabled for this topic
@@ -589,24 +609,26 @@ const TopicFeed = () => {
                   </Tooltip>
                 </TooltipProvider>
 
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/play/${slug}`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="Play mode"
-                        >
-                          <Gamepad2 className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-medium">Play Mode</p>
-                      <p className="text-xs text-muted-foreground">Swipe through stories</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {playModeEnabled && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link to={`/play/${slug}`}>
+                          <button
+                            className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            aria-label="Play mode"
+                          >
+                            <Gamepad2 className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">Play Mode</p>
+                        <p className="text-xs text-muted-foreground">Swipe through stories</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
 
               {/* Donation Button - Icon Only */}
