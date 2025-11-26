@@ -709,7 +709,7 @@ const TopicFeed = () => {
               <TooltipProvider>
                 <Tooltip open={showCollectionsHint}>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1" onMouseEnter={() => setShowCollectionsHint(false)}>
+                    <div className="flex items-center gap-1">
                       <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
                         <button
                           className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
