@@ -1,8 +1,9 @@
 import { useRef, useMemo } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ExternalLink, Heart, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, ExternalLink, Heart, X, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDeviceOptimizations, getAnimationPresets } from '@/lib/deviceUtils';
 
@@ -31,18 +32,41 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   const optimizations = useDeviceOptimizations();
   const animationPresets = useMemo(() => getAnimationPresets(), []);
   const x = useMotionValue(0);
+  const dragVelocity = useRef({ x: 0, y: 0 });
   
-  // Use less aggressive 3D rotation on old devices to reduce jank
-  const rotateY = useTransform(
+  // Device-adaptive effect values
+  const liftScale = optimizations.shouldReduceMotion ? 1.01 : 1.03;
+  const maxTilt = optimizations.shouldReduceMotion ? 5 : 12;
+  const shadowDepth = optimizations.shouldReduceMotion ? 10 : 30;
+  const exitVelocityMultiplier = optimizations.shouldReduceMotion ? 0.6 : 1.0;
+  
+  // Natural paper tilt (rotateZ) instead of flip
+  const rotateZ = useTransform(
     x, 
     [-200, 0, 200], 
-    optimizations.shouldReduceMotion ? [-5, 0, 5] : [-15, 0, 15]
+    [-maxTilt, 0, maxTilt]
   );
-  const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
+  
+  // Subtle vertical lift as paper tilts
+  const y = useTransform(x, [-200, 0, 200], [10, 0, 10]);
+  
+  // Shadow deepens as card lifts
+  const boxShadow = useTransform(
+    x,
+    [-200, 0, 200],
+    [
+      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(0,0,0,0.3)`,
+      `0 10px 20px -5px rgba(0,0,0,0.1)`,
+      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(0,0,0,0.3)`
+    ]
+  );
 
-  // Overlay opacity for like/discard
+  // Overlay opacity for like/discard with gradient effect
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
   const discardOpacity = useTransform(x, [-100, 0], [1, 0]);
+  
+  // Icon scale pulses near threshold
+  const iconScale = useTransform(x, [-150, -100, 100, 150], [1.2, 1, 1, 1.2]);
 
   const storyDate = story.article?.published_at 
     ? new Date(story.article.published_at)
@@ -55,6 +79,9 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 100;
     
+    // Capture velocity for throw physics
+    dragVelocity.current = { x: info.velocity.x, y: info.velocity.y };
+    
     if (Math.abs(info.offset.x) > threshold) {
       if (info.offset.x > 0) {
         onSwipe('like');
@@ -65,18 +92,24 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
     
     isDragging.current = false;
   };
+  
+  const handleReadStory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isDragging.current) {
+      onTap();
+    }
+  };
 
   return (
     <motion.div
       key={story.id}
       style={{
         x,
-        ...(optimizations.shouldReduceMotion ? {} : { rotateY }), // Disable 3D on old devices
-        opacity,
-        perspective: 1000,
-        transformStyle: 'preserve-3d',
-        cursor: 'grab',
-        // GPU acceleration hints for smoother animations
+        y,
+        rotateZ,
+        boxShadow,
+        cursor: isDragging.current ? 'grabbing' : 'grab',
+        // GPU acceleration hints
         willChange: 'transform',
         transform: 'translate3d(0, 0, 0)',
         WebkitTransform: 'translate3d(0, 0, 0)',
@@ -88,15 +121,11 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={animationPresets.dragElastic}
       dragTransition={animationPresets.dragTransition}
-      onDragStart={() => { isDragging.current = true; }}
-      onDragEnd={handleDragEnd}
-      whileTap={{ cursor: 'grabbing' }}
-      onTap={() => {
-        if (!isDragging.current) {
-          onTap();
-        }
-        isDragging.current = false;
+      onDragStart={() => { 
+        isDragging.current = true;
       }}
+      onDragEnd={handleDragEnd}
+      whileDrag={{ scale: liftScale }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
       animate={{ 
         scale: 1, 
@@ -110,33 +139,43 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       exit={
         exitDirection
           ? {
-              x: exitDirection === 'left' ? -500 : 500,
-              rotate: exitDirection === 'left' ? -20 : 20,
+              x: (exitDirection === 'left' ? -1 : 1) * (500 + Math.abs(dragVelocity.current.x) * exitVelocityMultiplier),
+              y: dragVelocity.current.y * exitVelocityMultiplier * 0.3,
+              rotate: (exitDirection === 'left' ? -1 : 1) * (20 + Math.abs(dragVelocity.current.x) * 0.02),
               opacity: 0,
-              transition: { duration: 0.3, ease: 'easeInOut' }
+              transition: { 
+                duration: 0.4, 
+                ease: [0.32, 0.72, 0, 1] // Custom bezier for natural throw
+              }
             }
           : undefined
       }
       className="absolute inset-0 touch-none"
     >
-      {/* Discard Overlay (Red) */}
+      {/* Discard Overlay (Gradient) */}
       <motion.div
         style={{ opacity: discardOpacity }}
-        className="absolute inset-0 bg-destructive/20 rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        className="absolute inset-0 bg-gradient-to-br from-destructive/30 via-destructive/20 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
       >
-        <div className="bg-destructive text-destructive-foreground rounded-full p-4">
+        <motion.div 
+          style={{ scale: iconScale }}
+          className="bg-destructive text-destructive-foreground rounded-full p-4 shadow-lg"
+        >
           <X className="w-12 h-12" strokeWidth={3} />
-        </div>
+        </motion.div>
       </motion.div>
 
-      {/* Like Overlay (Green) */}
+      {/* Like Overlay (Gradient) */}
       <motion.div
         style={{ opacity: likeOpacity }}
-        className="absolute inset-0 bg-primary/20 rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        className="absolute inset-0 bg-gradient-to-bl from-primary/30 via-primary/20 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
       >
-        <div className="bg-primary text-primary-foreground rounded-full p-4">
+        <motion.div 
+          style={{ scale: iconScale }}
+          className="bg-primary text-primary-foreground rounded-full p-4 shadow-lg"
+        >
           <Heart className="w-12 h-12 fill-current" strokeWidth={3} />
-        </div>
+        </motion.div>
       </motion.div>
 
       {/* Story Card (matching existing design) */}
@@ -182,10 +221,21 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
             </Badge>
           )}
 
-          {/* Tap to read hint */}
-          <p className="text-xs text-muted-foreground text-center pt-4 border-t">
-            Tap to read full story • Swipe to like or pass
-          </p>
+          {/* Read Story Button */}
+          <div className="pt-4 border-t">
+            <Button
+              onClick={handleReadStory}
+              variant="default"
+              size="lg"
+              className="w-full gap-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              Read Full Story
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Swipe left to discard • Swipe right to like
+            </p>
+          </div>
         </CardContent>
       </Card>
     </motion.div>
