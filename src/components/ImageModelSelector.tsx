@@ -141,10 +141,10 @@ export const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
             <DropdownMenuItem
               key={model.id}
               onClick={() => onModelSelect(model)}
-              className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex-col items-start"
+              className="p-3 cursor-pointer hover:bg-accent focus:bg-accent flex-col items-start text-popover-foreground"
             >
               <div className="flex w-full items-center justify-between mb-1">
-                <span className="font-medium text-sm">{model.name}</span>
+                <span className="font-medium text-sm text-popover-foreground">{model.name}</span>
                 <span className="text-xs font-semibold text-primary">
                   {model.credits} credits
                 </span>
