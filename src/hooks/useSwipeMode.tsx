@@ -41,11 +41,29 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // Get stories not yet swiped by this user - simplified query
+      // First get topic_article IDs for this topic
+      const topicArticlesQuery = await (supabase as any)
+        .from('topic_articles')
+        .select('id')
+        .eq('topic_id', topicId)
+        .eq('status', 'approved');
+
+      if (topicArticlesQuery.error) throw topicArticlesQuery.error;
+
+      const topicArticleIds = (topicArticlesQuery.data || []).map((ta: any) => ta.id);
+      
+      if (topicArticleIds.length === 0) {
+        setStories([]);
+        setStats(prev => ({ ...prev, remainingCount: 0 }));
+        setLoading(false);
+        return;
+      }
+
+      // Get stories for these topic_articles
       const storiesQuery = await (supabase as any)
         .from('stories')
-        .select('id, title, author, cover_illustration_url, created_at, article_id')
-        .eq('topic_id', topicId)
+        .select('id, title, author, cover_illustration_url, created_at, article_id, topic_article_id')
+        .in('topic_article_id', topicArticleIds)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(50);
