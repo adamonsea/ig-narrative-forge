@@ -226,13 +226,15 @@ export const useSwipeMode = (topicId: string) => {
     if (!user || !topicId) return;
 
     try {
-      const { error } = await supabase.functions.invoke('clear-swipe-history', {
-        body: { topicId }
-      });
+      const { error } = await supabase
+        .from('story_swipes')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('topic_id', topicId);
 
       if (error) throw error;
 
-      toast.success('Swipe history cleared');
+      toast.success('Swipe history cleared - reloading stories');
       setCurrentIndex(0);
       await fetchUnswipedStories();
       await fetchStats();
