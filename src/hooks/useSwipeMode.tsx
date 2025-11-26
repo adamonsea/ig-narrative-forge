@@ -220,6 +220,29 @@ export const useSwipeMode = (topicId: string) => {
   const currentStory = stories[currentIndex] || null;
   const hasMoreStories = currentIndex < stories.length;
 
+  // Reset all swipes for this topic (for testing)
+  const resetSwipes = useCallback(async () => {
+    if (!user || !topicId) return;
+
+    try {
+      const { error } = await supabase
+        .from('story_swipes')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('topic_id', topicId);
+
+      if (error) throw error;
+
+      toast.success('Swipe history cleared');
+      setCurrentIndex(0);
+      await fetchUnswipedStories();
+      await fetchStats();
+    } catch (error) {
+      console.error('Error resetting swipes:', error);
+      toast.error('Failed to reset swipes');
+    }
+  }, [user, topicId, fetchUnswipedStories, fetchStats]);
+
   return {
     currentStory,
     hasMoreStories,
@@ -227,6 +250,7 @@ export const useSwipeMode = (topicId: string) => {
     stats,
     recordSwipe,
     fetchLikedStories,
-    refetch: fetchUnswipedStories
+    refetch: fetchUnswipedStories,
+    resetSwipes
   };
 };

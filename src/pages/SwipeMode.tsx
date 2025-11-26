@@ -26,7 +26,17 @@ export default function SwipeMode() {
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
 
-  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch } = useSwipeMode(topicId || '');
+  const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, resetSwipes } = useSwipeMode(topicId || '');
+
+  // Expose reset function for testing (accessible via window.resetSwipes())
+  useEffect(() => {
+    if (resetSwipes) {
+      (window as any).resetSwipes = resetSwipes;
+    }
+    return () => {
+      delete (window as any).resetSwipes;
+    };
+  }, [resetSwipes]);
 
   // Fetch topic data
   useEffect(() => {
