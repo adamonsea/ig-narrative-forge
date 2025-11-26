@@ -52,6 +52,8 @@ const TopicFeed = () => {
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
   const [avgDailyStories, setAvgDailyStories] = useState<number>(0);
   const [playModeEnabled, setPlayModeEnabled] = useState(false);
+  const [showPlayModePulse, setShowPlayModePulse] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
   
   // Track story views for PWA prompt trigger
   const { incrementStoriesViewed } = useStoryViewTracker(slug || '');
@@ -191,6 +193,33 @@ const TopicFeed = () => {
 
     fetchPlayModeSetting();
   }, [topic?.id]);
+
+  // Detect first scroll and show pulse animation on play mode icon
+  useEffect(() => {
+    if (!playModeEnabled || !slug) return;
+
+    // Check if user has already seen the pulse
+    const pulseKey = `play_mode_pulse_shown_${slug}`;
+    const hasSeenPulse = localStorage.getItem(pulseKey);
+
+    if (hasSeenPulse) return;
+
+    const handleScroll = () => {
+      if (!hasScrolled) {
+        setHasScrolled(true);
+        setShowPlayModePulse(true);
+        localStorage.setItem(pulseKey, 'true');
+        
+        // Stop pulsing after 3 seconds
+        setTimeout(() => {
+          setShowPlayModePulse(false);
+        }, 3000);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { once: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [playModeEnabled, slug, hasScrolled]);
 
   // Check if user already has notifications enabled for this topic
   useEffect(() => {
@@ -615,7 +644,9 @@ const TopicFeed = () => {
                       <TooltipTrigger asChild>
                         <Link to={`/play/${slug}`}>
                           <button
-                            className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground ${
+                              showPlayModePulse ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                            }`}
                             aria-label="Play mode"
                           >
                             <Gamepad2 className="w-4 h-4" />
