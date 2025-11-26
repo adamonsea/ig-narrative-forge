@@ -97,8 +97,9 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
     isDragging.current = false;
   };
   
-  const handleReadStory = (e: React.MouseEvent) => {
+  const handleReadStory = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (!isDragging.current) {
       onTap();
     }
@@ -199,7 +200,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
 
         <CardContent className="p-4 space-y-3">
           {/* Title - use slide headline if available */}
-          <h2 className="text-2xl font-bold line-clamp-3 leading-tight">
+          <h2 className="text-3xl font-bold line-clamp-3 leading-tight uppercase">
             {story.slides?.[0]?.content?.replace(/<[^>]*>/g, '') || story.title}
           </h2>
 
@@ -223,9 +224,10 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
           <div className="pt-3 border-t flex justify-center">
             <Button
               onClick={handleReadStory}
+              onTouchEnd={handleReadStory}
               variant="default"
               size="lg"
-              className="w-1/3"
+              className="w-1/3 pointer-events-auto"
             >
               Read
             </Button>
