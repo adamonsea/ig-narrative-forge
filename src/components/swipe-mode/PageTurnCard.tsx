@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ interface PageTurnCardProps {
 }
 
 export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: PageTurnCardProps) => {
+  const isDragging = useRef(false);
   const x = useMotionValue(0);
   const rotateY = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
@@ -51,6 +53,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         onSwipe('discard');
       }
     }
+    
+    isDragging.current = false;
   };
 
   return (
@@ -68,9 +72,15 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.7}
+      onDragStart={() => { isDragging.current = true; }}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      onTap={onTap}
+      onTap={() => {
+        if (!isDragging.current) {
+          onTap();
+        }
+        isDragging.current = false;
+      }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
       animate={{ scale: 1, y: 0, opacity: 1 }}
       exit={
