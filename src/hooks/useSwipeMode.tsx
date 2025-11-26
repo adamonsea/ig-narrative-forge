@@ -42,32 +42,32 @@ export const useSwipeMode = (topicId: string) => {
       setLoading(true);
 
       // Get stories not yet swiped by this user - simplified query
-      const storiesQuery = await (supabase
+      const storiesQuery = await (supabase as any)
         .from('stories')
         .select('id, title, author, cover_illustration_url, created_at, article_id')
         .eq('topic_id', topicId)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
-        .limit(50) as any);
+        .limit(50);
 
       if (storiesQuery.error) throw storiesQuery.error;
 
       // Get article data for source URLs
       const articleIds = (storiesQuery.data || []).map((s: any) => s.article_id).filter(Boolean);
-      const articlesQuery: any = await supabase
+      const articlesQuery: any = await (supabase as any)
         .from('articles')
         .select('id, source_url, published_at')
         .in('id', articleIds);
 
       // Get slides data
       const storyIds = (storiesQuery.data || []).map((s: any) => s.id);
-      const slidesQuery: any = await supabase
+      const slidesQuery: any = await (supabase as any)
         .from('slides')
         .select('story_id, slide_number, content')
         .in('story_id', storyIds);
 
       // Filter out already swiped stories
-      const swipesQuery: any = await supabase
+      const swipesQuery: any = await (supabase as any)
         .from('story_swipes')
         .select('story_id')
         .eq('user_id', user.id)
@@ -106,7 +106,7 @@ export const useSwipeMode = (topicId: string) => {
   const fetchStats = useCallback(async () => {
     if (!user || !topicId) return;
 
-    const swipesQuery: any = await supabase
+    const swipesQuery: any = await (supabase as any)
       .from('story_swipes')
       .select('swipe_type')
       .eq('user_id', user.id)
@@ -159,7 +159,7 @@ export const useSwipeMode = (topicId: string) => {
   const fetchLikedStories = useCallback(async () => {
     if (!user || !topicId) return [];
 
-    const swipesQuery: any = await supabase
+    const swipesQuery: any = await (supabase as any)
       .from('story_swipes')
       .select('story_id, created_at')
       .eq('user_id', user.id)
@@ -171,13 +171,13 @@ export const useSwipeMode = (topicId: string) => {
     
     if (storyIds.length === 0) return [];
 
-    const storiesQuery: any = await supabase
+    const storiesQuery: any = await (supabase as any)
       .from('stories')
       .select('id, title, author, cover_illustration_url, created_at, article_id')
       .in('id', storyIds);
 
     const articleIds = (storiesQuery.data || []).map((s: any) => s.article_id).filter(Boolean);
-    const articlesQuery: any = await supabase
+    const articlesQuery: any = await (supabase as any)
       .from('articles')
       .select('id, source_url, published_at')
       .in('id', articleIds);
