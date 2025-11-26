@@ -187,6 +187,29 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             </div>
           </div>
 
+          {/* Play Mode - Premium Feature */}
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="play-mode" className="font-medium">
+                  🎮 Play Mode
+                </Label>
+                <Badge variant="default" className="text-xs">Premium</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Swipe-based interface to discover stories across all feeds
+              </p>
+            </div>
+            <Switch
+              id="play-mode"
+              checked={settings.play_mode_enabled}
+              onCheckedChange={(checked) => 
+                updateSettings.mutate({ play_mode_enabled: checked })
+              }
+              disabled={!settings.is_premium_tier}
+            />
+          </div>
+
           {/* This Time Last Month - Premium Feature */}
           <div className="flex items-center justify-between p-4 rounded-lg border opacity-50">
             <div className="flex-1 space-y-1">
