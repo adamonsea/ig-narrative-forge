@@ -46,7 +46,7 @@ export const useSwipeMode = (topicId: string) => {
         .from('topic_articles')
         .select('id')
         .eq('topic_id', topicId)
-        .limit(50);
+        .limit(200);
 
       if (topicArticlesQuery.error) throw topicArticlesQuery.error;
 
@@ -66,7 +66,7 @@ export const useSwipeMode = (topicId: string) => {
         .in('topic_article_id', topicArticleIds)
         .eq('status', 'published')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (storiesQuery.error) throw storiesQuery.error;
 
