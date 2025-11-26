@@ -41,11 +41,12 @@ export const useSwipeMode = (topicId: string) => {
     try {
       setLoading(true);
 
-      // First get topic_article IDs for this topic
+      // First get topic_article IDs for this topic (limit to prevent query overflow)
       const topicArticlesQuery = await (supabase as any)
         .from('topic_articles')
         .select('id')
-        .eq('topic_id', topicId);
+        .eq('topic_id', topicId)
+        .limit(50);
 
       if (topicArticlesQuery.error) throw topicArticlesQuery.error;
 
