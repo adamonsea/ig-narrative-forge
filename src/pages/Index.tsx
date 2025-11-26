@@ -46,9 +46,7 @@ const Index = () => {
           {/* Hero Section */}
           <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
             <div className="space-y-6">
-              <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">
-                Beautiful feeds, any sources, any topic
-              </h1>
+              <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">Create beautiful feeds, any sources, any topic</h1>
               <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
                 AI-powered editorial tools making niche content curation, simplification and publishing effortless and engaging    
               </p>
