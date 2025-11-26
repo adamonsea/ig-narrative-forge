@@ -221,16 +221,14 @@ export const useSwipeMode = (topicId: string) => {
   const currentStory = stories[currentIndex] || null;
   const hasMoreStories = currentIndex < stories.length;
 
-  // Reset all swipes for this topic (for testing)
+  // Reset all swipes for this topic
   const resetSwipes = useCallback(async () => {
     if (!user || !topicId) return;
 
     try {
-      const { error } = await supabase
-        .from('story_swipes')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('topic_id', topicId);
+      const { error } = await supabase.functions.invoke('clear-swipe-history', {
+        body: { topicId }
+      });
 
       if (error) throw error;
 
