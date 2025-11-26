@@ -47,9 +47,7 @@ const Index = () => {
           <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
             <div className="space-y-6">
               <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">Create beautiful feeds, any sources, any topic</h1>
-              <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
-                AI-powered editorial tools making niche content curation, simplification and publishing effortless and engaging    
-              </p>
+              <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">AI-powered editorial tools automating niche content curation, simplification and publishing. Driving engagement </p>
             </div>
             <div className="flex gap-4 justify-center pt-4">
               <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
