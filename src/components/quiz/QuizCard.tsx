@@ -38,7 +38,8 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
       });
 
       setResult(response);
-      onAnswered?.(question.id);
+      // Don't call onAnswered immediately - let user see the result first
+      // The answer is already persisted via localStorage in the mutation
     } catch (error) {
       console.error('Error submitting quiz response:', error);
     } finally {
