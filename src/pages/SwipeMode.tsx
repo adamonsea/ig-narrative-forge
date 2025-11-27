@@ -14,10 +14,17 @@ import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { SwipeCarousel } from '@/components/ui/swipe-carousel';
 import { ArrowLeft, Heart, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+type AuthVariant = 'curiosity' | 'agency' | 'belonging';
+
+// Progressive CTA thresholds
+const FIRST_TRIGGER = 3;
+const SECOND_TRIGGER = 13;
+const THIRD_TRIGGER = 23;
+const MAX_DISMISSALS = 3;
 
 export default function SwipeMode() {
   const { slug } = useParams<{ slug: string }>();
@@ -32,13 +39,17 @@ export default function SwipeMode() {
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
 
+  // Progressive auth state
+  const [anonymousSwipeCount, setAnonymousSwipeCount] = useState(0);
+  const [dismissCount, setDismissCount] = useState(0);
+  const [authVariant, setAuthVariant] = useState<AuthVariant>('curiosity');
+
   const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, stories, currentIndex } = useSwipeMode(topicId || '');
   const optimizations = useDeviceOptimizations();
   
   // Apply topic favicon
   const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
   useTopicFavicon(faviconUrl);
-
 
   // Fetch topic data
   useEffect(() => {
@@ -67,21 +78,49 @@ export default function SwipeMode() {
     fetchTopic();
   }, [slug, navigate]);
 
-  // Check auth on mount
-  useEffect(() => {
-    if (!loadingTopic && !user) {
+  // Check if we should show auth modal based on swipe count
+  const checkProgressiveTrigger = (newCount: number) => {
+    if (user || dismissCount >= MAX_DISMISSALS) return;
+
+    if (newCount === FIRST_TRIGGER && dismissCount === 0) {
+      setAuthVariant('curiosity');
+      setShowAuth(true);
+    } else if (newCount === SECOND_TRIGGER && dismissCount === 1) {
+      setAuthVariant('agency');
+      setShowAuth(true);
+    } else if (newCount === THIRD_TRIGGER && dismissCount === 2) {
+      setAuthVariant('belonging');
       setShowAuth(true);
     }
-  }, [user, loadingTopic]);
+  };
 
   const handleSwipe = async (direction: 'like' | 'discard') => {
     if (!currentStory) return;
     setExitDirection(direction === 'like' ? 'right' : 'left');
-    // Small delay to let animation start before recording swipe
+    
     setTimeout(() => {
-      recordSwipe(currentStory.id, direction);
+      if (user) {
+        // Authenticated: persist to database
+        recordSwipe(currentStory.id, direction);
+      } else {
+        // Anonymous: just advance locally (recordSwipe handles this)
+        recordSwipe(currentStory.id, direction);
+        
+        // Track anonymous swipes for progressive CTA
+        const newCount = anonymousSwipeCount + 1;
+        setAnonymousSwipeCount(newCount);
+        checkProgressiveTrigger(newCount);
+      }
       setExitDirection(null);
     }, 100);
+  };
+
+  const handleAuthClose = (open: boolean) => {
+    setShowAuth(open);
+    if (!open && !user) {
+      // User dismissed modal without registering
+      setDismissCount(prev => prev + 1);
+    }
   };
 
   const handleCardTap = () => {
@@ -116,7 +155,8 @@ export default function SwipeMode() {
           </Button>
 
           <div className="flex items-center gap-2">
-            {topicId && (
+            {/* Gate SwipeInsightsDrawer behind auth */}
+            {topicId && user && (
               <SwipeInsightsDrawer topicId={topicId} topicName={topicName} />
             )}
             <Button
@@ -238,12 +278,13 @@ export default function SwipeMode() {
         ) : null}
       </main>
 
-      {/* Auth Modal */}
+      {/* Auth Modal with progressive variant */}
       {slug && (
         <SwipeModeAuth 
           open={showAuth} 
-          onOpenChange={setShowAuth}
+          onOpenChange={handleAuthClose}
           topicSlug={slug}
+          variant={authVariant}
         />
       )}
 
@@ -327,8 +368,8 @@ export default function SwipeMode() {
             {/* Prominent CTAs - Fixed at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background border-t shadow-lg z-50">
               <div className="space-y-3">
-                {/* Story Rating Card */}
-                <StoryRatingCard storyId={currentStory.id} />
+                {/* Gate StoryRatingCard behind auth */}
+                {user && <StoryRatingCard storyId={currentStory.id} />}
                 
                 {/* Two CTA buttons side by side */}
                 <div className="flex gap-3">

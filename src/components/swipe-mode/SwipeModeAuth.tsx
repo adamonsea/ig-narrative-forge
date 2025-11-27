@@ -1,22 +1,34 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Mail } from 'lucide-react';
 
+type AuthVariant = 'curiosity' | 'agency' | 'belonging';
+
 interface SwipeModeAuthProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   topicSlug: string;
+  variant?: AuthVariant;
 }
 
-export const SwipeModeAuth = ({ open, onOpenChange, topicSlug }: SwipeModeAuthProps) => {
+const VARIANT_SUBTITLES: Record<AuthVariant, string> = {
+  curiosity: 'See what others loved',
+  agency: 'Make your vote count',
+  belonging: 'Be part of the conversation',
+};
+
+export const SwipeModeAuth = ({ 
+  open, 
+  onOpenChange, 
+  topicSlug,
+  variant = 'curiosity' 
+}: SwipeModeAuthProps) => {
   const { signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
@@ -31,13 +43,13 @@ export const SwipeModeAuth = ({ open, onOpenChange, topicSlug }: SwipeModeAuthPr
     setLoading(true);
 
     try {
-      const { error } = await signInWithMagicLink(email, displayName, `/play/${topicSlug}`);
+      const { error } = await signInWithMagicLink(email, undefined, `/play/${topicSlug}`);
 
       if (error) {
         toast.error(error.message);
       } else {
         setEmailSent(true);
-        toast.success('Magic link sent! Check your email to continue.');
+        toast.success('Magic link sent! Check your email.');
       }
     } catch (error) {
       toast.error('Failed to send magic link');
@@ -46,61 +58,59 @@ export const SwipeModeAuth = ({ open, onOpenChange, topicSlug }: SwipeModeAuthPr
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5" />
-            Sign in to Swipe Mode
-          </DialogTitle>
-          <DialogDescription>
-            {emailSent 
-              ? "Check your email for a magic link to continue."
-              : "Enter your email to get started. We'll send you a magic link to sign in instantly."}
-          </DialogDescription>
-        </DialogHeader>
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      // Reset state when closing
+      setEmailSent(false);
+      setEmail('');
+    }
+    onOpenChange(open);
+  };
 
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
         {!emailSent ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="py-8 space-y-6 text-center">
+            {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Register to play
+              </h2>
+              <p className="text-muted-foreground">
+                {VARIANT_SUBTITLES[variant]}
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
               <Input
-                id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
+                className="text-center"
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name (optional)</Label>
-              <Input
-                id="displayName"
-                type="text"
-                placeholder="Your name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send Magic Link'}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Sending...' : 'Get magic link'}
+              </Button>
+            </form>
+          </div>
         ) : (
-          <div className="text-center py-8">
-            <Mail className="w-16 h-16 mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">
-              We've sent a magic link to <strong>{email}</strong>
-            </p>
+          <div className="py-8 text-center space-y-4">
+            <Mail className="w-16 h-16 mx-auto text-primary" />
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Check your email</h2>
+              <p className="text-muted-foreground">
+                We've sent a magic link to <strong>{email}</strong>
+              </p>
+            </div>
             <Button
               variant="outline"
               onClick={() => setEmailSent(false)}
-              className="mt-4"
             >
               Use a different email
             </Button>
