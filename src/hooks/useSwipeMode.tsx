@@ -137,6 +137,8 @@ export const useSwipeMode = (topicId: string) => {
           const article = allArticles.find((a: any) => a.id === story.article_id);
           const slides = allSlides.filter((s: any) => s.story_id === story.id);
           
+          console.log('Story article data:', story.id, article?.source_url);
+          
           return {
             ...story,
             article: article ? {
@@ -145,8 +147,15 @@ export const useSwipeMode = (topicId: string) => {
             } : null,
             slides
           };
+        })
+        // Sort by published_at (newest first), fallback to created_at
+        .sort((a: any, b: any) => {
+          const dateA = a.article?.published_at ? new Date(a.article.published_at) : new Date(a.created_at);
+          const dateB = b.article?.published_at ? new Date(b.article.published_at) : new Date(b.created_at);
+          return dateB.getTime() - dateA.getTime();
         });
 
+      console.log('Enriched stories count:', enrichedStories.length, 'First story:', enrichedStories[0]?.article);
       setStories(enrichedStories);
       setStats(prev => ({ ...prev, remainingCount: enrichedStories.length }));
     } catch (error) {
