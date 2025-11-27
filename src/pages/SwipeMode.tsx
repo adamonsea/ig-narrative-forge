@@ -285,6 +285,21 @@ export default function SwipeMode() {
               
               {/* Story Content - more padding, larger text */}
               <div className="p-6 md:p-8 space-y-6">
+                {/* Source pill at top */}
+                {sourceDomain && currentStory.article?.source_url && (
+                  <a 
+                    href={currentStory.article.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                  >
+                    <Badge variant="secondary" className="text-xs hover:bg-secondary/80 cursor-pointer">
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      {sourceDomain}
+                    </Badge>
+                  </a>
+                )}
+                
                 {currentStory.slides
                   ?.sort((a, b) => a.slide_number - b.slide_number)
                   .map(slide => (

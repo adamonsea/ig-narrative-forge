@@ -1,9 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, ExternalLink, Heart, ThumbsDown, BookOpen } from 'lucide-react';
+import { Calendar, Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDeviceOptimizations, getAnimationPresets } from '@/lib/deviceUtils';
 
@@ -81,10 +80,6 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   const storyDate = story.article?.published_at
     ? new Date(story.article.published_at)
     : new Date(story.created_at);
-
-  const sourceDomain = story.article?.source_url 
-    ? new URL(story.article.source_url).hostname.replace('www.', '')
-    : null;
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 80;
@@ -287,13 +282,6 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
             </time>
           </div>
 
-          {/* Source Badge */}
-          {sourceDomain && (
-            <Badge variant="secondary" className="text-xs">
-              <ExternalLink className="w-3 h-3 mr-1" />
-              {sourceDomain}
-            </Badge>
-          )}
 
           {/* Read Story Button */}
           <div className="pt-3 border-t flex justify-center">
