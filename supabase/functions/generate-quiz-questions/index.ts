@@ -7,16 +7,15 @@ const corsHeaders = {
 };
 
 // Sensitive topic patterns to AVOID generating quizzes about
-// Be careful not to be too broad - only match clear sensitive terms
+// Focus on children-related and serious crime/legal matters
 const SENSITIVE_PATTERNS = [
-  /\b(death|died|killed|murder|fatal|fatality)\b/i,
-  /\b(court case|trial|sentenced|convicted|arrested|prison)\b/i,
-  /\b(abuse|assault|violent attack)\b/i,
+  /\b(child|children|minor|underage|paedophile|pedophile|safeguarding)\b.*\b(abuse|assault|harm|victim|exploitation)\b/i,
+  /\b(abuse|assault|harm|victim|exploitation)\b.*\b(child|children|minor|underage)\b/i,
+  /\b(murder|manslaughter|homicide|killing)\b/i,
+  /\b(tribunal|inquest|coroner)\b/i,
+  /\b(sexual offence|sexual assault|rape|indecent)\b/i,
   /\b(suicide|self-harm)\b/i,
-  /\b(cancer|terminal illness)\b/i,
-  /\b(missing person|disappeared)\b/i,
-  /\b(robbery|theft|burglary|fraud|scam)\b/i,
-  /\b(tragedy|tragic death|victim of)\b/i,
+  /\b(missing child|abduction|kidnap)\b/i,
 ];
 
 serve(async (req) => {
