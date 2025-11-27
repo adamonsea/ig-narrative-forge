@@ -1643,6 +1643,126 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_questions: {
+        Row: {
+          category: string | null
+          correct_option: string
+          correct_responses: number | null
+          created_at: string | null
+          difficulty: string | null
+          explanation: string | null
+          id: string
+          is_published: boolean | null
+          option_distribution: Json | null
+          options: Json
+          question_text: string
+          source_story_id: string | null
+          topic_id: string
+          total_responses: number | null
+          updated_at: string | null
+          valid_until: string
+        }
+        Insert: {
+          category?: string | null
+          correct_option: string
+          correct_responses?: number | null
+          created_at?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          id?: string
+          is_published?: boolean | null
+          option_distribution?: Json | null
+          options: Json
+          question_text: string
+          source_story_id?: string | null
+          topic_id: string
+          total_responses?: number | null
+          updated_at?: string | null
+          valid_until: string
+        }
+        Update: {
+          category?: string | null
+          correct_option?: string
+          correct_responses?: number | null
+          created_at?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          id?: string
+          is_published?: boolean | null
+          option_distribution?: Json | null
+          options?: Json
+          question_text?: string
+          source_story_id?: string | null
+          topic_id?: string
+          total_responses?: number | null
+          updated_at?: string | null
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_source_story_id_fkey"
+            columns: ["source_story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_responses: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_correct: boolean
+          question_id: string
+          response_time_ms: number | null
+          selected_option: string
+          user_id: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_correct: boolean
+          question_id: string
+          response_time_ms?: number | null
+          selected_option: string
+          user_id?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          response_time_ms?: number | null
+          selected_option?: string
+          user_id?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           created_at: string
@@ -3115,6 +3235,7 @@ export type Database = {
           id: string
           is_premium_tier: boolean | null
           play_mode_enabled: boolean | null
+          quiz_cards_enabled: boolean | null
           social_proof_enabled: boolean | null
           story_momentum_enabled: boolean | null
           this_time_last_month_enabled: boolean | null
@@ -3126,6 +3247,7 @@ export type Database = {
           id?: string
           is_premium_tier?: boolean | null
           play_mode_enabled?: boolean | null
+          quiz_cards_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null
@@ -3137,6 +3259,7 @@ export type Database = {
           id?: string
           is_premium_tier?: boolean | null
           play_mode_enabled?: boolean | null
+          quiz_cards_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null
@@ -4412,6 +4535,13 @@ export type Database = {
           articles_swiped: number
           share_clicks: number
           total_swipes: number
+        }[]
+      }
+      get_topic_quiz_stats: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          correct_rate: number
+          quiz_responses_count: number
         }[]
       }
       get_topic_registrant_stats: {

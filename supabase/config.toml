@@ -453,3 +453,13 @@ verify_jwt = false
 [functions.generate-story-momentum-cards]
 verify_jwt = false
 
+# ========================================
+# QUIZ CARDS
+# ========================================
+
+[functions.generate-quiz-questions]
+verify_jwt = false
+
+[functions.submit-quiz-response]
+verify_jwt = false
+

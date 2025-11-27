@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +36,7 @@ interface Topic {
   articles_swiped?: number;
   articles_liked?: number;
   share_clicks?: number;
+  quiz_responses_count?: number;
   installs_this_week?: number;
   installs_total?: number;
   registrants_this_week?: number;
@@ -77,7 +78,7 @@ export const TopicManager = () => {
         const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
           // Get accurate stats that match the Arrivals tab UX
           // 1) Multi-tenant articles for this topic
-          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats, swipeInsights] = await Promise.all([
+          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats, swipeInsights, quizStats] = await Promise.all([
             supabase.rpc('get_topic_articles_multi_tenant', {
               p_topic_id: topic.id,
               p_status: null,
@@ -115,7 +116,9 @@ export const TopicManager = () => {
             // Get registrant stats (game mode users)
             supabase.rpc('get_topic_registrant_stats', { p_topic_id: topic.id }),
             // Get liked stories count from Play Mode
-            supabase.rpc('get_swipe_insights', { p_topic_id: topic.id })
+            supabase.rpc('get_swipe_insights', { p_topic_id: topic.id }),
+            // Get quiz stats
+            supabase.rpc('get_topic_quiz_stats', { p_topic_id: topic.id, p_days: 7 })
           ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
@@ -161,6 +164,7 @@ export const TopicManager = () => {
           const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
           const swipeInsightsData = swipeInsights.data as { total_likes?: number; total_discards?: number } | null;
           const likedCount = Number(swipeInsightsData?.total_likes) || 0;
+          const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
 
           return {
             ...topic,
@@ -172,6 +176,7 @@ export const TopicManager = () => {
             articles_swiped: Number(interactionData.articles_swiped) || 0,
             articles_liked: likedCount,
             share_clicks: Number(interactionData.share_clicks) || 0,
+            quiz_responses_count: Number(quizData.quiz_responses_count) || 0,
             installs_this_week: Number(installData.installs_this_week) || 0,
             installs_total: Number(installData.installs_total) || 0,
             registrants_this_week: Number(registrantData.registrants_this_week) || 0,
@@ -419,7 +424,7 @@ export const TopicManager = () => {
                               <MousePointer className="w-3 h-3" />
                               Engagement
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
@@ -466,6 +471,23 @@ export const TopicManager = () => {
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Share button clicks on stories (last 7 days)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/30 cursor-help">
+                                    <div className="text-lg font-bold text-purple-500 flex items-center gap-1">
+                                      <Brain className="w-3 h-3" />
+                                      {topic.quiz_responses_count || 0}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Quizzed
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Quiz questions answered by readers (last 7 days)</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>

@@ -210,6 +210,29 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             />
           </div>
 
+          {/* Quiz Cards - Premium Feature */}
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="quiz-cards" className="font-medium">
+                  🧠 Quiz Cards
+                </Label>
+                <Badge variant="default" className="text-xs">Premium</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                AI-generated quiz questions based on your feed content
+              </p>
+            </div>
+            <Switch
+              id="quiz-cards"
+              checked={settings.quiz_cards_enabled}
+              onCheckedChange={(checked) => 
+                updateSettings.mutate({ quiz_cards_enabled: checked })
+              }
+              disabled={!settings.is_premium_tier}
+            />
+          </div>
+
           {/* This Time Last Month - Premium Feature */}
           <div className="flex items-center justify-between p-4 rounded-lg border opacity-50">
             <div className="flex-1 space-y-1">

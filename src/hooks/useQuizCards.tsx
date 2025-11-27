@@ -1,0 +1,211 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+
+export interface QuizQuestion {
+  id: string;
+  topic_id: string;
+  source_story_id: string | null;
+  question_text: string;
+  options: Array<{
+    label: string;
+    text: string;
+    is_correct: boolean;
+  }>;
+  correct_option: string;
+  explanation: string | null;
+  difficulty: string;
+  category: string;
+  total_responses: number;
+  correct_responses: number;
+  option_distribution: Record<string, number>;
+  valid_until: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface QuizResponse {
+  success: boolean;
+  isCorrect: boolean;
+  correctOption: string;
+  explanation: string | null;
+  selectedOption: string;
+  optionDistribution: Record<string, number>;
+  totalResponses: number;
+  correctRate?: number;
+  alreadyAnswered?: boolean;
+}
+
+// Generate a persistent visitor ID for quiz deduplication
+const getVisitorId = (): string => {
+  const storageKey = 'quiz_visitor_id';
+  let visitorId = localStorage.getItem(storageKey);
+  
+  if (!visitorId) {
+    // Generate a simple fingerprint-based ID
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx!.textBaseline = 'top';
+    ctx!.font = '14px Arial';
+    ctx!.fillText('Quiz fingerprint', 2, 2);
+    
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      canvas.toDataURL()
+    ].join('|');
+    
+    let hash = 0;
+    for (let i = 0; i < fingerprint.length; i++) {
+      const char = fingerprint.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    
+    visitorId = 'quiz_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+    localStorage.setItem(storageKey, visitorId);
+  }
+  
+  return visitorId;
+};
+
+// Track answered questions locally to avoid redundant API calls
+const getAnsweredQuestions = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem('quiz_answered');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const markQuestionAnswered = (questionId: string) => {
+  const answered = getAnsweredQuestions();
+  answered.add(questionId);
+  localStorage.setItem('quiz_answered', JSON.stringify([...answered]));
+};
+
+export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) => {
+  const [visitorId, setVisitorId] = useState<string>('');
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setVisitorId(getVisitorId());
+      setAnsweredQuestions(getAnsweredQuestions());
+    }
+  }, []);
+
+  const query = useQuery({
+    queryKey: ['quiz-questions', topicId],
+    queryFn: async () => {
+      if (!topicId || !quizEnabled) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('quiz_questions')
+        .select('*')
+        .eq('topic_id', topicId)
+        .eq('is_published', true)
+        .gt('valid_until', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching quiz questions:', error);
+        throw error;
+      }
+
+      // Cast the JSONB fields properly
+      return (data || []).map(q => ({
+        ...q,
+        options: q.options as QuizQuestion['options'],
+        option_distribution: q.option_distribution as Record<string, number>
+      })) as QuizQuestion[];
+    },
+    enabled: !!topicId && quizEnabled,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Filter out already answered questions for display
+  const unansweredQuestions = query.data?.filter(q => !answeredQuestions.has(q.id)) || [];
+
+  return {
+    ...query,
+    questions: query.data || [],
+    unansweredQuestions,
+    answeredQuestions,
+    visitorId,
+    isQuestionAnswered: (questionId: string) => answeredQuestions.has(questionId),
+    markAsAnswered: (questionId: string) => {
+      markQuestionAnswered(questionId);
+      setAnsweredQuestions(prev => new Set([...prev, questionId]));
+    }
+  };
+};
+
+export const useSubmitQuizResponse = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      questionId,
+      selectedOption,
+      visitorId,
+      responseTimeMs
+    }: {
+      questionId: string;
+      selectedOption: string;
+      visitorId: string;
+      responseTimeMs?: number;
+    }): Promise<QuizResponse> => {
+      const { data, error } = await supabase.functions.invoke('submit-quiz-response', {
+        body: {
+          questionId,
+          selectedOption,
+          visitorId,
+          responseTimeMs
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return data as QuizResponse;
+    },
+    onSuccess: (data, variables) => {
+      // Mark question as answered locally
+      markQuestionAnswered(variables.questionId);
+      // Invalidate quiz queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['quiz-questions'] });
+    }
+  });
+};
+
+// Hook to get quiz stats for dashboard
+export const useQuizStats = (topicId: string | undefined) => {
+  return useQuery({
+    queryKey: ['quiz-stats', topicId],
+    queryFn: async () => {
+      if (!topicId) return null;
+
+      const { data, error } = await supabase.rpc('get_topic_quiz_stats', {
+        p_topic_id: topicId,
+        p_days: 7
+      });
+
+      if (error) {
+        console.error('Error fetching quiz stats:', error);
+        return null;
+      }
+
+      return data?.[0] || { quiz_responses_count: 0, correct_rate: 0 };
+    },
+    enabled: !!topicId,
+    staleTime: 60 * 1000, // Cache for 1 minute
+  });
+};
