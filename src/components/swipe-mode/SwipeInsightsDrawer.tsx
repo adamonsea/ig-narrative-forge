@@ -26,6 +26,7 @@ interface InsightsData {
   totalDiscards: number;
   approvalRate: number;
   topStories: TopStory[];
+  bottomStories: TopStory[];
 }
 
 export const SwipeInsightsDrawer = ({ topicId, topicName }: SwipeInsightsDrawerProps) => {
@@ -52,12 +53,24 @@ export const SwipeInsightsDrawer = ({ topicId, topicName }: SwipeInsightsDrawerP
               dislikes: Number(s.dislikes) || 0
             }))
           : [];
+        
+        const bottomStoriesRaw = data[0].bottom_stories;
+        const bottomStories: TopStory[] = Array.isArray(bottomStoriesRaw) 
+          ? bottomStoriesRaw.map((s: any) => ({
+              story_id: s.story_id,
+              title: s.title,
+              likes: Number(s.likes) || 0,
+              dislikes: Number(s.dislikes) || 0
+            }))
+          : [];
+        
         setInsights({
           totalReaders: Number(data[0].total_readers) || 0,
           totalLikes: Number(data[0].total_likes) || 0,
           totalDiscards: Number(data[0].total_discards) || 0,
           approvalRate: Number(data[0].approval_rate) || 0,
-          topStories
+          topStories,
+          bottomStories
         });
       }
     } catch (error) {
@@ -171,7 +184,10 @@ export const SwipeInsightsDrawer = ({ topicId, topicName }: SwipeInsightsDrawerP
             {insights.topStories.length > 0 && (
               <Card>
                 <CardContent className="p-4">
-                  <h3 className="text-sm font-medium mb-3">Most Loved Stories</h3>
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    Most Loved Stories
+                  </h3>
                   <div className="space-y-3">
                     {insights.topStories.map((story, index) => {
                       const total = story.likes + story.dislikes;
@@ -188,6 +204,40 @@ export const SwipeInsightsDrawer = ({ topicId, topicName }: SwipeInsightsDrawerP
                             <Progress value={approval} className="h-1.5 flex-1" />
                             <span className="text-xs text-muted-foreground w-16">
                               {story.likes} ❤️ {story.dislikes} 👎
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Bottom Stories - Most Disliked */}
+            {insights.bottomStories.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <ThumbsDown className="w-4 h-4 text-muted-foreground" />
+                    Most Passed Stories
+                  </h3>
+                  <div className="space-y-3">
+                    {insights.bottomStories.map((story, index) => {
+                      const total = story.likes + story.dislikes;
+                      const disapproval = total > 0 ? Math.round((story.dislikes / total) * 100) : 0;
+                      return (
+                        <div key={story.story_id} className="space-y-1">
+                          <div className="flex items-start gap-2">
+                            <Badge variant="outline" className="shrink-0 w-6 h-6 rounded-full p-0 flex items-center justify-center text-xs text-muted-foreground">
+                              {index + 1}
+                            </Badge>
+                            <p className="text-sm line-clamp-2 flex-1 text-muted-foreground">{story.title}</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-8">
+                            <Progress value={disapproval} className="h-1.5 flex-1 [&>div]:bg-muted-foreground" />
+                            <span className="text-xs text-muted-foreground w-16">
+                              {story.dislikes} 👎 {story.likes} ❤️
                             </span>
                           </div>
                         </div>

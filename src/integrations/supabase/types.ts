@@ -4106,6 +4106,13 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_daily_story_counts: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          date: string
+          story_count: number
+        }[]
+      }
       get_legacy_articles_awaiting_simplification: {
         Args: { p_topic_id: string }
         Returns: number
@@ -4316,6 +4323,7 @@ export type Database = {
         Args: { p_topic_id: string }
         Returns: {
           approval_rate: number
+          bottom_stories: Json
           top_stories: Json
           total_discards: number
           total_likes: number
