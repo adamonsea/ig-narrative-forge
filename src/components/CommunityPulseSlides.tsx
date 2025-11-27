@@ -19,7 +19,8 @@ interface CommunityPulseSlidesProps {
   timeframe?: string;
   mostActiveThreadUrl?: string;
   mostActiveThreadTitle?: string;
-  subreddit?: string; // Add subreddit prop
+  subreddit?: string; // Subreddit name for the community
+  topicName?: string; // Topic name as fallback for subreddit
 }
 
 export const CommunityPulseSlides = ({
@@ -27,7 +28,8 @@ export const CommunityPulseSlides = ({
   timeframe = '48h',
   mostActiveThreadUrl,
   mostActiveThreadTitle,
-  subreddit
+  subreddit,
+  topicName
 }: CommunityPulseSlidesProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -44,8 +46,8 @@ export const CommunityPulseSlides = ({
   // Limit to max 3 keywords
   const limitedKeywords = keywords.slice(0, 3);
   
-  // Get subreddit from first keyword if not provided as prop
-  const subredditName = subreddit || limitedKeywords[0]?.subreddit || 'eastbourne';
+  // Get subreddit from first keyword, prop, or derive from topic name (multi-tenant)
+  const subredditName = subreddit || limitedKeywords[0]?.subreddit || topicName?.toLowerCase().replace(/\s+/g, '') || 'community';
 
   // Get sentiment color based on positive vs negative ratio
   const getSentimentColor = (keyword: PulseKeyword) => {

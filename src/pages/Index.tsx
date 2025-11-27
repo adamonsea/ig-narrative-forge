@@ -3,11 +3,31 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, BarChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
 const Index = () => {
   const {
     user,
     loading
   } = useAuth();
+
+  // Fetch first active public topic for demo link (multi-tenant)
+  const { data: demoTopic } = useQuery({
+    queryKey: ['demo-topic'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('topics')
+        .select('slug')
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .order('name')
+        .limit(1)
+        .single();
+      return data?.slug || 'eastbourne'; // Fallback only if no topics exist
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
 
   // Set Curatr favicon for home page
   usePageFavicon();
@@ -47,14 +67,14 @@ const Index = () => {
           <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
             <div className="space-y-6">
               <h1 className="text-7xl md:text-8xl font-display font-semibold tracking-tight leading-[0.95] text-white">Create beautiful feeds, any sources, any topic</h1>
-              <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">AI-powered editorial tools, automating niche content curation, simplification and publishing. Driving engagement </p>
+              <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">AI-powered editorial tools, automating niche content curation, simplification and publishing. Driving engagement </p>
             </div>
             <div className="flex gap-4 justify-center pt-4">
               <Button asChild size="lg" className="rounded-full px-8 h-12 text-base bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
                 <Link to={user ? "/dashboard" : "/auth"}>Get started</Link>
               </Button>
               <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white">
-                <Link to="/feed/eastbourne">View demo</Link>
+                <Link to={`/feed/${demoTopic || 'eastbourne'}`}>View demo</Link>
               </Button>
             </div>
           </section>
