@@ -679,40 +679,82 @@ ${geminiProPrompt}`;
         console.log(`📝 Gemini Pro text-only prompt (${geminiProPrompt.length} chars)`);
       }
 
-      const geminiProResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-pro-image-preview',
-          messages: [
-            {
-              role: 'user',
-              content: messageContent
+      // Helper function to make Gemini Pro request
+      const makeGeminiProRequest = async (content: any, isRetry = false) => {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-pro-image-preview',
+            messages: [
+              {
+                role: 'user',
+                content: content
+              }
+            ],
+            modalities: ['image', 'text'],
+            response_modalities: ['IMAGE'],
+            image_config: {
+              aspect_ratio: '3:2'
             }
-          ],
-          modalities: ['image', 'text'],
-          response_modalities: ['IMAGE'],
-          image_config: {
-            aspect_ratio: '3:2'
-          }
-        }),
-      });
+          }),
+        });
 
-      if (!geminiProResponse.ok) {
-        const errorText = await geminiProResponse.text();
-        console.error('Gemini Pro API error response:', errorText);
-        
-        if (geminiProResponse.status === 429) {
-          throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
-        } else if (geminiProResponse.status === 402) {
-          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Gemini Pro API error response${isRetry ? ' (retry)' : ''}:`, errorText);
+          
+          if (response.status === 429) {
+            throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
+          } else if (response.status === 402) {
+            throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
+          }
+          
+          // Return error info for fallback handling
+          return { error: true, status: response.status, errorText };
         }
         
-        throw new Error(`Gemini Pro API error: ${geminiProResponse.status} - ${errorText}`);
+        return { error: false, response };
+      };
+
+      // Try multimodal first, fall back to text-only if image processing fails
+      let geminiProResponse: Response;
+      let usedMultimodal = false;
+      
+      if (styleReferenceBase64) {
+        console.log('🖼️ Attempting multimodal generation with style reference...');
+        const multimodalResult = await makeGeminiProRequest(messageContent);
+        
+        if (multimodalResult.error && multimodalResult.status === 400 && 
+            multimodalResult.errorText?.includes('Unable to process input image')) {
+          // Fall back to text-only mode
+          console.warn('⚠️ Multimodal failed due to image processing, falling back to text-only mode');
+          const textOnlyResult = await makeGeminiProRequest(geminiProPrompt, true);
+          
+          if (textOnlyResult.error) {
+            throw new Error(`Gemini Pro API error: ${textOnlyResult.status} - ${textOnlyResult.errorText}`);
+          }
+          geminiProResponse = textOnlyResult.response!;
+          usedMultimodal = false;
+        } else if (multimodalResult.error) {
+          throw new Error(`Gemini Pro API error: ${multimodalResult.status} - ${multimodalResult.errorText}`);
+        } else {
+          geminiProResponse = multimodalResult.response!;
+          usedMultimodal = true;
+        }
+      } else {
+        const textOnlyResult = await makeGeminiProRequest(messageContent);
+        if (textOnlyResult.error) {
+          throw new Error(`Gemini Pro API error: ${textOnlyResult.status} - ${textOnlyResult.errorText}`);
+        }
+        geminiProResponse = textOnlyResult.response!;
+        usedMultimodal = false;
       }
+      
+      console.log(`✅ Gemini Pro request successful (multimodal: ${usedMultimodal})`);
 
       const geminiProData = await geminiProResponse.json();
       console.log('📊 Gemini Pro generation metadata:', {
