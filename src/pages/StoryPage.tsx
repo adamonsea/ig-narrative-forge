@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
 import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
+import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
 
 interface Story {
   id: string;
@@ -196,6 +197,11 @@ const StoryPage = () => {
           topicId={topic?.id}
           storyIndex={0}
         />
+        
+        {/* Story Rating Stats */}
+        <div className="p-4">
+          <StoryRatingCard storyId={story.id} />
+        </div>
       </div>
     </div>
   );
