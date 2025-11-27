@@ -341,27 +341,46 @@ export default function SwipeMode() {
                   </a>
                 )}
                 
-                {currentStory.slides
-                  ?.sort((a, b) => a.slide_number - b.slide_number)
-                  .map(slide => (
-                    <div 
-                      key={slide.slide_number} 
-                      className="text-foreground"
-                      style={{ color: 'hsl(var(--foreground))' }}
-                    >
+                {currentStory.slides && currentStory.slides.length > 0 ? (
+                  currentStory.slides
+                    .sort((a, b) => a.slide_number - b.slide_number)
+                    .map(slide => (
                       <div 
-                        className="prose prose-lg md:prose-xl max-w-none"
-                        style={{ 
-                          color: 'hsl(var(--foreground))',
-                          '--tw-prose-body': 'hsl(var(--foreground))',
-                          '--tw-prose-headings': 'hsl(var(--foreground))',
-                          '--tw-prose-bold': 'hsl(var(--foreground))',
-                          '--tw-prose-links': 'hsl(var(--primary))',
-                        } as React.CSSProperties}
-                        dangerouslySetInnerHTML={{ __html: slide.content }} 
-                      />
-                    </div>
-                  ))}
+                        key={slide.slide_number} 
+                        className="text-foreground"
+                        style={{ color: 'hsl(var(--foreground))' }}
+                      >
+                        <div 
+                          className="prose prose-lg md:prose-xl max-w-none"
+                          style={{ 
+                            color: 'hsl(var(--foreground))',
+                            '--tw-prose-body': 'hsl(var(--foreground))',
+                            '--tw-prose-headings': 'hsl(var(--foreground))',
+                            '--tw-prose-bold': 'hsl(var(--foreground))',
+                            '--tw-prose-links': 'hsl(var(--primary))',
+                          } as React.CSSProperties}
+                          dangerouslySetInnerHTML={{ __html: slide.content }} 
+                        />
+                      </div>
+                    ))
+                ) : (
+                  <div className="p-8 text-center space-y-4">
+                    <p className="text-muted-foreground">Story content couldn't be loaded.</p>
+                    {currentStory.article?.source_url && (
+                      <Button asChild variant="outline">
+                        <a
+                          href={currentStory.article.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View Original Source
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
