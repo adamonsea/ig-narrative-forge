@@ -358,9 +358,8 @@ export const SentimentCard = ({
   const sentiment = getSentimentStyle();
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <Card className={`w-full overflow-hidden shadow-lg border-2 ${sentiment.border}`}>
-        <div className={`relative h-[600px] flex flex-col overflow-hidden ${sentiment.gradient}`}>
+    <Card className={`w-full overflow-hidden shadow-lg border-2 ${sentiment.border}`}>
+      <div className={`relative h-[600px] flex flex-col overflow-hidden ${sentiment.gradient}`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/50">
             {isRecentlyUpdated() && updatedAt && (
@@ -409,6 +408,5 @@ export const SentimentCard = ({
           </div>
         </div>
       </Card>
-    </div>
   );
 };

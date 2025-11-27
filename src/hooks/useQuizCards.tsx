@@ -98,13 +98,24 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
     }
   }, []);
 
+  // Always fetch quiz questions when we have a topicId - the quizEnabled check 
+  // happens in the queryFn to avoid race conditions where the setting loads after
+  // the initial render, which would prevent the query from ever running
   const query = useQuery({
     queryKey: ['quiz-questions', topicId, quizEnabled],
     queryFn: async () => {
-      if (!topicId || !quizEnabled) {
+      if (!topicId) {
+        return [];
+      }
+      
+      // Return empty if quiz not enabled - but query still ran so it can refetch
+      // when quizEnabled changes
+      if (!quizEnabled) {
+        console.log('Quiz questions: quizEnabled is false, returning empty');
         return [];
       }
 
+      console.log('Quiz questions: fetching for topic', topicId);
       const { data, error } = await supabase
         .from('quiz_questions')
         .select('*')
@@ -119,6 +130,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
         throw error;
       }
 
+      console.log('Quiz questions: fetched', data?.length || 0, 'questions');
       // Cast the JSONB fields properly
       return (data || []).map(q => ({
         ...q,
@@ -126,7 +138,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
         option_distribution: q.option_distribution as Record<string, number>
       })) as QuizQuestion[];
     },
-    enabled: !!topicId && quizEnabled,
+    enabled: !!topicId, // Always enable when we have topicId - quizEnabled check is in queryFn
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
