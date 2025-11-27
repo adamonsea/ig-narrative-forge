@@ -250,12 +250,19 @@ export const useSwipeMode = (topicId: string) => {
   }, [user, topicId]);
 
   useEffect(() => {
-    // Only fetch on mount or when topicId changes, not when user authenticates
-    if (topicId && stories.length === 0) {
+    // Initial fetch on mount or when topicId changes
+    if (topicId) {
       fetchUnswipedStories();
       fetchStats();
+      
+      // Poll for new stories every 30 seconds to ensure newly added stories appear first
+      const pollInterval = setInterval(() => {
+        fetchUnswipedStories();
+      }, 30000);
+      
+      return () => clearInterval(pollInterval);
     }
-  }, [topicId]);
+  }, [topicId, fetchUnswipedStories, fetchStats]);
 
   const currentStory = stories[currentIndex] || null;
   const hasMoreStories = currentIndex < stories.length;
