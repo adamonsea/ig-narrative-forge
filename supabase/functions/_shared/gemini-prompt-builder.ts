@@ -104,27 +104,34 @@ export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): strin
   // Extract scene excerpt (first 180 chars to stay within target length)
   const sceneExcerpt = slideContent ? slideContent.substring(0, 180).trim() : subject;
   
-  return `⚠️ ABSOLUTE REQUIREMENT - ZERO TEXT IN IMAGE ⚠️
-NO letters, words, numbers, signs, labels, venue names, dates, or any typographic elements whatsoever. This is NOT a poster or flyer - it is pure visual storytelling without text.
+  return `Create an editorial illustration in the EXACT style of mid-century screen printing / risograph art.
 
-You're creating an editorial illustration for ${publicationName || 'a news publication'} in the style of Jon McNaught, Guardian editorial covers, or New Yorker spot illustrations.
+MANDATORY STYLE SPECIFICATION (follow precisely):
 
-Story: "${storyTitle}" about ${subject}
+TECHNIQUE: Screen print / risograph aesthetic with visible paper texture grain. Hand-printed look with slight ink irregularities and texture. NOT digital vector art.
 
-Visual story: ${sceneExcerpt}
+OUTLINES: Bold, thick BLACK outlines (3-5px equivalent weight) around ALL shapes. Every object must have a clear black stroke defining its edges. Think woodcut or linocut print.
 
-The illustration should feel: ${expressionGuidance} ${tonalGuidance}
+COLOR FILL: COMPLETELY FLAT color fills inside shapes. ZERO gradients, ZERO shading, ZERO highlights, ZERO shadows within shapes. Colors are solid blocks like screen printing ink.
 
-Visual Language: Bold editorial cartoon with FLAT COLOR FILLS and clean black outlines—screen print aesthetic, not detailed pen work. Large, simple geometric shapes. Architectural, modernist composition with clear focal points.
+PALETTE: Maximum 3-4 colors total:
+- Off-white/cream paper background (not pure white)
+- Black for all outlines and some solid areas
+- ONE accent color: ${primaryColor} used sparingly as a flat fill
+- Optional: one additional muted tone
 
-Color Palette: Predominantly white negative space (60%+) with solid black areas and exactly ONE accent color (${primaryColor}) as flat color block on story-relevant object. NO gradients, textures, or intricate details—clean, bold shapes only.
+SHAPES: Geometric, simplified, almost abstract. Human figures (if any) are simplified into basic geometric forms - circles for heads, rectangles for bodies. NO realistic proportions or detailed features. Think Saul Bass or Paul Rand illustration style.
 
-Composition: 3:2 landscape format. 1-3 large iconic forms maximum—prioritize SIMPLE, BOLD shapes over detailed rendering. Strategic negative space for balance and visual breathing room, not random emptiness. Edge-to-edge composition with no borders.
+COMPOSITION: Modernist, architectural arrangement. Large simple shapes. 60%+ negative space (cream background showing). 1-3 main elements maximum. 3:2 landscape format.
 
-REMINDER - TEXT IS FORBIDDEN:
-If the subject involves signage, buildings, or venues: show them WITHOUT readable text - use blank shapes, geometric patterns, or symbolic representations instead of letters.
+⚠️ ZERO TEXT: No letters, words, numbers, signs, or labels anywhere in the image.
 
-Capture this moment with clean minimalist sophistication—say more with less. Adult editorial aesthetic for serious journalism.`;
+SUBJECT FOR THIS ILLUSTRATION:
+Story: "${storyTitle}" for ${publicationName || 'a news publication'}
+Scene: ${sceneExcerpt}
+Mood: ${expressionGuidance} ${tonalGuidance}
+
+Create a single iconic visual moment that captures this story's essence using ONLY flat shapes, bold black outlines, limited colors, and generous negative space. Make it look hand-printed, not digital.`;
 }
 
 /**
