@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
-import { encode as encodeBase64 } from "https://deno.land/std@0.192.0/encoding/base64.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { 
   analyzeStoryTone, 
@@ -598,30 +597,15 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
-      // Build style reference URL from request origin and fetch as base64
-      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || '';
-      const styleReferenceUrl = origin ? `${origin}/style-references/editorial-reference-1.png` : null;
+      // Build style reference URL - use a publicly accessible URL for Gemini
+      // Gemini requires publicly accessible URLs, not localhost/preview URLs
+      // For now, we'll use an enhanced text-only prompt with very detailed style instructions
+      // since Gemini's image generation doesn't reliably support style transfer from reference images
       
-      console.log(`📸 Style reference URL: ${styleReferenceUrl || 'none (text-only mode)'}`);
-
-      // Fetch style reference image and convert to base64 for Gemini
-      let styleReferenceBase64: string | null = null;
-      if (styleReferenceUrl && illustrationStyle === 'editorial_illustrative') {
-        try {
-          console.log('🖼️ Fetching style reference image...');
-          const imageResponse = await fetch(styleReferenceUrl);
-          if (imageResponse.ok) {
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const base64 = encodeBase64(new Uint8Array(imageBuffer));
-            styleReferenceBase64 = `data:image/png;base64,${base64}`;
-            console.log(`✅ Style reference image fetched (${Math.round(imageBuffer.byteLength / 1024)}KB)`);
-          } else {
-            console.warn(`⚠️ Failed to fetch style reference: ${imageResponse.status}`);
-          }
-        } catch (fetchError) {
-          console.warn('⚠️ Error fetching style reference image:', fetchError);
-        }
-      }
+      console.log(`📸 Using enhanced text-only prompt for style consistency (Gemini image gen limitation)`);
+      
+      // Flag for style mode - currently text-only with detailed style instructions
+      const useEnhancedStylePrompt = illustrationStyle === 'editorial_illustrative';
 
       // Generate model-specific prompt leveraging Gemini's world knowledge
       const geminiProPrompt = illustrationStyle === 'editorial_photographic'
@@ -642,119 +626,46 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             primaryColor
           });
 
-      // Build multimodal message with style reference if available
-      let messageContent: any;
-      
-      if (styleReferenceBase64) {
-        // Multimodal prompt with style reference image as base64
-        const styleMatchingPrompt = `CRITICAL: Generate an editorial illustration that EXACTLY matches the visual style of the reference image provided.
+      // Use text-only prompt (Gemini image gen doesn't reliably support style transfer from reference images)
+      console.log(`📝 Gemini Pro prompt (${geminiProPrompt.length} chars) - enhanced style specification`);
 
-STYLE TO MATCH FROM REFERENCE IMAGE:
-- Same bold black outlines and flat color fills
-- Same simplified human figures (geometric shapes, minimal facial features)
-- Same screen-print/risograph aesthetic with paper texture
-- Same limited color palette: black + cream/off-white + single accent color (${primaryColor})
-- Same architectural, modernist composition
-- Same level of abstraction and simplification
-
-NOW GENERATE THIS SCENE IN THAT EXACT STYLE:
-${geminiProPrompt}`;
-
-        messageContent = [
-          {
-            type: 'text',
-            text: styleMatchingPrompt
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: styleReferenceBase64
+      // Make Gemini Pro request
+      const geminiProResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-pro-image-preview',
+          messages: [
+            {
+              role: 'user',
+              content: geminiProPrompt
             }
+          ],
+          modalities: ['image', 'text'],
+          response_modalities: ['IMAGE'],
+          image_config: {
+            aspect_ratio: '3:2'
           }
-        ];
-        console.log(`📝 Gemini Pro multimodal prompt (${styleMatchingPrompt.length} chars) with style reference (base64)`);
-      } else {
-        // Text-only prompt (fallback or photographic style)
-        messageContent = geminiProPrompt;
-        console.log(`📝 Gemini Pro text-only prompt (${geminiProPrompt.length} chars)`);
-      }
+        }),
+      });
 
-      // Helper function to make Gemini Pro request
-      const makeGeminiProRequest = async (content: any, isRetry = false) => {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-3-pro-image-preview',
-            messages: [
-              {
-                role: 'user',
-                content: content
-              }
-            ],
-            modalities: ['image', 'text'],
-            response_modalities: ['IMAGE'],
-            image_config: {
-              aspect_ratio: '3:2'
-            }
-          }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Gemini Pro API error response${isRetry ? ' (retry)' : ''}:`, errorText);
-          
-          if (response.status === 429) {
-            throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
-          } else if (response.status === 402) {
-            throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
-          }
-          
-          // Return error info for fallback handling
-          return { error: true, status: response.status, errorText };
+      if (!geminiProResponse.ok) {
+        const errorText = await geminiProResponse.text();
+        console.error('Gemini Pro API error response:', errorText);
+        
+        if (geminiProResponse.status === 429) {
+          throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
+        } else if (geminiProResponse.status === 402) {
+          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
         }
         
-        return { error: false, response };
-      };
-
-      // Try multimodal first, fall back to text-only if image processing fails
-      let geminiProResponse: Response;
-      let usedMultimodal = false;
-      
-      if (styleReferenceBase64) {
-        console.log('🖼️ Attempting multimodal generation with style reference...');
-        const multimodalResult = await makeGeminiProRequest(messageContent);
-        
-        if (multimodalResult.error && multimodalResult.status === 400 && 
-            multimodalResult.errorText?.includes('Unable to process input image')) {
-          // Fall back to text-only mode
-          console.warn('⚠️ Multimodal failed due to image processing, falling back to text-only mode');
-          const textOnlyResult = await makeGeminiProRequest(geminiProPrompt, true);
-          
-          if (textOnlyResult.error) {
-            throw new Error(`Gemini Pro API error: ${textOnlyResult.status} - ${textOnlyResult.errorText}`);
-          }
-          geminiProResponse = textOnlyResult.response!;
-          usedMultimodal = false;
-        } else if (multimodalResult.error) {
-          throw new Error(`Gemini Pro API error: ${multimodalResult.status} - ${multimodalResult.errorText}`);
-        } else {
-          geminiProResponse = multimodalResult.response!;
-          usedMultimodal = true;
-        }
-      } else {
-        const textOnlyResult = await makeGeminiProRequest(messageContent);
-        if (textOnlyResult.error) {
-          throw new Error(`Gemini Pro API error: ${textOnlyResult.status} - ${textOnlyResult.errorText}`);
-        }
-        geminiProResponse = textOnlyResult.response!;
-        usedMultimodal = false;
+        throw new Error(`Gemini Pro API error: ${geminiProResponse.status} - ${errorText}`);
       }
       
-      console.log(`✅ Gemini Pro request successful (multimodal: ${usedMultimodal})`);
+      console.log('✅ Gemini Pro request successful');
 
       const geminiProData = await geminiProResponse.json();
       console.log('📊 Gemini Pro generation metadata:', {
