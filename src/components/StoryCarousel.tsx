@@ -406,7 +406,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     console.error('StoryCarousel: No valid slides found for story', story.id);
     return (
       <div className="flex justify-center px-4">
-        <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg">
+        <Card className="w-full max-w-2xl overflow-hidden shadow-lg">
           <div className="p-6 text-center text-muted-foreground">
             <p>Story content is not available</p>
           </div>
@@ -1041,7 +1041,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       <meta itemProp="headline" content={story.title} />
       <meta itemProp="author" content={story.author || 'Unknown'} />
       <meta itemProp="datePublished" content={story.created_at} />
-      <Card className={`w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} data-story-card data-story-id={story.id}>
+      <Card className={`w-full max-w-2xl overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} data-story-card data-story-id={story.id}>
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
           <div className="p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50">

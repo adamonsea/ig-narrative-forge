@@ -79,7 +79,7 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
   };
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/50 bg-card relative h-full">
+    <Card className="w-full overflow-hidden rounded-2xl border-border/50 bg-card relative h-full">
       <SwipeCarousel
         slides={slideComponents}
         height="100%"
