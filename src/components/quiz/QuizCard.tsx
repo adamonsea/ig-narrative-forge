@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { QuizQuestion, QuizResponse, useSubmitQuizResponse } from '@/hooks/useQuizCards';
 import { Check, X, ExternalLink, Loader2, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,26 +16,23 @@ interface QuizCardProps {
 
 export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCardProps) => {
   const navigate = useNavigate();
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [result, setResult] = useState<QuizResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime] = useState<number>(Date.now());
   
   const submitResponse = useSubmitQuizResponse();
 
-  const handleOptionSelect = (label: string) => {
-    if (result) return; // Already answered
-    setSelectedOption(label);
-  };
+  // Immediate submit on option click - no separate submit button
+  const handleOptionSelect = async (label: string) => {
+    if (result || isSubmitting) return; // Already answered or submitting
 
-  const handleSubmit = async () => {
-    if (!selectedOption || result) return;
-
+    setIsSubmitting(true);
     const responseTimeMs = Date.now() - startTime;
 
     try {
       const response = await submitResponse.mutateAsync({
         questionId: question.id,
-        selectedOption,
+        selectedOption: label,
         visitorId,
         responseTimeMs
       });
@@ -45,6 +41,8 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
       onAnswered?.(question.id);
     } catch (error) {
       console.error('Error submitting quiz response:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,9 +54,7 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
 
   const getOptionStyle = (label: string) => {
     if (!result) {
-      return selectedOption === label
-        ? 'border-primary bg-primary/10'
-        : 'border-border hover:border-primary/50';
+      return 'border-border hover:border-primary/50 cursor-pointer';
     }
 
     const isCorrect = label === result.correctOption;
@@ -89,7 +85,7 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
   };
 
   return (
-    <Card className="w-full overflow-hidden rounded-2xl border-border/50 bg-card relative h-full flex flex-col">
+    <Card className="w-full overflow-hidden rounded-2xl border-border/50 bg-card relative min-h-[500px] flex flex-col">
       {/* Card type indicator */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-purple-dark z-10 shadow-sm">
         <span className="text-xs text-purple-dark font-medium tracking-wide whitespace-nowrap flex items-center gap-1">
@@ -100,24 +96,24 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
 
       <div className="flex-1 p-6 pt-14 flex flex-col">
         {/* Question */}
-        <h3 className="text-lg font-semibold text-foreground mb-4 text-center">
+        <h3 className="text-lg font-semibold text-foreground mb-6 text-center leading-snug">
           {question.question_text}
         </h3>
 
-        {/* Options */}
-        <div className="space-y-2 flex-1">
+        {/* Options - tap to answer immediately */}
+        <div className="space-y-3 flex-1">
           {question.options.map((option) => (
             <button
               key={option.label}
               onClick={() => handleOptionSelect(option.label)}
-              disabled={!!result}
+              disabled={!!result || isSubmitting}
               className={cn(
-                'w-full p-3 rounded-lg border-2 transition-all text-left flex items-center gap-3',
+                'w-full p-4 rounded-xl border-2 transition-all text-left flex items-center gap-3',
                 getOptionStyle(option.label),
-                !result && 'cursor-pointer'
+                isSubmitting && 'opacity-50'
               )}
             >
-              <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0">
+              <span className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
                 {option.label}
               </span>
               <span className="flex-1 text-sm text-foreground">{option.text}</span>
@@ -125,7 +121,7 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
               
               {/* Show percentage if result exists */}
               {result && result.optionDistribution && (
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className="text-xs text-muted-foreground shrink-0 font-medium">
                   {result.optionDistribution[option.label] || 0}%
                 </span>
               )}
@@ -133,27 +129,34 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
           ))}
         </div>
 
-        {/* Result section */}
+        {/* Loading state */}
+        {isSubmitting && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          </div>
+        )}
+
+        {/* Result section - immediate feedback */}
         {result && (
           <div className="mt-4 space-y-3">
             {/* Result banner */}
             <div className={cn(
-              'p-3 rounded-lg text-center',
+              'p-4 rounded-xl text-center',
               result.isCorrect ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'
             )}>
-              <p className="font-semibold">
+              <p className="font-bold text-lg">
                 {result.isCorrect ? '🎉 Correct!' : '❌ Not quite!'}
               </p>
               {result.explanation && (
-                <p className="text-sm mt-1 opacity-80">{result.explanation}</p>
+                <p className="text-sm mt-2 opacity-80">{result.explanation}</p>
               )}
             </div>
 
-            {/* Stats */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{result.totalResponses} people answered</span>
+            {/* Community comparison stats */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>{result.totalResponses} answered</span>
               {result.correctRate !== undefined && (
-                <span>{result.correctRate}% got it right</span>
+                <span className="font-medium">{result.correctRate}% got it right</span>
               )}
             </div>
 
@@ -172,22 +175,11 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
           </div>
         )}
 
-        {/* Submit button (only before answering) */}
-        {!result && (
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedOption || submitResponse.isPending}
-            className="w-full mt-4"
-          >
-            {submitResponse.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              'Submit Answer'
-            )}
-          </Button>
+        {/* Tap to answer hint (before answering) */}
+        {!result && !isSubmitting && (
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Tap an answer to see how you compare
+          </p>
         )}
       </div>
 
