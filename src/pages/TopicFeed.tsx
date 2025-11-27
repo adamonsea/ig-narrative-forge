@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
@@ -418,27 +419,35 @@ const TopicFeed = () => {
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
   const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
   
-  // Fetch quiz cards setting
-  const [quizCardsEnabled, setQuizCardsEnabled] = useState(false);
-  
-  useEffect(() => {
-    if (!topic?.id) return;
-    
-    const fetchQuizSetting = async () => {
-      const { data } = await supabase
+  // Fetch quiz cards setting using react-query for proper reactivity
+  const { data: quizSettingData } = useQuery({
+    queryKey: ['quiz-setting', topic?.id],
+    queryFn: async () => {
+      if (!topic?.id) return null;
+      const { data, error } = await supabase
         .from('topic_insight_settings')
         .select('quiz_cards_enabled')
         .eq('topic_id', topic.id)
         .single();
       
-      setQuizCardsEnabled(data?.quiz_cards_enabled ?? false);
-    };
-    
-    fetchQuizSetting();
-  }, [topic?.id]);
+      if (error) {
+        console.log('Quiz setting fetch error:', error);
+        return null;
+      }
+      console.log('Quiz setting loaded:', data?.quiz_cards_enabled);
+      return data;
+    },
+    enabled: !!topic?.id,
+    staleTime: 5 * 60 * 1000,
+  });
   
-  // Quiz cards hook
+  const quizCardsEnabled = quizSettingData?.quiz_cards_enabled ?? false;
+  
+  // Quiz cards hook - depends on setting being loaded
   const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled);
+  
+  // Debug log for quiz cards
+  console.log('Quiz cards state:', { quizCardsEnabled, questionsCount: quizQuestions.length, topicId: topic?.id });
 
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;

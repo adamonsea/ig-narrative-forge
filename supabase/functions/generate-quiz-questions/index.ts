@@ -7,17 +7,16 @@ const corsHeaders = {
 };
 
 // Sensitive topic patterns to AVOID generating quizzes about
+// Be careful not to be too broad - only match clear sensitive terms
 const SENSITIVE_PATTERNS = [
-  /death|died|killed|murder|fatal/i,
-  /accident|crash|collision/i,
-  /court|trial|sentenced|convicted|arrested/i,
-  /abuse|assault|violence|attack/i,
-  /tragedy|tragic|victim/i,
-  /suicide|self-harm/i,
-  /cancer|terminal|illness|disease/i,
-  /missing|disappeared/i,
-  /fire|explosion|disaster/i,
-  /robbery|theft|burglary|fraud/i,
+  /\b(death|died|killed|murder|fatal|fatality)\b/i,
+  /\b(court case|trial|sentenced|convicted|arrested|prison)\b/i,
+  /\b(abuse|assault|violent attack)\b/i,
+  /\b(suicide|self-harm)\b/i,
+  /\b(cancer|terminal illness)\b/i,
+  /\b(missing person|disappeared)\b/i,
+  /\b(robbery|theft|burglary|fraud|scam)\b/i,
+  /\b(tragedy|tragic death|victim of)\b/i,
 ];
 
 serve(async (req) => {
@@ -85,6 +84,7 @@ serve(async (req) => {
       console.log(`Processing topic: ${topicName} (${topicId})`);
 
       // Get recent published stories that don't have quiz questions yet
+      // Extended to 7 days to have more candidate stories
       const { data: stories, error: storiesError } = await supabase
         .from('stories')
         .select(`
@@ -104,9 +104,9 @@ serve(async (req) => {
         .eq('topic_articles.topic_id', topicId)
         .in('status', ['ready', 'published'])
         .eq('is_published', true)
-        .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(30);
 
       if (storiesError) {
         console.error(`Error fetching stories for topic ${topicId}:`, storiesError);
@@ -135,8 +135,8 @@ serve(async (req) => {
         continue;
       }
 
-      // Process up to 3 stories per topic per run
-      const storiesToProcess = storiesWithoutQuiz.slice(0, 3);
+      // Process up to 10 stories per topic per run
+      const storiesToProcess = storiesWithoutQuiz.slice(0, 10);
       let topicQuestionsGenerated = 0;
 
       for (const story of storiesToProcess) {
