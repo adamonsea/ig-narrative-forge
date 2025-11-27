@@ -254,13 +254,6 @@ export const useSwipeMode = (topicId: string) => {
     if (topicId) {
       fetchUnswipedStories();
       fetchStats();
-      
-      // Poll for new stories every 30 seconds to ensure newly added stories appear first
-      const pollInterval = setInterval(() => {
-        fetchUnswipedStories();
-      }, 30000);
-      
-      return () => clearInterval(pollInterval);
     }
   }, [topicId, fetchUnswipedStories, fetchStats]);
 
