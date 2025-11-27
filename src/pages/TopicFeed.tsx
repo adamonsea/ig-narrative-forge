@@ -32,6 +32,8 @@ import { Link } from "react-router-dom";
 import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAutomatedInsightCards";
 import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
+import { useQuizCards } from "@/hooks/useQuizCards";
+import { QuizCard } from "@/components/quiz/QuizCard";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -415,6 +417,28 @@ const TopicFeed = () => {
   const { sentimentCards } = useSentimentCards(topic?.id);
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
   const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
+  
+  // Fetch quiz cards setting
+  const [quizCardsEnabled, setQuizCardsEnabled] = useState(false);
+  
+  useEffect(() => {
+    if (!topic?.id) return;
+    
+    const fetchQuizSetting = async () => {
+      const { data } = await supabase
+        .from('topic_insight_settings')
+        .select('quiz_cards_enabled')
+        .eq('topic_id', topic.id)
+        .single();
+      
+      setQuizCardsEnabled(data?.quiz_cards_enabled ?? false);
+    };
+    
+    fetchQuizSetting();
+  }, [topic?.id]);
+  
+  // Quiz cards hook
+  const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled);
 
   // Show community pulse slides only if topic has community intelligence enabled and has keywords
   const shouldShowCommunityPulse = topic?.community_intelligence_enabled && pulseData && pulseData.keywords.length > 0;
@@ -1173,6 +1197,25 @@ const TopicFeed = () => {
                     />
                   </div>
                 );
+              }
+
+              // Add quiz cards every 8 stories (offset by 5 to avoid collisions with other cards)
+              if (storyIndex % 8 === 5 && storyIndex > 0 && quizQuestions.length > 0 && quizCardsEnabled) {
+                const quizIndex = Math.floor((storyIndex - 5) / 8) % quizQuestions.length;
+                const quizQuestion = quizQuestions[quizIndex];
+                
+                if (quizQuestion) {
+                  items.push(
+                    <div key={`quiz-${quizQuestion.id}-${index}`} className="w-full max-w-2xl">
+                      <QuizCard
+                        question={quizQuestion}
+                        visitorId={quizVisitorId}
+                        topicSlug={slug}
+                        onAnswered={markAsAnswered}
+                      />
+                    </div>
+                  );
+                }
               }
 
               return items;
