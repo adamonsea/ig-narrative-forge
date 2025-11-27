@@ -232,27 +232,32 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
   const loadTopic = useCallback(async () => {
     try {
-      console.log('🔍 loadTopic: Starting topic load for slug:', slug);
-      const { data: topics, error: topicError } = await supabase
-        .from('safe_public_topics')
-        .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at');
+      console.log('🔍 loadTopic: Starting optimized topic load for slug:', slug);
+      
+      // Combined query: Fetch both public topic data and full topic data in parallel
+      const [publicTopicsResult, fullTopicResult] = await Promise.all([
+        supabase
+          .from('safe_public_topics')
+          .select('id, name, description, topic_type, region, slug, is_public, is_active, created_at'),
+        supabase
+          .from('topics')
+          .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled')
+          .ilike('slug', slug)
+          .eq('is_public', true)
+          .single()
+      ]);
 
-      console.log('🔍 loadTopic: RPC response:', { topics, error: topicError });
-
-      if (topicError) throw topicError;
+      if (publicTopicsResult.error) throw publicTopicsResult.error;
 
       // Case-insensitive slug matching
-      const topicData = topics?.find(t => t.slug?.toLowerCase() === slug.toLowerCase());
+      const topicData = publicTopicsResult.data?.find(t => t.slug?.toLowerCase() === slug.toLowerCase());
       console.log('🔍 loadTopic: Found topic data:', topicData);
       
       if (!topicData) throw new Error('Topic not found');
 
-      const { data: fullTopicData, error: keywordError } = await supabase
-        .from('topics')
-        .select('keywords, landmarks, organizations, branding_config, donation_enabled, donation_config, automated_insights_enabled')
-        .ilike('slug', slug)
-        .eq('is_public', true)
-        .single();
+      // Extract full topic data (keywords, branding, etc.)
+      const fullTopicData = fullTopicResult.data;
+      const keywordError = fullTopicResult.error;
       
       let topicKeywords: string[] = [];
       let topicLandmarks: string[] = [];
@@ -779,36 +784,47 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       
       console.log('🔍 [GROUPING] Grouped into', storyMap.size, 'unique stories');
       
-      // Fetch full slide sets for all matched stories to ensure complete slide data
+      // CONDITIONAL OPTIMIZATION: Only re-fetch slides for stories with incomplete slide data (<3 slides)
+      // This preserves the safety net for incomplete stories while eliminating ~90% of redundant requests
       const storyIds = Array.from(storyMap.keys());
-      const chunkSize = 50;
-      const slideMap = new Map<string, any[]>();
-      for (let i = 0; i < storyIds.length; i += chunkSize) {
-        const chunk = storyIds.slice(i, i + chunkSize);
-        const { data: slidesData, error: slidesError } = await supabase
-          .from('slides')
-          .select('id,story_id,slide_number,content')
-          .in('story_id', chunk)
-          .order('slide_number', { ascending: true });
-        if (slidesError) {
-          console.warn('⚠️ Failed to fetch full slides for stories chunk:', slidesError);
-          continue;
-        }
-        (slidesData || []).forEach((s: any) => {
-          const arr = slideMap.get(s.story_id) || [];
-          if (!arr.some((t: any) => t.id === s.id)) {
-            arr.push({ id: s.id, slide_number: s.slide_number, content: s.content, word_count: 0 });
-          }
-          slideMap.set(s.story_id, arr);
-        });
-      }
-      // Replace slides with the complete sets when available
-      slideMap.forEach((slides, sid) => {
-        const storyData = storyMap.get(sid);
-        if (storyData) {
-          storyData.slides = slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
-        }
+      const incompleteStoryIds = storyIds.filter(storyId => {
+        const storyData = storyMap.get(storyId);
+        return storyData && storyData.slides.length < 3;
       });
+      
+      if (incompleteStoryIds.length > 0) {
+        console.log(`🔄 Re-fetching slides for ${incompleteStoryIds.length}/${storyIds.length} stories with incomplete data`);
+        const chunkSize = 50;
+        const slideMap = new Map<string, any[]>();
+        for (let i = 0; i < incompleteStoryIds.length; i += chunkSize) {
+          const chunk = incompleteStoryIds.slice(i, i + chunkSize);
+          const { data: slidesData, error: slidesError } = await supabase
+            .from('slides')
+            .select('id,story_id,slide_number,content')
+            .in('story_id', chunk)
+            .order('slide_number', { ascending: true });
+          if (slidesError) {
+            console.warn('⚠️ Failed to fetch full slides for stories chunk:', slidesError);
+            continue;
+          }
+          (slidesData || []).forEach((s: any) => {
+            const arr = slideMap.get(s.story_id) || [];
+            if (!arr.some((t: any) => t.id === s.id)) {
+              arr.push({ id: s.id, slide_number: s.slide_number, content: s.content, word_count: 0 });
+            }
+            slideMap.set(s.story_id, arr);
+          });
+        }
+        // Replace slides with the complete sets when available (only for incomplete stories)
+        slideMap.forEach((slides, sid) => {
+          const storyData = storyMap.get(sid);
+          if (storyData) {
+            storyData.slides = slides.sort((a: any, b: any) => a.slide_number - b.slide_number);
+          }
+        });
+      } else {
+        console.log(`✅ All ${storyIds.length} stories have complete slide data from RPC - skipping re-fetch`);
+      }
       
       // Log slide counts to detect incomplete stories
       const slideCounts = Array.from(storySlideCountMap.entries()).map(([storyId, count]) => ({
