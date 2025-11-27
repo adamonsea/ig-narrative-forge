@@ -108,7 +108,7 @@ export const useSwipeMode = (topicId: string) => {
         }
       }
 
-      // Get slides data (batch if needed)
+      // Get slides data (batch if needed) with error handling
       const storyIds = allStories.map((s: any) => s.id);
       let allSlides: any[] = [];
       
@@ -118,6 +118,12 @@ export const useSwipeMode = (topicId: string) => {
           .from('slides')
           .select('story_id, slide_number, content')
           .in('story_id', batch);
+        
+        // Add error handling - log and continue with other batches
+        if (slidesQuery.error) {
+          console.error(`⚠️ Slides batch ${i}-${i + batchSize} failed:`, slidesQuery.error);
+          continue;
+        }
         
         if (slidesQuery.data) {
           allSlides = [...allSlides, ...slidesQuery.data];
@@ -152,12 +158,23 @@ export const useSwipeMode = (topicId: string) => {
             slides
           };
         })
+        // Filter out stories with no slides - they can't be displayed properly
+        .filter((story: any) => story.slides && story.slides.length > 0)
         // Sort by published_at (newest first), fallback to created_at
         .sort((a: any, b: any) => {
           const dateA = a.article?.published_at ? new Date(a.article.published_at) : new Date(a.created_at);
           const dateB = b.article?.published_at ? new Date(b.article.published_at) : new Date(b.created_at);
           return dateB.getTime() - dateA.getTime();
         });
+      
+      // Defensive logging for stories that had no slides
+      const storiesWithNoSlides = allStories.filter((s: any) => 
+        !swipedIds.has(s.id) && !allSlides.some((sl: any) => sl.story_id === s.id)
+      );
+      if (storiesWithNoSlides.length > 0) {
+        console.warn(`⚠️ ${storiesWithNoSlides.length} stories filtered out (no slides):`, 
+          storiesWithNoSlides.map((s: any) => s.id));
+      }
 
       setStories(enrichedStories);
       setStats(prev => ({ ...prev, remainingCount: enrichedStories.length }));
