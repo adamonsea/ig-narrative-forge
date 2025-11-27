@@ -1,6 +1,5 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useRef, useCallback, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { EndOfFeedCTA } from "@/components/EndOfFeedCTA";
@@ -35,6 +34,7 @@ import { useAutomatedInsightCards, trackInsightCardDisplay } from "@/hooks/useAu
 import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
 import { useQuizCards } from "@/hooks/useQuizCards";
 import { QuizCard } from "@/components/quiz/QuizCard";
+import { useTopicMetadata } from "@/hooks/useTopicMetadata";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -43,8 +43,6 @@ const TopicFeed = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const [latestDaily, setLatestDaily] = useState<string | null>(null);
-  const [latestWeekly, setLatestWeekly] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [storiesWithSwipes, setStoriesWithSwipes] = useState<Set<string>>(new Set());
@@ -53,8 +51,6 @@ const TopicFeed = () => {
   const [scrollPastStoriesWithSwipes, setScrollPastStoriesWithSwipes] = useState(false);
   const [showCollectionsHint, setShowCollectionsHint] = useState(false);
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
-  const [avgDailyStories, setAvgDailyStories] = useState<number>(0);
-  const [playModeEnabled, setPlayModeEnabled] = useState(true); // Default to true, hide only if explicitly disabled
   const [showPlayModePulse, setShowPlayModePulse] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [topicLikedCount, setTopicLikedCount] = useState<number>(0);
@@ -99,6 +95,14 @@ const TopicFeed = () => {
     ensureFilterStoryIndexLoaded
   } = useHybridTopicFeedWithKeywords(slug || '');
 
+  // OPTIMIZED: Fetch all secondary metadata in parallel via cached React Query
+  const { data: topicMetadata } = useTopicMetadata(topic?.id, slug);
+  const avgDailyStories = topicMetadata.avgDailyStories;
+  const playModeEnabled = topicMetadata.playModeEnabled;
+  const latestDaily = topicMetadata.latestDailyRoundup;
+  const latestWeekly = topicMetadata.latestWeeklyRoundup;
+  const quizCardsEnabled = topicMetadata.quizCardsEnabled;
+
   useEffect(() => {
     if (isModalOpen) {
       ensureFilterStoryIndexLoaded();
@@ -118,88 +122,6 @@ const TopicFeed = () => {
 
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
-
-  // Calculate average daily stories for the topic
-  useEffect(() => {
-    if (!topic?.id) return;
-
-    const calculateAvgDailyStories = async () => {
-      // Get first published story date for this topic (legacy system)
-      const { data: legacyFirstStory } = await supabase
-        .from('stories')
-        .select('created_at, articles!inner(topic_id)')
-        .eq('articles.topic_id', topic.id)
-        .in('status', ['ready', 'published'])
-        .order('created_at', { ascending: true })
-        .limit(1);
-
-      // Get first published story date for this topic (multi-tenant system)
-      const { data: mtFirstStory } = await supabase
-        .from('stories')
-        .select('created_at, topic_articles!inner(topic_id)')
-        .eq('topic_articles.topic_id', topic.id)
-        .in('status', ['ready', 'published'])
-        .not('topic_article_id', 'is', null)
-        .order('created_at', { ascending: true })
-        .limit(1);
-
-      // Find the earliest story date
-      const dates = [
-        ...(legacyFirstStory || []),
-        ...(mtFirstStory || [])
-      ].map(s => new Date(s.created_at).getTime());
-
-      if (dates.length === 0) return;
-
-      const firstStoryDate = new Date(Math.min(...dates));
-      const now = new Date();
-      const daysActive = Math.max(1, Math.ceil((now.getTime() - firstStoryDate.getTime()) / (1000 * 60 * 60 * 24)));
-      
-      // Get total published stories count (legacy)
-      const { count: legacyCount } = await supabase
-        .from('stories')
-        .select('id, articles!inner(topic_id)', { count: 'exact', head: true })
-        .eq('articles.topic_id', topic.id)
-        .in('status', ['ready', 'published']);
-
-      // Get total published stories count (multi-tenant)
-      const { count: mtCount } = await supabase
-        .from('stories')
-        .select('id, topic_articles!inner(topic_id)', { count: 'exact', head: true })
-        .eq('topic_articles.topic_id', topic.id)
-        .in('status', ['ready', 'published'])
-        .not('topic_article_id', 'is', null);
-
-      const totalCount = (legacyCount || 0) + (mtCount || 0);
-      if (totalCount > 0) {
-        setAvgDailyStories(totalCount / daysActive);
-      }
-    };
-
-    calculateAvgDailyStories();
-  }, [topic?.id]);
-
-  // Fetch play mode setting
-  useEffect(() => {
-    if (!topic?.id) return;
-
-    const fetchPlayModeSetting = async () => {
-      const { data, error } = await supabase
-        .from('topic_insight_settings')
-        .select('play_mode_enabled')
-        .eq('topic_id', topic.id)
-        .single();
-
-      if (error) {
-        console.log('No play mode settings found, defaulting to enabled');
-        return;
-      }
-
-      setPlayModeEnabled(data?.play_mode_enabled !== false);
-    };
-
-    fetchPlayModeSetting();
-  }, [topic?.id]);
 
   // Detect first scroll and show pulse animation on play mode icon
   useEffect(() => {
@@ -344,106 +266,11 @@ const TopicFeed = () => {
     };
   }, [slug]);
 
-  // Fetch monthly count and latest roundups after we have topic
-  useEffect(() => {
-    let active = true;
-    const fetchMonthlyCount = async () => {
-      if (!topic?.id || !slug) return;
-      
-      try {
-        const start = new Date();
-        start.setDate(1);
-        start.setHours(0, 0, 0, 0);
-        
-        // Use correct RPC parameters
-        const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: slug,
-          p_keywords: null,
-          p_sources: null,
-          p_limit: 500,
-          p_offset: 0
-        });
-        
-        if (error) {
-          console.error('Monthly count error:', error);
-          return;
-        }
-        
-        // Count unique stories published this month (no longer displayed but keeping for future use)
-        const storyMap = new Map<string, any>();
-        (data || []).forEach((row: any) => {
-          if (!storyMap.has(row.story_id)) {
-            storyMap.set(row.story_id, row);
-          }
-        });
-
-        // Fetch latest daily roundup
-        const { data: dailyRoundup } = await supabase
-          .from('topic_roundups')
-          .select('period_start')
-          .eq('topic_id', topic.id)
-          .eq('roundup_type', 'daily')
-          .eq('is_published', true)
-          .order('period_start', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (dailyRoundup && active) {
-          setLatestDaily(format(new Date(dailyRoundup.period_start), 'yyyy-MM-dd'));
-        }
-
-        // Fetch latest weekly roundup
-        const { data: weeklyRoundup } = await supabase
-          .from('topic_roundups')
-          .select('period_start')
-          .eq('topic_id', topic.id)
-          .eq('roundup_type', 'weekly')
-          .eq('is_published', true)
-          .order('period_start', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (weeklyRoundup && active) {
-          setLatestWeekly(format(new Date(weeklyRoundup.period_start), 'yyyy-MM-dd'));
-        }
-      } catch (e) {
-        console.warn('Monthly count fetch failed:', e);
-      }
-    };
-    
-    fetchMonthlyCount();
-    return () => { active = false };
-  }, [topic?.id, slug]);
-
   const { sentimentCards } = useSentimentCards(topic?.id);
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
   const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
   
-  // Fetch quiz cards setting using react-query for proper reactivity
-  const { data: quizSettingData } = useQuery({
-    queryKey: ['quiz-setting', topic?.id],
-    queryFn: async () => {
-      if (!topic?.id) return null;
-      const { data, error } = await supabase
-        .from('topic_insight_settings')
-        .select('quiz_cards_enabled')
-        .eq('topic_id', topic.id)
-        .single();
-      
-      if (error) {
-        console.log('Quiz setting fetch error:', error);
-        return null;
-      }
-      console.log('Quiz setting loaded:', data?.quiz_cards_enabled);
-      return data;
-    },
-    enabled: !!topic?.id,
-    staleTime: 5 * 60 * 1000,
-  });
-  
-  const quizCardsEnabled = quizSettingData?.quiz_cards_enabled ?? false;
-  
-  // Quiz cards hook - depends on setting being loaded
+  // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata
   const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled);
   
   // Debug log for quiz cards
