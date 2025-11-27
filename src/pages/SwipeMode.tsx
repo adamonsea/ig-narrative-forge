@@ -310,7 +310,7 @@ export default function SwipeMode() {
             </div>
             
             {/* Prominent CTAs - Fixed at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t shadow-lg">
+            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background border-t shadow-lg z-50">
               <div className="space-y-3">
                 {/* Story Rating Card */}
                 <StoryRatingCard storyId={currentStory.id} />
@@ -327,13 +327,14 @@ export default function SwipeMode() {
                     </a>
                   </Button>
 
-                  {currentStory.article?.source_url && (
-                    <Button
-                      asChild
-                      size="lg"
-                      variant="outline"
-                      className="flex-1 gap-2 text-base"
-                    >
+                  <Button
+                    asChild={!!currentStory.article?.source_url}
+                    size="lg"
+                    variant="outline"
+                    className="flex-1 gap-2 text-base"
+                    disabled={!currentStory.article?.source_url}
+                  >
+                    {currentStory.article?.source_url ? (
                       <a
                         href={currentStory.article.source_url}
                         target="_blank"
@@ -342,8 +343,13 @@ export default function SwipeMode() {
                         <ExternalLink className="w-4 h-4" />
                         Source
                       </a>
-                    </Button>
-                  )}
+                    ) : (
+                      <>
+                        <ExternalLink className="w-4 h-4" />
+                        Source
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
