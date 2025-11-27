@@ -327,14 +327,13 @@ export default function SwipeMode() {
                     </a>
                   </Button>
 
-                  <Button
-                    asChild={!!currentStory.article?.source_url}
-                    size="lg"
-                    variant="outline"
-                    className="flex-1 gap-2 text-base"
-                    disabled={!currentStory.article?.source_url}
-                  >
-                    {currentStory.article?.source_url ? (
+                  {currentStory.article?.source_url ? (
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className="flex-1 gap-2 text-base"
+                    >
                       <a
                         href={currentStory.article.source_url}
                         target="_blank"
@@ -343,13 +342,18 @@ export default function SwipeMode() {
                         <ExternalLink className="w-4 h-4" />
                         Source
                       </a>
-                    ) : (
-                      <>
-                        <ExternalLink className="w-4 h-4" />
-                        Source
-                      </>
-                    )}
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="flex-1 gap-2 text-base"
+                      disabled
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Source
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
