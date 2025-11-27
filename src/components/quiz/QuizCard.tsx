@@ -89,7 +89,7 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
   };
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/50 bg-card relative h-full flex flex-col">
+    <Card className="w-full overflow-hidden rounded-2xl border-border/50 bg-card relative h-full flex flex-col">
       {/* Card type indicator */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-purple-dark z-10 shadow-sm">
         <span className="text-xs text-purple-dark font-medium tracking-wide whitespace-nowrap flex items-center gap-1">

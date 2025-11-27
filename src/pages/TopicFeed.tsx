@@ -1003,6 +1003,7 @@ const TopicFeed = () => {
                 items.push(
                   <div
                     key={`story-${story.id}`}
+                    className="w-full max-w-2xl"
                     ref={(node) => {
                       if (index === lastStoryContentIndex) {
                         lastStoryElementRef(node);
@@ -1102,6 +1103,7 @@ const TopicFeed = () => {
                 items.push(
                   <div
                     key={`parliamentary-${mention.id}`}
+                    className="w-full max-w-2xl"
                     ref={index === lastStoryContentIndex ? lastStoryElementRef : null}
                   >
                     <StoryCarousel 
@@ -1123,7 +1125,7 @@ const TopicFeed = () => {
               const pulseFrequency = topic?.community_pulse_frequency || 8;
               if ((storyIndex - 2) % pulseFrequency === 0 && storyIndex > 2 && shouldShowCommunityPulse && topic && pulseData) {
                 items.push(
-                  <div key={`community-pulse-${index}`} className="w-full flex justify-center">
+                  <div key={`community-pulse-${index}`} className="w-full max-w-2xl">
                     <CommunityPulseSlides
                       keywords={pulseData.keywords}
                       timeframe="48h"
@@ -1160,7 +1162,7 @@ const TopicFeed = () => {
                 
                 if (sentimentCard) {
                   items.push(
-                    <div key={`sentiment-${sentimentCard.id}-${index}`}>
+                    <div key={`sentiment-${sentimentCard.id}-${index}`} className="w-full max-w-2xl">
                       <SentimentCard
                         id={sentimentCard.id}
                         keywordPhrase={sentimentCard.keyword_phrase}

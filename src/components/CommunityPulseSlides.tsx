@@ -207,8 +207,8 @@ export const CommunityPulseSlides = ({
   ));
 
   return (
-    <div className="flex justify-center px-4">
-      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl overflow-hidden shadow-lg hover-scale">
+    <div className="w-full max-w-2xl mx-auto">
+      <Card className="w-full overflow-hidden shadow-lg hover-scale">
         <div className="relative h-[500px] flex flex-col overflow-hidden bg-gradient-to-br from-background to-muted/20">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
