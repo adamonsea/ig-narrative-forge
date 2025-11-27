@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
+import { useTopicFavicon } from '@/hooks/useTopicFavicon';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
@@ -24,6 +25,7 @@ export default function SwipeMode() {
   const { user } = useAuth();
   const [topicId, setTopicId] = useState<string | null>(null);
   const [topicName, setTopicName] = useState<string>('');
+  const [topicBranding, setTopicBranding] = useState<any>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [showLiked, setShowLiked] = useState(false);
   const [fullStoryOpen, setFullStoryOpen] = useState(false);
@@ -32,6 +34,10 @@ export default function SwipeMode() {
 
   const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, stories, currentIndex } = useSwipeMode(topicId || '');
   const optimizations = useDeviceOptimizations();
+  
+  // Apply topic favicon
+  const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
+  useTopicFavicon(faviconUrl);
 
 
   // Fetch topic data
@@ -41,7 +47,7 @@ export default function SwipeMode() {
 
       const { data, error } = await supabase
         .from('topics')
-        .select('id, name')
+        .select('id, name, branding_config')
         .eq('slug', slug)
         .eq('is_archived', false)
         .single();
@@ -54,6 +60,7 @@ export default function SwipeMode() {
 
       setTopicId(data.id);
       setTopicName(data.name);
+      setTopicBranding(data.branding_config);
       setLoadingTopic(false);
     };
 
