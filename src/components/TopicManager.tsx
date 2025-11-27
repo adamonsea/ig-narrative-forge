@@ -159,8 +159,8 @@ export const TopicManager = () => {
           const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
           const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
           const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
-          const swipeInsightsData = swipeInsights.data as { total_swipes?: number; liked_count?: number } | null;
-          const likedCount = Number(swipeInsightsData?.liked_count) || 0;
+          const swipeInsightsData = swipeInsights.data as { total_likes?: number; total_discards?: number } | null;
+          const likedCount = Number(swipeInsightsData?.total_likes) || 0;
 
           return {
             ...topic,

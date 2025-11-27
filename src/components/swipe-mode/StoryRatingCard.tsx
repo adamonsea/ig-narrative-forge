@@ -32,24 +32,68 @@ export const StoryRatingCard = ({ storyId }: StoryRatingCardProps) => {
             discardCount: Number(data[0].discard_count) || 0,
             total: Number(data[0].total_count) || 0
           });
+        } else {
+          // No data returned, set empty stats
+          setStats({ likeCount: 0, discardCount: 0, total: 0 });
         }
       } catch (error) {
         console.error('Error fetching story swipe stats:', error);
+        setStats({ likeCount: 0, discardCount: 0, total: 0 });
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
+
+    // Subscribe to realtime updates for this story's swipes
+    const channel = supabase
+      .channel(`story-swipes-${storyId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'story_swipes',
+          filter: `story_id=eq.${storyId}`
+        },
+        () => {
+          // Refetch on any change
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [storyId]);
 
-  if (loading || !stats || stats.total === 0) {
-    return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-6 py-3 px-4 bg-muted/50 rounded-lg animate-pulse">
+        <div className="h-5 w-16 bg-muted rounded" />
+        <div className="flex-1 max-w-32 h-2 bg-muted rounded" />
+        <div className="h-5 w-16 bg-muted rounded" />
+      </div>
+    );
   }
 
-  const approvalRate = stats.total > 0 
+  // Always show the card, even with no ratings
+  const hasRatings = stats && stats.total > 0;
+  const approvalRate = hasRatings 
     ? Math.round((stats.likeCount / stats.total) * 100) 
     : 0;
+
+  if (!hasRatings) {
+    return (
+      <div className="flex items-center justify-center gap-4 py-3 px-4 bg-muted/50 rounded-lg">
+        <Heart className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Be the first to rate this story in Play Mode</span>
+        <ThumbsDown className="w-4 h-4 text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center gap-6 py-3 px-4 bg-muted/50 rounded-lg">
@@ -70,7 +114,7 @@ export const StoryRatingCard = ({ storyId }: StoryRatingCardProps) => {
       
       <div className="flex items-center gap-2">
         <span className="text-lg font-semibold text-foreground">{stats.discardCount}</span>
-        <ThumbsDown className="w-5 h-5 text-muted-foreground" />
+        <ThumbsDown className="w-4 h-4 text-muted-foreground" />
       </div>
     </div>
   );
