@@ -51,7 +51,7 @@ const TopicFeed = () => {
   const [showCollectionsHint, setShowCollectionsHint] = useState(false);
   const [storiesScrolledPast, setStoriesScrolledPast] = useState(0);
   const [avgDailyStories, setAvgDailyStories] = useState<number>(0);
-  const [playModeEnabled, setPlayModeEnabled] = useState(false);
+  const [playModeEnabled, setPlayModeEnabled] = useState(true); // Default to true, hide only if explicitly disabled
   const [showPlayModePulse, setShowPlayModePulse] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   
@@ -175,7 +175,7 @@ const TopicFeed = () => {
     calculateAvgDailyStories();
   }, [topic?.id]);
 
-  // Fetch play mode setting
+  // Fetch play mode setting - only disable if explicitly set to false
   useEffect(() => {
     if (!topic?.id) return;
 
@@ -187,12 +187,13 @@ const TopicFeed = () => {
         .single();
 
       if (error) {
-        console.error('Failed to fetch play mode setting:', error);
+        // If no settings exist, keep default (enabled)
+        console.log('No play mode settings found, defaulting to enabled');
         return;
       }
 
-      // Explicitly set to true if data exists and play_mode_enabled is true
-      setPlayModeEnabled(data?.play_mode_enabled === true);
+      // Only disable if explicitly set to false
+      setPlayModeEnabled(data?.play_mode_enabled !== false);
     };
 
     fetchPlayModeSetting();
@@ -777,11 +778,11 @@ const TopicFeed = () => {
               </p>
             ) : null}
 
-            {/* Filter button - below subheader, centered */}
-            <div className="flex justify-center gap-3 pt-2">
+            {/* Action buttons - consistent with sticky header layout */}
+            <div className="flex items-center justify-center gap-2 pt-2">
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                 aria-label="Open filters"
               >
                 <Filter className="w-4 h-4" />
@@ -797,7 +798,7 @@ const TopicFeed = () => {
                     <div className="flex items-center gap-1">
                       <Link to={`/feed/${slug}/daily/${latestDaily || 'latest'}`}>
                         <button
-                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                           aria-label="Today's briefing"
                         >
                           <Calendar className="w-4 h-4" />
@@ -806,7 +807,7 @@ const TopicFeed = () => {
 
                       <Link to={`/feed/${slug}/weekly/${latestWeekly || 'latest'}`}>
                         <button
-                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                           aria-label="This week's briefing"
                         >
                           <CalendarDays className="w-4 h-4" />
@@ -815,7 +816,7 @@ const TopicFeed = () => {
 
                       <Link to={`/feed/${slug}/archive`}>
                         <button
-                          className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                           aria-label="View archive"
                         >
                           <Archive className="w-4 h-4" />
@@ -825,10 +826,14 @@ const TopicFeed = () => {
                       {playModeEnabled && (
                         <Link to={`/play/${slug}`}>
                           <button
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
+                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
+                            }`}
                             aria-label="Play mode"
                           >
-                            <Gamepad2 className="w-4 h-4" />
+                            <Gamepad2 className={`w-4 h-4 transition-colors ${
+                              showPlayModePulse ? 'text-primary' : ''
+                            }`} />
                           </button>
                         </Link>
                       )}
