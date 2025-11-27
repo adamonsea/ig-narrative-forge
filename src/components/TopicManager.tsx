@@ -36,6 +36,8 @@ interface Topic {
   share_clicks?: number;
   installs_this_week?: number;
   installs_total?: number;
+  registrants_this_week?: number;
+  registrants_total?: number;
   branding_config?: any;
   _count?: {
     articles: number;
@@ -73,7 +75,7 @@ export const TopicManager = () => {
         const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
           // Get accurate stats that match the Arrivals tab UX
           // 1) Multi-tenant articles for this topic
-          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats] = await Promise.all([
+          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats] = await Promise.all([
             supabase.rpc('get_topic_articles_multi_tenant', {
               p_topic_id: topic.id,
               p_status: null,
@@ -106,8 +108,10 @@ export const TopicManager = () => {
             supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id }),
             // Get interaction stats (swipes and shares)
             supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 }),
-            // Get install stats
-            supabase.rpc('get_topic_install_stats', { p_topic_id: topic.id })
+            // Get install stats (homescreen)
+            supabase.rpc('get_topic_install_stats', { p_topic_id: topic.id }),
+            // Get registrant stats (game mode users)
+            supabase.rpc('get_topic_registrant_stats', { p_topic_id: topic.id })
           ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
@@ -150,6 +154,7 @@ export const TopicManager = () => {
           const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
           const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
           const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
+          const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
 
           return {
             ...topic,
@@ -161,7 +166,9 @@ export const TopicManager = () => {
             articles_swiped: Number(interactionData.articles_swiped) || 0,
             share_clicks: Number(interactionData.share_clicks) || 0,
             installs_this_week: Number(installData.installs_this_week) || 0,
-            installs_total: Number(installData.installs_total) || 0
+            installs_total: Number(installData.installs_total) || 0,
+            registrants_this_week: Number(registrantData.registrants_this_week) || 0,
+            registrants_total: Number(registrantData.registrants_total) || 0
           };
       }));
       
@@ -485,46 +492,93 @@ export const TopicManager = () => {
                             </div>
                           </div>
 
-                          {/* Install Stats */}
-                          {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
+                          {/* Subscribers Section */}
+                          {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0 || (topic.registrants_this_week || 0) > 0 || (topic.registrants_total || 0) > 0) && (
                             <div className="space-y-2">
                               <div className="text-xs font-semibold text-pop uppercase tracking-wider flex items-center gap-1">
-                                <Plus className="w-2.5 h-2.5" />
-                                Installs
+                                <Users className="w-2.5 h-2.5" />
+                                Subscribers
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
-                                      <div className="text-lg font-bold text-pop-foreground">
-                                        {topic.installs_this_week || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        This week
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>PWA installs in last 7 days</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
-                                      <div className="text-lg font-bold text-pop-foreground">
-                                        {topic.installs_total || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Total
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Total PWA installs since launch</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
+                              
+                              {/* Homescreen Installs */}
+                              {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
+                                <>
+                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Homescreen</div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
+                                          <div className="text-lg font-bold text-pop-foreground">
+                                            {topic.installs_this_week || 0}
+                                          </div>
+                                          <div className="text-xs font-medium text-muted-foreground">
+                                            This week
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>PWA homescreen installs in last 7 days</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
+                                          <div className="text-lg font-bold text-pop-foreground">
+                                            {topic.installs_total || 0}
+                                          </div>
+                                          <div className="text-xs font-medium text-muted-foreground">
+                                            Total
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Total PWA homescreen installs since launch</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </>
+                              )}
+                              
+                              {/* Registrants (Game Mode users) */}
+                              {((topic.registrants_this_week || 0) > 0 || (topic.registrants_total || 0) > 0) && (
+                                <>
+                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Registrants</div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-2 border border-[hsl(155,100%,67%)]/30 cursor-help">
+                                          <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
+                                            {topic.registrants_this_week || 0}
+                                          </div>
+                                          <div className="text-xs font-medium text-muted-foreground">
+                                            This week
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Users who registered for Play Mode in last 7 days</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-2 border border-[hsl(155,100%,67%)]/30 cursor-help">
+                                          <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
+                                            {topic.registrants_total || 0}
+                                          </div>
+                                          <div className="text-xs font-medium text-muted-foreground">
+                                            Total
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Total users who registered for Play Mode</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>

@@ -4377,6 +4377,13 @@ export type Database = {
           total_swipes: number
         }[]
       }
+      get_topic_registrant_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          registrants_this_week: number
+          registrants_total: number
+        }[]
+      }
       get_topic_source_stats: {
         Args: { p_topic_id: string }
         Returns: {
