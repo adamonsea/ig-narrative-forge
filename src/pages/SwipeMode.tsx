@@ -281,7 +281,10 @@ export default function SwipeMode() {
                 {currentStory.slides
                   ?.sort((a, b) => a.slide_number - b.slide_number)
                   .map(slide => (
-                    <div key={slide.slide_number} className="prose prose-lg md:prose-xl max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground">
+                    <div 
+                      key={slide.slide_number} 
+                      className="prose prose-lg md:prose-xl max-w-none dark:prose-invert [&_*]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_p]:text-foreground [&_strong]:text-foreground [&_em]:text-foreground [&_li]:text-foreground"
+                    >
                       <div dangerouslySetInnerHTML={{ __html: slide.content }} />
                     </div>
                   ))}
