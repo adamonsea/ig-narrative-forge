@@ -71,19 +71,19 @@ export const SwipeModeAuth = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         {!emailSent ? (
-          <div className="py-8 space-y-6 text-center">
+          <div className="py-10 px-4 space-y-8 text-center">
             {/* Title */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-tight">
-                Register to play
+                Register to play properly
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-lg">
                 {VARIANT_SUBTITLES[variant]}
               </p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <Input
                 type="email"
                 placeholder="Enter your email"
@@ -91,10 +91,10 @@ export const SwipeModeAuth = ({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
-                className="text-center"
+                className="text-center h-12"
               />
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
                 {loading ? 'Sending...' : 'Get magic link'}
               </Button>
             </form>
