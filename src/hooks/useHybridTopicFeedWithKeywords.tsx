@@ -782,6 +782,14 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
       });
       
+      // Defensive split detection: warn if any story starts at slide > 1 (indicates split across pages)
+      storyMap.forEach((storyData, storyId) => {
+        const minSlide = Math.min(...storyData.slides.map((s: any) => s.slide_number));
+        if (minSlide > 1) {
+          console.warn(`⚠️ SPLIT DETECTED: Story ${storyId.substring(0, 8)} starts at slide ${minSlide} - story was split across pages!`);
+        }
+      });
+      
       console.log('🔍 [GROUPING] Grouped into', storyMap.size, 'unique stories');
       
       // CONDITIONAL OPTIMIZATION: Only re-fetch slides for stories with incomplete slide data (<3 slides)
