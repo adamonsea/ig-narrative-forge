@@ -1208,12 +1208,23 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add quiz cards every 8 stories (offset by 5 to avoid collisions with other cards)
-              if (storyIndex % 8 === 5 && storyIndex > 0 && quizQuestions.length > 0 && quizCardsEnabled) {
-                const quizIndex = Math.floor((storyIndex - 5) / 8) % quizQuestions.length;
+              // Add quiz cards every 8 stories (offset by 3 to appear earlier for testing)
+              const shouldShowQuiz = storyIndex % 8 === 3 && storyIndex > 0;
+              if (shouldShowQuiz) {
+                console.log('🎯 Quiz card position check:', { 
+                  storyIndex, 
+                  quizCardsEnabled, 
+                  questionsCount: quizQuestions.length,
+                  shouldRender: quizQuestions.length > 0 && quizCardsEnabled
+                });
+              }
+              
+              if (shouldShowQuiz && quizQuestions.length > 0 && quizCardsEnabled) {
+                const quizIndex = Math.floor((storyIndex - 3) / 8) % quizQuestions.length;
                 const quizQuestion = quizQuestions[quizIndex];
                 
                 if (quizQuestion) {
+                  console.log('✅ Rendering QuizCard:', quizQuestion.id);
                   items.push(
                     <div key={`quiz-${quizQuestion.id}-${index}`} className="w-full max-w-2xl">
                       <QuizCard
