@@ -30,6 +30,7 @@ import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 import { AudienceProgressCard } from "@/components/AudienceProgressCard";
+import { SourceHealthChart } from "@/components/SourceHealthChart";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -860,6 +861,11 @@ const TopicDashboard = () => {
                   </TooltipProvider>
                 </CardContent>
               </Card>
+            </div>
+            
+            {/* Source Health Chart */}
+            <div className="mt-4">
+              <SourceHealthChart topicId={topic.id} />
             </div>
           </CollapsibleContent>
         </Collapsible>

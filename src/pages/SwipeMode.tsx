@@ -8,6 +8,8 @@ import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
 import { SwipeModeHint } from '@/components/swipe-mode/SwipeModeHint';
+import { SwipeInsightsDrawer } from '@/components/swipe-mode/SwipeInsightsDrawer';
+import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -107,6 +109,9 @@ export default function SwipeMode() {
           </Button>
 
           <div className="flex items-center gap-2">
+            {topicId && (
+              <SwipeInsightsDrawer topicId={topicId} topicName={topicName} />
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -286,6 +291,9 @@ export default function SwipeMode() {
             {/* Prominent CTAs - Fixed at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t shadow-lg">
               <div className="space-y-3">
+                {/* Story Rating Card */}
+                <StoryRatingCard storyId={currentStory.id} />
+                
                 <p className="text-sm text-muted-foreground text-center font-medium">
                   Continue reading
                 </p>
