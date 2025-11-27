@@ -283,9 +283,20 @@ export default function SwipeMode() {
                   .map(slide => (
                     <div 
                       key={slide.slide_number} 
-                      className="prose prose-lg md:prose-xl max-w-none dark:prose-invert [&_*]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_p]:text-foreground [&_strong]:text-foreground [&_em]:text-foreground [&_li]:text-foreground"
+                      className="text-foreground"
+                      style={{ color: 'hsl(var(--foreground))' }}
                     >
-                      <div dangerouslySetInnerHTML={{ __html: slide.content }} />
+                      <div 
+                        className="prose prose-lg md:prose-xl max-w-none"
+                        style={{ 
+                          color: 'hsl(var(--foreground))',
+                          '--tw-prose-body': 'hsl(var(--foreground))',
+                          '--tw-prose-headings': 'hsl(var(--foreground))',
+                          '--tw-prose-bold': 'hsl(var(--foreground))',
+                          '--tw-prose-links': 'hsl(var(--primary))',
+                        } as React.CSSProperties}
+                        dangerouslySetInnerHTML={{ __html: slide.content }} 
+                      />
                     </div>
                   ))}
               </div>
@@ -297,39 +308,36 @@ export default function SwipeMode() {
                 {/* Story Rating Card */}
                 <StoryRatingCard storyId={currentStory.id} />
                 
-                <p className="text-sm text-muted-foreground text-center font-medium">
-                  Continue reading
-                </p>
-                
-                {/* View Full Story on Platform */}
-                <Button
-                  asChild
-                  size="lg"
-                  className="w-full gap-2 text-base font-semibold"
-                >
-                  <a href={`/feed/${slug}/story/${currentStory.id}`}>
-                    View Full Story
-                  </a>
-                </Button>
-
-                {/* External Source Link */}
-                {currentStory.article?.source_url && (
+                {/* Two CTA buttons side by side */}
+                <div className="flex gap-3">
                   <Button
                     asChild
                     size="lg"
-                    variant="outline"
-                    className="w-full gap-2 text-base"
+                    className="flex-1 gap-2 text-base font-semibold"
                   >
-                    <a
-                      href={currentStory.article.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="w-5 h-5" />
-                      Read at {sourceDomain}
+                    <a href={`/feed/${slug}/story/${currentStory.id}`}>
+                      Slides
                     </a>
                   </Button>
-                )}
+
+                  {currentStory.article?.source_url && (
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className="flex-1 gap-2 text-base"
+                    >
+                      <a
+                        href={currentStory.article.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Source
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </DialogContent>
