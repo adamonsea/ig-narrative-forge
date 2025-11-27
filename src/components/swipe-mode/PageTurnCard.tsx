@@ -72,9 +72,11 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   // Icon scale pulses near threshold
   const iconScale = useTransform(x, [-150, -100, 100, 150], [1.2, 1, 1, 1.2]);
   
-  // Simple page curl effects
-  const rightCurlOpacity = useTransform(x, [0, 100], [0, 0.6]);
-  const leftCurlOpacity = useTransform(x, [-100, 0], [0.6, 0]);
+  // Realistic page curl effects with depth
+  const rightCurlOpacity = useTransform(x, [0, 100], [0, 0.8]);
+  const leftCurlOpacity = useTransform(x, [-100, 0], [0.8, 0]);
+  const rightCurlSize = useTransform(x, [0, 150], [0, 80]);
+  const leftCurlSize = useTransform(x, [-150, 0], [80, 0]);
 
   const storyDate = story.article?.published_at
     ? new Date(story.article.published_at)
@@ -199,38 +201,60 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         </motion.div>
       </motion.div>
 
-      {/* Simple Page Curl - Bottom Left (appears when swiping right/liking) - OUTSIDE overflow */}
+      {/* Realistic Page Curl - Bottom Left (appears when swiping right/liking) */}
       <motion.div
         className="absolute bottom-0 left-0 pointer-events-none"
         style={{
-          width: 60,
-          height: 60,
+          width: rightCurlSize,
+          height: rightCurlSize,
           opacity: rightCurlOpacity,
           zIndex: 20,
         }}
       >
+        {/* Shadow layer for depth */}
         <div
-          className="absolute inset-0 bg-gradient-to-br from-muted via-card to-transparent rounded-tl-lg shadow-md"
+          className="absolute inset-0"
           style={{
-            clipPath: 'polygon(0 100%, 0 30%, 30% 100%)',
+            clipPath: 'path("M 0 100 Q 0 60, 20 80 Q 40 100, 100 100 Z")',
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+            filter: 'blur(2px)',
+          }}
+        />
+        {/* Curl layer with curved edge */}
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-background via-muted to-card"
+          style={{
+            clipPath: 'path("M 0 100 Q 0 70, 15 85 Q 30 100, 100 100 Z")',
+            boxShadow: '2px 2px 8px rgba(0,0,0,0.15)',
           }}
         />
       </motion.div>
 
-      {/* Simple Page Curl - Bottom Right (appears when swiping left/discarding) - OUTSIDE overflow */}
+      {/* Realistic Page Curl - Bottom Right (appears when swiping left/discarding) */}
       <motion.div
         className="absolute bottom-0 right-0 pointer-events-none"
         style={{
-          width: 60,
-          height: 60,
+          width: leftCurlSize,
+          height: leftCurlSize,
           opacity: leftCurlOpacity,
           zIndex: 20,
         }}
       >
+        {/* Shadow layer for depth */}
         <div
-          className="absolute inset-0 bg-gradient-to-bl from-muted via-card to-transparent rounded-tr-lg shadow-md"
+          className="absolute inset-0"
           style={{
-            clipPath: 'polygon(100% 100%, 100% 30%, 70% 100%)',
+            clipPath: 'path("M 100 100 Q 100 60, 80 80 Q 60 100, 0 100 Z")',
+            background: 'linear-gradient(225deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+            filter: 'blur(2px)',
+          }}
+        />
+        {/* Curl layer with curved edge */}
+        <div
+          className="absolute inset-0 bg-gradient-to-bl from-background via-muted to-card"
+          style={{
+            clipPath: 'path("M 100 100 Q 100 70, 85 85 Q 70 100, 0 100 Z")',
+            boxShadow: '-2px 2px 8px rgba(0,0,0,0.15)',
           }}
         />
       </motion.div>
