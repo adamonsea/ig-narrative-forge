@@ -107,6 +107,18 @@ export default function SwipeMode() {
           </Button>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                refetch();
+                toast.success('Checking for new stories...');
+              }}
+              disabled={loading}
+              className="gap-1"
+            >
+              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
+            </Button>
             <Badge variant="outline">{stats.remainingCount} left</Badge>
             <Button
               variant="ghost"
