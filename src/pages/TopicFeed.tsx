@@ -180,15 +180,19 @@ const TopicFeed = () => {
     if (!topic?.id) return;
 
     const fetchPlayModeSetting = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('topic_insight_settings')
         .select('play_mode_enabled')
         .eq('topic_id', topic.id)
         .single();
 
-      if (data) {
-        setPlayModeEnabled(data.play_mode_enabled || false);
+      if (error) {
+        console.error('Failed to fetch play mode setting:', error);
+        return;
       }
+
+      // Explicitly set to true if data exists and play_mode_enabled is true
+      setPlayModeEnabled(data?.play_mode_enabled === true);
     };
 
     fetchPlayModeSetting();
@@ -817,6 +821,17 @@ const TopicFeed = () => {
                           <Archive className="w-4 h-4" />
                         </button>
                       </Link>
+
+                      {playModeEnabled && (
+                        <Link to={`/play/${slug}`}>
+                          <button
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                            aria-label="Play mode"
+                          >
+                            <Gamepad2 className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="z-[60]">
