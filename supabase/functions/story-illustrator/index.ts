@@ -50,7 +50,7 @@ serve(async (req) => {
     
     // Model configuration mapping
     interface ModelConfig {
-      provider: 'openai' | 'lovable-gemini' | 'replicate-flux' | 'replicate-flux-pro';
+      provider: 'openai' | 'lovable-gemini' | 'lovable-gemini-pro' | 'replicate-flux' | 'replicate-flux-pro';
       quality?: 'high' | 'medium' | 'low';
       credits: number;
       cost: number;
@@ -70,6 +70,12 @@ serve(async (req) => {
         quality: 'medium',
         credits: 5,
         cost: 0.02,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gemini-pro-image': {
+        provider: 'lovable-gemini-pro',
+        credits: 3,
+        cost: 0.005,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gemini-image': {
@@ -581,6 +587,140 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       } catch (decodeError) {
         console.error('Failed to decode base64:', decodeError);
         throw new Error('Failed to decode Gemini image data');
+      }
+    } else if (modelConfig.provider === 'lovable-gemini-pro') {
+      // Use Lovable AI Gateway for Gemini 3 Pro image generation - Standard tier
+      console.log('Generating with Gemini 3 Pro Image via Lovable AI Gateway...');
+      
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        throw new Error('LOVABLE_API_KEY not configured');
+      }
+
+      // Generate model-specific prompt leveraging Gemini's world knowledge
+      const geminiProPrompt = illustrationStyle === 'editorial_photographic'
+        ? buildGeminiPhotographicPrompt({
+            tone: storyTone,
+            subject: subjectMatter,
+            storyTitle: story.title,
+            slideContent: slideContent || subjectMatter,
+            publicationName: story.topic?.name,
+            primaryColor
+          })
+        : buildGeminiIllustrativePrompt({
+            tone: storyTone,
+            subject: subjectMatter,
+            storyTitle: story.title,
+            slideContent: slideContent || subjectMatter,
+            publicationName: story.topic?.name,
+            primaryColor
+          });
+
+      console.log(`📝 Gemini Pro prompt (${geminiProPrompt.length} chars):`, geminiProPrompt.substring(0, 200) + '...');
+
+      const geminiProResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-pro-image-preview',
+          messages: [
+            {
+              role: 'user',
+              content: geminiProPrompt
+            }
+          ],
+          modalities: ['image', 'text'],
+          response_modalities: ['IMAGE'],
+          image_config: {
+            aspect_ratio: '3:2'
+          }
+        }),
+      });
+
+      if (!geminiProResponse.ok) {
+        const errorText = await geminiProResponse.text();
+        console.error('Gemini Pro API error response:', errorText);
+        
+        if (geminiProResponse.status === 429) {
+          throw new Error('Gemini Pro rate limit exceeded. Please try again later.');
+        } else if (geminiProResponse.status === 402) {
+          throw new Error('Lovable AI credits exhausted. Please add credits to your workspace.');
+        }
+        
+        throw new Error(`Gemini Pro API error: ${geminiProResponse.status} - ${errorText}`);
+      }
+
+      const geminiProData = await geminiProResponse.json();
+      console.log('📊 Gemini Pro generation metadata:', {
+        model: 'google/gemini-3-pro-image-preview',
+        requestedAspectRatio: '3:2',
+        promptLength: geminiProPrompt.length,
+        estimatedCost: '$0.005',
+        creditsUsed: 3
+      });
+      console.log('Gemini Pro response structure:', JSON.stringify(geminiProData, null, 2).substring(0, 1000));
+
+      // Extract image from response with comprehensive error handling
+      let base64DataPro: string | undefined;
+      
+      console.log('Parsing Gemini Pro response. Available keys:', Object.keys(geminiProData));
+      
+      // Try different response formats
+      if (geminiProData.choices?.[0]?.message?.images?.[0]?.image_url?.url) {
+        console.log('Found image in choices[0].message.images[0].image_url.url');
+        base64DataPro = geminiProData.choices[0].message.images[0].image_url.url;
+      } else if (geminiProData.choices?.[0]?.message?.content) {
+        console.log('Checking choices[0].message.content for base64');
+        const content = geminiProData.choices[0].message.content;
+        if (typeof content === 'string' && content.includes('base64,')) {
+          base64DataPro = content;
+        } else if (Array.isArray(content)) {
+          for (const part of content) {
+            if (part?.type === 'image_url' && part?.image_url?.url) {
+              base64DataPro = part.image_url.url;
+              break;
+            } else if (part?.image_base64) {
+              base64DataPro = `data:image/png;base64,${part.image_base64}`;
+              break;
+            }
+          }
+        }
+      } else if (geminiProData.data?.[0]?.url) {
+        console.log('Found image in data[0].url');
+        base64DataPro = geminiProData.data[0].url;
+      } else if (geminiProData.data?.[0]?.b64_json) {
+        console.log('Found image in data[0].b64_json');
+        base64DataPro = `data:image/png;base64,${geminiProData.data[0].b64_json}`;
+      } else if (geminiProData.images?.[0]) {
+        console.log('Found image in images[0]');
+        base64DataPro = geminiProData.images[0];
+      }
+
+      if (!base64DataPro) {
+        console.error('Could not find image in Gemini Pro response. Full response:', JSON.stringify(geminiProData, null, 2));
+        throw new Error('No image data in Gemini Pro response. The API response format may have changed.');
+      }
+
+      console.log('Found base64 data, length:', base64DataPro.length, 'prefix:', base64DataPro.substring(0, 50));
+      
+      // Remove data URL prefix if present
+      const base64StringPro = base64DataPro.includes('base64,') 
+        ? base64DataPro.split('base64,')[1] 
+        : base64DataPro;
+
+      console.log('Decoding base64 string of length:', base64StringPro.length);
+
+      // Decode base64 to direct base64 string
+      try {
+        atob(base64StringPro); // Test decode
+        imageBase64 = base64StringPro;
+        console.log('Successfully validated Gemini Pro image base64');
+      } catch (decodeError) {
+        console.error('Failed to decode base64:', decodeError);
+        throw new Error('Failed to decode Gemini Pro image data');
       }
     } else if (modelConfig.provider === 'openai') {
       // OpenAI GPT-Image-1 - Premium quality tier

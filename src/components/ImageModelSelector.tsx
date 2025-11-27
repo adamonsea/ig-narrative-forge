@@ -31,6 +31,13 @@ export const illustrativeModels: ImageModel[] = [
     description: 'Balanced quality and cost'
   },
   {
+    id: 'gemini-pro-image',
+    name: 'Standard',
+    credits: 3,
+    provider: 'lovable-gemini-pro',
+    description: 'Good quality at low cost'
+  },
+  {
     id: 'gemini-image',
     name: 'Budget',
     credits: 1,
@@ -54,6 +61,13 @@ export const photographicModels: ImageModel[] = [
     credits: 5,
     provider: 'openai',
     description: 'Balanced quality and cost'
+  },
+  {
+    id: 'gemini-pro-image',
+    name: 'Standard',
+    credits: 3,
+    provider: 'lovable-gemini-pro',
+    description: 'Good quality at low cost'
   },
   {
     id: 'gemini-image',
