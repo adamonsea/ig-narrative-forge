@@ -589,13 +589,19 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('Failed to decode Gemini image data');
       }
     } else if (modelConfig.provider === 'lovable-gemini-pro') {
-      // Use Lovable AI Gateway for Gemini 3 Pro image generation - Standard tier
-      console.log('Generating with Gemini 3 Pro Image via Lovable AI Gateway...');
+      // Use Lovable AI Gateway for Gemini 3 Pro image generation with style reference
+      console.log('Generating with Gemini 3 Pro Image via Lovable AI Gateway (with style reference)...');
       
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
       if (!LOVABLE_API_KEY) {
         throw new Error('LOVABLE_API_KEY not configured');
       }
+
+      // Build style reference URL from request origin
+      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || '';
+      const styleReferenceUrl = origin ? `${origin}/style-references/editorial-reference-1.png` : null;
+      
+      console.log(`📸 Style reference URL: ${styleReferenceUrl || 'none (text-only mode)'}`);
 
       // Generate model-specific prompt leveraging Gemini's world knowledge
       const geminiProPrompt = illustrationStyle === 'editorial_photographic'
@@ -616,7 +622,42 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             primaryColor
           });
 
-      console.log(`📝 Gemini Pro prompt (${geminiProPrompt.length} chars):`, geminiProPrompt.substring(0, 200) + '...');
+      // Build multimodal message with style reference if available
+      let messageContent: any;
+      
+      if (styleReferenceUrl && illustrationStyle === 'editorial_illustrative') {
+        // Multimodal prompt with style reference image
+        const styleMatchingPrompt = `CRITICAL: Generate an editorial illustration that EXACTLY matches the visual style of the reference image provided.
+
+STYLE TO MATCH FROM REFERENCE IMAGE:
+- Same bold black outlines and flat color fills
+- Same simplified human figures (geometric shapes, minimal facial features)
+- Same screen-print/risograph aesthetic with paper texture
+- Same limited color palette: black + cream/off-white + single accent color (${primaryColor})
+- Same architectural, modernist composition
+- Same level of abstraction and simplification
+
+NOW GENERATE THIS SCENE IN THAT EXACT STYLE:
+${geminiProPrompt}`;
+
+        messageContent = [
+          {
+            type: 'text',
+            text: styleMatchingPrompt
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: styleReferenceUrl
+            }
+          }
+        ];
+        console.log(`📝 Gemini Pro multimodal prompt (${styleMatchingPrompt.length} chars) with style reference`);
+      } else {
+        // Text-only prompt (fallback or photographic style)
+        messageContent = geminiProPrompt;
+        console.log(`📝 Gemini Pro text-only prompt (${geminiProPrompt.length} chars)`);
+      }
 
       const geminiProResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -629,7 +670,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           messages: [
             {
               role: 'user',
-              content: geminiProPrompt
+              content: messageContent
             }
           ],
           modalities: ['image', 'text'],
