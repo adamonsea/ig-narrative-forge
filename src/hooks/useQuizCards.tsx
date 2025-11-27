@@ -99,7 +99,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
   }, []);
 
   const query = useQuery({
-    queryKey: ['quiz-questions', topicId],
+    queryKey: ['quiz-questions', topicId, quizEnabled],
     queryFn: async () => {
       if (!topicId || !quizEnabled) {
         return [];

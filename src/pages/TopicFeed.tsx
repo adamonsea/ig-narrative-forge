@@ -1208,8 +1208,8 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add quiz cards every 8 stories (offset by 3 to appear earlier for testing)
-              const shouldShowQuiz = storyIndex % 8 === 3 && storyIndex > 0;
+              // Add quiz cards every 8 stories (offset by 5 to avoid collision with insight cards at % 6 === 3)
+              const shouldShowQuiz = storyIndex % 8 === 5 && storyIndex > 0;
               if (shouldShowQuiz) {
                 console.log('🎯 Quiz card position check:', { 
                   storyIndex, 
@@ -1220,7 +1220,7 @@ const TopicFeed = () => {
               }
               
               if (shouldShowQuiz && quizQuestions.length > 0 && quizCardsEnabled) {
-                const quizIndex = Math.floor((storyIndex - 3) / 8) % quizQuestions.length;
+                const quizIndex = Math.floor((storyIndex - 5) / 8) % quizQuestions.length;
                 const quizQuestion = quizQuestions[quizIndex];
                 
                 if (quizQuestion) {
