@@ -91,16 +91,27 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
             .from('topic_insight_settings')
             .select('play_mode_enabled, quiz_cards_enabled')
             .eq('topic_id', topicId)
-            .single();
+            .maybeSingle();
 
           if (error) {
-            console.log('No insight settings found, using defaults');
+            console.log('Error fetching insight settings:', error);
             return { playModeEnabled: true, quizCardsEnabled: false };
           }
 
+          // No row found - use defaults
+          if (!data) {
+            console.log('No insight settings row found for topic, using defaults');
+            return { playModeEnabled: true, quizCardsEnabled: false };
+          }
+
+          console.log('Insight settings loaded:', { 
+            playModeEnabled: data.play_mode_enabled, 
+            quizCardsEnabled: data.quiz_cards_enabled 
+          });
+
           return {
-            playModeEnabled: data?.play_mode_enabled !== false,
-            quizCardsEnabled: data?.quiz_cards_enabled ?? false
+            playModeEnabled: data.play_mode_enabled !== false,
+            quizCardsEnabled: data.quiz_cards_enabled ?? false
           };
         },
         enabled: !!topicId,
