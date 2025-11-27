@@ -9,7 +9,7 @@ interface Story {
   author: string | null;
   cover_illustration_url: string | null;
   created_at: string;
-  article_id?: string;
+  shared_content_id?: string;
   article: {
     source_url: string;
     published_at?: string | null;
@@ -79,7 +79,7 @@ export const useSwipeMode = (topicId: string) => {
         const batch = topicArticleIds.slice(i, i + batchSize);
         const storiesQuery = await (supabase as any)
           .from('stories')
-          .select('id, title, author, cover_illustration_url, created_at, article_id, topic_article_id')
+          .select('id, title, author, cover_illustration_url, created_at, shared_content_id, topic_article_id')
           .in('topic_article_id', batch)
           .eq('status', 'published')
           .not('cover_illustration_url', 'is', null)
@@ -89,19 +89,19 @@ export const useSwipeMode = (topicId: string) => {
         allStories = [...allStories, ...(storiesQuery.data || [])];
       }
 
-      // Get article data for source URLs (batch if needed)
-      const articleIds = allStories.map((s: any) => s.article_id).filter(Boolean);
-      let allArticles: any[] = [];
+      // Get article data for source URLs from shared_article_content (batch if needed)
+      const sharedContentIds = allStories.map((s: any) => s.shared_content_id).filter(Boolean);
+      let allSharedContent: any[] = [];
       
-      for (let i = 0; i < articleIds.length; i += batchSize) {
-        const batch = articleIds.slice(i, i + batchSize);
-        const articlesQuery: any = await (supabase as any)
-          .from('articles')
-          .select('id, source_url, published_at')
+      for (let i = 0; i < sharedContentIds.length; i += batchSize) {
+        const batch = sharedContentIds.slice(i, i + batchSize);
+        const sharedContentQuery: any = await (supabase as any)
+          .from('shared_article_content')
+          .select('id, url, published_at')
           .in('id', batch);
         
-        if (articlesQuery.data) {
-          allArticles = [...allArticles, ...articlesQuery.data];
+        if (sharedContentQuery.data) {
+          allSharedContent = [...allSharedContent, ...sharedContentQuery.data];
         }
       }
 
@@ -134,16 +134,16 @@ export const useSwipeMode = (topicId: string) => {
       const enrichedStories = allStories
         .filter((s: any) => !swipedIds.has(s.id))
         .map((story: any) => {
-          const article = allArticles.find((a: any) => a.id === story.article_id);
+          const sharedContent = allSharedContent.find((sc: any) => sc.id === story.shared_content_id);
           const slides = allSlides.filter((s: any) => s.story_id === story.id);
           
-          console.log('Story article data:', story.id, article?.source_url);
+          console.log('Story source data:', story.id, sharedContent?.url);
           
           return {
             ...story,
-            article: article ? {
-              source_url: article.source_url,
-              published_at: article.published_at
+            article: sharedContent ? {
+              source_url: sharedContent.url,
+              published_at: sharedContent.published_at
             } : null,
             slides
           };
@@ -237,22 +237,22 @@ export const useSwipeMode = (topicId: string) => {
 
     const storiesQuery: any = await (supabase as any)
       .from('stories')
-      .select('id, title, author, cover_illustration_url, created_at, article_id')
+      .select('id, title, author, cover_illustration_url, created_at, shared_content_id')
       .in('id', storyIds);
 
-    const articleIds = (storiesQuery.data || []).map((s: any) => s.article_id).filter(Boolean);
-    const articlesQuery: any = await (supabase as any)
-      .from('articles')
-      .select('id, source_url, published_at')
-      .in('id', articleIds);
+    const sharedContentIds = (storiesQuery.data || []).map((s: any) => s.shared_content_id).filter(Boolean);
+    const sharedContentQuery: any = await (supabase as any)
+      .from('shared_article_content')
+      .select('id, url, published_at')
+      .in('id', sharedContentIds);
 
     return (storiesQuery.data || []).map((story: any) => {
-      const article = (articlesQuery.data || []).find((a: any) => a.id === story.article_id);
+      const sharedContent = (sharedContentQuery.data || []).find((sc: any) => sc.id === story.shared_content_id);
       return {
         ...story,
-        article: article ? {
-          source_url: article.source_url,
-          published_at: article.published_at
+        article: sharedContent ? {
+          source_url: sharedContent.url,
+          published_at: sharedContent.published_at
         } : null
       };
     });
