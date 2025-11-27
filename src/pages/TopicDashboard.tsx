@@ -30,9 +30,6 @@ import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 import { AudienceProgressCard } from "@/components/AudienceProgressCard";
-import { EngagementSummaryCard } from "@/components/EngagementSummaryCard";
-import { NewStoriesSparkline } from "@/components/NewStoriesSparkline";
-import { SourceHealthChart } from "@/components/SourceHealthChart";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,7 +135,6 @@ const TopicDashboard = () => {
     shared_stories: 0
   });
   const [loading, setLoading] = useState(true);
-  const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState("content-flow");
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
@@ -702,124 +698,6 @@ const TopicDashboard = () => {
           </Card>
         </div>
 
-        {/* Collapsible Dashboard Overview - Simplified to Key Highlights Only */}
-        <Collapsible open={dashboardExpanded} onOpenChange={setDashboardExpanded} className="mb-8">
-          <CollapsibleTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="bg-card/60 backdrop-blur-sm border-border/50 hover:bg-card/80"
-            >
-              <BarChart3 className="h-4 w-4" />
-              <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${dashboardExpanded ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 mt-4">
-            {/* Key Highlights Only */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <Activity className="h-5 w-5 text-green-500" />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
-                              {topic && <NewStoriesSparkline topicId={topic.id} />}
-                            </div>
-                            <p className="text-sm text-muted-foreground">New Stories</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Stories created in the last 24 hours (7-day trend)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <div className="text-2xl font-bold">{stats.processing_queue}</div>
-                            <p className="text-sm text-muted-foreground">To Process</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Items currently in the arrivals queue awaiting story generation</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              {/* Engagement Summary Card - combines Liked, Swiped, Shared */}
-              <div className="col-span-2 md:col-span-1">
-                <EngagementSummaryCard 
-                  liked={stats.liked_stories || 0}
-                  swiped={stats.total_swipes || 0}
-                  shared={stats.shared_stories || 0}
-                />
-              </div>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <span className="text-xl">🏠</span>
-                          <div>
-                            <div className="text-2xl font-bold text-primary">{stats.pwa_installs || 0}</div>
-                            <p className="text-sm text-muted-foreground">PWA Installs</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Users who added this topic to their home screen</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <span className="text-xl">🔔</span>
-                          <div>
-                            <div className="text-2xl font-bold text-primary">{stats.notifications_enabled || 0}</div>
-                            <p className="text-sm text-muted-foreground">Subscribers</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Users who enabled push notifications for new stories</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Source Health Chart */}
-            <div className="mt-4">
-              <SourceHealthChart topicId={topic.id} />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* Primary Action Bar - Mobile Responsive */}
         <Card className="bg-card border-border mb-6">
