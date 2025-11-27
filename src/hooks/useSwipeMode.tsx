@@ -34,9 +34,12 @@ export const useSwipeMode = (topicId: string) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SwipeStats>({ likeCount: 0, discardCount: 0, remainingCount: 0 });
 
-  // Fetch stories that haven't been swiped yet
+  // Fetch stories - works for both authenticated and anonymous users
   const fetchUnswipedStories = useCallback(async () => {
-    if (!user || !topicId) return;
+    if (!topicId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -121,14 +124,17 @@ export const useSwipeMode = (topicId: string) => {
         }
       }
 
-      // Filter out already swiped stories
-      const swipesQuery: any = await (supabase as any)
-        .from('story_swipes')
-        .select('story_id')
-        .eq('user_id', user.id)
-        .eq('topic_id', topicId);
+      // Filter out already swiped stories (only if user is authenticated)
+      let swipedIds = new Set<string>();
+      if (user) {
+        const swipesQuery: any = await (supabase as any)
+          .from('story_swipes')
+          .select('story_id')
+          .eq('user_id', user.id)
+          .eq('topic_id', topicId);
 
-      const swipedIds = new Set((swipesQuery.data || []).map((s: any) => s.story_id));
+        swipedIds = new Set((swipesQuery.data || []).map((s: any) => s.story_id));
+      }
       
       // Combine data (already filtered for images in query)
       const enrichedStories = allStories
@@ -136,8 +142,6 @@ export const useSwipeMode = (topicId: string) => {
         .map((story: any) => {
           const sharedContent = allSharedContent.find((sc: any) => sc.id === story.shared_content_id);
           const slides = allSlides.filter((s: any) => s.story_id === story.id);
-          
-          console.log('Story source data:', story.id, sharedContent?.url);
           
           return {
             ...story,
@@ -155,7 +159,6 @@ export const useSwipeMode = (topicId: string) => {
           return dateB.getTime() - dateA.getTime();
         });
 
-      console.log('Enriched stories count:', enrichedStories.length, 'First story:', enrichedStories[0]?.article);
       setStories(enrichedStories);
       setStats(prev => ({ ...prev, remainingCount: enrichedStories.length }));
     } catch (error) {
@@ -166,7 +169,7 @@ export const useSwipeMode = (topicId: string) => {
     }
   }, [user, topicId]);
 
-  // Fetch swipe stats
+  // Fetch swipe stats (only for authenticated users)
   const fetchStats = useCallback(async () => {
     if (!user || !topicId) return;
 
@@ -182,11 +185,17 @@ export const useSwipeMode = (topicId: string) => {
     setStats(prev => ({ ...prev, likeCount, discardCount }));
   }, [user, topicId]);
 
-  // Record a swipe
+  // Record a swipe - returns true if persisted, false if anonymous
   const recordSwipe = useCallback(async (storyId: string, swipeType: 'like' | 'discard' | 'super_like') => {
+    // For anonymous users, just advance locally without persisting
     if (!user) {
-      toast.error('Please sign in to swipe stories');
-      return false;
+      setStats(prev => ({
+        likeCount: swipeType === 'like' || swipeType === 'super_like' ? prev.likeCount + 1 : prev.likeCount,
+        discardCount: swipeType === 'discard' ? prev.discardCount + 1 : prev.discardCount,
+        remainingCount: Math.max(0, prev.remainingCount - 1)
+      }));
+      setCurrentIndex(prev => prev + 1);
+      return false; // Indicates swipe was not persisted
     }
 
     try {
