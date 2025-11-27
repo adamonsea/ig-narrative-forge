@@ -30,6 +30,8 @@ import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 import { AudienceProgressCard } from "@/components/AudienceProgressCard";
+import { EngagementSummaryCard } from "@/components/EngagementSummaryCard";
+import { NewStoriesSparkline } from "@/components/NewStoriesSparkline";
 import { SourceHealthChart } from "@/components/SourceHealthChart";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -722,14 +724,17 @@ const TopicDashboard = () => {
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2 cursor-help">
                           <Activity className="h-5 w-5 text-green-500" />
-                          <div>
-                            <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <div className="text-2xl font-bold text-green-500">{stats.simplified_stories_24h}</div>
+                              {topic && <NewStoriesSparkline topicId={topic.id} />}
+                            </div>
                             <p className="text-sm text-muted-foreground">New Stories</p>
                           </div>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Stories created in the last 24 hours</p>
+                        <p>Stories created in the last 24 hours (7-day trend)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -757,68 +762,14 @@ const TopicDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <span className="text-xl">❤️</span>
-                          <div>
-                            <div className="text-2xl font-bold text-rose-500">{stats.liked_stories || 0}</div>
-                            <p className="text-sm text-muted-foreground">Liked</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Stories liked by readers in swipe mode</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <span className="text-xl">👆</span>
-                          <div>
-                            <div className="text-2xl font-bold text-blue-500">{stats.total_swipes || 0}</div>
-                            <p className="text-sm text-muted-foreground">Swiped</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Total swipes (likes + discards) in swipe mode</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-help">
-                          <span className="text-xl">🔗</span>
-                          <div>
-                            <div className="text-2xl font-bold text-purple-500">{stats.shared_stories || 0}</div>
-                            <p className="text-sm text-muted-foreground">Shared</p>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Unique stories that readers have shared</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
+              {/* Engagement Summary Card - combines Liked, Swiped, Shared */}
+              <div className="col-span-2 md:col-span-1">
+                <EngagementSummaryCard 
+                  liked={stats.liked_stories || 0}
+                  swiped={stats.total_swipes || 0}
+                  shared={stats.shared_stories || 0}
+                />
+              </div>
 
               <Card>
                 <CardContent className="p-4">
