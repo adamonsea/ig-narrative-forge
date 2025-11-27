@@ -4227,6 +4227,17 @@ export type Database = {
           topic_type: string
         }[]
       }
+      get_source_health_stats: {
+        Args: { p_topic_id: string }
+        Returns: {
+          articles_last_7_days: number
+          consecutive_failures: number
+          last_success_at: string
+          source_id: string
+          source_name: string
+          success_rate: number
+        }[]
+      }
       get_source_topics: {
         Args: { p_source_id: string }
         Returns: {
@@ -4293,6 +4304,24 @@ export type Database = {
               writing_style: string
             }[]
           }
+      get_story_swipe_stats: {
+        Args: { p_story_id: string }
+        Returns: {
+          discard_count: number
+          like_count: number
+          total_count: number
+        }[]
+      }
+      get_swipe_insights: {
+        Args: { p_topic_id: string }
+        Returns: {
+          approval_rate: number
+          top_stories: Json
+          total_discards: number
+          total_likes: number
+          total_readers: number
+        }[]
+      }
       get_topic_articles_multi_tenant: {
         Args: {
           p_limit?: number
