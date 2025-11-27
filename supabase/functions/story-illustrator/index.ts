@@ -597,11 +597,30 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('LOVABLE_API_KEY not configured');
       }
 
-      // Build style reference URL from request origin
+      // Build style reference URL from request origin and fetch as base64
       const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || '';
       const styleReferenceUrl = origin ? `${origin}/style-references/editorial-reference-1.png` : null;
       
       console.log(`📸 Style reference URL: ${styleReferenceUrl || 'none (text-only mode)'}`);
+
+      // Fetch style reference image and convert to base64 for Gemini
+      let styleReferenceBase64: string | null = null;
+      if (styleReferenceUrl && illustrationStyle === 'editorial_illustrative') {
+        try {
+          console.log('🖼️ Fetching style reference image...');
+          const imageResponse = await fetch(styleReferenceUrl);
+          if (imageResponse.ok) {
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+            styleReferenceBase64 = `data:image/png;base64,${base64}`;
+            console.log(`✅ Style reference image fetched (${Math.round(imageBuffer.byteLength / 1024)}KB)`);
+          } else {
+            console.warn(`⚠️ Failed to fetch style reference: ${imageResponse.status}`);
+          }
+        } catch (fetchError) {
+          console.warn('⚠️ Error fetching style reference image:', fetchError);
+        }
+      }
 
       // Generate model-specific prompt leveraging Gemini's world knowledge
       const geminiProPrompt = illustrationStyle === 'editorial_photographic'
@@ -625,8 +644,8 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       // Build multimodal message with style reference if available
       let messageContent: any;
       
-      if (styleReferenceUrl && illustrationStyle === 'editorial_illustrative') {
-        // Multimodal prompt with style reference image
+      if (styleReferenceBase64) {
+        // Multimodal prompt with style reference image as base64
         const styleMatchingPrompt = `CRITICAL: Generate an editorial illustration that EXACTLY matches the visual style of the reference image provided.
 
 STYLE TO MATCH FROM REFERENCE IMAGE:
@@ -648,11 +667,11 @@ ${geminiProPrompt}`;
           {
             type: 'image_url',
             image_url: {
-              url: styleReferenceUrl
+              url: styleReferenceBase64
             }
           }
         ];
-        console.log(`📝 Gemini Pro multimodal prompt (${styleMatchingPrompt.length} chars) with style reference`);
+        console.log(`📝 Gemini Pro multimodal prompt (${styleMatchingPrompt.length} chars) with style reference (base64)`);
       } else {
         // Text-only prompt (fallback or photographic style)
         messageContent = geminiProPrompt;
