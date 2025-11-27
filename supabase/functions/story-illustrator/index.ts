@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
+import { encode as encodeBase64 } from "https://deno.land/std@0.192.0/encoding/base64.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { 
   analyzeStoryTone, 
@@ -611,7 +612,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           const imageResponse = await fetch(styleReferenceUrl);
           if (imageResponse.ok) {
             const imageBuffer = await imageResponse.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+            const base64 = encodeBase64(new Uint8Array(imageBuffer));
             styleReferenceBase64 = `data:image/png;base64,${base64}`;
             console.log(`✅ Style reference image fetched (${Math.round(imageBuffer.byteLength / 1024)}KB)`);
           } else {
