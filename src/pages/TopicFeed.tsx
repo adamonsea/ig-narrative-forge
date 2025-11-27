@@ -176,12 +176,11 @@ const TopicFeed = () => {
     calculateAvgDailyStories();
   }, [topic?.id]);
 
-  // Fetch play mode setting and liked count
+  // Fetch play mode setting
   useEffect(() => {
     if (!topic?.id) return;
 
-    const fetchPlayModeSettings = async () => {
-      // Fetch settings
+    const fetchPlayModeSetting = async () => {
       const { data, error } = await supabase
         .from('topic_insight_settings')
         .select('play_mode_enabled')
@@ -190,23 +189,13 @@ const TopicFeed = () => {
 
       if (error) {
         console.log('No play mode settings found, defaulting to enabled');
-      } else {
-        setPlayModeEnabled(data?.play_mode_enabled !== false);
+        return;
       }
 
-      // Fetch liked count for this topic (last 7 days)
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from('story_swipes')
-        .select('id', { count: 'exact', head: true })
-        .eq('topic_id', topic.id)
-        .eq('swipe_type', 'like')
-        .gte('swiped_at', sevenDaysAgo);
-
-      setTopicLikedCount(count || 0);
+      setPlayModeEnabled(data?.play_mode_enabled !== false);
     };
 
-    fetchPlayModeSettings();
+    fetchPlayModeSetting();
   }, [topic?.id]);
 
   // Detect first scroll and show pulse animation on play mode icon
@@ -659,7 +648,7 @@ const TopicFeed = () => {
                       <TooltipTrigger asChild>
                         <Link to={`/play/${slug}`}>
                           <button
-                            className={`flex items-center gap-1.5 px-2 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
+                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
                               showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
                             }`}
                             aria-label="Play mode"
@@ -667,19 +656,12 @@ const TopicFeed = () => {
                             <Gamepad2 className={`w-4 h-4 transition-colors ${
                               showPlayModePulse ? 'text-primary' : ''
                             }`} />
-                            {topicLikedCount > 0 && (
-                              <span className="text-xs font-medium text-rose-500">{topicLikedCount}</span>
-                            )}
                           </button>
                         </Link>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="font-medium">Play Mode</p>
-                        <p className="text-xs text-muted-foreground">
-                          {topicLikedCount > 0 
-                            ? `${topicLikedCount} stories liked this week` 
-                            : 'Swipe through stories'}
-                        </p>
+                        <p className="text-xs text-muted-foreground">Swipe through stories</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -843,7 +825,7 @@ const TopicFeed = () => {
                       {playModeEnabled && (
                         <Link to={`/play/${slug}`}>
                           <button
-                            className={`flex items-center gap-1.5 px-2 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
+                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
                               showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
                             }`}
                             aria-label="Play mode"
@@ -851,9 +833,6 @@ const TopicFeed = () => {
                             <Gamepad2 className={`w-4 h-4 transition-colors ${
                               showPlayModePulse ? 'text-primary' : ''
                             }`} />
-                            {topicLikedCount > 0 && (
-                              <span className="text-xs font-medium text-rose-500">{topicLikedCount}</span>
-                            )}
                           </button>
                         </Link>
                       )}
