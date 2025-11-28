@@ -92,7 +92,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     }
   }, [currentStep, generatedKeywords.length, isGeneratingKeywords]);
 
-  // Auto-detect region and generate keywords when name changes
+  // Auto-detect region from topic name
   useEffect(() => {
     if (!topicName || topicName.length < 3) return;
 
@@ -112,16 +112,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
           setRegion(potentialRegion);
         }
       }
-
-      if (!description) {
-        if (topicType === 'regional') {
-          setDescription(`Stay updated with the latest news, events, and community stories from ${topicName}.`);
-        } else {
-          setDescription(`Curated updates and insights about ${topicName}.`);
-        }
-      }
-
-      generateKeywords();
     }, 800);
 
     return () => clearTimeout(timeoutId);
@@ -352,12 +342,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   autoFocus
                 />
               </div>
-
-              {topicName.length >= 3 && (
-                <p className="text-center text-base text-muted-foreground animate-in fade-in duration-300">
-                  AI is preparing your keywords...
-                </p>
-              )}
             </div>
           )}
 
@@ -420,10 +404,10 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   rows={2}
                 />
 
-                {/* Keyword generation state */}
-                {isGeneratingKeywords && (
-                  <div className="p-8 border rounded-xl bg-background-elevated text-center space-y-6">
-                    <p className="text-2xl font-semibold text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
+                {/* Keyword generation trigger */}
+                {isGeneratingKeywords ? (
+                  <div className="p-8 border rounded-xl bg-muted/30 text-center space-y-6">
+                    <p className="text-xl font-medium text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
                       {LOADING_MESSAGES[loadingMessageIndex]}
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
@@ -432,6 +416,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <Button
+                    onClick={generateKeywords}
+                    disabled={!topicName}
+                    className="w-full h-14 text-lg bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white"
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    Generate Keywords
+                  </Button>
                 )}
               </div>
             </div>
@@ -439,42 +432,39 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
           {/* Step 3: Refine Keywords */}
           {currentStep === 3 && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              <div className="text-center">
-                <h2 className="text-2xl font-display font-bold">Curate your keywords</h2>
-                <p className="text-muted-foreground mt-1">Tap to remove any that don't fit</p>
+            <div className="space-y-5 animate-in fade-in duration-300">
+              <div className="text-center space-y-1">
+                <h2 className="text-3xl font-semibold text-foreground">Curate your keywords</h2>
+                <p className="text-muted-foreground">Tap to toggle • {selectedKeywords.size} selected</p>
               </div>
 
-              {/* Quick actions */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{selectedKeywords.size} selected</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBulkAction('selectHighConfidence')}
-                  >
-                    Best only
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBulkAction('deselectAll')}
-                  >
-                    Clear
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleBulkAction('selectAll')}
-                  >
-                    All
-                  </Button>
-                </div>
+              {/* Quick actions row */}
+              <div className="flex items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('selectHighConfidence')}
+                >
+                  Best only
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('deselectAll')}
+                >
+                  Clear
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('selectAll')}
+                >
+                  All
+                </Button>
               </div>
 
               {/* Search */}
-              <div className="relative">
+              <div className="relative max-w-sm mx-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={keywordSearch}
@@ -485,13 +475,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
               </div>
 
               {/* Keyword pills by category */}
-              <div className="space-y-4 max-h-[280px] overflow-y-auto">
+              <div className="space-y-4 max-h-[300px] overflow-y-auto px-1">
                 {Object.entries(groupedKeywords).map(([category, keywords]) => (
                   <div key={category} className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       {categoryLabels[category] || category}
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {keywords.map((kw) => {
                         const isSelected = selectedKeywords.has(kw.keyword);
                         return (
@@ -499,16 +489,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                             key={kw.keyword}
                             onClick={() => handleToggleKeyword(kw.keyword)}
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
-                              "border hover:scale-105",
+                              "px-2.5 py-1 rounded-full text-sm transition-all",
                               isSelected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                ? "bg-[hsl(270,100%,68%)] text-white"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
                             title={kw.rationale}
                           >
                             {kw.keyword}
-                            {isSelected && <X className="w-3.5 h-3.5" />}
                           </button>
                         );
                       })}
@@ -516,31 +504,12 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   </div>
                 ))}
               </div>
-
-              {/* Selection summary */}
-              {selectedKeywords.size > 0 && (
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                  <p className="text-sm font-medium mb-2">Your feed will search for:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {Array.from(selectedKeywords).slice(0, 8).map((kw) => (
-                      <Badge key={kw} variant="secondary">
-                        {kw}
-                      </Badge>
-                    ))}
-                    {selectedKeywords.size > 8 && (
-                      <Badge variant="outline">
-                        +{selectedKeywords.size - 8}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-end items-center pt-8 mt-6">
+        <div className="flex justify-end items-center pt-6">
           {currentStep > 1 && (
             <Button
               variant="ghost"
@@ -552,12 +521,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             </Button>
           )}
 
-          {currentStep < 3 ? (
+          {currentStep === 1 && (
             <Button onClick={handleNext} disabled={!canProceed()} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
               Next
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-          ) : (
+          )}
+
+          {currentStep === 3 && (
             <Button onClick={handleCreate} disabled={!canProceed() || isLoading} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
               {isLoading ? "Creating..." : "Create Feed"}
             </Button>
