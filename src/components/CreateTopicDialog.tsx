@@ -246,10 +246,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         created_by: user.id,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error(`A feed with the name "${topicName}" already exists. Try a different name.`);
+        }
+        throw error;
+      }
 
       toast({
-        title: "Feed created! 🎉",
+        title: "Feed created!",
         description: "Now let's find some quality content sources...",
       });
 
