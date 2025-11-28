@@ -3880,16 +3880,19 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          plan: string | null
         }
         Insert: {
           created_at?: string
           email: string
           id?: string
+          plan?: string | null
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          plan?: string | null
         }
         Relationships: []
       }

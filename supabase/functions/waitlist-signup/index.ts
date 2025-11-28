@@ -17,9 +17,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { email } = await req.json()
+    const { email, plan } = await req.json()
 
-    console.log('Waitlist signup attempt:', { email })
+    console.log('Waitlist signup attempt:', { email, plan })
 
     if (!email) {
       return new Response(
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // Insert into waitlist
     const { data, error } = await supabase
       .from('waitlist')
-      .insert({ email })
+      .insert({ email, plan: plan || 'general' })
       .select()
 
     if (error) {
