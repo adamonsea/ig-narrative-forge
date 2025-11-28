@@ -99,39 +99,17 @@ export function buildGeminiIllustrativePrompt(params: GeminiPromptParams): strin
   const { tone, subject, storyTitle, slideContent, publicationName, primaryColor = '#10B981' } = params;
   
   const expressionGuidance = getExpressionGuidance(tone);
-  const tonalGuidance = getTonalGuidance(tone);
+  const sceneExcerpt = slideContent ? slideContent.substring(0, 150).trim() : subject;
   
-  // Extract scene excerpt (first 180 chars to stay within target length)
-  const sceneExcerpt = slideContent ? slideContent.substring(0, 180).trim() : subject;
-  
-  return `Create an editorial illustration in the EXACT style of mid-century screen printing / risograph art.
+  return `[SUBJECT]: ${subject}. Scene from story "${storyTitle}" for ${publicationName || 'a news publication'}: ${sceneExcerpt}
 
-MANDATORY STYLE SPECIFICATION (follow precisely):
+[COMPOSITION]: Modernist editorial cover. 3:2 landscape format. Large simple shapes with 60% negative space (cream paper showing). 1-3 main visual elements maximum. Architectural, clean arrangement.
 
-TECHNIQUE: Screen print / risograph aesthetic with visible paper texture grain. Hand-printed look with slight ink irregularities and texture. NOT digital vector art.
+[LIGHTING/CAMERA]: Flat poster-style lighting. No photographic shadows or realistic depth. Even illumination like a printed poster.
 
-OUTLINES: Bold, thick BLACK outlines (3-5px equivalent weight) around ALL shapes. Every object must have a clear black stroke defining its edges. Think woodcut or linocut print.
+[STYLE/REFERENCES]: In the style of mid-century screen printing and risograph art—visible paper texture grain, hand-printed aesthetic with slight ink irregularities. Think Jon McNaught, Paul Rand, or Saul Bass editorial illustration. Limited ink palette: cream/off-white paper background, bold black outlines around all shapes, and ${primaryColor} as the single accent color used sparingly. Human figures simplified to basic geometric forms (circles for heads, rectangles for bodies). ${expressionGuidance}.
 
-COLOR FILL: COMPLETELY FLAT color fills inside shapes. ZERO gradients, ZERO shading, ZERO highlights, ZERO shadows within shapes. Colors are solid blocks like screen printing ink.
-
-PALETTE: Maximum 3-4 colors total:
-- Off-white/cream paper background (not pure white)
-- Black for all outlines and some solid areas
-- ONE accent color: ${primaryColor} used sparingly as a flat fill
-- Optional: one additional muted tone
-
-SHAPES: Geometric, simplified, almost abstract. Human figures (if any) are simplified into basic geometric forms - circles for heads, rectangles for bodies. NO realistic proportions or detailed features. Think Saul Bass or Paul Rand illustration style.
-
-COMPOSITION: Modernist, architectural arrangement. Large simple shapes. 60%+ negative space (cream background showing). 1-3 main elements maximum. 3:2 landscape format.
-
-⚠️ ZERO TEXT: No letters, words, numbers, signs, or labels anywhere in the image.
-
-SUBJECT FOR THIS ILLUSTRATION:
-Story: "${storyTitle}" for ${publicationName || 'a news publication'}
-Scene: ${sceneExcerpt}
-Mood: ${expressionGuidance} ${tonalGuidance}
-
-Create a single iconic visual moment that captures this story's essence using ONLY flat shapes, bold black outlines, limited colors, and generous negative space. Make it look hand-printed, not digital.`;
+[CONSTRAINTS/EXCLUSIONS]: No gradients or shading—only completely flat solid color fills. No 3D effects or realistic rendering. No smooth digital vector look—must have hand-printed texture. No text, letters, numbers, words, or labels anywhere. No more than 3-4 total colors. No detailed facial features. Avoid visual clutter—keep it minimal and iconic.`;
 }
 
 /**
