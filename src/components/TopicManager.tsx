@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +35,7 @@ interface Topic {
   visits_this_week?: number;
   articles_swiped?: number;
   articles_liked?: number;
+  articles_disliked?: number;
   share_clicks?: number;
   quiz_responses_count?: number;
   installs_this_week?: number;
@@ -162,8 +163,9 @@ export const TopicManager = () => {
           const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
           const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
           const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
-          const swipeInsightsData = swipeInsights.data as { total_likes?: number; total_discards?: number } | null;
+          const swipeInsightsData = (swipeInsights.data as any)?.[0] || { total_likes: 0, total_discards: 0 };
           const likedCount = Number(swipeInsightsData?.total_likes) || 0;
+          const dislikedCount = Number(swipeInsightsData?.total_discards) || 0;
           const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
 
           return {
@@ -175,6 +177,7 @@ export const TopicManager = () => {
             visits_this_week: visitorData.visits_this_week || 0,
             articles_swiped: Number(interactionData.articles_swiped) || 0,
             articles_liked: likedCount,
+            articles_disliked: dislikedCount,
             share_clicks: Number(interactionData.share_clicks) || 0,
             quiz_responses_count: Number(quizData.quiz_responses_count) || 0,
             installs_this_week: Number(installData.installs_this_week) || 0,
@@ -424,7 +427,7 @@ export const TopicManager = () => {
                               <MousePointer className="w-3 h-3" />
                               Engagement
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-5 gap-2">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
@@ -438,23 +441,24 @@ export const TopicManager = () => {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Stories rated positively in Play Mode (last 7 days)</p>
+                                  <p>Stories rated positively in Play Mode</p>
                                 </TooltipContent>
                               </Tooltip>
                               
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                    <div className="text-lg font-bold text-foreground">
-                                      {topic.articles_swiped || 0}
+                                  <div className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/30 cursor-help">
+                                    <div className="text-lg font-bold text-orange-500 flex items-center gap-1">
+                                      <ThumbsDown className="w-3 h-3" />
+                                      {topic.articles_disliked || 0}
                                     </div>
                                     <div className="text-xs font-medium text-muted-foreground">
-                                      Rated
+                                      Skipped
                                     </div>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Total story ratings in Play Mode (last 7 days)</p>
+                                  <p>Stories rated negatively in Play Mode</p>
                                 </TooltipContent>
                               </Tooltip>
                               
@@ -470,7 +474,7 @@ export const TopicManager = () => {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Share button clicks on stories (last 7 days)</p>
+                                  <p>Share button clicks on stories</p>
                                 </TooltipContent>
                               </Tooltip>
                               
@@ -487,7 +491,23 @@ export const TopicManager = () => {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Quiz questions answered by readers (last 7 days)</p>
+                                  <p>Quiz questions answered by readers</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                    <div className="text-lg font-bold text-foreground">
+                                      {(topic.articles_liked || 0) + (topic.articles_disliked || 0)}
+                                    </div>
+                                    <div className="text-xs font-medium text-muted-foreground">
+                                      Total
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Total Play Mode ratings</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>
