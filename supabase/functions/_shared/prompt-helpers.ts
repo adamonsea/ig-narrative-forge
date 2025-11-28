@@ -54,6 +54,7 @@ export async function analyzeStoryTone(
 
 /**
  * Extracts key visual subject matter from story content using OpenAI
+ * Enhanced to capture gender, age, and physical characteristics when people are involved
  */
 export async function extractSubjectMatter(
   slides: SlideContent[],
@@ -76,9 +77,22 @@ export async function extractSubjectMatter(
         model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
-          content: `Extract the main visual subject from this story in 10-15 words (focus on concrete, visual elements - people, places, objects, actions):\n\n${storyText.slice(0, 1000)}`
+          content: `Extract the main visual subject from this story in 15-25 words for image generation.
+
+CRITICAL REQUIREMENTS:
+- If the story features a PERSON, you MUST specify: gender (man/woman/boy/girl), approximate age range (young/middle-aged/elderly), and any mentioned physical details
+- Focus on concrete visual elements: people with their gender/age, specific places, objects, actions
+- Be precise about WHO is doing WHAT and WHERE
+
+Example outputs:
+- "elderly man in his 70s sitting alone at a seaside bench overlooking the pier at sunset"
+- "young woman in her 30s celebrating outside a restaurant holding a trophy"
+- "middle-aged male business owner standing in front of his newly opened shop"
+
+Story text:
+${storyText.slice(0, 1500)}`
         }],
-        max_tokens: 40,
+        max_tokens: 60,
         temperature: 0.3,
       }),
     });
