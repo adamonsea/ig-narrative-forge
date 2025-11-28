@@ -296,7 +296,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 ring-2 ring-[hsl(270,100%,68%)] shadow-[0_0_80px_-15px_hsl(270,100%,68%,0.5)]">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10">
         {/* Minimal Progress - just dots */}
         <div className="flex justify-center gap-3 mb-10">
           {[1, 2, 3].map((step) => (
@@ -305,9 +305,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
                 currentStep === step 
-                  ? "bg-[hsl(270,100%,68%)] w-10" 
+                  ? "bg-foreground w-10" 
                   : currentStep > step 
-                    ? "bg-[hsl(270,100%,68%)]/50 w-4" 
+                    ? "bg-foreground/40 w-4" 
                     : "bg-muted w-4"
               )}
             />
@@ -325,7 +325,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-[hsl(270,100%,68%)] cursor-help hover:text-[hsl(270,100%,75%)] transition-colors" />
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
@@ -337,13 +337,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   value={topicName}
                   onChange={(e) => setTopicName(e.target.value)}
                   placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-2xl h-20 text-center font-medium border-2 border-[hsl(270,100%,68%)]/40 focus:border-[hsl(270,100%,68%)] focus:ring-4 focus:ring-[hsl(270,100%,68%)]/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
+                  className="text-2xl h-20 text-center font-medium border-2 border-[hsl(270,100%,68%)]/50 focus:border-[hsl(270,100%,68%)] focus:ring-4 focus:ring-[hsl(270,100%,68%)]/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
                   autoFocus
                 />
               </div>
 
               {topicName.length >= 3 && (
-                <p className="text-center text-base text-[hsl(270,100%,68%)] animate-in fade-in duration-300 font-medium">
+                <p className="text-center text-base text-muted-foreground animate-in fade-in duration-300">
                   AI is preparing your keywords...
                 </p>
               )}
