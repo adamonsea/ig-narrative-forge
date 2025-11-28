@@ -178,54 +178,62 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Workflow Section */}
-          <section className="max-w-7xl mx-auto py-24">
-            <h2 className="text-4xl md:text-5xl font-display font-semibold text-center mb-20 tracking-tight text-white">
+          {/* Workflow Timeline */}
+          <section className="max-w-5xl mx-auto py-24">
+            <h2 className="text-4xl md:text-5xl font-display font-semibold text-center mb-16 tracking-tight text-white">
               Your editorial workflow
             </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 1</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <Search className="h-7 w-7 text-[hsl(155,100%,67%)]" />
+            
+            {/* Timeline */}
+            <div className="relative">
+              {/* Connecting line - desktop */}
+              <div className="hidden lg:block absolute top-7 left-[calc(12.5%+28px)] right-[calc(12.5%+28px)] h-px bg-gradient-to-r from-[hsl(155,100%,67%)]/40 via-[hsl(270,100%,68%)]/40 to-[hsl(155,100%,67%)]/40" />
+              
+              {/* Timeline items */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+                {/* Step 1 */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
+                    <Search className="h-6 w-6 text-[hsl(155,100%,67%)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Discover</h3>
+                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
+                    Connect sources, AI finds stories
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Discover</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Connect sources and let AI discover relevant stories automatically
-                </p>
-              </div>
 
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(270,100%,68%)]">Step 2</div>
-                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Filter className="h-7 w-7 text-[hsl(270,100%,68%)]" />
+                {/* Step 2 */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
+                    <Filter className="h-6 w-6 text-[hsl(270,100%,68%)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Curate</h3>
+                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
+                    Review and approve content
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Curate</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Review and approve content that meets your editorial standards
-                </p>
-              </div>
 
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(155,100%,67%)]">Step 3</div>
-                <div className="rounded-2xl bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/30">
-                  <BarChart className="h-7 w-7 text-[hsl(155,100%,67%)]" />
+                {/* Step 3 */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
+                    <BarChart className="h-6 w-6 text-[hsl(155,100%,67%)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Analyze</h3>
+                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
+                    Track what resonates
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Analyze</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Track metrics and understand what resonates with your audience
-                </p>
-              </div>
 
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-[hsl(270,100%,68%)]">Step 4</div>
-                <div className="rounded-2xl bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/30">
-                  <Sparkles className="h-7 w-7 text-[hsl(270,100%,68%)]" />
+                {/* Step 4 */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
+                    <Sparkles className="h-6 w-6 text-[hsl(270,100%,68%)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Publish</h3>
+                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
+                    Beautiful, engaging stories
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Publish</h3>
-                <p className="text-white/60 text-sm leading-relaxed">
-                  Transform approved content into beautiful, engaging stories
-                </p>
               </div>
             </div>
           </section>
