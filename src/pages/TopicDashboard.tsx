@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -30,6 +30,8 @@ import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 import { AudienceProgressCard } from "@/components/AudienceProgressCard";
+import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
+import { SourceOnboardingTicker } from "@/components/SourceOnboardingTicker";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +119,7 @@ interface UniversalScraperResponse {
 
 const TopicDashboard = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin } = useAuth();
   const [topic, setTopic] = useState<Topic | null>(null);
   const [negativeKeywords, setNegativeKeywords] = useState<string[]>([]);
@@ -138,6 +141,7 @@ const TopicDashboard = () => {
   const [gatheringAll, setGatheringAll] = useState(false);
   const [activeTab, setActiveTab] = useState("content-flow");
   const [subscribersCollapsed, setSubscribersCollapsed] = useState(true);
+  const [autoSuggestSources, setAutoSuggestSources] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingPublishState, setPendingPublishState] = useState<boolean>(false);
   const { toast } = useToast();
@@ -157,6 +161,17 @@ const TopicDashboard = () => {
       loadTopicAndStats();
     }
   }, [slug, user]);
+
+  // Handle sources redirect from topic creation
+  useEffect(() => {
+    if (searchParams.get('sources') === 'true') {
+      setActiveTab('automation');
+      setAutoSuggestSources(true);
+      // Clean the URL
+      searchParams.delete('sources');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const loadTopicAndStats = async () => {
     try {
@@ -826,6 +841,33 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
+            {/* Source Discovery - Shown prominently for new topics */}
+            {autoSuggestSources && (
+              <Card className="bg-card border-border border-accent-green/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-accent-green" />
+                    Discover Quality Sources
+                  </CardTitle>
+                  <CardDescription>
+                    Let AI find reliable RSS feeds and news sources for your topic
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ImprovedSourceSuggestionTool
+                    topicName={topic.name}
+                    description={topic.description || ''}
+                    keywords={(topic.keywords || []).join(', ')}
+                    topicType={topic.topic_type}
+                    region={topic.region}
+                    topicId={topic.id}
+                    autoTrigger={autoSuggestSources}
+                    onTriggered={() => setAutoSuggestSources(false)}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <TopicScheduleMonitor 

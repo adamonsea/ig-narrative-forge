@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Search, Plus, Loader2, CheckCircle, XCircle, AlertTriangle, Zap, History, Eye } from 'lucide-react';
+import { Search, Plus, Loader2, CheckCircle, XCircle, AlertTriangle, Zap, History, Eye, Rss, Globe, Handshake, Shield, Sparkles, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSuggestionMemory, SourceSuggestionMemory } from '@/hooks/useSuggestionMemory';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SourceOnboardingTicker } from './SourceOnboardingTicker';
 
 interface SourceSuggestion {
   url: string;
@@ -31,6 +32,8 @@ interface ImprovedSourceSuggestionToolProps {
   topicType: 'regional' | 'keyword';
   region?: string;
   topicId?: string;
+  autoTrigger?: boolean;
+  onTriggered?: () => void;
 }
 
 export const ImprovedSourceSuggestionTool = ({ 
@@ -39,18 +42,30 @@ export const ImprovedSourceSuggestionTool = ({
   keywords, 
   topicType, 
   region,
-  topicId 
+  topicId,
+  autoTrigger = false,
+  onTriggered
 }: ImprovedSourceSuggestionToolProps) => {
   const [suggestions, setSuggestions] = useState<SourceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingSourceId, setAddingSourceId] = useState<string | null>(null);
   const [validationProgress, setValidationProgress] = useState<Record<string, number>>({});
   const [showHistory, setShowHistory] = useState(false);
+  const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const { toast } = useToast();
   
   const memoryKey = `sources-${topicName}-${topicType}${region ? '-' + region : ''}`;
   const suggestionMemory = useSuggestionMemory<SourceSuggestionMemory>(memoryKey);
   const stats = suggestionMemory.getStats();
+
+  // Auto-trigger suggestions when component mounts with autoTrigger=true
+  useEffect(() => {
+    if (autoTrigger && !hasAutoTriggered && topicName.trim()) {
+      setHasAutoTriggered(true);
+      getSuggestions();
+      onTriggered?.();
+    }
+  }, [autoTrigger, hasAutoTriggered, topicName]);
 
   const getSuggestions = async () => {
     if (!topicName.trim()) {
@@ -403,7 +418,7 @@ export const ImprovedSourceSuggestionTool = ({
         <div>
           <h3 className="text-sm font-medium">Enhanced Source Discovery</h3>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>AI-powered source finding with platform reliability scoring</span>
+            <span>AI finds RSS feeds & reliable sources for your topic</span>
             {stats.total > 0 && (
               <span>{stats.added} connected • {stats.pending} pending • {stats.total} discovered</span>
             )}
@@ -429,17 +444,34 @@ export const ImprovedSourceSuggestionTool = ({
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
+                Discovering...
               </>
             ) : (
               <>
-                <Zap className="w-4 h-4 mr-2" />
-                Discover Sources
+                <Rss className="w-4 h-4 mr-2" />
+                Find RSS Sources
               </>
             )}
           </Button>
         </div>
       </div>
+
+      {/* Onboarding tips when loading or no suggestions yet */}
+      {(loading || (suggestions.length === 0 && stats.total === 0)) && (
+        <div className="mt-4">
+          {loading ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-background-elevated rounded-lg border border-border/50">
+                <Loader2 className="w-5 h-5 animate-spin text-accent-green" />
+                <span className="text-sm">Searching for quality RSS feeds and reliable sources...</span>
+              </div>
+              <SourceOnboardingTicker variant="loading" />
+            </div>
+          ) : (
+            <SourceOnboardingTicker variant="static" />
+          )}
+        </div>
+      )}
 
       {suggestions.length > 0 && (
         <div className="space-y-3">

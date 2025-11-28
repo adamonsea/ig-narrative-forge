@@ -47,36 +47,40 @@ ${region ? `Region: ${region}` : ''}
 
 ${context}
 
-Suggest 8-10 high-quality, RELIABLE content sources that would be excellent for scraping relevant articles. Focus on sources that:
+Suggest 8-10 high-quality, RELIABLE content sources that would be excellent for gathering relevant articles. 
 
-1. Are well-established, mainstream sources with strong technical infrastructure
-2. Have working RSS feeds (prefer sources known to have RSS)
-3. Use proper SSL certificates and modern web standards
-4. Are actively maintained and regularly updated
-5. Have good content quality and credibility  
-6. Match the topic focus precisely
-7. Avoid sources known for SSL certificate issues or technical problems
+CRITICAL: Web scraping is unreliable - RSS feeds are the gold standard!
 
-PREFER these types of reliable sources:
-- Major news organizations (BBC, Reuters, AP, etc.)
-- Government and official websites (.gov, .org)
-- Well-established local newspapers with good web presence
-- Major industry publications
-- Reputable blogs on established platforms
+PRIORITIZE (in order):
+1. **RSS FEEDS FIRST** - Always look for /rss, /feed, /rss.xml endpoints
+2. WordPress sites (built-in RSS at /feed/)
+3. Substack newsletters (built-in RSS feeds)
+4. Official .gov and .org sites with RSS
+5. Major news organizations with RSS (BBC, Reuters, AP)
+6. Well-maintained local newspapers with RSS feeds
+
+WHY RSS MATTERS:
+- Structured, predictable content format
+- No anti-scraping blocks
+- Updated timestamps for freshness
+- Consistent article structure
 
 AVOID suggesting:
-- Small independent sites with potential SSL issues
-- Sources ending in .co.uk that might have certificate problems
-- Very new or unknown domains
+- Sites without RSS (web scraping is hit-and-miss)
+- Facebook, Twitter, Instagram (blocked)
+- Small independent sites
 - Sites known to block scrapers
+- Paywalled content
+
+SUGGEST RSS URLs directly when possible (e.g., example.com/feed/ rather than just example.com)
 
 For each source, provide exactly this JSON format:
 {
-  "url": "full URL including https://",
+  "url": "full RSS feed URL when possible (https://...)",
   "source_name": "Clear, concise source name",
-  "type": "RSS|News|Blog|Publication|Official",
+  "type": "RSS|News|Blog|Publication|Official|WordPress|Substack",
   "confidence_score": 1-100,
-  "rationale": "Brief reason why this source is relevant (max 50 characters)"
+  "rationale": "Brief reason - mention RSS if available (max 50 characters)"
 }
 
 Return ONLY a valid JSON array of suggestions, no other text or formatting.`;
