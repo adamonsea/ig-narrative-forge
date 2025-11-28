@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Search, Plus, Loader2, CheckCircle, XCircle, AlertTriangle, Zap, History, Eye, Rss, Globe, Handshake, Shield, Sparkles, ExternalLink } from 'lucide-react';
+import { Loader2, CheckCircle, Rss, Plus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useSuggestionMemory, SourceSuggestionMemory } from '@/hooks/useSuggestionMemory';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { SourceOnboardingTicker } from './SourceOnboardingTicker';
+import { cn } from '@/lib/utils';
 
 interface SourceSuggestion {
   url: string;
@@ -17,12 +13,6 @@ interface SourceSuggestion {
   confidence_score: number;
   rationale: string;
   platform_reliability?: 'high' | 'medium' | 'low';
-  technical_validation?: {
-    is_accessible: boolean;
-    is_valid_rss?: boolean;
-    has_recent_content?: boolean;
-    estimated_article_count?: number;
-  };
 }
 
 interface ImprovedSourceSuggestionToolProps {
@@ -49,16 +39,19 @@ export const ImprovedSourceSuggestionTool = ({
   const [suggestions, setSuggestions] = useState<SourceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingSourceId, setAddingSourceId] = useState<string | null>(null);
-  const [validationProgress, setValidationProgress] = useState<Record<string, number>>({});
-  const [showHistory, setShowHistory] = useState(false);
+  const [addedSources, setAddedSources] = useState<Set<string>>(new Set());
+  const [existingSourceUrls, setExistingSourceUrls] = useState<Set<string>>(new Set());
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const { toast } = useToast();
-  
-  const memoryKey = `sources-${topicName}-${topicType}${region ? '-' + region : ''}`;
-  const suggestionMemory = useSuggestionMemory<SourceSuggestionMemory>(memoryKey);
-  const stats = suggestionMemory.getStats();
 
-  // Auto-trigger suggestions when component mounts with autoTrigger=true
+  // Fetch existing topic sources on mount
+  useEffect(() => {
+    if (topicId) {
+      fetchExistingSources();
+    }
+  }, [topicId]);
+
+  // Auto-trigger suggestions
   useEffect(() => {
     if (autoTrigger && !hasAutoTriggered && topicName.trim()) {
       setHasAutoTriggered(true);
@@ -67,15 +60,36 @@ export const ImprovedSourceSuggestionTool = ({
     }
   }, [autoTrigger, hasAutoTriggered, topicName]);
 
-  const getSuggestions = async () => {
-    if (!topicName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a topic name first",
-        variant: "destructive"
+  const fetchExistingSources = async () => {
+    if (!topicId) return;
+
+    const { data } = await supabase
+      .from('topic_sources')
+      .select('source_id, content_sources!inner(feed_url, canonical_domain)')
+      .eq('topic_id', topicId);
+
+    if (data) {
+      const urls = new Set<string>();
+      data.forEach((ts: any) => {
+        if (ts.content_sources?.feed_url) {
+          urls.add(ts.content_sources.feed_url.toLowerCase());
+        }
+        if (ts.content_sources?.canonical_domain) {
+          urls.add(ts.content_sources.canonical_domain.toLowerCase());
+        }
       });
-      return;
+      setExistingSourceUrls(urls);
     }
+  };
+
+  const isSourceAlreadyLinked = (suggestion: SourceSuggestion): boolean => {
+    const url = suggestion.url.toLowerCase();
+    const domain = new URL(suggestion.url).hostname.replace('www.', '').toLowerCase();
+    return existingSourceUrls.has(url) || existingSourceUrls.has(domain);
+  };
+
+  const getSuggestions = async () => {
+    if (!topicName.trim()) return;
 
     setLoading(true);
     try {
@@ -86,95 +100,65 @@ export const ImprovedSourceSuggestionTool = ({
           keywords,
           topicType,
           region,
-          enhanced: true, // Request enhanced suggestions with platform reliability
-          focusPlatforms: ['WordPress', 'RSS', 'Substack', 'News'], // Prioritize reliable platforms
-          excludeProblematic: true // Blacklist known problem patterns
+          enhanced: true,
+          focusPlatforms: ['WordPress', 'RSS', 'Substack', 'News'],
+          excludeProblematic: true
         }
       });
 
       if (error) throw error;
 
-      if (data && !data.success) {
-        throw new Error(data.error || 'Failed to get suggestions');
-      }
-
-      const suggestions = data?.suggestions || [];
+      const allSuggestions = data?.suggestions || [];
       
-      // Filter out unreliable sources and sort by quality
-      const filteredSuggestions = suggestions.filter((suggestion: SourceSuggestion) => {
-        // Minimum confidence threshold
-        if (suggestion.confidence_score < 60) return false;
+      // Filter and sort
+      const filteredSuggestions = allSuggestions.filter((s: SourceSuggestion) => {
+        if (s.confidence_score < 60) return false;
         
-        // Block known problematic patterns
-        const url = suggestion.url.toLowerCase();
+        const url = s.url.toLowerCase();
         const problematicPatterns = [
           'facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com',
           'reddit.com', 'pinterest.com', 'linkedin.com',
-          'blogspot', 'tumblr', 'medium.com',
-          'youtube.com', 'vimeo.com'
+          'blogspot', 'tumblr', 'medium.com', 'youtube.com', 'vimeo.com'
         ];
         
-        if (problematicPatterns.some(pattern => url.includes(pattern))) return false;
+        if (problematicPatterns.some(p => url.includes(p))) return false;
+        if (s.platform_reliability === 'low') return false;
         
-        // Prefer high reliability platforms
-        if (suggestion.platform_reliability === 'low') return false;
+        // Filter out already linked sources
+        if (isSourceAlreadyLinked(s)) return false;
         
         return true;
       });
 
       const sortedSuggestions = filteredSuggestions.sort((a: SourceSuggestion, b: SourceSuggestion) => {
-        const reliabilityScore = (suggestion: SourceSuggestion) => {
-          let score = suggestion.confidence_score;
-          if (suggestion.platform_reliability === 'high') score += 25;
-          if (suggestion.platform_reliability === 'medium') score += 15;
-          if (['WordPress', 'RSS', 'Substack', 'News'].includes(suggestion.type)) score += 20;
-          return score;
+        const score = (s: SourceSuggestion) => {
+          let sc = s.confidence_score;
+          if (s.platform_reliability === 'high') sc += 25;
+          if (s.platform_reliability === 'medium') sc += 15;
+          if (['WordPress', 'RSS', 'Substack', 'News'].includes(s.type)) sc += 20;
+          return sc;
         };
-        return reliabilityScore(b) - reliabilityScore(a);
+        return score(b) - score(a);
       });
 
-      const allSources = sortedSuggestions;
-      const newSources = suggestionMemory.filterNewSuggestions(allSources) as SourceSuggestion[];
+      setSuggestions(sortedSuggestions);
       
-      setSuggestions(newSources);
-      
-      // Add to memory
-      const memoryItems = allSources.map((s: SourceSuggestion) => ({
-        url: s.url,
-        source_name: s.source_name,
-        type: s.type,
-        confidence_score: s.confidence_score,
-        rationale: s.rationale,
-        platform_reliability: s.platform_reliability,
-        technical_validation: s.technical_validation
-      }));
-      suggestionMemory.addSuggestions(memoryItems);
-      
-      if (newSources.length > 0) {
+      if (sortedSuggestions.length > 0) {
         toast({
-          title: "✨ Quality Sources Discovered",
-          description: `Found ${newSources.length} reliable sources${allSources.length > newSources.length ? ` (${allSources.length - newSources.length} already seen)` : ''}`,
-        });
-
-        // Start technical validation for top suggestions
-        startTechnicalValidation(newSources.slice(0, 5));
-      } else if (allSources.length > 0) {
-        toast({
-          title: "All Sources Previously Seen",
-          description: `All ${allSources.length} suggested sources were shown before. Check history to review them.`,
+          title: `Found ${sortedSuggestions.length} sources`,
+          description: "Click to add them to your feed",
         });
       } else {
         toast({
-          title: "No Quality Sources Found",
-          description: "No reliable sources discovered. Try adjusting your topic details or keywords.",
-          variant: "destructive"
+          title: "No new sources found",
+          description: "Try adjusting your keywords or check back later",
         });
       }
     } catch (error) {
       console.error('Error getting suggestions:', error);
       toast({
-        title: "Connection Issue",
-        description: "Having trouble connecting to source discovery service. Please try again.",
+        title: "Connection issue",
+        description: "Please try again",
         variant: "destructive"
       });
     } finally {
@@ -182,140 +166,37 @@ export const ImprovedSourceSuggestionTool = ({
     }
   };
 
-  const startTechnicalValidation = async (sourcesToValidate: SourceSuggestion[]) => {
-    for (const suggestion of sourcesToValidate) {
-      try {
-        setValidationProgress(prev => ({ ...prev, [suggestion.url]: 0 }));
-        
-        // Simulate validation progress
-        const progressInterval = setInterval(() => {
-          setValidationProgress(prev => {
-            const current = prev[suggestion.url] || 0;
-            if (current >= 90) {
-              clearInterval(progressInterval);
-              return prev;
-            }
-            return { ...prev, [suggestion.url]: current + 10 };
-          });
-        }, 200);
-
-        const { data: validationResult, error } = await supabase.functions.invoke('validate-content-source', {
-          body: {
-            url: suggestion.url,
-            sourceType: suggestion.type,
-            topicType,
-            region,
-            topicId,
-            enhanced: true
-          }
-        });
-
-        clearInterval(progressInterval);
-        setValidationProgress(prev => ({ ...prev, [suggestion.url]: 100 }));
-
-        if (!error && validationResult) {
-          // Update suggestion with validation results
-          setSuggestions(prev => prev.map(s => 
-            s.url === suggestion.url 
-              ? {
-                  ...s,
-                  technical_validation: {
-                    is_accessible: validationResult.isAccessible || false,
-                    is_valid_rss: validationResult.isValidRSS || false,
-                    has_recent_content: validationResult.hasRecentContent || false,
-                    estimated_article_count: validationResult.articleCount || 0
-                  }
-                }
-              : s
-          ));
-        }
-      } catch (error) {
-        console.error('Validation failed for', suggestion.url, error);
-        setValidationProgress(prev => ({ ...prev, [suggestion.url]: -1 })); // -1 indicates error
-      }
-    }
-  };
-
-  const checkExistingSource = async (suggestion: SourceSuggestion): Promise<{exists: boolean, isLinked: boolean, isActive: boolean, id?: string}> => {
-    const domain = new URL(suggestion.url).hostname.replace('www.', '');
-    
-    // First, check if source exists in content_sources by URL or domain
-    const { data: existingSource } = await supabase
-      .from('content_sources')
-      .select('id, source_name, feed_url')
-      .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
-      .maybeSingle();
-
-    if (!existingSource) {
-      return { exists: false, isLinked: false, isActive: false };
-    }
-
-    // Check if this source is linked to the current topic
-    const { data: topicSourceLink } = await supabase
-      .from('topic_sources')
-      .select('is_active')
-      .eq('topic_id', topicId)
-      .eq('source_id', existingSource.id)
-      .maybeSingle();
-
-    return {
-      exists: true,
-      isLinked: !!topicSourceLink,
-      isActive: topicSourceLink?.is_active || false,
-      id: existingSource.id
-    };
-  };
-
   const addSource = async (suggestion: SourceSuggestion) => {
-    const sourceKey = suggestion.url;
-    setAddingSourceId(sourceKey);
+    if (!topicId) {
+      toast({
+        title: "Error",
+        description: "Topic ID required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setAddingSourceId(suggestion.url);
     
     try {
-      const existingCheck = await checkExistingSource(suggestion);
+      const domain = new URL(suggestion.url).hostname.replace('www.', '');
       
-      // If source is already linked and active, show error
-      if (existingCheck.isLinked && existingCheck.isActive) {
-        toast({
-          title: "Source Already Added",
-          description: "This source is already active for this topic",
-          variant: "destructive"
-        });
-        setAddingSourceId(null);
-        return;
-      }
+      // Check if source exists
+      const { data: existingSource } = await supabase
+        .from('content_sources')
+        .select('id')
+        .or(`feed_url.eq.${suggestion.url},canonical_domain.eq.${domain}`)
+        .maybeSingle();
 
-      // Enhanced validation using technical validation results
-      const validation = suggestion.technical_validation;
-      if (validation && !validation.is_accessible) {
-        toast({
-          title: "Source Not Accessible",
-          description: "This source appears to be offline or blocked",
-          variant: "destructive"
-        });
-        setAddingSourceId(null);
-        return;
-      }
+      let sourceId = existingSource?.id;
 
-      // Calculate enhanced credibility score
-      let credibilityScore = Math.round(suggestion.confidence_score * 0.8);
-      
-      // Bonus for platform reliability
-      if (suggestion.platform_reliability === 'high') credibilityScore += 15;
-      if (suggestion.platform_reliability === 'medium') credibilityScore += 10;
-      
-      // Bonus for technical validation
-      if (validation?.is_valid_rss) credibilityScore += 10;
-      if (validation?.has_recent_content) credibilityScore += 5;
-      if ((validation?.estimated_article_count || 0) > 10) credibilityScore += 5;
-      
-      credibilityScore = Math.min(95, credibilityScore); // Cap at 95
-      
-      let sourceId = existingCheck.id;
-      
-      // If source doesn't exist, create it first
-      if (!existingCheck.exists) {
-        const domain = new URL(suggestion.url).hostname.replace('www.', '');
-        
+      // Create source if not exists
+      if (!sourceId) {
+        let credibilityScore = Math.round(suggestion.confidence_score * 0.8);
+        if (suggestion.platform_reliability === 'high') credibilityScore += 15;
+        if (suggestion.platform_reliability === 'medium') credibilityScore += 10;
+        credibilityScore = Math.min(95, credibilityScore);
+
         const { data: newSource, error: createError } = await supabase
           .from('content_sources')
           .insert({
@@ -327,7 +208,6 @@ export const ImprovedSourceSuggestionTool = ({
             is_active: true,
             source_type: suggestion.type === 'RSS' ? 'rss' : 'website',
             region: topicType === 'regional' ? region : null
-            // Remove topic_id - we use junction table now
           })
           .select('id')
           .single();
@@ -336,47 +216,32 @@ export const ImprovedSourceSuggestionTool = ({
         sourceId = newSource.id;
       }
 
-      // Link source to topic (or reactivate if inactive) - this is critical!
-      if (!topicId) {
-        throw new Error('Topic ID is required for linking sources');
-      }
-
+      // Link to topic
       const { error: linkError } = await supabase.rpc('add_source_to_topic', {
         p_topic_id: topicId,
         p_source_id: sourceId,
         p_source_config: {}
       });
 
-      if (linkError) {
-        console.error('Error linking source to topic:', linkError);
-        throw new Error(`Failed to link source: ${linkError.message}`);
-      }
+      if (linkError) throw new Error(linkError.message);
 
-      const qualityNote = credibilityScore >= 80 ? 'High Quality' : 
-                        credibilityScore >= 70 ? 'Good Quality' : 'Standard';
-      
-      const actionMessage = existingCheck.isLinked && !existingCheck.isActive ? 
-        'reactivated' : 'added';
+      // Update state
+      setAddedSources(prev => new Set([...prev, suggestion.url]));
+      setExistingSourceUrls(prev => new Set([...prev, suggestion.url.toLowerCase(), domain.toLowerCase()]));
+      setSuggestions(prev => prev.filter(s => s.url !== suggestion.url));
       
       toast({
-        title: "✅ Source Connected Successfully",
-        description: `${suggestion.source_name} ${actionMessage} with ${credibilityScore}% credibility (${qualityNote})`,
+        title: "Source added",
+        description: suggestion.source_name,
       });
-      
-      // Mark as added in memory
-      const memoryItem = suggestionMemory.memory.find(item => item.url === suggestion.url);
-      if (memoryItem) {
-        suggestionMemory.markAsAdded(memoryItem.id);
-      }
-      
-      setSuggestions(suggestions.filter(s => s.url !== suggestion.url));
+
       window.dispatchEvent(new CustomEvent('sourceAdded'));
 
     } catch (error) {
       console.error('Error adding source:', error);
       toast({
-        title: "Error",
-        description: `Failed to add source: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: "Failed to add",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive"
       });
     } finally {
@@ -384,183 +249,113 @@ export const ImprovedSourceSuggestionTool = ({
     }
   };
 
-  const getConfidenceColor = (score: number) => {
-    if (score >= 85) return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/20 dark:text-emerald-400';
-    if (score >= 70) return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400';
-    if (score >= 55) return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400';
-    return 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/20 dark:text-orange-400';
+  const dismissSuggestion = (suggestion: SourceSuggestion) => {
+    setSuggestions(prev => prev.filter(s => s.url !== suggestion.url));
   };
 
-  const getPlatformReliabilityBadge = (suggestion: SourceSuggestion) => {
-    if (!suggestion.platform_reliability) return null;
-    
-    const config = {
-      high: { label: 'Reliable Platform', variant: 'default' as const, className: 'bg-green-100 text-green-800 border-green-300' },
-      medium: { label: 'Standard Platform', variant: 'secondary' as const, className: 'bg-blue-100 text-blue-800 border-blue-300' },
-      low: { label: 'Basic Platform', variant: 'outline' as const, className: 'bg-yellow-100 text-yellow-800 border-yellow-300' }
-    };
-    
-    const { label, variant, className } = config[suggestion.platform_reliability];
-    return <Badge variant={variant} className={className}>{label}</Badge>;
-  };
-
-  const getValidationIcon = (url: string) => {
-    const progress = validationProgress[url];
-    if (progress === undefined) return null;
-    if (progress === -1) return <XCircle className="w-4 h-4 text-red-500" />;
-    if (progress === 100) return <CheckCircle className="w-4 h-4 text-green-500" />;
-    return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
+  const getTypeIcon = (type: string) => {
+    if (type === 'RSS') return '📡';
+    if (type === 'WordPress') return '📝';
+    if (type === 'Substack') return '📰';
+    if (type === 'News') return '🗞️';
+    return '🌐';
   };
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-medium">Enhanced Source Discovery</h3>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>AI finds RSS feeds & reliable sources for your topic</span>
-            {stats.total > 0 && (
-              <span>{stats.added} connected • {stats.pending} pending • {stats.total} discovered</span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {stats.total > 0 && (
-            <Button
-              onClick={() => setShowHistory(!showHistory)}
-              variant="ghost"
-              size="sm"
-            >
-              <History className="w-4 h-4 mr-2" />
-              History ({stats.total})
-            </Button>
+        <div className="text-sm text-muted-foreground">
+          {addedSources.size > 0 && (
+            <span className="text-accent-green">{addedSources.size} added</span>
           )}
-          <Button 
-            onClick={getSuggestions}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Discovering...
-              </>
-            ) : (
-              <>
-                <Rss className="w-4 h-4 mr-2" />
-                Find RSS Sources
-              </>
-            )}
-          </Button>
         </div>
+        <Button 
+          onClick={getSuggestions}
+          disabled={loading}
+          variant="outline"
+          size="sm"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Finding...
+            </>
+          ) : (
+            <>
+              <Rss className="w-4 h-4 mr-2" />
+              Find Sources
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* Onboarding tips when loading or no suggestions yet */}
-      {(loading || (suggestions.length === 0 && stats.total === 0)) && (
-        <div className="mt-4">
-          {loading ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-background-elevated rounded-lg border border-border/50">
-                <Loader2 className="w-5 h-5 animate-spin text-accent-green" />
-                <span className="text-sm">Searching for quality RSS feeds and reliable sources...</span>
-              </div>
-              <SourceOnboardingTicker variant="loading" />
-            </div>
-          ) : (
-            <SourceOnboardingTicker variant="static" />
-          )}
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center gap-3 p-4 bg-background-elevated rounded-lg border border-border/50">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span className="text-sm">Searching for RSS feeds and reliable sources...</span>
         </div>
       )}
 
+      {/* Pill-based suggestions */}
       {suggestions.length > 0 && (
         <div className="space-y-3">
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Sources are ranked by platform reliability and technical validation. 
-              Higher quality platforms (WordPress, RSS feeds, Substack) are prioritized.
-            </AlertDescription>
-          </Alert>
-
-          <div className="grid gap-3">
-            {suggestions.map((suggestion, index) => {
-              const validation = suggestion.technical_validation;
-              const progress = validationProgress[suggestion.url];
+          <p className="text-xs text-muted-foreground">
+            Click to add • {suggestions.length} available
+          </p>
+          
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => {
+              const isAdding = addingSourceId === suggestion.url;
               
               return (
                 <div
-                  key={`${suggestion.url}-${index}`}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  key={suggestion.url}
+                  className={cn(
+                    "group relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer",
+                    "bg-background hover:bg-accent hover:border-primary/50",
+                    isAdding && "opacity-50 pointer-events-none"
+                  )}
+                  onClick={() => !isAdding && addSource(suggestion)}
+                  title={`${suggestion.rationale} • ${suggestion.url}`}
                 >
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm truncate">
-                        {suggestion.source_name}
-                      </h4>
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs px-2 ${getConfidenceColor(suggestion.confidence_score)}`}
-                      >
-                        {suggestion.confidence_score}%
-                      </Badge>
-                      {getPlatformReliabilityBadge(suggestion)}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {suggestion.type}
-                      </Badge>
-                      {getValidationIcon(suggestion.url)}
-                    </div>
-
-                    <p className="text-xs text-muted-foreground truncate">
-                      {suggestion.url}
-                    </p>
-                    
-                    {progress !== undefined && progress >= 0 && progress < 100 && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Validating...</p>
-                        <Progress value={progress} className="h-1" />
-                      </div>
-                    )}
-                    
-                    {validation && (
-                      <div className="flex items-center gap-2 text-xs">
-                        {validation.is_accessible && <Badge variant="outline" className="text-green-700">✓ Accessible</Badge>}
-                        {validation.is_valid_rss && <Badge variant="outline" className="text-blue-700">✓ RSS</Badge>}
-                        {validation.has_recent_content && <Badge variant="outline" className="text-purple-700">✓ Fresh Content</Badge>}
-                        {(validation.estimated_article_count || 0) > 0 && (
-                          <Badge variant="outline" className="text-orange-700">
-                            ~{validation.estimated_article_count} articles
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    
-                    <p className="text-xs text-muted-foreground">
-                      {suggestion.rationale}
-                    </p>
-                  </div>
+                  <span className="text-sm">{getTypeIcon(suggestion.type)}</span>
+                  <span className="text-sm font-medium max-w-[200px] truncate">
+                    {suggestion.source_name}
+                  </span>
                   
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => addSource(suggestion)}
-                    disabled={addingSourceId === suggestion.url || progress === -1}
-                    className="ml-3 h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
-                  >
-                    {addingSourceId === suggestion.url ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                  </Button>
+                  {isAdding ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissSuggestion(suggestion);
+                        }}
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && suggestions.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          {addedSources.size > 0 
+            ? "All suggested sources have been added or dismissed"
+            : "Click 'Find Sources' to discover RSS feeds for your topic"
+          }
+        </p>
       )}
     </div>
   );
