@@ -15,7 +15,6 @@ import { UnifiedContentPipeline } from "@/components/UnifiedContentPipeline";
 import { ManualContentStaging } from "@/components/ManualContentStaging";
 import { GatheringProgressIndicator } from "@/components/GatheringProgressIndicator";
 import { KeywordManager } from "@/components/KeywordManager";
-import { TopicScheduleMonitor } from "@/components/TopicScheduleMonitor";
 import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager";
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
@@ -841,16 +840,7 @@ const TopicDashboard = () => {
           <TabsContent value="automation" className="space-y-6">
             <Card className="bg-card border-border">
               <CardContent className="p-6">
-                <TopicScheduleMonitor 
-                  topicId={topic.id}
-                  topicName={topic.name}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border">
-              <CardContent className="p-6">
-                <TopicAwareSourceManager 
+                <TopicAwareSourceManager
                   selectedTopicId={topic.id}
                   onSourcesChange={loadTopicAndStats}
                   topicName={topic.name}
