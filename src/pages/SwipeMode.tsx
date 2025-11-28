@@ -127,9 +127,15 @@ export default function SwipeMode() {
     setFullStoryOpen(true);
   };
 
-  const sourceDomain = currentStory?.article?.source_url 
-    ? new URL(currentStory.article.source_url).hostname.replace('www.', '')
-    : null;
+  const sourceDomain = (() => {
+    try {
+      return currentStory?.article?.source_url 
+        ? new URL(currentStory.article.source_url).hostname.replace('www.', '')
+        : null;
+    } catch {
+      return null; // Gracefully handle malformed URLs
+    }
+  })();
 
   if (loadingTopic) {
     return (
