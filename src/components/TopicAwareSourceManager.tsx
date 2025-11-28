@@ -7,12 +7,24 @@ import { UnifiedSourceManager } from "./UnifiedSourceManager";
 interface TopicAwareSourceManagerProps {
   selectedTopicId?: string;
   onSourcesChange: () => void;
+  topicName?: string;
+  description?: string;
+  keywords?: string[];
+  topicType?: 'regional' | 'keyword';
+  region?: string;
 }
 
-export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: TopicAwareSourceManagerProps) => {
+export const TopicAwareSourceManager = ({ 
+  selectedTopicId, 
+  onSourcesChange,
+  topicName,
+  description,
+  keywords,
+  topicType,
+  region
+}: TopicAwareSourceManagerProps) => {
   const [showDiscardedViewer, setShowDiscardedViewer] = useState(false);
 
-  // Always use UnifiedSourceManager - this component is now a wrapper
   if (selectedTopicId) {
     return (
       <div className="space-y-6">
@@ -20,6 +32,11 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
           mode="topic"
           topicId={selectedTopicId}
           onSourcesChange={onSourcesChange}
+          topicName={topicName}
+          description={description}
+          keywords={keywords}
+          topicType={topicType}
+          region={region}
         />
         
         <div className="flex gap-2">
@@ -43,7 +60,7 @@ export const TopicAwareSourceManager = ({ selectedTopicId, onSourcesChange }: To
     );
   }
 
-  // Global fallback - redirect to UnifiedSourceManager
+  // Global fallback
   return (
     <div className="space-y-6">
       <UnifiedSourceManager

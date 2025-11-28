@@ -30,8 +30,6 @@ import { AutomationStatusCard } from "@/components/AutomationStatusCard";
 import { SourceAvailabilitySummary } from "@/components/SourceAvailabilitySummary";
 import { TopicHealthIndicator } from "@/components/TopicHealthIndicator";
 import { AudienceProgressCard } from "@/components/AudienceProgressCard";
-import { ImprovedSourceSuggestionTool } from "@/components/ImprovedSourceSuggestionTool";
-import { SourceOnboardingTicker } from "@/components/SourceOnboardingTicker";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -841,31 +839,6 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            {/* AI Source Discovery - Always visible */}
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  Discover Quality Sources
-                </CardTitle>
-                <CardDescription>
-                  Let AI find reliable RSS feeds and news sources based on your topic keywords
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ImprovedSourceSuggestionTool
-                  topicName={topic.name}
-                  description={topic.description || ''}
-                  keywords={(topic.keywords || []).join(', ')}
-                  topicType={topic.topic_type}
-                  region={topic.region}
-                  topicId={topic.id}
-                  autoTrigger={autoSuggestSources}
-                  onTriggered={() => setAutoSuggestSources(false)}
-                />
-              </CardContent>
-            </Card>
-
             <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <TopicScheduleMonitor 
@@ -876,19 +849,15 @@ const TopicDashboard = () => {
             </Card>
 
             <Card className="bg-card border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Content Sources
-                </CardTitle>
-                <CardDescription>
-                  Manage sources, view publication patterns, and monitor source health
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <TopicAwareSourceManager 
                   selectedTopicId={topic.id}
                   onSourcesChange={loadTopicAndStats}
+                  topicName={topic.name}
+                  description={topic.description || ''}
+                  keywords={topic.keywords || []}
+                  topicType={topic.topic_type}
+                  region={topic.region}
                 />
               </CardContent>
             </Card>

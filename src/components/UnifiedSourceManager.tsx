@@ -29,7 +29,8 @@ import {
   XCircle,
   Loader2,
   ExternalLink,
-  Edit
+  Edit,
+  Sparkles
 } from 'lucide-react';
 import { getScraperFunction, createScraperRequestBody } from '@/lib/scraperUtils';
 import { StatusIndicator } from '@/components/StatusIndicator';
@@ -43,6 +44,7 @@ import { CooldownMinimal } from '@/components/CooldownMinimal';
 import { SourceActionsMenu } from '@/components/SourceActionsMenu';
 import { AverageDailyStoriesBadge } from '@/components/ui/average-daily-stories-badge';
 import { useDailyContentAvailability } from '@/hooks/useDailyContentAvailability';
+import { SourceDiscoveryModal } from '@/components/SourceDiscoveryModal';
 
 interface ContentSource {
   id: string;
@@ -110,6 +112,10 @@ interface UnifiedSourceManagerProps {
   showAddForm?: boolean;
   title?: string;
   description?: string;
+  // For AI source discovery
+  topicName?: string;
+  keywords?: string[];
+  topicType?: 'regional' | 'keyword';
 }
 
 export const UnifiedSourceManager = ({ 
@@ -119,7 +125,10 @@ export const UnifiedSourceManager = ({
   onSourcesChange, 
   showAddForm: externalShowAddForm = false,
   title,
-  description
+  description,
+  topicName,
+  keywords,
+  topicType
 }: UnifiedSourceManagerProps) => {
   const { toast } = useToast();
   const [sources, setSources] = useState<ContentSource[]>([]);
@@ -138,6 +147,7 @@ export const UnifiedSourceManager = ({
   const [isLoading, setIsLoading] = useState(false);
   const [testingSource, setTestingSource] = useState<string | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
+  const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     sourceId: string;
     sourceName: string;
@@ -1364,6 +1374,16 @@ export const UnifiedSourceManager = ({
               {isLoading ? 'Cleaning...' : 'Clean Legacy Sources'}
             </Button>
           )}
+          {mode === 'topic' && topicId && topicName && (
+            <Button
+              onClick={() => setShowDiscoveryModal(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              AI Discover
+            </Button>
+          )}
           <Button
             onClick={() => setShowDisabled(!showDisabled)}
             variant="outline"
@@ -1378,6 +1398,24 @@ export const UnifiedSourceManager = ({
           </Button>
         </div>
       </div>
+
+      {/* AI Source Discovery Modal */}
+      {mode === 'topic' && topicId && topicName && (
+        <SourceDiscoveryModal
+          open={showDiscoveryModal}
+          onOpenChange={setShowDiscoveryModal}
+          topicId={topicId}
+          topicName={topicName}
+          description={description || ''}
+          keywords={keywords || []}
+          topicType={topicType || 'keyword'}
+          region={region}
+          onSourceAdded={() => {
+            loadSources();
+            onSourcesChange();
+          }}
+        />
+      )}
 
       <Separator />
 
