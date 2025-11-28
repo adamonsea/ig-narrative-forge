@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, Plus, X, Sparkles, Lightbulb, Zap, TrendingUp } from 'lucide-react';
+import { Loader2, CheckCircle, Plus, X, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -29,11 +28,11 @@ interface SourceDiscoveryModalProps {
 }
 
 const ENCOURAGING_MESSAGES = [
-  { icon: Sparkles, text: "Scanning for high-quality RSS feeds..." },
-  { icon: Lightbulb, text: "Better sources = better content for your audience" },
-  { icon: Zap, text: "RSS feeds are the most reliable content source" },
-  { icon: TrendingUp, text: "Quality sources are the foundation of a great feed" },
-  { icon: Sparkles, text: "Looking for WordPress, Substack & official sites..." },
+  "Quality sources are the foundation of a great feed",
+  "Better sources = better content for your audience",
+  "Scanning RSS feeds, WordPress & Substack sites...",
+  "Great feeds start with reliable sources",
+  "Finding the best content pipelines for you",
 ];
 
 export const SourceDiscoveryModal = ({
@@ -263,52 +262,47 @@ export const SourceDiscoveryModal = ({
     return '🌐';
   };
 
-  const CurrentMessage = ENCOURAGING_MESSAGES[messageIndex];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Discover Sources
-          </DialogTitle>
-          <DialogDescription>
-            AI-powered source discovery for "{topicName}"
-          </DialogDescription>
+      <DialogContent className="max-w-md">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Source Discovery</DialogTitle>
+          <DialogDescription>Finding quality sources for your feed</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Loading state with encouraging messages */}
+        <div className="py-4">
+          {/* Loading state - minimal, focused on message */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
               <div className="relative">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <Sparkles className="w-4 h-4 absolute -top-1 -right-1 text-primary animate-pulse" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Sparkles className="w-3 h-3 absolute -top-0.5 -right-0.5 text-primary/60 animate-pulse" />
               </div>
-              <div className="flex items-center gap-2 text-sm text-foreground animate-in fade-in duration-500" key={messageIndex}>
-                <CurrentMessage.icon className="w-4 h-4 text-primary" />
-                <span>{CurrentMessage.text}</span>
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium text-foreground">Finding sources</p>
+                <p className="text-sm text-muted-foreground animate-in fade-in duration-500" key={messageIndex}>
+                  {ENCOURAGING_MESSAGES[messageIndex]}
+                </p>
               </div>
             </div>
           )}
 
           {/* Results */}
           {!loading && suggestions.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {suggestions.length} sources found • Click to add
+                  {suggestions.length} found · tap to add
                 </p>
                 {addedSources.size > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    <CheckCircle className="w-3 h-3 mr-1" />
+                  <span className="text-xs text-primary flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
                     {addedSources.size} added
-                  </Badge>
+                  </span>
                 )}
               </div>
               
-              <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto">
+              <div className="flex flex-wrap gap-2 max-h-[280px] overflow-y-auto py-1">
                 {suggestions.map((suggestion) => {
                   const isAdding = addingSourceId === suggestion.url;
                   
@@ -316,15 +310,15 @@ export const SourceDiscoveryModal = ({
                     <div
                       key={suggestion.url}
                       className={cn(
-                        "group relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer",
-                        "bg-background hover:bg-accent hover:border-primary/50",
+                        "group relative inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-border/50 transition-all cursor-pointer",
+                        "bg-background hover:bg-primary/5 hover:border-primary/30",
                         isAdding && "opacity-50 pointer-events-none"
                       )}
                       onClick={() => !isAdding && addSource(suggestion)}
-                      title={`${suggestion.rationale}\n${suggestion.url}`}
+                      title={suggestion.rationale}
                     >
-                      <span className="text-sm">{getTypeIcon(suggestion.type)}</span>
-                      <span className="text-sm font-medium max-w-[180px] truncate">
+                      <span className="text-xs">{getTypeIcon(suggestion.type)}</span>
+                      <span className="text-sm max-w-[160px] truncate">
                         {suggestion.source_name}
                       </span>
                       
@@ -338,7 +332,7 @@ export const SourceDiscoveryModal = ({
                               e.stopPropagation();
                               dismissSuggestion(suggestion);
                             }}
-                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-muted/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
                           >
                             <X className="w-2.5 h-2.5" />
                           </button>
@@ -348,37 +342,34 @@ export const SourceDiscoveryModal = ({
                   );
                 })}
               </div>
+              
+              <div className="flex justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={getSuggestions} className="text-muted-foreground">
+                  <Sparkles className="w-3 h-3 mr-1.5" />
+                  Find more
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Empty state */}
           {!loading && suggestions.length === 0 && (
-            <div className="text-center py-8 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {addedSources.size > 0 
-                  ? "All sources added! Your feed is ready to go."
-                  : "No new sources found for this topic."
-                }
-              </p>
-              <Button variant="outline" size="sm" onClick={getSuggestions}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Search Again
-              </Button>
+            <div className="text-center py-10 space-y-4">
+              {addedSources.size > 0 ? (
+                <>
+                  <CheckCircle className="w-8 h-8 text-primary mx-auto" />
+                  <p className="text-sm text-muted-foreground">All done! Your feed is ready.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">No new sources found</p>
+                  <Button variant="outline" size="sm" onClick={getSuggestions}>
+                    Try again
+                  </Button>
+                </>
+              )}
             </div>
           )}
-
-          {/* Footer actions */}
-          <div className="flex justify-between items-center pt-4 border-t">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
-            {!loading && suggestions.length > 0 && (
-              <Button variant="outline" size="sm" onClick={getSuggestions}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Find More
-              </Button>
-            )}
-          </div>
         </div>
       </DialogContent>
     </Dialog>
