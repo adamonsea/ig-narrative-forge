@@ -437,6 +437,33 @@ const TopicFeed = () => {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {/* Play Mode - First when enabled */}
+                {playModeEnabled && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link to={`/play/${slug}`}>
+                          <button
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
+                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
+                            }`}
+                            aria-label="Play mode"
+                          >
+                            <Gamepad2 className={`w-4 h-4 transition-colors ${
+                              showPlayModePulse ? 'text-primary' : ''
+                            }`} />
+                            <span className="hidden sm:inline text-sm font-medium">Play</span>
+                          </button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">Play Mode</p>
+                        <p className="text-xs text-muted-foreground">Swipe through stories</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
                 <button
                   onClick={() => setShowNotificationModal(true)}
                   className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
@@ -501,31 +528,6 @@ const TopicFeed = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-
-                {playModeEnabled && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link to={`/play/${slug}`}>
-                          <button
-                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
-                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
-                            }`}
-                            aria-label="Play mode"
-                          >
-                            <Gamepad2 className={`w-4 h-4 transition-colors ${
-                              showPlayModePulse ? 'text-primary' : ''
-                            }`} />
-                          </button>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-medium">Play Mode</p>
-                        <p className="text-xs text-muted-foreground">Swipe through stories</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
               </div>
 
               {/* Donation Button - Icon Only */}
@@ -639,6 +641,23 @@ const TopicFeed = () => {
 
             {/* Action buttons - consistent with sticky header layout */}
             <div className="flex items-center justify-center gap-2 pt-2">
+              {/* Play Mode - First when enabled */}
+              {playModeEnabled && (
+                <Link to={`/play/${slug}`}>
+                  <button
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
+                      showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
+                    }`}
+                    aria-label="Play mode"
+                  >
+                    <Gamepad2 className={`w-4 h-4 transition-colors ${
+                      showPlayModePulse ? 'text-primary' : ''
+                    }`} />
+                    <span className="text-sm font-medium">Play</span>
+                  </button>
+                </Link>
+              )}
+
               <button
                 onClick={() => setIsModalOpen(true)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
@@ -681,21 +700,6 @@ const TopicFeed = () => {
                           <Archive className="w-4 h-4" />
                         </button>
                       </Link>
-
-                      {playModeEnabled && (
-                        <Link to={`/play/${slug}`}>
-                          <button
-                            className={`flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-foreground ${
-                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
-                            }`}
-                            aria-label="Play mode"
-                          >
-                            <Gamepad2 className={`w-4 h-4 transition-colors ${
-                              showPlayModePulse ? 'text-primary' : ''
-                            }`} />
-                          </button>
-                        </Link>
-                      )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="z-[60]">
