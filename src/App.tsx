@@ -21,6 +21,7 @@ import DailyRoundupList from "./pages/DailyRoundupList";
 import WeeklyRoundupList from "./pages/WeeklyRoundupList";
 import BriefingsArchive from "./pages/BriefingsArchive";
 import SwipeMode from "./pages/SwipeMode";
+import Pricing from "./pages/Pricing";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -59,6 +60,7 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
