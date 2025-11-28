@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, Sparkles, BarChart, Gamepad2, Brain, Users, Image } from 'lucide-react';
+import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
 
@@ -172,47 +172,47 @@ const Index = () => {
               
               {/* Timeline items */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-                {/* Step 1 */}
+                {/* Step 1 - Discover */}
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
                     <Search className="h-6 w-6 text-[hsl(155,100%,67%)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-white">Discover</h3>
                   <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Connect sources, AI finds stories
+                    AI finds relevant content from your sources
                   </p>
                 </div>
 
-                {/* Step 2 */}
+                {/* Step 2 - Curate */}
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
                     <Filter className="h-6 w-6 text-[hsl(270,100%,68%)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-white">Curate</h3>
                   <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Review and approve content
+                    You approve what matters
                   </p>
                 </div>
 
-                {/* Step 3 */}
+                {/* Step 3 - Publish */}
                 <div className="flex flex-col items-center text-center space-y-3">
                   <div className="relative z-10 rounded-full bg-[hsl(155,100%,67%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(155,100%,67%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <BarChart className="h-6 w-6 text-[hsl(155,100%,67%)]" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white">Analyze</h3>
-                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Track what resonates
-                  </p>
-                </div>
-
-                {/* Step 4 */}
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
-                    <Sparkles className="h-6 w-6 text-[hsl(270,100%,68%)]" />
+                    <Sparkles className="h-6 w-6 text-[hsl(155,100%,67%)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-white">Publish</h3>
                   <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
-                    Beautiful, engaging stories
+                    Transform into beautiful stories
+                  </p>
+                </div>
+
+                {/* Step 4 - Engage */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  <div className="relative z-10 rounded-full bg-[hsl(270,100%,68%)]/10 w-14 h-14 flex items-center justify-center border border-[hsl(270,100%,68%)]/40 ring-4 ring-[hsl(214,50%,9%)]">
+                    <Users className="h-6 w-6 text-[hsl(270,100%,68%)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Engage</h3>
+                  <p className="text-white/60 text-sm leading-relaxed max-w-[180px]">
+                    Readers rate, share, and return
                   </p>
                 </div>
               </div>
