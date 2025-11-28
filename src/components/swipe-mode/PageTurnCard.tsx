@@ -77,9 +77,21 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   const rightCurlSize = useTransform(x, [0, 150], [0, 80]);
   const leftCurlSize = useTransform(x, [-150, 0], [80, 0]);
 
-  const storyDate = story.article?.published_at
-    ? new Date(story.article.published_at)
-    : new Date(story.created_at);
+  const storyDate = (() => {
+    const dateStr = story.article?.published_at || story.created_at;
+    if (!dateStr) return new Date();
+    const parsed = new Date(dateStr);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  })();
+
+  // Safe date formatting wrapper
+  const formatSafe = (date: Date, formatStr: string) => {
+    try {
+      return format(date, formatStr);
+    } catch {
+      return '';
+    }
+  };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 80;
@@ -277,8 +289,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
           {/* Date */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
-            <time dateTime={storyDate.toISOString()}>
-              {format(storyDate, 'MMM d')}
+            <time dateTime={storyDate.toISOString?.() || ''}>
+              {formatSafe(storyDate, 'MMM d')}
             </time>
           </div>
 
