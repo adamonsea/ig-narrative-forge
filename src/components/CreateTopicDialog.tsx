@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Sparkles, ArrowRight, ArrowLeft, Wand2, Search, X, Newspaper, Users, TrendingUp, Zap, Heart, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Search, X, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GeneratedKeyword {
@@ -28,18 +28,20 @@ interface CreateTopicDialogProps {
   onTopicCreated: (topicSlug: string) => void;
 }
 
-const STEPS = [
-  { id: 1, title: "Name", icon: Sparkles },
-  { id: 2, title: "Details", icon: Wand2 },
-  { id: 3, title: "Keywords", icon: Check },
-];
-
 const EXAMPLE_NAMES = [
   "Eastbourne News",
   "AI & Ethics", 
   "Cycling Culture",
   "Brighton Events",
   "Tech Innovation",
+];
+
+const LOADING_MESSAGES = [
+  "Quality sources are the foundation of a great feed",
+  "Great feeds start with focused keywords",
+  "Your audience will thank you for curated content",
+  "Building something your readers will love",
+  "Precision keywords = better content matching",
 ];
 
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
@@ -61,8 +63,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [keywordSearch, setKeywordSearch] = useState("");
   
-  // Placeholder animation
+  // Animation states
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -70,6 +73,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  // Rotate loading messages
+  useEffect(() => {
+    if (!isGeneratingKeywords) return;
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isGeneratingKeywords]);
 
   // Auto-detect region and generate keywords when name changes
   useEffect(() => {
@@ -277,9 +289,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   }, {} as Record<string, GeneratedKeyword[]>);
 
   const categoryLabels: Record<string, string> = {
-    core: 'Core Topics',
-    local: 'Local Context',
-    niche: 'Niche Focus',
+    core: 'Core',
+    local: 'Local',
+    niche: 'Niche',
     discovery: 'Discovery'
   };
 
@@ -294,141 +306,137 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         <div className="space-y-2">
           <Progress value={progress} className="h-1.5" />
           <div className="flex justify-between text-xs text-muted-foreground">
-            {STEPS.map((step) => {
-              const Icon = step.icon;
-              return (
-                <div
-                  key={step.id}
-                  className={cn(
-                    "flex items-center gap-1",
-                    currentStep === step.id && "text-foreground font-medium"
-                  )}
-                >
-                  <Icon className="w-3 h-3" />
-                  <span>{step.title}</span>
-                </div>
-              );
-            })}
+            <span className={cn(currentStep === 1 && "text-foreground font-medium")}>Name</span>
+            <span className={cn(currentStep === 2 && "text-foreground font-medium")}>Details</span>
+            <span className={cn(currentStep === 3 && "text-foreground font-medium")}>Keywords</span>
           </div>
         </div>
 
         {/* Step Content */}
-        <div className="py-4">
+        <div className="py-6">
           {/* Step 1: Name */}
           {currentStep === 1 && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="text-center space-y-1">
+            <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="text-center">
                 <h2 className="text-2xl font-display font-bold">What's your feed about?</h2>
-                <p className="text-sm text-muted-foreground">Give it a name that captures your focus</p>
               </div>
 
-              <div className="max-w-md mx-auto">
+              <div className="max-w-md mx-auto space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Topic title</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   value={topicName}
                   onChange={(e) => setTopicName(e.target.value)}
                   placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-lg h-12 text-center"
+                  className="text-lg h-14 text-center"
                   autoFocus
                 />
               </div>
 
               {topicName.length >= 3 && (
-                <div className="flex items-center justify-center gap-2 text-sm text-primary animate-in fade-in duration-300">
-                  <Sparkles className="w-4 h-4" />
-                  <span>AI is preparing your keywords...</span>
-                </div>
+                <p className="text-center text-sm text-primary animate-in fade-in duration-300">
+                  AI is preparing your keywords...
+                </p>
               )}
             </div>
           )}
 
           {/* Step 2: Details */}
           {currentStep === 2 && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-display font-bold">Add Details</h2>
-                <p className="text-sm text-muted-foreground">Help AI find better keywords</p>
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="text-center">
+                <h2 className="text-2xl font-display font-bold">Refine your feed</h2>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 max-w-lg mx-auto">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Type</Label>
-                    <Select value={topicType} onValueChange={(v: any) => setTopicType(v)}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="regional">Regional</SelectItem>
-                        <SelectItem value="keyword">Interest</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={topicType} onValueChange={(v: any) => setTopicType(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="regional">Regional</SelectItem>
+                      <SelectItem value="keyword">Interest</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                  {topicType === 'regional' && (
-                    <div className="space-y-2">
-                      <Label className="text-xs">Region</Label>
-                      <Input
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="e.g., Eastbourne"
-                        className="h-9"
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label className="text-xs">Audience</Label>
+                  {topicType === 'regional' ? (
+                    <Input
+                      value={region}
+                      onChange={(e) => setRegion(e.target.value)}
+                      placeholder="Region name"
+                    />
+                  ) : (
                     <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Audience" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="informed">Informed</SelectItem>
-                        <SelectItem value="expert">Expert</SelectItem>
+                        <SelectItem value="general">General audience</SelectItem>
+                        <SelectItem value="informed">Informed readers</SelectItem>
+                        <SelectItem value="expert">Expert level</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs">Description (optional)</Label>
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What makes this feed unique?"
-                    rows={2}
-                    className="text-sm"
-                  />
-                </div>
+                {topicType === 'regional' && (
+                  <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Audience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General audience</SelectItem>
+                      <SelectItem value="informed">Informed readers</SelectItem>
+                      <SelectItem value="expert">Expert level</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
 
-                {/* Keyword preview */}
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What makes this feed unique? (optional)"
+                  rows={2}
+                />
+
+                {/* Keyword generation state */}
                 {isGeneratingKeywords ? (
-                  <div className="p-4 border rounded-lg bg-background-elevated space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Sparkles className="w-4 h-4 animate-pulse text-primary" />
-                      <span>Generating keywords...</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {[...Array(8)].map((_, i) => (
-                        <Skeleton key={i} className="h-6 w-20 rounded-full" />
+                  <div className="p-6 border rounded-lg bg-background-elevated text-center space-y-4">
+                    <p className="text-lg font-medium text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
+                      {LOADING_MESSAGES[loadingMessageIndex]}
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {[...Array(6)].map((_, i) => (
+                        <Skeleton key={i} className="h-7 w-20 rounded-full" />
                       ))}
                     </div>
                   </div>
                 ) : generatedKeywords.length > 0 && (
                   <div className="p-4 border rounded-lg bg-background-elevated">
-                    <p className="text-xs text-muted-foreground mb-2">
+                    <p className="text-sm text-muted-foreground mb-3">
                       {generatedKeywords.length} keywords ready
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {generatedKeywords.slice(0, 12).map((kw) => (
-                        <Badge key={kw.keyword} variant="secondary" className="text-xs">
+                    <div className="flex flex-wrap gap-2">
+                      {generatedKeywords.slice(0, 10).map((kw) => (
+                        <Badge key={kw.keyword} variant="secondary">
                           {kw.keyword}
                         </Badge>
                       ))}
-                      {generatedKeywords.length > 12 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{generatedKeywords.length - 12}
+                      {generatedKeywords.length > 10 && (
+                        <Badge variant="outline">
+                          +{generatedKeywords.length - 10}
                         </Badge>
                       )}
                     </div>
@@ -441,23 +449,18 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
           {/* Step 3: Refine Keywords */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in duration-300">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-display font-bold">Refine Keywords</h2>
-                <p className="text-sm text-muted-foreground">
-                  Click to deselect any that don't fit
-                </p>
+              <div className="text-center">
+                <h2 className="text-2xl font-display font-bold">Curate your keywords</h2>
+                <p className="text-muted-foreground mt-1">Tap to remove any that don't fit</p>
               </div>
 
               {/* Quick actions */}
               <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="px-2 py-0.5">
-                  {selectedKeywords.size} selected
-                </Badge>
-                <div className="flex gap-1">
+                <span className="text-sm font-medium">{selectedKeywords.size} selected</span>
+                <div className="flex gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
                     onClick={() => handleBulkAction('selectHighConfidence')}
                   >
                     Best only
@@ -465,7 +468,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
                     onClick={() => handleBulkAction('deselectAll')}
                   >
                     Clear
@@ -473,7 +475,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
                     onClick={() => handleBulkAction('selectAll')}
                   >
                     All
@@ -483,23 +484,23 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   value={keywordSearch}
                   onChange={(e) => setKeywordSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="pl-8 h-8 text-sm"
+                  placeholder="Search keywords..."
+                  className="pl-10"
                 />
               </div>
 
               {/* Keyword pills by category */}
-              <div className="space-y-4 max-h-[300px] overflow-y-auto">
+              <div className="space-y-4 max-h-[280px] overflow-y-auto">
                 {Object.entries(groupedKeywords).map(([category, keywords]) => (
                   <div key={category} className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       {categoryLabels[category] || category}
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {keywords.map((kw) => {
                         const isSelected = selectedKeywords.has(kw.keyword);
                         return (
@@ -507,7 +508,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                             key={kw.keyword}
                             onClick={() => handleToggleKeyword(kw.keyword)}
                             className={cn(
-                              "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-all",
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all",
                               "border hover:scale-105",
                               isSelected
                                 ? "bg-primary text-primary-foreground border-primary"
@@ -516,7 +517,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                             title={kw.rationale}
                           >
                             {kw.keyword}
-                            {isSelected && <X className="w-3 h-3 ml-0.5" />}
+                            {isSelected && <X className="w-3.5 h-3.5" />}
                           </button>
                         );
                       })}
@@ -527,16 +528,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
               {/* Selection summary */}
               {selectedKeywords.size > 0 && (
-                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                  <p className="text-xs font-medium mb-1.5">Your feed will search for:</p>
-                  <div className="flex flex-wrap gap-1">
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Your feed will search for:</p>
+                  <div className="flex flex-wrap gap-2">
                     {Array.from(selectedKeywords).slice(0, 8).map((kw) => (
-                      <Badge key={kw} variant="secondary" className="text-xs">
+                      <Badge key={kw} variant="secondary">
                         {kw}
                       </Badge>
                     ))}
                     {selectedKeywords.size > 8 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline">
                         +{selectedKeywords.size - 8}
                       </Badge>
                     )}
@@ -548,29 +549,28 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center pt-3 border-t">
+        <div className="flex justify-between items-center pt-4 border-t">
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleBack}
             disabled={currentStep === 1}
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
 
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleClose}>
+            <Button variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
 
             {currentStep < 3 ? (
-              <Button size="sm" onClick={handleNext} disabled={!canProceed()}>
+              <Button onClick={handleNext} disabled={!canProceed()}>
                 Next
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button size="sm" onClick={handleCreate} disabled={!canProceed() || isLoading}>
+              <Button onClick={handleCreate} disabled={!canProceed() || isLoading}>
                 {isLoading ? "Creating..." : "Create Feed"}
               </Button>
             )}
