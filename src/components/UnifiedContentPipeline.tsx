@@ -63,6 +63,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     queueItems,
     stories,
     loading,
+    loadingMore,
     stats,
     loadTopicContent: refreshContent,
     handleMultiTenantApprove,
@@ -79,7 +80,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     newArrivals,
     newPublished,
     clearNewArrivals,
-    clearNewPublished
+    clearNewPublished,
+    hasMoreArticles,
+    totalArticlesCount,
+    loadMoreArticles
   } = useMultiTenantTopicPipeline(selectedTopicId);
 
   // Multi-tenant actions for additional functionality  
@@ -540,6 +544,10 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   defaultTone={currentTopic?.default_tone || 'conversational'}
                   defaultWritingStyle={currentTopic?.default_writing_style || 'journalistic'}
                   onRefresh={refreshContent}
+                  hasMoreArticles={hasMoreArticles}
+                  totalArticlesCount={totalArticlesCount}
+                  loadingMore={loadingMore}
+                  onLoadMore={loadMoreArticles}
                 />
               </CardContent>
             </Card>

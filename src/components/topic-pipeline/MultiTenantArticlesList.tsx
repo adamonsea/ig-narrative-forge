@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle } from "lucide-react";
+import { ExternalLink, Eye, Trash2, ArrowRight, FileText, RefreshCw, PlayCircle, Shield, CheckCircle, Loader2 } from "lucide-react";
 import { MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { getCurrentnessTag, getCurrentnessColor } from "@/lib/dateUtils";
 
@@ -37,6 +37,12 @@ interface MultiTenantArticlesListProps {
   onPromote?: (articleId: string) => void;
   topicId?: string;
   onRefresh?: () => void;
+  
+  // Pagination props
+  hasMoreArticles?: boolean;
+  totalArticlesCount?: number | null;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export default function MultiTenantArticlesList({
@@ -60,7 +66,11 @@ export default function MultiTenantArticlesList({
   onBulkDelete,
   onPromote,
   topicId,
-  onRefresh
+  onRefresh,
+  hasMoreArticles = false,
+  totalArticlesCount = null,
+  loadingMore = false,
+  onLoadMore
 }: MultiTenantArticlesListProps) {
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [bulkDeleteRelevanceThreshold, setBulkDeleteRelevanceThreshold] = useState(25);
@@ -457,7 +467,40 @@ export default function MultiTenantArticlesList({
         </Card>
       )}
       
+      {/* Articles count display */}
+      {totalArticlesCount !== null && totalArticlesCount > 0 && (
+        <div className="text-sm text-muted-foreground text-center py-2">
+          Showing {articles.length} of {totalArticlesCount} arrivals
+        </div>
+      )}
+      
       {articles.map((article) => renderArticleCard(article))}
+      
+      {/* Load more button */}
+      {hasMoreArticles && onLoadMore && (
+        <div className="pt-4">
+          <Button 
+            onClick={onLoadMore} 
+            variant="outline" 
+            className="w-full gap-2"
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Load More {totalArticlesCount !== null && articles.length < totalArticlesCount 
+                  ? `(${totalArticlesCount - articles.length} remaining)` 
+                  : ''}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
