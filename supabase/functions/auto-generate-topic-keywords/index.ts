@@ -62,62 +62,41 @@ serve(async (req) => {
 
     const allKeywords: any[] = [...tier1Keywords, ...regionalKeywords];
 
-    // Step 2: Fetch proven keywords from analytics (parallel)
-    try {
-      const { data: provenKeywords } = await supabase
-        .from('keyword_analytics')
-        .select('keyword, success_metrics')
-        .eq('topic_type', topicType)
-        .order('usage_count', { ascending: false })
-        .limit(15);
-
-      if (provenKeywords) {
-        for (const kw of provenKeywords) {
-          const metrics = kw.success_metrics as any;
-          const confidence = Math.min(0.95, 0.7 + (metrics?.story_count || 0) * 0.01);
-          
-          // Avoid duplicates
-          if (!allKeywords.find(k => k.keyword.toLowerCase() === kw.keyword.toLowerCase())) {
-            allKeywords.push({
-              keyword: kw.keyword,
-              category: "discovery",
-              confidence,
-              rationale: `Proven keyword with ${metrics?.story_count || 0} successful stories`,
-              preSelected: confidence > 0.80,
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Failed to fetch proven keywords:', error);
-    }
-
-    // Step 3: AI-enhanced keywords (if DeepSeek available)
+    // Step 2: AI-enhanced keywords focused purely on this topic (if DeepSeek available)
     if (DEEPSEEK_API_KEY) {
       try {
         const existingKeywords = allKeywords.map(k => k.keyword);
         const prompt = `You are a keyword generation expert for a news curation platform.
+
+Generate 20-30 highly relevant keywords SPECIFICALLY for this NEW topic:
 
 Topic Name: "${topicName}"
 Topic Type: ${topicType}
 ${region ? `Region: ${region}` : ''}
 ${description ? `Description: ${description}` : ''}
 
-Generate 15-20 highly relevant keywords for this topic that would help match news articles.
+Existing base keywords (do not duplicate): ${existingKeywords.join(', ')}
 
-Existing keywords to avoid duplicating: ${existingKeywords.join(', ')}
-
-Focus on:
 ${topicType === 'regional' ? `
-- Local landmarks, neighborhoods, and places in ${region}
-- Regional organizations and institutions
-- Local government terms
-- Area-specific events and activities
+Generate keywords that are SPECIFIC to "${topicName}" and "${region || topicName}":
+- Exact landmarks, streets, neighborhoods in ${region || topicName}
+- Local organizations, clubs, institutions specific to this area
+- Nearby towns/suburbs/districts
+- Regional-specific terms and slang
+- Local events, festivals, venues
+- Sports teams, schools, hospitals specific to ${region || topicName}
+
+DO NOT generate generic regional keywords like "crime" or "council" - those are already included.
 ` : `
-- Industry-specific terminology
-- Related concepts and synonyms
-- Trending terms in this domain
-- Niche subcategories
+Generate keywords SPECIFIC to the topic "${topicName}":
+- Exact terminology used in this niche
+- Key people, companies, products in this space
+- Specific concepts and frameworks
+- Technical terms and jargon
+- Related subtopics and categories
+- Industry events and publications
+
+DO NOT generate generic keywords - be SPECIFIC to "${topicName}".
 `}
 
 Return ONLY a valid JSON array of keyword objects with this exact structure:

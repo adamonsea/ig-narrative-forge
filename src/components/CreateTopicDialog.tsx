@@ -12,7 +12,7 @@ import { KeywordCategoryGrid } from "./KeywordCategoryGrid";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Sparkles, ArrowRight, ArrowLeft, Wand2, Search, Filter } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, Wand2, Search, Filter, Newspaper, Users, TrendingUp, Zap, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GeneratedKeyword {
@@ -408,10 +408,44 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
                   <div className="border rounded-lg p-4 bg-background-elevated min-h-[300px] space-y-3">
                     {isGeneratingKeywords ? (
-                      <div className="space-y-2">
-                        {[...Array(8)].map((_, i) => (
-                          <Skeleton key={i} className="h-8 w-full" />
-                        ))}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          {[...Array(8)].map((_, i) => (
+                            <Skeleton key={i} className="h-8 w-full" />
+                          ))}
+                        </div>
+                        
+                        {/* Onboarding Ticker */}
+                        <div className="mt-6 pt-4 border-t border-border/30">
+                          <div className="space-y-2 overflow-hidden h-12">
+                            <div className="animate-[slide-up_12s_ease-in-out_infinite] space-y-2">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Sparkles className="w-4 h-4 text-accent-purple" />
+                                <span>Building your personalized news feed...</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Newspaper className="w-4 h-4 text-accent-cyan" />
+                                <span>Curating quality sources from trusted publishers</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Users className="w-4 h-4 text-accent-green" />
+                                <span>Engaging readers with interactive stories & quizzes</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <TrendingUp className="w-4 h-4 text-accent-orange" />
+                                <span>Tracking sentiment & community pulse in real-time</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Zap className="w-4 h-4 text-accent-yellow" />
+                                <span>Auto-publishing fresh stories daily to your feed</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Heart className="w-4 h-4 text-accent-pink" />
+                                <span>Building lasting connections with your audience</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : generatedKeywords.length > 0 ? (
                       <div className="space-y-2">
