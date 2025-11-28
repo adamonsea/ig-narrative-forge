@@ -296,19 +296,19 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 border-2 border-primary/20">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 ring-2 ring-primary/30 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.3)]">
         {/* Minimal Progress - just dots */}
         <div className="flex justify-center gap-3 mb-10">
           {[1, 2, 3].map((step) => (
             <div
               key={step}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
+                "h-2 rounded-full transition-all duration-300",
                 currentStep === step 
-                  ? "bg-primary w-8" 
+                  ? "bg-primary w-10" 
                   : currentStep > step 
-                    ? "bg-primary/50 w-3" 
-                    : "bg-muted w-3"
+                    ? "bg-primary/50 w-4" 
+                    : "bg-muted w-4"
               )}
             />
           ))}
@@ -318,14 +318,14 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         <div className="py-6">
           {/* Step 1: Name */}
           {currentStep === 1 && (
-            <div className="space-y-12 animate-in fade-in duration-300">
-              <div className="max-w-lg mx-auto space-y-8">
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Topic title</span>
+            <div className="space-y-10 animate-in fade-in duration-300">
+              <div className="max-w-lg mx-auto space-y-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xl font-medium text-foreground">Topic title</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-primary transition-colors" />
+                        <HelpCircle className="w-5 h-5 text-primary/60 cursor-help hover:text-primary transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
@@ -337,13 +337,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   value={topicName}
                   onChange={(e) => setTopicName(e.target.value)}
                   placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-2xl h-20 text-center font-medium border-2 border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground/40"
+                  className="text-2xl h-20 text-center font-medium border-2 border-primary/30 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
                   autoFocus
                 />
               </div>
 
               {topicName.length >= 3 && (
-                <p className="text-center text-sm text-primary/80 animate-in fade-in duration-300 font-medium">
+                <p className="text-center text-base text-primary animate-in fade-in duration-300 font-medium">
                   AI is preparing your keywords...
                 </p>
               )}
@@ -547,7 +547,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center pt-6 border-t mt-4">
+        <div className="flex justify-between items-center pt-8 mt-6">
           {currentStep > 1 ? (
             <Button
               variant="ghost"
