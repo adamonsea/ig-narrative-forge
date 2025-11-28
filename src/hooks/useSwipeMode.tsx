@@ -159,13 +159,29 @@ export const useSwipeMode = (topicId: string) => {
           };
         })
         // Filter out stories with no slides - they can't be displayed properly
-        .filter((story: any) => story.slides && story.slides.length > 0)
-        // Sort by published_at (newest first), fallback to created_at
-        .sort((a: any, b: any) => {
-          const dateA = a.article?.published_at ? new Date(a.article.published_at) : new Date(a.created_at);
-          const dateB = b.article?.published_at ? new Date(b.article.published_at) : new Date(b.created_at);
-          return dateB.getTime() - dateA.getTime();
-        });
+        .filter((story: any) => story.slides && story.slides.length > 0);
+
+      // Separate into recent (last 7 days) and older stories
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const getStoryDate = (story: any) => 
+        story.article?.published_at ? new Date(story.article.published_at) : new Date(story.created_at);
+
+      const recentStories = enrichedStories.filter((s: any) => getStoryDate(s) >= oneWeekAgo);
+      const olderStories = enrichedStories.filter((s: any) => getStoryDate(s) < oneWeekAgo);
+
+      // Sort recent by date (newest first)
+      recentStories.sort((a: any, b: any) => getStoryDate(b).getTime() - getStoryDate(a).getTime());
+
+      // Shuffle older stories (Fisher-Yates algorithm)
+      for (let i = olderStories.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [olderStories[i], olderStories[j]] = [olderStories[j], olderStories[i]];
+      }
+
+      // Combine: recent first, then randomized older
+      const finalStories = [...recentStories, ...olderStories];
       
       // Defensive logging for stories that had no slides
       const storiesWithNoSlides = allStories.filter((s: any) => 
@@ -176,8 +192,8 @@ export const useSwipeMode = (topicId: string) => {
           storiesWithNoSlides.map((s: any) => s.id));
       }
 
-      setStories(enrichedStories);
-      setStats(prev => ({ ...prev, remainingCount: enrichedStories.length }));
+      setStories(finalStories);
+      setStats(prev => ({ ...prev, remainingCount: finalStories.length }));
     } catch (error) {
       console.error('Error fetching stories:', error);
       toast.error('Failed to load stories');
