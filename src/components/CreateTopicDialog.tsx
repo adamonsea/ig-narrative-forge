@@ -234,10 +234,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
       toast({
         title: "Feed created! 🎉",
-        description: "Your topic feed is ready to start gathering stories.",
+        description: "Now let's find some quality content sources...",
       });
 
-      onTopicCreated(slug);
+      // Pass slug with ?sources=true to navigate to sources tab
+      onTopicCreated(`${slug}?sources=true`);
       resetForm();
       onOpenChange(false);
     } catch (error) {
@@ -418,30 +419,38 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                         {/* Onboarding Ticker */}
                         <div className="mt-6 pt-4 border-t border-border/30">
                           <div className="space-y-2 overflow-hidden h-12">
-                            <div className="animate-[slide-up_12s_ease-in-out_infinite] space-y-2">
+                            <div className="animate-[slide-up_24s_ease-in-out_infinite] space-y-2">
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <Sparkles className="w-4 h-4 text-accent-purple" />
                                 <span>Building your personalized news feed...</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <Newspaper className="w-4 h-4 text-accent-cyan" />
-                                <span>Curating quality sources from trusted publishers</span>
+                                <span>RSS feeds work best — reliable, structured content</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <Users className="w-4 h-4 text-accent-green" />
-                                <span>Engaging readers with interactive stories & quizzes</span>
+                                <span>Engage readers with interactive quizzes & swipe mode</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <TrendingUp className="w-4 h-4 text-accent-orange" />
-                                <span>Tracking sentiment & community pulse in real-time</span>
+                                <span>Track sentiment & community pulse in real-time</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <Zap className="w-4 h-4 text-accent-yellow" />
-                                <span>Auto-publishing fresh stories daily to your feed</span>
+                                <span>Direct partnerships with sources = best results</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                                 <Heart className="w-4 h-4 text-accent-pink" />
-                                <span>Building lasting connections with your audience</span>
+                                <span>WordPress, Substack & official sites are most reliable</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Newspaper className="w-4 h-4 text-accent-cyan" />
+                                <span>Not all sources work — we'll help you find the best</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                <Users className="w-4 h-4 text-accent-green" />
+                                <span>Consider becoming an affiliate with local publishers</span>
                               </div>
                             </div>
                           </div>
