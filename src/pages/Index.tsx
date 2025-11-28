@@ -3,22 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, Gamepad2, Brain, Users, Image } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
-
 const Index = () => {
-  const { user, loading } = useAuth();
-
+  const {
+    user,
+    loading
+  } = useAuth();
   usePageFavicon();
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-[hsl(214,50%,9%)]">
+  return <div className="min-h-screen bg-[hsl(214,50%,9%)]">
       {/* Background gradients */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[hsl(270,80%,25%)] rounded-full blur-[150px] opacity-20" />
@@ -36,15 +32,11 @@ const Index = () => {
               <Link to="/pricing" className="text-white/70 hover:text-white transition-colors">
                 Pricing
               </Link>
-              {user ? (
-                <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
+              {user ? <Button asChild size="lg" className="rounded-full bg-[hsl(155,100%,67%)] text-[hsl(214,50%,9%)] hover:bg-[hsl(155,100%,60%)]">
                   <Link to="/dashboard">Dashboard</Link>
-                </Button>
-              ) : (
-                <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
+                </Button> : <Button asChild variant="ghost" size="lg" className="rounded-full text-white hover:bg-[hsl(270,100%,68%)]/20 border border-[hsl(270,100%,68%)]/30">
                   <Link to="/auth">Sign in</Link>
-                </Button>
-              )}
+                </Button>}
             </div>
           </nav>
         </header>
@@ -53,9 +45,7 @@ const Index = () => {
           {/* Hero Section */}
           <section className="max-w-5xl mx-auto text-center py-24 space-y-8">
             <div className="space-y-6">
-              <h1 className="text-6xl md:text-7xl font-display font-semibold tracking-tight leading-[0.95] text-white">
-                AI-powered feeds that engage your audience
-              </h1>
+              <h1 className="text-6xl md:text-7xl font-display font-semibold tracking-tight leading-[0.95] text-white">AI-powered feeds to engage any audience</h1>
               <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed">
                 Curate content from any source, transform it with AI, and build engaged communities with gamification tools.
               </p>
@@ -243,8 +233,6 @@ const Index = () => {
           <div className="h-12" />
         </main>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
