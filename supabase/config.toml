@@ -416,6 +416,9 @@ verify_jwt = true
 [functions.sync-topic-source-feed-urls]
 verify_jwt = true
 
+[functions.fix-source-urls]
+verify_jwt = true
+
 [functions.clean-slate-migration]
 verify_jwt = true
 
