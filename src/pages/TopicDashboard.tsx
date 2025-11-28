@@ -841,32 +841,30 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="automation" className="space-y-6">
-            {/* Source Discovery - Shown prominently for new topics */}
-            {autoSuggestSources && (
-              <Card className="bg-card border-border border-accent-green/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-accent-green" />
-                    Discover Quality Sources
-                  </CardTitle>
-                  <CardDescription>
-                    Let AI find reliable RSS feeds and news sources for your topic
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ImprovedSourceSuggestionTool
-                    topicName={topic.name}
-                    description={topic.description || ''}
-                    keywords={(topic.keywords || []).join(', ')}
-                    topicType={topic.topic_type}
-                    region={topic.region}
-                    topicId={topic.id}
-                    autoTrigger={autoSuggestSources}
-                    onTriggered={() => setAutoSuggestSources(false)}
-                  />
-                </CardContent>
-              </Card>
-            )}
+            {/* AI Source Discovery - Always visible */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Discover Quality Sources
+                </CardTitle>
+                <CardDescription>
+                  Let AI find reliable RSS feeds and news sources based on your topic keywords
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ImprovedSourceSuggestionTool
+                  topicName={topic.name}
+                  description={topic.description || ''}
+                  keywords={(topic.keywords || []).join(', ')}
+                  topicType={topic.topic_type}
+                  region={topic.region}
+                  topicId={topic.id}
+                  autoTrigger={autoSuggestSources}
+                  onTriggered={() => setAutoSuggestSources(false)}
+                />
+              </CardContent>
+            </Card>
 
             <Card className="bg-card border-border">
               <CardContent className="p-6">
