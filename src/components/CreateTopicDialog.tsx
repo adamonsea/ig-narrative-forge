@@ -117,6 +117,17 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => clearTimeout(timeoutId);
   }, [topicName]);
 
+  // Auto-populate description when entering step 2
+  useEffect(() => {
+    if (currentStep === 2 && !description && topicName) {
+      if (topicType === 'regional') {
+        setDescription(`Stay updated with the latest news, events, and community stories from ${region || topicName}.`);
+      } else {
+        setDescription(`Curated updates and insights about ${topicName}.`);
+      }
+    }
+  }, [currentStep, topicName, topicType, region]);
+
   const generateKeywords = async () => {
     if (!topicName) return;
 
@@ -400,7 +411,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What makes this feed unique? (optional)"
+                  placeholder="Refine this to improve keyword accuracy — the more specific, the better your matches"
                   rows={2}
                 />
 
