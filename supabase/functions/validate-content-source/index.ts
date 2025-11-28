@@ -12,6 +12,7 @@ interface ValidationRequest {
   topicType: 'regional' | 'keyword';
   region?: string;
   topicId?: string;
+  existingCanonicalDomain?: string; // For checking domain consistency
 }
 
 interface ValidationResult {
@@ -34,6 +35,94 @@ interface ValidationResult {
     sectionPath?: string;
     articlesFound?: number;
     testSuccess?: boolean;
+  };
+  // New: URL health check results
+  urlHealth?: {
+    domainConsistent: boolean;
+    suggestedCanonicalDomain?: string;
+    urlReachable: boolean;
+    redirectsTo?: string;
+    sslValid: boolean;
+  };
+  suggestedUrl?: string;
+  discoveredFeeds?: string[];
+}
+
+// Extract domain from URL for consistency checks
+function extractDomain(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch {
+    return null;
+  }
+}
+
+// Check URL health and domain consistency
+async function checkUrlHealth(url: string, existingCanonicalDomain?: string): Promise<{
+  domainConsistent: boolean;
+  suggestedCanonicalDomain?: string;
+  urlReachable: boolean;
+  redirectsTo?: string;
+  sslValid: boolean;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+  const urlDomain = extractDomain(url);
+  
+  let domainConsistent = true;
+  let suggestedCanonicalDomain = urlDomain || undefined;
+  
+  // Check domain consistency if canonical_domain was provided
+  if (existingCanonicalDomain && urlDomain && existingCanonicalDomain !== urlDomain) {
+    domainConsistent = false;
+    warnings.push(`Domain mismatch: canonical_domain is "${existingCanonicalDomain}" but feed URL domain is "${urlDomain}". Consider updating canonical_domain to "${urlDomain}".`);
+    suggestedCanonicalDomain = urlDomain;
+  }
+  
+  // Check for redirects
+  let urlReachable = false;
+  let redirectsTo: string | undefined;
+  let sslValid = true;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; eeZeeNews/1.0; +https://eezee.news)',
+      },
+      redirect: 'manual' // Don't follow redirects automatically
+    });
+    
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (location) {
+        redirectsTo = location;
+        const redirectDomain = extractDomain(location);
+        if (redirectDomain && redirectDomain !== urlDomain) {
+          warnings.push(`URL redirects to different domain: ${redirectDomain}. Consider using ${location} as the feed URL.`);
+          suggestedCanonicalDomain = redirectDomain;
+        }
+      }
+    }
+    
+    urlReachable = response.ok || (response.status >= 300 && response.status < 400);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (errorMsg.includes('certificate') || errorMsg.includes('SSL') || errorMsg.includes('TLS')) {
+      sslValid = false;
+      warnings.push('SSL certificate issue detected. Source may be unreliable.');
+    }
+    urlReachable = false;
+  }
+  
+  return {
+    domainConsistent,
+    suggestedCanonicalDomain,
+    urlReachable,
+    redirectsTo,
+    sslValid,
+    warnings
   };
 }
 
@@ -363,15 +452,36 @@ serve(async (req) => {
   }
 
   try {
-    const { url, sourceType, topicType, region, topicId }: ValidationRequest = await req.json();
+    const { url, sourceType, topicType, region, topicId, existingCanonicalDomain }: ValidationRequest = await req.json();
 
-    console.log('🔍 Validating source:', { url, sourceType, topicType });
+    console.log('🔍 Validating source:', { url, sourceType, topicType, existingCanonicalDomain });
 
     const result: ValidationResult = {
       success: false,
       isAccessible: false,
       warnings: []
     };
+
+    // NEW: URL Health Check - check domain consistency, redirects, SSL
+    console.log('🏥 Running URL health check...');
+    const urlHealth = await checkUrlHealth(url, existingCanonicalDomain);
+    result.urlHealth = {
+      domainConsistent: urlHealth.domainConsistent,
+      suggestedCanonicalDomain: urlHealth.suggestedCanonicalDomain,
+      urlReachable: urlHealth.urlReachable,
+      redirectsTo: urlHealth.redirectsTo,
+      sslValid: urlHealth.sslValid
+    };
+    
+    // Add URL health warnings
+    result.warnings.push(...urlHealth.warnings);
+    
+    if (!urlHealth.domainConsistent) {
+      console.log('⚠️ Domain mismatch detected:', {
+        existing: existingCanonicalDomain,
+        suggested: urlHealth.suggestedCanonicalDomain
+      });
+    }
 
     // Test basic accessibility with fallbacks
     let accessibilityResult = await testAccessibility(url);
