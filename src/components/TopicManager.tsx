@@ -422,94 +422,109 @@ export const TopicManager = () => {
                           </div>
                           
                           {/* Engagement Stats - Last 7 Days */}
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                               <MousePointer className="w-3 h-3" />
                               Engagement
                             </div>
-                            <div className="grid grid-cols-5 gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
-                                    <div className="text-lg font-bold text-pink-500 flex items-center gap-1">
-                                      <Heart className="w-3 h-3" />
-                                      {topic.articles_liked || 0}
+                            
+                            {/* Play Mode Stats */}
+                            <div className="space-y-2">
+                              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
+                                Play Mode
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-pink-500 flex items-center gap-1">
+                                        <Heart className="w-3 h-3" />
+                                        {topic.articles_liked || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Liked
+                                      </div>
                                     </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Liked
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Stories rated positively in Play Mode</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-orange-500 flex items-center gap-1">
+                                        <ThumbsDown className="w-3 h-3" />
+                                        {topic.articles_disliked || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Skipped
+                                      </div>
                                     </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Stories rated positively in Play Mode</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/30 cursor-help">
-                                    <div className="text-lg font-bold text-orange-500 flex items-center gap-1">
-                                      <ThumbsDown className="w-3 h-3" />
-                                      {topic.articles_disliked || 0}
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Stories rated negatively in Play Mode</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                      <div className="text-lg font-bold text-foreground">
+                                        {(topic.articles_liked || 0) + (topic.articles_disliked || 0)}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Total
+                                      </div>
                                     </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Skipped
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Total Play Mode ratings</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+                            
+                            {/* Feed Mode Stats */}
+                            <div className="space-y-2 pt-2 border-t border-border/30">
+                              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
+                                Feed Mode
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
+                                      <div className="text-lg font-bold text-foreground">
+                                        {topic.share_clicks || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Shares
+                                      </div>
                                     </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Stories rated negatively in Play Mode</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                    <div className="text-lg font-bold text-foreground">
-                                      {topic.share_clicks || 0}
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Share button clicks on stories</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-purple-500 flex items-center gap-1">
+                                        <Brain className="w-3 h-3" />
+                                        {topic.quiz_responses_count || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Quizzed
+                                      </div>
                                     </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Shares
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Share button clicks on stories</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/30 cursor-help">
-                                    <div className="text-lg font-bold text-purple-500 flex items-center gap-1">
-                                      <Brain className="w-3 h-3" />
-                                      {topic.quiz_responses_count || 0}
-                                    </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Quizzed
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Quiz questions answered by readers</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                    <div className="text-lg font-bold text-foreground">
-                                      {(topic.articles_liked || 0) + (topic.articles_disliked || 0)}
-                                    </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Total
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Total Play Mode ratings</p>
-                                </TooltipContent>
-                              </Tooltip>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Quiz questions answered by readers</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             </div>
                             
                             {/* Trend sparkline */}
