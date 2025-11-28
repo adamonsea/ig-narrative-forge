@@ -32,7 +32,7 @@ serve(async (req) => {
   }
 
   try {
-    const { topicName, description, topicType, region } = await req.json();
+    const { topicName, description, topicType, region, targetCount = 35 } = await req.json();
 
     if (!topicName || !topicType) {
       return new Response(
@@ -61,6 +61,8 @@ serve(async (req) => {
     }
 
     const allKeywords: any[] = [...tier1Keywords, ...regionalKeywords];
+    const baseKeywordCount = allKeywords.length;
+    const aiKeywordsNeeded = Math.max(targetCount - baseKeywordCount, 30);
 
     // Step 2: AI-enhanced keywords focused purely on this topic (if DeepSeek available)
     if (DEEPSEEK_API_KEY) {
@@ -68,7 +70,7 @@ serve(async (req) => {
         const existingKeywords = allKeywords.map(k => k.keyword);
         const prompt = `You are a keyword generation expert for a news curation platform.
 
-Generate 20-30 highly relevant keywords SPECIFICALLY for this NEW topic:
+Generate ${aiKeywordsNeeded} highly relevant keywords SPECIFICALLY for this NEW topic:
 
 Topic Name: "${topicName}"
 Topic Type: ${topicType}
@@ -129,7 +131,7 @@ Ensure:
               { role: 'user', content: prompt }
             ],
             temperature: 0.7,
-            max_tokens: 2000,
+            max_tokens: 4000,
           }),
         });
 

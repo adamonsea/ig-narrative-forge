@@ -82,6 +82,16 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     return () => clearInterval(interval);
   }, [isGeneratingKeywords]);
 
+  // Auto-progress to step 3 when keywords are generated
+  useEffect(() => {
+    if (currentStep === 2 && generatedKeywords.length > 0 && !isGeneratingKeywords) {
+      const timer = setTimeout(() => {
+        setCurrentStep(3);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, generatedKeywords.length, isGeneratingKeywords]);
+
   // Auto-detect region and generate keywords when name changes
   useEffect(() => {
     if (!topicName || topicName.length < 3) return;
@@ -129,6 +139,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
           description: description || undefined,
           topicType,
           region: region || undefined,
+          targetCount: 50,
         },
       });
 
@@ -354,7 +365,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
           {currentStep === 2 && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="text-center">
-                <h2 className="text-2xl font-display font-bold">Refine your feed</h2>
+                <h2 className="text-3xl font-semibold text-foreground">Refine your feed</h2>
               </div>
 
               <div className="space-y-4 max-w-lg mx-auto">
@@ -410,33 +421,15 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 />
 
                 {/* Keyword generation state */}
-                {isGeneratingKeywords ? (
-                  <div className="p-6 border rounded-lg bg-background-elevated text-center space-y-4">
-                    <p className="text-lg font-medium text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
+                {isGeneratingKeywords && (
+                  <div className="p-8 border rounded-xl bg-background-elevated text-center space-y-6">
+                    <p className="text-2xl font-semibold text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
                       {LOADING_MESSAGES[loadingMessageIndex]}
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {[...Array(6)].map((_, i) => (
+                      {[...Array(8)].map((_, i) => (
                         <Skeleton key={i} className="h-7 w-20 rounded-full" />
                       ))}
-                    </div>
-                  </div>
-                ) : generatedKeywords.length > 0 && (
-                  <div className="p-4 border rounded-lg bg-background-elevated">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {generatedKeywords.length} keywords ready
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {generatedKeywords.slice(0, 10).map((kw) => (
-                        <Badge key={kw.keyword} variant="secondary">
-                          {kw.keyword}
-                        </Badge>
-                      ))}
-                      {generatedKeywords.length > 10 && (
-                        <Badge variant="outline">
-                          +{generatedKeywords.length - 10}
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 )}
