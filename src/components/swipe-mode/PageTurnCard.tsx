@@ -270,7 +270,7 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
 
         <CardContent className="p-4 space-y-3">
           {/* Title - use slide headline if available */}
-          <h2 className="text-3xl font-bold line-clamp-3 leading-tight uppercase">
+          <h2 className="text-2xl font-bold leading-tight uppercase">
             {story.slides?.[0]?.content?.replace(/<[^>]*>/g, '') || story.title}
           </h2>
 
