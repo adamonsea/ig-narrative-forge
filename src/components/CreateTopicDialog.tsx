@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, ArrowLeft, Search, X, HelpCircle } from "lucide-react";
+import { ArrowRight, ArrowLeft, Search, X, HelpCircle, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GeneratedKeyword {
@@ -60,7 +60,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   // Keywords
   const [generatedKeywords, setGeneratedKeywords] = useState<GeneratedKeyword[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
-  const [keywordSearch, setKeywordSearch] = useState("");
+  const [manualKeyword, setManualKeyword] = useState("");
   
   // Animation states
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -277,7 +277,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
     setAudienceExpertise("general");
     setGeneratedKeywords([]);
     setSelectedKeywords(new Set());
-    setKeywordSearch("");
+    setManualKeyword("");
   };
 
   const handleClose = () => {
@@ -288,9 +288,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
   const progress = (currentStep / 3) * 100;
 
   // Filter keywords by search
-  const filteredKeywords = generatedKeywords.filter(kw =>
-    kw.keyword.toLowerCase().includes(keywordSearch.toLowerCase())
-  );
+  const filteredKeywords = generatedKeywords;
 
   // Group keywords by category
   const groupedKeywords = filteredKeywords.reduce((acc, kw) => {
@@ -417,8 +415,12 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
                 {/* Keyword generation trigger */}
                 {isGeneratingKeywords ? (
-                  <div className="p-8 border rounded-xl bg-muted/30 text-center space-y-6">
-                    <p className="text-xl font-medium text-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
+                  <div className="p-8 border rounded-xl bg-muted/30 text-center space-y-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-6 h-6 animate-spin text-[hsl(270,100%,68%)]" />
+                      <span className="text-lg font-medium text-foreground">Finding keywords...</span>
+                    </div>
+                    <p className="text-base text-muted-foreground animate-in fade-in duration-500" key={loadingMessageIndex}>
                       {LOADING_MESSAGES[loadingMessageIndex]}
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
@@ -454,13 +456,6 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleBulkAction('selectHighConfidence')}
-                >
-                  Best only
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => handleBulkAction('deselectAll')}
                 >
                   Clear
@@ -474,19 +469,8 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                 </Button>
               </div>
 
-              {/* Search */}
-              <div className="relative max-w-sm mx-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={keywordSearch}
-                  onChange={(e) => setKeywordSearch(e.target.value)}
-                  placeholder="Search keywords..."
-                  className="pl-10"
-                />
-              </div>
-
               {/* Keyword pills by category */}
-              <div className="space-y-4 max-h-[300px] overflow-y-auto px-1">
+              <div className="space-y-4 max-h-[240px] overflow-y-auto px-1">
                 {Object.entries(groupedKeywords).map(([category, keywords]) => (
                   <div key={category} className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -514,6 +498,34 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Manual add */}
+              <div className="flex gap-2 max-w-sm mx-auto">
+                <Input
+                  value={manualKeyword}
+                  onChange={(e) => setManualKeyword(e.target.value)}
+                  placeholder="Add your own keyword"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && manualKeyword.trim()) {
+                      setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
+                      setManualKeyword("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (manualKeyword.trim()) {
+                      setSelectedKeywords(prev => new Set([...prev, manualKeyword.trim()]));
+                      setManualKeyword("");
+                    }
+                  }}
+                  disabled={!manualKeyword.trim()}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           )}
