@@ -296,7 +296,7 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 ring-2 ring-primary/30 shadow-[0_0_60px_-15px_hsl(var(--primary)/0.3)]">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 ring-2 ring-[hsl(270,100%,68%)] shadow-[0_0_80px_-15px_hsl(270,100%,68%,0.5)]">
         {/* Minimal Progress - just dots */}
         <div className="flex justify-center gap-3 mb-10">
           {[1, 2, 3].map((step) => (
@@ -305,9 +305,9 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
                 currentStep === step 
-                  ? "bg-primary w-10" 
+                  ? "bg-[hsl(270,100%,68%)] w-10" 
                   : currentStep > step 
-                    ? "bg-primary/50 w-4" 
+                    ? "bg-[hsl(270,100%,68%)]/50 w-4" 
                     : "bg-muted w-4"
               )}
             />
@@ -321,11 +321,11 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
             <div className="space-y-10 animate-in fade-in duration-300">
               <div className="max-w-lg mx-auto space-y-6">
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl font-medium text-foreground">Topic title</span>
+                  <span className="text-3xl font-semibold text-foreground">Topic title</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-5 h-5 text-primary/60 cursor-help hover:text-primary transition-colors" />
+                        <HelpCircle className="w-4 h-4 text-[hsl(270,100%,68%)] cursor-help hover:text-[hsl(270,100%,75%)] transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
@@ -337,13 +337,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   value={topicName}
                   onChange={(e) => setTopicName(e.target.value)}
                   placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-2xl h-20 text-center font-medium border-2 border-primary/30 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
+                  className="text-2xl h-20 text-center font-medium border-2 border-[hsl(270,100%,68%)]/40 focus:border-[hsl(270,100%,68%)] focus:ring-4 focus:ring-[hsl(270,100%,68%)]/20 rounded-xl transition-all placeholder:text-muted-foreground/40 bg-background"
                   autoFocus
                 />
               </div>
 
               {topicName.length >= 3 && (
-                <p className="text-center text-base text-primary animate-in fade-in duration-300 font-medium">
+                <p className="text-center text-base text-[hsl(270,100%,68%)] animate-in fade-in duration-300 font-medium">
                   AI is preparing your keywords...
                 </p>
               )}
@@ -547,35 +547,28 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center pt-8 mt-6">
-          {currentStep > 1 ? (
+        <div className="flex justify-end items-center pt-8 mt-6">
+          {currentStep > 1 && (
             <Button
               variant="ghost"
               onClick={handleBack}
+              className="mr-auto"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-          ) : (
-            <div />
           )}
 
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleClose}>
-              Cancel
+          {currentStep < 3 ? (
+            <Button onClick={handleNext} disabled={!canProceed()} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-
-            {currentStep < 3 ? (
-              <Button onClick={handleNext} disabled={!canProceed()}>
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
-              <Button onClick={handleCreate} disabled={!canProceed() || isLoading}>
-                {isLoading ? "Creating..." : "Create Feed"}
-              </Button>
-            )}
-          </div>
+          ) : (
+            <Button onClick={handleCreate} disabled={!canProceed() || isLoading} className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,60%)] text-white">
+              {isLoading ? "Creating..." : "Create Feed"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
