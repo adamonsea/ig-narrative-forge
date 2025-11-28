@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, ArrowRight, Globe, Hash, MapPin, X, Sparkles, Loader2, Wand2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { KeywordCategoryGrid } from "./KeywordCategoryGrid";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { Sparkles, ArrowRight, ArrowLeft, Wand2, Search, Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface KeywordSuggestion {
+interface GeneratedKeyword {
   keyword: string;
+  category: 'core' | 'local' | 'niche' | 'discovery';
   confidence: number;
   rationale: string;
+  preSelected: boolean;
 }
 
 interface CreateTopicDialogProps {
@@ -26,677 +30,534 @@ interface CreateTopicDialogProps {
 }
 
 const STEPS = [
-  { id: 1, title: "Topic Name", icon: Hash },
-  { id: 2, title: "Topic Type", icon: Globe },
-  { id: 3, title: "Description", icon: Globe },
-  { id: 4, title: "Keywords", icon: Hash },
-  { id: 5, title: "Audience", icon: Globe },
+  { id: 1, title: "Name Your Feed", icon: Sparkles },
+  { id: 2, title: "Describe & Refine", icon: Wand2 },
+  { id: 3, title: "Prune Your Garden", icon: Filter },
+];
+
+const EXAMPLE_NAMES = [
+  "Eastbourne News",
+  "AI & Ethics", 
+  "Cycling Culture",
+  "Brighton Events",
+  "Tech Innovation",
 ];
 
 export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: CreateTopicDialogProps) => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    name: '',
-    topic_type: 'keyword' as 'keyword' | 'regional',
-    description: '',
-    keywords: [] as string[],
-    audience_expertise: 'intermediate' as 'beginner' | 'intermediate' | 'expert',
-    region: ''
-  });
-  const [keywordInput, setKeywordInput] = useState('');
-  const [creating, setCreating] = useState(false);
-  // Removed preview colors - using design system tokens instead
-  const [smartSuggestions, setSmartSuggestions] = useState<KeywordSuggestion[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [showSuggestionPreview, setShowSuggestionPreview] = useState(false);
-  const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
-  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
-  
   const { toast } = useToast();
   const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingKeywords, setIsGeneratingKeywords] = useState(false);
+  
+  // Form data
+  const [topicName, setTopicName] = useState("");
+  const [topicType, setTopicType] = useState<"regional" | "keyword">("keyword");
+  const [region, setRegion] = useState("");
+  const [description, setDescription] = useState("");
+  const [audienceExpertise, setAudienceExpertise] = useState("general");
+  
+  // Keywords
+  const [generatedKeywords, setGeneratedKeywords] = useState<GeneratedKeyword[]>([]);
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
+  const [keywordSearch, setKeywordSearch] = useState("");
+  
+  // Placeholder animation
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
-  // Auto-populate generic regional keywords when region is set
   useEffect(() => {
-    if (
-      formData.topic_type === 'regional' && 
-      formData.region && 
-      formData.keywords.length === 0 &&
-      !hasAutoPopulated
-    ) {
-      const regionLower = formData.region.toLowerCase().trim();
-      
-      // Tier 1: Universal keywords
-      const universalKeywords = [
-        'crime', 'police', 'community', 'council', 'planning',
-        'events', 'fire', 'ambulance', 'court', 'development',
-        'housing', 'transport', 'business', 'health', 'education',
-        'schools', 'hospital', 'traffic', 'parking', 'shops'
-      ];
-      
-      // Tier 2: Regional templates with region name
-      const regionalTemplates = [
-        `${regionLower} news`,
-        `${regionLower} community`,
-        `${regionLower} crime`,
-        `${regionLower} council`,
-        `${regionLower} events`,
-        `${regionLower} planning`,
-        `${regionLower} development`,
-        `${regionLower} business`,
-        `${regionLower} town centre`,
-        `${regionLower} high street`,
-        `${regionLower} tourism`,
-        `${regionLower} transport`
-      ];
-      
-      const genericKeywords = [...universalKeywords, ...regionalTemplates];
-      
-      setFormData({
-        ...formData,
-        keywords: genericKeywords
-      });
-      
-      setHasAutoPopulated(true);
-      
-      toast({
-        title: "✨ Keywords auto-populated!",
-        description: `Added ${genericKeywords.length} proven regional keywords. Remove any you don't need or add your own.`,
-        duration: 5000
-      });
-    }
-  }, [formData.topic_type, formData.region, hasAutoPopulated]);
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % EXAMPLE_NAMES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Removed preview colors effect - using design system tokens instead
-
-  // Auto-save to localStorage
+  // Auto-detect region and generate keywords when name changes
   useEffect(() => {
-    if (user && (formData.name || formData.description || formData.keywords.length > 0)) {
-      localStorage.setItem(`topic-draft-${user.id}`, JSON.stringify(formData));
-    }
-  }, [formData, user]);
+    if (!topicName || topicName.length < 3) return;
 
-  // Load saved data when dialog opens
-  useEffect(() => {
-    if (open && user) {
-      const saved = localStorage.getItem(`topic-draft-${user.id}`);
-      if (saved) {
-        try {
-          const savedData = JSON.parse(saved);
-          setFormData(savedData);
-          toast({
-            title: "Draft restored",
-            description: "Your previous topic draft has been restored"
-          });
-        } catch (error) {
-          console.error('Error loading saved data:', error);
+    const timeoutId = setTimeout(() => {
+      // Auto-detect if it's regional
+      const commonCityWords = ['news', 'events', 'local', 'area', 'community'];
+      const hasRegionalIndicator = commonCityWords.some(word => 
+        topicName.toLowerCase().includes(word)
+      );
+      
+      if (hasRegionalIndicator && topicType === 'keyword') {
+        setTopicType('regional');
+        // Extract potential region name (first word that's not a common word)
+        const words = topicName.split(' ');
+        const potentialRegion = words.find(w => 
+          !commonCityWords.includes(w.toLowerCase()) && w.length > 2
+        );
+        if (potentialRegion) {
+          setRegion(potentialRegion);
         }
       }
-    }
-  }, [open, user, toast]);
 
-  // Load smart suggestions when regional type is selected
-  useEffect(() => {
-    if (formData.topic_type === 'regional' && currentStep === 4 && smartSuggestions.length === 0 && !loadingSuggestions) {
-      loadSmartSuggestions();
-    }
-  }, [formData.topic_type, currentStep]);
-
-  const loadSmartSuggestions = async () => {
-    setLoadingSuggestions(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('suggest-regional-keywords', {
-        body: {
-          topicType: formData.topic_type,
-          region: formData.region || formData.name,
-          existingKeywords: formData.keywords
+      // Auto-generate description
+      if (!description) {
+        if (topicType === 'regional') {
+          setDescription(`Stay updated with the latest news, events, and community stories from ${topicName}.`);
+        } else {
+          setDescription(`Curated updates and insights about ${topicName}.`);
         }
+      }
+
+      // Generate keywords in background
+      generateKeywords();
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [topicName]);
+
+  const generateKeywords = async () => {
+    if (!topicName) return;
+
+    setIsGeneratingKeywords(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-generate-topic-keywords', {
+        body: {
+          topicName,
+          description: description || undefined,
+          topicType,
+          region: region || undefined,
+        },
       });
-      
+
       if (error) throw error;
-      
-      if (data?.suggestions) {
-        setSmartSuggestions(data.suggestions);
-        // Pre-select all by default
-        setSelectedSuggestions(data.suggestions.map((s: KeywordSuggestion) => s.keyword));
+
+      if (data?.keywords) {
+        setGeneratedKeywords(data.keywords);
+        // Pre-select all keywords marked as preSelected
+        const preSelected = new Set<string>(
+          data.keywords
+            .filter((k: GeneratedKeyword) => k.preSelected)
+            .map((k: GeneratedKeyword) => k.keyword)
+        );
+        setSelectedKeywords(preSelected);
       }
     } catch (error) {
-      console.error('Failed to load smart suggestions:', error);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
-  const acceptAllSuggestions = () => {
-    const newKeywords = smartSuggestions
-      .map(s => s.keyword)
-      .filter(k => !formData.keywords.includes(k));
-    
-    setFormData({
-      ...formData,
-      keywords: [...formData.keywords, ...newKeywords]
-    });
-    
-    toast({
-      title: "Keywords added!",
-      description: `Added ${newKeywords.length} proven keywords to your topic`
-    });
-  };
-
-  const addSelectedSuggestions = () => {
-    const newKeywords = selectedSuggestions
-      .filter(k => !formData.keywords.includes(k));
-    
-    setFormData({
-      ...formData,
-      keywords: [...formData.keywords, ...newKeywords]
-    });
-    
-    setShowSuggestionPreview(false);
-    
-    toast({
-      title: "Keywords added!",
-      description: `Added ${newKeywords.length} keywords to your topic`
-    });
-  };
-
-  const toggleSuggestion = (keyword: string, checked: boolean | 'indeterminate') => {
-    if (checked === true) {
-      setSelectedSuggestions([...selectedSuggestions, keyword]);
-    } else {
-      setSelectedSuggestions(selectedSuggestions.filter(k => k !== keyword));
-    }
-  };
-
-  const clearDraft = () => {
-    if (user) {
-      localStorage.removeItem(`topic-draft-${user.id}`);
-    }
-  };
-
-  const clearAllKeywords = () => {
-    setFormData({
-      ...formData,
-      keywords: []
-    });
-    setHasAutoPopulated(false);
-    toast({
-      title: "Keywords cleared",
-      description: "All keywords have been removed. You can add your own or let them auto-populate again.",
-    });
-  };
-
-  const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const addKeyword = () => {
-    if (keywordInput.trim() && !formData.keywords.includes(keywordInput.trim().toLowerCase())) {
-      setFormData({
-        ...formData,
-        keywords: [...formData.keywords, keywordInput.trim().toLowerCase()]
+      console.error('Failed to generate keywords:', error);
+      toast({
+        title: "Keyword generation failed",
+        description: "We'll use basic keywords. You can add more later.",
+        variant: "destructive",
       });
-      setKeywordInput('');
+    } finally {
+      setIsGeneratingKeywords(false);
     }
   };
 
-  const removeKeyword = (keyword: string) => {
-    setFormData({
-      ...formData,
-      keywords: formData.keywords.filter(k => k !== keyword)
+  const handleToggleKeyword = (keyword: string) => {
+    setSelectedKeywords(prev => {
+      const next = new Set(prev);
+      if (next.has(keyword)) {
+        next.delete(keyword);
+      } else {
+        next.add(keyword);
+      }
+      return next;
     });
+  };
+
+  const handleBulkAction = (action: 'selectAll' | 'deselectAll' | 'selectHighConfidence') => {
+    if (action === 'selectAll') {
+      setSelectedKeywords(new Set(generatedKeywords.map(k => k.keyword)));
+    } else if (action === 'deselectAll') {
+      setSelectedKeywords(new Set());
+    } else if (action === 'selectHighConfidence') {
+      const highConfidence = generatedKeywords
+        .filter(k => k.confidence >= 0.85)
+        .map(k => k.keyword);
+      setSelectedKeywords(new Set(highConfidence));
+    }
   };
 
   const canProceed = () => {
-    switch (currentStep) {
-      case 1: return formData.name.trim().length > 0;
-      case 2: return formData.topic_type === 'keyword' || (formData.topic_type === 'regional' && formData.region.trim().length > 0);
-      case 3: return true; // Description is optional
-      case 4: return formData.keywords.length > 0;
-      case 5: return formData.audience_expertise === 'beginner' || formData.audience_expertise === 'intermediate' || formData.audience_expertise === 'expert';
-      default: return false;
+    if (currentStep === 1) return topicName.length >= 3;
+    if (currentStep === 2) return true;
+    if (currentStep === 3) return selectedKeywords.size >= 3;
+    return false;
+  };
+
+  const handleNext = () => {
+    if (currentStep === 2 && generatedKeywords.length === 0) {
+      generateKeywords();
     }
+    setCurrentStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const handleCreate = async () => {
-    if (!formData.name.trim()) {
+    if (!user) {
       toast({
-        title: "Error",
-        description: "Topic name is required",
-        variant: "destructive"
+        title: "Authentication required",
+        description: "Please sign in to create a topic",
+        variant: "destructive",
       });
       return;
     }
 
-    setCreating(true);
-    try {
-      const slug = formData.name.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+    setIsLoading(true);
 
-      const topicData = {
-        name: formData.name,
-        description: formData.description || null,
-        topic_type: formData.topic_type,
-        keywords: formData.keywords,
-        region: formData.topic_type === 'regional' ? formData.region : null,
-        slug,
-        is_active: false, // Start as draft
-        created_by: user?.id,
-        audience_expertise: formData.audience_expertise,
-        default_tone: 'conversational' as const
+    try {
+      const slug = topicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      // Map audience expertise to the expected enum values
+      const audienceMap: Record<string, 'beginner' | 'intermediate' | 'expert'> = {
+        'general': 'beginner',
+        'informed': 'intermediate',
+        'expert': 'expert'
       };
 
-      const { error } = await supabase
-        .from('topics')
-        .insert([topicData]);
+      const { error } = await supabase.from('topics').insert({
+        name: topicName,
+        slug,
+        topic_type: topicType,
+        region: region || null,
+        description: description || null,
+        keywords: Array.from(selectedKeywords),
+        audience_expertise: audienceMap[audienceExpertise] || 'beginner',
+        is_active: true,
+        created_by: user.id,
+      });
 
       if (error) throw error;
 
       toast({
-        title: "Success!",
-        description: "Your topic has been created"
+        title: "Feed created! 🎉",
+        description: "Your topic feed is ready to start gathering stories.",
       });
 
-      clearDraft();
-      onOpenChange(false);
       onTopicCreated(slug);
-
+      resetForm();
+      onOpenChange(false);
     } catch (error) {
-      console.error('Error creating topic:', error);
+      console.error('Failed to create topic:', error);
       toast({
-        title: "Error",
-        description: "Failed to create topic",
-        variant: "destructive"
+        title: "Failed to create feed",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
       });
     } finally {
-      setCreating(false);
+      setIsLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      topic_type: 'keyword',
-      description: '',
-      keywords: [],
-      audience_expertise: 'intermediate',
-      region: ''
-    });
     setCurrentStep(1);
-    setKeywordInput('');
-    clearDraft();
+    setTopicName("");
+    setTopicType("keyword");
+    setRegion("");
+    setDescription("");
+    setAudienceExpertise("general");
+    setGeneratedKeywords([]);
+    setSelectedKeywords(new Set());
+    setKeywordSearch("");
   };
 
   const handleClose = () => {
     resetForm();
-    setHasAutoPopulated(false);
     onOpenChange(false);
   };
 
-  const progress = (currentStep / STEPS.length) * 100;
+  const progress = (currentStep / 3) * 100;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Create New Topic
-          </DialogTitle>
-          <div className="flex items-center gap-3 mt-4">
-            <Progress value={progress} className="flex-1" />
-            <span className="text-sm font-medium text-muted-foreground">
-              {currentStep}/{STEPS.length}
-            </span>
-          </div>
+          <DialogTitle className="text-2xl font-display">Create Your Feed</DialogTitle>
         </DialogHeader>
 
-        <div className="py-8">
-          {/* Step 1: Topic Name */}
+        {/* Progress */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            {STEPS.map((step) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={step.id}
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    currentStep === step.id && "text-foreground font-medium"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{step.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <div className="py-6">
+          {/* Step 1: Name Your Feed */}
           {currentStep === 1 && (
-            <div className="space-y-6 text-center">
-              <div className="space-y-3">
-                <h2 className="text-3xl font-bold">What's your topic called?</h2>
-                <p className="text-lg text-muted-foreground">
-                  Give your topic a clear, memorable name
-                </p>
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-display font-bold">What's your feed about?</h2>
+                <p className="text-muted-foreground">Give it a name that captures what you're interested in</p>
               </div>
+
               <div className="max-w-md mx-auto">
                 <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., AI & Technology"
-                  className="text-xl p-6 text-center"
+                  value={topicName}
+                  onChange={(e) => setTopicName(e.target.value)}
+                  placeholder={EXAMPLE_NAMES[placeholderIndex]}
+                  className="text-lg h-14 text-center transition-all duration-300"
                   autoFocus
                 />
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center text-sm text-muted-foreground">
-                <span>Examples:</span>
-                <Badge variant="outline">Local News</Badge>
-                <Badge variant="outline">Cycling Culture</Badge>
-                <Badge variant="outline">AI & Ethics</Badge>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Topic Type */}
-          {currentStep === 2 && (
-            <div className="space-y-6 text-center">
-              <div className="space-y-3">
-                <h2 className="text-3xl font-bold">What type of topic is this?</h2>
-                <p className="text-lg text-muted-foreground">
-                  Choose the approach that fits your content
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                <button
-                  onClick={() => setFormData({ ...formData, topic_type: 'keyword' })}
-                  className={`p-8 rounded-lg border-2 transition-all hover:shadow-md ${
-                    formData.topic_type === 'keyword'
-                      ? 'border-primary bg-accent'
-                      : 'border-border hover:border-muted-foreground'
-                  }`}
-                >
-                  <Hash className="w-12 h-12 mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-semibold mb-2">Interest Topic</h3>
-                  <p className="text-sm text-muted-foreground">Based on keywords and themes</p>
-                </button>
-                <button
-                  onClick={() => setFormData({ ...formData, topic_type: 'regional', region: formData.name })}
-                  className={`p-8 rounded-lg border-2 transition-all hover:shadow-md ${
-                    formData.topic_type === 'regional'
-                      ? 'border-primary bg-accent'
-                      : 'border-border hover:border-muted-foreground'
-                  }`}
-                >
-                  <MapPin className="w-12 h-12 mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-semibold mb-2">Local News</h3>
-                  <p className="text-sm text-muted-foreground">Location-based content</p>
-                </button>
-              </div>
-              
-              {/* Region input for regional topics */}
-              {formData.topic_type === 'regional' && (
-                <div className="mt-6 max-w-md mx-auto">
-                  <Label htmlFor="region" className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4" />
-                    Region/Town Name
-                  </Label>
-                  <Input
-                    id="region"
-                    value={formData.region}
-                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                    placeholder="e.g., Hastings, Brighton, Lewes"
-                    className="text-lg p-4"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Used for parliamentary tracking and regional content filtering
+                {topicName.length > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    {topicName.length} characters
                   </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Description */}
-          {currentStep === 3 && (
-            <div className="space-y-6 text-center">
-              <div className="space-y-3">
-                <h2 className="text-3xl font-bold">Describe your topic</h2>
-                <p className="text-lg text-muted-foreground">
-                  One sentence about what you'll cover (optional)
-                </p>
-              </div>
-              <div className="max-w-xl mx-auto">
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="e.g., Latest developments in artificial intelligence and machine learning"
-                  className="text-lg p-6 text-center min-h-[120px]"
-                  maxLength={200}
-                />
-                <div className="mt-2 text-sm text-muted-foreground">
-                  {formData.description.length}/200 characters
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Keywords */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div className="space-y-3 text-center">
-                <h2 className="text-3xl font-bold">What keywords describe your topic?</h2>
-                <p className="text-lg text-muted-foreground">
-                  Add words that help find relevant content
-                </p>
-              </div>
-
-              {/* Auto-populated Keywords Banner */}
-              {formData.topic_type === 'regional' && formData.keywords.length > 0 && hasAutoPopulated && (
-                <div className="p-4 bg-accent rounded-lg border">
-                  <div className="flex items-start gap-3">
-                    <Wand2 className="h-5 w-5 text-pop mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm mb-1">
-                        Generic keywords auto-added
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        These {formData.keywords.length} keywords work well across regional topics. Remove any that don't fit your focus, or add your own specific keywords.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={clearAllKeywords}
-                      >
-                        Clear all keywords
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Smart Setup for Regional Topics */}
-              {formData.topic_type === 'regional' && smartSuggestions.length > 0 && (
-                <div className="bg-accent border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-pop mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground mb-1">Smart Setup Available</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Based on successful regional feeds, we can pre-fill {smartSuggestions.length} proven keywords for local news coverage.
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={acceptAllSuggestions}
-                          variant="default"
-                          size="sm"
-                        >
-                          Add All {smartSuggestions.length} Keywords
-                        </Button>
-                        <Button
-                          onClick={() => setShowSuggestionPreview(true)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Preview Keywords
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Loading state */}
-              {formData.topic_type === 'regional' && loadingSuggestions && (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Loading smart suggestions...</span>
-                </div>
-              )}
-
-              {/* Manual keyword entry */}
-              <div className="max-w-xl mx-auto space-y-4">
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold text-center">Add Keywords Manually</h3>
-                  <div className="flex gap-2">
-                    <Input
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      placeholder="Enter a keyword"
-                      className="text-lg p-4"
-                      onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
-                    />
-                    <Button onClick={addKeyword} disabled={!keywordInput.trim()}>
-                      Add
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Show added keywords */}
-                <div className="flex flex-wrap gap-2 justify-center min-h-[60px]">
-                  {formData.keywords.map((keyword) => (
-                    <Badge key={keyword} variant="secondary" className="text-sm py-1 px-3">
-                      {keyword}
-                      <button
-                        onClick={() => removeKeyword(keyword)}
-                        className="ml-2 hover:text-destructive"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-
-                {formData.keywords.length === 0 && (
-                  <p className="text-muted-foreground text-sm text-center">No keywords added yet</p>
                 )}
-                
-                {/* Show count and recommendation */}
-                <p className="text-sm text-muted-foreground text-center">
-                  {formData.keywords.length} keyword{formData.keywords.length !== 1 ? 's' : ''} added
-                  {formData.keywords.length < 10 && formData.keywords.length > 0 && " • Recommended: 10-20 keywords"}
-                </p>
               </div>
+
+              {topicName.length >= 3 && (
+                <div className="flex items-center justify-center gap-2 text-sm text-accent-green animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <Sparkles className="w-4 h-4" />
+                  <span>AI is preparing your keywords...</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Preview Modal */}
-          {showSuggestionPreview && (
-            <Dialog open={showSuggestionPreview} onOpenChange={setShowSuggestionPreview}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Recommended Keywords for {formData.name || 'Your Topic'}</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-[400px] pr-4">
+          {/* Step 2: Describe & Refine */}
+          {currentStep === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-display font-bold">Refine Your Feed</h2>
+                <p className="text-muted-foreground">Add details and watch your keyword list grow</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Left: Details */}
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    {smartSuggestions.map((suggestion) => (
-                      <div key={suggestion.keyword} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors">
-                        <Checkbox
-                          checked={selectedSuggestions.includes(suggestion.keyword)}
-                          onCheckedChange={(checked) => toggleSuggestion(suggestion.keyword, checked)}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{suggestion.keyword}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {Math.round(suggestion.confidence * 100)}% match
+                    <Label>Topic Type</Label>
+                    <Select value={topicType} onValueChange={(v: any) => setTopicType(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="regional">Regional News</SelectItem>
+                        <SelectItem value="keyword">Interest-Based</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {topicType === 'regional' && (
+                    <div className="space-y-2">
+                      <Label>Region</Label>
+                      <Input
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        placeholder="e.g., Eastbourne, Brighton"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Description (Optional)</Label>
+                    <Textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="What makes this feed unique?"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Audience Level</Label>
+                    <Select value={audienceExpertise} onValueChange={setAudienceExpertise}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General Public</SelectItem>
+                        <SelectItem value="informed">Informed Reader</SelectItem>
+                        <SelectItem value="expert">Expert/Professional</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Right: Live Keyword Preview */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Live Keyword Preview</Label>
+                    {isGeneratingKeywords && (
+                      <Badge variant="secondary" className="animate-pulse">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Generating...
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="border rounded-lg p-4 bg-background-elevated min-h-[300px] space-y-3">
+                    {isGeneratingKeywords ? (
+                      <div className="space-y-2">
+                        {[...Array(8)].map((_, i) => (
+                          <Skeleton key={i} className="h-8 w-full" />
+                        ))}
+                      </div>
+                    ) : generatedKeywords.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">
+                          {generatedKeywords.length} keywords ready
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {generatedKeywords.slice(0, 15).map((kw) => (
+                            <Badge
+                              key={kw.keyword}
+                              variant="secondary"
+                              className="animate-in fade-in slide-in-from-bottom-1 duration-200"
+                            >
+                              {kw.keyword}
                             </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{suggestion.rationale}</p>
+                          ))}
+                          {generatedKeywords.length > 15 && (
+                            <Badge variant="outline">
+                              +{generatedKeywords.length - 15} more
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <p className="text-sm">Keywords will appear here as you type...</p>
+                      </div>
+                    )}
                   </div>
-                </ScrollArea>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowSuggestionPreview(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={addSelectedSuggestions}>
-                    Add {selectedSuggestions.length} Keyword{selectedSuggestions.length !== 1 ? 's' : ''}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* Step 5: Audience */}
-          {currentStep === 5 && (
-            <div className="space-y-6 text-center">
-              <div className="space-y-3">
-                <h2 className="text-3xl font-bold">Who's your audience?</h2>
-                <p className="text-lg text-muted-foreground">
-                  This helps tailor the content style
+          {/* Step 3: Prune Your Garden */}
+          {currentStep === 3 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-display font-bold">🌱 Prune Your Garden</h2>
+                <p className="text-muted-foreground">
+                  Remove keywords that don't fit. Everything's pre-selected for you.
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-                {[
-                  { value: 'beginner', emoji: '🎯', title: 'General Audience', desc: 'Clear explanations, more context' },
-                  { value: 'intermediate', emoji: '🔧', title: 'Some Expertise', desc: 'Balanced technical depth' },
-                  { value: 'expert', emoji: '🧠', title: 'Expert Level', desc: 'Technical terminology, advanced insights' }
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setFormData({ ...formData, audience_expertise: option.value as any })}
-                    className={`p-6 rounded-lg border-2 transition-all hover:shadow-md ${
-                      formData.audience_expertise === option.value
-                        ? 'border-primary bg-accent'
-                        : 'border-border hover:border-muted-foreground'
-                    }`}
+
+              {/* Stats & Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-background-elevated rounded-lg">
+                <div className="flex items-center gap-4">
+                  <Badge variant="secondary" className="text-base px-3 py-1">
+                    {selectedKeywords.size} selected
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Recommended: 25-40 keywords
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkAction('selectHighConfidence')}
                   >
-                    <div className="text-4xl mb-3">{option.emoji}</div>
-                    <h3 className="font-semibold mb-2">{option.title}</h3>
-                    <p className="text-sm text-muted-foreground">{option.desc}</p>
-                  </button>
-                ))}
+                    High Priority Only
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkAction('deselectAll')}
+                  >
+                    Clear All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkAction('selectAll')}
+                  >
+                    Select All
+                  </Button>
+                </div>
               </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={keywordSearch}
+                  onChange={(e) => setKeywordSearch(e.target.value)}
+                  placeholder="Search keywords..."
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Keyword Grid */}
+              <KeywordCategoryGrid
+                keywords={generatedKeywords}
+                selectedKeywords={selectedKeywords}
+                onToggleKeyword={handleToggleKeyword}
+                searchFilter={keywordSearch}
+              />
+
+              {/* Preview */}
+              {selectedKeywords.size > 0 && (
+                <div className="p-4 bg-accent-green/5 border border-accent-green/20 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Your feed will look for:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(selectedKeywords).slice(0, 10).map((kw) => (
+                      <Badge key={kw} variant="secondary">
+                        {kw}
+                      </Badge>
+                    ))}
+                    {selectedKeywords.size > 10 && (
+                      <Badge variant="outline">+{selectedKeywords.size - 10} more</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between pt-6 border-t">
+        <div className="flex justify-between items-center pt-4 border-t">
           <Button
-            variant="outline"
-            onClick={prevStep}
+            variant="ghost"
+            onClick={handleBack}
             disabled={currentStep === 1}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
 
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-            className="text-muted-foreground"
-          >
-            Cancel
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
 
-          {currentStep < STEPS.length ? (
-            <Button
-              onClick={nextStep}
-              disabled={!canProceed()}
-            >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleCreate}
-              disabled={!canProceed() || creating}
-            >
-              {creating ? 'Creating...' : 'Create Topic'}
-            </Button>
-          )}
+            {currentStep < 3 ? (
+              <Button onClick={handleNext} disabled={!canProceed()}>
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : (
+              <Button onClick={handleCreate} disabled={!canProceed() || isLoading}>
+                {isLoading ? "Creating..." : "Create Feed"}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

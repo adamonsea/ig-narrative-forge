@@ -144,6 +144,9 @@ verify_jwt = false
 [functions.auto-simplify-queue]
 verify_jwt = false
 
+[functions.auto-generate-topic-keywords]
+verify_jwt = false
+
 # Story operations
 [functions.story-illustrator]
 verify_jwt = false
