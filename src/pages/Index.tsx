@@ -3,28 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, Sparkles, BarChart, Gamepad2, Brain, Users, Image } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageFavicon } from '@/hooks/usePageFavicon';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { user, loading } = useAuth();
-
-  // Fetch first active public topic for demo link (multi-tenant)
-  const { data: demoTopic } = useQuery({
-    queryKey: ['demo-topic'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('topics')
-        .select('slug')
-        .eq('is_active', true)
-        .eq('is_archived', false)
-        .order('name')
-        .limit(1)
-        .single();
-      return data?.slug || 'eastbourne';
-    },
-    staleTime: 1000 * 60 * 60,
-  });
 
   usePageFavicon();
 
@@ -84,7 +65,7 @@ const Index = () => {
                 <Link to={user ? '/dashboard' : '/auth'}>Get started</Link>
               </Button>
               <Button asChild variant="ghost" size="lg" className="rounded-full px-8 h-12 text-base border-2 border-[hsl(270,100%,68%)] bg-transparent text-white hover:bg-[hsl(270,100%,68%)] hover:text-white">
-                <Link to={`/feed/${demoTopic || 'eastbourne'}`}>View demo</Link>
+                <Link to="/feed/eastbourne">View demo</Link>
               </Button>
             </div>
           </section>
