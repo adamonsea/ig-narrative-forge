@@ -95,6 +95,8 @@ export interface MultiTenantStats {
   readyStories?: number;
 }
 
+const ARTICLES_PAGE_SIZE = 50;
+
 export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
   const { toast } = useToast();
   const [articles, setArticles] = useState<MultiTenantArticle[]>([]);
@@ -106,6 +108,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     queueItems: 0,
     stories: 0
   });
+
+  // Pagination state for articles
+  const [articlesPage, setArticlesPage] = useState(1);
+  const [totalArticlesCount, setTotalArticlesCount] = useState<number | null>(null);
+  const [hasMoreArticles, setHasMoreArticles] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // New content indicators for real-time updates
   const [newArrivals, setNewArrivals] = useState(false);
@@ -152,11 +160,23 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       setLoading(true);
 
       // Get ONLY multi-tenant articles for arrivals (no legacy articles)
+      // Use pagination - first page loads with reset
       const multiTenantArticlesResult = await supabase.rpc('get_topic_articles_multi_tenant', {
         p_topic_id: selectedTopicId,
         p_status: null, // Get all statuses to filter out processed ones
-        p_limit: 100 // Increased limit to ensure more content
+        p_limit: ARTICLES_PAGE_SIZE,
+        p_offset: 0 // Always start from first page on initial load
       });
+      
+      // Get total count for pagination display
+      const { count: totalCount } = await supabase
+        .from('topic_articles')
+        .select('id', { count: 'exact', head: true })
+        .eq('topic_id', selectedTopicId)
+        .in('processing_status', ['new', 'processed']);
+      
+      setTotalArticlesCount(totalCount || 0);
+      setArticlesPage(1); // Reset to first page
 
       if (multiTenantArticlesResult.error) {
         console.error('Error loading multi-tenant articles:', multiTenantArticlesResult.error);
@@ -291,6 +311,10 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       setArticles(allArticles);
+      
+      // Update hasMoreArticles based on total count
+      const filteredTotal = totalCount || 0;
+      setHasMoreArticles(allArticles.length < filteredTotal);
 
       // Detect new arrivals for visual indicator
       if (previousCountsRef.current.articles > 0 && allArticles.length > previousCountsRef.current.articles) {
@@ -1099,6 +1123,78 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     return () => clearInterval(pollInterval);
   }, [selectedTopicId, loadTopicContent]);
 
+  // Load more articles (pagination)
+  const loadMoreArticles = useCallback(async () => {
+    if (!selectedTopicId || loadingMore || !hasMoreArticles) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = articlesPage + 1;
+      const offset = (nextPage - 1) * ARTICLES_PAGE_SIZE;
+      
+      const result = await supabase.rpc('get_topic_articles_multi_tenant', {
+        p_topic_id: selectedTopicId,
+        p_status: null,
+        p_limit: ARTICLES_PAGE_SIZE,
+        p_offset: offset
+      });
+      
+      if (result.error) {
+        console.error('Error loading more articles:', result.error);
+        return;
+      }
+      
+      // Process and append new articles
+      const newArticles = (result.data || [])
+        .filter((item: any) => ['new', 'processed'].includes(item.processing_status))
+        .map((item: any) => ({
+          id: item.id,
+          shared_content_id: item.shared_content_id,
+          topic_id: selectedTopicId,
+          source_id: item.source_id,
+          regional_relevance_score: item.regional_relevance_score || 0,
+          content_quality_score: item.content_quality_score || 0,
+          import_metadata: item.import_metadata || {},
+          originality_confidence: item.originality_confidence || 100,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          processing_status: item.processing_status,
+          keyword_matches: item.keyword_matches || [],
+          url: item.url,
+          normalized_url: item.normalized_url || item.url,
+          title: item.title,
+          body: item.body,
+          author: item.author,
+          image_url: item.image_url,
+          canonical_url: item.canonical_url,
+          content_checksum: item.content_checksum,
+          published_at: item.published_at,
+          word_count: item.word_count || 0,
+          language: item.language || 'en',
+          source_domain: item.source_domain,
+          last_seen_at: item.last_seen_at || item.updated_at,
+          is_snippet: (item.word_count || 0) > 0 && (item.word_count || 0) < 150,
+          article_type: 'multi_tenant' as const
+        }));
+      
+      // Deduplicate against existing articles
+      const existingIds = new Set(articles.map(a => a.id));
+      const uniqueNewArticles = newArticles.filter(a => !existingIds.has(a.id));
+      
+      setArticles(prev => [...prev, ...uniqueNewArticles]);
+      setArticlesPage(nextPage);
+      setHasMoreArticles(uniqueNewArticles.length === ARTICLES_PAGE_SIZE);
+      
+      console.log('📄 Loaded more articles:', {
+        page: nextPage,
+        newCount: uniqueNewArticles.length,
+        totalNow: articles.length + uniqueNewArticles.length
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [selectedTopicId, articlesPage, loadingMore, hasMoreArticles, articles]);
+
   return {
     // Data
     articles,
@@ -1108,6 +1204,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
     
     // Loading states
     loading,
+    loadingMore,
+    
+    // Pagination
+    hasMoreArticles,
+    totalArticlesCount,
+    loadMoreArticles,
     
     // New content indicators
     newArrivals,

@@ -644,10 +644,10 @@ export const UnifiedSourceManager = ({
               description: `"${existingSource.source_name}" has been reactivated for this topic`,
             });
             
-            loadSources();
-            onSourcesChange();
-            setShowAddForm(false);
-            return;
+        await loadSources();
+        onSourcesChange();
+        setShowAddForm(false);
+        return;
           } else {
             return;
           }
@@ -801,7 +801,7 @@ export const UnifiedSourceManager = ({
       });
       setShowAddForm(false);
       setValidationResult(null);
-      loadSources();
+      await loadSources();
       onSourcesChange();
     } catch (error) {
       console.error('Error adding source:', error);
