@@ -296,36 +296,36 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-8">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-10 border-2 border-primary/20">
         {/* Minimal Progress - just dots */}
-        <div className="flex justify-center gap-2 mb-8">
+        <div className="flex justify-center gap-3 mb-10">
           {[1, 2, 3].map((step) => (
             <div
               key={step}
               className={cn(
-                "w-2 h-2 rounded-full transition-all",
+                "h-1.5 rounded-full transition-all duration-300",
                 currentStep === step 
-                  ? "bg-primary w-6" 
+                  ? "bg-primary w-8" 
                   : currentStep > step 
-                    ? "bg-primary/60" 
-                    : "bg-muted"
+                    ? "bg-primary/50 w-3" 
+                    : "bg-muted w-3"
               )}
             />
           ))}
         </div>
 
         {/* Step Content */}
-        <div className="py-4">
+        <div className="py-6">
           {/* Step 1: Name */}
           {currentStep === 1 && (
-            <div className="space-y-8 animate-in fade-in duration-300">
-              <div className="max-w-md mx-auto space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-lg font-medium">Topic title</span>
+            <div className="space-y-12 animate-in fade-in duration-300">
+              <div className="max-w-lg mx-auto space-y-8">
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Topic title</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                        <HelpCircle className="w-4 h-4 text-muted-foreground/60 cursor-help hover:text-primary transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Choose a clear, descriptive name. This becomes your feed's identity and helps AI generate relevant keywords.</p>
@@ -337,13 +337,13 @@ export const CreateTopicDialog = ({ open, onOpenChange, onTopicCreated }: Create
                   value={topicName}
                   onChange={(e) => setTopicName(e.target.value)}
                   placeholder={EXAMPLE_NAMES[placeholderIndex]}
-                  className="text-lg h-14 text-center"
+                  className="text-2xl h-20 text-center font-medium border-2 border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all placeholder:text-muted-foreground/40"
                   autoFocus
                 />
               </div>
 
               {topicName.length >= 3 && (
-                <p className="text-center text-sm text-primary animate-in fade-in duration-300">
+                <p className="text-center text-sm text-primary/80 animate-in fade-in duration-300 font-medium">
                   AI is preparing your keywords...
                 </p>
               )}
