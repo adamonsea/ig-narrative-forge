@@ -122,8 +122,7 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
         .eq('topic_id', topicId)
         .eq('is_published', true)
         .gt('valid_until', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20); // Fetch more to allow for randomization
 
       if (error) {
         console.error('Error fetching quiz questions:', error);
@@ -131,12 +130,22 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
       }
 
       console.log('Quiz questions: fetched', data?.length || 0, 'questions');
+      
       // Cast the JSONB fields properly
-      return (data || []).map(q => ({
+      const questions = (data || []).map(q => ({
         ...q,
         options: q.options as QuizQuestion['options'],
         option_distribution: q.option_distribution as Record<string, number>
       })) as QuizQuestion[];
+
+      // Shuffle questions using Fisher-Yates for variety
+      for (let i = questions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [questions[i], questions[j]] = [questions[j], questions[i]];
+      }
+
+      // Return shuffled questions (limit to 10 for display)
+      return questions.slice(0, 10);
     },
     enabled: !!topicId, // Always enable when we have topicId - quizEnabled check is in queryFn
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes

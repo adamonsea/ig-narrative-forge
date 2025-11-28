@@ -121,6 +121,22 @@ Deno.serve(async (req) => {
         console.log(`  ⏭️ Flashback generator not yet implemented`);
         // TODO: Implement generate-flashback-cards function
       }
+
+      // Quiz Cards - generate new quizzes from today's stories if enabled
+      if (settings.quiz_cards_enabled) {
+        console.log(`  🧠 Triggering quiz question generation...`);
+        const { error: quizError } = await supabase.functions.invoke('generate-quiz-questions', {
+          body: { topicId: topic.id }
+        });
+
+        if (quizError) {
+          console.error(`  ❌ Failed to generate quiz questions: ${quizError.message}`);
+          results.push({ topic: topic.name, type: 'quiz', success: false, error: quizError.message });
+        } else {
+          console.log(`  ✅ Quiz questions generated`);
+          results.push({ topic: topic.name, type: 'quiz', success: true });
+        }
+      }
     }
 
     console.log('\n✅ Insight Card Scheduler: Complete');
