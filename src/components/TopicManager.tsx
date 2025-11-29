@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown, Gamepad2, TrendingUp } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown, Gamepad2, TrendingUp, Layers, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +45,8 @@ interface Topic {
   registrants_total?: number;
   avg_stories_scrolled?: number;
   avg_stories_swiped?: number;
+  avg_feed_stories_swiped?: number;
+  avg_final_slides_seen?: number;
   branding_config?: any;
   _count?: {
     articles: number;
@@ -172,7 +174,12 @@ export const TopicManager = () => {
           const likedCount = Number(swipeInsightsData?.total_likes) || 0;
           const dislikedCount = Number(swipeInsightsData?.total_discards) || 0;
           const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
-          const engagementData = engagementAverages?.data?.[0] || { avg_stories_scrolled: 0, avg_stories_swiped: 0 };
+          const engagementData = engagementAverages?.data?.[0] || { 
+            avg_stories_scrolled: 0, 
+            avg_stories_swiped: 0,
+            avg_feed_stories_swiped: 0,
+            avg_final_slides_seen: 0
+          };
 
           return {
             ...topic,
@@ -192,7 +199,9 @@ export const TopicManager = () => {
             registrants_this_week: Number(registrantData.registrants_this_week) || 0,
             registrants_total: Number(registrantData.registrants_total) || 0,
             avg_stories_scrolled: Number(engagementData.avg_stories_scrolled) || 0,
-            avg_stories_swiped: Number(engagementData.avg_stories_swiped) || 0
+            avg_stories_swiped: Number(engagementData.avg_stories_swiped) || 0,
+            avg_feed_stories_swiped: Number(engagementData.avg_feed_stories_swiped) || 0,
+            avg_final_slides_seen: Number(engagementData.avg_final_slides_seen) || 0
           };
       }));
       
@@ -524,6 +533,60 @@ export const TopicManager = () => {
                               <div className="grid grid-cols-3 gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
+                                    <div className="bg-green-500/10 rounded-lg p-2 border border-green-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-green-500 flex items-center gap-1">
+                                        <Eye className="w-3 h-3" />
+                                        {topic.avg_stories_scrolled || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Scrolled
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Avg stories scrolled past per visitor</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-blue-500 flex items-center gap-1">
+                                        <SlidersHorizontal className="w-3 h-3" />
+                                        {topic.avg_feed_stories_swiped || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Swiped
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Avg stories with slide swipes per visitor</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-emerald-500/10 rounded-lg p-2 border border-emerald-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-emerald-500 flex items-center gap-1">
+                                        <Layers className="w-3 h-3" />
+                                        {topic.avg_final_slides_seen || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Completed
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Avg stories read to final slide per visitor</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                              
+                              {/* Secondary Feed Stats */}
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
                                     <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
                                       <div className="text-lg font-bold text-foreground">
                                         {topic.share_clicks || 0}
@@ -552,23 +615,6 @@ export const TopicManager = () => {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Quiz questions answered by readers</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-green-500/10 rounded-lg p-2 border border-green-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-green-500 flex items-center gap-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        {topic.avg_stories_scrolled || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Avg/User
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Average stories scrolled per visitor this week</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
