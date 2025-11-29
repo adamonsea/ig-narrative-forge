@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTopicFavicon } from '@/hooks/useTopicFavicon';
 
 interface Topic {
   id: string;
@@ -59,6 +60,10 @@ const AboutFeed = () => {
       </div>
     );
   }
+
+  // Update favicon based on topic branding
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
 
   if (!topic || !topic.branding_config?.about_page_enabled) {
     return (

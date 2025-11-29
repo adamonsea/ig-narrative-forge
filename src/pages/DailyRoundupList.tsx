@@ -10,6 +10,7 @@ import { RoundupSEO } from "@/components/seo/RoundupSEO";
 import { FilterModal } from "@/components/FilterModal";
 import { FeedFilters } from "@/components/FeedFilters";
 import { useToast } from "@/hooks/use-toast";
+import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 
 interface Topic {
   id: string;
@@ -66,6 +67,10 @@ export default function DailyRoundupList() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
+
+  // Update favicon based on topic branding
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
 
   useEffect(() => {
     const fetchData = async () => {
