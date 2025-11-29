@@ -29,24 +29,47 @@ export const FeedOnboardingOrchestrator = ({
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('complete');
   const [hasStarted, setHasStarted] = useState(false);
 
+  // Debug helper - expose to window for testing
+  useEffect(() => {
+    (window as any).resetOnboarding = () => {
+      localStorage.removeItem(`welcome_shown_${topicSlug}`);
+      localStorage.removeItem(`onboarding_complete_${topicSlug}`);
+      console.log(`[Onboarding] Reset for ${topicSlug} - refresh page to see welcome card`);
+      window.location.reload();
+    };
+  }, [topicSlug]);
+
   // Check if onboarding has been completed for this topic
   useEffect(() => {
     const welcomeShown = localStorage.getItem(`welcome_shown_${topicSlug}`);
     const onboardingComplete = localStorage.getItem(`onboarding_complete_${topicSlug}`);
 
+    // Debug logging
+    console.log('[Onboarding] Config:', {
+      topicSlug,
+      welcomeCardEnabled: config.welcomeCardEnabled,
+      welcomeShown,
+      onboardingComplete
+    });
+
     if (onboardingComplete) {
+      console.log('[Onboarding] Already complete, skipping');
       setCurrentStep('complete');
       return;
     }
 
     // Determine starting step
     if (config.welcomeCardEnabled && !welcomeShown) {
+      console.log('[Onboarding] Starting with welcome card');
       setCurrentStep('welcome');
       setHasStarted(true);
     } else if (!welcomeShown && !onboardingComplete) {
       // Skip welcome, start with tooltips
+      console.log('[Onboarding] Welcome disabled, starting with live tooltip');
       setCurrentStep('live');
       setHasStarted(true);
+    } else {
+      console.log('[Onboarding] No onboarding to show');
     }
   }, [topicSlug, config.welcomeCardEnabled]);
 
