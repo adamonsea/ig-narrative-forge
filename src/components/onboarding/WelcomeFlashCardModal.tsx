@@ -1,6 +1,5 @@
-import { Dialog, DialogContent, DialogOverlay } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface WelcomeFlashCardModalProps {
@@ -18,7 +17,7 @@ export const WelcomeFlashCardModal = ({
   onClose,
   topicSlug,
   headline = "Welcome to your feed",
-  ctaText = "Start Reading",
+  ctaText = "Read on...",
   showAboutLink = false,
   aboutPageEnabled = false
 }: WelcomeFlashCardModalProps) => {
@@ -31,30 +30,35 @@ export const WelcomeFlashCardModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent 
-        className="sm:max-w-md border-0 shadow-2xl bg-background/95 backdrop-blur-md"
+        className="sm:max-w-md border-0 shadow-2xl bg-background p-0 gap-0"
+        hideCloseButton
       >
-        <div className="p-4 text-center space-y-6">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <div className="p-8 md:p-12 text-center space-y-8">
+          {/* Large bold headline */}
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight">
             {headline}
           </h2>
           
+          {/* Purple CTA button */}
           <Button 
             onClick={handleClose}
             size="lg"
-            className="w-full font-medium"
+            className="px-8 py-6 text-lg font-medium bg-primary hover:bg-primary/90"
           >
             {ctaText}
           </Button>
           
+          {/* Optional About link */}
           {showAboutLink && aboutPageEnabled && (
-            <Link 
-              to={`/feed/${topicSlug}/about`}
-              onClick={handleClose}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" />
-              About this feed
-            </Link>
+            <div>
+              <Link 
+                to={`/feed/${topicSlug}/about`}
+                onClick={handleClose}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+              >
+                About this feed
+              </Link>
+            </div>
           )}
         </div>
       </DialogContent>
