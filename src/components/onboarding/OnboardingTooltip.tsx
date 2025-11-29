@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface OnboardingTooltipProps {
@@ -23,19 +24,20 @@ export const OnboardingTooltip = ({
 
   // Calculate position relative to target element
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      setCoords(null);
+      return;
+    }
 
     const updatePosition = () => {
       const target = document.querySelector(targetSelector);
       if (!target) {
-        // If target not found, dismiss this tooltip
         console.log(`[OnboardingTooltip] Target not found: ${targetSelector}`);
         onDismiss();
         return;
       }
 
       const rect = target.getBoundingClientRect();
-      // Use viewport coordinates directly for fixed positioning (no scroll offset needed)
       let top = 0;
       let left = 0;
 
@@ -58,19 +60,22 @@ export const OnboardingTooltip = ({
           break;
       }
 
-      console.log(`[OnboardingTooltip] Positioning tooltip for ${targetSelector}:`, { rect, top, left });
+      console.log(`[OnboardingTooltip] Position for ${targetSelector}:`, { 
+        targetRect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+        tooltip: { top, left } 
+      });
       setCoords({ top, left });
     };
 
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(updatePosition, 100);
+    // Delay to ensure DOM is ready
+    const timer = setTimeout(updatePosition, 150);
     window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, [isVisible, targetSelector, position, onDismiss]);
 
@@ -84,8 +89,6 @@ export const OnboardingTooltip = ({
 
     return () => clearTimeout(timer);
   }, [isVisible, autoDismissMs, onDismiss]);
-
-  if (!coords) return null;
 
   const getArrowStyles = () => {
     const base = "absolute w-0 h-0 border-solid";
@@ -101,33 +104,37 @@ export const OnboardingTooltip = ({
     }
   };
 
-  const getTransform = () => {
+  const getTransformOrigin = () => {
     switch (position) {
-      case 'top':
-        return 'translateX(-50%) translateY(-100%)';
-      case 'bottom':
-        return 'translateX(-50%)';
-      case 'left':
-        return 'translateX(-100%) translateY(-50%)';
-      case 'right':
-        return 'translateY(-50%)';
+      case 'top': return 'bottom center';
+      case 'bottom': return 'top center';
+      case 'left': return 'right center';
+      case 'right': return 'left center';
     }
   };
 
-  return (
+  // Render via portal to avoid transform containment issues
+  const tooltipContent = (
     <AnimatePresence>
-      {isVisible && (
+      {isVisible && coords && (
         <motion.div
           ref={tooltipRef}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.2 }}
-          className="fixed z-[100] pointer-events-none"
+          className="fixed z-[9999] pointer-events-none"
           style={{
             top: coords.top,
             left: coords.left,
-            transform: getTransform()
+            transform: position === 'top' 
+              ? 'translateX(-50%) translateY(-100%)' 
+              : position === 'bottom'
+              ? 'translateX(-50%)'
+              : position === 'left'
+              ? 'translateX(-100%) translateY(-50%)'
+              : 'translateY(-50%)',
+            transformOrigin: getTransformOrigin()
           }}
         >
           <div className="relative bg-foreground text-background px-3 py-2 rounded-lg shadow-lg max-w-[200px]">
@@ -138,4 +145,11 @@ export const OnboardingTooltip = ({
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render at document body level
+  if (typeof document !== 'undefined') {
+    return createPortal(tooltipContent, document.body);
+  }
+
+  return null;
 };
