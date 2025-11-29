@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 // Sensitive topic patterns to AVOID generating quizzes about
-// Focus on children-related and serious crime/legal matters
 const SENSITIVE_PATTERNS = [
   /\b(child|children|minor|underage|paedophile|pedophile|safeguarding)\b.*\b(abuse|assault|harm|victim|exploitation)\b/i,
   /\b(abuse|assault|harm|victim|exploitation)\b.*\b(child|children|minor|underage)\b/i,
@@ -26,10 +25,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const deepseekApiKey = Deno.env.get('DEEPSEEK_API_KEY');
     
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    if (!deepseekApiKey) {
+      throw new Error('DEEPSEEK_API_KEY not configured');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -43,7 +42,7 @@ serve(async (req) => {
       // No body provided, process all enabled topics
     }
 
-    console.log('Starting quiz question generation', { targetTopicId });
+    console.log('Starting quiz question generation with DeepSeek', { targetTopicId });
 
     // Get topics with quiz cards enabled
     let topicsQuery = supabase
@@ -83,7 +82,6 @@ serve(async (req) => {
       console.log(`Processing topic: ${topicName} (${topicId})`);
 
       // Get recent published stories that don't have quiz questions yet
-      // Extended to 7 days to have more candidate stories
       const { data: stories, error: storiesError } = await supabase
         .from('stories')
         .select(`
@@ -154,17 +152,16 @@ serve(async (req) => {
           continue;
         }
 
-        // Generate quiz question using Lovable AI Gateway (gemini-2.5-flash-lite)
+        // Generate quiz question using DeepSeek
         try {
           const quizQuestion = await generateQuizQuestion(
-            lovableApiKey,
+            deepseekApiKey,
             content.title,
-            content.body.substring(0, 3000), // Limit content length
+            content.body.substring(0, 3000),
             topicName
           );
 
           if (quizQuestion) {
-            // Insert the quiz question
             const { error: insertError } = await supabase
               .from('quiz_questions')
               .insert({
@@ -252,13 +249,12 @@ async function generateQuizQuestion(
 
 CRITICAL GUIDELINES:
 - NEVER create questions about deaths, tragedies, crimes, accidents, or sensitive topics
-- If the article is about something negative or distressing, return null
+- If the article is about something negative or distressing, respond with {"skip": true, "reason": "sensitive content"}
 - Focus on: sports scores/results, business news, community events, achievements, statistics, openings, announcements
 - Questions should be factual and verifiable from the article text
 - The correct answer must be clearly stated in the article
 - Create plausible but incorrect distractor options
 - Keep the tone respectful and appropriate for all ages
-- Make questions engaging but not trivializing
 
 QUESTION TYPES TO PREFER:
 - Numerical facts (scores, amounts, dates, numbers)
@@ -266,7 +262,25 @@ QUESTION TYPES TO PREFER:
 - Outcomes and results
 - New initiatives or announcements
 
-If the article content is unsuitable for a quiz, you MUST return {"skip": true, "reason": "sensitive content"}`;
+You MUST respond with valid JSON only. No markdown, no explanation text outside of JSON.
+
+If the article is suitable for a quiz, respond with this JSON structure:
+{
+  "question": "The quiz question text",
+  "options": [
+    {"label": "A", "text": "First option", "is_correct": false},
+    {"label": "B", "text": "Second option", "is_correct": true},
+    {"label": "C", "text": "Third option", "is_correct": false},
+    {"label": "D", "text": "Fourth option", "is_correct": false}
+  ],
+  "correct_option": "B",
+  "explanation": "Brief explanation of why this is correct",
+  "difficulty": "easy|medium|hard",
+  "category": "factual|numerical|temporal|contextual"
+}
+
+If the article is unsuitable, respond with:
+{"skip": true, "reason": "explanation"}`;
 
   const userPrompt = `Create a quiz question based on this article from "${topicName}":
 
@@ -274,97 +288,53 @@ Title: ${articleTitle}
 
 Content: ${articleBody}
 
-Generate a single multiple-choice question with 4 options (A, B, C, D) where exactly one is correct.`;
+Generate a single multiple-choice question with 4 options (A, B, C, D) where exactly one is correct. Respond ONLY with JSON.`;
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Calling DeepSeek API for quiz generation...');
+    
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'create_quiz_question',
-              description: 'Create a quiz question based on the article content',
-              parameters: {
-                type: 'object',
-                properties: {
-                  skip: {
-                    type: 'boolean',
-                    description: 'Set to true if the content is unsuitable for a quiz'
-                  },
-                  reason: {
-                    type: 'string',
-                    description: 'Reason for skipping (only if skip is true)'
-                  },
-                  question: {
-                    type: 'string',
-                    description: 'The quiz question text'
-                  },
-                  options: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        label: { type: 'string', enum: ['A', 'B', 'C', 'D'] },
-                        text: { type: 'string' },
-                        is_correct: { type: 'boolean' }
-                      },
-                      required: ['label', 'text', 'is_correct']
-                    },
-                    description: 'Four answer options'
-                  },
-                  correct_option: {
-                    type: 'string',
-                    enum: ['A', 'B', 'C', 'D'],
-                    description: 'The correct answer label'
-                  },
-                  explanation: {
-                    type: 'string',
-                    description: 'Brief explanation of the correct answer'
-                  },
-                  difficulty: {
-                    type: 'string',
-                    enum: ['easy', 'medium', 'hard']
-                  },
-                  category: {
-                    type: 'string',
-                    enum: ['factual', 'numerical', 'temporal', 'contextual']
-                  }
-                },
-                required: ['question', 'options', 'correct_option', 'explanation']
-              }
-            }
-          }
-        ],
-        tool_choice: { type: 'function', function: { name: 'create_quiz_question' } }
+        temperature: 0.3,
+        max_tokens: 1000,
+        response_format: { type: 'json_object' }
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
+      console.error('DeepSeek API error:', response.status, errorText);
       return null;
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const content = data.choices?.[0]?.message?.content;
     
-    if (!toolCall) {
-      console.error('No tool call in response');
+    if (!content) {
+      console.error('No content in DeepSeek response');
       return null;
     }
 
-    const quizData = JSON.parse(toolCall.function.arguments);
+    console.log('DeepSeek response received, parsing...');
+    
+    // Parse JSON response
+    let quizData;
+    try {
+      quizData = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse DeepSeek response as JSON:', content);
+      return null;
+    }
     
     // Check if AI decided to skip
     if (quizData.skip) {
@@ -374,7 +344,7 @@ Generate a single multiple-choice question with 4 options (A, B, C, D) where exa
 
     // Validate the response
     if (!quizData.question || !quizData.options || quizData.options.length !== 4) {
-      console.error('Invalid quiz data structure');
+      console.error('Invalid quiz data structure:', quizData);
       return null;
     }
 
@@ -385,9 +355,10 @@ Generate a single multiple-choice question with 4 options (A, B, C, D) where exa
       return null;
     }
 
+    console.log('Successfully generated quiz question');
     return quizData;
   } catch (error) {
-    console.error('Error calling AI API:', error);
+    console.error('Error calling DeepSeek API:', error);
     return null;
   }
 }
