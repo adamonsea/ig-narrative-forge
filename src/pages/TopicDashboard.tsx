@@ -19,6 +19,7 @@ import { NewsletterSignupsManager } from "@/components/NewsletterSignupsManager"
 import { TopicSettings } from "@/components/TopicSettings";
 import { TopicAwareSourceManager } from "@/components/TopicAwareSourceManager";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
+import { OnboardingSettings } from "@/components/onboarding";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentHub } from "@/components/SentimentHub";
@@ -963,6 +964,30 @@ const TopicDashboard = () => {
                           id: topic.id,
                           name: topic.name,
                           illustration_primary_color: topic.illustration_primary_color,
+                          branding_config: topic.branding_config
+                        }}
+                        onUpdate={() => loadTopicAndStats()}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="onboarding" className="overflow-hidden rounded-lg border border-border/60 bg-background/50 backdrop-blur">
+                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                      <div className="flex w-full items-start justify-between gap-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <Users className="h-4 w-4" />
+                          <div>
+                            <p className="text-sm font-medium">Onboarding & Welcome</p>
+                            <p className="text-xs text-muted-foreground">Welcome modal, tooltips, and About page</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <OnboardingSettings
+                        topic={{
+                          id: topic.id,
+                          name: topic.name,
                           branding_config: topic.branding_config
                         }}
                         onUpdate={() => loadTopicAndStats()}
