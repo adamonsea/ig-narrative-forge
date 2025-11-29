@@ -29,44 +29,46 @@ export const OnboardingTooltip = ({
       const target = document.querySelector(targetSelector);
       if (!target) {
         // If target not found, dismiss this tooltip
+        console.log(`[OnboardingTooltip] Target not found: ${targetSelector}`);
         onDismiss();
         return;
       }
 
       const rect = target.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const scrollX = window.scrollX;
-
+      // Use viewport coordinates directly for fixed positioning (no scroll offset needed)
       let top = 0;
       let left = 0;
 
       switch (position) {
         case 'top':
-          top = rect.top + scrollY - 8;
-          left = rect.left + scrollX + rect.width / 2;
+          top = rect.top - 8;
+          left = rect.left + rect.width / 2;
           break;
         case 'bottom':
-          top = rect.bottom + scrollY + 8;
-          left = rect.left + scrollX + rect.width / 2;
+          top = rect.bottom + 8;
+          left = rect.left + rect.width / 2;
           break;
         case 'left':
-          top = rect.top + scrollY + rect.height / 2;
-          left = rect.left + scrollX - 8;
+          top = rect.top + rect.height / 2;
+          left = rect.left - 8;
           break;
         case 'right':
-          top = rect.top + scrollY + rect.height / 2;
-          left = rect.right + scrollX + 8;
+          top = rect.top + rect.height / 2;
+          left = rect.right + 8;
           break;
       }
 
+      console.log(`[OnboardingTooltip] Positioning tooltip for ${targetSelector}:`, { rect, top, left });
       setCoords({ top, left });
     };
 
-    updatePosition();
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(updatePosition, 100);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition);
     };
