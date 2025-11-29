@@ -539,9 +539,9 @@ export default function WeeklyRoundupList() {
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8 flex flex-col items-center">
             {filteredStories.map((story, index) => (
-              <div key={story.id}>
+              <div key={story.id} className="w-full max-w-2xl">
                 <StoryCarousel
                   story={story}
                   storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
