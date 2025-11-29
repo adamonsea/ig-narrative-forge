@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
 
@@ -177,8 +177,6 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
 };
 
 export const useSubmitQuizResponse = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       questionId,
@@ -207,10 +205,9 @@ export const useSubmitQuizResponse = () => {
       return data as QuizResponse;
     },
     onSuccess: (data, variables) => {
-      // Mark question as answered locally
+      // Mark question as answered locally - but DON'T invalidate queries
+      // This keeps the same question visible with results until page refresh
       markQuestionAnswered(variables.questionId);
-      // Invalidate quiz queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['quiz-questions'] });
     }
   });
 };
