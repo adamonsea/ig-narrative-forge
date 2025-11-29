@@ -1109,34 +1109,23 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add quiz cards every 8 stories (offset by 5 to avoid collision with insight cards at % 6 === 3)
-              const shouldShowQuiz = storyIndex % 8 === 5 && storyIndex > 0;
-              if (shouldShowQuiz) {
-                console.log('🎯 Quiz card position check:', { 
-                  storyIndex, 
-                  quizCardsEnabled, 
-                  questionsCount: quizQuestions.length,
-                  shouldRender: quizQuestions.length > 0 && quizCardsEnabled
-                });
-              }
+              // Show ONE quiz card after story index 5 (first available position)
+              // Only show once per feed - the first question stays visible even after answering
+              const isQuizPosition = storyIndex === 5;
+              const firstQuizQuestion = quizQuestions[0];
               
-              if (shouldShowQuiz && quizQuestions.length > 0 && quizCardsEnabled) {
-                const quizIndex = Math.floor((storyIndex - 5) / 8) % quizQuestions.length;
-                const quizQuestion = quizQuestions[quizIndex];
-                
-                if (quizQuestion) {
-                  console.log('✅ Rendering QuizCard:', quizQuestion.id);
-                  items.push(
-                    <div key={`quiz-${quizQuestion.id}-${index}`} className="w-full max-w-2xl">
-                      <QuizCard
-                        question={quizQuestion}
-                        visitorId={quizVisitorId}
-                        topicSlug={slug}
-                        onAnswered={markAsAnswered}
-                      />
-                    </div>
-                  );
-                }
+              if (isQuizPosition && firstQuizQuestion && quizCardsEnabled) {
+                console.log('✅ Rendering single QuizCard:', firstQuizQuestion.id);
+                items.push(
+                  <div key={`quiz-${firstQuizQuestion.id}`} className="w-full max-w-2xl">
+                    <QuizCard
+                      question={firstQuizQuestion}
+                      visitorId={quizVisitorId}
+                      topicSlug={slug}
+                      onAnswered={markAsAnswered}
+                    />
+                  </div>
+                );
               }
 
               return items;
