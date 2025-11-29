@@ -7,17 +7,17 @@
   .onboarding-highlight {
     @apply relative;
     animation: onboarding-pulse 1.5s ease-in-out infinite;
-    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 0 2px rgb(168 85 247 / 0.6), 0 0 12px rgb(168 85 247 / 0.25);
     border-radius: 8px;
     z-index: 50;
   }
   
   @keyframes onboarding-pulse {
     0%, 100% {
-      box-shadow: 0 0 0 3px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+      box-shadow: 0 0 0 2px rgb(168 85 247 / 0.6), 0 0 12px rgb(168 85 247 / 0.25);
     }
     50% {
-      box-shadow: 0 0 0 6px hsl(var(--primary) / 0.3), 0 0 30px hsl(var(--primary) / 0.4);
+      box-shadow: 0 0 0 3px rgb(168 85 247 / 0.4), 0 0 18px rgb(168 85 247 / 0.35);
     }
   }
 
