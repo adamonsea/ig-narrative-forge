@@ -11,6 +11,9 @@ interface OnboardingTooltipProps {
   autoDismissMs?: number;
 }
 
+// CSS class for highlighting the target element
+const HIGHLIGHT_CLASS = 'onboarding-highlight';
+
 export const OnboardingTooltip = ({
   message,
   targetSelector,
@@ -20,6 +23,23 @@ export const OnboardingTooltip = ({
   autoDismissMs = 3000
 }: OnboardingTooltipProps) => {
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  // Add/remove highlight class on target element
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const target = document.querySelector(targetSelector);
+    if (target) {
+      target.classList.add(HIGHLIGHT_CLASS);
+      console.log(`[OnboardingTooltip] Added highlight to ${targetSelector}`);
+    }
+
+    return () => {
+      if (target) {
+        target.classList.remove(HIGHLIGHT_CLASS);
+      }
+    };
+  }, [isVisible, targetSelector]);
 
   // Calculate position relative to target element
   useEffect(() => {
@@ -40,8 +60,7 @@ export const OnboardingTooltip = ({
       let top = 0;
       let left = 0;
 
-      // Simple positioning: center horizontally, offset vertically
-      const gap = 8; // Gap between target and tooltip
+      const gap = 12;
       
       switch (position) {
         case 'top':
@@ -62,14 +81,9 @@ export const OnboardingTooltip = ({
           break;
       }
 
-      console.log(`[OnboardingTooltip] ${targetSelector}:`, { 
-        rect: { top: rect.top, left: rect.left, width: rect.width, bottom: rect.bottom },
-        calculated: { top, left } 
-      });
       setCoords({ top, left });
     };
 
-    // Delay to ensure DOM is ready
     const timer = setTimeout(updatePosition, 200);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
@@ -92,7 +106,6 @@ export const OnboardingTooltip = ({
     return () => clearTimeout(timer);
   }, [isVisible, autoDismissMs, onDismiss]);
 
-  // Get transform based on position (to center the tooltip)
   const getTransform = () => {
     switch (position) {
       case 'top':
@@ -110,8 +123,8 @@ export const OnboardingTooltip = ({
     <AnimatePresence>
       {isVisible && coords && (
         <motion.div
-          initial={{ opacity: 0, y: position === 'bottom' ? -5 : position === 'top' ? 5 : 0, x: position === 'left' ? 5 : position === 'right' ? -5 : 0 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
+          initial={{ opacity: 0, y: position === 'bottom' ? -5 : position === 'top' ? 5 : 0 }}
+          animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           style={{
@@ -131,7 +144,6 @@ export const OnboardingTooltip = ({
     </AnimatePresence>
   );
 
-  // Use portal to render at document body level
   if (typeof document !== 'undefined') {
     return createPortal(tooltipContent, document.body);
   }
