@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Upload, X, Loader2 } from 'lucide-react';
 
 interface OnboardingSettingsProps {
   topic: {
@@ -18,6 +19,7 @@ interface OnboardingSettingsProps {
       welcome_card_about_link?: boolean;
       about_page_enabled?: boolean;
       about_page_content?: string;
+      about_page_photo_url?: string;
       [key: string]: any;
     };
   };
@@ -33,9 +35,81 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
   const [showAboutLink, setShowAboutLink] = useState(config.welcome_card_about_link ?? false);
   const [aboutPageEnabled, setAboutPageEnabled] = useState(config.about_page_enabled ?? false);
   const [aboutContent, setAboutContent] = useState(config.about_page_content || '');
+  const [aboutPhotoUrl, setAboutPhotoUrl] = useState(config.about_page_photo_url || '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `about-photo.${fileExt}`;
+      const filePath = `${topic.id}/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('topic-assets')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('topic-assets')
+        .getPublicUrl(filePath);
+
+      setAboutPhotoUrl(publicUrl);
+      
+      toast({
+        title: "Image uploaded",
+        description: "Don't forget to save your settings"
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setAboutPhotoUrl('');
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -49,6 +123,7 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
         welcome_card_about_link: showAboutLink,
         about_page_enabled: aboutPageEnabled,
         about_page_content: aboutContent,
+        about_page_photo_url: aboutPhotoUrl,
       };
 
       const { error } = await supabase
@@ -160,19 +235,76 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
           </div>
 
           {aboutPageEnabled && (
-            <div className="pl-4 border-l-2 border-muted">
-              <Label htmlFor="aboutContent">About Page Content</Label>
-              <textarea
-                id="aboutContent"
-                value={aboutContent}
-                onChange={(e) => setAboutContent(e.target.value)}
-                placeholder="Tell visitors about your feed, what content they can expect, and who curates it..."
-                className="w-full mt-1 p-3 border rounded-md min-h-[120px] text-sm resize-y bg-background"
-                maxLength={2000}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {aboutContent.length}/2000 characters
-              </p>
+            <div className="space-y-4 pl-4 border-l-2 border-muted">
+              {/* Image Upload */}
+              <div>
+                <Label>About Page Photo</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Add an image to personalize your about page
+                </p>
+                
+                {aboutPhotoUrl ? (
+                  <div className="relative w-full max-w-xs">
+                    <img 
+                      src={aboutPhotoUrl} 
+                      alt="About page preview" 
+                      className="w-full h-32 object-cover rounded-md border"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="gap-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Upload Image
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* About Content */}
+              <div>
+                <Label htmlFor="aboutContent">About Page Content</Label>
+                <textarea
+                  id="aboutContent"
+                  value={aboutContent}
+                  onChange={(e) => setAboutContent(e.target.value)}
+                  placeholder="Tell visitors about your feed, what content they can expect, and who curates it..."
+                  className="w-full mt-1 p-3 border rounded-md min-h-[120px] text-sm resize-y bg-background"
+                  maxLength={2000}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {aboutContent.length}/2000 characters
+                </p>
+              </div>
             </div>
           )}
         </div>
