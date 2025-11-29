@@ -18,7 +18,7 @@ interface FeedOnboardingOrchestratorProps {
   onWelcomeClose?: () => void;
 }
 
-type OnboardingStep = 'welcome' | 'live' | 'filter' | 'play' | 'notifications' | 'complete';
+type OnboardingStep = 'welcome' | 'live' | 'filter' | 'play' | 'notifications' | 'whatsapp' | 'complete';
 
 export const FeedOnboardingOrchestrator = ({
   topicSlug,
@@ -86,6 +86,8 @@ export const FeedOnboardingOrchestrator = ({
         case 'play':
           return 'notifications';
         case 'notifications':
+          return 'whatsapp';
+        case 'whatsapp':
           // Mark onboarding complete
           localStorage.setItem(`onboarding_complete_${topicSlug}`, 'true');
           return 'complete';
@@ -158,6 +160,16 @@ export const FeedOnboardingOrchestrator = ({
         targetSelector="[data-onboarding='notifications']"
         position="bottom"
         isVisible={currentStep === 'notifications'}
+        onDismiss={handleTooltipDismiss}
+        autoDismissMs={3000}
+      />
+
+      {/* Tooltip 5: WhatsApp Share */}
+      <OnboardingTooltip
+        message="WhatsApp any story"
+        targetSelector="[data-onboarding='whatsapp-share']"
+        position="top"
+        isVisible={currentStep === 'whatsapp'}
         onDismiss={handleTooltipDismiss}
         autoDismissMs={3000}
       />
