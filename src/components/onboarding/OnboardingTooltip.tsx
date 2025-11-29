@@ -24,13 +24,15 @@ export const OnboardingTooltip = ({
 }: OnboardingTooltipProps) => {
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
-  // Add/remove highlight class on target element
+  // Add/remove highlight class on target element and scroll into view
   useEffect(() => {
     if (!isVisible) return;
 
     const target = document.querySelector(targetSelector);
     if (target) {
       target.classList.add(HIGHLIGHT_CLASS);
+      // Scroll target into view smoothly
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       console.log(`[OnboardingTooltip] Added highlight to ${targetSelector}`);
     }
 
