@@ -1173,6 +1173,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          page_type: string | null
           referrer: string | null
           topic_id: string
           user_agent: string | null
@@ -1183,6 +1184,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          page_type?: string | null
           referrer?: string | null
           topic_id: string
           user_agent?: string | null
@@ -1193,6 +1195,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          page_type?: string | null
           referrer?: string | null
           topic_id?: string
           user_agent?: string | null
