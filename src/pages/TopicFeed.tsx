@@ -472,7 +472,6 @@ const TopicFeed = () => {
 
                 <button
                   onClick={() => setShowNotificationModal(true)}
-                  data-onboarding="notifications"
                   className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Manage notifications"
                 >
@@ -572,38 +571,16 @@ const TopicFeed = () => {
       <div className="bg-background border-b border-border">
         <div className="container mx-auto px-1 md:px-4 py-16">
           {/* Top left: Avatar (if logged in) and Live pill (if active) */}
-          <div className="absolute left-4 top-4 flex items-center gap-2">
-            {user && (
+          {/* User avatar - top left corner */}
+          {user && (
+            <div className="absolute left-4 top-4">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                   {user.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-            )}
-            {isLive && avgDailyStories > 1 ? (
-              <span 
-                data-onboarding="live-badge"
-                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Live • {Math.round(avgDailyStories)}/day
-              </span>
-            ) : isLive ? (
-              <span 
-                data-onboarding="live-badge"
-                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Live
-              </span>
-            ) : null}
-          </div>
+            </div>
+          )}
 
           {/* Topic Header - Clean and minimal with branding support */}
           <div className="text-center space-y-4">
@@ -654,6 +631,19 @@ const TopicFeed = () => {
 
             {/* Action buttons - consistent with sticky header layout */}
             <div className="flex items-center justify-center gap-2 pt-2">
+              {/* Live Badge - in header row for onboarding visibility */}
+              {isLive && (
+                <span 
+                  data-onboarding="live-badge"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  {avgDailyStories > 1 ? `Live • ${Math.round(avgDailyStories)}/day` : 'Live'}
+                </span>
+              )}
               {/* About Page Link - if enabled */}
               {(topic.branding_config as any)?.about_page_enabled && (
                 <TooltipProvider>
@@ -743,6 +733,22 @@ const TopicFeed = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {/* Notifications button - in main header for onboarding */}
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                data-onboarding="notifications"
+                className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                aria-label="Manage notifications"
+              >
+                <Bell className="w-4 h-4" />
+                {shouldShowNotificationPrompt && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-background"></span>
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
