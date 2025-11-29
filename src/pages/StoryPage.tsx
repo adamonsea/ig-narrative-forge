@@ -198,9 +198,9 @@ const StoryPage = () => {
           storyIndex={0}
         />
         
-        {/* Story Rating Stats */}
+        {/* Story Rating Stats - links to Play Mode */}
         <div className="p-4">
-          <StoryRatingCard storyId={story.id} />
+          <StoryRatingCard storyId={story.id} topicSlug={slug} />
         </div>
       </div>
     </div>
