@@ -25,6 +25,10 @@ const AboutFeed = () => {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Update favicon based on topic branding - must be called unconditionally
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
+
   useEffect(() => {
     const fetchTopic = async () => {
       if (!slug) return;
@@ -60,10 +64,6 @@ const AboutFeed = () => {
       </div>
     );
   }
-
-  // Update favicon based on topic branding
-  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
-  useTopicFavicon(faviconUrl);
 
   if (!topic || !topic.branding_config?.about_page_enabled) {
     return (
