@@ -89,12 +89,15 @@ const markQuestionAnswered = (questionId: string) => {
 
 export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) => {
   const [visitorId, setVisitorId] = useState<string>('');
-  const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(new Set());
+  // Questions answered BEFORE this session (loaded from localStorage on mount) - these are filtered out
+  const [persistedAnswered, setPersistedAnswered] = useState<Set<string>>(new Set());
+  // Questions answered DURING this session - saved to localStorage but NOT filtered out until refresh
+  const [sessionAnswered, setSessionAnswered] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setVisitorId(getVisitorId());
-      setAnsweredQuestions(getAnsweredQuestions());
+      setPersistedAnswered(getAnsweredQuestions());
     }
   }, []);
 
@@ -151,19 +154,24 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Filter out already answered questions for display
-  const unansweredQuestions = query.data?.filter(q => !answeredQuestions.has(q.id)) || [];
+  // Filter out questions that were answered BEFORE this session
+  // Questions answered during this session stay visible until refresh
+  const unansweredQuestions = query.data?.filter(q => !persistedAnswered.has(q.id)) || [];
+
+  // Combined set for checking if a question has been answered (either session)
+  const allAnswered = new Set([...persistedAnswered, ...sessionAnswered]);
 
   return {
     ...query,
     questions: query.data || [],
     unansweredQuestions,
-    answeredQuestions,
+    answeredQuestions: allAnswered,
     visitorId,
-    isQuestionAnswered: (questionId: string) => answeredQuestions.has(questionId),
+    isQuestionAnswered: (questionId: string) => allAnswered.has(questionId),
     markAsAnswered: (questionId: string) => {
+      // Save to localStorage for next session, but don't filter out immediately
       markQuestionAnswered(questionId);
-      setAnsweredQuestions(prev => new Set([...prev, questionId]));
+      setSessionAnswered(prev => new Set([...prev, questionId]));
     }
   };
 };
