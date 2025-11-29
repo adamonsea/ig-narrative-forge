@@ -12,6 +12,7 @@ interface OnboardingSettingsProps {
   topic: {
     id: string;
     name: string;
+    slug?: string;
     branding_config?: {
       welcome_card_enabled?: boolean;
       welcome_card_headline?: string;
@@ -112,7 +113,8 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
   };
 
   const handlePreview = () => {
-    const slug = topic.name.toLowerCase().replace(/\s+/g, '-');
+    // Use actual slug if available, otherwise derive from name
+    const slug = topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-');
     
     // Clear localStorage for this topic's onboarding state
     localStorage.removeItem(`welcome_shown_${slug}`);

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StoryPageSEO } from "@/components/seo/StoryPageSEO";
 import { StoryStructuredData } from "@/components/seo/StoryStructuredData";
 import { StoryRatingCard } from "@/components/swipe-mode/StoryRatingCard";
+import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 
 interface Story {
   id: string;
@@ -123,6 +124,10 @@ const StoryPage = () => {
 
     loadStoryAndTopic();
   }, [slug, storyId, navigate]);
+
+  // Update favicon based on topic branding
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
 
   if (loading) {
     return (

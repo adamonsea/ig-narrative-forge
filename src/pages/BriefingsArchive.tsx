@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BriefingsArchiveSEO } from "@/components/seo/BriefingsArchiveSEO";
+import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 
 interface Topic {
   id: string;
@@ -37,6 +38,10 @@ export default function BriefingsArchive() {
   const [weeklyRoundups, setWeeklyRoundups] = useState<Roundup[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
+
+  // Update favicon based on topic branding
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
 
   useEffect(() => {
     const fetchData = async () => {

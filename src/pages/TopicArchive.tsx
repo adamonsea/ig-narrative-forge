@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { TopicArchiveSEO } from "@/components/seo/TopicArchiveSEO";
 import { StoryCard } from "@/components/StoryCard";
+import { useTopicFavicon } from "@/hooks/useTopicFavicon";
 import {
   Pagination,
   PaginationContent,
@@ -36,6 +37,7 @@ interface Topic {
   topic_type: string;
   branding_config?: {
     logo_url?: string;
+    icon_url?: string;
     subheader?: string;
   };
 }
@@ -51,6 +53,10 @@ const TopicArchive = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Update favicon based on topic branding
+  const faviconUrl = topic?.branding_config?.icon_url || topic?.branding_config?.logo_url;
+  useTopicFavicon(faviconUrl);
 
   const totalPages = Math.ceil(totalCount / STORIES_PER_PAGE);
 
@@ -87,6 +93,7 @@ const TopicArchive = () => {
           topic_type: topicData.topic_type,
           branding_config: brandingConfig ? {
             logo_url: brandingConfig.logo_url,
+            icon_url: brandingConfig.icon_url,
             subheader: brandingConfig.subheader
           } : undefined
         });

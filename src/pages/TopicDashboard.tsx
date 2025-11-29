@@ -988,6 +988,7 @@ const TopicDashboard = () => {
                         topic={{
                           id: topic.id,
                           name: topic.name,
+                          slug: topic.slug,
                           branding_config: topic.branding_config
                         }}
                         onUpdate={() => loadTopicAndStats()}
