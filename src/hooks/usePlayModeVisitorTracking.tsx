@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate a visitor ID based on browser fingerprint and IP approximation
+// Generate a visitor ID based on browser fingerprint
 const generateVisitorId = (): string => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -17,22 +17,23 @@ const generateVisitorId = (): string => {
     canvas.toDataURL()
   ].join('|');
   
-  // Simple hash function
   let hash = 0;
   for (let i = 0; i < fingerprint.length; i++) {
     const char = fingerprint.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   
   return 'visitor_' + Math.abs(hash).toString(36);
 };
 
-export const useVisitorTracking = (topicId: string | undefined) => {
+/**
+ * Hook to track Play Mode page visits (separate from feed visits)
+ */
+export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
   const [visitorId, setVisitorId] = useState<string>('');
 
   useEffect(() => {
-    // Generate visitor ID once on mount
     const id = generateVisitorId();
     setVisitorId(id);
   }, []);
@@ -54,15 +55,14 @@ export const useVisitorTracking = (topicId: string | undefined) => {
             user_agent: userAgent,
             referrer: referrer || null,
             visit_date: new Date().toISOString().split('T')[0],
-            page_type: 'feed'
+            page_type: 'play'
           } as any);
       } catch (error) {
-        // Silent fail - don't disrupt user experience
-        console.debug('Visitor tracking failed:', error);
+        console.debug('Play Mode visitor tracking failed:', error);
       }
     };
 
-    // Track visit after a short delay to ensure page has loaded
+    // Track visit after a short delay
     const timer = setTimeout(trackVisit, 1000);
     return () => clearTimeout(timer);
   }, [topicId, visitorId]);

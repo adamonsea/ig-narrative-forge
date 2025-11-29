@@ -18,6 +18,7 @@ import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
+import { useStoryImpressionTracking } from "@/hooks/useStoryImpressionTracking";
 import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,6 +123,9 @@ const TopicFeed = () => {
 
   // Track visitor for analytics
   const visitorId = useVisitorTracking(topic?.id);
+  
+  // Track story impressions when stories are viewed
+  const { trackImpression } = useStoryImpressionTracking(topic?.id);
 
   // Detect first scroll and show pulse animation on play mode icon
   useEffect(() => {
@@ -185,6 +189,9 @@ const TopicFeed = () => {
 
   // Track story swipes - only count stories where user has swiped at least once
   const handleStorySwipe = useCallback((storyId: string) => {
+    // Track story impression when user swipes through slides
+    trackImpression(storyId);
+    
     if (!shouldShowNotificationPrompt || !topic?.id) return;
 
     setStoriesWithSwipes(prev => {
@@ -192,7 +199,7 @@ const TopicFeed = () => {
       newSet.add(storyId);
       return newSet;
     });
-  }, [shouldShowNotificationPrompt, topic?.id]);
+  }, [shouldShowNotificationPrompt, topic?.id, trackImpression]);
 
   // Show collections hint on page load (once per topic)
   useEffect(() => {

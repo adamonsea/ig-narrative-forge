@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { useTopicFavicon } from '@/hooks/useTopicFavicon';
+import { usePlayModeVisitorTracking } from '@/hooks/usePlayModeVisitorTracking';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
@@ -50,6 +51,9 @@ export default function SwipeMode() {
   // Apply topic favicon
   const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
   useTopicFavicon(faviconUrl);
+  
+  // Track Play Mode visitor (even anonymous)
+  usePlayModeVisitorTracking(topicId || undefined);
 
   // Fetch topic data
   useEffect(() => {

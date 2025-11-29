@@ -4712,6 +4712,7 @@ export type Database = {
       get_topic_visitor_stats: {
         Args: { p_topic_id: string }
         Returns: {
+          play_mode_visits_week: number
           visits_this_week: number
           visits_today: number
         }[]
@@ -4778,12 +4779,13 @@ export type Database = {
           }
       record_feed_visit: {
         Args: {
+          p_page_type?: string
           p_referrer?: string
           p_topic_id: string
           p_user_agent?: string
           p_visitor_id: string
         }
-        Returns: boolean
+        Returns: undefined
       }
       record_newsletter_signup_attempt: {
         Args: { p_email: string; p_ip_hash?: string }
