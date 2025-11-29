@@ -1143,6 +1143,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                 variant="outline"
                 size="sm"
                 onClick={handleWhatsAppShare}
+                data-onboarding="whatsapp-share"
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
                 title="Share on WhatsApp"
               >

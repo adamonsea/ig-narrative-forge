@@ -572,13 +572,60 @@ const TopicFeed = () => {
         <div className="container mx-auto px-1 md:px-4 py-16">
           {/* Top left: Avatar (if logged in) and Live pill (if active) */}
           {/* User avatar - top left corner */}
-          {user && (
-            <div className="absolute left-4 top-4">
+          {/* Top-left: User avatar and Live badge */}
+          <div className="absolute left-4 top-4 flex items-center gap-2">
+            {user && (
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                   {user.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
+            )}
+            {isLive && avgDailyStories > 1 ? (
+              <span 
+                data-onboarding="live-badge"
+                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live • {Math.round(avgDailyStories)}/day
+              </span>
+            ) : isLive ? (
+              <span 
+                data-onboarding="live-badge"
+                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live
+              </span>
+            ) : null}
+          </div>
+
+          {/* Top-right: About icon */}
+          {(topic.branding_config as any)?.about_page_enabled && (
+            <div className="absolute right-4 top-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to={`/feed/${slug}/about`}>
+                      <button
+                        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="About this feed"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>About this feed</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
 
@@ -631,40 +678,6 @@ const TopicFeed = () => {
 
             {/* Action buttons - consistent with sticky header layout */}
             <div className="flex items-center justify-center gap-2 pt-2">
-              {/* Live Badge - in header row for onboarding visibility */}
-              {isLive && (
-                <span 
-                  data-onboarding="live-badge"
-                  className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                  </span>
-                  {avgDailyStories > 1 ? `Live • ${Math.round(avgDailyStories)}/day` : 'Live'}
-                </span>
-              )}
-              {/* About Page Link - if enabled */}
-              {(topic.branding_config as any)?.about_page_enabled && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link to={`/feed/${slug}/about`}>
-                        <button
-                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-                          aria-label="About this feed"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>About this feed</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
               {/* Play Mode - First when enabled */}
               {playModeEnabled && (
                 <Link to={`/play/${slug}`} data-onboarding="play-mode">
