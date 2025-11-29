@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Heart, ThumbsDown } from 'lucide-react';
+import { Heart, ThumbsDown, Gamepad2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface StoryRatingCardProps {
   storyId: string;
+  topicSlug?: string;
 }
 
 interface SwipeStats {
@@ -13,7 +15,7 @@ interface SwipeStats {
   total: number;
 }
 
-export const StoryRatingCard = ({ storyId }: StoryRatingCardProps) => {
+export const StoryRatingCard = ({ storyId, topicSlug }: StoryRatingCardProps) => {
   const [stats, setStats] = useState<SwipeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -85,17 +87,12 @@ export const StoryRatingCard = ({ storyId }: StoryRatingCardProps) => {
     ? Math.round((stats.likeCount / stats.total) * 100) 
     : 0;
 
-  if (!hasRatings) {
-    return (
-      <div className="flex items-center justify-center gap-4 py-3 px-4 bg-muted/50 rounded-lg">
-        <Heart className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Be the first to rate this story in Play Mode</span>
-        <ThumbsDown className="w-4 h-4 text-muted-foreground" />
-      </div>
-    );
-  }
-
-  return (
+  const cardContent = !hasRatings ? (
+    <div className="flex items-center justify-center gap-4 py-3 px-4 bg-muted/50 rounded-lg">
+      <Gamepad2 className="w-4 h-4 text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">Be the first to rate this story in Play Mode</span>
+    </div>
+  ) : (
     <div className="flex items-center justify-center gap-6 py-3 px-4 bg-muted/50 rounded-lg">
       <div className="flex items-center gap-2">
         <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
@@ -118,4 +115,17 @@ export const StoryRatingCard = ({ storyId }: StoryRatingCardProps) => {
       </div>
     </div>
   );
+
+  if (topicSlug) {
+    return (
+      <Link 
+        to={`/play/${topicSlug}`} 
+        className="block hover:opacity-80 transition-opacity"
+      >
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 };
