@@ -2832,6 +2832,55 @@ export type Database = {
           },
         ]
       }
+      story_impressions: {
+        Row: {
+          created_at: string
+          id: string
+          impression_date: string
+          story_id: string
+          topic_id: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          impression_date?: string
+          story_id: string
+          topic_id: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          impression_date?: string
+          story_id?: string
+          topic_id?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_impressions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_impressions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_impressions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_interactions: {
         Row: {
           created_at: string
@@ -4492,6 +4541,18 @@ export type Database = {
           updated_at: string
           url: string
           word_count: number
+        }[]
+      }
+      get_topic_engagement_averages: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          avg_feed_stories_swiped: number
+          avg_final_slides_seen: number
+          avg_stories_scrolled: number
+          avg_stories_swiped: number
+          play_mode_visitors_week: number
+          total_scrollers: number
+          total_swipers: number
         }[]
       }
       get_topic_engagement_stats: {
