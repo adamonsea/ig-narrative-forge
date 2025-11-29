@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown } from "lucide-react";
+import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown, Gamepad2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +33,7 @@ interface Topic {
   stories_published_this_week?: number;
   visits_today?: number;
   visits_this_week?: number;
+  play_mode_visits_week?: number;
   articles_swiped?: number;
   articles_liked?: number;
   articles_disliked?: number;
@@ -42,6 +43,8 @@ interface Topic {
   installs_total?: number;
   registrants_this_week?: number;
   registrants_total?: number;
+  avg_stories_scrolled?: number;
+  avg_stories_swiped?: number;
   branding_config?: any;
   _count?: {
     articles: number;
@@ -79,7 +82,7 @@ export const TopicManager = () => {
         const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
           // Get accurate stats that match the Arrivals tab UX
           // 1) Multi-tenant articles for this topic
-          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats, swipeInsights, quizStats] = await Promise.all([
+          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats, swipeInsights, quizStats, engagementAverages] = await Promise.all([
             supabase.rpc('get_topic_articles_multi_tenant', {
               p_topic_id: topic.id,
               p_status: null,
@@ -108,7 +111,7 @@ export const TopicManager = () => {
               .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
               .eq('topic_articles.topic_id', topic.id)
               .not('topic_article_id', 'is', null),
-            // Get visitor stats
+            // Get visitor stats (now includes play_mode_visits_week)
             supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id }),
             // Get interaction stats (swipes and shares)
             supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 }),
@@ -119,7 +122,9 @@ export const TopicManager = () => {
             // Get liked stories count from Play Mode
             supabase.rpc('get_swipe_insights', { p_topic_id: topic.id }),
             // Get quiz stats
-            supabase.rpc('get_topic_quiz_stats', { p_topic_id: topic.id, p_days: 7 })
+            supabase.rpc('get_topic_quiz_stats', { p_topic_id: topic.id, p_days: 7 }),
+            // Get engagement averages (avg stories scrolled, avg stories swiped)
+            (supabase.rpc as any)('get_topic_engagement_averages', { p_topic_id: topic.id, p_days: 7 })
           ]);
 
         const mtArticles = (mtArticlesRes.data || []) as any[];
@@ -159,7 +164,7 @@ export const TopicManager = () => {
         ) && !publishedIds.has(a.id) && !queuedIds.has(a.id) && !isParliamentaryArticle(a)).length;
 
           const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
-          const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0 };
+          const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0, play_mode_visits_week: 0 };
           const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
           const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
           const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
@@ -167,6 +172,7 @@ export const TopicManager = () => {
           const likedCount = Number(swipeInsightsData?.total_likes) || 0;
           const dislikedCount = Number(swipeInsightsData?.total_discards) || 0;
           const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
+          const engagementData = engagementAverages?.data?.[0] || { avg_stories_scrolled: 0, avg_stories_swiped: 0 };
 
           return {
             ...topic,
@@ -175,6 +181,7 @@ export const TopicManager = () => {
             stories_published_this_week: publishedThisWeek,
             visits_today: visitorData.visits_today || 0,
             visits_this_week: visitorData.visits_this_week || 0,
+            play_mode_visits_week: Number(visitorData.play_mode_visits_week) || 0,
             articles_swiped: Number(interactionData.articles_swiped) || 0,
             articles_liked: likedCount,
             articles_disliked: dislikedCount,
@@ -183,7 +190,9 @@ export const TopicManager = () => {
             installs_this_week: Number(installData.installs_this_week) || 0,
             installs_total: Number(installData.installs_total) || 0,
             registrants_this_week: Number(registrantData.registrants_this_week) || 0,
-            registrants_total: Number(registrantData.registrants_total) || 0
+            registrants_total: Number(registrantData.registrants_total) || 0,
+            avg_stories_scrolled: Number(engagementData.avg_stories_scrolled) || 0,
+            avg_stories_swiped: Number(engagementData.avg_stories_swiped) || 0
           };
       }));
       
@@ -433,7 +442,7 @@ export const TopicManager = () => {
                               <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
                                 Play Mode
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-2 gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
@@ -467,20 +476,41 @@ export const TopicManager = () => {
                                     <p>Stories rated negatively in Play Mode</p>
                                   </TooltipContent>
                                 </Tooltip>
-                                
+                              </div>
+                              
+                              {/* Play Mode Visitors & Avg Swiped */}
+                              <div className="grid grid-cols-2 gap-2 mt-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                      <div className="text-lg font-bold text-foreground">
-                                        {(topic.articles_liked || 0) + (topic.articles_disliked || 0)}
+                                    <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-blue-500 flex items-center gap-1">
+                                        <Gamepad2 className="w-3 h-3" />
+                                        {topic.play_mode_visits_week || 0}
                                       </div>
                                       <div className="text-xs font-medium text-muted-foreground">
-                                        Total
+                                        Visitors
                                       </div>
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Total Play Mode ratings</p>
+                                    <p>Unique visitors to Play Mode this week</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-cyan-500/10 rounded-lg p-2 border border-cyan-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-cyan-500 flex items-center gap-1">
+                                        <TrendingUp className="w-3 h-3" />
+                                        {topic.avg_stories_swiped || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Avg/User
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Average stories swiped per user this week</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -491,7 +521,7 @@ export const TopicManager = () => {
                               <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
                                 Feed Mode
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="grid grid-cols-3 gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
@@ -522,6 +552,23 @@ export const TopicManager = () => {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Quiz questions answered by readers</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="bg-green-500/10 rounded-lg p-2 border border-green-500/30 cursor-help">
+                                      <div className="text-lg font-bold text-green-500 flex items-center gap-1">
+                                        <TrendingUp className="w-3 h-3" />
+                                        {topic.avg_stories_scrolled || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Avg/User
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Average stories scrolled per visitor this week</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
