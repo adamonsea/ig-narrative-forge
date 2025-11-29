@@ -11,7 +11,7 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, Gamepad2 } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, Gamepad2, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -22,7 +22,6 @@ import { TopicFeedSEO } from "@/components/seo/TopicFeedSEO";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoryNotifications } from "@/hooks/useStoryNotifications";
-import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { NewsletterSignupModal } from "@/components/NewsletterSignupModal";
 import { NotificationPreferencesModal } from "@/components/NotificationPreferencesModal";
 import { CommunityPulseSlides } from "@/components/CommunityPulseSlides";
@@ -35,6 +34,7 @@ import { AutomatedInsightCard } from "@/components/AutomatedInsightCard";
 import { useQuizCards } from "@/hooks/useQuizCards";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { useTopicMetadata } from "@/hooks/useTopicMetadata";
+import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -406,11 +406,17 @@ const TopicFeed = () => {
         logoUrl={topic.branding_config?.logo_url}
       />
 
-      {/* Add to Home Screen Prompt */}
-      <AddToHomeScreen
-        topicName={topic.name}
+      {/* Onboarding Orchestrator */}
+      <FeedOnboardingOrchestrator
         topicSlug={slug || ''}
-        topicIcon={topic.branding_config?.icon_url || topic.branding_config?.logo_url}
+        playModeEnabled={playModeEnabled}
+        config={{
+          welcomeCardEnabled: (topic.branding_config as any)?.welcome_card_enabled,
+          welcomeCardHeadline: (topic.branding_config as any)?.welcome_card_headline,
+          welcomeCardCtaText: (topic.branding_config as any)?.welcome_card_cta_text,
+          welcomeCardAboutLink: (topic.branding_config as any)?.welcome_card_about_link,
+          aboutPageEnabled: (topic.branding_config as any)?.about_page_enabled,
+        }}
       />
 
       {/* Sticky header for scrollers */}
@@ -466,6 +472,7 @@ const TopicFeed = () => {
 
                 <button
                   onClick={() => setShowNotificationModal(true)}
+                  data-onboarding="notifications"
                   className="relative flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   aria-label="Manage notifications"
                 >
@@ -574,7 +581,10 @@ const TopicFeed = () => {
               </Avatar>
             )}
             {isLive && avgDailyStories > 1 ? (
-              <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+              <span 
+                data-onboarding="live-badge"
+                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+              >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -582,7 +592,10 @@ const TopicFeed = () => {
                 Live • {Math.round(avgDailyStories)}/day
               </span>
             ) : isLive ? (
-              <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+              <span 
+                data-onboarding="live-badge"
+                className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+              >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -641,9 +654,30 @@ const TopicFeed = () => {
 
             {/* Action buttons - consistent with sticky header layout */}
             <div className="flex items-center justify-center gap-2 pt-2">
+              {/* About Page Link - if enabled */}
+              {(topic.branding_config as any)?.about_page_enabled && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to={`/feed/${slug}/about`}>
+                        <button
+                          className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                          aria-label="About this feed"
+                        >
+                          <HelpCircle className="w-4 h-4" />
+                        </button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>About this feed</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
               {/* Play Mode - First when enabled */}
               {playModeEnabled && (
-                <Link to={`/play/${slug}`}>
+                <Link to={`/play/${slug}`} data-onboarding="play-mode">
                   <button
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
                       showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
@@ -660,6 +694,7 @@ const TopicFeed = () => {
 
               <button
                 onClick={() => setIsModalOpen(true)}
+                data-onboarding="filter-button"
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                 aria-label="Open filters"
               >
@@ -868,6 +903,20 @@ const TopicFeed = () => {
                     />
                   </div>
                 );
+
+                {/* Inline PWA Card - appears after 5th story */}
+                if (index === 4) {
+                  items.push(
+                    <div key="inline-pwa-card" className="w-full max-w-2xl">
+                      <InlinePWACard
+                        topicName={topic?.name || ''}
+                        topicSlug={slug || ''}
+                        topicIcon={topic?.branding_config?.icon_url || topic?.branding_config?.logo_url}
+                        storiesScrolledPast={storiesScrolledPast}
+                      />
+                    </div>
+                  );
+                }
               }
 
               // Render parliamentary mention as a story carousel
