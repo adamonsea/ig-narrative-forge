@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, X, Loader2, ExternalLink } from 'lucide-react';
 
 interface OnboardingSettingsProps {
   topic: {
@@ -109,6 +109,22 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
 
   const handleRemoveImage = () => {
     setAboutPhotoUrl('');
+  };
+
+  const handlePreview = () => {
+    const slug = topic.name.toLowerCase().replace(/\s+/g, '-');
+    
+    // Clear localStorage for this topic's onboarding state
+    localStorage.removeItem(`welcome_shown_${slug}`);
+    localStorage.removeItem(`onboarding_complete_${slug}`);
+    
+    toast({
+      title: "Preview mode enabled",
+      description: "Opening feed with fresh onboarding..."
+    });
+    
+    // Open the feed in a new tab
+    window.open(`/feed/${slug}`, '_blank');
   };
 
   const handleSave = async () => {
@@ -309,9 +325,17 @@ export function OnboardingSettings({ topic, onUpdate }: OnboardingSettingsProps)
           )}
         </div>
 
-        <Button onClick={handleSave} disabled={saving} className="w-full">
-          {saving ? "Saving..." : "Save Onboarding Settings"}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving} className="flex-1">
+            {saving ? "Saving..." : "Save Settings"}
+          </Button>
+          {welcomeEnabled && (
+            <Button variant="outline" onClick={handlePreview} className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Preview
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
