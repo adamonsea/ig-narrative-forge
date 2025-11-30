@@ -52,8 +52,8 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           if (reg) {
             await reg.showNotification(title, {
               body,
-              icon: '/favicon.ico',
-              badge: '/favicon.ico',
+              icon: '/curatr-icon.png',
+              badge: '/curatr-icon.png',
               tag,
               
               data: { url }
@@ -62,7 +62,7 @@ export const useStoryNotifications = (topicId: string | undefined, topicName: st
           }
         }
         if ('Notification' in window && Notification.permission === 'granted') {
-          const n = new Notification(title, { body, icon: '/favicon.ico', badge: '/favicon.ico', tag, requireInteraction: false });
+          const n = new Notification(title, { body, icon: '/curatr-icon.png', badge: '/curatr-icon.png', tag, requireInteraction: false });
           n.onclick = () => {
             window.focus();
             window.location.href = url;

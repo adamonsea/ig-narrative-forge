@@ -16,8 +16,8 @@ self.addEventListener('push', (event) => {
   let data = { 
     title: 'New Update', 
     body: 'You have new content',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/curatr-icon.png',
+    badge: '/curatr-icon.png',
     url: '/',
     topic: '',
     color: '#000000'
@@ -40,8 +40,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: data.body || 'New content available',
-    icon: data.icon || '/favicon.ico',
-    badge: data.badge || '/favicon.ico',
+    icon: data.icon || '/curatr-icon.png',
+    badge: data.badge || '/curatr-icon.png',
     tag: data.topic || 'general', // Group notifications by topic
     data: {
       url: data.url || '/',
