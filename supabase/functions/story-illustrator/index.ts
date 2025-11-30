@@ -847,21 +847,112 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
           if (!geminiResponse.ok) {
             const geminiErrorText = await geminiResponse.text();
-            console.error('Gemini fallback also failed:', geminiErrorText);
-            throw new Error(`OpenAI moderation blocked and Gemini fallback failed: ${geminiErrorText}`);
-          }
+            console.error('Gemini fallback failed:', geminiErrorText);
+            
+            // Check if it's a credits issue - try Replicate FLUX as tertiary fallback
+            if (geminiResponse.status === 402 || geminiErrorText.includes('Not enough credits')) {
+              console.log('🔄 Gemini credits exhausted - trying Replicate FLUX fallback...');
+              
+              const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
+              if (!REPLICATE_API_KEY) {
+                throw new Error('OpenAI moderation blocked, Gemini credits exhausted, and Replicate not configured. Please add Lovable AI credits or configure REPLICATE_API_KEY.');
+              }
 
-          const geminiData = await geminiResponse.json();
-          const base64Data = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          
-          if (!base64Data || !base64Data.includes('base64,')) {
-            throw new Error('No valid image data in Gemini fallback response');
-          }
+              // FLUX-specific prompt (simplified for reliability)
+              const fluxFallbackPrompt = `Editorial illustration for news story. Subject: ${subjectMatter}. Story: "${story.title}". Style: Clean editorial illustration with bold black outlines and ${primaryColor} accent color. Tone: ${storyTone}. No text.`;
 
-          const base64String = base64Data.split('base64,')[1];
-          imageBase64 = base64String;
-          
-          console.log('✅ Successfully generated image using Gemini fallback');
+              const fluxResponse = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Token ${REPLICATE_API_KEY}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'wait=60'
+                },
+                body: JSON.stringify({
+                  input: {
+                    prompt: fluxFallbackPrompt,
+                    aspect_ratio: '3:2',
+                    num_outputs: 1,
+                    output_format: 'png',
+                    go_fast: true
+                  }
+                }),
+              });
+
+              if (!fluxResponse.ok) {
+                const fluxErrorText = await fluxResponse.text();
+                console.error('Replicate FLUX fallback also failed:', fluxErrorText);
+                throw new Error('All image generation providers failed. Please try again later or contact support.');
+              }
+
+              const fluxPrediction = await fluxResponse.json();
+              const fluxPredictionId = fluxPrediction.id;
+              console.log('Replicate FLUX fallback prediction started:', fluxPredictionId);
+
+              // Poll for completion (max 60 seconds)
+              let fluxAttempts = 0;
+              const fluxMaxAttempts = 60;
+              let finalFluxPrediction;
+
+              while (fluxAttempts < fluxMaxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${fluxPredictionId}`, {
+                  headers: { 'Authorization': `Token ${REPLICATE_API_KEY}` },
+                });
+
+                if (!statusResponse.ok) {
+                  throw new Error(`Replicate status check failed: ${statusResponse.status}`);
+                }
+
+                finalFluxPrediction = await statusResponse.json();
+                console.log(`Replicate FLUX status (attempt ${fluxAttempts + 1}):`, finalFluxPrediction.status);
+
+                if (finalFluxPrediction.status === 'succeeded') break;
+                if (finalFluxPrediction.status === 'failed' || finalFluxPrediction.status === 'canceled') {
+                  throw new Error(`Replicate FLUX generation failed: ${finalFluxPrediction.error || 'Unknown error'}`);
+                }
+
+                fluxAttempts++;
+              }
+
+              if (!finalFluxPrediction || finalFluxPrediction.status !== 'succeeded') {
+                throw new Error('Replicate FLUX generation timeout');
+              }
+
+              const fluxImageUrl = finalFluxPrediction.output?.[0];
+              if (!fluxImageUrl) {
+                throw new Error('No image URL in Replicate FLUX response');
+              }
+
+              console.log('Fetching FLUX fallback image from:', fluxImageUrl);
+              const fluxImageResponse = await fetch(fluxImageUrl);
+              if (!fluxImageResponse.ok) {
+                throw new Error(`Failed to fetch FLUX image: ${fluxImageResponse.status}`);
+              }
+
+              const fluxImageBlob = await fluxImageResponse.blob();
+              const fluxArrayBuffer = await fluxImageBlob.arrayBuffer();
+              const fluxUint8Array = new Uint8Array(fluxArrayBuffer);
+              imageBase64 = safeBase64Encode(fluxUint8Array);
+              
+              console.log('✅ Successfully generated image using Replicate FLUX fallback');
+            } else {
+              throw new Error(`OpenAI moderation blocked and Gemini fallback failed: ${geminiErrorText}`);
+            }
+          } else {
+            const geminiData = await geminiResponse.json();
+            const base64Data = geminiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+            
+            if (!base64Data || !base64Data.includes('base64,')) {
+              throw new Error('No valid image data in Gemini fallback response');
+            }
+
+            const base64String = base64Data.split('base64,')[1];
+            imageBase64 = base64String;
+            
+            console.log('✅ Successfully generated image using Gemini fallback');
+          }
           
         } else {
           // Other OpenAI errors
