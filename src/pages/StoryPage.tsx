@@ -182,6 +182,7 @@ const StoryPage = () => {
         story={story}
         storyUrl={`${window.location.origin}/feed/${slug}/story/${story.id}`}
         topicName={topic.name}
+        topicSlug={slug || ''}
         position={0}
       />
 

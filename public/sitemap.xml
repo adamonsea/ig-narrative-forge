@@ -1,7 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap>
-    <loc>https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml</loc>
-    <lastmod>2025-11-25</lastmod>
-  </sitemap>
-</sitemapindex>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+  <!-- Static pages -->
+  <url>
+    <loc>https://curatr.pro/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://curatr.pro/pricing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Dynamic content served by edge function -->
+  <!-- For full dynamic sitemap with all topics and stories, visit: -->
+  <!-- https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1/sitemap-xml -->
+  
+  <!-- Note: Submit both this static sitemap AND the dynamic edge function URL to Google Search Console -->
+  <!-- The edge function provides real-time sitemap of all published content -->
+</urlset>

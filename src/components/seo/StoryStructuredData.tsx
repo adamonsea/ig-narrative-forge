@@ -10,6 +10,7 @@ interface Story {
   article?: {
     region?: string;
     source_url?: string;
+    published_at?: string;
   };
   mp_name?: string;
   constituency?: string;
@@ -19,6 +20,7 @@ interface StoryStructuredDataProps {
   story: Story;
   storyUrl: string;
   topicName: string;
+  topicSlug: string;
   position: number;
 }
 
@@ -26,8 +28,11 @@ export const StoryStructuredData = ({
   story,
   storyUrl,
   topicName,
+  topicSlug,
   position
 }: StoryStructuredDataProps) => {
+  const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
+  
   // Generate full article body from all slides
   const getArticleBody = () => {
     if (!story.slides || story.slides.length === 0) return story.title;
@@ -64,27 +69,69 @@ export const StoryStructuredData = ({
     return mentions;
   };
 
+  // Breadcrumb data for story page
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://curatr.pro"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": topicName,
+        "item": feedUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": story.title,
+        "item": storyUrl
+      }
+    ]
+  };
+
+  // Determine if this should be a NewsArticle (for regional/news topics)
+  const isNewsArticle = story.article?.region || story.article?.published_at;
+  const articleType = isNewsArticle ? "NewsArticle" : "Article";
+
   // Generate Article structured data with full content and enhanced metadata
   const articleData = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": articleType,
     "@id": storyUrl,
     "headline": story.title,
     "url": storyUrl,
-    "datePublished": story.created_at,
+    "datePublished": story.article?.published_at || story.created_at,
     "dateModified": story.created_at,
     "inLanguage": "en-GB",
+    "isAccessibleForFree": true,
     "author": {
       "@type": "Organization",
-      "name": story.author || topicName
+      "name": story.author || topicName,
+      "@id": "https://curatr.pro/#organization"
     },
     "publisher": {
       "@type": "Organization",
-      "name": "Breefly",
+      "name": "Curatr",
+      "@id": "https://curatr.pro/#organization",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://curatr.pro/placeholder.svg"
+        "url": "https://curatr.pro/curatr-icon.png"
       }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": storyUrl
+    },
+    "isPartOf": {
+      "@type": "CollectionPage",
+      "@id": feedUrl,
+      "name": `Curated ${topicName}`
     },
     "articleBody": articleBody,
     "articleSection": topicName,
@@ -94,19 +141,43 @@ export const StoryStructuredData = ({
     "about": {
       "@type": "Thing",
       "name": topicName,
-      ...(story.article?.region && { "location": story.article.region })
+      ...(story.article?.region && { 
+        "location": {
+          "@type": "Place",
+          "name": story.article.region
+        }
+      })
     },
+    // Speakable specification for AI voice assistants
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [
+        "h1",
+        ".story-headline",
+        ".slide-content"
+      ]
+    },
+    ...(isNewsArticle && story.article?.region && {
+      "dateline": story.article.region
+    }),
     ...(extractMentions().length > 0 && { "mentions": extractMentions() }),
     ...(story.cover_illustration_url && {
       "image": {
         "@type": "ImageObject",
-        "url": story.cover_illustration_url
-      }
+        "url": story.cover_illustration_url,
+        "caption": story.title
+      },
+      "thumbnailUrl": story.cover_illustration_url
     })
   };
 
   return (
     <Helmet>
+      {/* Breadcrumb structured data */}
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbData)}
+      </script>
+      {/* Article structured data */}
       <script type="application/ld+json">
         {JSON.stringify(articleData)}
       </script>

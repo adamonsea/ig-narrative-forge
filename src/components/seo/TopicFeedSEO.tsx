@@ -41,14 +41,104 @@ export const TopicFeedSEO = ({
   
   const siteName = `Curated ${topicName}`;
 
-  // Generate structured data for the feed
-  const structuredData = {
+  // ItemList structured data for the feed
+  const itemListData = {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    "@id": `${feedUrl}#itemlist`,
     "name": topicName,
     "description": description,
     "url": feedUrl,
+    "numberOfItems": 0, // Will be populated dynamically
     "itemListElement": []
+  };
+
+  // Breadcrumb structured data
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://curatr.pro"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": topicName,
+        "item": feedUrl
+      }
+    ]
+  };
+
+  // FAQ Schema for common questions about this topic feed
+  const faqData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": `What is the ${topicName} feed?`,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": `The ${topicName} feed is a curated collection of news and updates about ${topicName}${region ? ` in ${region}` : ''}. Stories are sourced from trusted publications and curated for relevance and quality.`
+        }
+      },
+      {
+        "@type": "Question",
+        "name": `How often is the ${topicName} feed updated?`,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": `The ${topicName} feed is updated multiple times daily as new stories are published by our curated sources. You can also subscribe to notifications for breaking news.`
+        }
+      },
+      {
+        "@type": "Question",
+        "name": `Can I get ${topicName} news delivered to me?`,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": `Yes! You can install the ${topicName} feed as an app on your phone's home screen for easy access. You can also enable push notifications to receive alerts when important stories are published.`
+        }
+      }
+    ]
+  };
+
+  // CollectionPage with speakable content
+  const collectionPageData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": feedUrl,
+    "name": title,
+    "description": description,
+    "url": feedUrl,
+    "inLanguage": "en-GB",
+    "isAccessibleForFree": true,
+    "isPartOf": {
+      "@id": "https://curatr.pro/#website"
+    },
+    "about": {
+      "@type": "Thing",
+      "name": topicName,
+      ...(region && { 
+        "location": {
+          "@type": "Place",
+          "name": region
+        }
+      })
+    },
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [
+        "h1",
+        ".story-headline",
+        "[data-speakable='true']"
+      ]
+    },
+    "publisher": {
+      "@id": "https://curatr.pro/#organization"
+    }
   };
 
   return (
@@ -78,9 +168,18 @@ export const TopicFeedSEO = ({
       {region && <meta name="geo.placename" content={region} />}
       {topicType && <meta name="article:section" content={topicType} />}
 
-      {/* Structured Data */}
+      {/* Structured Data - Multiple schemas for rich results */}
       <script type="application/ld+json">
-        {JSON.stringify(structuredData)}
+        {JSON.stringify(collectionPageData)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(breadcrumbData)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(faqData)}
+      </script>
+      <script type="application/ld+json">
+        {JSON.stringify(itemListData)}
       </script>
     </Helmet>
   );
