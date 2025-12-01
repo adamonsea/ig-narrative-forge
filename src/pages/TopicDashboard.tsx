@@ -23,6 +23,9 @@ import { OnboardingSettings } from "@/components/onboarding";
 import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { SentimentHub } from "@/components/SentimentHub";
+import { SentimentOverviewCard } from "@/components/SentimentOverviewCard";
+import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
+import { AutoKeywordInsights } from "@/components/AutoKeywordInsights";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
@@ -855,6 +858,13 @@ const TopicDashboard = () => {
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-8">
+            {/* Keyword Insights Overview */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <SentimentOverviewCard topicId={topic.id} />
+              <AutoKeywordInsights topicId={topic.id} />
+              <FlashbackInsightsPanel topicId={topic.id} topicSlug={topic.slug} />
+            </div>
+            
             {/* Sentiment Hub - Unified sentiment management */}
             <SentimentHub topicId={topic.id} />
             

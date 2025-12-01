@@ -469,3 +469,10 @@ verify_jwt = false
 [functions.submit-quiz-response]
 verify_jwt = false
 
+# ========================================
+# SENTIMENT HISTORY
+# ========================================
+
+[functions.sentiment-history-snapshot]
+verify_jwt = false
+

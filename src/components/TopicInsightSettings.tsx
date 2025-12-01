@@ -234,14 +234,13 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* This Time Last Month - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border opacity-50">
+          <div className="flex items-center justify-between p-4 rounded-lg border">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="flashback" className="font-medium">
                   📅 Flashback
                 </Label>
                 <Badge variant="default" className="text-xs">Premium</Badge>
-                <Badge variant="outline" className="text-xs">Coming Soon</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Shows what stories were popular 30 days ago
@@ -250,7 +249,10 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
             <Switch
               id="flashback"
               checked={settings.this_time_last_month_enabled}
-              disabled={true}
+              onCheckedChange={(checked) => 
+                updateSettings.mutate({ this_time_last_month_enabled: checked })
+              }
+              disabled={!settings.is_premium_tier}
             />
           </div>
         </div>
