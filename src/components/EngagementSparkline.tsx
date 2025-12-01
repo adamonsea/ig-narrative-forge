@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { Loader2 } from 'lucide-react';
+import { engagementColors } from '@/lib/designTokens';
 
 interface EngagementSparklineProps {
   topicId: string;
@@ -119,9 +120,9 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
       return (
         <div className="bg-popover border border-border rounded-lg px-2 py-1 shadow-lg">
           <p className="text-xs font-medium">{payload[0].payload.displayDate}</p>
-          <p className="text-xs text-primary">Swipes: {payload[0].value}</p>
-          <p className="text-xs text-pop">Shares: {payload[1].value}</p>
-          <p className="text-xs" style={{ color: 'hsl(270, 100%, 68%)' }}>Visitors: {payload[2].value}</p>
+          <p className="text-xs" style={{ color: engagementColors.swipes }}>Swipes: {payload[0]?.value || 0}</p>
+          <p className="text-xs" style={{ color: engagementColors.shares }}>Shares: {payload[1]?.value || 0}</p>
+          <p className="text-xs" style={{ color: engagementColors.visitors }}>Visitors: {payload[2]?.value || 0}</p>
         </div>
       );
     }
@@ -136,21 +137,21 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
           <Line 
             type="monotone" 
             dataKey="swipes" 
-            stroke="hsl(var(--primary))"
+            stroke={engagementColors.swipes}
             strokeWidth={1.5}
             dot={false}
           />
           <Line 
             type="monotone" 
             dataKey="shares" 
-            stroke="hsl(var(--pop))"
+            stroke={engagementColors.shares}
             strokeWidth={1.5}
             dot={false}
           />
           <Line 
             type="monotone" 
             dataKey="visitors" 
-            stroke="hsl(270, 100%, 68%)"
+            stroke={engagementColors.visitors}
             strokeWidth={1.5}
             dot={false}
           />

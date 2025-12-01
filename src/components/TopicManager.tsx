@@ -11,7 +11,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { CreateTopicDialog } from "@/components/CreateTopicDialog";
 import { EngagementSparkline } from "@/components/EngagementSparkline";
+import { EngagementFunnel } from "@/components/EngagementFunnel";
 import { SourceHealthBadge } from "@/components/SourceHealthBadge";
+import { engagementColors } from "@/lib/designTokens";
 
 interface Topic {
   id: string;
@@ -38,14 +40,14 @@ interface Topic {
   articles_liked?: number;
   articles_disliked?: number;
   share_clicks?: number;
+  source_clicks?: number;
   quiz_responses_count?: number;
   installs_this_week?: number;
   installs_total?: number;
   registrants_this_week?: number;
   registrants_total?: number;
-  avg_stories_scrolled?: number;
-  avg_stories_swiped?: number;
-  avg_feed_stories_swiped?: number;
+  avg_stories_engaged?: number;
+  avg_carousel_swipes?: number;
   avg_final_slides_seen?: number;
   branding_config?: any;
   _count?: {
@@ -175,10 +177,10 @@ export const TopicManager = () => {
           const dislikedCount = Number(swipeInsightsData?.total_discards) || 0;
           const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
           const engagementData = engagementAverages?.data?.[0] || { 
-            avg_stories_scrolled: 0, 
-            avg_stories_swiped: 0,
-            avg_feed_stories_swiped: 0,
-            avg_final_slides_seen: 0
+            avg_stories_engaged: 0, 
+            avg_carousel_swipes: 0,
+            avg_final_slides_seen: 0,
+            total_source_clicks: 0
           };
 
           return {
@@ -193,14 +195,14 @@ export const TopicManager = () => {
             articles_liked: likedCount,
             articles_disliked: dislikedCount,
             share_clicks: Number(interactionData.share_clicks) || 0,
+            source_clicks: Number(engagementData.total_source_clicks) || 0,
             quiz_responses_count: Number(quizData.quiz_responses_count) || 0,
             installs_this_week: Number(installData.installs_this_week) || 0,
             installs_total: Number(installData.installs_total) || 0,
             registrants_this_week: Number(registrantData.registrants_this_week) || 0,
             registrants_total: Number(registrantData.registrants_total) || 0,
-            avg_stories_scrolled: Number(engagementData.avg_stories_scrolled) || 0,
-            avg_stories_swiped: Number(engagementData.avg_stories_swiped) || 0,
-            avg_feed_stories_swiped: Number(engagementData.avg_feed_stories_swiped) || 0,
+            avg_stories_engaged: Number(engagementData.avg_stories_engaged) || 0,
+            avg_carousel_swipes: Number(engagementData.avg_carousel_swipes) || 0,
             avg_final_slides_seen: Number(engagementData.avg_final_slides_seen) || 0
           };
       }));
@@ -511,7 +513,7 @@ export const TopicManager = () => {
                                     <div className="bg-cyan-500/10 rounded-lg p-2 border border-cyan-500/30 cursor-help">
                                       <div className="text-lg font-bold text-cyan-500 flex items-center gap-1">
                                         <TrendingUp className="w-3 h-3" />
-                                        {topic.avg_stories_swiped || 0}
+                                        {topic.avg_carousel_swipes || 0}
                                       </div>
                                       <div className="text-xs font-medium text-muted-foreground">
                                         Avg/User
@@ -519,7 +521,7 @@ export const TopicManager = () => {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Average stories swiped per user this week</p>
+                                    <p>Average carousel swipes per user this week</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -530,45 +532,28 @@ export const TopicManager = () => {
                               <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
                                 Feed Mode
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-2 gap-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="bg-green-500/10 rounded-lg p-2 border border-green-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-green-500 flex items-center gap-1">
-                                        <Eye className="w-3 h-3" />
-                                        {topic.avg_stories_scrolled || 0}
+                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.engaged}15`, borderColor: `${engagementColors.engaged}40` }}>
+                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.engaged }}>
+                                        <MousePointer className="w-3 h-3" />
+                                        {topic.avg_stories_engaged || 0}
                                       </div>
                                       <div className="text-xs font-medium text-muted-foreground">
-                                        Scrolled
+                                        Engaged
                                       </div>
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Avg stories scrolled past per visitor</p>
+                                    <p>Avg unique stories engaged per visitor</p>
                                   </TooltipContent>
                                 </Tooltip>
                                 
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-blue-500 flex items-center gap-1">
-                                        <SlidersHorizontal className="w-3 h-3" />
-                                        {topic.avg_feed_stories_swiped || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Swiped
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Avg stories with slide swipes per visitor</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-emerald-500/10 rounded-lg p-2 border border-emerald-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-emerald-500 flex items-center gap-1">
+                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.completed}15`, borderColor: `${engagementColors.completed}40` }}>
+                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.completed }}>
                                         <Layers className="w-3 h-3" />
                                         {topic.avg_final_slides_seen || 0}
                                       </div>
@@ -584,11 +569,11 @@ export const TopicManager = () => {
                               </div>
                               
                               {/* Secondary Feed Stats */}
-                              <div className="grid grid-cols-2 gap-2 mt-2">
+                              <div className="grid grid-cols-3 gap-2 mt-2">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                      <div className="text-lg font-bold text-foreground">
+                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.shares}15`, borderColor: `${engagementColors.shares}40` }}>
+                                      <div className="text-lg font-bold" style={{ color: engagementColors.shares }}>
                                         {topic.share_clicks || 0}
                                       </div>
                                       <div className="text-xs font-medium text-muted-foreground">
@@ -603,8 +588,25 @@ export const TopicManager = () => {
                                 
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-purple-500 flex items-center gap-1">
+                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.sourceClicks}15`, borderColor: `${engagementColors.sourceClicks}40` }}>
+                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.sourceClicks }}>
+                                        <ExternalLink className="w-3 h-3" />
+                                        {topic.source_clicks || 0}
+                                      </div>
+                                      <div className="text-xs font-medium text-muted-foreground">
+                                        Source
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Clicks to original source articles</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.quiz}15`, borderColor: `${engagementColors.quiz}40` }}>
+                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.quiz }}>
                                         <Brain className="w-3 h-3" />
                                         {topic.quiz_responses_count || 0}
                                       </div>
@@ -618,6 +620,11 @@ export const TopicManager = () => {
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
+                            </div>
+                            
+                            {/* Engagement Funnel */}
+                            <div className="mt-3 pt-3 border-t border-border/30">
+                              <EngagementFunnel topicId={topic.id} />
                             </div>
                             
                             {/* Trend sparkline */}
