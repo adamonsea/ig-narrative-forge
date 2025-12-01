@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { createSafeHTML } from '@/lib/sanitizer';
+import { ExternalLink } from 'lucide-react';
 
 interface Slide {
   id: string;
@@ -99,6 +100,18 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
 
   const { mainContent, ctaContent, sourceUrl } = parseContentForLastSlide(currentSlide.content);
 
+  // Extract source domain for display
+  const sourceDomain = story.article.source_url && story.article.source_url !== '#' ? 
+    (() => {
+      try {
+        return new URL(story.article.source_url).hostname.replace('www.', '');
+      } catch (error) {
+        console.warn('Invalid URL in story.article.source_url:', story.article.source_url);
+        return null;
+      }
+    })() : 
+    null;
+
   // Dynamic text sizing - increased for better mobile readability
   const getTextSize = (content: string, isTitle: boolean) => {
     const length = content.length;
@@ -179,11 +192,24 @@ export const CarouselSlideRenderer: React.FC<CarouselSlideRendererProps> = ({
             </div>
           </div>
 
-          {/* Footer with attribution */}
-          <div className="p-6 border-t">
+          {/* Footer with attribution and source link */}
+          <div className="p-6 border-t space-y-3">
             <div className="text-center text-lg text-muted-foreground">
               {story.author ? `Story by ${story.author}` : 'Source: Local News'}
             </div>
+            {sourceDomain && story.article.source_url && story.article.source_url !== '#' && (
+              <div className="flex justify-center">
+                <a 
+                  href={story.article.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {sourceDomain}
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </Card>
