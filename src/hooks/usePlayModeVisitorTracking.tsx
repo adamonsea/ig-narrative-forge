@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 // Generate a visitor ID based on browser fingerprint
@@ -27,27 +27,33 @@ const generateVisitorId = (): string => {
   return 'visitor_' + Math.abs(hash).toString(36);
 };
 
+// Stable visitor ID - generated once per session
+const VISITOR_ID = generateVisitorId();
+
 /**
  * Hook to track Play Mode page visits (separate from feed visits)
  */
 export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
-  const [visitorId, setVisitorId] = useState<string>(() => generateVisitorId());
-  const hasTracked = useRef(false);
+  const hasTracked = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only track once per mount with valid topicId
-    if (!topicId || hasTracked.current) return;
+    // Skip if no topicId or already tracked this topicId
+    if (!topicId || hasTracked.current === topicId) {
+      return;
+    }
 
     const trackVisit = async () => {
       try {
         const userAgent = navigator.userAgent;
         const referrer = document.referrer;
 
+        console.log('[PlayMode] Tracking visit for topic:', topicId, 'visitor:', VISITOR_ID);
+
         const { error } = await supabase
           .from('feed_visits')
           .insert({
             topic_id: topicId,
-            visitor_id: visitorId,
+            visitor_id: VISITOR_ID,
             user_agent: userAgent,
             referrer: referrer || null,
             visit_date: new Date().toISOString().split('T')[0],
@@ -55,20 +61,20 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
           });
 
         if (error) {
-          console.error('Play Mode visitor tracking error:', error);
+          console.error('[PlayMode] Visitor tracking error:', error.message, error.details);
         } else {
-          hasTracked.current = true;
-          console.debug('Play Mode visit tracked for topic:', topicId);
+          hasTracked.current = topicId;
+          console.log('[PlayMode] Visit tracked successfully for topic:', topicId);
         }
       } catch (error) {
-        console.error('Play Mode visitor tracking failed:', error);
+        console.error('[PlayMode] Visitor tracking failed:', error);
       }
     };
 
-    // Track visit after a short delay
-    const timer = setTimeout(trackVisit, 500);
+    // Track visit after a short delay to ensure component is mounted
+    const timer = setTimeout(trackVisit, 300);
     return () => clearTimeout(timer);
-  }, [topicId, visitorId]);
+  }, [topicId]);
 
-  return visitorId;
+  return VISITOR_ID;
 };
