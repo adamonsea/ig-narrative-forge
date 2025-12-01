@@ -25,6 +25,8 @@ interface SwipeStats {
   likeCount: number;
   discardCount: number;
   remainingCount: number;
+  currentStreak: number;
+  totalSwipes: number;
 }
 
 export const useSwipeMode = (topicId: string) => {
@@ -32,7 +34,13 @@ export const useSwipeMode = (topicId: string) => {
   const [stories, setStories] = useState<Story[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<SwipeStats>({ likeCount: 0, discardCount: 0, remainingCount: 0 });
+  const [stats, setStats] = useState<SwipeStats>({ 
+    likeCount: 0, 
+    discardCount: 0, 
+    remainingCount: 0,
+    currentStreak: 0,
+    totalSwipes: 0
+  });
 
   // Fetch stories - works for both authenticated and anonymous users
   const fetchUnswipedStories = useCallback(async () => {
@@ -225,7 +233,9 @@ export const useSwipeMode = (topicId: string) => {
       setStats(prev => ({
         likeCount: swipeType === 'like' || swipeType === 'super_like' ? prev.likeCount + 1 : prev.likeCount,
         discardCount: swipeType === 'discard' ? prev.discardCount + 1 : prev.discardCount,
-        remainingCount: Math.max(0, prev.remainingCount - 1)
+        remainingCount: Math.max(0, prev.remainingCount - 1),
+        currentStreak: swipeType === 'like' || swipeType === 'super_like' ? prev.currentStreak + 1 : 0,
+        totalSwipes: prev.totalSwipes + 1
       }));
       setCurrentIndex(prev => prev + 1);
       return false; // Indicates swipe was not persisted
@@ -243,11 +253,13 @@ export const useSwipeMode = (topicId: string) => {
 
       if (error) throw error;
 
-      // Update stats
+      // Update stats with streak tracking
       setStats(prev => ({
         likeCount: swipeType === 'like' || swipeType === 'super_like' ? prev.likeCount + 1 : prev.likeCount,
         discardCount: swipeType === 'discard' ? prev.discardCount + 1 : prev.discardCount,
-        remainingCount: Math.max(0, prev.remainingCount - 1)
+        remainingCount: Math.max(0, prev.remainingCount - 1),
+        currentStreak: swipeType === 'like' || swipeType === 'super_like' ? prev.currentStreak + 1 : 0,
+        totalSwipes: prev.totalSwipes + 1
       }));
 
       // Move to next story
