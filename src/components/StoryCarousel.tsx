@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, useMotionValue, animate } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Heart, Download, Pin, MessageCircle } from 'lucide-react';
+import { Share2, Heart, Download, Pin, MessageCircle, ExternalLink } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -1125,17 +1125,18 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     href={sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors underline font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors"
                     onClick={() => {
                       if (topicId) {
                         trackSourceClick(story.id, topicId);
                       }
                     }}
                   >
+                    <ExternalLink className="w-3 h-3" />
                     from {sourceName}
                   </a>
                 ) : (
-                  <span className="text-xs text-muted-foreground font-medium">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground rounded-full">
                     from {sourceName}
                   </span>
                 );
