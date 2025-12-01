@@ -12,10 +12,13 @@ import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
 import { SwipeModeHint } from '@/components/swipe-mode/SwipeModeHint';
 import { SwipeInsightsDrawer } from '@/components/swipe-mode/SwipeInsightsDrawer';
 import { StoryRatingCard } from '@/components/swipe-mode/StoryRatingCard';
+import { ProgressRing } from '@/components/swipe-mode/ProgressRing';
+import { StreakIndicator } from '@/components/swipe-mode/StreakIndicator';
+import { MilestoneCelebration } from '@/components/swipe-mode/MilestoneCelebration';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ArrowLeft, Heart, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Heart, Loader2, ExternalLink, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -165,6 +168,9 @@ export default function SwipeMode() {
           </Button>
 
           <div className="flex items-center gap-2">
+            {/* Streak indicator */}
+            <StreakIndicator streak={stats.currentStreak} />
+            
             {/* Gate SwipeInsightsDrawer behind auth */}
             {topicId && user && (
               <SwipeInsightsDrawer topicId={topicId} topicName={topicName} />
@@ -181,7 +187,10 @@ export default function SwipeMode() {
             >
               {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Refresh'}
             </Button>
-            <Badge variant="outline">{stats.remainingCount} left</Badge>
+            
+            {/* Progress ring instead of text badge */}
+            <ProgressRing current={stats.remainingCount} total={stats.totalSwipes + stats.remainingCount} />
+            
             <Button
               variant="ghost"
               size="sm"
@@ -195,6 +204,9 @@ export default function SwipeMode() {
         </div>
       </header>
 
+      {/* Milestone celebration overlay */}
+      <MilestoneCelebration swipeCount={stats.totalSwipes} />
+
       {/* Main Swipe Area */}
       <main className="flex-1 container max-w-lg mx-auto px-4 py-8 relative">
         {loading ? (
@@ -203,17 +215,37 @@ export default function SwipeMode() {
           </div>
         ) : !hasMoreStories ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-            <Heart className="w-24 h-24 text-muted-foreground" />
+            <Trophy className="w-24 h-24 text-primary" />
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold">You're all caught up!</h2>
+              <h2 className="text-2xl font-semibold">All caught up! 🎉</h2>
               <p className="text-muted-foreground">
-                You've seen all the stories in {topicName}
+                You've swiped through all {stats.totalSwipes} stories in {topicName}
               </p>
             </div>
-            <div className="flex gap-3">
+            
+            {/* Session stats summary */}
+            <div className="grid grid-cols-3 gap-4 w-full max-w-sm">
+              <div className="bg-card border rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-primary">{stats.likeCount}</div>
+                <div className="text-xs text-muted-foreground">Liked</div>
+              </div>
+              <div className="bg-card border rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-muted-foreground">{stats.discardCount}</div>
+                <div className="text-xs text-muted-foreground">Skipped</div>
+              </div>
+              <div className="bg-card border rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-orange-500">{stats.currentStreak}</div>
+                <div className="text-xs text-muted-foreground">Streak</div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3">
               <Button onClick={() => setShowLiked(true)} className="gap-2">
                 <Heart className="w-4 h-4" />
-                View Liked ({stats.likeCount})
+                View Liked Stories
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/feed/${slug}`)}>
+                Back to Feed
               </Button>
             </div>
           </div>
