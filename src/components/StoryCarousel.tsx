@@ -113,7 +113,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
   const [loveCount, setLoveCount] = useState(Math.floor(Math.random() * 50) + 10); // Random initial count
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const iOSVersion = isIOS ? parseInt((navigator.userAgent.match(/OS (\d+)_/i) || ['', '0'])[1]) : 0;
-  const { trackShareClick } = useStoryInteractionTracking();
+  const { trackShareClick, trackSourceClick } = useStoryInteractionTracking();
   const [hasTrackedSwipe, setHasTrackedSwipe] = useState(false);
   const isFastConnection = useNetworkSpeed(); // Network speed detection
   
@@ -1126,6 +1126,11 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-muted-foreground hover:text-primary transition-colors underline font-medium"
+                    onClick={() => {
+                      if (topicId) {
+                        trackSourceClick(story.id, topicId);
+                      }
+                    }}
                   >
                     from {sourceName}
                   </a>

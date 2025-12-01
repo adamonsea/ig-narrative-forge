@@ -178,6 +178,20 @@ export const breakpoints = {
   '2xl': '1400px',
 } as const;
 
+// Engagement metric colors - used for consistent dashboard visualization
+export const engagementColors = {
+  visitors: 'hsl(270, 100%, 68%)',      // Brand purple
+  engaged: 'hsl(142, 76%, 36%)',        // Green-600
+  swipes: 'hsl(199, 89%, 48%)',         // Sky-500
+  completed: 'hsl(160, 84%, 39%)',      // Emerald-500
+  shares: 'hsl(280, 87%, 60%)',         // Fuchsia-500
+  sourceClicks: 'hsl(24, 94%, 50%)',    // Orange-500
+  liked: 'hsl(350, 89%, 60%)',          // Rose-500
+  skipped: 'hsl(32, 95%, 44%)',         // Orange-600
+  playMode: 'hsl(217, 91%, 60%)',       // Blue-500
+  quiz: 'hsl(262, 83%, 58%)',           // Violet-500
+} as const;
+
 // Composite tokens for common patterns
 export const componentTokens = {
   card: {

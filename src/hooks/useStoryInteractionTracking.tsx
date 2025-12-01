@@ -76,8 +76,32 @@ export const useStoryInteractionTracking = () => {
     })();
   };
 
+  const trackSourceClick = (storyId: string, topicId: string) => {
+    // Non-blocking async call - fire and forget
+    (async () => {
+      try {
+        const visitorId = generateVisitorId();
+        const userAgent = navigator.userAgent;
+        const referrer = document.referrer;
+
+        await supabase.rpc('record_story_interaction', {
+          p_story_id: storyId,
+          p_topic_id: topicId,
+          p_visitor_id: visitorId,
+          p_interaction_type: 'source_click',
+          p_user_agent: userAgent,
+          p_referrer: referrer || null
+        });
+      } catch (error) {
+        // Silent fail - don't disrupt user experience
+        console.debug('Source click tracking failed:', error);
+      }
+    })();
+  };
+
   return {
     trackSwipe,
-    trackShareClick
+    trackShareClick,
+    trackSourceClick
   };
 };

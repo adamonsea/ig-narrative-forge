@@ -4546,13 +4546,24 @@ export type Database = {
       get_topic_engagement_averages: {
         Args: { p_days?: number; p_topic_id: string }
         Returns: {
-          avg_feed_stories_swiped: number
+          avg_carousel_swipes: number
           avg_final_slides_seen: number
-          avg_stories_scrolled: number
-          avg_stories_swiped: number
+          avg_stories_engaged: number
           play_mode_visitors_week: number
-          total_scrollers: number
-          total_swipers: number
+          total_completed: number
+          total_source_clicks: number
+          total_stories_engaged: number
+          total_visitors: number
+        }[]
+      }
+      get_topic_engagement_funnel: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          completed: number
+          engaged: number
+          shared: number
+          source_clicks: number
+          visitors: number
         }[]
       }
       get_topic_engagement_stats: {
