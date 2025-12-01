@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Settings, Users, BarChart3, MapPin, Hash, Trash2, MessageSquare, Clock, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown, Gamepad2, TrendingUp, Layers, SlidersHorizontal } from "lucide-react";
+import { Plus, Users, BarChart3, MapPin, Hash, Archive, Info, Eye, MousePointer, Share2, ExternalLink, Heart, Brain, ThumbsDown, Gamepad2, TrendingUp, Layers, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -373,405 +373,331 @@ export const TopicManager = () => {
                   }}
                 >
                   <CardContent className="p-4 md:p-6">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {topic.branding_config?.logo_url && (
-                            <img 
-                              src={topic.branding_config.logo_url} 
-                              alt={`${topic.name} logo`}
-                              className="w-8 h-8 md:w-10 md:h-10 rounded object-cover"
-                            />
-                          )}
-                          <h3 className="text-xl md:text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors">
-                            {topic.name}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                    {/* Header: Topic Info */}
+                    <div className="flex items-start gap-4 mb-6">
+                      {topic.branding_config?.logo_url && (
+                        <img 
+                          src={topic.branding_config.logo_url} 
+                          alt={`${topic.name} logo`}
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl md:text-2xl font-bold tracking-tight group-hover:text-[hsl(270,100%,68%)] transition-colors truncate">
+                          {topic.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
                           {topic.description}
                         </p>
                       </div>
-                      
-                      {/* Stats Section */}
-                      <TooltipProvider>
-                        <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[180px]">
-                          {/* Content Generation Stats */}
-                          <div className="space-y-2">
-                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                              <BarChart3 className="w-3 h-3" />
-                              Content
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                    <div className="text-lg font-bold text-foreground">
-                                      {topic.articles_in_arrivals || 0}
-                                    </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Arrivals
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>New articles discovered by scrapers, waiting for your review</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-background/50 rounded-lg p-2 border border-border/50 cursor-help">
-                                    <div className="text-lg font-bold text-foreground">
-                                      {topic.stories_published_this_week || 0}
-                                    </div>
-                                    <div className="text-xs font-medium text-muted-foreground">
-                                      Stories
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Stories published to your feed in the last 7 days</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                            
-                            {/* Source Health Badge */}
-                            <div className="mt-2">
-                              <SourceHealthBadge topicId={topic.id} />
-                            </div>
-                          </div>
-                          
-                          {/* Engagement Stats - Last 7 Days */}
-                          <div className="space-y-3">
-                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                              <MousePointer className="w-3 h-3" />
-                              Engagement
-                            </div>
-                            
-                            {/* Play Mode Stats */}
-                            <div className="space-y-2">
-                              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
-                                Play Mode
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-pink-500/10 rounded-lg p-2 border border-pink-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-pink-500 flex items-center gap-1">
-                                        <Heart className="w-3 h-3" />
-                                        {topic.articles_liked || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Liked
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Stories rated positively in Play Mode</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-orange-500/10 rounded-lg p-2 border border-orange-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-orange-500 flex items-center gap-1">
-                                        <ThumbsDown className="w-3 h-3" />
-                                        {topic.articles_disliked || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Skipped
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Stories rated negatively in Play Mode</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              
-                              {/* Play Mode Visitors & Avg Swiped */}
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-blue-500/10 rounded-lg p-2 border border-blue-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-blue-500 flex items-center gap-1">
-                                        <Gamepad2 className="w-3 h-3" />
-                                        {topic.play_mode_visits_week || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Visitors
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Unique visitors to Play Mode this week</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="bg-cyan-500/10 rounded-lg p-2 border border-cyan-500/30 cursor-help">
-                                      <div className="text-lg font-bold text-cyan-500 flex items-center gap-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        {topic.avg_carousel_swipes || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Avg/User
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Average carousel swipes per user this week</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-                            
-                            {/* Feed Mode Stats */}
-                            <div className="space-y-2 pt-2 border-t border-border/30">
-                              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider px-1">
-                                Feed Mode
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.engaged}15`, borderColor: `${engagementColors.engaged}40` }}>
-                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.engaged }}>
-                                        <MousePointer className="w-3 h-3" />
-                                        {topic.avg_stories_engaged || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Engaged
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Avg unique stories engaged per visitor</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.completed}15`, borderColor: `${engagementColors.completed}40` }}>
-                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.completed }}>
-                                        <Layers className="w-3 h-3" />
-                                        {topic.avg_final_slides_seen || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Completed
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Avg stories read to final slide per visitor</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              
-                              {/* Secondary Feed Stats */}
-                              <div className="grid grid-cols-3 gap-2 mt-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.shares}15`, borderColor: `${engagementColors.shares}40` }}>
-                                      <div className="text-lg font-bold" style={{ color: engagementColors.shares }}>
-                                        {topic.share_clicks || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Shares
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Share button clicks on stories</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.sourceClicks}15`, borderColor: `${engagementColors.sourceClicks}40` }}>
-                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.sourceClicks }}>
-                                        <ExternalLink className="w-3 h-3" />
-                                        {topic.source_clicks || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Source
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Clicks to original source articles</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="rounded-lg p-2 border cursor-help" style={{ backgroundColor: `${engagementColors.quiz}15`, borderColor: `${engagementColors.quiz}40` }}>
-                                      <div className="text-lg font-bold flex items-center gap-1" style={{ color: engagementColors.quiz }}>
-                                        <Brain className="w-3 h-3" />
-                                        {topic.quiz_responses_count || 0}
-                                      </div>
-                                      <div className="text-xs font-medium text-muted-foreground">
-                                        Quizzed
-                                      </div>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Quiz questions answered by readers</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-                            
-                            {/* Engagement Funnel */}
-                            <div className="mt-3 pt-3 border-t border-border/30">
-                              <EngagementFunnel topicId={topic.id} />
-                            </div>
-                            
-                            {/* Trend sparkline */}
-                            <div className="mt-2">
-                              <EngagementSparkline topicId={topic.id} />
-                            </div>
-                            
-                            <div className="text-xs text-muted-foreground italic text-center">
-                              Last 7 days
-                            </div>
-                          </div>
-                          
-                          {/* Visitor Stats */}
-                          <div className="space-y-2">
-                            <div className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider flex items-center gap-1">
-                              <Eye className="w-3 h-3" />
-                              Visitors
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20 cursor-help">
-                                    <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
-                                      {topic.visits_today || 0}
-                                    </div>
-                                    <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
-                                      Today
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Unique people who viewed your feed today</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="bg-[hsl(270,100%,68%)]/5 rounded-lg p-2 border border-[hsl(270,100%,68%)]/20 cursor-help">
-                                    <div className="text-lg font-bold text-[hsl(270,100%,68%)]">
-                                      {topic.visits_this_week || 0}
-                                    </div>
-                                    <div className="text-xs font-medium text-[hsl(270,100%,68%)]/70">
-                                      This week
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Unique people who viewed your feed in the last 7 days</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </div>
-
-                          {/* Subscribers Section */}
-                          {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0 || (topic.registrants_this_week || 0) > 0 || (topic.registrants_total || 0) > 0) && (
-                            <div className="space-y-2">
-                              <div className="text-xs font-semibold text-pop uppercase tracking-wider flex items-center gap-1">
-                                <Users className="w-2.5 h-2.5" />
-                                Subscribers
-                              </div>
-                              
-                              {/* Homescreen Installs */}
-                              {((topic.installs_this_week || 0) > 0 || (topic.installs_total || 0) > 0) && (
-                                <>
-                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Homescreen</div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
-                                          <div className="text-lg font-bold text-pop-foreground">
-                                            {topic.installs_this_week || 0}
-                                          </div>
-                                          <div className="text-xs font-medium text-muted-foreground">
-                                            This week
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Users who added this feed to their phone's home screen this week</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="bg-pop/10 rounded-lg p-2 border border-pop/30 cursor-help">
-                                          <div className="text-lg font-bold text-pop-foreground">
-                                            {topic.installs_total || 0}
-                                          </div>
-                                          <div className="text-xs font-medium text-muted-foreground">
-                                            Total
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Total users with this feed on their home screen</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </>
-                              )}
-                              
-                              {/* Registrants (Game Mode users) */}
-                              {((topic.registrants_this_week || 0) > 0 || (topic.registrants_total || 0) > 0) && (
-                                <>
-                                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Registrants</div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-2 border border-[hsl(155,100%,67%)]/30 cursor-help">
-                                          <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
-                                            {topic.registrants_this_week || 0}
-                                          </div>
-                                          <div className="text-xs font-medium text-muted-foreground">
-                                            This week
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>New users who signed up to rate stories in Play Mode this week</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="bg-[hsl(155,100%,67%)]/10 rounded-lg p-2 border border-[hsl(155,100%,67%)]/30 cursor-help">
-                                          <div className="text-lg font-bold text-[hsl(155,100%,67%)]">
-                                            {topic.registrants_total || 0}
-                                          </div>
-                                          <div className="text-xs font-medium text-muted-foreground">
-                                            Total
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Total Play Mode users for this feed</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </TooltipProvider>
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    {/* Stats Grid - Full Width Horizontal Layout */}
+                    <TooltipProvider>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+                        {/* Content Stats */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-background/50 rounded-xl p-4 border border-border/50 cursor-help hover:border-border transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Arrivals</span>
+                              </div>
+                              <div className="text-2xl font-bold text-foreground">
+                                {topic.articles_in_arrivals || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>New articles discovered by scrapers, waiting for your review</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-background/50 rounded-xl p-4 border border-border/50 cursor-help hover:border-border transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Layers className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stories</span>
+                              </div>
+                              <div className="text-2xl font-bold text-foreground">
+                                {topic.stories_published_this_week || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Stories published to your feed in the last 7 days</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Visitors */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-xl p-4 border border-[hsl(270,100%,68%)]/20 cursor-help hover:border-[hsl(270,100%,68%)]/40 transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Eye className="w-4 h-4 text-[hsl(270,100%,68%)]" />
+                                <span className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider">Today</span>
+                              </div>
+                              <div className="text-2xl font-bold text-[hsl(270,100%,68%)]">
+                                {topic.visits_today || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Unique visitors to your feed today</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-[hsl(270,100%,68%)]/5 rounded-xl p-4 border border-[hsl(270,100%,68%)]/20 cursor-help hover:border-[hsl(270,100%,68%)]/40 transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Users className="w-4 h-4 text-[hsl(270,100%,68%)]" />
+                                <span className="text-xs font-semibold text-[hsl(270,100%,68%)] uppercase tracking-wider">Week</span>
+                              </div>
+                              <div className="text-2xl font-bold text-[hsl(270,100%,68%)]">
+                                {topic.visits_this_week || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Unique visitors to your feed in the last 7 days</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Engagement */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-xl p-4 border cursor-help hover:opacity-90 transition-opacity" style={{ backgroundColor: `${engagementColors.engaged}10`, borderColor: `${engagementColors.engaged}30` }}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <MousePointer className="w-4 h-4" style={{ color: engagementColors.engaged }} />
+                                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: engagementColors.engaged }}>Engaged</span>
+                              </div>
+                              <div className="text-2xl font-bold" style={{ color: engagementColors.engaged }}>
+                                {topic.avg_stories_engaged || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Avg unique stories engaged per visitor</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-xl p-4 border cursor-help hover:opacity-90 transition-opacity" style={{ backgroundColor: `${engagementColors.completed}10`, borderColor: `${engagementColors.completed}30` }}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="w-4 h-4" style={{ color: engagementColors.completed }} />
+                                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: engagementColors.completed }}>Completed</span>
+                              </div>
+                              <div className="text-2xl font-bold" style={{ color: engagementColors.completed }}>
+                                {topic.avg_final_slides_seen || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Avg stories read to final slide per visitor</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      {/* Secondary Stats Row */}
+                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+                        {/* Play Mode Stats */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-pink-500/10 rounded-xl p-3 border border-pink-500/30 cursor-help hover:border-pink-500/50 transition-colors">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Heart className="w-3.5 h-3.5 text-pink-500" />
+                                <span className="text-[10px] font-semibold text-pink-500 uppercase tracking-wider">Liked</span>
+                              </div>
+                              <div className="text-xl font-bold text-pink-500">
+                                {topic.articles_liked || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Stories rated positively in Play Mode</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-orange-500/10 rounded-xl p-3 border border-orange-500/30 cursor-help hover:border-orange-500/50 transition-colors">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <ThumbsDown className="w-3.5 h-3.5 text-orange-500" />
+                                <span className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider">Skipped</span>
+                              </div>
+                              <div className="text-xl font-bold text-orange-500">
+                                {topic.articles_disliked || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Stories skipped in Play Mode</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/30 cursor-help hover:border-blue-500/50 transition-colors">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Gamepad2 className="w-3.5 h-3.5 text-blue-500" />
+                                <span className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider">Play</span>
+                              </div>
+                              <div className="text-xl font-bold text-blue-500">
+                                {topic.play_mode_visits_week || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Unique visitors to Play Mode this week</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Feed Engagement */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-xl p-3 border cursor-help hover:opacity-90 transition-opacity" style={{ backgroundColor: `${engagementColors.shares}10`, borderColor: `${engagementColors.shares}30` }}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Share2 className="w-3.5 h-3.5" style={{ color: engagementColors.shares }} />
+                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: engagementColors.shares }}>Shares</span>
+                              </div>
+                              <div className="text-xl font-bold" style={{ color: engagementColors.shares }}>
+                                {topic.share_clicks || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Share button clicks on stories</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-xl p-3 border cursor-help hover:opacity-90 transition-opacity" style={{ backgroundColor: `${engagementColors.sourceClicks}10`, borderColor: `${engagementColors.sourceClicks}30` }}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <ExternalLink className="w-3.5 h-3.5" style={{ color: engagementColors.sourceClicks }} />
+                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: engagementColors.sourceClicks }}>Source</span>
+                              </div>
+                              <div className="text-xl font-bold" style={{ color: engagementColors.sourceClicks }}>
+                                {topic.source_clicks || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Clicks to original source articles</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="rounded-xl p-3 border cursor-help hover:opacity-90 transition-opacity" style={{ backgroundColor: `${engagementColors.quiz}10`, borderColor: `${engagementColors.quiz}30` }}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Brain className="w-3.5 h-3.5" style={{ color: engagementColors.quiz }} />
+                                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: engagementColors.quiz }}>Quiz</span>
+                              </div>
+                              <div className="text-xl font-bold" style={{ color: engagementColors.quiz }}>
+                                {topic.quiz_responses_count || 0}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Quiz questions answered by readers</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      {/* Visual Components Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {/* Source Health */}
+                        <div className="bg-background/30 rounded-xl p-4 border border-border/30">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                            Source Health
+                          </div>
+                          <SourceHealthBadge topicId={topic.id} />
+                        </div>
+
+                        {/* Engagement Funnel */}
+                        <div className="bg-background/30 rounded-xl p-4 border border-border/30">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            Funnel
+                          </div>
+                          <EngagementFunnel topicId={topic.id} />
+                        </div>
+
+                        {/* Sparkline Trends */}
+                        <div className="bg-background/30 rounded-xl p-4 border border-border/30">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <BarChart3 className="w-3.5 h-3.5" />
+                            7-Day Trend
+                          </div>
+                          <EngagementSparkline topicId={topic.id} />
+                        </div>
+                      </div>
+
+                      {/* Subscribers Section - Conditional */}
+                      {((topic.installs_total || 0) > 0 || (topic.registrants_total || 0) > 0) && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-border/30">
+                          {(topic.installs_total || 0) > 0 && (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-pop/10 rounded-xl p-3 border border-pop/30 cursor-help">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Homescreen (Week)</div>
+                                    <div className="text-xl font-bold text-pop-foreground">{topic.installs_this_week || 0}</div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Users who added this feed to their phone this week</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-pop/10 rounded-xl p-3 border border-pop/30 cursor-help">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Homescreen (Total)</div>
+                                    <div className="text-xl font-bold text-pop-foreground">{topic.installs_total || 0}</div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Total users with this feed on their home screen</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
+                          {(topic.registrants_total || 0) > 0 && (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-[hsl(155,100%,67%)]/10 rounded-xl p-3 border border-[hsl(155,100%,67%)]/30 cursor-help">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Registrants (Week)</div>
+                                    <div className="text-xl font-bold text-[hsl(155,100%,67%)]">{topic.registrants_this_week || 0}</div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>New Play Mode users who signed up this week</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="bg-[hsl(155,100%,67%)]/10 rounded-xl p-3 border border-[hsl(155,100%,67%)]/30 cursor-help">
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Registrants (Total)</div>
+                                    <div className="text-xl font-bold text-[hsl(155,100%,67%)]">{topic.registrants_total || 0}</div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Total Play Mode users for this feed</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </TooltipProvider>
+
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t border-border/20 mt-2">
                       <div className="flex flex-wrap items-center gap-2 md:gap-3">
                         <Badge variant="outline" className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border-border/50">
                           {topic.topic_type === 'regional' ? <MapPin className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
