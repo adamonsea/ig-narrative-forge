@@ -86,7 +86,7 @@ export const OnboardingTooltip = ({
       setCoords({ top, left });
     };
 
-    const timer = setTimeout(updatePosition, 200);
+    const timer = setTimeout(updatePosition, 100);
     window.addEventListener('resize', updatePosition);
     window.addEventListener('scroll', updatePosition, true);
 

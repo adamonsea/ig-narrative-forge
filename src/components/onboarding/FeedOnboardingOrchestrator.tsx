@@ -18,7 +18,7 @@ interface FeedOnboardingOrchestratorProps {
   onWelcomeClose?: () => void;
 }
 
-type OnboardingStep = 'welcome' | 'live' | 'filter' | 'play' | 'notifications' | 'whatsapp' | 'complete';
+type OnboardingStep = 'welcome' | 'live' | 'filter' | 'play' | 'notifications' | 'whatsapp' | 'swipe-hint' | 'complete';
 
 export const FeedOnboardingOrchestrator = ({
   topicSlug,
@@ -88,6 +88,8 @@ export const FeedOnboardingOrchestrator = ({
         case 'notifications':
           return 'whatsapp';
         case 'whatsapp':
+          return 'swipe-hint';
+        case 'swipe-hint':
           // Mark onboarding complete
           localStorage.setItem(`onboarding_complete_${topicSlug}`, 'true');
           return 'complete';
@@ -129,7 +131,7 @@ export const FeedOnboardingOrchestrator = ({
         position="bottom"
         isVisible={currentStep === 'live'}
         onDismiss={handleTooltipDismiss}
-        autoDismissMs={3000}
+        autoDismissMs={2000}
       />
 
       {/* Tooltip 2: Filter Button */}
@@ -139,7 +141,7 @@ export const FeedOnboardingOrchestrator = ({
         position="bottom"
         isVisible={currentStep === 'filter'}
         onDismiss={handleTooltipDismiss}
-        autoDismissMs={3000}
+        autoDismissMs={2000}
       />
 
       {/* Tooltip 3: Play Mode (if enabled) */}
@@ -150,7 +152,7 @@ export const FeedOnboardingOrchestrator = ({
           position="bottom"
           isVisible={currentStep === 'play'}
           onDismiss={handleTooltipDismiss}
-          autoDismissMs={3000}
+          autoDismissMs={2000}
         />
       )}
 
@@ -161,7 +163,7 @@ export const FeedOnboardingOrchestrator = ({
         position="bottom"
         isVisible={currentStep === 'notifications'}
         onDismiss={handleTooltipDismiss}
-        autoDismissMs={3000}
+        autoDismissMs={2000}
       />
 
       {/* Tooltip 5: WhatsApp Share */}
@@ -171,8 +173,17 @@ export const FeedOnboardingOrchestrator = ({
         position="top"
         isVisible={currentStep === 'whatsapp'}
         onDismiss={handleTooltipDismiss}
-        autoDismissMs={3000}
+        autoDismissMs={2000}
       />
+
+      {/* Swipe Hint - shown at the end */}
+      {currentStep === 'swipe-hint' && (
+        <HandSwipeHint 
+          topicSlug={topicSlug} 
+          forceShow={true}
+          onComplete={handleTooltipDismiss}
+        />
+      )}
     </>
   );
 };
