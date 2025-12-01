@@ -50,6 +50,7 @@ export default function SwipeMode() {
 
   const { currentStory, hasMoreStories, loading, stats, recordSwipe, fetchLikedStories, refetch, stories, currentIndex } = useSwipeMode(topicId || '');
   const optimizations = useDeviceOptimizations();
+  const [previousStreak, setPreviousStreak] = useState(0);
   
   // Apply topic favicon
   const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
@@ -104,6 +105,8 @@ export default function SwipeMode() {
   const handleSwipe = async (direction: 'like' | 'discard') => {
     if (!currentStory) return;
     setExitDirection(direction === 'like' ? 'right' : 'left');
+    
+    setPreviousStreak(stats.currentStreak);
     
     setTimeout(() => {
       if (user) {
@@ -168,9 +171,6 @@ export default function SwipeMode() {
           </Button>
 
           <div className="flex items-center gap-2">
-            {/* Streak indicator */}
-            <StreakIndicator streak={stats.currentStreak} />
-            
             {/* Gate SwipeInsightsDrawer behind auth */}
             {topicId && user && (
               <SwipeInsightsDrawer topicId={topicId} topicName={topicName} />
@@ -204,6 +204,9 @@ export default function SwipeMode() {
         </div>
       </header>
 
+      {/* Streak encouragement (floating, centered) */}
+      <StreakIndicator streak={stats.currentStreak} previousStreak={previousStreak} />
+      
       {/* Milestone celebration overlay */}
       <MilestoneCelebration swipeCount={stats.totalSwipes} />
 
