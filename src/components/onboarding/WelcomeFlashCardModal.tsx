@@ -49,7 +49,7 @@ export const WelcomeFlashCardModal = ({
           </Button>
           
           {/* Optional About link */}
-          {showAboutLink && aboutPageEnabled && (
+          {showAboutLink && aboutPageEnabled && topicSlug && (
             <div>
               <Link 
                 to={`/feed/${topicSlug}/about`}
