@@ -1121,20 +1121,19 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                 }
                 
                 return sourceUrl && sourceUrl !== '#' ? (
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors"
-                    onClick={() => {
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (topicId) {
                         trackSourceClick(story.id, topicId);
                       }
+                      window.open(sourceUrl, '_blank', 'noopener,noreferrer');
                     }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3 h-3" />
                     from {sourceName}
-                  </a>
+                  </button>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-muted text-muted-foreground rounded-full">
                     from {sourceName}
