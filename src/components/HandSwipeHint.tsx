@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pointer } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface HandSwipeHintProps {
   topicSlug: string;
@@ -10,21 +10,21 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if hint has been shown before for this topic
-    const storageKey = `feed_swipe_hint_shown_${topicSlug}`;
-    const hasBeenShown = localStorage.getItem(storageKey);
+    // Track visit count for this topic
+    const storageKey = `feed_swipe_hint_count_${topicSlug}`;
+    const visitCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
 
-    if (!hasBeenShown) {
+    if (visitCount < 3) {
       // Show hint after a brief delay
       const showTimer = setTimeout(() => {
         setIsVisible(true);
       }, 500);
 
-      // Auto-dismiss after 3 seconds
+      // Auto-dismiss after 3.5 seconds and increment counter
       const hideTimer = setTimeout(() => {
         setIsVisible(false);
-        localStorage.setItem(storageKey, 'true');
-      }, 3500);
+        localStorage.setItem(storageKey, String(visitCount + 1));
+      }, 4000);
 
       return () => {
         clearTimeout(showTimer);
@@ -43,22 +43,50 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
           transition={{ duration: 0.3 }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
         >
-          <motion.div
-            animate={{ 
-              x: [0, 30, 0],
-              y: [0, -5, 0],
-              rotate: [-15, 15, -15]
-            }}
-            transition={{ 
-              duration: 1.2, 
-              repeat: Infinity, 
-              ease: "easeInOut" 
-            }}
-          >
-            <div className="bg-white rounded-full p-3 shadow-lg border-2 border-black">
-              <Pointer className="w-8 h-8 text-black" />
+          <div className="flex flex-col items-center gap-4">
+            {/* Animated Card Mock */}
+            <div className="relative">
+              {/* Back card - moves less */}
+              <motion.div
+                animate={{ 
+                  x: [0, -30, 0]
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+                className="absolute top-2 left-2 w-32 h-40 bg-muted rounded-xl shadow-lg border-2 border-border opacity-60"
+              />
+              
+              {/* Front card - moves more */}
+              <motion.div
+                animate={{ 
+                  x: [0, -50, 0]
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+                className="relative w-32 h-40 bg-card rounded-xl shadow-2xl border-2 border-primary/50"
+              >
+                <div className="p-3 space-y-2">
+                  <div className="h-2 w-3/4 bg-foreground/20 rounded" />
+                  <div className="h-2 w-full bg-foreground/20 rounded" />
+                  <div className="h-2 w-2/3 bg-foreground/20 rounded" />
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
+
+            {/* Instruction Text */}
+            <div className="flex items-center gap-2 bg-primary/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+              <span className="text-primary-foreground font-semibold text-sm">
+                Swipe for more
+              </span>
+              <ArrowRight className="w-4 h-4 text-primary-foreground" />
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
