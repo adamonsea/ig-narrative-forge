@@ -154,9 +154,11 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Filter out questions that were answered BEFORE this session
-  // Questions answered during this session stay visible until refresh
-  const unansweredQuestions = query.data?.filter(q => !persistedAnswered.has(q.id)) || [];
+  // Filter out ALL answered questions (both before and during this session)
+  // This prevents the same question from appearing multiple times in the feed
+  const unansweredQuestions = query.data?.filter(q => 
+    !persistedAnswered.has(q.id) && !sessionAnswered.has(q.id)
+  ) || [];
 
   // Combined set for checking if a question has been answered (either session)
   const allAnswered = new Set([...persistedAnswered, ...sessionAnswered]);
