@@ -45,17 +45,19 @@ export const useVisitorTracking = (topicId: string | undefined) => {
         const userAgent = navigator.userAgent;
         const referrer = document.referrer;
 
-        // Use direct insert - RPC types not yet updated
         await supabase
           .from('feed_visits')
-          .insert({
+          .upsert({
             topic_id: topicId,
             visitor_id: visitorId,
             user_agent: userAgent,
             referrer: referrer || null,
             visit_date: new Date().toISOString().split('T')[0],
             page_type: 'feed'
-          } as any);
+          }, {
+            onConflict: 'topic_id,visitor_id,visit_date,page_type',
+            ignoreDuplicates: true
+          });
       } catch (error) {
         // Silent fail - don't disrupt user experience
         console.debug('Visitor tracking failed:', error);
