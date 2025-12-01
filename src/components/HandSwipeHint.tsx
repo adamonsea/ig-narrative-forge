@@ -4,13 +4,32 @@ import { ArrowRight } from 'lucide-react';
 
 interface HandSwipeHintProps {
   topicSlug: string;
+  forceShow?: boolean;
+  onComplete?: () => void;
 }
 
-export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
+export const HandSwipeHint = ({ topicSlug, forceShow = false, onComplete }: HandSwipeHintProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Track visit count for this topic
+    // If forceShow (from onboarding), always show
+    if (forceShow) {
+      const showTimer = setTimeout(() => {
+        setIsVisible(true);
+      }, 100);
+
+      const hideTimer = setTimeout(() => {
+        setIsVisible(false);
+        onComplete?.();
+      }, 3100);
+
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
+    }
+
+    // Normal behavior: track visit count for this topic
     const storageKey = `feed_swipe_hint_count_${topicSlug}`;
     const visitCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
 
@@ -20,18 +39,18 @@ export const HandSwipeHint = ({ topicSlug }: HandSwipeHintProps) => {
         setIsVisible(true);
       }, 500);
 
-      // Auto-dismiss after 3.5 seconds and increment counter
+      // Auto-dismiss after 3 seconds and increment counter
       const hideTimer = setTimeout(() => {
         setIsVisible(false);
         localStorage.setItem(storageKey, String(visitCount + 1));
-      }, 4000);
+      }, 3500);
 
       return () => {
         clearTimeout(showTimer);
         clearTimeout(hideTimer);
       };
     }
-  }, [topicSlug]);
+  }, [topicSlug, forceShow, onComplete]);
 
   return (
     <AnimatePresence>
