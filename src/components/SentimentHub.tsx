@@ -215,6 +215,33 @@ export const SentimentHub = ({ topicId }: SentimentHubProps) => {
       </CardHeader>
       <CardContent>
         <TrendingKeywordsReview topicId={topicId} enabled={enabled} />
+        
+        {/* Backfill History Button */}
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                toast.success('Backfilling sentiment history...');
+                const { error } = await supabase.functions.invoke('sentiment-history-snapshot', {
+                  body: { backfill: true, weeksToBackfill: 8 }
+                });
+                if (error) throw error;
+                toast.success('Historical sentiment data generated!');
+              } catch (err) {
+                toast.error('Failed to backfill history');
+              }
+            }}
+            className="text-xs"
+          >
+            <Clock className="w-3 h-3 mr-1" />
+            Generate Historical Data
+          </Button>
+          <p className="text-xs text-muted-foreground mt-1">
+            Populate trend charts with historical keyword data
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

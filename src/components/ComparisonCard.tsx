@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { KeywordSparkline } from './KeywordSparkline';
 
 interface ComparisonCardProps {
   content: {
@@ -13,27 +14,39 @@ interface ComparisonCardProps {
   };
   dataWindowStart?: string;
   dataWindowEnd?: string;
+  topicId?: string;
 }
 
-// Single sentiment card component
+// Single sentiment card component with sparkline
 const SentimentKeywordCard = ({ 
   keyword, 
   mentions, 
   maxMentions, 
-  isPositive 
+  isPositive,
+  topicId
 }: { 
   keyword: string; 
   mentions: number; 
   maxMentions: number; 
   isPositive: boolean;
+  topicId?: string;
 }) => {
   const percentage = Math.round((mentions / maxMentions) * 100);
   
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <span className="text-base font-medium text-foreground">{keyword}</span>
-        <span className="text-2xl font-bold text-foreground">{mentions}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-base font-medium text-foreground truncate">{keyword}</span>
+          {topicId && (
+            <KeywordSparkline 
+              topicId={topicId} 
+              keyword={keyword} 
+              sentimentDirection={isPositive ? 'positive' : 'negative'}
+            />
+          )}
+        </div>
+        <span className="text-2xl font-bold text-foreground shrink-0 ml-2">{mentions}</span>
       </div>
       <div className="h-8 bg-muted rounded-lg overflow-hidden">
         <div 
@@ -45,14 +58,15 @@ const SentimentKeywordCard = ({
   );
 };
 
-export const ComparisonCard = ({ content }: ComparisonCardProps) => {
+export const ComparisonCard = ({ content, topicId }: ComparisonCardProps) => {
   const { chart_data } = content;
   
   if (!chart_data) return null;
 
   const maxMentions = Math.max(
     ...chart_data.positive.map(k => k.mentions),
-    ...chart_data.negative.map(k => k.mentions)
+    ...chart_data.negative.map(k => k.mentions),
+    1 // Prevent division by zero
   );
 
   // Split into two separate cards
@@ -73,6 +87,7 @@ export const ComparisonCard = ({ content }: ComparisonCardProps) => {
                 mentions={kw.mentions}
                 maxMentions={maxMentions}
                 isPositive={true}
+                topicId={topicId}
               />
             ))}
           </div>
@@ -94,6 +109,7 @@ export const ComparisonCard = ({ content }: ComparisonCardProps) => {
                 mentions={kw.mentions}
                 maxMentions={maxMentions}
                 isPositive={false}
+                topicId={topicId}
               />
             ))}
           </div>
