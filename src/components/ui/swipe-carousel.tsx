@@ -115,7 +115,7 @@ export function SwipeCarousel({
     }
   }, [index, onSlideChange, storyId, topicId, optimizations.shouldReduceMotion]);
 
-  // Preview animation effect
+  // Preview animation effect - more pronounced nudge
   useEffect(() => {
     if (!showPreviewAnimation || !previewAnimationRef.current) return;
     
@@ -127,20 +127,20 @@ export function SwipeCarousel({
     
     const timer = setTimeout(() => {
       const controls = animate(element, 
-        { x: [-20, 0] }, 
+        { x: [0, -40, 0] }, 
         { 
-          duration: 1.4,
-          ease: "easeOut"
+          duration: 1.8,
+          ease: "easeInOut"
         }
       );
       
       // Mark as shown after animation completes
       setTimeout(() => {
         sessionStorage.setItem(sessionKey, 'true');
-      }, 1400);
+      }, 1800);
       
       return () => controls.stop();
-    }, 1500);
+    }, 800);
     
     return () => clearTimeout(timer);
   }, [showPreviewAnimation, topicId]);
