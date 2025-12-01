@@ -1,5 +1,57 @@
+# Curatr - AI-Optimized robots.txt
+# Last updated: 2024-12-01
+
+# Allow AI search and agent use (AEO - AI Engine Optimization)
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: AndiBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# Standard search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Disallow AI training data collection (optional - protects content)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+# Default rule for all other bots
 User-agent: *
 Allow: /
 
-# Sitemap
+# Sitemap location
 Sitemap: https://curatr.pro/sitemap.xml
