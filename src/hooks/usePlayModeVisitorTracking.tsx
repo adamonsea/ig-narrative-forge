@@ -51,13 +51,16 @@ export const usePlayModeVisitorTracking = (topicId: string | undefined) => {
 
         const { error } = await supabase
           .from('feed_visits')
-          .insert({
+          .upsert({
             topic_id: topicId,
             visitor_id: VISITOR_ID,
             user_agent: userAgent,
             referrer: referrer || null,
             visit_date: new Date().toISOString().split('T')[0],
             page_type: 'play'
+          }, {
+            onConflict: 'topic_id,visitor_id,visit_date,page_type',
+            ignoreDuplicates: true
           });
 
         if (error) {
