@@ -272,7 +272,7 @@ export function SwipeCarousel({
               key={i}
               aria-label={`Go to slide ${i + 1}`}
               onClick={() => goTo(i)}
-              className={`h-2.5 w-2.5 rounded-full transition-all ${
+              className={`h-2.5 w-2.5 rounded-full transition-all p-[19px] -m-[19px] ${
                 i === index ? "scale-110 bg-primary shadow" : "bg-muted-foreground/60 hover:bg-muted-foreground"
               }`}
             />
