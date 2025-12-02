@@ -749,14 +749,15 @@ export const TopicManager = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          asChild
-                          className="hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30"
-                          onClick={(e) => e.preventDefault()}
+                          className="hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30 flex items-center gap-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/feed/${topic.slug}`);
+                          }}
                         >
-                          <Link to={`/feed/${topic.slug}`} className="flex items-center gap-2">
-                            <ExternalLink className="w-3 h-3" />
-                            <span className="hidden md:inline">Feed</span>
-                          </Link>
+                          <ExternalLink className="w-3 h-3" />
+                          <span className="hidden md:inline">Feed</span>
                         </Button>
 
                         <TooltipProvider>
