@@ -42,7 +42,7 @@ serve(async (req) => {
       // No body provided, process all enabled topics
     }
 
-    console.log('Starting quiz question generation with DeepSeek', { targetTopicId });
+    console.log('Starting quiz question generation with DeepSeek Reasoner', { targetTopicId });
 
     // Get topics with quiz cards enabled
     let topicsQuery = supabase
@@ -291,7 +291,7 @@ Content: ${articleBody}
 Generate a single multiple-choice question with 4 options (A, B, C, D) where exactly one is correct. Respond ONLY with JSON.`;
 
   try {
-    console.log('Calling DeepSeek API for quiz generation...');
+    console.log('Calling DeepSeek Reasoner API for quiz generation...');
     
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -300,14 +300,11 @@ Generate a single multiple-choice question with 4 options (A, B, C, D) where exa
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-reasoner',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }
         ],
-        temperature: 0.3,
-        max_tokens: 1000,
-        response_format: { type: 'json_object' }
+        max_tokens: 2000
       }),
     });
 
