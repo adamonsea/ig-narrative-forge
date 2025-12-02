@@ -211,26 +211,42 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
           </div>
 
           {/* Quiz Cards - Premium Feature */}
-          <div className="flex items-center justify-between p-4 rounded-lg border">
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="quiz-cards" className="font-medium">
-                  🧠 Quiz Cards
-                </Label>
-                <Badge variant="default" className="text-xs">Premium</Badge>
+          <div className="p-4 rounded-lg border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="quiz-cards" className="font-medium">
+                    🧠 Quiz Cards
+                  </Label>
+                  <Badge variant="default" className="text-xs">Premium</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  AI-generated quiz questions based on your feed content
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                AI-generated quiz questions based on your feed content
-              </p>
+              <Switch
+                id="quiz-cards"
+                checked={settings.quiz_cards_enabled}
+                onCheckedChange={(checked) => 
+                  updateSettings.mutate({ quiz_cards_enabled: checked })
+                }
+                disabled={!settings.is_premium_tier}
+              />
             </div>
-            <Switch
-              id="quiz-cards"
-              checked={settings.quiz_cards_enabled}
-              onCheckedChange={(checked) => 
-                updateSettings.mutate({ quiz_cards_enabled: checked })
-              }
-              disabled={!settings.is_premium_tier}
-            />
+            
+            {settings.quiz_cards_enabled && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem('quiz_answered');
+                  toast.success('Quiz history cleared. Refresh to see all quiz cards.');
+                }}
+                className="w-full"
+              >
+                Clear Quiz History
+              </Button>
+            )}
           </div>
 
           {/* This Time Last Month - Premium Feature */}
