@@ -98,6 +98,12 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
     if (typeof window !== 'undefined') {
       setVisitorId(getVisitorId());
       setPersistedAnswered(getAnsweredQuestions());
+      
+      // Debug helper: expose function to clear answered questions
+      (window as any).clearQuizAnswers = () => {
+        localStorage.removeItem('quiz_answered');
+        console.log('Cleared quiz answered history. Refresh page to see all quiz cards.');
+      };
     }
   }, []);
 
@@ -159,6 +165,18 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
   const unansweredQuestions = query.data?.filter(q => 
     !persistedAnswered.has(q.id) && !sessionAnswered.has(q.id)
   ) || [];
+  
+  // Debug logging for quiz card filtering
+  if (query.data && query.data.length > 0) {
+    console.log('Quiz cards filtering:', {
+      totalQuestions: query.data.length,
+      persistedAnsweredCount: persistedAnswered.size,
+      sessionAnsweredCount: sessionAnswered.size,
+      unansweredCount: unansweredQuestions.length,
+      sampleQuestionIds: query.data.slice(0, 3).map(q => q.id),
+      sampleAnsweredIds: [...persistedAnswered].slice(0, 3)
+    });
+  }
 
   // Combined set for checking if a question has been answered (either session)
   const allAnswered = new Set([...persistedAnswered, ...sessionAnswered]);
