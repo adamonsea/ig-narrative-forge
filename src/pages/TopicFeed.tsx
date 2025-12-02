@@ -277,8 +277,8 @@ const TopicFeed = () => {
   const { data: pulseData } = useCommunityPulseKeywords(topic?.id || '');
   const { data: insightCards = [] } = useAutomatedInsightCards(topic?.id, topic?.automated_insights_enabled ?? true);
   
-  // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata
-  const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled);
+  // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata, passes user ID for deduplication
+  const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled, user?.id);
   
   // Debug log for quiz cards
   console.log('Quiz cards state:', { quizCardsEnabled, questionsCount: quizQuestions.length, topicId: topic?.id });
@@ -1131,6 +1131,7 @@ const TopicFeed = () => {
                       <QuizCard
                         question={quizQuestion}
                         visitorId={quizVisitorId}
+                        userId={user?.id}
                         topicSlug={slug}
                         onAnswered={markAsAnswered}
                       />

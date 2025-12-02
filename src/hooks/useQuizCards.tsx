@@ -87,12 +87,14 @@ const markQuestionAnswered = (questionId: string) => {
   localStorage.setItem('quiz_answered', JSON.stringify([...answered]));
 };
 
-export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) => {
+export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean, userId?: string | null) => {
   const [visitorId, setVisitorId] = useState<string>('');
   // Questions answered BEFORE this session (loaded from localStorage on mount) - these are filtered out
   const [persistedAnswered, setPersistedAnswered] = useState<Set<string>>(new Set());
   // Questions answered DURING this session - saved to localStorage but NOT filtered out until refresh
   const [sessionAnswered, setSessionAnswered] = useState<Set<string>>(new Set());
+  // Questions answered by this user (from database) - for logged-in users
+  const [userAnsweredFromDb, setUserAnsweredFromDb] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -100,6 +102,32 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
       setPersistedAnswered(getAnsweredQuestions());
     }
   }, []);
+
+  // Fetch answered questions from database for logged-in users
+  useEffect(() => {
+    const fetchUserAnsweredQuestions = async () => {
+      if (!userId || !topicId) {
+        setUserAnsweredFromDb(new Set());
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('quiz_responses')
+        .select('question_id')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching user quiz responses:', error);
+        return;
+      }
+
+      const answeredIds = new Set(data?.map(r => r.question_id) || []);
+      console.log('Quiz: User has answered', answeredIds.size, 'questions from DB');
+      setUserAnsweredFromDb(answeredIds);
+    };
+
+    fetchUserAnsweredQuestions();
+  }, [userId, topicId]);
 
   // Always fetch quiz questions when we have a topicId - the quizEnabled check 
   // happens in the queryFn to avoid race conditions where the setting loads after
@@ -154,14 +182,14 @@ export const useQuizCards = (topicId: string | undefined, quizEnabled: boolean) 
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Filter out ALL answered questions (both before and during this session)
+  // Filter out ALL answered questions (localStorage, session, and database for logged-in users)
   // This prevents the same question from appearing multiple times in the feed
   const unansweredQuestions = query.data?.filter(q => 
-    !persistedAnswered.has(q.id) && !sessionAnswered.has(q.id)
+    !persistedAnswered.has(q.id) && !sessionAnswered.has(q.id) && !userAnsweredFromDb.has(q.id)
   ) || [];
 
-  // Combined set for checking if a question has been answered (either session)
-  const allAnswered = new Set([...persistedAnswered, ...sessionAnswered]);
+  // Combined set for checking if a question has been answered (any source)
+  const allAnswered = new Set([...persistedAnswered, ...sessionAnswered, ...userAnsweredFromDb]);
 
   return {
     ...query,
@@ -184,11 +212,13 @@ export const useSubmitQuizResponse = () => {
       questionId,
       selectedOption,
       visitorId,
+      userId,
       responseTimeMs
     }: {
       questionId: string;
       selectedOption: string;
       visitorId: string;
+      userId?: string;
       responseTimeMs?: number;
     }): Promise<QuizResponse> => {
       const { data, error } = await supabase.functions.invoke('submit-quiz-response', {
@@ -196,6 +226,7 @@ export const useSubmitQuizResponse = () => {
           questionId,
           selectedOption,
           visitorId,
+          userId,
           responseTimeMs
         }
       });

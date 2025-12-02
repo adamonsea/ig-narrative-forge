@@ -10,11 +10,12 @@ import { useNavigate } from 'react-router-dom';
 interface QuizCardProps {
   question: QuizQuestion;
   visitorId: string;
+  userId?: string | null;
   topicSlug?: string;
   onAnswered?: (questionId: string) => void;
 }
 
-export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCardProps) => {
+export const QuizCard = ({ question, visitorId, userId, topicSlug, onAnswered }: QuizCardProps) => {
   const navigate = useNavigate();
   const [result, setResult] = useState<QuizResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,7 @@ export const QuizCard = ({ question, visitorId, topicSlug, onAnswered }: QuizCar
         questionId: question.id,
         selectedOption: label,
         visitorId,
+        userId: userId || undefined,
         responseTimeMs
       });
 
