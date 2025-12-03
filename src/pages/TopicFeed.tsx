@@ -497,7 +497,7 @@ const TopicFeed = () => {
                   className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                 >
                   <Filter className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm font-medium">Filters</span>
+                  <span className="hidden sm:inline text-sm font-medium">Curate</span>
                   {hasActiveFilters && (
                     <span className="w-2 h-2 bg-primary rounded-full" />
                   )}
@@ -709,7 +709,7 @@ const TopicFeed = () => {
                 aria-label="Open filters"
               >
                 <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Filters</span>
+                <span className="text-sm font-medium">Curate</span>
                 {hasActiveFilters && (
                   <span className="w-2 h-2 bg-primary rounded-full" />
                 )}
