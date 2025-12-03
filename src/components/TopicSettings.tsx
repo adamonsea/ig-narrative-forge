@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TopicBrandingSettings } from "@/components/TopicBrandingSettings";
 import { ParliamentaryAutomationSettings } from "@/components/ParliamentaryAutomationSettings";
 import { TopicAutomationSettings } from "@/components/TopicAutomationSettings";
+import { DripFeedSettings } from "@/components/DripFeedSettings";
 import { ILLUSTRATION_STYLES, ILLUSTRATION_STYLE_LABELS, ILLUSTRATION_STYLE_DESCRIPTIONS, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
 
 interface TopicSettingsProps {
@@ -677,6 +678,11 @@ export const TopicSettings = ({
 
         {/* Unified Automation Settings */}
         <TopicAutomationSettings topicId={topicId} />
+
+        <Separator />
+
+        {/* Drip Feed Release Settings */}
+        <DripFeedSettings topicId={topicId} onUpdate={onUpdate} />
 
         <div className="flex justify-end">
           <Button 
