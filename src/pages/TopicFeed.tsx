@@ -38,6 +38,7 @@ import { useTopicMetadata } from "@/hooks/useTopicMetadata";
 import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
 import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
 import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
+import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -1080,6 +1081,18 @@ const TopicFeed = () => {
                   <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
                     <ParliamentaryInsightCard
                       votes={parliamentaryVotes}
+                      topicSlug={slug}
+                    />
+                  </div>
+                );
+              }
+
+              // Show flashback "This time last month" card once at position 10
+              if (storyIndex === 10 && topic?.id) {
+                items.push(
+                  <div key="flashback-insight" className="w-full max-w-2xl">
+                    <FlashbackInsightsPanel
+                      topicId={topic.id}
                       topicSlug={slug}
                     />
                   </div>
