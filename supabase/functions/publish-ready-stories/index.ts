@@ -24,8 +24,20 @@ serve(async (req) => {
 
     console.log('📢 Converting ready stories to published status...');
 
-    // First, check for stories with future publication dates
-    // DRIP FEED SAFETY: Also filter out stories with future scheduled_publish_at
+    // First, fetch topics with drip feed enabled to know which topics should hold stories
+    const { data: dripFeedTopics, error: topicsError } = await supabase
+      .from('topics')
+      .select('id')
+      .eq('drip_feed_enabled', true);
+
+    if (topicsError) {
+      console.error('Error fetching drip feed topics:', topicsError);
+    }
+
+    const dripFeedTopicIds = new Set((dripFeedTopics || []).map(t => t.id));
+    console.log(`💧 ${dripFeedTopicIds.size} topics have drip feed enabled`);
+
+    // Fetch ready stories with topic info
     const { data: readyStories, error: fetchError } = await supabase
       .from('stories')
       .select(`
@@ -54,49 +66,25 @@ serve(async (req) => {
       );
     }
 
-    // Check publication dates for each story
+    // Check publication dates and drip feed status for each story
     const storiesToPublish: string[] = [];
     const futureStories: Array<{id: string; title: string; date: string; reason: string}> = [];
-    const dripQueuedStories: Array<{id: string; title: string; scheduled_at: string}> = [];
+    const dripQueuedStories: Array<{id: string; title: string; scheduled_at: string | null; reason: string}> = [];
 
     for (const story of readyStories) {
-      // DRIP FEED CHECK: Skip stories with future scheduled_publish_at
-      if (story.scheduled_publish_at) {
-        const scheduledTime = new Date(story.scheduled_publish_at);
-        if (scheduledTime > new Date()) {
-          dripQueuedStories.push({ 
-            id: story.id, 
-            title: story.title, 
-            scheduled_at: story.scheduled_publish_at 
-          });
-          console.log(`⏰ Drip feed: Holding "${story.title}" until ${story.scheduled_publish_at}`);
-          continue;
-        }
-      }
-
-      if (story.article_id) {
-        // Legacy article
-        const { data: article } = await supabase
-          .from('articles')
-          .select('published_at')
-          .eq('id', story.article_id)
-          .single();
-        
-        if (article?.published_at) {
-          const pubDate = new Date(article.published_at);
-          if (pubDate > new Date()) {
-            futureStories.push({ id: story.id, title: story.title, date: article.published_at, reason: 'future_article_date' });
-            continue;
-          }
-        }
-      } else if (story.topic_article_id) {
-        // Multi-tenant article
+      // Get the topic ID for this story
+      let topicId: string | null = null;
+      
+      if (story.topic_article_id) {
         const { data: topicArticle } = await supabase
           .from('topic_articles')
-          .select('shared_content_id')
+          .select('topic_id, shared_content_id')
           .eq('id', story.topic_article_id)
           .single();
         
+        topicId = topicArticle?.topic_id || null;
+        
+        // Check for future article date
         if (topicArticle?.shared_content_id) {
           const { data: content } = await supabase
             .from('shared_article_content')
@@ -112,6 +100,55 @@ serve(async (req) => {
             }
           }
         }
+      } else if (story.article_id) {
+        // Legacy article path
+        const { data: article } = await supabase
+          .from('articles')
+          .select('published_at, topic_id')
+          .eq('id', story.article_id)
+          .single();
+        
+        topicId = article?.topic_id || null;
+        
+        if (article?.published_at) {
+          const pubDate = new Date(article.published_at);
+          if (pubDate > new Date()) {
+            futureStories.push({ id: story.id, title: story.title, date: article.published_at, reason: 'future_article_date' });
+            continue;
+          }
+        }
+      }
+
+      // DRIP FEED CHECK: If topic has drip feed enabled
+      const isDripFeedTopic = topicId && dripFeedTopicIds.has(topicId);
+      
+      if (isDripFeedTopic) {
+        // If story has scheduled_publish_at, check if it's in the future
+        if (story.scheduled_publish_at) {
+          const scheduledTime = new Date(story.scheduled_publish_at);
+          if (scheduledTime > new Date()) {
+            dripQueuedStories.push({ 
+              id: story.id, 
+              title: story.title, 
+              scheduled_at: story.scheduled_publish_at,
+              reason: 'scheduled_for_future'
+            });
+            console.log(`⏰ Drip feed: Holding "${story.title}" until ${story.scheduled_publish_at}`);
+            continue;
+          }
+          // scheduled_publish_at is in the past, okay to publish
+        } else {
+          // NO scheduled_publish_at but drip feed is enabled - HOLD the story
+          // Scheduler hasn't assigned a time yet, don't publish prematurely
+          dripQueuedStories.push({ 
+            id: story.id, 
+            title: story.title, 
+            scheduled_at: null,
+            reason: 'awaiting_drip_schedule'
+          });
+          console.log(`⏳ Drip feed: Holding "${story.title}" - awaiting scheduler to assign time`);
+          continue;
+        }
       }
       
       storiesToPublish.push(story.id);
@@ -122,7 +159,9 @@ serve(async (req) => {
     }
 
     if (dripQueuedStories.length > 0) {
-      console.log(`💧 Drip feed: ${dripQueuedStories.length} stories held for scheduled release`);
+      const scheduledCount = dripQueuedStories.filter(s => s.reason === 'scheduled_for_future').length;
+      const awaitingCount = dripQueuedStories.filter(s => s.reason === 'awaiting_drip_schedule').length;
+      console.log(`💧 Drip feed: ${scheduledCount} stories scheduled, ${awaitingCount} awaiting scheduler`);
     }
 
     if (storiesToPublish.length === 0) {
@@ -137,7 +176,7 @@ serve(async (req) => {
       );
     }
 
-    // Update only stories without future dates AND not in drip queue
+    // Update only stories that passed all checks
     const { data: updatedStories, error: updateError } = await supabase
       .from('stories')
       .update({
