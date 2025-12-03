@@ -36,6 +36,8 @@ import { useQuizCards } from "@/hooks/useQuizCards";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { useTopicMetadata } from "@/hooks/useTopicMetadata";
 import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
+import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
+import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -279,6 +281,13 @@ const TopicFeed = () => {
   
   // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata, passes user ID for deduplication
   const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled, user?.id);
+  
+  // Parliamentary insight cards - only for regional topics with tracking enabled
+  const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
+    topic?.id,
+    topic?.topic_type,
+    (topic as any)?.parliamentary_tracking_enabled
+  );
   
   // Debug log for quiz cards
   console.log('Quiz cards state:', { quizCardsEnabled, questionsCount: quizQuestions.length, topicId: topic?.id });
@@ -945,86 +954,8 @@ const TopicFeed = () => {
                 }
               }
 
-              // Render parliamentary mention as a story carousel
-              if (contentItem.type === 'parliamentary_mention') {
-                const mention = contentItem.data as any;
-                
-                // Transform parliamentary mention into a Story-compatible object
-                const parliamentaryStory = {
-                  id: mention.id,
-                  title: mention.vote_title || mention.debate_title || 'Parliamentary Activity',
-                  author: mention.mp_name || 'Unknown MP',
-                  publication_name: 'UK Parliament',
-                  created_at: mention.created_at,
-                  updated_at: mention.created_at,
-                  is_parliamentary: true,
-                  mp_name: mention.mp_name,
-                  mp_party: mention.party,
-                  constituency: mention.constituency,
-                  slides: [
-                    {
-                      id: `${mention.id}-slide-1`,
-                      slide_number: 1,
-                      content: `${mention.mp_name || 'MP'}\n${format(new Date(mention.vote_date || mention.debate_date || mention.created_at), 'MMMM d, yyyy')}\n${mention.vote_title || mention.debate_title || 'Parliamentary Activity'}`,
-                      word_count: 15
-                    },
-                    {
-                      id: `${mention.id}-slide-2`,
-                      slide_number: 2,
-                      content: `${mention.vote_direction?.toUpperCase() || 'ABSTAIN'}${mention.is_rebellion ? '\n🔥 Against party whip' : ''}`,
-                      word_count: 5
-                    },
-                    {
-                      id: `${mention.id}-slide-3`,
-                      slide_number: 3,
-                      content: `${mention.vote_outcome?.toUpperCase() || 'PENDING'}\nAyes ${mention.aye_count || 0} : Noes ${mention.no_count || 0}`,
-                      word_count: 10
-                    },
-                    {
-                      id: `${mention.id}-slide-4`,
-                      slide_number: 4,
-                      content: `Category: ${mention.vote_category || 'General'}\n\n${mention.local_impact_summary || 'Parliamentary activity'}`,
-                      word_count: 20
-                    },
-                    {
-                      id: `${mention.id}-slide-5`,
-                      slide_number: 5,
-                      content: 'View full details on Parliament.uk',
-                      word_count: 5,
-                      links: mention.vote_url || mention.debate_url ? [{
-                        url: mention.vote_url || mention.debate_url,
-                        text: 'View vote details',
-                        start: 0,
-                        end: 16
-                      }] : []
-                    }
-                  ],
-                  article: {
-                    source_url: mention.vote_url || mention.debate_url || 'https://www.parliament.uk',
-                    published_at: mention.vote_date || mention.debate_date || mention.created_at,
-                    region: topic?.region || 'UK'
-                  }
-                };
-
-                items.push(
-                  <div
-                    key={`parliamentary-${mention.id}`}
-                    className="w-full max-w-2xl"
-                    ref={index === lastStoryContentIndex ? lastStoryElementRef : null}
-                  >
-                    <StoryCarousel 
-                      story={parliamentaryStory} 
-                      storyUrl={`${window.location.origin}/feed/${slug}/parliamentary/${mention.id}`}
-                      topicId={topic?.id}
-                      storyIndex={index}
-                      topicName={topic?.name}
-                      topicSlug={slug}
-                      onStorySwipe={handleStorySwipe}
-                      onStoryScrolledPast={handleStoryScrolledPast}
-                    />
-                  </div>
-                );
-              }
+              // Render parliamentary mention is now handled via ParliamentaryInsightCard (non-chronological)
+              // at fixed intervals, not in chronological feed
 
               // Add community pulse card based on topic setting
               const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
@@ -1138,6 +1069,21 @@ const TopicFeed = () => {
                     </div>
                   );
                 }
+              }
+
+              // Show parliamentary insight cards every 12 stories (offset by 7 to avoid collisions)
+              // Only for regional topics with parliamentary tracking enabled
+              const shouldShowParliamentary = storyIndex % 12 === 7 && storyIndex > 0 && hasParliamentaryData;
+              
+              if (shouldShowParliamentary && parliamentaryVotes.length > 0) {
+                items.push(
+                  <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
+                    <ParliamentaryInsightCard
+                      votes={parliamentaryVotes}
+                      topicSlug={slug}
+                    />
+                  </div>
+                );
               }
 
               return items;

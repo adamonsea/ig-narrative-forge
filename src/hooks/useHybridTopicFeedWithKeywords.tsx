@@ -96,32 +96,12 @@ interface FilterStoryIndexEntry {
 const STORIES_PER_PAGE = 20; // Increased to load more stories per page
 const DEBOUNCE_DELAY_MS = 0;
 
-// Enhanced Story interface to include parliamentary mentions
+// Feed content interface - stories only (parliamentary content moved to insight cards)
 interface FeedContent {
-  type: 'story' | 'parliamentary_mention';
+  type: 'story';
   id: string;
   content_date: string; // Used for chronological sorting
-  data: Story | ParliamentaryMention;
-}
-
-interface ParliamentaryMention {
-  id: string;
-  mention_type: string;
-  mp_name: string | null;
-  constituency: string | null;
-  party: string | null;
-  vote_title: string | null;
-  vote_direction: string | null;
-  vote_date: string | null;
-  vote_url: string | null;
-  debate_title: string | null;
-  debate_excerpt: string | null;
-  debate_date: string | null;
-  hansard_url: string | null;
-  region_mentioned: string | null;
-  landmark_mentioned: string | null;
-  relevance_score: number;
-  created_at: string;
+  data: Story;
 }
 
 export const useHybridTopicFeedWithKeywords = (slug: string) => {
@@ -464,53 +444,18 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         }
 
         const storyContent: FeedContent[] = transformedStories.map(story => ({
-          type: 'story',
+          type: 'story' as const,
           id: story.id,
           content_date: story.article.published_at || story.created_at,
           data: story
         }));
 
-        let parliamentaryMentions: ParliamentaryMention[] = [];
-        if (
-          topicData.topic_type === 'regional' &&
-          topicData.parliamentary_tracking_enabled &&
-          pageNum === 0
-        ) {
-          try {
-            const { data: mentionsData, error: mentionsError } = await supabase
-              .from('parliamentary_mentions')
-              .select('*')
-              .eq('topic_id', topicData.id)
-              .gte('relevance_score', 30)
-              .order('created_at', { ascending: false })
-              .limit(20);
+        // Parliamentary mentions are now handled via ParliamentaryInsightCard (non-chronological)
+        // No longer merged into chronological feed
 
-            if (!mentionsError && mentionsData) {
-              parliamentaryMentions = mentionsData;
-            }
-          } catch (error) {
-            console.warn('⚠️ Fallback: Failed to load parliamentary mentions:', error);
-          }
-        }
-
-        const parliamentaryContent: FeedContent[] = parliamentaryMentions.map(mention => ({
-          type: 'parliamentary_mention' as const,
-          id: mention.id,
-          content_date: mention.vote_date || mention.debate_date || mention.created_at,
-          data: mention
-        }));
-
-        const mergedContent = [...storyContent, ...parliamentaryContent]
+        const orderedContent = storyContent
           .filter(item => !!item?.id)
-          .reduce<Map<string, FeedContent>>((acc, item) => {
-            if (!acc.has(item.id)) {
-              acc.set(item.id, item);
-            }
-            return acc;
-          }, new Map())
-          .values();
-
-        const orderedContent = Array.from(mergedContent).sort((a, b) => {
+          .sort((a, b) => {
           const aTime = new Date(a.content_date).getTime();
           const bTime = new Date(b.content_date).getTime();
           return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
@@ -980,25 +925,8 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         console.debug(`🏛️ Primary RPC: ${parliamentaryCount}/${transformedStories.length} stories marked as parliamentary`);
       }
 
-      // Fetch parliamentary mentions if enabled for regional topics
-      let parliamentaryMentions: ParliamentaryMention[] = [];
-      if (topicData.topic_type === 'regional' && topicData.parliamentary_tracking_enabled && pageNum === 0) {
-        try {
-          const { data: mentionsData, error: mentionsError } = await supabase
-            .from('parliamentary_mentions')
-            .select('*')
-            .eq('topic_id', topicData.id)
-            .gte('relevance_score', 30)
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-          if (!mentionsError && mentionsData) {
-            parliamentaryMentions = mentionsData;
-          }
-        } catch (error) {
-          console.warn('Failed to load parliamentary mentions:', error);
-        }
-      }
+      // Parliamentary mentions are now handled via ParliamentaryInsightCard (non-chronological)
+      // No longer merged into chronological feed
 
       const storyContent: FeedContent[] = transformedStories.map(story => ({
         type: 'story' as const,
@@ -1007,17 +935,10 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         data: story
       }));
 
-      const parliamentaryContent: FeedContent[] = parliamentaryMentions.map(mention => ({
-        type: 'parliamentary_mention' as const,
-        id: mention.id,
-        content_date: mention.vote_date || mention.debate_date || mention.created_at,
-        data: mention
-      }));
-
       // Defensive deduplication: use Map to ensure each ID appears exactly once
-      console.log('🔍 [DEDUP] Before dedup:', storyContent.length, 'stories', parliamentaryContent.length, 'parliamentary');
+      console.log('🔍 [DEDUP] Before dedup:', storyContent.length, 'stories');
       const contentMap = new Map<string, FeedContent>();
-      [...storyContent, ...parliamentaryContent].forEach(item => {
+      storyContent.forEach(item => {
         if (item?.id) {
           if (!contentMap.has(item.id)) {
             contentMap.set(item.id, item);
@@ -1026,9 +947,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             console.warn(`⚠️ [DEDUP] Duplicate content detected:`, {
               id: item.id.substring(0, 8),
               type: item.type,
-              title: item.type === 'story' ? (item.data as any).title?.substring(0, 50) : '',
-              existingSlides: item.type === 'story' ? (existing?.data as any).slides?.length : 0,
-              newSlides: item.type === 'story' ? (item.data as any).slides?.length : 0
+              title: (item.data as any).title?.substring(0, 50),
+              existingSlides: (existing?.data as any).slides?.length,
+              newSlides: (item.data as any).slides?.length
             });
           }
         }
@@ -1036,70 +957,27 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       console.log('🔍 [DEDUP] After dedup:', contentMap.size, 'unique items');
 
       const now = new Date().getTime();
-      // Helper function to interleave parliamentary content within same-day groups
-      const interleaveByDay = (content: FeedContent[]): FeedContent[] => {
-        // Group content by day
-        const dayGroups = new Map<string, FeedContent[]>();
-        
-        content.forEach(item => {
-          const dayKey = new Date(item.content_date).toISOString().split('T')[0];
-          if (!dayGroups.has(dayKey)) {
-            dayGroups.set(dayKey, []);
-          }
-          dayGroups.get(dayKey)!.push(item);
+      const sortedContent = Array.from(contentMap.values())
+        .filter(item => {
+          // Filter out stories with future published dates
+          const itemDate = new Date(item.content_date).getTime();
+          if (isNaN(itemDate)) return true; // Keep items with invalid dates
+          return itemDate <= now; // Only keep items with dates in the past or present
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.content_date).getTime();
+          const dateB = new Date(b.content_date).getTime();
+          // If dates are invalid, fall back to treating as very old
+          const validDateA = isNaN(dateA) ? 0 : dateA;
+          const validDateB = isNaN(dateB) ? 0 : dateB;
+          return validDateB - validDateA; // Newest first
         });
 
-        // Interleave within each day group
-        const interleaved: FeedContent[] = [];
-        Array.from(dayGroups.entries())
-          .sort(([a], [b]) => b.localeCompare(a)) // Newest days first
-          .forEach(([_, dayItems]) => {
-            const parliamentary = dayItems.filter(i => i.type === 'parliamentary_mention');
-            const stories = dayItems.filter(i => i.type === 'story');
-            
-            let pIndex = 0;
-            let sIndex = 0;
-            
-            while (pIndex < parliamentary.length || sIndex < stories.length) {
-              // Add 1-2 regular stories
-              const storiesToAdd = Math.min(2, stories.length - sIndex);
-              for (let i = 0; i < storiesToAdd; i++) {
-                interleaved.push(stories[sIndex++]);
-              }
-              
-              // Add 1 parliamentary card (if available)
-              if (pIndex < parliamentary.length) {
-                interleaved.push(parliamentary[pIndex++]);
-              }
-            }
-          });
-        
-        return interleaved;
-      };
-
-      const mixedContent = interleaveByDay(
-        Array.from(contentMap.values())
-          .filter(item => {
-            // Filter out stories with future published dates
-            const itemDate = new Date(item.content_date).getTime();
-            if (isNaN(itemDate)) return true; // Keep items with invalid dates
-            return itemDate <= now; // Only keep items with dates in the past or present
-          })
-          .sort((a, b) => {
-            const dateA = new Date(a.content_date).getTime();
-            const dateB = new Date(b.content_date).getTime();
-            // If dates are invalid, fall back to treating as very old
-            const validDateA = isNaN(dateA) ? 0 : dateA;
-            const validDateB = isNaN(dateB) ? 0 : dateB;
-            return validDateB - validDateA; // Newest first
-          })
-      );
-
-      console.log('🔍 Mixed content ordering:', mixedContent.slice(0, 5).map(item => ({
+      console.log('🔍 Content ordering:', sortedContent.slice(0, 5).map(item => ({
         type: item.type,
         id: item.id.substring(0, 8),
         date: item.content_date,
-        title: item.type === 'story' ? (item.data as any).title : (item.data as any).vote_title || (item.data as any).debate_title
+        title: (item.data as any).title
       })));
 
       if (append) {
@@ -1110,11 +988,11 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           return combined;
         });
         
-        // Merge new stories with existing mixed content and re-sort chronologically with deduplication
+        // Merge new stories with existing content and re-sort chronologically with deduplication
         setAllContent(prev => {
           console.log('🔍 [APPEND] Merging into allContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
-          [...prev, ...storyContent, ...parliamentaryContent].forEach(item => {
+          [...prev, ...storyContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
             } else {
@@ -1126,17 +1004,16 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             const bTime = new Date(b.content_date).getTime();
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
           });
-          const merged = interleaveByDay(sorted);
-          console.log('🔍 [APPEND] AllContent now has', merged.length, 'items');
-          allContentRef.current = merged;
-          return merged;
+          console.log('🔍 [APPEND] AllContent now has', sorted.length, 'items');
+          allContentRef.current = sorted;
+          return sorted;
         });
 
         setFilteredContent(prev => {
           console.log('🔍 [APPEND] Merging into filteredContent, prev had', prev.length, 'items');
           const contentMap = new Map<string, FeedContent>();
           const base = prev;
-          [...base, ...storyContent, ...parliamentaryContent].forEach(item => {
+          [...base, ...storyContent].forEach(item => {
             if (!contentMap.has(item.id)) {
               contentMap.set(item.id, item);
             } else {
@@ -1149,36 +1026,19 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
             const bTime = new Date(b.content_date).getTime();
             return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
           });
-          const merged = interleaveByDay(sorted);
 
-          if (keywords || sources) {
-            // Filter stories by keywords/sources, but ALWAYS include parliamentary content
-            const filtered = merged.filter(item => {
-              if (item.type === 'parliamentary_mention') return true; // Always keep parliamentary
-              return item.type === 'story'; // Apply filtering to regular stories
-            });
-            console.log('🔍 [APPEND] FilteredContent now has', filtered.length, 'items (filtered, parliamentary preserved)');
-            return filtered;
-          }
-          
-          console.log(`🏛️ Parliamentary content in feed:`, {
-            total_items: contentMap.size,
-            parliamentary_count: Array.from(contentMap.values()).filter(i => i.type === 'parliamentary_mention').length,
-            story_count: Array.from(contentMap.values()).filter(i => i.type === 'story').length
-          });
-
-          console.log('🔍 [APPEND] FilteredContent now has', merged.length, 'items');
-          return merged;
+          console.log('🔍 [APPEND] FilteredContent now has', sorted.length, 'items');
+          return sorted;
         });
       } else {
-        console.log('🔍 [INITIAL] Setting initial content:', transformedStories.length, 'stories', mixedContent.length, 'mixed items');
+        console.log('🔍 [INITIAL] Setting initial content:', transformedStories.length, 'stories', sortedContent.length, 'sorted items');
         setAllStories(transformedStories);
-        // For initial load, use the mixed content with proper chronological order
-        setAllContent(mixedContent);
-        allContentRef.current = mixedContent;
+        // For initial load, use the sorted content with proper chronological order
+        setAllContent(sortedContent);
+        allContentRef.current = sortedContent;
         if (!keywords && !sources) {
-          setFilteredContent(mixedContent);
-          console.log('🔍 [INITIAL] FilteredContent set to', mixedContent.length, 'mixed items (no filters)');
+          setFilteredContent(sortedContent);
+          console.log('🔍 [INITIAL] FilteredContent set to', sortedContent.length, 'items (no filters)');
         } else {
           // For filtering, only include stories for now
           setFilteredContent(storyContent);
