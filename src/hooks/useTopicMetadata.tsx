@@ -6,6 +6,7 @@ interface TopicMetadata {
   avgDailyStories: number;
   playModeEnabled: boolean;
   quizCardsEnabled: boolean;
+  this_time_last_month_enabled: boolean;
   latestDailyRoundup: string | null;
   latestWeeklyRoundup: string | null;
 }
@@ -85,33 +86,35 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       {
         queryKey: ['topic-insight-settings', topicId],
         queryFn: async () => {
-          if (!topicId) return { playModeEnabled: true, quizCardsEnabled: false };
+          if (!topicId) return { playModeEnabled: true, quizCardsEnabled: false, thisTimeLastMonthEnabled: false };
           
           const { data, error } = await supabase
             .from('topic_insight_settings')
-            .select('play_mode_enabled, quiz_cards_enabled')
+            .select('play_mode_enabled, quiz_cards_enabled, this_time_last_month_enabled')
             .eq('topic_id', topicId)
             .maybeSingle();
 
           if (error) {
             console.log('Error fetching insight settings:', error);
-            return { playModeEnabled: true, quizCardsEnabled: false };
+            return { playModeEnabled: true, quizCardsEnabled: false, thisTimeLastMonthEnabled: false };
           }
 
           // No row found - use defaults
           if (!data) {
             console.log('No insight settings row found for topic, using defaults');
-            return { playModeEnabled: true, quizCardsEnabled: false };
+            return { playModeEnabled: true, quizCardsEnabled: false, thisTimeLastMonthEnabled: false };
           }
 
           console.log('Insight settings loaded:', { 
             playModeEnabled: data.play_mode_enabled, 
-            quizCardsEnabled: data.quiz_cards_enabled 
+            quizCardsEnabled: data.quiz_cards_enabled,
+            thisTimeLastMonthEnabled: data.this_time_last_month_enabled
           });
 
           return {
             playModeEnabled: data.play_mode_enabled !== false,
-            quizCardsEnabled: data.quiz_cards_enabled ?? false
+            quizCardsEnabled: data.quiz_cards_enabled ?? false,
+            thisTimeLastMonthEnabled: data.this_time_last_month_enabled ?? false
           };
         },
         enabled: !!topicId,
@@ -167,6 +170,7 @@ export const useTopicMetadata = (topicId: string | undefined, slug: string | und
       avgDailyStories: avgDailyResult.data ?? 0,
       playModeEnabled: insightSettingsResult.data?.playModeEnabled ?? true,
       quizCardsEnabled: insightSettingsResult.data?.quizCardsEnabled ?? false,
+      this_time_last_month_enabled: insightSettingsResult.data?.thisTimeLastMonthEnabled ?? false,
       latestDailyRoundup: roundupsResult.data?.daily ?? null,
       latestWeeklyRoundup: roundupsResult.data?.weekly ?? null,
     },
