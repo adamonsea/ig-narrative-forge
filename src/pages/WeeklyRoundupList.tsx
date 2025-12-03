@@ -469,7 +469,7 @@ export default function WeeklyRoundupList() {
               className={hasActiveFilters ? "border-primary text-primary" : ""}
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              Curate
               {hasActiveFilters && (
                 <span className="ml-2 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">
                   {filteredStories.length}
