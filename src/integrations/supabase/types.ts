@@ -2685,6 +2685,7 @@ export type Database = {
           cover_illustration_prompt: string | null
           cover_illustration_url: string | null
           created_at: string
+          drip_queued_at: string | null
           id: string
           illustration_generated_at: string | null
           is_parliamentary: boolean | null
@@ -2694,6 +2695,7 @@ export type Database = {
           mp_party: string | null
           publication_name: string | null
           quality_score: number | null
+          scheduled_publish_at: string | null
           selected_cover_id: string | null
           shared_content_id: string | null
           slide_type: string | null
@@ -2714,6 +2716,7 @@ export type Database = {
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
           created_at?: string
+          drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
           is_parliamentary?: boolean | null
@@ -2723,6 +2726,7 @@ export type Database = {
           mp_party?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          scheduled_publish_at?: string | null
           selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
@@ -2743,6 +2747,7 @@ export type Database = {
           cover_illustration_prompt?: string | null
           cover_illustration_url?: string | null
           created_at?: string
+          drip_queued_at?: string | null
           id?: string
           illustration_generated_at?: string | null
           is_parliamentary?: boolean | null
@@ -2752,6 +2757,7 @@ export type Database = {
           mp_party?: string | null
           publication_name?: string | null
           quality_score?: number | null
+          scheduled_publish_at?: string | null
           selected_cover_id?: string | null
           shared_content_id?: string | null
           slide_type?: string | null
@@ -3693,6 +3699,11 @@ export type Database = {
           description: string | null
           donation_config: Json | null
           donation_enabled: boolean | null
+          drip_end_hour: number | null
+          drip_feed_enabled: boolean | null
+          drip_release_interval_hours: number | null
+          drip_start_hour: number | null
+          drip_stories_per_release: number | null
           events_enabled: boolean | null
           id: string
           illustration_accent_color: string | null
@@ -3738,6 +3749,11 @@ export type Database = {
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
+          drip_end_hour?: number | null
+          drip_feed_enabled?: boolean | null
+          drip_release_interval_hours?: number | null
+          drip_start_hour?: number | null
+          drip_stories_per_release?: number | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null
@@ -3783,6 +3799,11 @@ export type Database = {
           description?: string | null
           donation_config?: Json | null
           donation_enabled?: boolean | null
+          drip_end_hour?: number | null
+          drip_feed_enabled?: boolean | null
+          drip_release_interval_hours?: number | null
+          drip_start_hour?: number | null
+          drip_stories_per_release?: number | null
           events_enabled?: boolean | null
           id?: string
           illustration_accent_color?: string | null

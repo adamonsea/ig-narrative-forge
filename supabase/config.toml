@@ -476,3 +476,10 @@ verify_jwt = false
 [functions.sentiment-history-snapshot]
 verify_jwt = false
 
+# ========================================
+# DRIP FEED
+# ========================================
+
+[functions.drip-feed-scheduler]
+verify_jwt = false
+

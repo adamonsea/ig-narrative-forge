@@ -25,13 +25,15 @@ serve(async (req) => {
     console.log('📢 Converting ready stories to published status...');
 
     // First, check for stories with future publication dates
+    // DRIP FEED SAFETY: Also filter out stories with future scheduled_publish_at
     const { data: readyStories, error: fetchError } = await supabase
       .from('stories')
       .select(`
         id, 
         title,
         article_id,
-        topic_article_id
+        topic_article_id,
+        scheduled_publish_at
       `)
       .eq('status', 'ready');
 
@@ -54,9 +56,24 @@ serve(async (req) => {
 
     // Check publication dates for each story
     const storiesToPublish: string[] = [];
-    const futureStories: Array<{id: string; title: string; date: string}> = [];
+    const futureStories: Array<{id: string; title: string; date: string; reason: string}> = [];
+    const dripQueuedStories: Array<{id: string; title: string; scheduled_at: string}> = [];
 
     for (const story of readyStories) {
+      // DRIP FEED CHECK: Skip stories with future scheduled_publish_at
+      if (story.scheduled_publish_at) {
+        const scheduledTime = new Date(story.scheduled_publish_at);
+        if (scheduledTime > new Date()) {
+          dripQueuedStories.push({ 
+            id: story.id, 
+            title: story.title, 
+            scheduled_at: story.scheduled_publish_at 
+          });
+          console.log(`⏰ Drip feed: Holding "${story.title}" until ${story.scheduled_publish_at}`);
+          continue;
+        }
+      }
+
       if (story.article_id) {
         // Legacy article
         const { data: article } = await supabase
@@ -68,7 +85,7 @@ serve(async (req) => {
         if (article?.published_at) {
           const pubDate = new Date(article.published_at);
           if (pubDate > new Date()) {
-            futureStories.push({ id: story.id, title: story.title, date: article.published_at });
+            futureStories.push({ id: story.id, title: story.title, date: article.published_at, reason: 'future_article_date' });
             continue;
           }
         }
@@ -90,7 +107,7 @@ serve(async (req) => {
           if (content?.published_at) {
             const pubDate = new Date(content.published_at);
             if (pubDate > new Date()) {
-              futureStories.push({ id: story.id, title: story.title, date: content.published_at });
+              futureStories.push({ id: story.id, title: story.title, date: content.published_at, reason: 'future_article_date' });
               continue;
             }
           }
@@ -104,18 +121,23 @@ serve(async (req) => {
       console.warn('⚠️ Skipping future-dated stories:', futureStories);
     }
 
+    if (dripQueuedStories.length > 0) {
+      console.log(`💧 Drip feed: ${dripQueuedStories.length} stories held for scheduled release`);
+    }
+
     if (storiesToPublish.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'No stories to publish (all have future dates)',
-          skippedStories: futureStories
+          message: 'No stories to publish (all have future dates or are drip queued)',
+          skippedStories: futureStories,
+          dripQueuedStories: dripQueuedStories
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update only stories without future dates
+    // Update only stories without future dates AND not in drip queue
     const { data: updatedStories, error: updateError } = await supabase
       .from('stories')
       .update({
@@ -132,13 +154,18 @@ serve(async (req) => {
 
     const updatedCount = updatedStories?.length || 0;
     console.log(`✅ Successfully published ${updatedCount} ready stories`);
+    
+    if (dripQueuedStories.length > 0) {
+      console.log(`💧 ${dripQueuedStories.length} stories remain in drip queue`);
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}`,
+        message: `Published ${updatedCount} ready stories${futureStories.length > 0 ? `, skipped ${futureStories.length} future-dated stories` : ''}${dripQueuedStories.length > 0 ? `, ${dripQueuedStories.length} in drip queue` : ''}`,
         updatedStories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
-        skippedStories: futureStories.length > 0 ? futureStories : undefined
+        skippedStories: futureStories.length > 0 ? futureStories : undefined,
+        dripQueuedStories: dripQueuedStories.length > 0 ? dripQueuedStories : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
