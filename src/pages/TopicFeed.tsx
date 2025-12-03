@@ -39,6 +39,30 @@ import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboardi
 import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
 import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
 import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
+import { 
+  FEED_CARD_POSITIONS, 
+  shouldShowCard, 
+  getCardIndex,
+  logCollisionReport 
+} from "@/lib/feedCardPositions";
+
+// Helper functions using centralized position system
+const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
+const getSentimentIndex = (idx: number) => getCardIndex('sentiment', idx);
+const shouldShowAutomatedInsight = (idx: number) => shouldShowCard('automatedInsight', idx);
+const getAutomatedInsightIndex = (idx: number) => getCardIndex('automatedInsight', idx);
+const shouldShowQuiz = (idx: number) => shouldShowCard('quiz', idx);
+const getQuizIndex = (idx: number) => getCardIndex('quiz', idx);
+const shouldShowEvents = (idx: number) => shouldShowCard('events', idx);
+const shouldShowParliamentary = (idx: number) => shouldShowCard('parliamentary', idx);
+const shouldShowFlashback = (idx: number) => shouldShowCard('flashback', idx);
+const shouldShowCommunityPulseCard = (idx: number) => shouldShowCard('communityPulse', idx);
+const getCommunityPulseIndex = (idx: number) => getCardIndex('communityPulse', idx);
+
+// Log position map on mount (development only)
+if (import.meta.env.DEV) {
+  logCollisionReport(50);
+}
 
 const TopicFeed = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -958,12 +982,17 @@ const TopicFeed = () => {
               // Render parliamentary mention is now handled via ParliamentaryInsightCard (non-chronological)
               // at fixed intervals, not in chronological feed
 
-              // Add community pulse card based on topic setting
+              // Calculate story index for position-based card rendering
               const storyIndex = filteredContent.slice(0, index + 1).filter(item => item.type === 'story').length;
-              const pulseFrequency = topic?.community_pulse_frequency || 8;
-              if ((storyIndex - 2) % pulseFrequency === 0 && storyIndex > 2 && shouldShowCommunityPulse && topic && pulseData) {
+
+              // ═══════════════════════════════════════════════════════════════════
+              // FEED CARD POSITIONS - Using centralized registry from feedCardPositions.ts
+              // ═══════════════════════════════════════════════════════════════════
+
+              // Community pulse cards (positions 4, 19, 34...)
+              if (shouldShowCommunityPulseCard(storyIndex) && shouldShowCommunityPulse && topic && pulseData) {
                 items.push(
-                  <div key={`community-pulse-${index}`} className="w-full max-w-2xl">
+                  <div key={`community-pulse-${storyIndex}`} className="w-full max-w-2xl">
                     <CommunityPulseSlides
                       keywords={pulseData.keywords}
                       timeframe="48h"
@@ -974,25 +1003,20 @@ const TopicFeed = () => {
                 );
               }
 
-              // Add sentiment cards with comparison cards after every 3 keyword cards
-              if (storyIndex % 6 === 0 && storyIndex > 0 && sentimentCards.length > 0) {
-                // Separate comparison and keyword cards
+              // Sentiment cards (positions 6, 12, 18, 24...)
+              if (shouldShowSentiment(storyIndex) && sentimentCards.length > 0) {
                 const keywordCards = sentimentCards.filter(card => card.card_type !== 'comparison');
                 const comparisonCards = sentimentCards.filter(card => card.card_type === 'comparison');
+                const totalSentimentCardsShown = getSentimentIndex(storyIndex);
                 
-                // Calculate how many sentiment cards have been shown so far
-                const totalSentimentCardsShown = Math.floor((storyIndex - 1) / 6);
-                
-                // Every 4th sentiment card slot should be a comparison card (after 3 keyword cards)
-                const shouldShowComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
+                // Every 4th sentiment card slot is a comparison card
+                const showComparison = (totalSentimentCardsShown + 1) % 4 === 0 && comparisonCards.length > 0;
                 
                 let sentimentCard;
-                if (shouldShowComparison) {
-                  // Cycle through comparison cards
+                if (showComparison) {
                   const comparisonIndex = Math.floor(totalSentimentCardsShown / 4) % comparisonCards.length;
                   sentimentCard = comparisonCards[comparisonIndex];
                 } else {
-                  // Cycle through keyword cards (accounting for comparison card slots)
                   const keywordSlotsUsed = totalSentimentCardsShown - Math.floor(totalSentimentCardsShown / 4);
                   const keywordIndex = keywordSlotsUsed % keywordCards.length;
                   sentimentCard = keywordCards[keywordIndex];
@@ -1018,9 +1042,9 @@ const TopicFeed = () => {
                 }
               }
 
-              // Add automated insight cards every 6 stories (offset by 3 to avoid collisions)
-              if (storyIndex % 6 === 3 && storyIndex > 0 && insightCards.length > 0 && topic?.automated_insights_enabled) {
-                const cardIndex = Math.floor((storyIndex - 3) / 6) % insightCards.length;
+              // Automated insight cards (positions 3, 10, 17, 24...)
+              if (shouldShowAutomatedInsight(storyIndex) && insightCards.length > 0 && topic?.automated_insights_enabled) {
+                const cardIndex = getAutomatedInsightIndex(storyIndex) % insightCards.length;
                 const insightCard = insightCards[cardIndex];
                 
                 items.push(
@@ -1031,15 +1055,13 @@ const TopicFeed = () => {
                     />
                   </div>
                 );
-                
-                // Track card display
                 trackInsightCardDisplay(insightCard.id);
               }
 
-              // Add events accordion every 10 stories (count stories only)
-              if (storyIndex % 10 === 0 && storyIndex > 0 && topic?.id && topic?.events_enabled) {
+              // Events accordion (positions 11, 22, 33...)
+              if (shouldShowEvents(storyIndex) && topic?.id && topic?.events_enabled) {
                 items.push(
-                  <div key={`events-${index}`} className="w-full max-w-2xl">
+                  <div key={`events-${storyIndex}`} className="w-full max-w-2xl">
                     <EventsAccordion 
                       topicId={topic.id} 
                       isOwner={false}
@@ -1048,13 +1070,9 @@ const TopicFeed = () => {
                 );
               }
 
-              // Show quiz cards every 8 stories (offset by 5 to avoid collision with insight cards)
-              // Questions answered this session stay visible until page refresh
-              const shouldShowQuiz = storyIndex % 8 === 5 && storyIndex > 0;
-              
-              if (shouldShowQuiz && quizQuestions.length > 0 && quizCardsEnabled) {
-                // Cycle through available questions based on position
-                const quizIndex = Math.floor((storyIndex - 5) / 8) % quizQuestions.length;
+              // Quiz cards (positions 5, 14, 23, 32...)
+              if (shouldShowQuiz(storyIndex) && quizQuestions.length > 0 && quizCardsEnabled) {
+                const quizIndex = getQuizIndex(storyIndex) % quizQuestions.length;
                 const quizQuestion = quizQuestions[quizIndex];
                 
                 if (quizQuestion) {
@@ -1072,11 +1090,8 @@ const TopicFeed = () => {
                 }
               }
 
-              // Show parliamentary insight cards every 12 stories (offset by 7 to avoid collisions)
-              // Only for regional topics with parliamentary tracking enabled
-              const shouldShowParliamentary = storyIndex % 12 === 7 && storyIndex > 0 && hasParliamentaryData;
-              
-              if (shouldShowParliamentary && parliamentaryVotes.length > 0) {
+              // Parliamentary insight cards (positions 8, 21, 34...)
+              if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
                 items.push(
                   <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
                     <ParliamentaryInsightCard
@@ -1087,8 +1102,9 @@ const TopicFeed = () => {
                 );
               }
 
-              // Show flashback "This time last month" card once at position 10
-              if (storyIndex === 10 && topic?.id) {
+              // Flashback "This time last month" card (position 16, once)
+              // Only shows if this_time_last_month_enabled is true in topic settings
+              if (shouldShowFlashback(storyIndex) && topic?.id && topicMetadata?.this_time_last_month_enabled) {
                 items.push(
                   <div key="flashback-insight" className="w-full max-w-2xl">
                     <FlashbackInsightsPanel
