@@ -83,6 +83,7 @@ export interface MultiTenantStory {
   audience_expertise?: string;
   is_teaser?: boolean;
   is_parliamentary?: boolean;
+  scheduled_publish_at?: string | null;
 }
 
 export interface MultiTenantStats {
@@ -592,7 +593,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           writing_style: story.writing_style || '',
           audience_expertise: story.audience_expertise || '',
           is_teaser: story.is_teaser || false,
-          is_parliamentary: isParliamentary
+          is_parliamentary: isParliamentary,
+          scheduled_publish_at: story.scheduled_publish_at || null
         };
       });
 

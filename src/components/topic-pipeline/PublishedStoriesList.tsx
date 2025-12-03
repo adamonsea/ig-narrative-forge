@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2, Clock, Zap } from "lucide-react";
+import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
@@ -51,6 +51,7 @@ interface PublishedStory {
   illustration_generated_at?: string | null;
   animated_illustration_url?: string | null;
   is_parliamentary?: boolean;
+  scheduled_publish_at?: string | null;
 }
 
 interface PublishedStoriesListProps {
@@ -83,6 +84,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
+  const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
     isOpen: boolean; 
     storyId?: string; 
@@ -95,6 +97,38 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
+
+  const handlePublishNow = async (storyId: string, title: string) => {
+    setPublishingNow(prev => new Set(prev.add(storyId)));
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .update({ 
+          scheduled_publish_at: null,
+          status: 'published',
+          is_published: true
+        })
+        .eq('id', storyId);
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: 'Published Immediately', 
+        description: `"${title}" is now live.` 
+      });
+      
+      onRefresh();
+    } catch (e) {
+      console.error('Error publishing story:', e);
+      toast({ 
+        title: 'Publish failed', 
+        description: 'Could not publish story', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setPublishingNow(prev => { const n = new Set(prev); n.delete(storyId); return n; });
+    }
+  };
 
   const filteredStories = useMemo(() => {
     if (storyFilter === 'all') return stories;
@@ -516,7 +550,10 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         </Button>
       </div>
 
-      {paginatedStories.map((story) => (
+      {paginatedStories.map((story) => {
+        const isScheduled = story.scheduled_publish_at && isFuture(new Date(story.scheduled_publish_at));
+        
+        return (
         <Card key={story.id} className="relative">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
@@ -524,10 +561,16 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <CardTitle className="text-base font-medium leading-tight mb-2">
                   {story.title || story.headline}
                 </CardTitle>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant={getStatusColor(story)} className="text-xs">
                     {getStatusLabel(story)}
                   </Badge>
+                  {isScheduled && (
+                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30">
+                      <Clock className="mr-1 h-3 w-3" />
+                      Scheduled: {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
+                    </Badge>
+                  )}
                   {story.is_parliamentary && (
                     <Badge variant="default" className="text-xs bg-blue-600">
                       Parliamentary
@@ -542,6 +585,24 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <span>•</span>
                   <span>{formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}</span>
                 </div>
+                {isScheduled && (
+                  <div className="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
+                      disabled={publishingNow.has(story.id)}
+                    >
+                      {publishingNow.has(story.id) ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Zap className="mr-1 h-3 w-3" />
+                      )}
+                      Publish Now
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -849,7 +910,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             )}
            </CardContent>
           </Card>
-      ))}
+      )
+      })}
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
