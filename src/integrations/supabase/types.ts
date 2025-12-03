@@ -4266,6 +4266,7 @@ export type Database = {
           id: string
           illustration_generated_at: string
           is_published: boolean
+          scheduled_publish_at: string
           shared_content_id: string
           slide_count: number
           slide_type: string
