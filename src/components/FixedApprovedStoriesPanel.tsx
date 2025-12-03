@@ -75,6 +75,8 @@ interface Story {
   slides: Slide[];
   article?: StoryArticle;
   content_generation_queue?: any;
+  scheduled_publish_at?: string | null;
+  drip_queued_at?: string | null;
 }
 
 export const FixedApprovedStoriesPanel = () => {
@@ -140,7 +142,7 @@ export const FixedApprovedStoriesPanel = () => {
             word_count
           )
         `)
-        .eq('status', 'published')
+        .in('status', ['published', 'ready'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -382,7 +384,19 @@ export const FixedApprovedStoriesPanel = () => {
                                 <ChevronRight className="h-4 w-4" />
                               )}
                             </Button>
-                            <Badge variant="outline" className="bg-green-50 text-green-700">Ready</Badge>
+                            {story.status === 'published' ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700">Published</Badge>
+                            ) : story.scheduled_publish_at ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Scheduled {new Date(story.scheduled_publish_at).toLocaleString()}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Awaiting Drip Schedule
+                              </Badge>
+                            )}
                             <Badge variant="outline" className="text-xs">
                               {story.slides.length} slides
                             </Badge>
