@@ -52,6 +52,7 @@ interface PublishedStory {
   animated_illustration_url?: string | null;
   is_parliamentary?: boolean;
   scheduled_publish_at?: string | null;
+  source_url?: string | null;
 }
 
 interface PublishedStoriesListProps {
@@ -547,7 +548,8 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       {/* Story cards */}
       {paginatedStories.map((story) => {
         const isScheduled = story.scheduled_publish_at && isFuture(new Date(story.scheduled_publish_at));
-        const isLive = story.is_published && story.status === 'published' && !isScheduled;
+        const isLive = story.status === 'published';
+        const isReady = story.status === 'ready' && !isScheduled;
         
         return (
         <Card key={story.id} className={`relative ${isScheduled ? 'border-amber-300 dark:border-amber-700' : ''}`}>
@@ -583,9 +585,11 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           
           <CardHeader className={`pb-2 ${isScheduled ? 'pt-3' : ''}`}>
             <div className="flex items-start gap-3">
-              {/* Status indicator dot - only show for live/scheduled */}
+              {/* Status indicator dot */}
               <div className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${
-                isLive ? 'bg-green-500' : 'bg-amber-500'
+                isLive ? 'bg-green-500' : 
+                isScheduled ? 'bg-amber-500' : 
+                'bg-blue-500'
               }`} />
               
               <div className="flex-1 min-w-0">
@@ -595,6 +599,14 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   {isLive && (
                     <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>
+                  )}
+                  {isScheduled && (
+                    <Badge variant="outline" className="h-5 text-[10px] border-amber-500 text-amber-600">
+                      {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
+                    </Badge>
+                  )}
+                  {isReady && (
+                    <Badge variant="outline" className="h-5 text-[10px] border-blue-500 text-blue-600">Ready</Badge>
                   )}
                   {story.is_parliamentary && (
                     <Badge variant="secondary" className="h-5 text-[10px]">Parliament</Badge>
@@ -645,15 +657,32 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <span className="hidden sm:inline">Unpublish</span>
               </Button>
 
-              {topicSlug && story.is_published && (
+              {/* Source URL link */}
+              {story.source_url && (
                 <Button
                   variant="ghost"
                   size="sm"
                   asChild
-                  className="h-7 text-xs px-2 ml-auto"
+                  className="h-7 w-7 p-0 ml-auto"
+                  title="View source article"
                 >
-                  <a href={`/@${topicSlug}/${story.id}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" />
+                  <a href={story.source_url} target="_blank" rel="noopener noreferrer">
+                    <Link className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
+
+              {/* Live feed link */}
+              {topicSlug && isLive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="h-7 w-7 p-0"
+                  title="View on feed"
+                >
+                  <a href={`/feed/${topicSlug}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </Button>
               )}
