@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2, Clock, Zap } from "lucide-react";
+import { ExternalLink, Archive, RotateCcw, Eye, Trash2, Save, Link, ChevronLeft, ChevronRight, Loader2, Clock, Zap, XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow, format, isFuture } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { CreditService } from "@/lib/creditService";
 import { ImageModelSelector, ImageModel } from "@/components/ImageModelSelector";
 import { LinkEditor } from "@/components/LinkEditor";
+import { MultiTenantQueueItem } from "@/hooks/useMultiTenantTopicPipeline";
 
 interface Link {
   start: number;
@@ -57,10 +58,12 @@ interface PublishedStory {
 
 interface PublishedStoriesListProps {
   stories: PublishedStory[];
+  processingItems?: MultiTenantQueueItem[];
   onArchive: (storyId: string, title: string) => void;
   onReturnToReview: (storyId: string) => void;
   onDelete: (storyId: string, title: string) => void;
   onViewStory: (story: PublishedStory) => void;
+  onCancelProcessing?: (queueId: string) => void;
   onRefresh: () => void;
   loading?: boolean;
   topicSlug?: string;
@@ -69,10 +72,12 @@ interface PublishedStoriesListProps {
 
 export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   stories,
+  processingItems = [],
   onArchive,
   onReturnToReview,
   onDelete,
   onViewStory,
+  onCancelProcessing,
   onRefresh,
   loading = false,
   topicSlug,
@@ -86,6 +91,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [generatingIllustrations, setGeneratingIllustrations] = useState<Set<string>>(new Set());
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
+  const [cancellingQueue, setCancellingQueue] = useState<Set<string>>(new Set());
   const [coverSelectionModal, setCoverSelectionModal] = useState<{ 
     isOpen: boolean; 
     storyId?: string; 
@@ -98,6 +104,20 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   const [storyFilter, setStoryFilter] = useState<'all' | 'regular' | 'parliamentary'>('all');
   const pageSize = 10;
   const [illustrationStyle, setIllustrationStyle] = useState<string>('editorial_illustrative');
+
+  const handleCancelQueueItem = async (queueId: string) => {
+    if (!onCancelProcessing) return;
+    setCancellingQueue(prev => new Set(prev.add(queueId)));
+    try {
+      await onCancelProcessing(queueId);
+    } finally {
+      setCancellingQueue(prev => {
+        const next = new Set(prev);
+        next.delete(queueId);
+        return next;
+      });
+    }
+  };
 
   const handlePublishNow = async (storyId: string, title: string) => {
     setPublishingNow(prev => new Set(prev.add(storyId)));
@@ -455,7 +475,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
     return <>{parts}</>;
   };
 
-  if (stories.length === 0 && !loading) {
+  if (stories.length === 0 && processingItems.length === 0 && !loading) {
     return (
       <div className="text-center py-12">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
@@ -544,6 +564,62 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Processing items - grey cards at top */}
+      {processingItems.length > 0 && (
+        <div className="space-y-2">
+          {processingItems.map((item) => (
+            <Card key={item.id} className="border-muted bg-muted/30">
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {item.status === 'processing' ? (
+                      <Loader2 className="h-4 w-4 text-muted-foreground animate-spin shrink-0" />
+                    ) : item.status === 'failed' ? (
+                      <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-muted-foreground truncate">
+                        {item.article_title || item.title || 'Processing...'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-muted text-muted-foreground">
+                          {item.status === 'processing' ? 'Generating' : item.status === 'failed' ? 'Failed' : 'Queued'}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {item.slidetype} • Attempt {item.attempts}/{item.max_attempts}
+                        </span>
+                      </div>
+                      {item.error_message && (
+                        <p className="text-[10px] text-destructive mt-1 line-clamp-1">
+                          {item.error_message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleCancelQueueItem(item.id)}
+                    disabled={cancellingQueue.has(item.id)}
+                    title="Cancel"
+                  >
+                    {cancellingQueue.has(item.id) ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+          {stories.length > 0 && <Separator className="my-3" />}
+        </div>
+      )}
 
       {/* Story cards */}
       {paginatedStories.map((story) => {

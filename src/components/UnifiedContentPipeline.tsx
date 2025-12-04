@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMultiTenantTopicPipeline, MultiTenantArticle } from "@/hooks/useMultiTenantTopicPipeline";
 import { useMultiTenantActions } from "@/hooks/useMultiTenantActions";
 import MultiTenantArticlesList from "@/components/topic-pipeline/MultiTenantArticlesList";
-import { MultiTenantQueueList } from "@/components/topic-pipeline/MultiTenantQueueList";
+
 import { MultiTenantStoriesList } from "@/components/topic-pipeline/MultiTenantStoriesList";
 import { PublishedStoriesList } from "@/components/topic-pipeline/PublishedStoriesList";
 import { CommunityPulseReview } from "@/components/CommunityPulseReview";
@@ -442,7 +442,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
     <div className="space-y-6">
       {/* Main Content Tabs */}
       <Tabs defaultValue="articles" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="articles" className="relative">
             <div className="flex items-center gap-2">
               <span>Arrivals ({totalArticles})</span>
@@ -458,24 +458,15 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               />
             </div>
           </TabsTrigger>
-          <TabsTrigger value="processing" className="flex items-center gap-2">
-            <span>Processing ({queueItems.length})</span>
-            {processingCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
-                <span aria-hidden className="h-2 w-2 rounded-full bg-primary pulse" />
-                <span className="text-xs">{processingCount}</span>
-              </span>
-            )}
-            {stuckCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-destructive animate-fade-in">
-                <span aria-hidden className="h-2 w-2 rounded-full bg-destructive" />
-                <span className="text-xs" title={`${stuckCount} items need attention`}>{stuckCount}</span>
-              </span>
-            )}
-          </TabsTrigger>
           <TabsTrigger value="published">
             <div className="flex items-center gap-2">
               <span>Published</span>
+              {queueItems.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-primary animate-fade-in">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span className="text-xs">{queueItems.length}</span>
+                </span>
+              )}
               {stories.filter(s => s.is_parliamentary).length > 0 && (
                 <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
                   <Users className="w-3 h-3 mr-1" />
@@ -554,56 +545,6 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
           )}
         </TabsContent>
 
-        {/* Processing Tab */}
-        <TabsContent value="processing" className="space-y-4">
-          <div className="flex justify-end mb-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
-                  if (error) throw error;
-                  toast({
-                    title: "Recovery Triggered",
-                    description: `Recovered ${data?.totalRecovered || 0} stuck items`,
-                  });
-                  refreshContent();
-                } catch (error) {
-                  toast({
-                    title: "Recovery Failed",
-                    description: error instanceof Error ? error.message : "Failed to recover stuck items",
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              Recover stuck
-            </Button>
-          </div>
-          <Card>
-            <CardContent>
-            {queueItems.length > 0 ? (
-              <MultiTenantQueueList
-                queueItems={queueItems}
-                deletingQueueItems={deletingQueueItems}
-                onCancel={handleMultiTenantCancelQueue}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                  <Zap className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold">No Items Processing</h3>
-                <p className="text-muted-foreground">
-                  Content generation queue is empty. Approved articles will appear here while being processed.
-                </p>
-              </div>
-            )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Published Tab */}
         <TabsContent value="published" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
@@ -622,17 +563,46 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                 </Label>
               </div>
             </div>
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={refreshContent}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              {stuckCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('auto-recover-stuck-stories');
+                      if (error) throw error;
+                      toast({
+                        title: "Recovery Triggered",
+                        description: `Recovered ${data?.totalRecovered || 0} stuck items`,
+                      });
+                      refreshContent();
+                    } catch (error) {
+                      toast({
+                        title: "Recovery Failed",
+                        description: error instanceof Error ? error.message : "Failed to recover stuck items",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                >
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Recover {stuckCount} stuck
+                </Button>
+              )}
+              <Button
+                variant="outline" 
+                size="sm"
+                onClick={refreshContent}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
           
-          {stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 ? (
+          {stories.filter(s => s.is_published && ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 && queueItems.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -650,10 +620,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
               <CardContent>
                 <PublishedStoriesList 
                   stories={stories.filter(s => s.is_published && (!parliamentaryFilter || s.is_parliamentary))}
+                  processingItems={queueItems}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
                   onDelete={handleMultiTenantRejectStory}
                   onViewStory={handleViewStory}
+                  onCancelProcessing={handleMultiTenantCancelQueue}
                   onRefresh={refreshContent}
                   loading={loading}
                   topicSlug={topicSlug}
