@@ -564,9 +564,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       try {
         const { data, error } = await supabase
           .rpc('get_topic_stories_with_keywords', {
-            p_topic_slug: topicData.slug,
-            p_keywords: keywords,
-            p_sources: sources,
+            p_topic_id: topicData.id,
+            p_keyword_filters: keywords,
+            p_source_filters: sources,
             p_limit: rawLimit,
             p_offset: from
           } as any)
@@ -668,15 +668,15 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
           storyMap.set(row.story_id, {
             id: row.story_id,
             title: row.story_title,
-            status: row.story_status,
-            is_published: row.story_is_published,
+            status: 'published', // Fixed RPC only returns published stories
+            is_published: true, // Fixed RPC only returns published stories
             created_at: row.story_created_at,
-            cover_illustration_url: row.story_cover_url,
+            cover_illustration_url: row.story_cover_illustration_url || row.story_cover_url,
             article_source_url: row.article_source_url,
             article_published_at: row.article_published_at,
             article_id: row.article_id,
             shared_content_id: row.shared_content_id,
-            is_parliamentary: row.story_is_parliamentary || false,
+            is_parliamentary: row.is_parliamentary || row.story_is_parliamentary || false,
             mp_name: row.mp_name || undefined,
             mp_party: row.mp_party || undefined,
             constituency: row.constituency || undefined,
@@ -1170,9 +1170,9 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
 
       while (true) {
         const { data, error } = await supabase.rpc('get_topic_stories_with_keywords', {
-          p_topic_slug: slugToUse,
-          p_keywords: null,
-          p_sources: null,
+          p_topic_id: topicData.id,
+          p_keyword_filters: null,
+          p_source_filters: null,
           p_limit: limit,
           p_offset: offset
         } as any);
