@@ -222,6 +222,17 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
     config.drip_end_hour !== originalConfig.drip_end_hour
   );
 
+  // Auto-save when config changes (debounced)
+  useEffect(() => {
+    if (!hasChanges || loading) return;
+    
+    const timeoutId = setTimeout(() => {
+      handleSave();
+    }, 1000); // 1 second debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [config, hasChanges, loading]);
+
   const formatTime = (hour: number) => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
@@ -441,12 +452,13 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
           </>
         )}
 
-        {/* Save Button */}
-        <div className="flex justify-end pt-2">
-          <Button onClick={handleSave} disabled={saving || !hasChanges}>
-            {saving ? "Saving..." : "Save Drip Feed Settings"}
-          </Button>
-        </div>
+        {/* Auto-save indicator */}
+        {saving && (
+          <div className="flex items-center justify-end gap-2 pt-2 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Saving...
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -578,13 +578,8 @@ const TopicDashboard = () => {
     );
   }
 
-  // Progressive disclosure logic
+  // Progressive disclosure logic (for potential future use)
   const hasEnoughArticles = stats.articles > 10;
-  const needsAttention = {
-    contentFlow: stats.pending_articles > 0 || stats.processing_queue > 0,
-    automation: stats.sources === 0,
-    advanced: !topic.audience_expertise || !topic.default_tone || topic.keywords.length === 0
-  };
 
   return (
     <AppLayout>
@@ -605,144 +600,99 @@ const TopicDashboard = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        {/* Topic Header */}
-        <div className="mb-8">
-          <Card className="bg-card border-border hover:border-[hsl(270,100%,68%)]/30 transition-colors">
-            <CardContent className="p-6 relative">
-              <Button variant="outline" asChild className="absolute top-4 right-4 z-10 hover:bg-[hsl(270,100%,68%)]/10 hover:text-[hsl(270,100%,68%)] hover:border-[hsl(270,100%,68%)]/30">
-                <Link to={`/feed/${topic.slug}`} target="_blank">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View Feed
-                </Link>
-              </Button>
-              <div className="mobile-card-header mb-4">
-                <div className="flex items-center gap-3">
-                  {topic.branding_config?.logo_url ? (
-                    <img 
-                      src={topic.branding_config.logo_url} 
-                      alt={`${topic.name} logo`}
-                      className="w-12 h-12 rounded object-cover"
+        {/* Topic Header - Clean, out of card */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {topic.branding_config?.logo_url ? (
+                <img 
+                  src={topic.branding_config.logo_url} 
+                  alt={`${topic.name} logo`}
+                  className="w-14 h-14 rounded-lg object-cover shadow-sm border border-border"
+                />
+              ) : topic.topic_type === 'regional' ? (
+                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(270,100%,68%)] to-[hsl(270,80%,55%)] flex items-center justify-center shadow-sm">
+                  <MapPin className="w-7 h-7 text-white" />
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(155,100%,67%)] to-[hsl(155,80%,50%)] flex items-center justify-center shadow-sm">
+                  <Hash className="w-7 h-7 text-white" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                  {topic.name}
+                </h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <Badge 
+                    variant={topic.is_public ? "default" : "secondary"} 
+                    className={topic.is_public 
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
+                      : "bg-muted text-muted-foreground"
+                    }
+                  >
+                    {topic.is_public ? (
+                      <>
+                        <Eye className="w-3 h-3 mr-1" />
+                        Published
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="w-3 h-3 mr-1" />
+                        Draft
+                      </>
+                    )}
+                  </Badge>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {topic.is_public ? 'Live' : 'Draft'}
+                    </span>
+                    <Switch
+                      id="publish-toggle"
+                      checked={topic.is_public}
+                      onCheckedChange={handlePublishToggle}
                     />
-                  ) : topic.topic_type === 'regional' ? (
-                    <MapPin className="w-8 h-8 text-[hsl(270,100%,68%)]" />
-                  ) : (
-                    <Hash className="w-8 h-8 text-[hsl(155,100%,67%)]" />
-                  )}
-                  <div>
-                    <h1 className="text-2xl sm:text-4xl font-bold text-foreground">
-                      {topic.name}
-                    </h1>
-                    <div className="flex items-center gap-4 mt-1 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={topic.is_public ? "default" : "secondary"} className={topic.is_public ? "bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90" : ""}>
-                          {topic.is_public ? (
-                            <>
-                              <Eye className="w-3 h-3 mr-1" />
-                              Published
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="w-3 h-3 mr-1" />
-                              Draft
-                            </>
-                          )}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <label htmlFor="publish-toggle" className="text-sm font-medium cursor-pointer">
-                          {topic.is_public ? 'Live' : 'Draft'}
-                        </label>
-                        <Switch
-                          id="publish-toggle"
-                          checked={topic.is_public}
-                          onCheckedChange={handlePublishToggle}
-                        />
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {topic.description && (
-                <p className="text-muted-foreground mb-4">
-                  {topic.description}
-                </p>
-              )}
+            <Button variant="outline" asChild className="shrink-0 hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+              <Link to={`/feed/${topic.slug}`} target="_blank">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View Feed
+              </Link>
+            </Button>
+          </div>
 
-              {/* Keywords */}
-              {topic.keywords.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex flex-wrap gap-2 cursor-help">
-                          <Badge variant="outline" className="text-xs">
-                            <Hash className="w-3 h-3 mr-1" />
-                            {topic.keywords.length} Keywords
-                          </Badge>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-md">
-                        <div className="space-y-1">
-                          <p className="font-medium">Keywords:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {topic.keywords.map((keyword, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {keyword}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="outline" className="cursor-help text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Created
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Created: {new Date(topic.created_at).toLocaleDateString()}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {topic.description && (
+            <p className="text-muted-foreground max-w-2xl">
+              {topic.description}
+            </p>
+          )}
         </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mobile-tabs bg-card">
-            <TabsTrigger value="content-flow" className="relative">
+          <TabsList className="w-full grid grid-cols-3 h-12 p-1 bg-muted/50 rounded-lg">
+            <TabsTrigger 
+              value="content-flow" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
+            >
               Content Flow
-              {needsAttention.contentFlow && (
-                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
-                  <AlertCircle className="h-2 w-2" />
-                </Badge>
-              )}
             </TabsTrigger>
-            <TabsTrigger value="automation" className="relative">
+            <TabsTrigger 
+              value="automation" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
+            >
               Sources
-              {needsAttention.automation && (
-                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
-                  <AlertCircle className="h-2 w-2" />
-                </Badge>
-              )}
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="relative">
+            <TabsTrigger 
+              value="advanced" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md font-medium"
+            >
               Advanced Tools
-              {needsAttention.advanced && (
-                <Badge className="ml-2 h-4 w-4 p-0 bg-orange-500 hover:bg-orange-600">
-                  <AlertCircle className="h-2 w-2" />
-                </Badge>
-              )}
             </TabsTrigger>
           </TabsList>
 
