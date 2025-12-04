@@ -67,52 +67,50 @@ export function AudienceProgressCard({ topicId }: AudienceProgressCardProps) {
   const { data: metrics, refetch: refetchMetrics } = useQuery({
     queryKey: ['audience-progress', topicId],
     queryFn: async () => {
-      // Get total unique readers
-      const { data: readers, error: readersError } = await supabase
-        .from('story_interactions')
+      // Get total unique visitors from feed_visits
+      const { data: visitors, error: visitorsError } = await supabase
+        .from('feed_visits')
         .select('visitor_id')
-        .eq('topic_id', topicId)
-        .neq('visitor_id', '');
+        .eq('topic_id', topicId);
       
-      if (readersError) throw readersError;
+      if (visitorsError) throw visitorsError;
       
-      const uniqueReaders = new Set(readers?.map(r => r.visitor_id) || []).size;
+      const uniqueReaders = new Set(visitors?.map(v => v.visitor_id) || []).size;
       
-      // Get weekly growth
+      // Get weekly growth - unique visitors this week
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       
-      const { data: weeklyReaders, error: weeklyError } = await supabase
-        .from('story_interactions')
+      const { data: weeklyVisitors, error: weeklyError } = await supabase
+        .from('feed_visits')
         .select('visitor_id')
         .eq('topic_id', topicId)
-        .gte('created_at', weekAgo.toISOString())
-        .neq('visitor_id', '');
+        .gte('visit_date', weekAgo.toISOString().split('T')[0]);
       
       if (weeklyError) throw weeklyError;
       
-      const weeklyGrowth = new Set(weeklyReaders?.map(r => r.visitor_id) || []).size;
+      const weeklyGrowth = new Set(weeklyVisitors?.map(v => v.visitor_id) || []).size;
       
       // Get daily data for sparkline (last 14 days)
       const { data: dailyData, error: dailyError } = await supabase
-        .from('story_interactions')
-        .select('created_at, visitor_id')
+        .from('feed_visits')
+        .select('visit_date, visitor_id')
         .eq('topic_id', topicId)
-        .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: true });
+        .gte('visit_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
       
       if (dailyError) throw dailyError;
       
-      // Group by day
+      // Group by day and count unique visitors
       const dailyMap = new Map<string, Set<string>>();
       dailyData?.forEach(item => {
-        const day = item.created_at.split('T')[0];
+        const day = item.visit_date;
         if (!dailyMap.has(day)) dailyMap.set(day, new Set());
         dailyMap.get(day)!.add(item.visitor_id);
       });
       
       const sparklineData = Array.from(dailyMap.entries())
-        .map(([day, visitors]) => ({ day, count: visitors.size }))
+        .map(([day, uniqueVisitors]) => ({ day, count: uniqueVisitors.size }))
+        .sort((a, b) => a.day.localeCompare(b.day))
         .slice(-14);
       
       return {

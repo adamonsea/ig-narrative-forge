@@ -340,8 +340,7 @@ const TopicFeed = () => {
     return lastIndex;
   }, [filteredContent]);
 
-  // Track visitor stats
-  useVisitorTracking(topic?.id);
+  // Note: Visitor tracking already called at line 155
 
   // Enable browser notifications for new stories
   useStoryNotifications(topic?.id, topic?.name || '', slug);
