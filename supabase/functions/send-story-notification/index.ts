@@ -236,14 +236,14 @@ serve(async (req: Request) => {
         
         // If subscription is expired/invalid or unauthorized (410, 404, 401, 403), mark it as inactive
         if (error.statusCode === 410 || error.statusCode === 404 || error.statusCode === 401 || error.statusCode === 403) {
-          console.log(`🗑️ Marking subscription as inactive for ${email} (status: ${error.statusCode})`);
+          console.log(`🗑️ Marking subscription as inactive (status: ${error.statusCode})`);
+          // Match by endpoint since email may be null for push-only subscriptions
+          const subscription = signup.push_subscription as PushSubscription;
           await supabase
             .from('topic_newsletter_signups')
             .update({ is_active: false })
-            .match({ 
-              topic_id: topicId, 
-              email: email 
-            });
+            .eq('topic_id', topicId)
+            .eq('push_subscription->>endpoint', subscription.endpoint);
         }
       }
     }

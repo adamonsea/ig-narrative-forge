@@ -6,6 +6,7 @@ import { MapPin, Calendar, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ParliamentaryBackfillTrigger } from "@/components/ParliamentaryBackfillTrigger";
+import { TrackedMPsManager } from "@/components/TrackedMPsManager";
 
 interface RegionalFeaturesSettingsProps {
   topicId: string;
@@ -106,8 +107,9 @@ export const RegionalFeaturesSettings = ({
         </div>
 
         {parliamentaryEnabled && region && (
-          <div className="pl-6 border-l-2 border-muted">
+          <div className="space-y-4 pl-6 border-l-2 border-muted">
             <ParliamentaryBackfillTrigger topicId={topicId} region={region} />
+            <TrackedMPsManager topicId={topicId} region={region} />
           </div>
         )}
       </div>
