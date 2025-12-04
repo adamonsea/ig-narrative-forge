@@ -691,16 +691,16 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 </Button>
               )}
 
-              {/* Live feed link */}
+              {/* Story page link */}
               {topicSlug && isLive && (
                 <Button
                   variant="ghost"
                   size="sm"
                   asChild
                   className="h-7 w-7 p-0"
-                  title="View on feed"
+                  title="View story"
                 >
-                  <a href={`/feed/${topicSlug}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/feed/${topicSlug}/story/${story.id}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </Button>
