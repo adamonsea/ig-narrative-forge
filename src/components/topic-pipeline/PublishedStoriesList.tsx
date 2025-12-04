@@ -552,21 +552,21 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
         const isReady = story.status === 'ready' && !isScheduled;
         
         return (
-        <Card key={story.id} className={`relative ${isScheduled ? 'border-amber-300 dark:border-amber-700' : ''}`}>
+        <Card key={story.id} className={`relative ${isScheduled ? 'border-amber-300 dark:border-amber-700' : isReady ? 'border-blue-300 dark:border-blue-700' : ''}`}>
           {/* Scheduled indicator bar */}
           {isScheduled && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-3 py-2 sm:px-4 rounded-t-lg">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-3 py-1.5 sm:px-4 rounded-t-lg">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                  <Clock className="h-3.5 w-3.5 shrink-0" />
-                  <span className="text-xs font-medium">
-                    Scheduled: {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span className="text-xs">
+                    {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
                   </span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 px-2"
+                  className="h-5 text-[10px] text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 px-1.5"
                   onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
                   disabled={publishingNow.has(story.id)}
                 >
@@ -574,7 +574,34 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
                     <>
-                      <Zap className="h-3 w-3 mr-1" />
+                      <Zap className="h-2.5 w-2.5 mr-0.5" />
+                      Now
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Ready/queued indicator bar */}
+          {isReady && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 border-b border-blue-200 dark:border-blue-800 px-3 py-1.5 sm:px-4 rounded-t-lg">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-blue-700 dark:text-blue-400">
+                  Queued for next release
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 text-[10px] text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-1.5"
+                  onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
+                  disabled={publishingNow.has(story.id)}
+                >
+                  {publishingNow.has(story.id) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Zap className="h-2.5 w-2.5 mr-0.5" />
                       Publish Now
                     </>
                   )}
@@ -583,7 +610,7 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             </div>
           )}
           
-          <CardHeader className={`pb-2 ${isScheduled ? 'pt-3' : ''}`}>
+          <CardHeader className={`pb-2 ${(isScheduled || isReady) ? 'pt-2' : ''}`}>
             <div className="flex items-start gap-3">
               {/* Status indicator dot */}
               <div className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${
@@ -599,14 +626,6 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   {isLive && (
                     <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>
-                  )}
-                  {isScheduled && (
-                    <Badge variant="outline" className="h-5 text-[10px] border-amber-500 text-amber-600">
-                      {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
-                    </Badge>
-                  )}
-                  {isReady && (
-                    <Badge variant="outline" className="h-5 text-[10px] border-blue-500 text-blue-600">Ready</Badge>
                   )}
                   {story.is_parliamentary && (
                     <Badge variant="secondary" className="h-5 text-[10px]">Parliament</Badge>
