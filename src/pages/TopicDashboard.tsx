@@ -719,68 +719,6 @@ const TopicDashboard = () => {
           </Card>
         </div>
 
-
-        {/* Primary Action Bar - Mobile Responsive */}
-        <Card className="bg-card border-border mb-6">
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <Button 
-                  onClick={handleStartScraping}
-                  disabled={gatheringAll}
-                  className="flex items-center gap-2 w-full sm:w-auto bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white"
-                  size="lg"
-                >
-                  {gatheringAll ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Play className="w-4 h-4" />
-                  )}
-                  {gatheringAll ? 'Scraping...' : 'Start Scraping'}
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                  className="w-full sm:w-auto"
-                >
-                  {showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options
-                </Button>
-              </div>
-
-              {showAdvancedOptions && (
-                <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-border">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium mb-2 block">Content Age Window</label>
-                    <select 
-                      value={maxAgeDays}
-                      onChange={(e) => setMaxAgeDays(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-md border border-input bg-background"
-                    >
-                      <option value={7}>Last 7 days</option>
-                      <option value={30}>Last 30 days</option>
-                      <option value={60}>Last 60 days</option>
-                      <option value={100}>Last 100 days</option>
-                    </select>
-                  </div>
-                  <div className="flex-1 flex items-end">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={forceRescrape}
-                        onChange={(e) => setForceRescrape(e.target.checked)}
-                        className="w-4 h-4 rounded border-input"
-                      />
-                      <span className="text-sm font-medium">Force Rescrape (ignore cache)</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Main Content Tabs */}
         <Tabs defaultValue="content-flow" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4 mobile-tabs bg-card">
@@ -857,6 +795,7 @@ const TopicDashboard = () => {
                   keywords={topic.keywords || []}
                   topicType={topic.topic_type}
                   region={topic.region}
+                  articleCount={stats?.articles || 0}
                 />
               </CardContent>
             </Card>
@@ -1096,6 +1035,59 @@ const TopicDashboard = () => {
               </CardContent>
             </Card>
 
+            {/* Manual Backfill - Power Users */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Manual Backfill
+                </CardTitle>
+                <CardDescription>
+                  Gather historical content with custom settings. Use this for initial setup, after adding sources, or to fill content gaps.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Content Age Window</label>
+                    <select 
+                      value={maxAgeDays}
+                      onChange={(e) => setMaxAgeDays(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                    >
+                      <option value={7}>Last 7 days</option>
+                      <option value={30}>Last 30 days</option>
+                      <option value={60}>Last 60 days</option>
+                      <option value={100}>Last 100 days</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={forceRescrape}
+                        onChange={(e) => setForceRescrape(e.target.checked)}
+                        className="w-4 h-4 rounded border-input"
+                      />
+                      <span className="text-sm font-medium">Force rescrape (ignore cache)</span>
+                    </label>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleStartScraping}
+                  disabled={gatheringAll}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  {gatheringAll ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
+                  {gatheringAll ? 'Running Backfill...' : 'Run Manual Backfill'}
+                </Button>
+              </CardContent>
+            </Card>
 
 
             <Collapsible open={!subscribersCollapsed} onOpenChange={(open) => setSubscribersCollapsed(!open)}>

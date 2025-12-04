@@ -116,6 +116,8 @@ interface UnifiedSourceManagerProps {
   topicName?: string;
   keywords?: string[];
   topicType?: 'regional' | 'keyword';
+  // Stats for contextual prompts
+  articleCount?: number;
 }
 
 export const UnifiedSourceManager = ({ 
@@ -128,7 +130,8 @@ export const UnifiedSourceManager = ({
   description,
   topicName,
   keywords,
-  topicType
+  topicType,
+  articleCount = 0
 }: UnifiedSourceManagerProps) => {
   const { toast } = useToast();
   const [sources, setSources] = useState<ContentSource[]>([]);
@@ -148,6 +151,9 @@ export const UnifiedSourceManager = ({
   const [testingSource, setTestingSource] = useState<string | null>(null);
   const [showDisabled, setShowDisabled] = useState(false);
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
+  const [showBackfillModal, setShowBackfillModal] = useState(false);
+  const [backfillMaxAgeDays, setBackfillMaxAgeDays] = useState(30);
+  const [sourceToBackfill, setSourceToBackfill] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     sourceId: string;
     sourceName: string;
@@ -1106,6 +1112,104 @@ export const UnifiedSourceManager = ({
     }
   };
 
+  // Simple Gather All with sensible defaults (7 days, no force rescrape)
+  const handleGatherAllSimple = async () => {
+    if (!topicId) return;
+    
+    const activeSources = sources.filter(s => s.is_active && s.feed_url);
+    
+    if (activeSources.length === 0) {
+      toast({
+        title: 'No Sources',
+        description: 'No active sources found to gather from',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setGatheringAll(true);
+      
+      toast({
+        title: 'Gathering Started',
+        description: `Fetching recent content from ${activeSources.length} sources...`,
+      });
+
+      const { data, error } = await supabase.functions.invoke('universal-topic-automation', {
+        body: {
+          topicIds: [topicId],
+          force: false,
+          dryRun: false,
+          maxAgeDays: 7
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Gathering Complete',
+        description: 'Content has been gathered from all sources',
+      });
+
+      loadSources();
+      onSourcesChange();
+    } catch (error: any) {
+      console.error('Gather all error:', error);
+      toast({
+        title: 'Gathering Failed',
+        description: error.message || 'Failed to gather content',
+        variant: 'destructive',
+      });
+    } finally {
+      setGatheringAll(false);
+    }
+  };
+
+  // Backfill with custom age window
+  const handleBackfill = async (maxAgeDays: number, sourceId?: string) => {
+    if (!topicId) return;
+    
+    try {
+      setGatheringAll(true);
+      
+      toast({
+        title: 'Backfill Started',
+        description: `Gathering content from the last ${maxAgeDays} days...`,
+      });
+
+      const { data, error } = await supabase.functions.invoke('universal-topic-automation', {
+        body: {
+          topicIds: [topicId],
+          force: true,
+          dryRun: false,
+          maxAgeDays,
+          sourceId // Optional: only backfill specific source
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Backfill Complete',
+        description: `Historical content has been gathered`,
+      });
+
+      loadSources();
+      onSourcesChange();
+      setShowBackfillModal(false);
+      setSourceToBackfill(null);
+    } catch (error: any) {
+      console.error('Backfill error:', error);
+      toast({
+        title: 'Backfill Failed',
+        description: error.message || 'Failed to backfill content',
+        variant: 'destructive',
+      });
+    } finally {
+      setGatheringAll(false);
+    }
+  };
+
   const handleScrapeAll = async () => {
     const activeSources = sources.filter(s => s.is_active && s.feed_url);
     
@@ -1264,7 +1368,7 @@ export const UnifiedSourceManager = ({
     }
   };
 
-  const handleReactivateSource = async (sourceId: string) => {
+  const handleReactivateSource = async (sourceId: string, withBackfill: boolean = false) => {
     const source = sources.find(s => s.id === sourceId);
     if (!source) return;
 
@@ -1299,6 +1403,12 @@ export const UnifiedSourceManager = ({
       });
       
       loadSources();
+
+      // If backfill requested, open backfill modal with this source pre-selected
+      if (withBackfill && mode === 'topic' && topicId) {
+        setSourceToBackfill(sourceId);
+        setShowBackfillModal(true);
+      }
     } catch (error) {
       console.error('Failed to reactivate source:', error);
       toast({
@@ -1351,7 +1461,7 @@ export const UnifiedSourceManager = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">{getDisplayTitle()}</h2>
           <p className="text-muted-foreground">{getDisplayDescription()}</p>
@@ -1361,7 +1471,22 @@ export const UnifiedSourceManager = ({
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Gather All button - only for topic mode */}
+          {mode === 'topic' && topicId && sources.filter(s => s.is_active).length > 0 && (
+            <Button
+              onClick={handleGatherAllSimple}
+              disabled={gatheringAll}
+              className="bg-[hsl(270,100%,68%)] hover:bg-[hsl(270,100%,68%)]/90 text-white"
+            >
+              {gatheringAll ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4 mr-2" />
+              )}
+              {gatheringAll ? 'Gathering...' : 'Gather All'}
+            </Button>
+          )}
           {mode === 'global' && (
             <Button
               onClick={() => runCleanup('cleanup_legacy_orphaned')}
@@ -1392,12 +1517,83 @@ export const UnifiedSourceManager = ({
             <Eye className="w-4 h-4 mr-2" />
             {showDisabled ? 'Hide' : 'Show'} Disabled
           </Button>
-          <Button onClick={() => setShowAddForm(true)}>
+          <Button onClick={() => setShowAddForm(true)} size="sm">
             <Plus className="w-4 w-4 mr-2" />
             Add Source
           </Button>
         </div>
       </div>
+
+      {/* Contextual Backfill Prompt - for new topics with few articles */}
+      {mode === 'topic' && topicId && articleCount < 10 && sources.length > 0 && (
+        <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+          <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="text-blue-700 dark:text-blue-300">
+              <strong>New feed?</strong> Run a backfill to gather older content and populate your feed faster.
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50 shrink-0"
+              onClick={() => setShowBackfillModal(true)}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Run Backfill
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Backfill Modal */}
+      <Dialog open={showBackfillModal} onOpenChange={setShowBackfillModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Backfill Historical Content</DialogTitle>
+            <DialogDescription>
+              Gather older articles from your sources. This is useful when setting up a new feed or after adding new sources.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="backfill-age">Content Age Window</Label>
+              <Select 
+                value={backfillMaxAgeDays.toString()} 
+                onValueChange={(v) => setBackfillMaxAgeDays(Number(v))}
+              >
+                <SelectTrigger id="backfill-age">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                  <SelectItem value="60">Last 60 days</SelectItem>
+                  <SelectItem value="100">Last 100 days</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Longer windows may take more time and find more duplicate content.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBackfillModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => handleBackfill(backfillMaxAgeDays, sourceToBackfill || undefined)}
+              disabled={gatheringAll}
+            >
+              {gatheringAll ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Start Backfill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AI Source Discovery Modal */}
       {mode === 'topic' && topicId && topicName && (
@@ -1694,7 +1890,7 @@ export const UnifiedSourceManager = ({
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={() => handleReactivateSource(source.id)}
+                      onClick={() => handleReactivateSource(source.id, false)}
                       className="flex-shrink-0"
                     >
                       <Play className="w-4 h-4 sm:mr-2" />

@@ -12,6 +12,7 @@ interface TopicAwareSourceManagerProps {
   keywords?: string[];
   topicType?: 'regional' | 'keyword';
   region?: string;
+  articleCount?: number;
 }
 
 export const TopicAwareSourceManager = ({ 
@@ -21,7 +22,8 @@ export const TopicAwareSourceManager = ({
   description,
   keywords,
   topicType,
-  region
+  region,
+  articleCount = 0
 }: TopicAwareSourceManagerProps) => {
   const [showDiscardedViewer, setShowDiscardedViewer] = useState(false);
 
@@ -37,6 +39,7 @@ export const TopicAwareSourceManager = ({
           keywords={keywords}
           topicType={topicType}
           region={region}
+          articleCount={articleCount}
         />
         
         <div className="flex gap-2">
