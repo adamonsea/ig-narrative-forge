@@ -500,135 +500,134 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
   });
 
   return (
-    <div className="space-y-4">
-      {/* Filter Tabs with Loading Indicator */}
-      <div className="flex items-center justify-between border-b pb-2">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3 sm:space-y-4">
+      {/* Mobile-optimized header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-3">
+        {/* Filter pills - horizontal scroll on mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1">
           <Button
-            variant={storyFilter === 'all' ? 'default' : 'ghost'}
+            variant={storyFilter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => { setStoryFilter('all'); setCurrentPage(1); }}
+            className="h-7 text-xs shrink-0"
           >
-            All Stories ({stories.length})
+            All ({stories.length})
           </Button>
           <Button
-            variant={storyFilter === 'regular' ? 'default' : 'ghost'}
+            variant={storyFilter === 'regular' ? 'default' : 'outline'}
             size="sm"
             onClick={() => { setStoryFilter('regular'); setCurrentPage(1); }}
+            className="h-7 text-xs shrink-0"
           >
             Regular ({regularCount})
           </Button>
-          <Button
-            variant={storyFilter === 'parliamentary' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => { setStoryFilter('parliamentary'); setCurrentPage(1); }}
-          >
-            Parliamentary ({parliamentaryCount})
-          </Button>
-        </div>
-        {loading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Refreshing...</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {filteredStories.length} {storyFilter !== 'all' ? storyFilter + ' ' : ''}
-          {filteredStories.length === 1 ? 'story' : 'stories'}
-          {totalPages > 1 && (
-            <span className="ml-2">
-              • Page {currentPage} of {totalPages}
-            </span>
+          {parliamentaryCount > 0 && (
+            <Button
+              variant={storyFilter === 'parliamentary' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => { setStoryFilter('parliamentary'); setCurrentPage(1); }}
+              className="h-7 text-xs shrink-0"
+            >
+              Parliamentary ({parliamentaryCount})
+            </Button>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={onRefresh}>
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        
+        {/* Right side: count + refresh */}
+        <div className="flex items-center justify-between sm:justify-end gap-2">
+          <span className="text-xs text-muted-foreground">
+            {totalPages > 1 && `Page ${currentPage}/${totalPages}`}
+          </span>
+          <Button variant="ghost" size="sm" onClick={onRefresh} className="h-7 w-7 p-0">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
+      {/* Story cards */}
       {paginatedStories.map((story) => {
         const isScheduled = story.scheduled_publish_at && isFuture(new Date(story.scheduled_publish_at));
+        const isLive = story.is_published && story.status === 'published' && !isScheduled;
         
         return (
-        <Card key={story.id} className="relative">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-base font-medium leading-tight mb-2">
-                  {story.title || story.headline}
-                </CardTitle>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant={getStatusColor(story)} className="text-xs">
-                    {getStatusLabel(story)}
-                  </Badge>
-                  {isScheduled && (
-                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30">
-                      <Clock className="mr-1 h-3 w-3" />
-                      Scheduled: {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
-                    </Badge>
-                  )}
-                  {story.is_parliamentary && (
-                    <Badge variant="default" className="text-xs bg-blue-600">
-                      Parliamentary
-                    </Badge>
-                  )}
-                  {story.author && (
+        <Card key={story.id} className={`relative ${isScheduled ? 'border-amber-300 dark:border-amber-700' : ''}`}>
+          {/* Scheduled indicator bar */}
+          {isScheduled && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-3 py-2 sm:px-4 rounded-t-lg">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-xs font-medium">
+                    Scheduled: {format(new Date(story.scheduled_publish_at!), 'MMM d, h:mm a')}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 px-2"
+                  onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
+                  disabled={publishingNow.has(story.id)}
+                >
+                  {publishingNow.has(story.id) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
                     <>
-                      <span>•</span>
-                      <span>{story.author}</span>
+                      <Zap className="h-3 w-3 mr-1" />
+                      Publish Now
                     </>
                   )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <CardHeader className={`pb-2 ${isScheduled ? 'pt-3' : ''}`}>
+            <div className="flex items-start gap-3">
+              {/* Status indicator dot */}
+              <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                isLive ? 'bg-green-500' : 
+                isScheduled ? 'bg-amber-500' : 
+                'bg-muted-foreground'
+              }`} />
+              
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-sm sm:text-base font-medium leading-snug mb-1.5">
+                  {story.title || story.headline}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  {isLive && (
+                    <Badge variant="default" className="h-5 text-[10px] bg-green-600">Live</Badge>
+                  )}
+                  {story.is_parliamentary && (
+                    <Badge variant="secondary" className="h-5 text-[10px]">Parliament</Badge>
+                  )}
+                  {story.author && <span className="truncate max-w-[100px]">{story.author}</span>}
                   <span>•</span>
                   <span>{formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}</span>
                 </div>
-                {isScheduled && (
-                  <div className="mt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                      onClick={() => handlePublishNow(story.id, story.title || story.headline || 'Untitled')}
-                      disabled={publishingNow.has(story.id)}
-                    >
-                      {publishingNow.has(story.id) ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Zap className="mr-1 h-3 w-3" />
-                      )}
-                      Publish Now
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 pb-3">
             {story.summary && (
-              <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2 pl-5">
                 {story.summary}
               </p>
             )}
 
-            <Separator className="my-4" />
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            {/* Action buttons - mobile optimized */}
+            <div className="flex items-center gap-1.5 flex-wrap pl-5">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => toggleExpanded(story.id)}
-                className="h-8"
+                className="h-7 text-xs px-2"
               >
-                <Eye className="mr-1 h-3 w-3" />
-                {expanded.has(story.id) ? 'Hide' : 'View'}
+                <Eye className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">{expanded.has(story.id) ? 'Hide' : 'Edit'}</span>
               </Button>
 
-              {/* Cover Generation Button */}
               <ImageModelSelector
                 onModelSelect={(model) => handleGenerateIllustration(story, model)}
                 isGenerating={generatingIllustrations.has(story.id)}
@@ -641,58 +640,38 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => onArchive(story.id, story.title || story.headline || 'Untitled')}
-                className="h-8"
+                className="h-7 text-xs px-2"
               >
-                <Archive className="mr-1 h-3 w-3" />
-                Archive
+                <Archive className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">Archive</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onReturnToReview(story.id)}
-                className="h-8"
+                className="h-7 text-xs px-2"
               >
-                <RotateCcw className="mr-1 h-3 w-3" />
-                Return
+                <RotateCcw className="h-3 w-3" />
               </Button>
 
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => onDelete(story.id, story.title || story.headline || 'Untitled')}
-                className="h-8 text-destructive hover:text-destructive"
+                className="h-7 text-xs px-2 text-destructive hover:text-destructive"
               >
-                <Trash2 className="mr-1 h-3 w-3" />
-                Delete
+                <Trash2 className="h-3 w-3" />
               </Button>
 
               {topicSlug && story.is_published && (
                 <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="h-8"
-                >
-                  <a href={`/@${topicSlug}/${story.id}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-1 h-3 w-3" />
-                    View Story
-                  </a>
-                </Button>
-              )}
-
-              {!topicSlug && story.is_published && (
-                <Button 
                   variant="ghost"
                   size="sm"
                   asChild
-                  className="h-8 ml-auto"
+                  className="h-7 text-xs px-2 ml-auto"
                 >
-                  <a 
-                    href={topicSlug ? `/feed/${topicSlug}/story/${story.id}` : `/story/${story.id}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`/@${topicSlug}/${story.id}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </Button>
