@@ -582,6 +582,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           story_type: story.story_type,
           title: story.title,
           url: story.article_url,
+          source_url: story.article_url,
           author: story.article_author,
           word_count: story.word_count,
           cover_illustration_url: story.cover_illustration_url,
