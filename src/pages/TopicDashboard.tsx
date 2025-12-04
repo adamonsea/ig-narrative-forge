@@ -604,10 +604,10 @@ const TopicDashboard = () => {
         <div className="mb-8 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              {topic.branding_config?.logo_url ? (
+              {topic.branding_config?.icon_url ? (
                 <img 
-                  src={topic.branding_config.logo_url} 
-                  alt={`${topic.name} logo`}
+                  src={topic.branding_config.icon_url} 
+                  alt={`${topic.name} favicon`}
                   className="w-14 h-14 rounded-lg object-cover shadow-sm border border-border"
                 />
               ) : topic.topic_type === 'regional' ? (
@@ -619,11 +619,16 @@ const TopicDashboard = () => {
                   <Hash className="w-7 h-7 text-white" />
                 </div>
               )}
-              <div>
+              <div className="space-y-1">
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
                   {topic.name}
                 </h1>
-                <div className="flex items-center gap-3 mt-2">
+                {topic.description && (
+                  <p className="text-muted-foreground text-sm max-w-xl">
+                    {topic.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-3 pt-1">
                   <Badge 
                     variant={topic.is_public ? "default" : "secondary"} 
                     className={topic.is_public 
@@ -665,12 +670,6 @@ const TopicDashboard = () => {
               </Link>
             </Button>
           </div>
-
-          {topic.description && (
-            <p className="text-muted-foreground max-w-2xl">
-              {topic.description}
-            </p>
-          )}
         </div>
 
         {/* Main Content Tabs */}
