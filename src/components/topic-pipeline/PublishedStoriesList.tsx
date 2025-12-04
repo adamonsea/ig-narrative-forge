@@ -583,11 +583,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
           
           <CardHeader className={`pb-2 ${isScheduled ? 'pt-3' : ''}`}>
             <div className="flex items-start gap-3">
-              {/* Status indicator dot */}
-              <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
-                isLive ? 'bg-green-500' : 
-                isScheduled ? 'bg-amber-500' : 
-                'bg-muted-foreground'
+              {/* Status indicator dot - only show for live/scheduled */}
+              <div className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${
+                isLive ? 'bg-green-500' : 'bg-amber-500'
               }`} />
               
               <div className="flex-1 min-w-0">
@@ -639,29 +637,12 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onArchive(story.id, story.title || story.headline || 'Untitled')}
-                className="h-7 text-xs px-2"
-              >
-                <Archive className="h-3 w-3 sm:mr-1" />
-                <span className="hidden sm:inline">Archive</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => onReturnToReview(story.id)}
                 className="h-7 text-xs px-2"
+                title="Return to review"
               >
-                <RotateCcw className="h-3 w-3" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(story.id, story.title || story.headline || 'Untitled')}
-                className="h-7 text-xs px-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-3 w-3" />
+                <RotateCcw className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">Unpublish</span>
               </Button>
 
               {topicSlug && story.is_published && (
