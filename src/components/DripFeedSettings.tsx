@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Clock, Droplets, AlertTriangle, HelpCircle, Zap, Calendar } from "lucide-react";
+import { Clock, Droplets, HelpCircle, Zap, Calendar, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -398,45 +398,45 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
               </div>
             </div>
 
-            {/* Queued Stories */}
+            {/* Queued Stories - mobile optimized */}
             {queuedStories.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    Queued for Release
-                    <Badge variant="secondary">{queuedStories.length}</Badge>
-                  </Label>
-                </div>
-                <div className="max-h-48 overflow-y-auto space-y-2">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
+                  Queued
+                  <Badge variant="secondary" className="h-5 text-xs">{queuedStories.length}</Badge>
+                </Label>
+                <div className="max-h-40 overflow-y-auto space-y-1.5">
                   {queuedStories.map((story) => (
-                    <div key={story.id} className="flex items-center justify-between text-sm bg-muted/30 rounded px-3 py-2">
-                      <span className="truncate max-w-[200px]">{story.title}</span>
-                      <Badge variant="outline" className="shrink-0 ml-2">
-                        {formatScheduledTime(story.scheduled_publish_at)}
-                      </Badge>
+                    <div key={story.id} className="flex items-start gap-2 text-xs bg-muted/30 rounded-md px-2.5 py-2">
+                      <Clock className="h-3 w-3 mt-0.5 text-amber-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate leading-tight">{story.title}</p>
+                        <p className="text-muted-foreground text-[10px] mt-0.5">
+                          {formatScheduledTime(story.scheduled_publish_at)}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Emergency Bypass */}
+            {/* Emergency Bypass - compact */}
             {queuedStories.length > 0 && (
-              <div className="border-t pt-4">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleEmergencyPublish}
-                  disabled={emergencyPublishing}
-                  className="w-full"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  {emergencyPublishing ? "Publishing..." : `Emergency: Publish All ${queuedStories.length} Now`}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Bypasses drip feed and publishes all queued stories immediately
-                </p>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEmergencyPublish}
+                disabled={emergencyPublishing}
+                className="w-full h-8 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              >
+                {emergencyPublishing ? (
+                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                ) : (
+                  <Zap className="w-3 h-3 mr-1.5" />
+                )}
+                {emergencyPublishing ? "Publishing..." : `Publish All ${queuedStories.length} Now`}
+              </Button>
             )}
           </>
         )}
