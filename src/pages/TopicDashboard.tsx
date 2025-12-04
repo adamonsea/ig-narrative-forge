@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useParliamentaryAutomation } from "@/hooks/useParliamentaryAutomation";
 import { usePageFavicon } from "@/hooks/usePageFavicon";
+import { useDripFeedPublishSound } from "@/hooks/useDripFeedPublishSound";
 import { BarChart3, Settings, FileText, Users, ExternalLink, MapPin, Hash, Clock, CheckCircle, ChevronDown, Loader2, RefreshCw, Activity, Database, Globe, Play, MessageCircle, AlertCircle, Eye, EyeOff, Palette, Target, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/constants/illustrationStyles";
@@ -95,6 +96,7 @@ interface Topic {
   branding_config?: any; // Use any to handle Json type from Supabase
   donation_enabled?: boolean;
   donation_config?: any;
+  drip_feed_enabled?: boolean;
 }
 
 const SCRAPING_WINDOW_OPTIONS = new Set([7, 30, 60, 100]);
@@ -157,6 +159,9 @@ const TopicDashboard = () => {
     region: topic?.region
   });
 
+  // Play subtle chime when drip feed stories publish
+  useDripFeedPublishSound(topic?.id, topic?.drip_feed_enabled === true);
+
   useEffect(() => {
     if (slug && user) {
       loadTopicAndStats();
@@ -179,7 +184,7 @@ const TopicDashboard = () => {
       // Load topic
       const { data: topicData, error: topicError } = await supabase
         .from('topics')
-        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color')
+        .select('*, auto_simplify_enabled, automation_quality_threshold, branding_config, donation_enabled, donation_config, community_config, community_pulse_frequency, illustration_style, illustration_primary_color, drip_feed_enabled')
         .eq('slug', slug)
         .single();
 
