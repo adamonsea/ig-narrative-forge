@@ -48,6 +48,29 @@ export const DripFeedSettings = ({ topicId, topicName, onUpdate }: DripFeedSetti
   useEffect(() => {
     loadConfig();
     loadQueuedStories();
+
+    // Subscribe to real-time story updates to refresh queue when stories publish
+    const channel = supabase
+      .channel('drip-feed-stories')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'stories'
+        },
+        (payload) => {
+          // Refresh when any story status changes (could be our scheduled stories publishing)
+          if (payload.new && (payload.new as any).status === 'published') {
+            loadQueuedStories();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [topicId]);
 
   const loadConfig = async () => {
