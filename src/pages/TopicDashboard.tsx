@@ -23,7 +23,7 @@ import { TopicNegativeKeywords } from "@/components/TopicNegativeKeywords";
 import { TopicCompetingRegions } from "@/components/TopicCompetingRegions";
 import { TopicDonationSettings } from "@/components/TopicDonationSettings";
 import { TopicInsightSettings } from "@/components/TopicInsightSettings";
-import { AudienceProgressCard } from "@/components/AudienceProgressCard";
+// AudienceProgressCard removed - functionality merged into TopicInsightSettings
 import { ContentVoiceSettings } from "@/components/ContentVoiceSettings";
 import { CommunityVoiceSettings } from "@/components/CommunityVoiceSettings";
 import { RegionalFeaturesSettings } from "@/components/RegionalFeaturesSettings";
@@ -875,6 +875,39 @@ const TopicDashboard = () => {
                 </AccordionContent>
               </AccordionItem>
 
+              {/* Presentation - moved up after Content & Voice */}
+              <AccordionItem value="presentation" className="rounded-lg border bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-3 text-left">
+                    <Palette className="h-4 w-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">Presentation</p>
+                      <p className="text-xs text-muted-foreground truncate">Branding, onboarding, donations</p>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4 space-y-6">
+                  <TopicBrandingSettings
+                    topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
+                    onUpdate={() => loadTopicAndStats()}
+                  />
+                  <div className="border-t pt-4">
+                    <OnboardingSettings
+                      topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
+                      onUpdate={() => loadTopicAndStats()}
+                    />
+                  </div>
+                  <div className="border-t pt-4">
+                    <TopicDonationSettings
+                      topicId={topic.id}
+                      donationEnabled={topic.donation_enabled || false}
+                      donationConfig={topic.donation_config || { button_text: "Support this feed", tiers: [] }}
+                      onUpdate={loadTopicAndStats}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
               {/* Feed Insight Cards */}
               <AccordionItem value="insights" className="rounded-lg border bg-card">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -886,11 +919,8 @@ const TopicDashboard = () => {
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-4">
-                  <AudienceProgressCard topicId={topic.id} />
-                  <div className="border-t pt-4">
-                    <TopicInsightSettings topicId={topic.id} />
-                  </div>
+                <AccordionContent className="px-4 pb-4">
+                  <TopicInsightSettings topicId={topic.id} />
                 </AccordionContent>
               </AccordionItem>
 
@@ -939,38 +969,6 @@ const TopicDashboard = () => {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Presentation */}
-              <AccordionItem value="presentation" className="rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center gap-3 text-left">
-                    <Palette className="h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Presentation</p>
-                      <p className="text-xs text-muted-foreground truncate">Branding, onboarding, donations</p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4 space-y-6">
-                  <TopicBrandingSettings
-                    topic={{ id: topic.id, name: topic.name, illustration_primary_color: topic.illustration_primary_color, branding_config: topic.branding_config }}
-                    onUpdate={() => loadTopicAndStats()}
-                  />
-                  <div className="border-t pt-4">
-                    <OnboardingSettings
-                      topic={{ id: topic.id, name: topic.name, slug: topic.slug, branding_config: topic.branding_config }}
-                      onUpdate={() => loadTopicAndStats()}
-                    />
-                  </div>
-                  <div className="border-t pt-4">
-                    <TopicDonationSettings
-                      topicId={topic.id}
-                      donationEnabled={topic.donation_enabled || false}
-                      donationConfig={topic.donation_config || { button_text: "Support this feed", tiers: [] }}
-                      onUpdate={loadTopicAndStats}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
 
               {/* Regional Features - only for regional topics */}
               {topic.topic_type === 'regional' && (
