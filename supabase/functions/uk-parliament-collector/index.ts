@@ -33,6 +33,7 @@ interface VotingRecord {
   no_count: number;
   is_weekly_roundup?: boolean;
   week_start_date?: string;
+  is_major_vote?: boolean;
   import_metadata: Record<string, any>;
 }
 
@@ -502,6 +503,13 @@ async function collectVotesForMP(
       // Generate local impact summary
       const localImpact = generateLocalImpact(title, region, category);
       
+      // Determine if this is a MAJOR vote (rebellion, close vote, high relevance, or major policy)
+      const totalVotes = ayeCount + noCount;
+      const voteMargin = totalVotes > 0 ? Math.abs(ayeCount - noCount) / totalVotes : 1;
+      const isCloseVote = voteMargin < 0.1; // Less than 10% margin
+      const isMajorPolicy = ['Economy', 'NHS', 'Education', 'Housing'].includes(category) && totalVotes > 400;
+      const isMajorVote = isRebellion || isCloseVote || nationalRelevance > 75 || isMajorPolicy;
+      
       votes.push({
         mention_type: 'vote',
         mp_name: mpName,
@@ -522,6 +530,7 @@ async function collectVotesForMP(
         vote_outcome: outcome,
         aye_count: ayeCount,
         no_count: noCount,
+        is_major_vote: isMajorVote,
         import_metadata: {
           api_version: '2.0',
           collection_method: 'comprehensive_mp_voting',
@@ -529,11 +538,13 @@ async function collectVotesForMP(
           mp_id: mpId,
           comprehensive_tracking: true,
           bill_description: billDescription,
-          bill_stage: billStage
+          bill_stage: billStage,
+          is_close_vote: isCloseVote,
+          is_major_policy: isMajorPolicy
         }
       });
       
-      console.log(`✓ Collected vote: ${title.substring(0, 60)}... ${isRebellion ? '⚠️ REBELLION' : ''}`);
+      console.log(`✓ Collected vote: ${title.substring(0, 60)}... ${isMajorVote ? '⭐ MAJOR' : ''} ${isRebellion ? '⚠️ REBELLION' : ''}`);
     }
     
   } catch (error) {
@@ -744,6 +755,7 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
         aye_count: vote.aye_count,
         no_count: vote.no_count,
         is_weekly_roundup: false,
+        is_major_vote: vote.is_major_vote || false,
         week_start_date: null,
         import_metadata: vote.import_metadata
       };
@@ -759,7 +771,8 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
           continue;
         }
 
-        if (!existingVote.story_id) {
+        // Only create stories for MAJOR votes
+        if (!existingVote.story_id && vote.is_major_vote) {
           const { data: refreshedVote, error: refreshedError } = await supabase
             .from('parliamentary_mentions')
             .select('*')
@@ -772,6 +785,8 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
           }
 
           await createDailyVoteStory(supabase, refreshedVote, topicId);
+        } else if (!vote.is_major_vote) {
+          console.log(`⏭️ Skipping story creation for minor vote: ${vote.vote_title?.substring(0, 50)}...`);
         }
 
         continue;
@@ -789,8 +804,12 @@ async function storeDailyVotes(supabase: any, votes: VotingRecord[], topicId: st
         continue;
       }
       
-      // Create single-slide banner story
-      await createDailyVoteStory(supabase, insertedVote, topicId);
+      // Only create stories for MAJOR votes
+      if (vote.is_major_vote) {
+        await createDailyVoteStory(supabase, insertedVote, topicId);
+      } else {
+        console.log(`⏭️ Minor vote stored (no story): ${vote.vote_title?.substring(0, 50)}...`);
+      }
       
     } catch (error) {
       console.error('Error processing vote:', error);

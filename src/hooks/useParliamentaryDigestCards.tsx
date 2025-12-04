@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface ParliamentaryVote {
+export interface ParliamentaryDigestVote {
   id: string;
   mp_name: string | null;
   party: string | null;
@@ -11,26 +11,22 @@ export interface ParliamentaryVote {
   vote_date: string | null;
   vote_url: string | null;
   vote_outcome: string | null;
-  aye_count: number | null;
-  no_count: number | null;
-  is_rebellion: boolean | null;
   vote_category: string | null;
-  local_impact_summary: string | null;
-  created_at: string;
+  is_rebellion: boolean | null;
 }
 
-interface UseParliamentaryInsightCardsResult {
-  votes: ParliamentaryVote[];
+interface UseParliamentaryDigestCardsResult {
+  votes: ParliamentaryDigestVote[];
   loading: boolean;
   hasData: boolean;
 }
 
-export const useParliamentaryInsightCards = (
+export const useParliamentaryDigestCards = (
   topicId: string | undefined,
   topicType: string | undefined,
   parliamentaryTrackingEnabled: boolean | undefined
-): UseParliamentaryInsightCardsResult => {
-  const [votes, setVotes] = useState<ParliamentaryVote[]>([]);
+): UseParliamentaryDigestCardsResult => {
+  const [votes, setVotes] = useState<ParliamentaryDigestVote[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -40,39 +36,40 @@ export const useParliamentaryInsightCards = (
       return;
     }
 
-    const fetchVotes = async () => {
+    const fetchDigestVotes = async () => {
       setLoading(true);
       try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // Only fetch MAJOR votes for the insight card
+        // Fetch minor votes (not major, not yet in weekly roundup)
         const { data, error } = await supabase
           .from('parliamentary_mentions')
-          .select('id, mp_name, party, constituency, vote_title, vote_direction, vote_date, vote_url, vote_outcome, aye_count, no_count, is_rebellion, vote_category, local_impact_summary, created_at')
+          .select('id, mp_name, party, constituency, vote_title, vote_direction, vote_date, vote_url, vote_outcome, vote_category, is_rebellion')
           .eq('topic_id', topicId)
           .eq('mention_type', 'vote')
-          .eq('is_major_vote', true)
-          .gte('created_at', thirtyDaysAgo.toISOString())
+          .eq('is_major_vote', false)
+          .eq('is_weekly_roundup', false)
+          .gte('vote_date', sevenDaysAgo.toISOString().split('T')[0])
           .order('vote_date', { ascending: false })
-          .limit(10);
+          .limit(15);
 
         if (error) {
-          console.error('Error fetching parliamentary votes for insight card:', error);
+          console.error('Error fetching parliamentary digest votes:', error);
           setVotes([]);
           return;
         }
 
         setVotes(data || []);
       } catch (err) {
-        console.error('Failed to fetch parliamentary insight cards:', err);
+        console.error('Failed to fetch parliamentary digest cards:', err);
         setVotes([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVotes();
+    fetchDigestVotes();
   }, [topicId, topicType, parliamentaryTrackingEnabled]);
 
   return {
