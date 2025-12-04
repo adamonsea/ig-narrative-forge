@@ -1010,29 +1010,58 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 px-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
+            className="px-2 sm:px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            Previous
+            <span className="hidden sm:inline ml-1">Previous</span>
           </Button>
           
           <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <Button
-                key={pageNum}
-                variant={pageNum === currentPage ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(pageNum)}
-                className="w-8 h-8 p-0"
-              >
-                {pageNum}
-              </Button>
-            ))}
+            {/* Smart pagination: show first, last, current, and neighbors */}
+            {(() => {
+              const pages: (number | 'ellipsis')[] = [];
+              const showPages = new Set<number>();
+              
+              // Always show first and last
+              showPages.add(1);
+              showPages.add(totalPages);
+              
+              // Show current and neighbors
+              for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
+                showPages.add(i);
+              }
+              
+              const sortedPages = Array.from(showPages).sort((a, b) => a - b);
+              
+              sortedPages.forEach((page, idx) => {
+                if (idx > 0 && page - sortedPages[idx - 1] > 1) {
+                  pages.push('ellipsis');
+                }
+                pages.push(page);
+              });
+              
+              return pages.map((item, idx) => 
+                item === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground">…</span>
+                ) : (
+                  <Button
+                    key={item}
+                    variant={item === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(item)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {item}
+                  </Button>
+                )
+              );
+            })()}
           </div>
 
           <Button
@@ -1040,8 +1069,9 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
             size="sm"
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
+            className="px-2 sm:px-3"
           >
-            Next
+            <span className="hidden sm:inline mr-1">Next</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
