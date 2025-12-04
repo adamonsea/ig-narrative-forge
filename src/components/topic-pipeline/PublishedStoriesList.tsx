@@ -635,6 +635,17 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
                   <span>{formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}</span>
                 </div>
               </div>
+
+              {/* Thumbnail - desktop only */}
+              {story.cover_illustration_url && (
+                <div className="hidden sm:block shrink-0">
+                  <img 
+                    src={story.cover_illustration_url} 
+                    alt="" 
+                    className="w-16 h-16 object-cover rounded-md"
+                  />
+                </div>
+              )}
             </div>
           </CardHeader>
 
