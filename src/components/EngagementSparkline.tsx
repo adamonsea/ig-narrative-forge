@@ -40,7 +40,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
           .in('interaction_type', ['swipe', 'share_click']),
         supabase
           .from('feed_visits')
-          .select('visit_date')
+          .select('visit_date, visitor_id')
           .eq('topic_id', topicId)
           .gte('visit_date', sevenDaysAgo.toISOString().split('T')[0])
       ]);
@@ -71,11 +71,20 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
         }
       });
 
-      // Count unique visitors per day
+      // Count unique visitors per day using Set
+      const visitorsPerDay = new Map<string, Set<string>>();
       (visits || []).forEach((visit) => {
-        const existing = dayMap.get(visit.visit_date);
+        if (!visitorsPerDay.has(visit.visit_date)) {
+          visitorsPerDay.set(visit.visit_date, new Set());
+        }
+        visitorsPerDay.get(visit.visit_date)!.add(visit.visitor_id);
+      });
+      
+      // Update dayMap with unique visitor counts
+      visitorsPerDay.forEach((visitorSet, date) => {
+        const existing = dayMap.get(date);
         if (existing) {
-          existing.visitors++;
+          existing.visitors = visitorSet.size;
         }
       });
 
