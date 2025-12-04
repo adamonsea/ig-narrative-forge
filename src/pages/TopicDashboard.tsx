@@ -603,19 +603,19 @@ const TopicDashboard = () => {
         {/* Topic Header - Clean, out of card */}
         <div className="mb-8 space-y-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-5">
               {topic.branding_config?.icon_url ? (
                 <img 
                   src={topic.branding_config.icon_url} 
                   alt={`${topic.name} favicon`}
-                  className="w-14 h-14 rounded-lg object-cover shadow-sm border border-border"
+                  className="w-14 h-14 rounded-lg object-cover shadow-sm border border-border mt-1"
                 />
               ) : topic.topic_type === 'regional' ? (
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(270,100%,68%)] to-[hsl(270,80%,55%)] flex items-center justify-center shadow-sm">
+                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(270,100%,68%)] to-[hsl(270,80%,55%)] flex items-center justify-center shadow-sm mt-1">
                   <MapPin className="w-7 h-7 text-white" />
                 </div>
               ) : (
-                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(155,100%,67%)] to-[hsl(155,80%,50%)] flex items-center justify-center shadow-sm">
+                <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[hsl(155,100%,67%)] to-[hsl(155,80%,50%)] flex items-center justify-center shadow-sm mt-1">
                   <Hash className="w-7 h-7 text-white" />
                 </div>
               )}
