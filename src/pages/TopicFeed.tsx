@@ -37,7 +37,9 @@ import { QuizCard } from "@/components/quiz/QuizCard";
 import { useTopicMetadata } from "@/hooks/useTopicMetadata";
 import { FeedOnboardingOrchestrator, InlinePWACard } from "@/components/onboarding";
 import { useParliamentaryInsightCards } from "@/hooks/useParliamentaryInsightCards";
+import { useParliamentaryDigestCards } from "@/hooks/useParliamentaryDigestCards";
 import { ParliamentaryInsightCard } from "@/components/ParliamentaryInsightCard";
+import { ParliamentaryDigestCard } from "@/components/ParliamentaryDigestCard";
 import { FlashbackInsightsPanel } from "@/components/FlashbackInsightsPanel";
 import { 
   FEED_CARD_POSITIONS, 
@@ -55,6 +57,7 @@ const shouldShowQuiz = (idx: number) => shouldShowCard('quiz', idx);
 const getQuizIndex = (idx: number) => getCardIndex('quiz', idx);
 const shouldShowEvents = (idx: number) => shouldShowCard('events', idx);
 const shouldShowParliamentary = (idx: number) => shouldShowCard('parliamentary', idx);
+const shouldShowParliamentaryDigest = (idx: number) => shouldShowCard('parliamentaryDigest', idx);
 const shouldShowFlashback = (idx: number) => shouldShowCard('flashback', idx);
 const shouldShowCommunityPulseCard = (idx: number) => shouldShowCard('communityPulse', idx);
 const getCommunityPulseIndex = (idx: number) => getCardIndex('communityPulse', idx);
@@ -307,8 +310,15 @@ const TopicFeed = () => {
   // Quiz cards hook - uses quizCardsEnabled from useTopicMetadata, passes user ID for deduplication
   const { unansweredQuestions: quizQuestions, visitorId: quizVisitorId, markAsAnswered } = useQuizCards(topic?.id, quizCardsEnabled, user?.id);
   
-  // Parliamentary insight cards - only for regional topics with tracking enabled
+  // Parliamentary insight cards - only for regional topics with tracking enabled (MAJOR votes)
   const { votes: parliamentaryVotes, hasData: hasParliamentaryData } = useParliamentaryInsightCards(
+    topic?.id,
+    topic?.topic_type,
+    (topic as any)?.parliamentary_tracking_enabled
+  );
+  
+  // Parliamentary digest cards - weekly digest of MINOR votes
+  const { votes: parliamentaryDigestVotes, hasData: hasParliamentaryDigest } = useParliamentaryDigestCards(
     topic?.id,
     topic?.topic_type,
     (topic as any)?.parliamentary_tracking_enabled
@@ -1090,12 +1100,24 @@ const TopicFeed = () => {
                 }
               }
 
-              // Parliamentary insight cards (positions 8, 21, 34...)
+              // Parliamentary insight cards for MAJOR votes (positions 8, 21, 34...)
               if (shouldShowParliamentary(storyIndex) && hasParliamentaryData && parliamentaryVotes.length > 0) {
                 items.push(
                   <div key={`parliamentary-insight-${storyIndex}`} className="w-full max-w-2xl">
                     <ParliamentaryInsightCard
                       votes={parliamentaryVotes}
+                      topicSlug={slug}
+                    />
+                  </div>
+                );
+              }
+
+              // Parliamentary weekly digest for MINOR votes (position 25, once)
+              if (shouldShowParliamentaryDigest(storyIndex) && hasParliamentaryDigest && parliamentaryDigestVotes.length > 0) {
+                items.push(
+                  <div key={`parliamentary-digest-${storyIndex}`} className="w-full max-w-2xl">
+                    <ParliamentaryDigestCard
+                      votes={parliamentaryDigestVotes}
                       topicSlug={slug}
                     />
                   </div>
