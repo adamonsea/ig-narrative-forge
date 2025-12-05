@@ -430,52 +430,106 @@ export const useMultiTenantActions = () => {
 
   /**
    * Approve a multi-tenant story
+   * If topic has drip feed enabled, story goes to 'ready' status and scheduler is triggered
+   * Otherwise, story is immediately published
    */
   const approveMultiTenantStory = async (storyId: string, topicId?: string) => {
     try {
       console.log('✅ Approving multi-tenant story:', storyId);
 
-      // Update story status to published
-      const { error: updateError } = await supabase
-        .from('stories')
-        .update({
-          status: 'published',
-          is_published: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', storyId);
-
-      if (updateError) {
-        console.error('Error approving multi-tenant story:', updateError);
-        throw new Error(`Failed to approve story: ${updateError.message}`);
+      // Check if topic has drip feed enabled
+      let dripFeedEnabled = false;
+      if (topicId) {
+        const { data: topicData } = await supabase
+          .from('topics')
+          .select('drip_feed_enabled')
+          .eq('id', topicId)
+          .single();
+        
+        dripFeedEnabled = topicData?.drip_feed_enabled === true;
+        console.log('📊 Drip feed enabled for topic:', dripFeedEnabled);
       }
 
-      console.log('✅ Multi-tenant story approved successfully');
+      if (dripFeedEnabled) {
+        // Drip feed mode: set to 'ready' status, scheduler will assign publish time
+        const { error: updateError } = await supabase
+          .from('stories')
+          .update({
+            status: 'ready',
+            is_published: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', storyId);
 
-      // Send push notifications to subscribers if topic is provided
-      if (topicId) {
+        if (updateError) {
+          console.error('Error setting story to ready:', updateError);
+          throw new Error(`Failed to approve story: ${updateError.message}`);
+        }
+
+        console.log('✅ Story set to ready status, triggering drip feed scheduler');
+
+        // Trigger drip feed scheduler to assign scheduled_publish_at
         try {
-          console.log('📤 Sending push notifications for story:', { storyId, topicId });
-          const { data, error: notificationError } = await supabase.functions.invoke('send-story-notification', {
-            body: { storyId, topicId }
+          const { data: schedulerResult, error: schedulerError } = await supabase.functions.invoke('drip-feed-scheduler', {
+            body: { topic_id: topicId }
           });
 
-          if (notificationError) {
-            console.error('Error sending push notifications:', notificationError);
-            // Don't throw - notifications failing shouldn't block story publishing
+          if (schedulerError) {
+            console.error('Error triggering drip feed scheduler:', schedulerError);
+            // Don't throw - story is approved, scheduler can catch up later
           } else {
-            console.log('✅ Push notifications sent:', data);
+            console.log('✅ Drip feed scheduler triggered:', schedulerResult);
           }
-        } catch (notifError) {
-          console.error('Error sending push notifications:', notifError);
-          // Silent fail for notifications
+        } catch (schedulerErr) {
+          console.error('Error calling drip feed scheduler:', schedulerErr);
         }
-      }
 
-      toast({
-        title: "Story Approved",
-        description: "The story has been approved and is now ready for publishing.",
-      });
+        toast({
+          title: "Story Approved",
+          description: "Story queued for drip feed release.",
+        });
+
+      } else {
+        // Immediate publish mode: set to 'published' status
+        const { error: updateError } = await supabase
+          .from('stories')
+          .update({
+            status: 'published',
+            is_published: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', storyId);
+
+        if (updateError) {
+          console.error('Error approving multi-tenant story:', updateError);
+          throw new Error(`Failed to approve story: ${updateError.message}`);
+        }
+
+        console.log('✅ Multi-tenant story published immediately');
+
+        // Send push notifications to subscribers if topic is provided
+        if (topicId) {
+          try {
+            console.log('📤 Sending push notifications for story:', { storyId, topicId });
+            const { data, error: notificationError } = await supabase.functions.invoke('send-story-notification', {
+              body: { storyId, topicId }
+            });
+
+            if (notificationError) {
+              console.error('Error sending push notifications:', notificationError);
+            } else {
+              console.log('✅ Push notifications sent:', data);
+            }
+          } catch (notifError) {
+            console.error('Error sending push notifications:', notifError);
+          }
+        }
+
+        toast({
+          title: "Story Approved",
+          description: "The story has been published.",
+        });
+      }
 
     } catch (error: any) {
       console.error('Error approving multi-tenant story:', error);

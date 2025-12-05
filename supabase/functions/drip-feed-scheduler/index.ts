@@ -109,9 +109,10 @@ serve(async (req) => {
 
       // Log the emergency action
       await supabase.from('system_logs').insert({
-        log_type: 'drip_feed_emergency',
+        level: 'warn',
+        function_name: 'drip-feed-scheduler',
         message: `Emergency publish all triggered for topic`,
-        metadata: { 
+        context: { 
           topic_id: targetTopicId, 
           stories_released: topicStoryIds.length,
           triggered_at: new Date().toISOString()
@@ -298,16 +299,31 @@ serve(async (req) => {
       log(`✅ Scheduled ${scheduledCount} stories for ${topic.name}`);
     }
 
-    // Log summary to system_logs
+    // Calculate totals for summary
+    const totalScheduled = results.reduce((sum, r) => sum + r.scheduled, 0);
+    const topicsProcessed = results.filter(r => r.scheduled > 0).length;
+    const topicsSkipped = results.filter(r => r.skipped).length;
+
+    // Log detailed summary to system_logs
     await supabase.from('system_logs').insert({
-      log_type: 'drip_feed_scheduler',
-      message: `Drip feed scheduler completed`,
-      metadata: { 
+      level: 'info',
+      function_name: 'drip-feed-scheduler',
+      message: `Drip feed scheduler completed: ${totalScheduled} stories scheduled across ${topicsProcessed} topics`,
+      context: { 
         results,
+        summary: {
+          total_stories_scheduled: totalScheduled,
+          topics_processed: topicsProcessed,
+          topics_skipped: topicsSkipped,
+          trigger_source: targetTopicId ? 'story_ready_trigger' : 'cron_job'
+        },
         duration_ms: Date.now() - startTime,
-        current_hour_utc: currentHour
+        current_hour_utc: currentHour,
+        run_timestamp: new Date().toISOString()
       }
     });
+
+    log(`\n📊 Summary: ${totalScheduled} stories scheduled, ${topicsProcessed} topics processed, ${topicsSkipped} skipped`);
 
     log(`\n✅ Drip Feed Scheduler completed in ${Date.now() - startTime}ms`);
 
