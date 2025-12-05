@@ -4354,13 +4354,8 @@ export type Database = {
               article_url: string
               slide_alt_text: string
               slide_content: string
-              slide_cta_text: string
-              slide_cta_url: string
-              slide_hook: string
               slide_id: string
-              slide_image_url: string
               slide_number: number
-              slide_type: string
               slide_word_count: number
               source_canonical_domain: string
               source_name: string
@@ -4774,13 +4769,8 @@ export type Database = {
               shared_content_id: string
               slide_alt_text: string
               slide_content: string
-              slide_cta_text: string
-              slide_cta_url: string
-              slide_hook: string
               slide_id: string
-              slide_image_url: string
               slide_number: number
-              slide_type: string
               slide_word_count: number
               source_canonical_domain: string
               source_name: string
