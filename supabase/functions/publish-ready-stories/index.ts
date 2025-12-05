@@ -198,6 +198,21 @@ serve(async (req) => {
       console.log(`💧 ${dripQueuedStories.length} stories remain in drip queue`);
     }
 
+    // Log to database for persistent tracking
+    await supabase.from('system_logs').insert({
+      level: 'info',
+      message: 'publish-ready-stories completed',
+      context: {
+        published_count: updatedCount,
+        drip_queued_count: dripQueuedStories.length,
+        future_skipped_count: futureStories.length,
+        published_stories: updatedStories?.map(s => ({ id: s.id, title: s.title })) || [],
+        drip_queued: dripQueuedStories,
+        timestamp: new Date().toISOString()
+      },
+      function_name: 'publish-ready-stories'
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true,

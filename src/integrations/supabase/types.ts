@@ -4346,6 +4346,36 @@ export type Database = {
       }
       get_public_topic_feed:
         | {
+            Args: { p_limit?: number; p_offset?: number; p_topic_slug: string }
+            Returns: {
+              article_author: string
+              article_published_at: string
+              article_title: string
+              article_url: string
+              slide_alt_text: string
+              slide_content: string
+              slide_cta_text: string
+              slide_cta_url: string
+              slide_hook: string
+              slide_id: string
+              slide_image_url: string
+              slide_number: number
+              slide_type: string
+              slide_word_count: number
+              source_canonical_domain: string
+              source_name: string
+              story_cover_illustration_url: string
+              story_created_at: string
+              story_id: string
+              story_slug: string
+              story_status: string
+              story_title: string
+              story_tone: string
+              story_updated_at: string
+              topic_article_id: string
+            }[]
+          }
+        | {
             Args: {
               p_limit?: number
               p_offset?: number
@@ -4364,20 +4394,6 @@ export type Database = {
               slides: Json
               status: string
               summary: string
-              title: string
-              updated_at: string
-            }[]
-          }
-        | {
-            Args: { p_limit?: number; p_offset?: number; p_topic_slug: string }
-            Returns: {
-              article_published_at: string
-              article_source_url: string
-              author: string
-              cover_illustration_prompt: string
-              cover_illustration_url: string
-              created_at: string
-              id: string
               title: string
               updated_at: string
             }[]
@@ -4749,31 +4765,38 @@ export type Database = {
               p_topic_id: string
             }
             Returns: {
-              article_id: string
+              article_author: string
               article_published_at: string
-              article_region: string
-              article_source_url: string
-              is_parliamentary: boolean
-              mp_name: string
-              pm_created_at: string
-              pm_debate_date: string
-              pm_id: string
-              pm_mp_id: string
-              pm_relevance_score: number
-              pm_summary: string
-              pm_vote_date: string
+              article_source_id: string
+              article_title: string
+              article_url: string
+              matched_keywords: string[]
+              shared_content_id: string
+              slide_alt_text: string
               slide_content: string
+              slide_cta_text: string
+              slide_cta_url: string
+              slide_hook: string
               slide_id: string
+              slide_image_url: string
               slide_number: number
+              slide_type: string
               slide_word_count: number
-              story_author: string
-              story_cover_illustration_prompt: string
+              source_canonical_domain: string
+              source_name: string
+              story_animated_illustration_url: string
+              story_audience_expertise: string
               story_cover_illustration_url: string
               story_created_at: string
               story_id: string
-              story_publication_name: string
+              story_is_published: boolean
+              story_slug: string
+              story_status: string
               story_title: string
+              story_tone: string
               story_updated_at: string
+              story_writing_style: string
+              topic_article_id: string
             }[]
           }
         | {
@@ -4824,6 +4847,15 @@ export type Database = {
       is_feature_enabled: { Args: { flag_name: string }; Returns: boolean }
       is_story_published: { Args: { p_story_id: string }; Returns: boolean }
       is_story_visible: { Args: { story_updated_at: string }; Returns: boolean }
+      log_drip_feed_event: {
+        Args: {
+          p_details?: Json
+          p_event_type: string
+          p_story_id?: string
+          p_topic_id: string
+        }
+        Returns: undefined
+      }
       log_error_ticket: {
         Args: {
           p_context_data?: Json
