@@ -278,6 +278,18 @@ serve(async (req) => {
           continue;
         }
 
+        // Log each scheduled story to database
+        await supabase.rpc('log_drip_feed_event', {
+          p_topic_id: topic.id,
+          p_event_type: 'story_scheduled',
+          p_story_id: story.id,
+          p_details: {
+            title: story.title,
+            scheduled_for: scheduledTime.toISOString(),
+            slot_index: slotIndex
+          }
+        });
+
         log(`📅 Scheduled "${story.title?.substring(0, 40)}..." for ${scheduledTime.toISOString()}`);
         scheduledCount++;
       }
