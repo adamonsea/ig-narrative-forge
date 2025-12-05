@@ -57,6 +57,9 @@ Deno.serve(async (req) => {
       .rpc('get_topic_stories_with_keywords', {
         p_topic_id: topic_id,
         p_limit: 1000,
+        p_offset: 0,
+        p_keyword_filters: null,
+        p_source_filters: null,
       });
 
     if (rpcError) {
