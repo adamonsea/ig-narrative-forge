@@ -4710,8 +4710,8 @@ export type Database = {
           article_author: string
           article_published_at: string
           article_source_id: string
+          article_source_url: string
           article_title: string
-          article_url: string
           matched_keywords: string[]
           shared_content_id: string
           slide_alt_text: string
