@@ -132,13 +132,11 @@ serve(async (req) => {
             .eq('id', schedule.source_id)
             .single();
 
-          // Call the hybrid scraper with proper region from topic
-          const scrapeResponse = await supabase.functions.invoke('hybrid-scraper', {
+          // Call the universal topic scraper (consolidated scraping path)
+          const scrapeResponse = await supabase.functions.invoke('universal-topic-scraper', {
             body: {
-              feedUrl: source.feed_url,
-              sourceId: schedule.source_id,
               topicId: sourceWithTopic?.topic_id,
-              region: sourceWithTopic?.topics?.[0]?.region || 'default'
+              sourceIds: [schedule.source_id]
             }
           });
 
