@@ -214,11 +214,10 @@ export const Phase4Validator = () => {
         // Test scraping if we have a feed URL
         if (source.feed_url && sourceValidation.articlesFound < 5) {
           try {
-            const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('hybrid-scraper', {
+            const { data: scrapeData, error: scrapeError } = await supabase.functions.invoke('universal-topic-scraper', {
               body: {
-                feedUrl: source.feed_url,
-                sourceId: source.id,
-                region: source.region || 'general',
+                topicId: source.topic_id,
+                sourceIds: [source.id],
                 testMode: true
               }
             });
