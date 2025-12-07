@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { useDeviceOptimizations, getAnimationPresets } from '@/lib/deviceUtils';
+import { useDeviceOptimizations, getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
 
 interface Story {
   id: string;
@@ -37,11 +37,11 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   const x = useMotionValue(0);
   const dragVelocity = useRef({ x: 0, y: 0 });
   
-  // Device-adaptive effect values
-  const liftScale = optimizations.shouldReduceMotion ? 1.01 : 1.03;
-  const maxTilt = optimizations.shouldReduceMotion ? 5 : 12;
-  const shadowDepth = optimizations.shouldReduceMotion ? 10 : 30;
-  const exitVelocityMultiplier = optimizations.shouldReduceMotion ? 0.6 : 1.0;
+  // Device-adaptive effect values based on tier
+  const liftScale = animationPresets.enableDynamicShadows ? 1.03 : 1.01;
+  const maxTilt = animationPresets.enablePageCurl ? 12 : 5;
+  const shadowDepth = animationPresets.enableDynamicShadows ? 30 : 10;
+  const exitVelocityMultiplier = animationPresets.swipeVelocityMultiplier;
   
   // Natural paper tilt (rotateZ) instead of flip
   const rotateZ = useTransform(
@@ -94,12 +94,20 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 80;
+    // Velocity-weighted threshold: faster swipes require less distance
+    const baseThreshold = 80;
+    const velocityBoost = Math.min(Math.abs(info.velocity.x) / 1000, 0.4) * animationPresets.swipeVelocityMultiplier;
+    const effectiveThreshold = baseThreshold * (1 - velocityBoost);
     
     // Capture velocity for throw physics
     dragVelocity.current = { x: info.velocity.x, y: info.velocity.y };
     
-    if (Math.abs(info.offset.x) > threshold) {
+    if (Math.abs(info.offset.x) > effectiveThreshold) {
+      // Haptic feedback on successful swipe
+      if (animationPresets.enableHaptics) {
+        triggerHaptic('medium');
+      }
+      
       if (info.offset.x > 0) {
         onSwipe('like');
       } else {
@@ -208,63 +216,72 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
         </motion.div>
       </motion.div>
 
-      {/* Realistic Page Curl - Bottom Left (appears when swiping right/liking) */}
-      <motion.div
-        className="absolute bottom-0 left-0 pointer-events-none"
-        style={{
-          width: rightCurlSize,
-          height: rightCurlSize,
-          opacity: rightCurlOpacity,
-          zIndex: 20,
-        }}
-      >
-        {/* Shadow layer for depth */}
-        <div
-          className="absolute inset-0"
-          style={{
-            clipPath: 'path("M 0 100 Q 0 60, 20 80 Q 40 100, 100 100 Z")',
-            background: 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
-            filter: 'blur(2px)',
-          }}
-        />
-        {/* Curl layer with curved edge */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-background via-muted to-card"
-          style={{
-            clipPath: 'path("M 0 100 Q 0 70, 15 85 Q 30 100, 100 100 Z")',
-            boxShadow: '2px 2px 8px rgba(0,0,0,0.15)',
-          }}
-        />
-      </motion.div>
+      {/* Realistic Page Curl - Only rendered on capable devices */}
+      {animationPresets.enablePageCurl && (
+        <>
+          {/* Page Curl - Bottom Left (appears when swiping right/liking) */}
+          <motion.div
+            className="absolute bottom-0 left-0 pointer-events-none"
+            style={{
+              width: rightCurlSize,
+              height: rightCurlSize,
+              opacity: rightCurlOpacity,
+              zIndex: 20,
+            }}
+          >
+            {/* Shadow layer for depth - only on devices with dynamic shadows */}
+            {animationPresets.enableDynamicShadows && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  clipPath: 'path("M 0 100 Q 0 60, 20 80 Q 40 100, 100 100 Z")',
+                  background: 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+                  filter: 'blur(2px)',
+                }}
+              />
+            )}
+            {/* Curl layer with curved edge */}
+            <div
+              className="absolute inset-0 bg-gradient-to-br from-background via-muted to-card"
+              style={{
+                clipPath: 'path("M 0 100 Q 0 70, 15 85 Q 30 100, 100 100 Z")',
+                boxShadow: animationPresets.enableDynamicShadows ? '2px 2px 8px rgba(0,0,0,0.15)' : 'none',
+              }}
+            />
+          </motion.div>
 
-      {/* Realistic Page Curl - Bottom Right (appears when swiping left/discarding) */}
-      <motion.div
-        className="absolute bottom-0 right-0 pointer-events-none"
-        style={{
-          width: leftCurlSize,
-          height: leftCurlSize,
-          opacity: leftCurlOpacity,
-          zIndex: 20,
-        }}
-      >
-        {/* Shadow layer for depth */}
-        <div
-          className="absolute inset-0"
-          style={{
-            clipPath: 'path("M 100 100 Q 100 60, 80 80 Q 60 100, 0 100 Z")',
-            background: 'linear-gradient(225deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
-            filter: 'blur(2px)',
-          }}
-        />
-        {/* Curl layer with curved edge */}
-        <div
-          className="absolute inset-0 bg-gradient-to-bl from-background via-muted to-card"
-          style={{
-            clipPath: 'path("M 100 100 Q 100 70, 85 85 Q 70 100, 0 100 Z")',
-            boxShadow: '-2px 2px 8px rgba(0,0,0,0.15)',
-          }}
-        />
-      </motion.div>
+          {/* Page Curl - Bottom Right (appears when swiping left/discarding) */}
+          <motion.div
+            className="absolute bottom-0 right-0 pointer-events-none"
+            style={{
+              width: leftCurlSize,
+              height: leftCurlSize,
+              opacity: leftCurlOpacity,
+              zIndex: 20,
+            }}
+          >
+            {/* Shadow layer for depth - only on devices with dynamic shadows */}
+            {animationPresets.enableDynamicShadows && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  clipPath: 'path("M 100 100 Q 100 60, 80 80 Q 60 100, 0 100 Z")',
+                  background: 'linear-gradient(225deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+                  filter: 'blur(2px)',
+                }}
+              />
+            )}
+            {/* Curl layer with curved edge */}
+            <div
+              className="absolute inset-0 bg-gradient-to-bl from-background via-muted to-card"
+              style={{
+                clipPath: 'path("M 100 100 Q 100 70, 85 85 Q 70 100, 0 100 Z")',
+                boxShadow: animationPresets.enableDynamicShadows ? '-2px 2px 8px rgba(0,0,0,0.15)' : 'none',
+              }}
+            />
+          </motion.div>
+        </>
+      )}
 
       {/* Story Card (matching feed design) */}
       <Card className="h-full shadow-lg overflow-hidden border relative">

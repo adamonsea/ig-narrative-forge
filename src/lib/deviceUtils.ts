@@ -28,6 +28,12 @@ export interface AnimationPresets {
     power: number;
     timeConstant: number;
   };
+  // Device-tier visual complexity
+  enablePageCurl: boolean;
+  enableDynamicShadows: boolean;
+  enableHaptics: boolean;
+  // Velocity-responsive thresholds
+  swipeVelocityMultiplier: number;
 }
 
 /**
@@ -219,50 +225,92 @@ export function getAnimationPresets(): AnimationPresets {
   const tier = getDevicePerformanceTier();
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   
-  // If user prefers reduced motion, use gentlest settings
+  // If user prefers reduced motion, use gentlest settings with no visual effects
   if (prefersReducedMotion) {
     return {
       dragElastic: 0.05,
       spring: { stiffness: 180, damping: 30, mass: 1.3 },
       dragTransition: { power: 0.4, timeConstant: 200 },
+      enablePageCurl: false,
+      enableDynamicShadows: false,
+      enableHaptics: false,
+      swipeVelocityMultiplier: 0.8,
     };
   }
   
   switch (tier) {
     case 'modern-ios':
-    case 'modern-android':
-      // Modern devices: snappy and responsive
+      // Modern iOS: full effects, haptics enabled, velocity-responsive
       return {
-        dragElastic: 0.15,
-        spring: { stiffness: 450, damping: 40, mass: 0.9 },
-        dragTransition: { power: 0.3, timeConstant: 260 },
+        dragElastic: 0.12,
+        spring: { stiffness: 380, damping: 36, mass: 0.95 },
+        dragTransition: { power: 0.28, timeConstant: 280 },
+        enablePageCurl: true,
+        enableDynamicShadows: true,
+        enableHaptics: true,
+        swipeVelocityMultiplier: 1.2,
+      };
+      
+    case 'modern-android':
+      // Modern Android: full effects, no haptics (inconsistent support)
+      return {
+        dragElastic: 0.12,
+        spring: { stiffness: 380, damping: 36, mass: 0.95 },
+        dragTransition: { power: 0.28, timeConstant: 280 },
+        enablePageCurl: true,
+        enableDynamicShadows: true,
+        enableHaptics: false,
+        swipeVelocityMultiplier: 1.2,
       };
       
     case 'mid-range-ios':
     case 'mid-range-android':
-      // Mid-range: smooth and balanced
+      // Mid-range: simplified effects, balanced springs
       return {
-        dragElastic: 0.10,
-        spring: { stiffness: 300, damping: 35, mass: 1.1 },
-        dragTransition: { power: 0.35, timeConstant: 230 },
+        dragElastic: 0.08,
+        spring: { stiffness: 320, damping: 34, mass: 1.0 },
+        dragTransition: { power: 0.32, timeConstant: 250 },
+        enablePageCurl: true,
+        enableDynamicShadows: false,
+        enableHaptics: false,
+        swipeVelocityMultiplier: 1.0,
       };
       
     case 'old-ios':
     case 'legacy-android':
-      // Old/legacy devices: gentle and smooth to reduce jank
+      // Old/legacy: minimal effects, gentle springs to reduce jank
       return {
-        dragElastic: 0.05,
-        spring: { stiffness: 180, damping: 30, mass: 1.3 },
-        dragTransition: { power: 0.4, timeConstant: 200 },
+        dragElastic: 0.04,
+        spring: { stiffness: 200, damping: 28, mass: 1.2 },
+        dragTransition: { power: 0.38, timeConstant: 220 },
+        enablePageCurl: false,
+        enableDynamicShadows: false,
+        enableHaptics: false,
+        swipeVelocityMultiplier: 0.8,
       };
       
     case 'desktop':
-      // Desktop: balanced and smooth
+      // Desktop: full effects, smooth feel
       return {
-        dragElastic: 0.12,
-        spring: { stiffness: 400, damping: 38, mass: 1.0 },
-        dragTransition: { power: 0.32, timeConstant: 250 },
+        dragElastic: 0.10,
+        spring: { stiffness: 360, damping: 35, mass: 1.0 },
+        dragTransition: { power: 0.30, timeConstant: 260 },
+        enablePageCurl: true,
+        enableDynamicShadows: true,
+        enableHaptics: false,
+        swipeVelocityMultiplier: 1.0,
       };
+  }
+}
+
+/**
+ * Triggers haptic feedback on supported devices
+ */
+export function triggerHaptic(type: 'light' | 'medium' | 'heavy' = 'light'): void {
+  // Check for iOS-style haptic feedback
+  if ('vibrate' in navigator) {
+    const duration = type === 'light' ? 10 : type === 'medium' ? 20 : 30;
+    navigator.vibrate(duration);
   }
 }
 
