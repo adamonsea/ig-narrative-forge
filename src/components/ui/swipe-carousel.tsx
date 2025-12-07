@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { useDeviceOptimizations, getAnimationPresets } from "@/lib/deviceUtils";
+import { useDeviceOptimizations, getAnimationPresets, triggerHaptic } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -99,9 +99,9 @@ export function SwipeCarousel({
       onSlideChange(index);
     }
 
-    // iOS-specific haptic feedback on slide change (all iOS devices)
-    if (optimizations.shouldReduceMotion && index > 0 && (navigator as any).vibrate) {
-      (navigator as any).vibrate(10);
+    // Haptic feedback on slide change (modern iOS only)
+    if (animationPresets.enableHaptics && index > 0) {
+      triggerHaptic('light');
     }
 
     // Track swipe interaction if we have story/topic context and this is a real swipe
@@ -164,19 +164,23 @@ export function SwipeCarousel({
   const prev = () => goTo(index - 1);
   const next = () => goTo(index + 1);
 
-  // Instagram-like gesture: smooth slide-by-slide navigation
+  // Instagram-like gesture: smooth slide-by-slide navigation with velocity-weighted thresholds
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const threshold = width * 0.25; // 25% of width to trigger slide change
+    const baseThreshold = width * 0.25; // 25% of width base threshold
     const swipeDistance = info.offset.x;
     const swipeVelocity = info.velocity.x;
     
+    // Velocity-weighted threshold: faster swipes require less distance
+    const velocityBoost = Math.min(Math.abs(swipeVelocity) / 1000, 0.5) * animationPresets.swipeVelocityMultiplier;
+    const effectiveThreshold = baseThreshold * (1 - velocityBoost);
+    
     let targetIndex = index;
     
-    // Determine direction based on distance and velocity
-    if (swipeDistance > threshold || (swipeDistance > 50 && swipeVelocity > 500)) {
+    // Determine direction based on distance and velocity-adjusted threshold
+    if (swipeDistance > effectiveThreshold || (swipeDistance > 40 && swipeVelocity > 400)) {
       // Swiped right (previous slide)
       targetIndex = Math.max(0, index - 1);
-    } else if (swipeDistance < -threshold || (swipeDistance < -50 && swipeVelocity < -500)) {
+    } else if (swipeDistance < -effectiveThreshold || (swipeDistance < -40 && swipeVelocity < -400)) {
       // Swiped left (next slide)
       targetIndex = Math.min(count - 1, index + 1);
     }
@@ -219,15 +223,14 @@ export function SwipeCarousel({
           style={{ 
             x, 
             touchAction: "pan-y",
-            ...(optimizations.shouldReduceMotion ? {
-              willChange: 'transform',
-              transform: 'translate3d(0, 0, 0)',
-              WebkitTransform: 'translate3d(0, 0, 0)',
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              WebkitPerspective: 1000,
-              perspective: 1000,
-            } : {})
+            // Universal GPU acceleration for all devices
+            willChange: 'transform',
+            transform: 'translate3d(0, 0, 0)',
+            WebkitTransform: 'translate3d(0, 0, 0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            WebkitPerspective: 1000,
+            perspective: 1000,
           }}
           onDragEnd={onDragEnd}
         >
