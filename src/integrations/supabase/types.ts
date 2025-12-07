@@ -4736,6 +4736,17 @@ export type Database = {
           topic_article_id: string
         }[]
       }
+      get_topic_visitor_breakdown: {
+        Args: { p_days?: number; p_topic_id: string }
+        Returns: {
+          return_rate_pct: number
+          today_new: number
+          today_returning: number
+          total_unique: number
+          week_new: number
+          week_returning: number
+        }[]
+      }
       get_topic_visitor_stats: {
         Args: { p_topic_id: string }
         Returns: {
