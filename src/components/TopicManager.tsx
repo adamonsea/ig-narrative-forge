@@ -71,140 +71,51 @@ export const TopicManager = () => {
 
   const loadTopics = async () => {
     try {
-      // Only load active (non-archived) topics created by the current user
-      const { data, error } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('created_by', user?.id)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false });
+      // Load topics and stats in parallel with a single consolidated RPC
+      const [topicsRes, statsRes] = await Promise.all([
+        supabase
+          .from('topics')
+          .select('*')
+          .eq('created_by', user?.id)
+          .eq('is_archived', false)
+          .order('created_at', { ascending: false }),
+        supabase.rpc('get_user_dashboard_stats', { p_user_id: user?.id })
+      ]);
 
-      if (error) throw error;
+      if (topicsRes.error) throw topicsRes.error;
       
-        // Get real stats for each topic
-        const topicsWithStats = await Promise.all((data || []).map(async (topic) => {
-          // Get accurate stats that match the Arrivals tab UX
-          // 1) Multi-tenant articles for this topic
-          const [mtArticlesRes, storiesThisWeekLegacy, storiesThisWeekMT, visitorStats, interactionStats, installStats, registrantStats, swipeInsights, quizStats, engagementAverages] = await Promise.all([
-            supabase.rpc('get_topic_articles_multi_tenant', {
-              p_topic_id: topic.id,
-              p_status: null,
-              p_limit: 500
-            }),
-            // Legacy published stories from this week
-            supabase
-              .from('stories')
-              .select(`
-                id,
-                article_id,
-                articles!inner(topic_id)
-              `, { count: 'exact' })
-              .in('status', ['ready', 'published'])
-              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-              .eq('articles.topic_id', topic.id),
-            // Multi-tenant published stories from this week
-            supabase
-              .from('stories')
-              .select(`
-                id,
-                topic_article_id,
-                topic_articles!inner(topic_id)
-              `, { count: 'exact' })
-              .in('status', ['ready', 'published'])
-              .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-              .eq('topic_articles.topic_id', topic.id)
-              .not('topic_article_id', 'is', null),
-            // Get visitor stats (now includes play_mode_visits_week)
-            supabase.rpc('get_topic_visitor_stats', { p_topic_id: topic.id }),
-            // Get interaction stats (swipes and shares)
-            supabase.rpc('get_topic_interaction_stats', { p_topic_id: topic.id, p_days: 7 }),
-            // Get install stats (homescreen)
-            supabase.rpc('get_topic_install_stats', { p_topic_id: topic.id }),
-            // Get registrant stats (game mode users)
-            supabase.rpc('get_topic_registrant_stats', { p_topic_id: topic.id }),
-            // Get liked stories count from Play Mode
-            supabase.rpc('get_swipe_insights', { p_topic_id: topic.id }),
-            // Get quiz stats
-            supabase.rpc('get_topic_quiz_stats', { p_topic_id: topic.id, p_days: 7 }),
-            // Get engagement averages (avg stories scrolled, avg stories swiped)
-            (supabase.rpc as any)('get_topic_engagement_averages', { p_topic_id: topic.id, p_days: 7 })
-          ]);
+      // Create a map of topic_id -> stats for O(1) lookup
+      const statsMap = new Map<string, any>();
+      (statsRes.data || []).forEach((stat: any) => {
+        statsMap.set(stat.topic_id, stat);
+      });
 
-        const mtArticles = (mtArticlesRes.data || []) as any[];
-        const mtIds = new Set(mtArticles.map(a => a.id));
-
-        // 2) Published stories for this topic (ready/published) to exclude from arrivals
-        const [{ data: publishedStories }, { data: queuedItems }] = await Promise.all([
-          supabase
-            .from('stories')
-            .select(`topic_article_id, topic_articles!inner(topic_id)`) 
-            .in('status', ['ready', 'published'])
-            .not('topic_article_id', 'is', null)
-            .eq('topic_articles.topic_id', topic.id),
-          supabase
-            .from('content_generation_queue')
-            .select('topic_article_id')
-            .in('status', ['pending', 'processing'])
-            .not('topic_article_id', 'is', null)
-        ]);
-
-        const publishedIds = new Set((publishedStories || []).map(s => s.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
-        const queuedIds = new Set((queuedItems || []).map(q => q.topic_article_id).filter((id: string | null) => id && mtIds.has(id)) as string[]);
-
-        // Helper to check if article is parliamentary (matching Arrivals tab exclusion)
-        const isParliamentaryArticle = (a: any) => {
-          const metadata = a.import_metadata || {};
-          return (
-            metadata.source === 'parliamentary_vote' ||
-            metadata.parliamentary_vote === true ||
-            metadata.source === 'parliamentary_weekly_roundup'
-          );
+      // Merge topics with their stats
+      const topicsWithStats = (topicsRes.data || []).map((topic) => {
+        const stats = statsMap.get(topic.id) || {};
+        return {
+          ...topic,
+          topic_type: topic.topic_type as 'regional' | 'keyword',
+          articles_in_arrivals: Number(stats.articles_in_arrivals) || 0,
+          stories_published_this_week: Number(stats.stories_published_week) || 0,
+          visits_today: Number(stats.visits_today) || 0,
+          visits_this_week: Number(stats.visits_this_week) || 0,
+          play_mode_visits_week: Number(stats.play_mode_visits_week) || 0,
+          articles_swiped: 0, // Not used in UI anymore
+          articles_liked: Number(stats.articles_liked) || 0,
+          articles_disliked: Number(stats.articles_disliked) || 0,
+          share_clicks: Number(stats.share_clicks) || 0,
+          source_clicks: Number(stats.source_clicks) || 0,
+          quiz_responses_count: Number(stats.quiz_responses_count) || 0,
+          installs_this_week: Number(stats.installs_this_week) || 0,
+          installs_total: Number(stats.installs_total) || 0,
+          registrants_this_week: Number(stats.registrants_this_week) || 0,
+          registrants_total: Number(stats.registrants_total) || 0,
+          avg_stories_engaged: Number(stats.avg_stories_engaged) || 0,
+          avg_carousel_swipes: Number(stats.avg_carousel_swipes) || 0,
+          avg_final_slides_seen: Number(stats.avg_final_slides_seen) || 0
         };
-
-        // 3) Count arrivals exactly like the Arrivals tab
-        const arrivalsCount = mtArticles.filter(a => (
-          a.processing_status === 'new' || a.processing_status === 'processed'
-        ) && !publishedIds.has(a.id) && !queuedIds.has(a.id) && !isParliamentaryArticle(a)).length;
-
-          const publishedThisWeek = (storiesThisWeekLegacy.count || 0) + (storiesThisWeekMT.count || 0);
-          const visitorData = visitorStats.data?.[0] || { visits_today: 0, visits_this_week: 0, play_mode_visits_week: 0 };
-          const interactionData = interactionStats.data?.[0] || { articles_swiped: 0, share_clicks: 0 };
-          const installData = installStats.data?.[0] || { installs_this_week: 0, installs_total: 0 };
-          const registrantData = registrantStats.data?.[0] || { registrants_this_week: 0, registrants_total: 0 };
-          const swipeInsightsData = (swipeInsights.data as any)?.[0] || { total_likes: 0, total_discards: 0 };
-          const likedCount = Number(swipeInsightsData?.total_likes) || 0;
-          const dislikedCount = Number(swipeInsightsData?.total_discards) || 0;
-          const quizData = quizStats.data?.[0] || { quiz_responses_count: 0 };
-          const engagementData = engagementAverages?.data?.[0] || { 
-            avg_stories_engaged: 0, 
-            avg_carousel_swipes: 0,
-            avg_final_slides_seen: 0,
-            total_source_clicks: 0
-          };
-
-          return {
-            ...topic,
-            topic_type: topic.topic_type as 'regional' | 'keyword',
-            articles_in_arrivals: arrivalsCount,
-            stories_published_this_week: publishedThisWeek,
-            visits_today: visitorData.visits_today || 0,
-            visits_this_week: visitorData.visits_this_week || 0,
-            play_mode_visits_week: Number(visitorData.play_mode_visits_week) || 0,
-            articles_swiped: Number(interactionData.articles_swiped) || 0,
-            articles_liked: likedCount,
-            articles_disliked: dislikedCount,
-            share_clicks: Number(interactionData.share_clicks) || 0,
-            source_clicks: Number(engagementData.total_source_clicks) || 0,
-            quiz_responses_count: Number(quizData.quiz_responses_count) || 0,
-            installs_this_week: Number(installData.installs_this_week) || 0,
-            installs_total: Number(installData.installs_total) || 0,
-            registrants_this_week: Number(registrantData.registrants_this_week) || 0,
-            registrants_total: Number(registrantData.registrants_total) || 0,
-            avg_stories_engaged: Number(engagementData.avg_stories_engaged) || 0,
-            avg_carousel_swipes: Number(engagementData.avg_carousel_swipes) || 0,
-            avg_final_slides_seen: Number(engagementData.avg_final_slides_seen) || 0
-          };
-      }));
+      });
       
       setTopics(topicsWithStats);
     } catch (error) {

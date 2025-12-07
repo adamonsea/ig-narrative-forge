@@ -4755,6 +4755,29 @@ export type Database = {
           visits_today: number
         }[]
       }
+      get_user_dashboard_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          articles_disliked: number
+          articles_in_arrivals: number
+          articles_liked: number
+          avg_carousel_swipes: number
+          avg_final_slides_seen: number
+          avg_stories_engaged: number
+          installs_this_week: number
+          installs_total: number
+          play_mode_visits_week: number
+          quiz_responses_count: number
+          registrants_this_week: number
+          registrants_total: number
+          share_clicks: number
+          source_clicks: number
+          stories_published_week: number
+          topic_id: string
+          visits_this_week: number
+          visits_today: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
