@@ -4216,7 +4216,7 @@ export type Database = {
       delete_topic_cascade: { Args: { p_topic_id: string }; Returns: Json }
       detect_article_duplicates:
         | {
-            Args: { p_article_id: string; p_topic_id?: string }
+            Args: { p_article_id: string }
             Returns: {
               detection_method: string
               duplicate_id: string
@@ -4224,7 +4224,7 @@ export type Database = {
             }[]
           }
         | {
-            Args: { p_article_id: string }
+            Args: { p_article_id: string; p_topic_id?: string }
             Returns: {
               detection_method: string
               duplicate_id: string
@@ -4450,33 +4450,6 @@ export type Database = {
       }
       get_stories_unified:
         | {
-            Args: {
-              p_limit?: number
-              p_offset?: number
-              p_status?: string
-              p_topic_id: string
-            }
-            Returns: {
-              article_id: string
-              author: string
-              cover_illustration_prompt: string
-              cover_illustration_url: string
-              created_at: string
-              id: string
-              is_published: boolean
-              publication_name: string
-              quality_score: number
-              shared_content_id: string
-              slides: Json
-              source_url: string
-              status: string
-              title: string
-              topic_article_id: string
-              updated_at: string
-              word_count: number
-            }[]
-          }
-        | {
             Args: { p_topic_id?: string }
             Returns: {
               article_id: string
@@ -4501,6 +4474,33 @@ export type Database = {
               updated_at: string
               word_count: number
               writing_style: string
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_offset?: number
+              p_status?: string
+              p_topic_id: string
+            }
+            Returns: {
+              article_id: string
+              author: string
+              cover_illustration_prompt: string
+              cover_illustration_url: string
+              created_at: string
+              id: string
+              is_published: boolean
+              publication_name: string
+              quality_score: number
+              shared_content_id: string
+              slides: Json
+              source_url: string
+              status: string
+              title: string
+              topic_article_id: string
+              updated_at: string
+              word_count: number
             }[]
           }
       get_story_swipe_stats: {
@@ -4832,7 +4832,6 @@ export type Database = {
               p_shared_content_id: string
               p_slidetype?: string
               p_tone?: Database["public"]["Enums"]["tone_type"]
-              p_topic_article_id: string
               p_writing_style?: string
             }
             Returns: string
@@ -4843,6 +4842,7 @@ export type Database = {
               p_shared_content_id: string
               p_slidetype?: string
               p_tone?: Database["public"]["Enums"]["tone_type"]
+              p_topic_article_id: string
               p_writing_style?: string
             }
             Returns: string

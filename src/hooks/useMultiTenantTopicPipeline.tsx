@@ -169,12 +169,12 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
         p_offset: 0 // Always start from first page on initial load
       });
       
-      // Get total count for pagination display
+      // Get total count for pagination display - only 'new' articles that haven't been processed yet
       const { count: totalCount } = await supabase
         .from('topic_articles')
         .select('id', { count: 'exact', head: true })
         .eq('topic_id', selectedTopicId)
-        .in('processing_status', ['new', 'processed']);
+        .eq('processing_status', 'new');
       
       setTotalArticlesCount(totalCount || 0);
       setArticlesPage(1); // Reset to first page
