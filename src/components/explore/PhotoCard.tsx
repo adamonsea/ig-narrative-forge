@@ -34,9 +34,8 @@ interface PhotoCardProps {
 
 // Gesture thresholds
 const FLICK_VELOCITY = 800;
-const LONG_PRESS_DURATION = 400;
-const TAP_DISTANCE_THRESHOLD = 12;
-const DOUBLE_TAP_THRESHOLD = 280;
+const LONG_PRESS_DURATION = 350;
+const TAP_DISTANCE_THRESHOLD = 10;
 
 const PhotoCardComponent = ({
   story,
@@ -61,17 +60,17 @@ const PhotoCardComponent = ({
   
   const dragStartPos = useRef({ x: 0, y: 0 });
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
-  const lastTapTime = useRef(0);
   const hasMoved = useRef(false);
+  const dragStartTime = useRef(0);
   
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
   
-  // Dynamic scale based on state
-  const baseScale = isHolding || localHolding ? 1.12 : isDragging ? 1.06 : 1;
+  // Dynamic scale based on state - larger scale for holding/preview
+  const baseScale = isHolding || localHolding ? 1.35 : isDragging ? 1.06 : 1;
   const scale = useTransform([x, y], () => baseScale);
   
-  // Dynamic rotation - reset when holding
+  // Dynamic rotation - reset when holding for clear preview
   const dynamicRotation = isHolding || localHolding ? 0 : position.rotation;
 
   const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
@@ -88,12 +87,15 @@ const PhotoCardComponent = ({
     setIsDragging(true);
     hasMoved.current = false;
     dragStartPos.current = { x: info.point.x, y: info.point.y };
+    dragStartTime.current = Date.now();
     
-    // Start long press timer
+    // Start long press timer for preview/enlarge
     pressTimer.current = setTimeout(() => {
-      setLocalHolding(true);
-      if (!isLegacy) triggerHaptic('medium');
-      onLongPress();
+      if (!hasMoved.current) {
+        setLocalHolding(true);
+        if (!isLegacy) triggerHaptic('medium');
+        onLongPress();
+      }
     }, LONG_PRESS_DURATION);
     
     onDragStart();
@@ -106,17 +108,21 @@ const PhotoCardComponent = ({
     if (dx > 5 || dy > 5) {
       hasMoved.current = true;
       clearPressTimer();
+      setLocalHolding(false);
     }
   }, [clearPressTimer]);
 
   const handleDragEnd = useCallback((event: any, info: PanInfo) => {
     clearPressTimer();
     setIsDragging(false);
+    
+    const wasHolding = localHolding;
     setLocalHolding(false);
     
     const dx = Math.abs(info.point.x - dragStartPos.current.x);
     const dy = Math.abs(info.point.y - dragStartPos.current.y);
     const movedDistance = Math.sqrt(dx * dx + dy * dy);
+    const pressDuration = Date.now() - dragStartTime.current;
     
     // Check for flick gesture
     const velocity = Math.sqrt(info.velocity.x ** 2 + info.velocity.y ** 2);
@@ -127,31 +133,20 @@ const PhotoCardComponent = ({
       return;
     }
     
-    // Check for tap
-    if (movedDistance < TAP_DISTANCE_THRESHOLD && !hasMoved.current) {
-      const now = Date.now();
-      const timeSinceLastTap = now - lastTapTime.current;
-      
-      if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD) {
-        lastTapTime.current = 0;
-        if (!isLegacy) triggerHaptic('light');
-        onDoubleTap();
-        return;
-      }
-      
-      lastTapTime.current = now;
-      
-      // Wait briefly for potential double tap
-      setTimeout(() => {
-        if (Date.now() - lastTapTime.current >= DOUBLE_TAP_THRESHOLD - 30) {
-          onClick();
-        }
-      }, DOUBLE_TAP_THRESHOLD);
+    // TAP: Quick press with minimal movement opens story immediately
+    if (movedDistance < TAP_DISTANCE_THRESHOLD && !hasMoved.current && pressDuration < LONG_PRESS_DURATION) {
+      if (!isLegacy) triggerHaptic('light');
+      onClick();
+      return;
+    }
+    
+    // If was holding (long press), releasing just closes preview - don't open story
+    if (wasHolding) {
       return;
     }
     
     onDragEnd(x.get(), y.get());
-  }, [clearPressTimer, onClick, onDoubleTap, onDragEnd, onFlick, isLegacy, x, y]);
+  }, [clearPressTimer, onClick, onDragEnd, onFlick, isLegacy, x, y, localHolding]);
 
   // GPU-accelerated styles
   const gpuStyles = {
@@ -212,14 +207,23 @@ const PhotoCardComponent = ({
         transition: { duration: 0.15 }
       } : undefined}
     >
+      {/* Preview hint when holding */}
+      {localHolding && (
+        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded-full whitespace-nowrap z-10">
+          Tap to open story
+        </div>
+      )}
+      
       {/* Polaroid-style card */}
       <div 
-        className="bg-white rounded-sm overflow-hidden"
+        className={`bg-white rounded-sm overflow-hidden transition-all duration-200 ${
+          localHolding ? 'ring-2 ring-primary/40' : ''
+        }`}
         style={{
           width: 160,
           padding: '6px 6px 24px 6px',
           boxShadow: localHolding
-            ? '0 35px 60px -15px rgba(0, 0, 0, 0.5)'
+            ? '0 45px 70px -15px rgba(0, 0, 0, 0.55), 0 0 40px rgba(99, 102, 241, 0.2)'
             : isDragging 
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' 
               : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 10px -5px rgba(0, 0, 0, 0.1)',
