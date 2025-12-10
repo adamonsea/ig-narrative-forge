@@ -61,67 +61,42 @@ export default function ExplorePile() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data: storiesData, error: storiesError } = await supabase
-        .from('stories')
-        .select(`
-          id,
-          title,
-          cover_illustration_url,
-          created_at,
-          slides,
-          topic_articles!inner (
-            topic_id,
-            articles!inner (
-              source_url
-            )
-          )
-        `)
-        .eq('topic_articles.topics.slug', slug)
-        .eq('is_published', true)
-        .eq('status', 'published')
-        .not('cover_illustration_url', 'is', null)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(150);
+      // Use the RPC for reliable topic filtering
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_topic_stories_with_keywords', {
+          p_topic_id: topic.id,
+          p_limit: 150,
+          p_offset: 0,
+          p_keyword_filters: null,
+          p_source_filters: null
+        });
 
-      if (storiesError) {
-        console.error('Error fetching stories:', storiesError);
-        // Try alternative query
-        const { data: altData } = await supabase
-          .rpc('get_topic_stories_with_keywords', {
-            p_topic_id: topic.id,
-            p_limit: 150,
-            p_offset: 0,
-            p_keyword_filters: null,
-            p_source_filters: null
-          });
+      if (rpcError) {
+        console.error('Error fetching stories:', rpcError);
+        setLoading(false);
+        return;
+      }
 
-        if (altData) {
-          const uniqueStories = new Map<string, Story>();
-          (altData as any[]).forEach(row => {
-            if (row.cover_illustration_url && !uniqueStories.has(row.story_id)) {
-              uniqueStories.set(row.story_id, {
-                id: row.story_id,
-                title: row.headline || row.title,
-                cover_illustration_url: row.cover_illustration_url,
-                created_at: row.created_at,
-                slides: [],
-                article: { source_url: row.source_url }
-              });
-            }
-          });
-          setStories(Array.from(uniqueStories.values()));
-        }
-      } else if (storiesData) {
-        const mapped = storiesData.map((s: any) => ({
-          id: s.id,
-          title: s.title,
-          cover_illustration_url: s.cover_illustration_url,
-          created_at: s.created_at,
-          slides: s.slides || [],
-          article: { source_url: s.topic_articles?.articles?.source_url }
-        }));
-        setStories(mapped);
+      if (rpcData) {
+        const uniqueStories = new Map<string, Story>();
+        const thirtyDaysAgoTime = thirtyDaysAgo.getTime();
+        
+        (rpcData as any[]).forEach(row => {
+          const storyDate = new Date(row.created_at).getTime();
+          if (row.cover_illustration_url && 
+              !uniqueStories.has(row.story_id) &&
+              storyDate >= thirtyDaysAgoTime) {
+            uniqueStories.set(row.story_id, {
+              id: row.story_id,
+              title: row.headline || row.title,
+              cover_illustration_url: row.cover_illustration_url,
+              created_at: row.created_at,
+              slides: [],
+              article: { source_url: row.source_url }
+            });
+          }
+        });
+        setStories(Array.from(uniqueStories.values()));
       }
 
       setLoading(false);
