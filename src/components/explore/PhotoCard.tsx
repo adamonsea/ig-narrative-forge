@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useState, useRef, useCallback, memo } from 'react';
 import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
 import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
@@ -33,22 +33,17 @@ interface PhotoCardProps {
 }
 
 // Gesture thresholds
-const FLICK_VELOCITY = 800;
-const LONG_PRESS_DURATION = 350;
-const TAP_DISTANCE_THRESHOLD = 10;
+const LONG_PRESS_DURATION = 400;
 
 const PhotoCardComponent = ({
   story,
   position,
   index,
-  totalCards,
   isAnimating,
   isHolding = false,
   onDragStart,
   onDragEnd,
   onLongPress,
-  onDoubleTap,
-  onFlick,
   onClick
 }: PhotoCardProps) => {
   const deviceTier = getDevicePerformanceTier();
@@ -58,10 +53,9 @@ const PhotoCardComponent = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [localHolding, setLocalHolding] = useState(false);
   
-  const dragStartPos = useRef({ x: 0, y: 0 });
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPos = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
-  const dragStartTime = useRef(0);
   
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
@@ -83,13 +77,19 @@ const PhotoCardComponent = ({
     }
   }, []);
 
-  const handleDragStart = useCallback((event: any, info: PanInfo) => {
-    setIsDragging(true);
+  // Prevent browser context menu on long press
+  const handleContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }, []);
+
+  // Touch start - begin long press timer
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
     hasMoved.current = false;
-    dragStartPos.current = { x: info.point.x, y: info.point.y };
-    dragStartTime.current = Date.now();
     
-    // Start long press timer for preview/enlarge
     pressTimer.current = setTimeout(() => {
       if (!hasMoved.current) {
         setLocalHolding(true);
@@ -97,56 +97,54 @@ const PhotoCardComponent = ({
         onLongPress();
       }
     }, LONG_PRESS_DURATION);
-    
-    onDragStart();
-  }, [onDragStart, onLongPress, isLegacy]);
+  }, [isLegacy, onLongPress]);
 
-  const handleDrag = useCallback((event: any, info: PanInfo) => {
-    const dx = Math.abs(info.point.x - dragStartPos.current.x);
-    const dy = Math.abs(info.point.y - dragStartPos.current.y);
+  // Touch move - cancel long press if moved
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
     
-    if (dx > 5 || dy > 5) {
+    if (dx > 10 || dy > 10) {
       hasMoved.current = true;
       clearPressTimer();
       setLocalHolding(false);
     }
   }, [clearPressTimer]);
 
-  const handleDragEnd = useCallback((event: any, info: PanInfo) => {
+  // Touch end - detect tap or end long press
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     clearPressTimer();
-    setIsDragging(false);
     
     const wasHolding = localHolding;
     setLocalHolding(false);
     
-    const dx = Math.abs(info.point.x - dragStartPos.current.x);
-    const dy = Math.abs(info.point.y - dragStartPos.current.y);
-    const movedDistance = Math.sqrt(dx * dx + dy * dy);
-    const pressDuration = Date.now() - dragStartTime.current;
-    
-    // Check for flick gesture
-    const velocity = Math.sqrt(info.velocity.x ** 2 + info.velocity.y ** 2);
-    
-    if (!isLegacy && velocity > FLICK_VELOCITY && movedDistance > 30) {
-      triggerHaptic('light');
-      onFlick(info.velocity.x, info.velocity.y);
-      return;
-    }
-    
-    // TAP: Quick press with minimal movement opens story immediately
-    if (movedDistance < TAP_DISTANCE_THRESHOLD && !hasMoved.current && pressDuration < LONG_PRESS_DURATION) {
-      if (!isLegacy) triggerHaptic('light');
-      onClick();
-      return;
-    }
-    
-    // If was holding (long press), releasing just closes preview - don't open story
+    // If was holding, just close preview
     if (wasHolding) {
       return;
     }
     
+    // If didn't move, it's a tap - open story
+    if (!hasMoved.current && !isDragging) {
+      e.preventDefault();
+      if (!isLegacy) triggerHaptic('light');
+      onClick();
+    }
+  }, [clearPressTimer, localHolding, isDragging, isLegacy, onClick]);
+
+  // Drag handlers for framer-motion
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+    hasMoved.current = true;
+    clearPressTimer();
+    setLocalHolding(false);
+    onDragStart();
+  }, [onDragStart, clearPressTimer]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
     onDragEnd(x.get(), y.get());
-  }, [clearPressTimer, onClick, onDragEnd, onFlick, isLegacy, x, y, localHolding]);
+  }, [onDragEnd, x, y]);
 
   // GPU-accelerated styles
   const gpuStyles = {
@@ -157,13 +155,14 @@ const PhotoCardComponent = ({
 
   return (
     <motion.div
-      className="absolute cursor-grab active:cursor-grabbing touch-none select-none"
+      className="absolute cursor-grab active:cursor-grabbing select-none"
       style={{
         x,
         y,
         rotate: dynamicRotation,
-        zIndex: position.zIndex,
+        zIndex: localHolding ? 9999 : position.zIndex,
         scale,
+        touchAction: 'none',
         ...gpuStyles,
       }}
       initial={isAnimating ? { 
@@ -193,13 +192,14 @@ const PhotoCardComponent = ({
       dragMomentum={!isLegacy}
       dragElastic={isLegacy ? 0.05 : 0.12}
       onDragStart={handleDragStart}
-      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onContextMenu={handleContextMenu}
       whileDrag={{ 
-        scale: localHolding ? 1.15 : 1.08,
-        boxShadow: localHolding 
-          ? '0 35px 60px -15px rgba(0, 0, 0, 0.5)' 
-          : '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+        scale: 1.08,
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         zIndex: 9999
       }}
       whileHover={!isLegacy ? { 
@@ -210,7 +210,7 @@ const PhotoCardComponent = ({
       {/* Preview hint when holding */}
       {localHolding && (
         <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded-full whitespace-nowrap z-10">
-          Tap to open story
+          Release to close preview
         </div>
       )}
       
@@ -229,6 +229,7 @@ const PhotoCardComponent = ({
               : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 10px -5px rgba(0, 0, 0, 0.1)',
           ...gpuStyles,
         }}
+        onContextMenu={handleContextMenu}
       >
         {/* Image container */}
         <div className="relative w-full aspect-[4/3] bg-muted overflow-hidden">
@@ -238,17 +239,18 @@ const PhotoCardComponent = ({
           <img
             src={thumbnailUrl || story.cover_illustration_url}
             alt=""
-            className={`w-full h-full object-cover transition-opacity duration-200 ${
+            className={`w-full h-full object-cover transition-opacity duration-200 pointer-events-none ${
               isLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             loading="lazy"
             draggable={false}
             onLoad={() => setIsLoaded(true)}
+            onContextMenu={handleContextMenu}
           />
         </div>
         
         {/* Date hint */}
-        <div className="mt-1 text-center">
+        <div className="mt-1 text-center pointer-events-none">
           <span className="text-[9px] text-neutral-400 font-mono">
             {new Date(story.created_at).toLocaleDateString('en-GB', { 
               day: 'numeric', 
