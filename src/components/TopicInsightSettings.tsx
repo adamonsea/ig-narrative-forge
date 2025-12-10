@@ -271,6 +271,29 @@ export const TopicInsightSettings = ({ topicId }: TopicInsightSettingsProps) => 
               disabled={!settings.is_premium_tier}
             />
           </div>
+
+          {/* Sift Mode - Premium Feature */}
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sift-mode" className="font-medium">
+                  🗂️ Sift Mode
+                </Label>
+                <Badge variant="default" className="text-xs">Premium</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Photo pile interface for browsing stories visually
+              </p>
+            </div>
+            <Switch
+              id="sift-mode"
+              checked={settings.sift_enabled}
+              onCheckedChange={(checked) => 
+                updateSettings.mutate({ sift_enabled: checked })
+              }
+              disabled={!settings.is_premium_tier}
+            />
+          </div>
         </div>
 
         {!settings.is_premium_tier && (

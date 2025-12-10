@@ -12,15 +12,35 @@ interface PlayModeMenuProps {
   showPulse?: boolean;
   showLabel?: boolean;
   className?: string;
+  siftEnabled?: boolean;
 }
 
 export const PlayModeMenu = ({ 
   slug, 
   showPulse = false, 
   showLabel = true,
-  className = ''
+  className = '',
+  siftEnabled = false
 }: PlayModeMenuProps) => {
   const navigate = useNavigate();
+
+  // If sift is disabled, just show a simple button for swipe mode
+  if (!siftEnabled) {
+    return (
+      <button
+        onClick={() => navigate(`/play/${slug}`)}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
+          showPulse ? 'bg-primary/10 animate-pulse' : ''
+        } ${className}`}
+        aria-label="Play mode"
+      >
+        <Gamepad2 className={`w-4 h-4 transition-colors ${
+          showPulse ? 'text-primary' : ''
+        }`} />
+        {showLabel && <span className="text-sm font-medium">Play</span>}
+      </button>
+    );
+  }
 
   return (
     <DropdownMenu>
