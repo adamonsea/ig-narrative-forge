@@ -88,19 +88,19 @@ export default function ExplorePile() {
         const thirtyDaysAgoTime = thirtyDaysAgo.getTime();
         
         (rpcData as any[]).forEach(row => {
-          const storyDate = new Date(row.created_at).getTime();
-          const hasImage = !!row.cover_illustration_url;
+          const storyDate = new Date(row.story_created_at).getTime();
+          const hasImage = !!row.story_cover_illustration_url;
           const isNew = !uniqueStories.has(row.story_id);
           const isRecent = storyDate >= thirtyDaysAgoTime;
           
           if (hasImage && isNew && isRecent) {
             uniqueStories.set(row.story_id, {
               id: row.story_id,
-              title: row.headline || row.title,
-              cover_illustration_url: row.cover_illustration_url,
-              created_at: row.created_at,
+              title: row.story_title,
+              cover_illustration_url: row.story_cover_illustration_url,
+              created_at: row.story_created_at,
               slides: [],
-              article: { source_url: row.source_url }
+              article: { source_url: row.article_source_url }
             });
           }
         });
