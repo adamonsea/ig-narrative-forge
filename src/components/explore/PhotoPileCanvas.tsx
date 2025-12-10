@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhotoCard } from './PhotoCard';
+import { WeekStackSwitcher, groupStoriesByWeek } from './WeekStackSwitcher';
+import { DismissedPile } from './DismissedPile';
+import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
 
 interface Story {
   id: string;
@@ -26,12 +29,31 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
   const [positions, setPositions] = useState<Map<string, CardPosition>>(new Map());
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isAnimating, setIsAnimating] = useState(true);
-  const [highestZ, setHighestZ] = useState(stories.length);
+  const [highestZ, setHighestZ] = useState(0);
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
+  const [dismissedStories, setDismissedStories] = useState<Story[]>([]);
+  const [holdingCardId, setHoldingCardId] = useState<string | null>(null);
+  
+  const deviceTier = getDevicePerformanceTier();
+  const isLegacy = deviceTier.includes('legacy') || deviceTier.includes('old');
 
   // Card dimensions
   const CARD_WIDTH = 160;
-  const CARD_HEIGHT = 120;
+  const CARD_HEIGHT = 145;
   const PADDING = 20;
+
+  // Group stories by week
+  const weekGroups = useMemo(() => groupStoriesByWeek(stories), [stories]);
+  
+  // Current week's stories (excluding dismissed)
+  const currentWeekStories = useMemo(() => {
+    const weekData = weekGroups[selectedWeekIndex];
+    if (!weekData) return [];
+    return weekData.stories.filter(s => !dismissedStories.find(d => d.id === s.id));
+  }, [weekGroups, selectedWeekIndex, dismissedStories]);
+
+  // Week info for switcher
+  const weeks = useMemo(() => weekGroups.map(g => g.week), [weekGroups]);
 
   // Calculate container dimensions
   useEffect(() => {
@@ -49,74 +71,68 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // Generate initial scattered positions when dimensions are ready
+  // Generate positions when week changes or dimensions ready
   useEffect(() => {
-    if (dimensions.width === 0 || dimensions.height === 0 || stories.length === 0) return;
+    if (dimensions.width === 0 || dimensions.height === 0 || currentWeekStories.length === 0) return;
 
     const newPositions = new Map<string, CardPosition>();
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     
-    // Calculate safe area for card placement
     const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
     const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
 
-    stories.forEach((story, index) => {
-      // More recent stories closer to center (they're already sorted desc by created_at)
-      const centerBias = Math.max(0, 1 - (index / stories.length));
-      const spread = 0.3 + (1 - centerBias) * 0.7; // 30% to 100% spread
+    currentWeekStories.forEach((story, index) => {
+      // More recent stories closer to center
+      const centerBias = Math.max(0, 1 - (index / currentWeekStories.length));
+      const spread = 0.25 + (1 - centerBias) * 0.75;
 
-      // Random position with center bias for recent stories
       const angle = Math.random() * Math.PI * 2;
       const distance = spread * Math.min(safeWidth, safeHeight) / 2;
       
-      const x = centerX - CARD_WIDTH / 2 + Math.cos(angle) * distance * (0.5 + Math.random() * 0.5);
-      const y = centerY - CARD_HEIGHT / 2 + Math.sin(angle) * distance * (0.5 + Math.random() * 0.5);
+      const x = centerX - CARD_WIDTH / 2 + Math.cos(angle) * distance * (0.4 + Math.random() * 0.6);
+      const y = centerY - CARD_HEIGHT / 2 + Math.sin(angle) * distance * (0.4 + Math.random() * 0.6);
       
-      // Clamp to safe bounds
       const clampedX = Math.max(PADDING, Math.min(x, safeWidth + PADDING));
       const clampedY = Math.max(PADDING, Math.min(y, safeHeight + PADDING));
-
-      // Random rotation (-20 to 20 degrees)
-      const rotation = (Math.random() - 0.5) * 40;
+      const rotation = (Math.random() - 0.5) * 35;
 
       newPositions.set(story.id, {
         x: clampedX,
         y: clampedY,
         rotation,
-        zIndex: stories.length - index // Most recent on top
+        zIndex: currentWeekStories.length - index
       });
     });
 
     setPositions(newPositions);
+    setHighestZ(currentWeekStories.length);
     setIsAnimating(true);
 
-    // Allow animations to complete
-    const timer = setTimeout(() => setIsAnimating(false), stories.length * 20 + 500);
+    const timer = setTimeout(() => setIsAnimating(false), currentWeekStories.length * 15 + 400);
     return () => clearTimeout(timer);
-  }, [dimensions, stories]);
+  }, [dimensions, currentWeekStories, selectedWeekIndex]);
 
-  const handleDragStart = (storyId: string) => {
-    // Bring dragged card to front
-    const newZ = highestZ + 1;
-    setHighestZ(newZ);
-    
-    setPositions(prev => {
-      const newMap = new Map(prev);
-      const current = newMap.get(storyId);
-      if (current) {
-        newMap.set(storyId, { ...current, zIndex: newZ });
-      }
-      return newMap;
+  const handleDragStart = useCallback((storyId: string) => {
+    setHighestZ(prev => {
+      const newZ = prev + 1;
+      setPositions(prevPositions => {
+        const newMap = new Map(prevPositions);
+        const current = newMap.get(storyId);
+        if (current) {
+          newMap.set(storyId, { ...current, zIndex: newZ });
+        }
+        return newMap;
+      });
+      return newZ;
     });
-  };
+  }, []);
 
-  const handleDragEnd = (storyId: string, x: number, y: number) => {
+  const handleDragEnd = useCallback((storyId: string, x: number, y: number) => {
     setPositions(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(storyId);
       if (current) {
-        // Clamp to bounds
         const safeWidth = dimensions.width - CARD_WIDTH - PADDING * 2;
         const safeHeight = dimensions.height - CARD_HEIGHT - PADDING * 2;
         
@@ -128,23 +144,89 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       }
       return newMap;
     });
-  };
+  }, [dimensions]);
+
+  const handleLongPress = useCallback((storyId: string) => {
+    setHoldingCardId(storyId);
+    // Bring to absolute top
+    setHighestZ(prev => {
+      const newZ = prev + 10;
+      setPositions(prevPositions => {
+        const newMap = new Map(prevPositions);
+        const current = newMap.get(storyId);
+        if (current) {
+          newMap.set(storyId, { ...current, zIndex: newZ, rotation: 0 });
+        }
+        return newMap;
+      });
+      return newZ;
+    });
+  }, []);
+
+  const handleDoubleTap = useCallback((story: Story) => {
+    // Dismiss to pile
+    if (!isLegacy) triggerHaptic('light');
+    setDismissedStories(prev => [...prev, story]);
+  }, [isLegacy]);
+
+  const handleFlick = useCallback((story: Story, velocityX: number, velocityY: number) => {
+    // Animate off-screen then dismiss
+    const position = positions.get(story.id);
+    if (position) {
+      setPositions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(story.id, {
+          ...position,
+          x: position.x + velocityX * 0.5,
+          y: position.y + velocityY * 0.5
+        });
+        return newMap;
+      });
+    }
+    
+    setTimeout(() => {
+      setDismissedStories(prev => [...prev, story]);
+    }, 150);
+  }, [positions]);
+
+  const handleRestore = useCallback((storyId: string) => {
+    setDismissedStories(prev => prev.filter(s => s.id !== storyId));
+  }, []);
+
+  const handleRestoreAll = useCallback(() => {
+    setDismissedStories([]);
+  }, []);
+
+  const handleWeekChange = useCallback((index: number) => {
+    setSelectedWeekIndex(index);
+    setIsAnimating(true);
+  }, []);
 
   return (
     <div 
       ref={containerRef}
       className="absolute inset-0 overflow-hidden bg-gradient-to-br from-muted/30 to-background"
-      style={{ touchAction: 'none' }}
+      style={{ 
+        touchAction: 'none',
+        willChange: 'transform',
+      }}
     >
       {/* Subtle table texture */}
-      <div className="absolute inset-0 opacity-[0.03]" 
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
         style={{ 
           backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
         }} 
       />
+
+      {/* Week stack switcher */}
+      <WeekStackSwitcher
+        weeks={weeks}
+        selectedIndex={selectedWeekIndex}
+        onSelectWeek={handleWeekChange}
+      />
       
-      <AnimatePresence>
-        {stories.map((story, index) => {
+      <AnimatePresence mode="popLayout">
+        {currentWeekStories.map((story, index) => {
           const position = positions.get(story.id);
           if (!position) return null;
 
@@ -154,15 +236,29 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
               story={story}
               position={position}
               index={index}
-              totalCards={stories.length}
+              totalCards={currentWeekStories.length}
               isAnimating={isAnimating}
+              isHolding={holdingCardId === story.id}
               onDragStart={() => handleDragStart(story.id)}
               onDragEnd={(x, y) => handleDragEnd(story.id, x, y)}
-              onClick={() => onCardClick(story)}
+              onLongPress={() => handleLongPress(story.id)}
+              onDoubleTap={() => handleDoubleTap(story)}
+              onFlick={(vx, vy) => handleFlick(story, vx, vy)}
+              onClick={() => {
+                setHoldingCardId(null);
+                onCardClick(story);
+              }}
             />
           );
         })}
       </AnimatePresence>
+
+      {/* Dismissed pile */}
+      <DismissedPile
+        stories={dismissedStories}
+        onRestore={handleRestore}
+        onRestoreAll={handleRestoreAll}
+      />
     </div>
   );
 }
