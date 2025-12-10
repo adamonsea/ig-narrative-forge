@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Hash, MapPin } from "lucide-react";
+import { ArrowLeft, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import StoryCarousel from "@/components/StoryCarousel";
@@ -147,19 +147,38 @@ const StoryPage = () => {
 
   if (!story || !topic) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
-        <div className="container mx-auto px-1 md:px-4 py-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold">Story Not Found</h1>
-            <p className="text-muted-foreground">
-              The story you're looking for doesn't exist or is no longer available.
-            </p>
-            <Button asChild>
-              <Link to={`/feed/${slug || ''}`}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to {topic?.name || 'Feed'}
-              </Link>
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center">
+        <div className="container mx-auto px-4 py-8 max-w-md animate-fade-in">
+          <div className="text-center space-y-6">
+            {/* Archive icon */}
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+              <Archive className="w-8 h-8 text-muted-foreground" />
+            </div>
+            
+            {/* Headline */}
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold text-foreground">
+                This story has been archived
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Stories are regularly curated to keep your feed fresh
+              </p>
+            </div>
+            
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Button asChild>
+                <Link to={`/feed/${slug || ''}`}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Feed
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to={`/feed/${slug || ''}/archive`}>
+                  View Archive
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
