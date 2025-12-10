@@ -291,14 +291,9 @@ const PhotoCardComponent = ({
       onMouseLeave={handleMouseLeave}
       onContextMenu={handleContextMenu}
       whileDrag={{ 
-        scale: 1.08,
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         zIndex: 9999
       }}
-      whileHover={!isLegacy && !isTouchDevice ? { 
-        scale: 1.02,
-        transition: { duration: 0.15 }
-      } : undefined}
     >
       {/* Preview hint when holding/hovering */}
       {showPreview && (
