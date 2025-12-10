@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, memo } from 'react';
 import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
+import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
 
 interface Story {
   id: string;
@@ -22,59 +23,141 @@ interface PhotoCardProps {
   index: number;
   totalCards: number;
   isAnimating: boolean;
+  isHolding?: boolean;
   onDragStart: () => void;
   onDragEnd: (x: number, y: number) => void;
+  onLongPress: () => void;
+  onDoubleTap: () => void;
+  onFlick: (velocityX: number, velocityY: number) => void;
   onClick: () => void;
 }
 
-export function PhotoCard({
+// Gesture thresholds
+const FLICK_VELOCITY = 800;
+const LONG_PRESS_DURATION = 400;
+const TAP_DISTANCE_THRESHOLD = 12;
+const DOUBLE_TAP_THRESHOLD = 280;
+
+const PhotoCardComponent = ({
   story,
   position,
   index,
   totalCards,
   isAnimating,
+  isHolding = false,
   onDragStart,
   onDragEnd,
+  onLongPress,
+  onDoubleTap,
+  onFlick,
   onClick
-}: PhotoCardProps) {
+}: PhotoCardProps) => {
+  const deviceTier = getDevicePerformanceTier();
+  const isLegacy = deviceTier.includes('legacy') || deviceTier.includes('old');
+  
   const [isDragging, setIsDragging] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [localHolding, setLocalHolding] = useState(false);
+  
   const dragStartPos = useRef({ x: 0, y: 0 });
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastTapTime = useRef(0);
+  const hasMoved = useRef(false);
   
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
   
-  // Subtle lift effect when dragging
-  const scale = useTransform(
-    [x, y],
-    () => isDragging ? 1.05 : 1
-  );
+  // Dynamic scale based on state
+  const baseScale = isHolding || localHolding ? 1.12 : isDragging ? 1.06 : 1;
+  const scale = useTransform([x, y], () => baseScale);
+  
+  // Dynamic rotation - reset when holding
+  const dynamicRotation = isHolding || localHolding ? 0 : position.rotation;
 
   const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
+  const entryDelay = index * 0.015;
 
-  // Entry animation - staggered drop like cards falling
-  const entryDelay = index * 0.02; // 20ms stagger
-  
-  const handleDragStart = (event: any, info: PanInfo) => {
+  const clearPressTimer = useCallback(() => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  }, []);
+
+  const handleDragStart = useCallback((event: any, info: PanInfo) => {
     setIsDragging(true);
+    hasMoved.current = false;
     dragStartPos.current = { x: info.point.x, y: info.point.y };
-    onDragStart();
-  };
-
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    setIsDragging(false);
     
-    // Calculate movement distance
+    // Start long press timer
+    pressTimer.current = setTimeout(() => {
+      setLocalHolding(true);
+      if (!isLegacy) triggerHaptic('medium');
+      onLongPress();
+    }, LONG_PRESS_DURATION);
+    
+    onDragStart();
+  }, [onDragStart, onLongPress, isLegacy]);
+
+  const handleDrag = useCallback((event: any, info: PanInfo) => {
+    const dx = Math.abs(info.point.x - dragStartPos.current.x);
+    const dy = Math.abs(info.point.y - dragStartPos.current.y);
+    
+    if (dx > 5 || dy > 5) {
+      hasMoved.current = true;
+      clearPressTimer();
+    }
+  }, [clearPressTimer]);
+
+  const handleDragEnd = useCallback((event: any, info: PanInfo) => {
+    clearPressTimer();
+    setIsDragging(false);
+    setLocalHolding(false);
+    
     const dx = Math.abs(info.point.x - dragStartPos.current.x);
     const dy = Math.abs(info.point.y - dragStartPos.current.y);
     const movedDistance = Math.sqrt(dx * dx + dy * dy);
     
-    // If barely moved (< 10px), treat as click
-    if (movedDistance < 10) {
-      onClick();
-    } else {
-      onDragEnd(x.get(), y.get());
+    // Check for flick gesture
+    const velocity = Math.sqrt(info.velocity.x ** 2 + info.velocity.y ** 2);
+    
+    if (!isLegacy && velocity > FLICK_VELOCITY && movedDistance > 30) {
+      triggerHaptic('light');
+      onFlick(info.velocity.x, info.velocity.y);
+      return;
     }
+    
+    // Check for tap
+    if (movedDistance < TAP_DISTANCE_THRESHOLD && !hasMoved.current) {
+      const now = Date.now();
+      const timeSinceLastTap = now - lastTapTime.current;
+      
+      if (timeSinceLastTap < DOUBLE_TAP_THRESHOLD) {
+        lastTapTime.current = 0;
+        if (!isLegacy) triggerHaptic('light');
+        onDoubleTap();
+        return;
+      }
+      
+      lastTapTime.current = now;
+      
+      // Wait briefly for potential double tap
+      setTimeout(() => {
+        if (Date.now() - lastTapTime.current >= DOUBLE_TAP_THRESHOLD - 30) {
+          onClick();
+        }
+      }, DOUBLE_TAP_THRESHOLD);
+      return;
+    }
+    
+    onDragEnd(x.get(), y.get());
+  }, [clearPressTimer, onClick, onDoubleTap, onDragEnd, onFlick, isLegacy, x, y]);
+
+  // GPU-accelerated styles
+  const gpuStyles = {
+    willChange: 'transform' as const,
+    transform: 'translate3d(0, 0, 0)',
+    backfaceVisibility: 'hidden' as const,
   };
 
   return (
@@ -83,57 +166,64 @@ export function PhotoCard({
       style={{
         x,
         y,
-        rotate: position.rotation,
+        rotate: dynamicRotation,
         zIndex: position.zIndex,
         scale,
+        ...gpuStyles,
       }}
       initial={isAnimating ? { 
         y: -200, 
-        x: position.x + (Math.random() - 0.5) * 100,
+        x: position.x + (Math.random() - 0.5) * 80,
         opacity: 0,
-        rotate: position.rotation + (Math.random() - 0.5) * 30
+        rotate: position.rotation + (Math.random() - 0.5) * 25
       } : false}
       animate={{ 
         y: position.y, 
         x: position.x,
         opacity: 1,
-        rotate: position.rotation
+        rotate: dynamicRotation
       }}
       transition={isAnimating ? {
         type: 'spring',
-        stiffness: 200,
-        damping: 20,
+        stiffness: 180,
+        damping: 18,
         delay: entryDelay,
-        mass: 0.8
+        mass: 0.6
       } : {
         type: 'spring',
-        stiffness: 300,
-        damping: 25
+        stiffness: 350,
+        damping: 28
       }}
       drag
-      dragMomentum={true}
-      dragElastic={0.1}
+      dragMomentum={!isLegacy}
+      dragElastic={isLegacy ? 0.05 : 0.12}
       onDragStart={handleDragStart}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       whileDrag={{ 
-        scale: 1.08,
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+        scale: localHolding ? 1.15 : 1.08,
+        boxShadow: localHolding 
+          ? '0 35px 60px -15px rgba(0, 0, 0, 0.5)' 
+          : '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         zIndex: 9999
       }}
-      whileHover={{ 
+      whileHover={!isLegacy ? { 
         scale: 1.02,
-        transition: { duration: 0.2 }
-      }}
+        transition: { duration: 0.15 }
+      } : undefined}
     >
       {/* Polaroid-style card */}
       <div 
-        className="bg-white rounded-sm shadow-lg overflow-hidden"
+        className="bg-white rounded-sm overflow-hidden"
         style={{
           width: 160,
           padding: '6px 6px 24px 6px',
-          boxShadow: isDragging 
-            ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' 
-            : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 10px -5px rgba(0, 0, 0, 0.1)'
+          boxShadow: localHolding
+            ? '0 35px 60px -15px rgba(0, 0, 0, 0.5)'
+            : isDragging 
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' 
+              : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 10px -5px rgba(0, 0, 0, 0.1)',
+          ...gpuStyles,
         }}
       >
         {/* Image container */}
@@ -144,7 +234,7 @@ export function PhotoCard({
           <img
             src={thumbnailUrl || story.cover_illustration_url}
             alt=""
-            className={`w-full h-full object-cover transition-opacity duration-300 ${
+            className={`w-full h-full object-cover transition-opacity duration-200 ${
               isLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             loading="lazy"
@@ -153,7 +243,7 @@ export function PhotoCard({
           />
         </div>
         
-        {/* Subtle date hint */}
+        {/* Date hint */}
         <div className="mt-1 text-center">
           <span className="text-[9px] text-neutral-400 font-mono">
             {new Date(story.created_at).toLocaleDateString('en-GB', { 
@@ -165,4 +255,7 @@ export function PhotoCard({
       </div>
     </motion.div>
   );
-}
+};
+
+// Memoize to prevent unnecessary re-renders
+export const PhotoCard = memo(PhotoCardComponent);
