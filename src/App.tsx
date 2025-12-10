@@ -23,6 +23,7 @@ import BriefingsArchive from "./pages/BriefingsArchive";
 import SwipeMode from "./pages/SwipeMode";
 import Pricing from "./pages/Pricing";
 import AboutFeed from "./pages/AboutFeed";
+import ExplorePile from "./pages/ExplorePile";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -82,6 +83,9 @@ const App = () => {
               
               {/* Swipe Mode (isolated) */}
               <Route path="/play/:slug" element={<SwipeMode />} />
+              
+              {/* Explore Mode - photo pile */}
+              <Route path="/explore/:slug" element={<ExplorePile />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

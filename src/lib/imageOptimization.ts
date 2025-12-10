@@ -78,3 +78,16 @@ export function generateResponsiveSrcSet(url: string | null | undefined): string
 
   return srcset;
 }
+
+/**
+ * Generate a thumbnail-optimized image URL for pile/grid views
+ * Smaller dimensions and lower quality for performance with many images
+ */
+export function optimizeThumbnailUrl(url: string | null | undefined): string | null {
+  return optimizeImageUrl(url, {
+    width: 200,
+    height: 150,
+    quality: 60,
+    format: 'webp'
+  });
+}
