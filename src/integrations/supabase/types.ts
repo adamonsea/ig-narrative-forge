@@ -3294,6 +3294,7 @@ export type Database = {
           is_premium_tier: boolean | null
           play_mode_enabled: boolean | null
           quiz_cards_enabled: boolean | null
+          sift_enabled: boolean | null
           social_proof_enabled: boolean | null
           story_momentum_enabled: boolean | null
           this_time_last_month_enabled: boolean | null
@@ -3306,6 +3307,7 @@ export type Database = {
           is_premium_tier?: boolean | null
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
+          sift_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null
@@ -3318,6 +3320,7 @@ export type Database = {
           is_premium_tier?: boolean | null
           play_mode_enabled?: boolean | null
           quiz_cards_enabled?: boolean | null
+          sift_enabled?: boolean | null
           social_proof_enabled?: boolean | null
           story_momentum_enabled?: boolean | null
           this_time_last_month_enabled?: boolean | null

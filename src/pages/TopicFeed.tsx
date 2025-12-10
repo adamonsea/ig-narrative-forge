@@ -131,6 +131,7 @@ const TopicFeed = () => {
   const { data: topicMetadata } = useTopicMetadata(topic?.id, slug);
   const avgDailyStories = topicMetadata.avgDailyStories;
   const playModeEnabled = topicMetadata.playModeEnabled;
+  const siftEnabled = topicMetadata.siftEnabled;
   const latestDaily = topicMetadata.latestDailyRoundup;
   const latestWeekly = topicMetadata.latestWeeklyRoundup;
   const quizCardsEnabled = topicMetadata.quizCardsEnabled;
@@ -500,6 +501,7 @@ const TopicFeed = () => {
                     slug={slug!} 
                     showPulse={showPlayModePulse}
                     showLabel={false}
+                    siftEnabled={siftEnabled}
                   />
                 )}
 
@@ -717,6 +719,7 @@ const TopicFeed = () => {
                   <PlayModeMenu 
                     slug={slug!} 
                     showPulse={showPlayModePulse}
+                    siftEnabled={siftEnabled}
                   />
                 </div>
               )}
