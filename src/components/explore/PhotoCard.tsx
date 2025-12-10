@@ -70,7 +70,7 @@ const PhotoCardComponent = ({
   
   // Dynamic scale based on state - larger scale for holding/preview (desktop uses hover)
   const showPreview = isHolding || localHolding || (isDesktop && isHovering);
-  const baseScale = showPreview ? 1.35 : isDragging ? 1.06 : 1;
+  const baseScale = showPreview ? 1.6 : isDragging ? 1.06 : 1;
   const scale = useTransform([x, y], () => baseScale);
   
   // Dynamic rotation - reset when holding for clear preview
