@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
 import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
@@ -70,8 +70,18 @@ const PhotoCardComponent = ({
   
   // Dynamic scale based on state - larger scale for holding/preview (desktop uses hover)
   const showPreview = isHolding || localHolding || (isDesktop && isHovering);
-  const baseScale = showPreview ? 1.6 : isDragging ? 1.06 : 1;
-  const scale = useTransform([x, y], () => baseScale);
+  const targetScale = showPreview ? 1.6 : isDragging ? 1.06 : 1;
+  
+  // Use spring for smooth scale animation on release
+  const scale = useSpring(targetScale, {
+    stiffness: 300,
+    damping: 25
+  });
+  
+  // Update scale when state changes
+  useEffect(() => {
+    scale.set(targetScale);
+  }, [targetScale, scale]);
   
   // Dynamic rotation - reset when holding for clear preview
   const dynamicRotation = showPreview ? 0 : position.rotation;
