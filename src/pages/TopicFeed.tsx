@@ -11,7 +11,8 @@ import { EventsAccordion } from "@/components/EventsAccordion";
 import { FilterModal } from "@/components/FilterModal";
 import { DonationButton } from "@/components/DonationButton";
 import { DonationModal } from "@/components/DonationModal";
-import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, Gamepad2, HelpCircle } from "lucide-react";
+import { Hash, MapPin, Filter, Bell, Archive, Calendar, CalendarDays, RefreshCw, HelpCircle } from "lucide-react";
+import { PlayModeMenu } from "@/components/feed/PlayModeMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -495,29 +496,11 @@ const TopicFeed = () => {
               <div className="flex items-center gap-2">
                 {/* Play Mode - First when enabled */}
                 {playModeEnabled && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link to={`/play/${slug}`}>
-                          <button
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
-                              showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
-                            }`}
-                            aria-label="Play mode"
-                          >
-                            <Gamepad2 className={`w-4 h-4 transition-colors ${
-                              showPlayModePulse ? 'text-primary' : ''
-                            }`} />
-                            <span className="hidden sm:inline text-sm font-medium">Play</span>
-                          </button>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-medium">Play Mode</p>
-                        <p className="text-xs text-muted-foreground">Swipe through stories</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <PlayModeMenu 
+                    slug={slug!} 
+                    showPulse={showPlayModePulse}
+                    showLabel={false}
+                  />
                 )}
 
                 <button
@@ -730,19 +713,12 @@ const TopicFeed = () => {
             <div className="flex items-center justify-center gap-2 pt-2">
               {/* Play Mode - First when enabled */}
               {playModeEnabled && (
-                <Link to={`/play/${slug}`} data-onboarding="play-mode">
-                  <button
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-all ${
-                      showPlayModePulse ? 'bg-primary/10 animate-pulse' : ''
-                    }`}
-                    aria-label="Play mode"
-                  >
-                    <Gamepad2 className={`w-4 h-4 transition-colors ${
-                      showPlayModePulse ? 'text-primary' : ''
-                    }`} />
-                    <span className="text-sm font-medium">Play</span>
-                  </button>
-                </Link>
+                <div data-onboarding="play-mode">
+                  <PlayModeMenu 
+                    slug={slug!} 
+                    showPulse={showPlayModePulse}
+                  />
+                </div>
               )}
 
               <button
