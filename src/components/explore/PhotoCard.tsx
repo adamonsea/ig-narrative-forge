@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { useState, useRef, useCallback, memo } from 'react';
+import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { optimizeThumbnailUrl } from '@/lib/imageOptimization';
 import { triggerHaptic, getDevicePerformanceTier } from '@/lib/deviceUtils';
 
@@ -34,6 +34,10 @@ interface PhotoCardProps {
 
 // Gesture thresholds
 const LONG_PRESS_DURATION = 400;
+const HOVER_PREVIEW_DELAY = 800;
+
+// Detect touch vs mouse device
+const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 const PhotoCardComponent = ({
   story,
@@ -48,27 +52,32 @@ const PhotoCardComponent = ({
 }: PhotoCardProps) => {
   const deviceTier = getDevicePerformanceTier();
   const isLegacy = deviceTier.includes('legacy') || deviceTier.includes('old');
+  const isDesktop = deviceTier === 'desktop';
   
   const [isDragging, setIsDragging] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [localHolding, setLocalHolding] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartPos = useRef({ x: 0, y: 0 });
+  const mouseDownTime = useRef<number>(0);
   const hasMoved = useRef(false);
   
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
   
-  // Dynamic scale based on state - larger scale for holding/preview
-  const baseScale = isHolding || localHolding ? 1.35 : isDragging ? 1.06 : 1;
+  // Dynamic scale based on state - larger scale for holding/preview (desktop uses hover)
+  const showPreview = isHolding || localHolding || (isDesktop && isHovering);
+  const baseScale = showPreview ? 1.35 : isDragging ? 1.06 : 1;
   const scale = useTransform([x, y], () => baseScale);
   
   // Dynamic rotation - reset when holding for clear preview
-  const dynamicRotation = isHolding || localHolding ? 0 : position.rotation;
+  const dynamicRotation = showPreview ? 0 : position.rotation;
 
   const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
-  const entryDelay = index * 0.015;
+  const entryDelay = isLegacy ? 0 : index * 0.015;
 
   const clearPressTimer = useCallback(() => {
     if (pressTimer.current) {
@@ -76,6 +85,21 @@ const PhotoCardComponent = ({
       pressTimer.current = null;
     }
   }, []);
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+  }, []);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearPressTimer();
+      clearHoverTimer();
+    };
+  }, [clearPressTimer, clearHoverTimer]);
 
   // Prevent browser context menu on long press
   const handleContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -137,20 +161,89 @@ const PhotoCardComponent = ({
     setIsDragging(true);
     hasMoved.current = true;
     clearPressTimer();
+    clearHoverTimer();
     setLocalHolding(false);
+    setIsHovering(false);
     onDragStart();
-  }, [onDragStart, clearPressTimer]);
+  }, [onDragStart, clearPressTimer, clearHoverTimer]);
 
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
     onDragEnd(x.get(), y.get());
   }, [onDragEnd, x, y]);
 
+  // Desktop mouse handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isTouchDevice) return;
+    mouseDownTime.current = Date.now();
+    hasMoved.current = false;
+    touchStartPos.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (isTouchDevice) return;
+    const pressDuration = Date.now() - mouseDownTime.current;
+    
+    // Quick click without movement = open story
+    if (!hasMoved.current && pressDuration < 200 && !isDragging) {
+      e.preventDefault();
+      onClick();
+    }
+  }, [isDragging, onClick]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isTouchDevice) return;
+    const dx = Math.abs(e.clientX - touchStartPos.current.x);
+    const dy = Math.abs(e.clientY - touchStartPos.current.y);
+    
+    if (dx > 5 || dy > 5) {
+      hasMoved.current = true;
+    }
+  }, []);
+
+  // Desktop hover preview
+  const handleMouseEnter = useCallback(() => {
+    if (isTouchDevice || isDragging) return;
+    
+    hoverTimer.current = setTimeout(() => {
+      setIsHovering(true);
+    }, HOVER_PREVIEW_DELAY);
+  }, [isDragging]);
+
+  const handleMouseLeave = useCallback(() => {
+    clearHoverTimer();
+    setIsHovering(false);
+  }, [clearHoverTimer]);
+
   // GPU-accelerated styles
   const gpuStyles = {
     willChange: 'transform' as const,
     transform: 'translate3d(0, 0, 0)',
     backfaceVisibility: 'hidden' as const,
+  };
+
+  // Simplified animations for legacy devices
+  const entryAnimation = isLegacy ? false : isAnimating ? { 
+    y: -200, 
+    x: position.x + (Math.random() - 0.5) * 80,
+    opacity: 0,
+    rotate: position.rotation + (Math.random() - 0.5) * 25
+  } : false;
+
+  const springTransition = isLegacy ? {
+    type: 'tween' as const,
+    duration: 0.15,
+    ease: 'easeOut' as const
+  } : isAnimating ? {
+    type: 'spring' as const,
+    stiffness: 180,
+    damping: 18,
+    delay: entryDelay,
+    mass: 0.6
+  } : {
+    type: 'spring' as const,
+    stiffness: 350,
+    damping: 28
   };
 
   return (
@@ -160,34 +253,19 @@ const PhotoCardComponent = ({
         x,
         y,
         rotate: dynamicRotation,
-        zIndex: localHolding ? 9999 : position.zIndex,
+        zIndex: showPreview ? 9999 : position.zIndex,
         scale,
         touchAction: 'none',
         ...gpuStyles,
       }}
-      initial={isAnimating ? { 
-        y: -200, 
-        x: position.x + (Math.random() - 0.5) * 80,
-        opacity: 0,
-        rotate: position.rotation + (Math.random() - 0.5) * 25
-      } : false}
+      initial={entryAnimation}
       animate={{ 
         y: position.y, 
         x: position.x,
         opacity: 1,
         rotate: dynamicRotation
       }}
-      transition={isAnimating ? {
-        type: 'spring',
-        stiffness: 180,
-        damping: 18,
-        delay: entryDelay,
-        mass: 0.6
-      } : {
-        type: 'spring',
-        stiffness: 350,
-        damping: 28
-      }}
+      transition={springTransition}
       drag
       dragMomentum={!isLegacy}
       dragElastic={isLegacy ? 0.05 : 0.12}
@@ -196,33 +274,38 @@ const PhotoCardComponent = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onContextMenu={handleContextMenu}
       whileDrag={{ 
         scale: 1.08,
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
         zIndex: 9999
       }}
-      whileHover={!isLegacy ? { 
+      whileHover={!isLegacy && !isTouchDevice ? { 
         scale: 1.02,
         transition: { duration: 0.15 }
       } : undefined}
     >
-      {/* Preview hint when holding */}
-      {localHolding && (
+      {/* Preview hint when holding/hovering */}
+      {showPreview && (
         <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded-full whitespace-nowrap z-10">
-          Release to close preview
+          {isDesktop ? 'Click to open' : 'Release to close preview'}
         </div>
       )}
       
       {/* Polaroid-style card */}
       <div 
         className={`bg-white rounded-sm overflow-hidden transition-all duration-200 ${
-          localHolding ? 'ring-2 ring-primary/40' : ''
+          showPreview ? 'ring-2 ring-primary/40' : ''
         }`}
         style={{
           width: 160,
           padding: '6px 6px 24px 6px',
-          boxShadow: localHolding
+          boxShadow: showPreview
             ? '0 45px 70px -15px rgba(0, 0, 0, 0.55), 0 0 40px rgba(99, 102, 241, 0.2)'
             : isDragging 
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' 
