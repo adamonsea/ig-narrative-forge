@@ -93,7 +93,7 @@ export function ExploreStoryModal({ story, open, onOpenChange, topicSlug }: Expl
                     style={{ color: 'hsl(var(--foreground))' }}
                   >
                     <div 
-                      className="prose prose-lg md:prose-xl max-w-none"
+                      className="prose prose-lg md:prose-xl max-w-none [&_h1]:font-extrabold [&_h2]:font-bold [&_h3]:font-bold [&_p:first-of-type]:text-xl [&_p:first-of-type]:font-semibold [&_p:first-of-type]:leading-snug"
                       style={{ 
                         color: 'hsl(var(--foreground))',
                         '--tw-prose-body': 'hsl(var(--foreground))',
