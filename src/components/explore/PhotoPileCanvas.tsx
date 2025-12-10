@@ -37,20 +37,24 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
   const deviceTier = getDevicePerformanceTier();
   const isLegacy = deviceTier.includes('legacy') || deviceTier.includes('old');
 
-  // Card dimensions
+  // Card dimensions - memoize to prevent recalculation
   const CARD_WIDTH = 160;
   const CARD_HEIGHT = 145;
   const PADDING = 20;
+  
+  // Limit visible cards for performance on legacy devices
+  const MAX_VISIBLE_CARDS = isLegacy ? 15 : 30;
 
   // Group stories by week
   const weekGroups = useMemo(() => groupStoriesByWeek(stories), [stories]);
   
-  // Current week's stories (excluding dismissed)
+  // Current week's stories (excluding dismissed) - limit for performance
   const currentWeekStories = useMemo(() => {
     const weekData = weekGroups[selectedWeekIndex];
     if (!weekData) return [];
-    return weekData.stories.filter(s => !dismissedStories.find(d => d.id === s.id));
-  }, [weekGroups, selectedWeekIndex, dismissedStories]);
+    const filtered = weekData.stories.filter(s => !dismissedStories.find(d => d.id === s.id));
+    return filtered.slice(0, MAX_VISIBLE_CARDS);
+  }, [weekGroups, selectedWeekIndex, dismissedStories, MAX_VISIBLE_CARDS]);
 
   // Week info for switcher
   const weeks = useMemo(() => weekGroups.map(g => g.week), [weekGroups]);
@@ -109,7 +113,11 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
     setHighestZ(currentWeekStories.length);
     setIsAnimating(true);
 
-    const timer = setTimeout(() => setIsAnimating(false), currentWeekStories.length * 15 + 400);
+    // Faster animation completion for smoother feel
+    const animDuration = isLegacy 
+      ? currentWeekStories.length * 8 + 200 
+      : currentWeekStories.length * 12 + 300;
+    const timer = setTimeout(() => setIsAnimating(false), animDuration);
     return () => clearTimeout(timer);
   }, [dimensions, currentWeekStories, selectedWeekIndex]);
 
@@ -209,6 +217,9 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
       style={{ 
         touchAction: 'none',
         willChange: 'transform',
+        transform: 'translateZ(0)', // Force GPU layer
+        backfaceVisibility: 'hidden',
+        perspective: 1000,
       }}
     >
       {/* Subtle table texture */}
@@ -225,7 +236,7 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
         onSelectWeek={handleWeekChange}
       />
       
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="sync">
         {currentWeekStories.map((story, index) => {
           const position = positions.get(story.id);
           if (!position) return null;
