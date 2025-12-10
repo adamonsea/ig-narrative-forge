@@ -71,8 +71,14 @@ export default function ExplorePile() {
           p_source_filters: null
         });
 
+      console.log('[Explore] RPC response:', { 
+        rpcError, 
+        rowCount: rpcData?.length,
+        sampleRow: rpcData?.[0]
+      });
+
       if (rpcError) {
-        console.error('Error fetching stories:', rpcError);
+        console.error('[Explore] Error fetching stories:', rpcError);
         setLoading(false);
         return;
       }
@@ -83,9 +89,11 @@ export default function ExplorePile() {
         
         (rpcData as any[]).forEach(row => {
           const storyDate = new Date(row.created_at).getTime();
-          if (row.cover_illustration_url && 
-              !uniqueStories.has(row.story_id) &&
-              storyDate >= thirtyDaysAgoTime) {
+          const hasImage = !!row.cover_illustration_url;
+          const isNew = !uniqueStories.has(row.story_id);
+          const isRecent = storyDate >= thirtyDaysAgoTime;
+          
+          if (hasImage && isNew && isRecent) {
             uniqueStories.set(row.story_id, {
               id: row.story_id,
               title: row.headline || row.title,
@@ -96,6 +104,8 @@ export default function ExplorePile() {
             });
           }
         });
+        
+        console.log('[Explore] Filtered stories with images:', uniqueStories.size);
         setStories(Array.from(uniqueStories.values()));
       }
 
