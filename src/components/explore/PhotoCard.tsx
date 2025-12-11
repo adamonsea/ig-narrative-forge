@@ -55,7 +55,8 @@ const PhotoCardComponent = ({
   const isDesktop = deviceTier === 'desktop';
   
   const [isDragging, setIsDragging] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(false);
+  const [placeholderLoaded, setPlaceholderLoaded] = useState(false);
   const [localHolding, setLocalHolding] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   
@@ -86,6 +87,8 @@ const PhotoCardComponent = ({
   // Dynamic rotation - reset when holding for clear preview
   const dynamicRotation = showPreview ? 0 : position.rotation;
 
+  // Progressive image URLs - tiny blur placeholder, then thumbnail
+  const placeholderUrl = optimizeThumbnailUrl(story.cover_illustration_url)?.replace('width=200', 'width=20')?.replace('height=150', 'height=15') || '';
   const thumbnailUrl = optimizeThumbnailUrl(story.cover_illustration_url);
   const entryDelay = isLegacy ? 0 : index * 0.015;
 
@@ -319,22 +322,39 @@ const PhotoCardComponent = ({
         }}
         onContextMenu={handleContextMenu}
       >
-        {/* Image container */}
+        {/* Image container with progressive loading */}
         <div className="relative w-full aspect-[4/3] bg-muted overflow-hidden">
-          {!isLoaded && (
-            <div className="absolute inset-0 bg-muted animate-pulse" />
+          {/* Tiny blurred placeholder - loads first */}
+          {placeholderUrl && !thumbnailLoaded && (
+            <img
+              src={placeholderUrl}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                placeholderLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ filter: 'blur(8px)', transform: 'scale(1.1)' }}
+              draggable={false}
+              onLoad={() => setPlaceholderLoaded(true)}
+            />
           )}
+          
+          {/* Full thumbnail - swaps in when loaded */}
           <img
             src={thumbnailUrl || story.cover_illustration_url}
             alt=""
-            className={`w-full h-full object-cover transition-opacity duration-200 pointer-events-none ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+              thumbnailLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             loading="lazy"
             draggable={false}
-            onLoad={() => setIsLoaded(true)}
+            onLoad={() => setThumbnailLoaded(true)}
             onContextMenu={handleContextMenu}
           />
+          
+          {/* Loading shimmer when nothing loaded yet */}
+          {!placeholderLoaded && !thumbnailLoaded && (
+            <div className="absolute inset-0 bg-muted animate-pulse" />
+          )}
         </div>
         
         {/* Date hint */}
