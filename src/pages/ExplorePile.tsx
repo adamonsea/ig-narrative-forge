@@ -158,9 +158,14 @@ export default function ExplorePile() {
             Back to Feed
           </Button>
           
-          <span className="text-sm text-muted-foreground">
-            {stories.length} stories
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded-full">
+              Beta
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {stories.length} stories
+            </span>
+          </div>
         </div>
       </header>
 
