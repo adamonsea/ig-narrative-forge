@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +7,7 @@ import { useTopicFavicon } from '@/hooks/useTopicFavicon';
 import { PhotoPileCanvas } from '@/components/explore/PhotoPileCanvas';
 import { ExploreStoryModal } from '@/components/explore/ExploreStoryModal';
 import { toast } from 'sonner';
+import { format, parseISO, startOfWeek as getStartOfWeek } from 'date-fns';
 
 interface Story {
   id: string;
@@ -24,6 +25,8 @@ interface Story {
 
 export default function ExplorePile() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const weekParam = searchParams.get('week');
   const navigate = useNavigate();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +34,7 @@ export default function ExplorePile() {
   const [topicBranding, setTopicBranding] = useState<any>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [weekLabel, setWeekLabel] = useState<string | null>(null);
 
   const faviconUrl = topicBranding?.icon_url || topicBranding?.logo_url;
   useTopicFavicon(faviconUrl);
@@ -57,7 +61,59 @@ export default function ExplorePile() {
       setTopicName(topic.name);
       setTopicBranding(topic.branding_config);
 
-      // Fetch stories with cover images from last 30 days
+      // If week param is provided, fetch stories from that weekly roundup
+      if (weekParam) {
+        const weekStartDate = parseISO(weekParam);
+        const weekStartFormatted = format(getStartOfWeek(weekStartDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+        // Fetch the roundup for this week
+        const { data: roundupData, error: roundupError } = await supabase
+          .from('topic_roundups')
+          .select('story_ids, period_start, period_end')
+          .eq('topic_id', topic.id)
+          .eq('roundup_type', 'weekly')
+          .gte('period_start', `${weekStartFormatted}T00:00:00Z`)
+          .lt('period_start', `${weekStartFormatted}T23:59:59.999Z`)
+          .eq('is_published', true)
+          .maybeSingle();
+
+        if (roundupError || !roundupData || !roundupData.story_ids?.length) {
+          toast.error('Weekly roundup not found');
+          setLoading(false);
+          return;
+        }
+
+        // Set week label
+        const startDate = parseISO(roundupData.period_start);
+        const endDate = parseISO(roundupData.period_end);
+        setWeekLabel(`${format(startDate, 'MMM d')} - ${format(endDate, 'd')}`);
+
+        // Fetch stories from the roundup
+        const { data: storiesData, error: storiesError } = await supabase
+          .from('stories')
+          .select('id, title, cover_illustration_url, created_at')
+          .in('id', roundupData.story_ids)
+          .eq('is_published', true)
+          .not('cover_illustration_url', 'is', null);
+
+        if (storiesError) {
+          console.error('[Explore] Error fetching roundup stories:', storiesError);
+          setLoading(false);
+          return;
+        }
+
+        const mappedStories = (storiesData || []).map(s => ({
+          ...s,
+          slides: [],
+          article: { source_url: '' }
+        }));
+
+        setStories(mappedStories);
+        setLoading(false);
+        return;
+      }
+
+      // Default: Fetch stories from last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -113,7 +169,7 @@ export default function ExplorePile() {
     };
 
     fetchData();
-  }, [slug, navigate]);
+  }, [slug, weekParam, navigate]);
 
   const handleCardClick = async (story: Story) => {
     // Fetch full story data for modal
@@ -151,14 +207,22 @@ export default function ExplorePile() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/feed/${slug}`)}
+            onClick={() => weekParam 
+              ? navigate(`/feed/${slug}/weekly/${weekParam}`)
+              : navigate(`/feed/${slug}`)
+            }
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Feed
+            {weekParam ? 'Back to Briefing' : 'Back to Feed'}
           </Button>
           
           <div className="flex items-center gap-3">
+            {weekLabel && (
+              <span className="text-sm font-medium text-foreground">
+                {weekLabel}
+              </span>
+            )}
             <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded-full">
               Beta
             </span>

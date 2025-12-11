@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfWeek } from "date-fns";
 import StoryCarousel from "@/components/StoryCarousel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Filter, Share2, LayoutList } from "lucide-react";
+import { ArrowLeft, Filter, Share2, LayoutList, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoundupSEO } from "@/components/seo/RoundupSEO";
 import { FilterModal } from "@/components/FilterModal";
@@ -62,6 +62,7 @@ export default function WeeklyRoundupList() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [siftEnabled, setSiftEnabled] = useState(false);
   
   // Filter states
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -101,6 +102,15 @@ export default function WeeklyRoundupList() {
         }
 
         setTopic(topicData);
+
+        // Check if sift is enabled
+        const { data: insightSettings } = await supabase
+          .from('topic_insight_settings')
+          .select('sift_enabled')
+          .eq('topic_id', topicData.id)
+          .maybeSingle();
+        
+        setSiftEnabled(insightSettings?.sift_enabled ?? false);
 
         // Handle "latest" parameter - fetch most recent roundup
         if (weekStart === 'latest') {
@@ -462,20 +472,34 @@ export default function WeeklyRoundupList() {
                 </Link>
               </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsModalOpen(true)}
-              className={hasActiveFilters ? "border-primary text-primary" : ""}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Curate
-              {hasActiveFilters && (
-                <span className="ml-2 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                  {filteredStories.length}
-                </span>
+            <div className="flex items-center gap-2">
+              {siftEnabled && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                >
+                  <Link to={`/explore/${slug}?week=${weekStart}`}>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Explore
+                  </Link>
+                </Button>
               )}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsModalOpen(true)}
+                className={hasActiveFilters ? "border-primary text-primary" : ""}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Curate
+                {hasActiveFilters && (
+                  <span className="ml-2 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {filteredStories.length}
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
           
           <div className="text-center space-y-3">
