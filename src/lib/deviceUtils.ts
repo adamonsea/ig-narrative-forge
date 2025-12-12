@@ -94,27 +94,51 @@ function estimateDeviceGeneration(iosVersion: number): 'modern' | 'mid-range' | 
 }
 
 /**
- * Estimates Android device generation based on version and memory
+ * Estimates Android device generation based on version, memory, and hardware concurrency
+ * Note: deviceMemory is capped at 8GB in Chrome, and some browsers don't report it at all
  */
 function estimateAndroidGeneration(androidVersion: number): 'modern' | 'mid-range' | 'legacy' {
   const deviceMemory = (navigator as any).deviceMemory;
+  const hardwareConcurrency = navigator.hardwareConcurrency || 0;
   
-  // Modern Android: Android 10+ with good memory
-  if (androidVersion >= 10 && deviceMemory && deviceMemory >= 4) {
-    return 'modern';
+  // Debug logging for device classification
+  if (import.meta.env.DEV) {
+    console.log('[DeviceUtils] Android classification:', {
+      androidVersion,
+      deviceMemory,
+      hardwareConcurrency,
+    });
   }
   
-  // Mid-range: Android 8-9 or moderate memory
-  if (androidVersion >= 8 && androidVersion < 10) {
-    return 'mid-range';
-  }
-  
-  // Legacy: Android 7 or below, or very low memory
+  // Legacy: Android 7 or below, or confirmed low memory
   if (androidVersion < 8 || (deviceMemory && deviceMemory < 3)) {
     return 'legacy';
   }
   
-  // Default to mid-range for safety
+  // Mid-range: Android 8-9
+  if (androidVersion >= 8 && androidVersion < 10) {
+    return 'mid-range';
+  }
+  
+  // Modern Android 10+: Check for high-end signals
+  // deviceMemory may be undefined/capped, so use hardwareConcurrency as fallback
+  // Pixel 8 Pro has 8+ cores, most modern flagships have 6+ cores
+  if (androidVersion >= 10) {
+    // If deviceMemory is available and good, it's modern
+    if (deviceMemory && deviceMemory >= 4) {
+      return 'modern';
+    }
+    // If no deviceMemory but high core count, assume modern (Pixel 8, etc.)
+    if (hardwareConcurrency >= 6) {
+      return 'modern';
+    }
+    // Android 12+ without memory info is likely modern (most legacy devices stuck on older OS)
+    if (androidVersion >= 12) {
+      return 'modern';
+    }
+  }
+  
+  // Default Android 10-11 without clear signals to mid-range for safety
   return 'mid-range';
 }
 
@@ -252,15 +276,16 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'modern-android':
-      // Modern Android: full effects, no haptics (inconsistent support)
+      // Modern Android: full effects, optimized springs for Android touch latency
+      // Slightly higher stiffness and lower mass for snappier response
       return {
-        dragElastic: 0.12,
-        spring: { stiffness: 380, damping: 36, mass: 0.95 },
-        dragTransition: { power: 0.28, timeConstant: 280 },
+        dragElastic: 0.10,
+        spring: { stiffness: 420, damping: 38, mass: 0.85 },
+        dragTransition: { power: 0.25, timeConstant: 250 },
         enablePageCurl: true,
         enableDynamicShadows: true,
-        enableHaptics: false,
-        swipeVelocityMultiplier: 1.2,
+        enableHaptics: true, // Enable haptics for modern Android (vibration API)
+        swipeVelocityMultiplier: 1.3,
       };
       
     case 'mid-range-ios':
