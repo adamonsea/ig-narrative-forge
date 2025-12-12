@@ -1046,12 +1046,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         data-story-card 
         data-story-id={story.id}
         style={{
-          willChange: 'transform',
-          transform: 'translateZ(0)',
-          WebkitTransform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
-          contain: 'layout style paint',
+          touchAction: 'manipulation',
         } as React.CSSProperties}
       >
         <div className="relative min-h-[600px] flex flex-col">
