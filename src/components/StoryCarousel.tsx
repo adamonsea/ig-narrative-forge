@@ -1045,9 +1045,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         className={`w-full overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} 
         data-story-card 
         data-story-id={story.id}
-        style={{
-          touchAction: 'manipulation',
-        } as React.CSSProperties}
+        style={{} as React.CSSProperties}
       >
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}

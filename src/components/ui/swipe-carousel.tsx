@@ -222,15 +222,9 @@ export function SwipeCarousel({
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
             x, 
-            touchAction: "pan-y",
-            // Universal GPU acceleration for all devices
+            touchAction: "none",
             willChange: 'transform',
             transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            WebkitPerspective: 1000,
-            perspective: 1000,
           }}
           onDragEnd={onDragEnd}
         >
