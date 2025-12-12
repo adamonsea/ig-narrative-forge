@@ -1041,7 +1041,19 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
       <meta itemProp="headline" content={story.title} />
       <meta itemProp="author" content={story.author || 'Unknown'} />
       <meta itemProp="datePublished" content={story.created_at} />
-      <Card className={`w-full overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} data-story-card data-story-id={story.id}>
+      <Card 
+        className={`w-full overflow-hidden shadow-lg feed-card ${isParliamentaryStory ? `parliamentary-card ${partyColors.border}` : ''}`} 
+        data-story-card 
+        data-story-id={story.id}
+        style={{
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          contain: 'layout style paint',
+        } as React.CSSProperties}
+      >
         <div className="relative min-h-[600px] flex flex-col">
           {/* Header with subtle grey background */}
           <div className="p-4 border-b feed-card-header bg-slate-50/50 dark:bg-slate-900/50">

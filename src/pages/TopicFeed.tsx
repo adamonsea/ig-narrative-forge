@@ -358,13 +358,16 @@ const TopicFeed = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Intersection Observer for infinite scroll with iOS-specific optimization
+  // Intersection Observer for infinite scroll with mobile-specific optimization
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isMobile = isIOS || isAndroid;
+  
   const lastStoryElementRef = useCallback((node: HTMLDivElement | null) => {
     if (loading || loadingMore) return;
     if (observerRef.current) observerRef.current.disconnect();
     
-    // iOS-specific: More aggressive rootMargin for better perceived performance
-    const rootMargin = isIOS ? '400px' : '100px';
+    // Mobile-specific: More aggressive rootMargin for better perceived performance
+    const rootMargin = isMobile ? '400px' : '100px';
     
     observerRef.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
@@ -376,24 +379,24 @@ const TopicFeed = () => {
     });
     
     if (node) observerRef.current.observe(node);
-  }, [loading, loadingMore, hasMore, loadMore, isIOS]);
+  }, [loading, loadingMore, hasMore, loadMore, isMobile]);
   
-  // iOS-specific: Add passive scroll listener for feed container
+  // Mobile-specific: Add passive scroll listener for feed container
   useEffect(() => {
-    if (!isIOS) return;
+    if (!isMobile) return;
     
     const feedContainer = document.querySelector('[data-feed-container]');
     if (!feedContainer) return;
     
     const handleScroll = () => {
       requestAnimationFrame(() => {
-        // iOS optimization: Debounce expensive operations during scroll
+        // Mobile optimization: Debounce expensive operations during scroll
       });
     };
     
     feedContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => feedContainer.removeEventListener('scroll', handleScroll);
-  }, [isIOS]);
+  }, [isMobile]);
 
   useEffect(() => {
     return () => {
