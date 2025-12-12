@@ -160,9 +160,17 @@ export const AdminPanel = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Admin Panel</h2>
-        <Button onClick={fetchApiUsage} variant="outline">
-          Refresh Data
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="default">
+            <a href="/admin/ai-costs">
+              <DollarSign className="h-4 w-4 mr-2" />
+              AI Cost Dashboard
+            </a>
+          </Button>
+          <Button onClick={fetchApiUsage} variant="outline">
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* API Cost Overview */}
