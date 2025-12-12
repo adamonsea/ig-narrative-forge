@@ -276,16 +276,15 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'modern-android':
-      // Modern Android: full effects, optimized springs for Android touch latency
-      // Slightly higher stiffness and lower mass for snappier response
+      // Modern Android: full effects, smoother springs for natural feel
       return {
-        dragElastic: 0.10,
-        spring: { stiffness: 420, damping: 38, mass: 0.85 },
+        dragElastic: 0.08,
+        spring: { stiffness: 400, damping: 38, mass: 0.90 },
         dragTransition: { power: 0.25, timeConstant: 250 },
         enablePageCurl: true,
         enableDynamicShadows: true,
-        enableHaptics: true, // Enable haptics for modern Android (vibration API)
-        swipeVelocityMultiplier: 1.3,
+        enableHaptics: true,
+        swipeVelocityMultiplier: 1.2,
       };
       
     case 'mid-range-ios':
