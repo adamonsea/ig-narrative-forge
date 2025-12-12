@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 import AdminPanel from "./pages/AdminPanel";
+import AICostDashboardPage from "./pages/AICostDashboard";
 import Dashboard from "./pages/Dashboard";
 import TopicDashboard from "./pages/TopicDashboard";
 import TopicFeed from "./pages/TopicFeed";
@@ -67,6 +68,7 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
                 <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
                 {/* Redirect old URL patterns to new universal URLs */}
                 <Route path="/feed/topic/:slug" element={<FeedRedirect />} />
