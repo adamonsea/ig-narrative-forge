@@ -36,9 +36,8 @@ interface PhotoCardProps {
 const LONG_PRESS_DURATION = 400;
 const HOVER_PREVIEW_DELAY = 800;
 
-// Detect touch vs mouse device
-const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-
+// Track whether current interaction is touch-based (not device capability)
+// This allows hybrid devices like Surface Pro to use both touch and mouse
 const PhotoCardComponent = ({
   story,
   position,
@@ -65,6 +64,7 @@ const PhotoCardComponent = ({
   const touchStartPos = useRef({ x: 0, y: 0 });
   const mouseDownTime = useRef<number>(0);
   const hasMoved = useRef(false);
+  const isCurrentInteractionTouch = useRef(false);
   
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
@@ -123,6 +123,7 @@ const PhotoCardComponent = ({
 
   // Touch start - begin long press timer
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    isCurrentInteractionTouch.current = true;
     const touch = e.touches[0];
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
     hasMoved.current = false;
@@ -167,6 +168,11 @@ const PhotoCardComponent = ({
       if (!isLegacy) triggerHaptic('light');
       onClick();
     }
+    
+    // Reset touch flag after a short delay to allow mouse events if needed
+    setTimeout(() => {
+      isCurrentInteractionTouch.current = false;
+    }, 100);
   }, [clearPressTimer, localHolding, isDragging, isLegacy, onClick]);
 
   // Drag handlers for framer-motion
@@ -185,16 +191,16 @@ const PhotoCardComponent = ({
     onDragEnd(x.get(), y.get());
   }, [onDragEnd, x, y]);
 
-  // Desktop mouse handlers
+  // Desktop mouse handlers - also work on hybrid devices like Surface Pro
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isTouchDevice) return;
+    if (isCurrentInteractionTouch.current) return;
     mouseDownTime.current = Date.now();
     hasMoved.current = false;
     touchStartPos.current = { x: e.clientX, y: e.clientY };
   }, []);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (isTouchDevice) return;
+    if (isCurrentInteractionTouch.current) return;
     const pressDuration = Date.now() - mouseDownTime.current;
     
     // Quick click without movement = open story
@@ -205,7 +211,7 @@ const PhotoCardComponent = ({
   }, [isDragging, onClick]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isTouchDevice) return;
+    if (isCurrentInteractionTouch.current) return;
     const dx = Math.abs(e.clientX - touchStartPos.current.x);
     const dy = Math.abs(e.clientY - touchStartPos.current.y);
     
@@ -214,9 +220,9 @@ const PhotoCardComponent = ({
     }
   }, []);
 
-  // Desktop hover preview
+  // Desktop hover preview - also works on hybrid devices with mouse
   const handleMouseEnter = useCallback(() => {
-    if (isTouchDevice || isDragging) return;
+    if (isCurrentInteractionTouch.current || isDragging) return;
     
     hoverTimer.current = setTimeout(() => {
       setIsHovering(true);
