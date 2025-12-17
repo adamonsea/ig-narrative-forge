@@ -116,6 +116,9 @@ export class CreditService {
     error?: string;
     credits_used?: number;
     new_balance?: number;
+    used_fallback?: boolean;
+    fallback_reason?: string;
+    fallback_model?: string;
   }> {
     try {
       const { data, error } = await supabase.functions.invoke('story-illustrator', {

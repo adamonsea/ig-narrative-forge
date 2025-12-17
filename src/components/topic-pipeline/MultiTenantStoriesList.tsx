@@ -114,10 +114,20 @@ export const MultiTenantStoriesList: React.FC<MultiTenantStoriesListProps> = ({
         return;
       }
 
-      toast({
-        title: 'Illustration Generated Successfully',
-        description: `Used ${result.credits_used} credits with ${model.name}. Balance: ${result.new_balance}`,
-      });
+      // Warn user if fallback was used
+      if (result.used_fallback) {
+        toast({
+          title: 'Image Generated with Fallback',
+          description: `${result.fallback_reason} (Used: ${result.fallback_model})`,
+          variant: 'default',
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: 'Illustration Generated Successfully',
+          description: `Used ${result.credits_used} credits with ${model.name}. Balance: ${result.new_balance}`,
+        });
+      }
 
       if (onRefresh) await onRefresh();
     } catch (error) {
