@@ -23,6 +23,8 @@ export const PlayModeMenu = ({
   siftEnabled = false
 }: PlayModeMenuProps) => {
   const navigate = useNavigate();
+  
+  console.log('PlayModeMenu rendered:', { slug, siftEnabled });
 
   // If sift is disabled, just show a simple button for swipe mode
   if (!siftEnabled) {
