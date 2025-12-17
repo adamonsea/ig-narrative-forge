@@ -311,67 +311,134 @@ const PhotoCardComponent = ({
         </div>
       )}
       
-      {/* Polaroid-style card */}
+      {/* Newspaper cutting card */}
       <div 
-        className={`bg-white rounded-sm overflow-hidden transition-all duration-200 ${
-          showPreview ? 'ring-2 ring-primary/40' : ''
-        }`}
+        className="relative overflow-visible transition-all duration-200"
         style={{
-          width: 160,
-          padding: '6px 6px 24px 6px',
-          boxShadow: showPreview
-            ? '0 45px 70px -15px rgba(0, 0, 0, 0.55), 0 0 40px rgba(99, 102, 241, 0.2)'
-            : isDragging 
-              ? '0 25px 50px -12px rgba(0, 0, 0, 0.4)' 
-              : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 10px -5px rgba(0, 0, 0, 0.1)',
+          width: 170,
           ...gpuStyles,
         }}
         onContextMenu={handleContextMenu}
       >
-        {/* Image container with progressive loading */}
-        <div className="relative w-full aspect-[4/3] bg-muted overflow-hidden">
-          {/* Tiny blurred placeholder - loads first */}
-          {placeholderUrl && !thumbnailLoaded && (
-            <img
-              src={placeholderUrl}
-              alt=""
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
-                placeholderLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ filter: 'blur(8px)', transform: 'scale(1.1)' }}
-              draggable={false}
-              onLoad={() => setPlaceholderLoaded(true)}
-            />
-          )}
-          
-          {/* Full thumbnail - swaps in when loaded */}
-          <img
-            src={thumbnailUrl || story.cover_illustration_url}
-            alt=""
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
-              thumbnailLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            loading="lazy"
-            draggable={false}
-            onLoad={() => setThumbnailLoaded(true)}
-            onContextMenu={handleContextMenu}
+        {/* Torn edge SVG mask applied to the main card */}
+        <div 
+          className="relative overflow-hidden"
+          style={{
+            background: '#f5f0e1',
+            clipPath: `polygon(
+              0% 2%, 3% 0%, 8% 3%, 15% 1%, 22% 4%, 30% 0%, 38% 2%, 45% 1%, 52% 3%, 60% 0%, 68% 2%, 75% 1%, 82% 3%, 90% 0%, 95% 2%, 100% 1%,
+              100% 98%, 97% 100%, 92% 97%, 85% 100%, 78% 98%, 70% 100%, 62% 97%, 55% 100%, 48% 98%, 40% 100%, 32% 97%, 25% 100%, 18% 98%, 10% 100%, 5% 97%, 0% 100%
+            )`,
+            boxShadow: showPreview
+              ? '0 30px 50px -15px rgba(0, 0, 0, 0.4)'
+              : isDragging 
+                ? '0 20px 40px -10px rgba(0, 0, 0, 0.3)' 
+                : '0 8px 20px -5px rgba(0, 0, 0, 0.15), 0 3px 8px -4px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {/* Paper texture overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none z-10 opacity-30"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+              mixBlendMode: 'multiply',
+            }}
           />
           
-          {/* Loading shimmer when nothing loaded yet */}
-          {!placeholderLoaded && !thumbnailLoaded && (
-            <div className="absolute inset-0 bg-muted animate-pulse" />
-          )}
+          {/* Subtle fold line */}
+          <div 
+            className="absolute top-1/3 left-0 right-0 h-px pointer-events-none z-10 opacity-20"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(139, 119, 101, 0.5) 20%, rgba(139, 119, 101, 0.5) 80%, transparent 100%)',
+            }}
+          />
+          
+          {/* Image container with sepia tint */}
+          <div className="relative w-full aspect-[4/3] overflow-hidden">
+            {/* Tiny blurred placeholder - loads first */}
+            {placeholderUrl && !thumbnailLoaded && (
+              <img
+                src={placeholderUrl}
+                alt=""
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                  placeholderLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ 
+                  filter: 'blur(8px) sepia(15%) contrast(1.05)', 
+                  transform: 'scale(1.1)' 
+                }}
+                draggable={false}
+                onLoad={() => setPlaceholderLoaded(true)}
+              />
+            )}
+            
+            {/* Full thumbnail - swaps in when loaded */}
+            <img
+              src={thumbnailUrl || story.cover_illustration_url}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                thumbnailLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ 
+                filter: 'sepia(12%) contrast(1.02) brightness(0.98)' 
+              }}
+              loading="lazy"
+              draggable={false}
+              onLoad={() => setThumbnailLoaded(true)}
+              onContextMenu={handleContextMenu}
+            />
+            
+            {/* Loading shimmer when nothing loaded yet */}
+            {!placeholderLoaded && !thumbnailLoaded && (
+              <div className="absolute inset-0 bg-muted animate-pulse" />
+            )}
+          </div>
+          
+          {/* Newspaper-style headline and dateline */}
+          <div className="px-2 py-2 pointer-events-none" style={{ background: '#f5f0e1' }}>
+            {/* Dateline - newspaper style */}
+            <div className="flex items-center gap-1 mb-1">
+              <span 
+                className="text-[8px] uppercase tracking-wider"
+                style={{ 
+                  color: '#8b7765',
+                  fontFamily: 'Georgia, "Times New Roman", serif',
+                }}
+              >
+                {new Date(story.created_at).toLocaleDateString('en-GB', { 
+                  day: 'numeric', 
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </span>
+            </div>
+            
+            {/* Headline - condensed newspaper style */}
+            <h3 
+              className="line-clamp-2 leading-tight"
+              style={{
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: '#1a1a1a',
+                textTransform: 'uppercase',
+              }}
+            >
+              {story.title}
+            </h3>
+          </div>
         </div>
         
-        {/* Date hint */}
-        <div className="mt-1 text-center pointer-events-none">
-          <span className="text-[9px] text-neutral-400 font-mono">
-            {new Date(story.created_at).toLocaleDateString('en-GB', { 
-              day: 'numeric', 
-              month: 'short' 
-            })}
-          </span>
-        </div>
+        {/* Highlight ring for preview state */}
+        {showPreview && (
+          <div 
+            className="absolute inset-0 rounded-sm pointer-events-none"
+            style={{
+              boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.4)',
+            }}
+          />
+        )}
       </div>
     </motion.div>
   );
