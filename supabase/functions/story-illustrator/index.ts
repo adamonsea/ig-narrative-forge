@@ -286,6 +286,11 @@ serve(async (req) => {
     
     const isSuperAdmin = hasAdminRole === true
     let creditResult = null
+    
+    // Track fallback usage to inform the user
+    let usedFallback = false
+    let fallbackReason = ''
+    let fallbackModel = ''
 
     // Deduct credits based on model - skip for super admin
     if (!isSuperAdmin) {
@@ -825,6 +830,9 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           
           // Automatically fall back to Gemini
           console.log('🔄 Automatically falling back to Gemini image generation...');
+          usedFallback = true
+          fallbackReason = 'OpenAI content moderation blocked this prompt (likely due to a celebrity name or sensitive topic). Image generated using fallback model.'
+          fallbackModel = 'Gemini'
           
           const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
           if (!LOVABLE_API_KEY) {
@@ -877,6 +885,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
             // Check if it's a credits issue - try Replicate FLUX as tertiary fallback
             if (geminiResponse.status === 402 || geminiErrorText.includes('Not enough credits')) {
               console.log('🔄 Gemini credits exhausted - trying Replicate FLUX fallback...');
+              fallbackModel = 'Replicate FLUX'
               
               const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
               if (!REPLICATE_API_KEY) {
@@ -1209,7 +1218,10 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         illustration_url: imageUrl,
         model: model,
         credits_used: isSuperAdmin ? 0 : modelConfig.credits,
-        new_balance: creditResult?.new_balance || null
+        new_balance: creditResult?.new_balance || null,
+        used_fallback: usedFallback,
+        fallback_reason: usedFallback ? fallbackReason : undefined,
+        fallback_model: usedFallback ? fallbackModel : undefined
       }),
       { 
         status: 200, 

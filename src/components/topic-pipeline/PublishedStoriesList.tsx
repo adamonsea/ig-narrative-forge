@@ -252,10 +252,20 @@ export const PublishedStoriesList: React.FC<PublishedStoriesListProps> = ({
       const result = await CreditService.generateStoryIllustration(story.id, model.id);
       
       if (result.success) {
-        toast({
-          title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
-          description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
-        });
+        // Warn user if fallback was used
+        if (result.used_fallback) {
+          toast({
+            title: 'Image Generated with Fallback',
+            description: `${result.fallback_reason} (Used: ${result.fallback_model})`,
+            variant: 'default',
+            duration: 8000,
+          });
+        } else {
+          toast({
+            title: story.cover_illustration_url ? 'Illustration Regenerated Successfully' : 'Illustration Generated Successfully',
+            description: `Used ${result.credits_used} credits with ${model.name}. New balance: ${result.new_balance}`,
+          });
+        }
         
         // Refresh stories to show the new illustration
         onRefresh();
