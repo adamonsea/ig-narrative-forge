@@ -1,8 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Heart, ThumbsDown } from 'lucide-react';
+import { Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDeviceOptimizations, getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
 
@@ -30,6 +29,18 @@ interface PageTurnCardProps {
   style?: React.CSSProperties;
 }
 
+// Torn edge clip-path for newspaper cutting effect
+const tornEdgeClipPath = `polygon(
+  0% 2%, 2% 0%, 5% 1%, 8% 0%, 12% 2%, 15% 0%, 18% 1%, 22% 0%, 25% 2%, 28% 0%, 
+  32% 1%, 35% 0%, 38% 2%, 42% 0%, 45% 1%, 48% 0%, 52% 2%, 55% 0%, 58% 1%, 
+  62% 0%, 65% 2%, 68% 0%, 72% 1%, 75% 0%, 78% 2%, 82% 0%, 85% 1%, 88% 0%, 
+  92% 2%, 95% 0%, 98% 1%, 100% 2%,
+  100% 98%, 98% 100%, 95% 99%, 92% 100%, 88% 98%, 85% 100%, 82% 99%, 78% 100%, 
+  75% 98%, 72% 100%, 68% 99%, 65% 100%, 62% 98%, 58% 100%, 55% 99%, 52% 100%, 
+  48% 98%, 45% 100%, 42% 99%, 38% 100%, 35% 98%, 32% 100%, 28% 99%, 25% 100%, 
+  22% 98%, 18% 100%, 15% 99%, 12% 100%, 8% 98%, 5% 100%, 2% 99%, 0% 98%
+)`;
+
 export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: PageTurnCardProps) => {
   const isDragging = useRef(false);
   const optimizations = useDeviceOptimizations();
@@ -53,14 +64,14 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
   // Subtle vertical lift as paper tilts
   const y = useTransform(x, [-200, 0, 200], [10, 0, 10]);
   
-  // Shadow deepens as card lifts
+  // Shadow deepens as card lifts - softer newspaper shadow
   const boxShadow = useTransform(
     x,
     [-200, 0, 200],
     [
-      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(0,0,0,0.3)`,
-      `0 10px 20px -5px rgba(0,0,0,0.1)`,
-      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(0,0,0,0.3)`
+      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(139,119,101,0.25)`,
+      `0 8px 24px -4px rgba(139,119,101,0.15)`,
+      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(139,119,101,0.25)`
     ]
   );
 
@@ -192,8 +203,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
     >
       {/* Discard Overlay (Gradient) */}
       <motion.div
-        style={{ opacity: discardOpacity }}
-        className="absolute inset-0 bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        style={{ opacity: discardOpacity, clipPath: tornEdgeClipPath }}
+        className="absolute inset-0 bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent z-10 pointer-events-none flex items-center justify-center"
       >
         <motion.div 
           style={{ scale: iconScale }}
@@ -205,8 +216,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
 
       {/* Like Overlay (Gradient) */}
       <motion.div
-        style={{ opacity: likeOpacity }}
-        className="absolute inset-0 bg-gradient-to-bl from-primary/20 via-primary/10 to-transparent rounded-lg z-10 pointer-events-none flex items-center justify-center"
+        style={{ opacity: likeOpacity, clipPath: tornEdgeClipPath }}
+        className="absolute inset-0 bg-gradient-to-bl from-primary/20 via-primary/10 to-transparent z-10 pointer-events-none flex items-center justify-center"
       >
         <motion.div 
           style={{ scale: iconScale }}
@@ -229,23 +240,22 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
               zIndex: 20,
             }}
           >
-            {/* Shadow layer for depth - only on devices with dynamic shadows */}
             {animationPresets.enableDynamicShadows && (
               <div
                 className="absolute inset-0"
                 style={{
                   clipPath: 'path("M 0 100 Q 0 60, 20 80 Q 40 100, 100 100 Z")',
-                  background: 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+                  background: 'linear-gradient(135deg, rgba(139,119,101,0.2) 0%, transparent 70%)',
                   filter: 'blur(2px)',
                 }}
               />
             )}
-            {/* Curl layer with curved edge */}
             <div
-              className="absolute inset-0 bg-gradient-to-br from-background via-muted to-card"
+              className="absolute inset-0"
               style={{
                 clipPath: 'path("M 0 100 Q 0 70, 15 85 Q 30 100, 100 100 Z")',
-                boxShadow: animationPresets.enableDynamicShadows ? '2px 2px 8px rgba(0,0,0,0.15)' : 'none',
+                background: 'linear-gradient(135deg, #f8f5e9 0%, #efe8d8 100%)',
+                boxShadow: animationPresets.enableDynamicShadows ? '2px 2px 8px rgba(139,119,101,0.15)' : 'none',
               }}
             />
           </motion.div>
@@ -260,60 +270,94 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
               zIndex: 20,
             }}
           >
-            {/* Shadow layer for depth - only on devices with dynamic shadows */}
             {animationPresets.enableDynamicShadows && (
               <div
                 className="absolute inset-0"
                 style={{
                   clipPath: 'path("M 100 100 Q 100 60, 80 80 Q 60 100, 0 100 Z")',
-                  background: 'linear-gradient(225deg, rgba(0,0,0,0.2) 0%, transparent 70%)',
+                  background: 'linear-gradient(225deg, rgba(139,119,101,0.2) 0%, transparent 70%)',
                   filter: 'blur(2px)',
                 }}
               />
             )}
-            {/* Curl layer with curved edge */}
             <div
-              className="absolute inset-0 bg-gradient-to-bl from-background via-muted to-card"
+              className="absolute inset-0"
               style={{
                 clipPath: 'path("M 100 100 Q 100 70, 85 85 Q 70 100, 0 100 Z")',
-                boxShadow: animationPresets.enableDynamicShadows ? '-2px 2px 8px rgba(0,0,0,0.15)' : 'none',
+                background: 'linear-gradient(225deg, #f8f5e9 0%, #efe8d8 100%)',
+                boxShadow: animationPresets.enableDynamicShadows ? '-2px 2px 8px rgba(139,119,101,0.15)' : 'none',
               }}
             />
           </motion.div>
         </>
       )}
 
-      {/* Story Card (matching feed design) */}
-      <Card className="h-full shadow-lg overflow-hidden border relative">
-        {/* Cover Image */}
+      {/* Newspaper Cutting Card */}
+      <div 
+        className="h-full overflow-hidden relative"
+        style={{
+          clipPath: tornEdgeClipPath,
+          background: 'linear-gradient(145deg, #f8f5e9 0%, #f5f0e1 50%, #efe8d8 100%)',
+        }}
+      >
+        {/* Paper texture overlay */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-30 z-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        
+        {/* Subtle fold line */}
+        <div 
+          className="absolute left-1/2 top-0 bottom-0 w-px pointer-events-none z-10"
+          style={{
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(139,119,101,0.1) 20%, rgba(139,119,101,0.15) 50%, rgba(139,119,101,0.1) 80%, transparent 100%)',
+          }}
+        />
+
+        {/* Cover Image with sepia treatment */}
         {story.cover_illustration_url && (
-          <div className="relative w-full aspect-[4/3] overflow-hidden bg-muted">
+          <div className="relative w-full aspect-[4/3] overflow-hidden">
             <img
               src={story.cover_illustration_url}
               alt={story.title}
               className="w-full h-full object-cover"
+              style={{ 
+                filter: 'sepia(12%) contrast(1.02) brightness(0.98)' 
+              }}
               loading="eager"
             />
           </div>
         )}
 
-        <CardContent className="p-4 space-y-3">
-          {/* Title - use slide headline if available */}
-          <h2 className="text-2xl font-bold leading-tight uppercase">
+        {/* Content area */}
+        <div className="p-4 space-y-3 relative z-20">
+          {/* Newspaper dateline */}
+          <div 
+            className="text-xs tracking-wider uppercase"
+            style={{ 
+              color: '#8b7765',
+              fontFamily: 'Georgia, "Times New Roman", serif',
+            }}
+          >
+            The Herald • {formatSafe(storyDate, 'd MMM')}
+          </div>
+
+          {/* Headline - newspaper style */}
+          <h2 
+            className="text-xl font-bold leading-tight uppercase tracking-tight"
+            style={{
+              color: '#2c2416',
+              fontFamily: 'Georgia, "Times New Roman", serif',
+              textShadow: '0.5px 0.5px 0 rgba(139,119,101,0.1)',
+            }}
+          >
             {story.slides?.[0]?.content?.replace(/<[^>]*>/g, '') || story.title}
           </h2>
 
-          {/* Date */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <time dateTime={storyDate.toISOString?.() || ''}>
-              {formatSafe(storyDate, 'MMM d')}
-            </time>
-          </div>
-
-
           {/* Read Story Button */}
-          <div className="pt-3 border-t flex justify-center">
+          <div className="pt-3 border-t border-[#d4c9b8] flex justify-center">
             <Button
               onClick={handleReadStory}
               onTouchEnd={handleReadStory}
@@ -324,8 +368,8 @@ export const PageTurnCard = ({ story, onSwipe, onTap, exitDirection, style }: Pa
               Read
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </motion.div>
   );
 };
