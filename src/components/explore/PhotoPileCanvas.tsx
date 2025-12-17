@@ -241,6 +241,9 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
           const position = positions.get(story.id);
           if (!position) return null;
 
+          // Front cards (higher zIndex / lower index) load first
+          const loadPriority = index < 5 ? 'eager' : 'lazy';
+
           return (
             <PhotoCard
               key={story.id}
@@ -250,6 +253,7 @@ export function PhotoPileCanvas({ stories, onCardClick }: PhotoPileCanvasProps) 
               totalCards={currentWeekStories.length}
               isAnimating={isAnimating}
               isHolding={holdingCardId === story.id}
+              loadPriority={loadPriority}
               onDragStart={() => handleDragStart(story.id)}
               onDragEnd={(x, y) => handleDragEnd(story.id, x, y)}
               onLongPress={() => handleLongPress(story.id)}
