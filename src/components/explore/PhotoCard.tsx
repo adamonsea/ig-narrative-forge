@@ -24,6 +24,7 @@ interface PhotoCardProps {
   totalCards: number;
   isAnimating: boolean;
   isHolding?: boolean;
+  loadPriority?: 'eager' | 'lazy';
   onDragStart: () => void;
   onDragEnd: (x: number, y: number) => void;
   onLongPress: () => void;
@@ -44,6 +45,7 @@ const PhotoCardComponent = ({
   index,
   isAnimating,
   isHolding = false,
+  loadPriority = 'lazy',
   onDragStart,
   onDragEnd,
   onLongPress,
@@ -382,7 +384,8 @@ const PhotoCardComponent = ({
               style={{ 
                 filter: 'sepia(12%) contrast(1.02) brightness(0.98)' 
               }}
-              loading="lazy"
+              loading={loadPriority}
+              fetchPriority={loadPriority === 'eager' ? 'high' : 'low'}
               draggable={false}
               onLoad={() => setThumbnailLoaded(true)}
               onContextMenu={handleContextMenu}
