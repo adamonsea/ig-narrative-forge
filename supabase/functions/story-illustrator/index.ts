@@ -46,7 +46,7 @@ serve(async (req) => {
       }
     )
 
-    const { storyId, model = 'gpt-image-1-medium' } = await req.json()
+    const { storyId, model = 'gpt-image-1.5-medium' } = await req.json()
     
     // Model configuration mapping
     interface ModelConfig {
@@ -58,18 +58,26 @@ serve(async (req) => {
     }
     
     const modelConfigs: Record<string, ModelConfig> = {
-      'gpt-image-1-high': {
+      // GPT Image 1.5 - 20% cheaper than GPT Image 1, better quality
+      'gpt-image-1.5-high': {
         provider: 'openai',
         quality: 'high',
-        credits: 10,
-        cost: 0.04,
+        credits: 8,
+        cost: 0.032, // 20% less than 0.04
         stylePrefix: 'cinematic and editorial style, '
       },
-      'gpt-image-1-medium': {
+      'gpt-image-1.5-medium': {
         provider: 'openai',
         quality: 'medium',
-        credits: 5,
-        cost: 0.02,
+        credits: 4,
+        cost: 0.016, // 20% less than 0.02
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-1.5-low': {
+        provider: 'openai',
+        quality: 'low',
+        credits: 2,
+        cost: 0.008, // Estimated low quality pricing
         stylePrefix: 'cinematic and editorial style, '
       },
       'gemini-pro-image': {
@@ -90,12 +98,26 @@ serve(async (req) => {
         cost: 0.04,
         stylePrefix: 'photorealistic editorial photography, '
       },
-      // Legacy support
+      // Legacy support for old model names
+      'gpt-image-1-high': {
+        provider: 'openai',
+        quality: 'high',
+        credits: 8,
+        cost: 0.032,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-1-medium': {
+        provider: 'openai',
+        quality: 'medium',
+        credits: 4,
+        cost: 0.016,
+        stylePrefix: 'cinematic and editorial style, '
+      },
       'gpt-image-1': {
         provider: 'openai',
         quality: 'medium',
-        credits: 5,
-        cost: 0.02,
+        credits: 4,
+        cost: 0.016,
         stylePrefix: 'cinematic and editorial style, '
       },
       'flux-dev': {
@@ -106,7 +128,7 @@ serve(async (req) => {
       }
     }
     
-    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-1-medium']
+    const modelConfig = modelConfigs[model] || modelConfigs['gpt-image-1.5-medium']
 
     if (!storyId) {
       return new Response(
@@ -737,13 +759,16 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('Failed to decode Gemini Pro image data');
       }
     } else if (modelConfig.provider === 'openai') {
-      // OpenAI GPT-Image-1 - Premium quality tier
-      console.log('Generating with OpenAI GPT-Image-1...');
+      // OpenAI GPT-Image-1.5 - Premium quality tier (20% cheaper, better quality)
+      console.log('Generating with OpenAI GPT-Image-1.5...');
       
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (!OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY not configured');
       }
+
+      // Compression varies by quality tier
+      const compressionLevel = modelConfig.quality === 'high' ? 95 : modelConfig.quality === 'low' ? 60 : 75;
 
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -752,13 +777,13 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'gpt-image-1.5',
           prompt: illustrationPrompt,
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
           quality: modelConfig.quality || 'medium',
           output_format: 'webp',
-          output_compression: modelConfig.quality === 'high' ? 95 : 75 // Premium gets 95% for full texture, Creative gets 75%
+          output_compression: compressionLevel
         }),
       });
 
@@ -766,11 +791,11 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         const errorText = await openaiResponse.text();
         console.error('OpenAI API error response:', errorText);
         console.error('Request parameters:', JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'gpt-image-1.5',
           size: '1536x1024',
           quality: modelConfig.quality,
           output_format: 'webp',
-          output_compression: modelConfig.quality === 'high' ? 95 : 75
+          output_compression: compressionLevel
         }));
         
         // Try to parse error details
