@@ -29,6 +29,8 @@ interface Story {
     region: string;
     published_at?: string;
   };
+  canonicalStoryId?: string; // The original story ID for duplicate content
+  canonicalTopicSlug?: string; // The topic slug of the original story
 }
 
 interface Topic {
@@ -97,6 +99,33 @@ const StoryPage = () => {
 
         // Parse the JSONB result
         const data = storyData as any;
+        
+        // Look up the canonical (original) story if this content exists in multiple topics
+        let canonicalStoryId: string | undefined;
+        let canonicalTopicSlug: string | undefined;
+        
+        if (data.shared_content_id) {
+          const { data: canonicalData } = await supabase
+            .from('stories')
+            .select(`
+              id,
+              topic_article:topic_articles!inner(
+                shared_content_id,
+                topic:topics!inner(slug)
+              )
+            `)
+            .eq('topic_article.shared_content_id', data.shared_content_id)
+            .eq('status', 'published')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          
+          if (canonicalData && canonicalData.id !== storyId) {
+            canonicalStoryId = canonicalData.id;
+            canonicalTopicSlug = (canonicalData.topic_article as any)?.topic?.slug;
+          }
+        }
+        
         const parsedStory: Story = {
           id: data.id,
           title: data.title,
@@ -110,7 +139,9 @@ const StoryPage = () => {
             source_url: '',
             region: '',
             published_at: null
-          }
+          },
+          canonicalStoryId,
+          canonicalTopicSlug
         };
 
         setStory(parsedStory);
@@ -194,6 +225,8 @@ const StoryPage = () => {
         topicSlug={slug}
         topicType={topic.topic_type}
         topicLogoUrl={topic.branding_config?.logo_url}
+        canonicalStoryId={story.canonicalStoryId}
+        canonicalTopicSlug={story.canonicalTopicSlug}
       />
       
       {/* Article Structured Data for SEO */}

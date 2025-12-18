@@ -24,6 +24,8 @@ interface StoryPageSEOProps {
   topicSlug: string;
   topicType?: string;
   topicLogoUrl?: string;
+  canonicalStoryId?: string; // For duplicate content - point to original
+  canonicalTopicSlug?: string;
 }
 
 export const StoryPageSEO = ({
@@ -31,9 +33,15 @@ export const StoryPageSEO = ({
   topicName,
   topicSlug,
   topicType,
-  topicLogoUrl
+  topicLogoUrl,
+  canonicalStoryId,
+  canonicalTopicSlug
 }: StoryPageSEOProps) => {
+  // Use canonical URL for the original story if this is a duplicate
+  const canonicalSlug = canonicalTopicSlug || topicSlug;
+  const canonicalId = canonicalStoryId || story.id;
   const storyUrl = `https://curatr.pro/feed/${topicSlug}/story/${story.id}`;
+  const canonicalUrl = `https://curatr.pro/feed/${canonicalSlug}/story/${canonicalId}`;
   const feedUrl = `https://curatr.pro/feed/${topicSlug}`;
   
   // Title: Story title + Curated TopicName
@@ -115,7 +123,7 @@ export const StoryPageSEO = ({
       <title>{title}</title>
       <meta name="title" content={title} />
       <meta name="description" content={description} />
-      <link rel="canonical" href={storyUrl} />
+      <link rel="canonical" href={canonicalUrl} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="article" />
