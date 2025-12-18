@@ -446,7 +446,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
         const storyContent: FeedContent[] = transformedStories.map(story => ({
           type: 'story' as const,
           id: story.id,
-          content_date: story.article.published_at || story.created_at,
+          content_date: story.created_at, // "new to me" ordering (stable, based on story creation)
           data: story
         }));
 
@@ -931,7 +931,7 @@ export const useHybridTopicFeedWithKeywords = (slug: string) => {
       const storyContent: FeedContent[] = transformedStories.map(story => ({
         type: 'story' as const,
         id: story.id,
-        content_date: story.article.published_at, // strictly use published_at to avoid reordering on updates
+        content_date: story.created_at, // "new to me" ordering (stable, based on story creation)
         data: story
       }));
 
