@@ -242,22 +242,26 @@ serve(async (req) => {
             }
             
             // Auto-approve if quality score meets or exceeds threshold
+            // Note: enhanced-content-generator already sets status='published' and is_published=true
+            // We only need to log the auto-approval, not change the status
             if (story.quality_score && story.quality_score >= qualityThreshold) {
-              const { error: approveError } = await supabase
+              console.log(`🎯 Story ${storyId} auto-approved - quality score ${story.quality_score} >= threshold ${qualityThreshold}`);
+            } else {
+              // Only downgrade to 'pending_review' if quality is below threshold
+              const { error: reviewError } = await supabase
                 .from('stories')
                 .update({ 
-                  status: 'ready',
+                  status: 'pending_review',
+                  is_published: false,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', storyId);
               
-              if (!approveError) {
-                console.log(`🎯 Auto-approved story ${storyId} - quality score ${story.quality_score} >= threshold ${qualityThreshold}`);
+              if (!reviewError) {
+                console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
               } else {
-                console.warn('⚠️ Failed to auto-approve story:', approveError);
+                console.warn('⚠️ Failed to mark story for review:', reviewError);
               }
-            } else {
-              console.log(`📝 Story ${storyId} needs review - quality score ${story.quality_score || 'unknown'} < threshold ${qualityThreshold}`);
             }
           }
         } catch (autoApproveError) {
