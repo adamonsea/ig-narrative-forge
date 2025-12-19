@@ -410,9 +410,6 @@ OUTPUT FORMAT (JSON):
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      
-      const data = await response.json();
-      const content = data.choices[0].message.content;
 
       const extractSlides = (raw: string): any[] => {
         let extracted: any;

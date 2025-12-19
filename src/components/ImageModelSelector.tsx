@@ -14,28 +14,28 @@ export interface ImageModel {
   description?: string;
 }
 
-// Illustrative models (editorial cartoon style) - GPT Image 1.5 with 20% cost savings
+// Illustrative models (editorial cartoon style) - GPT Image 1.5
 export const illustrativeModels: ImageModel[] = [
   {
     id: 'gpt-image-1.5-high',
     name: 'Premium',
     credits: 8,
     provider: 'openai',
-    description: 'Highest quality editorial cartoons (GPT-1.5)'
+    description: 'Highest quality editorial cartoons (GPT-Image-1.5)'
   },
   {
     id: 'gpt-image-1.5-medium',
     name: 'Creative',
     credits: 4,
     provider: 'openai',
-    description: 'Balanced quality and cost (GPT-1.5)'
+    description: 'Balanced quality and cost (GPT-Image-1.5)'
   },
   {
     id: 'gpt-image-1.5-low',
     name: 'Quick',
     credits: 2,
     provider: 'openai',
-    description: 'Fast generation, good quality (GPT-1.5)'
+    description: 'Fast generation, good quality (GPT-Image-1.5)'
   },
   {
     id: 'gemini-pro-image',
@@ -53,28 +53,28 @@ export const illustrativeModels: ImageModel[] = [
   }
 ];
 
-// Photographic models (documentary/photojournalism style) - GPT Image 1.5 with 20% cost savings
+// Photographic models (documentary/photojournalism style) - GPT Image 1.5
 export const photographicModels: ImageModel[] = [
   {
     id: 'gpt-image-1.5-high',
     name: 'Premium',
     credits: 8,
     provider: 'openai',
-    description: 'Highest quality photorealistic images (GPT-1.5)'
+    description: 'Highest quality photorealistic images (GPT-Image-1.5)'
   },
   {
     id: 'gpt-image-1.5-medium',
     name: 'Creative',
     credits: 4,
     provider: 'openai',
-    description: 'Balanced quality and cost (GPT-1.5)'
+    description: 'Balanced quality and cost (GPT-Image-1.5)'
   },
   {
     id: 'gpt-image-1.5-low',
     name: 'Quick',
     credits: 2,
     provider: 'openai',
-    description: 'Fast generation, good quality (GPT-1.5)'
+    description: 'Fast generation, good quality (GPT-Image-1.5)'
   },
   {
     id: 'gemini-pro-image',
