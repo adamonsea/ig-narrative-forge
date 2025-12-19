@@ -2926,6 +2926,50 @@ export type Database = {
         }
         Relationships: []
       }
+      story_social_content: {
+        Row: {
+          caption: string | null
+          content_type: string
+          created_at: string
+          hashtags: Json
+          id: string
+          metadata: Json
+          platform: string
+          story_id: string
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          content_type?: string
+          created_at?: string
+          hashtags?: Json
+          id?: string
+          metadata?: Json
+          platform: string
+          story_id: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          content_type?: string
+          created_at?: string
+          hashtags?: Json
+          id?: string
+          metadata?: Json
+          platform?: string
+          story_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_social_content_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_swipes: {
         Row: {
           created_at: string

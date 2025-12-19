@@ -379,6 +379,8 @@ OUTPUT FORMAT (JSON):
   ]
 }`;
 
+      const maxTokens = slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000;
+
       const response = await fetch('https://api.deepseek.com/chat/completions', {
         method: 'POST',
         headers: {
@@ -398,7 +400,7 @@ OUTPUT FORMAT (JSON):
             }
           ],
           temperature: 0.7,
-          max_tokens: 2000
+          max_tokens: maxTokens
         })
       });
 
@@ -409,42 +411,144 @@ OUTPUT FORMAT (JSON):
       const data = await response.json();
       const content = data.choices[0].message.content;
       
-      // Enhanced JSON parsing with multiple attempts
-      let slides;
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          slides = parsed.slides || parsed;
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      const extractSlides = (raw: string): any[] => {
+        let extracted: any;
+
+        // Try full object first
+        try {
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            extracted = parsed.slides ?? parsed;
+          }
+        } catch {
+          // ignore and try next strategy
         }
-      } catch (error) {
-        console.log('Initial JSON parsing failed, trying alternative methods...');
-        
-        // Try extracting just the slides array
-        const slidesMatch = content.match(/\[[\s\S]*\]/);
-        if (slidesMatch) {
-          try {
-            slides = JSON.parse(slidesMatch[0]);
-          } catch (error) {
-            console.log('Array parsing also failed, using fallback...');
-            // Final fallback - create basic slides from content
-            throw new Error('Could not parse JSON from DeepSeek response after multiple attempts');
+
+        // Try array-only extraction
+        if (!extracted) {
+          const slidesMatch = raw.match(/\[[\s\S]*\]/);
+          if (slidesMatch) {
+            extracted = JSON.parse(slidesMatch[0]);
           }
         }
+
+        if (!extracted) {
+          console.error('Failed to extract slides from DeepSeek response:', raw);
+          throw new Error('Could not parse JSON from DeepSeek response');
+        }
+
+        if (Array.isArray(extracted)) return extracted;
+        if (Array.isArray(extracted.slides)) return extracted.slides;
+        return extracted;
+      };
+
+      const normalizeSlides = (rawSlides: any[]): SlideContent[] =>
+        (rawSlides || []).map((slide: any, index: number) => ({
+          // Force sequential numbering to avoid duplicates/missing numbers from the model
+          slideNumber: index + 1,
+          content: slide.content || slide.text || `Generated slide ${index + 1}`,
+          visualPrompt:
+            slide.visualPrompt ||
+            slide.visual ||
+            slide.imagePrompt ||
+            `Visual representation for "${article.title}" - slide ${index + 1}`,
+          altText:
+            slide.altText ||
+            slide.alt ||
+            slide.description ||
+            `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`,
+        }));
+
+      let rawSlides = extractSlides(content);
+      let normalized = normalizeSlides(rawSlides);
+
+      // Hard cap in case the model over-produces
+      if (normalized.length > slideCount) {
+        normalized = normalized.slice(0, slideCount);
       }
-      
-      if (!slides) {
-        console.error('Failed to extract slides from DeepSeek response:', content);
-        throw new Error('Could not parse JSON from DeepSeek response');
+
+      // If under-produced, retry once with a stricter “fix the count” instruction
+      if (normalized.length < slideCount) {
+        console.warn(`⚠️ DeepSeek returned ${normalized.length}/${slideCount} slides; attempting repair...`);
+
+        const repairPrompt = `You MUST return exactly ${slideCount} slides.
+
+You previously returned only ${normalized.length} slides. Re-output the full carousel as valid JSON using this schema:
+{
+  "slides": [
+    { "slideNumber": 1, "content": "...", "visualPrompt": "...", "altText": "..." }
+  ]
+}
+
+Constraints:
+- Exactly ${slideCount} slides.
+- Slide 1: 8 words ideal, 15 words max.
+- Slides 2-${slideCount}: max 30-40 words each.
+- Final slide MUST include source attribution.
+- Do not invent facts; if missing, say "Not specified in source".
+
+ARTICLE TITLE: ${article.title}
+ARTICLE CONTENT: ${article.body}
+PUBLICATION: ${publicationName}
+
+Here is your partial prior output (use it as the starting point):
+${JSON.stringify({ slides: normalized }, null, 2)}
+`;
+
+        const repairResp = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: 'You are a precise JSON generator. Output valid JSON only.' },
+              { role: 'user', content: repairPrompt }
+            ],
+            temperature: 0.3,
+            max_tokens: slideCount >= 12 ? 3600 : slideCount >= 8 ? 2600 : 2000
+          })
+        });
+
+        if (repairResp.ok) {
+          const repairData = await repairResp.json();
+          const repairContent = repairData.choices?.[0]?.message?.content || '';
+          try {
+            rawSlides = extractSlides(repairContent);
+            normalized = normalizeSlides(rawSlides).slice(0, slideCount);
+          } catch (e) {
+            console.warn('⚠️ Repair attempt failed to parse, falling back to padding.', e);
+          }
+        } else {
+          console.warn(`⚠️ Repair request failed: ${repairResp.status}`);
+        }
       }
-      
-      // Validate and normalize slide structure
-      return slides.map((slide: any, index: number) => ({
-        slideNumber: slide.slideNumber || (index + 1),
-        content: slide.content || slide.text || `Generated slide ${index + 1}`,
-        visualPrompt: slide.visualPrompt || slide.visual || slide.imagePrompt || `Visual representation for "${article.title}" - slide ${index + 1}`,
-        altText: slide.altText || slide.alt || slide.description || `Slide ${index + 1}: ${(slide.content || '').substring(0, 50)}...`
-      }));
+
+      // As a last resort, pad to the requested count (keeps the pipeline consistent)
+      if (normalized.length < slideCount) {
+        console.warn(`⚠️ Still short after repair (${normalized.length}/${slideCount}); padding safely.`);
+        while (normalized.length < slideCount) {
+          const n = normalized.length + 1;
+          const isLast = n === slideCount;
+          normalized.push({
+            slideNumber: n,
+            content: isLast
+              ? `Source: ${publicationName}. Read the original article for full details.`
+              : 'Not specified in source. Read the original article for full context.',
+            visualPrompt: `Simple, neutral editorial illustration for "${article.title}" (slide ${n}).`,
+            altText: `Slide ${n}: Additional context not specified in source.`,
+          });
+        }
+      }
+
+      return normalized.slice(0, slideCount);
+
       
     } catch (error) {
       console.error('Error generating slides with DeepSeek:', error);
@@ -702,7 +806,14 @@ Return in JSON format:
         throw new Error('DeepSeek API key not configured');
       }
       
-      console.log('🤖 Using DeepSeek for slide generation...');
+      console.log('🤖 Using DeepSeek for slide generation...', {
+        finalSlideType,
+        targetSlideCount,
+        effectiveTone,
+        effectiveWritingStyle,
+        topicExpertise
+      });
+
       slides = await generateSlidesWithDeepSeek(
         article,
         deepseekApiKey,
@@ -716,7 +827,7 @@ Return in JSON format:
         supabase
       );
 
-      console.log(`✅ Generated ${slides.length} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
+      console.log(`✅ Generated ${slides.length}/${targetSlideCount} slides successfully from ${actualContentSource} source${isSnippet ? ' (snippet)' : ''}`);
     } catch (error) {
       console.error('❌ Error during slide generation:', error);
       
@@ -793,6 +904,11 @@ Return in JSON format:
         title: article.title,
         status: 'published', // Auto-publish updated stories
         is_published: true, // Auto-publish updated stories
+        tone: effectiveTone,
+        writing_style: effectiveWritingStyle,
+        audience_expertise: topicExpertise,
+        slide_type: finalSlideType,
+        slide_count: targetSlideCount,
         quality_score: article.content_quality_score, // Persist for auto-illustration
         updated_at: new Date().toISOString()
       };
@@ -831,7 +947,10 @@ Return in JSON format:
         status: 'published', // Auto-publish new stories
         is_published: true, // Auto-publish new stories
         tone: effectiveTone,
+        writing_style: effectiveWritingStyle,
         audience_expertise: topicExpertise,
+        slide_type: finalSlideType,
+        slide_count: targetSlideCount,
         quality_score: article.content_quality_score, // Persist quality score for auto-illustration
         cover_illustration_url: article.image_url || null // Preserve original article image for social sharing
       };
@@ -876,20 +995,28 @@ Return in JSON format:
       console.warn('⚠️ Could not delete existing slides (may be none):', deleteSlidesError);
     }
 
-    const { error: slidesError } = await supabase
+    const { data: insertedSlides, error: slidesError } = await supabase
       .from('slides')
-      .insert(slides.map(slide => ({
+      .insert(slides.map((slide, index) => ({
         story_id: storyId,
-        slide_number: slide.slideNumber,
+        slide_number: index + 1,
         content: slide.content,
         visual_prompt: slide.visualPrompt,
         alt_text: slide.altText
-      })));
+      })))
+      .select('id, slide_number');
 
     if (slidesError) {
       console.error('❌ Failed to store slides:', slidesError);
     } else {
-      console.log('💾 Stored slides successfully');
+      const minN = Math.min(...(insertedSlides || []).map(s => s.slide_number));
+      const maxN = Math.max(...(insertedSlides || []).map(s => s.slide_number));
+      console.log('💾 Stored slides successfully', {
+        inserted: insertedSlides?.length || 0,
+        expected: targetSlideCount,
+        minSlideNumber: Number.isFinite(minN) ? minN : null,
+        maxSlideNumber: Number.isFinite(maxN) ? maxN : null
+      });
     }
 
     // Upsert post copy for Instagram by replacing any prior row
