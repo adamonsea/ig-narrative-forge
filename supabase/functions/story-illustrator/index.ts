@@ -58,26 +58,26 @@ serve(async (req) => {
     }
     
     const modelConfigs: Record<string, ModelConfig> = {
-      // GPT Image 1.5 - 20% cheaper than GPT Image 1, better quality
+      // GPT Image 1 - OpenAI's image generation model
       'gpt-image-1.5-high': {
         provider: 'openai',
         quality: 'high',
         credits: 8,
-        cost: 0.032, // 20% less than 0.04
+        cost: 0.032,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-1.5-medium': {
         provider: 'openai',
         quality: 'medium',
         credits: 4,
-        cost: 0.016, // 20% less than 0.02
+        cost: 0.016,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-1.5-low': {
         provider: 'openai',
         quality: 'low',
         credits: 2,
-        cost: 0.008, // Estimated low quality pricing
+        cost: 0.008,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gemini-pro-image': {
@@ -764,8 +764,8 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('Failed to decode Gemini Pro image data');
       }
     } else if (modelConfig.provider === 'openai') {
-      // OpenAI GPT-Image-1.5 - Premium quality tier (20% cheaper, better quality)
-      console.log('Generating with OpenAI GPT-Image-1.5...');
+      // OpenAI GPT-Image-1 - Premium quality tier
+      console.log('Generating with OpenAI GPT-Image-1...');
       
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (!OPENAI_API_KEY) {
@@ -775,6 +775,14 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       // Compression varies by quality tier
       const compressionLevel = modelConfig.quality === 'high' ? 95 : modelConfig.quality === 'low' ? 60 : 75;
 
+      // Note: OpenAI's image model is 'gpt-image-1' (not 1.5 - that doesn't exist)
+      console.log('📸 OpenAI request parameters:', {
+        model: 'gpt-image-1',
+        size: '1536x1024',
+        quality: modelConfig.quality || 'medium',
+        promptLength: illustrationPrompt.length
+      });
+
       const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
@@ -782,7 +790,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1.5',
+          model: 'gpt-image-1',
           prompt: illustrationPrompt,
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
