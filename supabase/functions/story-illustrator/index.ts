@@ -58,26 +58,27 @@ serve(async (req) => {
     }
     
     const modelConfigs: Record<string, ModelConfig> = {
-      // GPT Image 1 - OpenAI's image generation model
+      // OpenAI GPT Image 1.5 (official per-image pricing for 1536x1024)
+      // https://platform.openai.com/docs/models/gpt-image-1.5
       'gpt-image-1.5-high': {
         provider: 'openai',
         quality: 'high',
         credits: 8,
-        cost: 0.032,
+        cost: 0.20,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-1.5-medium': {
         provider: 'openai',
         quality: 'medium',
         credits: 4,
-        cost: 0.016,
+        cost: 0.05,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-1.5-low': {
         provider: 'openai',
         quality: 'low',
         credits: 2,
-        cost: 0.008,
+        cost: 0.013,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gemini-pro-image': {
@@ -98,18 +99,28 @@ serve(async (req) => {
         cost: 0.04,
         stylePrefix: 'photorealistic editorial photography, '
       },
-      // Legacy support for old model names
+
+      // Legacy support for older UI/model keys that map to GPT Image 1
+      // (official per-image pricing for 1536x1024)
+      // https://platform.openai.com/docs/models/gpt-image-1
       'gpt-image-1-high': {
         provider: 'openai',
         quality: 'high',
         credits: 8,
-        cost: 0.032,
+        cost: 0.25,
         stylePrefix: 'cinematic and editorial style, '
       },
       'gpt-image-1-medium': {
         provider: 'openai',
         quality: 'medium',
         credits: 4,
+        cost: 0.063,
+        stylePrefix: 'cinematic and editorial style, '
+      },
+      'gpt-image-1-low': {
+        provider: 'openai',
+        quality: 'low',
+        credits: 2,
         cost: 0.016,
         stylePrefix: 'cinematic and editorial style, '
       },
@@ -117,7 +128,7 @@ serve(async (req) => {
         provider: 'openai',
         quality: 'medium',
         credits: 4,
-        cost: 0.016,
+        cost: 0.063,
         stylePrefix: 'cinematic and editorial style, '
       },
       'flux-dev': {
@@ -764,9 +775,10 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('Failed to decode Gemini Pro image data');
       }
     } else if (modelConfig.provider === 'openai') {
-      // OpenAI GPT-Image-1 - Premium quality tier
-      console.log('Generating with OpenAI GPT-Image-1...');
-      
+      const openaiModelName = model.startsWith('gpt-image-1.5') ? 'gpt-image-1.5' : 'gpt-image-1';
+
+      console.log(`Generating with OpenAI ${openaiModelName}...`);
+
       const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
       if (!OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY not configured');
@@ -775,9 +787,8 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
       // Compression varies by quality tier
       const compressionLevel = modelConfig.quality === 'high' ? 95 : modelConfig.quality === 'low' ? 60 : 75;
 
-      // Note: OpenAI's image model is 'gpt-image-1' (not 1.5 - that doesn't exist)
       console.log('📸 OpenAI request parameters:', {
-        model: 'gpt-image-1',
+        model: openaiModelName,
         size: '1536x1024',
         quality: modelConfig.quality || 'medium',
         promptLength: illustrationPrompt.length
@@ -790,7 +801,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: openaiModelName,
           prompt: illustrationPrompt,
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
@@ -804,9 +815,9 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         const errorText = await openaiResponse.text();
         console.error('OpenAI API error response:', errorText);
         console.error('Request parameters:', JSON.stringify({
-          model: 'gpt-image-1.5',
+          model: openaiModelName,
           size: '1536x1024',
-          quality: modelConfig.quality,
+          quality: modelConfig.quality || 'medium',
           output_format: 'webp',
           output_compression: compressionLevel
         }));
