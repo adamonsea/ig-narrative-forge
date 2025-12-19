@@ -784,9 +784,6 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
         throw new Error('OPENAI_API_KEY not configured');
       }
 
-      // Compression varies by quality tier
-      const compressionLevel = modelConfig.quality === 'high' ? 95 : modelConfig.quality === 'low' ? 60 : 75;
-
       console.log('📸 OpenAI request parameters:', {
         model: openaiModelName,
         size: '1536x1024',
@@ -806,8 +803,7 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
           n: 1,
           size: '1536x1024', // Landscape aspect ratio for feed UI
           quality: modelConfig.quality || 'medium',
-          output_format: 'webp',
-          output_compression: compressionLevel
+          output_format: 'png'
         }),
       });
 
@@ -1154,26 +1150,30 @@ Style benchmark: Think flat vector illustration with maximum 30 line strokes tot
 
     generationTime = Date.now() - startTime
     
-    // Calculate actual cost based on model configuration
-    const estimatedCost = modelConfig.cost;
+    // Calculate actual cost based on provider actually used (handles fallbacks)
+    let actualServiceName: string = modelConfig.provider;
+    let actualCostUsd: number = modelConfig.cost;
 
-    // Track API usage with enhanced metadata for debugging
+    if (usedFallback) {
+      if (fallbackModel === 'Gemini') {
+        actualServiceName = 'lovable-gemini';
+        actualCostUsd = modelConfigs['gemini-image']?.cost ?? 0.001;
+      } else if (fallbackModel === 'Replicate FLUX') {
+        actualServiceName = 'replicate-flux';
+        actualCostUsd = modelConfigs['flux-dev']?.cost ?? 0.025;
+      }
+    }
+
+    // Track API usage (table has no metadata column)
     try {
       const { error: usageError } = await supabase
         .from('api_usage')
         .insert({
-          service_name: modelConfig.provider,
+          service_name: actualServiceName,
           operation: 'image_generation',
-          cost_usd: estimatedCost,
+          cost_usd: actualCostUsd,
           tokens_used: 0,
           region: null,
-          metadata: {
-            model: model,
-            illustration_style: illustrationStyle,
-            story_id: storyId,
-            generation_time_ms: generationTime,
-            prompt_preview: illustrationPrompt.substring(0, 500) // Store prompt for QA
-          }
         })
 
       if (usageError) {

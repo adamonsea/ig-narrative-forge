@@ -905,7 +905,6 @@ Return in JSON format:
         writing_style: effectiveWritingStyle,
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
-        slide_count: targetSlideCount,
         quality_score: article.content_quality_score, // Persist for auto-illustration
         updated_at: new Date().toISOString()
       };
@@ -947,7 +946,6 @@ Return in JSON format:
         writing_style: effectiveWritingStyle,
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
-        slide_count: targetSlideCount,
         quality_score: article.content_quality_score, // Persist quality score for auto-illustration
         cover_illustration_url: article.image_url || null // Preserve original article image for social sharing
       };
