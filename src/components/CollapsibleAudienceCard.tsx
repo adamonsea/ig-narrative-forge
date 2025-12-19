@@ -85,16 +85,23 @@ export const CollapsibleAudienceCard = ({ topicId, visitsToday, visitsThisWeek }
             </div>
             
             {/* Summary line - always visible */}
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <span className="font-bold text-[hsl(270,100%,68%)]">{visitsThisWeek}</span>
-              <span className="text-muted-foreground">This Week</span>
+            <div className="mt-2 flex items-center gap-3 text-sm">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-[hsl(270,100%,68%)]">{visitsToday}</span>
+                <span className="text-xs text-muted-foreground">today</span>
+              </div>
               <span className="text-muted-foreground">•</span>
-              {breakdown ? (
-                <span className={`font-medium ${returnRateColor}`}>
-                  {breakdown.return_rate_pct}% Return Rate
-                </span>
-              ) : (
-                <span className="text-muted-foreground text-xs">Expand for details</span>
+              <div className="flex items-baseline gap-1">
+                <span className="font-semibold text-foreground">{visitsThisWeek}</span>
+                <span className="text-xs text-muted-foreground">this week</span>
+              </div>
+              {breakdown && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <span className={`text-xs font-medium ${returnRateColor}`}>
+                    {breakdown.return_rate_pct}% return
+                  </span>
+                </>
               )}
             </div>
           </CollapsibleTrigger>
