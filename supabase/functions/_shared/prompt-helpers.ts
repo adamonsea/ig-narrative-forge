@@ -54,11 +54,12 @@ export async function analyzeStoryTone(
 
 /**
  * Extracts key visual subject matter from story content using OpenAI
- * Enhanced to capture gender, age, and physical characteristics when people are involved
+ * Enhanced to capture specific names, roles, gender, age, and physical characteristics
  */
 export async function extractSubjectMatter(
   slides: SlideContent[],
-  openaiKey: string
+  openaiKey: string,
+  storyTitle?: string
 ): Promise<string> {
   if (!openaiKey || slides.length === 0) {
     return 'local news scene';
@@ -66,6 +67,7 @@ export async function extractSubjectMatter(
 
   try {
     const storyText = slides.map(s => s.content).join('\n');
+    const titleContext = storyTitle ? `Story Title: ${storyTitle}\n\n` : '';
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,22 +79,30 @@ export async function extractSubjectMatter(
         model: 'gpt-4o-mini',
         messages: [{
           role: 'user',
-          content: `Extract the main visual subject from this story in 15-25 words for image generation.
+          content: `Extract the main visual subject from this story in 20-35 words for image generation.
 
 CRITICAL REQUIREMENTS:
-- If the story features a PERSON, you MUST specify: gender (man/woman/boy/girl), approximate age range (young/middle-aged/elderly), and any mentioned physical details
-- Focus on concrete visual elements: people with their gender/age, specific places, objects, actions
-- Be precise about WHO is doing WHAT and WHERE
+- INCLUDE SPECIFIC NAMES when mentioned (e.g., "MP Stephen Lloyd", "Councillor Jane Smith", "Chef Marco Pierre White")
+- Include their ROLE or TITLE (MP, councillor, business owner, chef, teacher, etc.)
+- Specify gender (man/woman) and approximate age if apparent from context
+- Describe the KEY ACTION or SETTING they're involved in
+- Focus on the PRIMARY person/people, not background characters
+
+NAMING IS ESSENTIAL:
+- If someone is named in the story, USE THEIR NAME in your output
+- Politicians, officials, business owners, celebrities - always include their actual name
+- This helps generate contextually appropriate images
 
 Example outputs:
-- "elderly man in his 70s sitting alone at a seaside bench overlooking the pier at sunset"
-- "young woman in her 30s celebrating outside a restaurant holding a trophy"
-- "middle-aged male business owner standing in front of his newly opened shop"
+- "MP Stephen Lloyd, middle-aged man in suit, speaking at a community town hall meeting in Eastbourne"
+- "Chef Gordon Ramsay, 50s, demonstrating cooking techniques in his restaurant kitchen"  
+- "Councillor Sarah Thompson, woman in her 40s, cutting ribbon at new community centre opening"
+- "Local business owner David Chen outside his newly renovated seafront cafe"
 
-Story text:
-${storyText.slice(0, 1500)}`
+${titleContext}Story text:
+${storyText.slice(0, 2000)}`
         }],
-        max_tokens: 60,
+        max_tokens: 80,
         temperature: 0.3,
       }),
     });
