@@ -713,15 +713,16 @@ Return in JSON format:
       console.log(`✅ Using legacy article: ${article.title} (${article.word_count} words)`);
     }
 
-    // Get topic details for audience expertise and default tone if available
+    // Get topic details for audience expertise, default tone, and drip feed settings
     let topicExpertise = audienceExpertise;
     let effectiveTone = tone;
     let effectiveWritingStyle = writingStyle;
+    let dripFeedEnabled = false;
     
     if (article.topic_id) {
       const { data: topicData } = await supabase
         .from('topics')
-        .select('audience_expertise, default_tone, default_writing_style')
+        .select('audience_expertise, default_tone, default_writing_style, drip_feed_enabled')
         .eq('id', article.topic_id)
         .maybeSingle();
       
@@ -729,7 +730,8 @@ Return in JSON format:
         topicExpertise = audienceExpertise || topicData.audience_expertise;
         effectiveTone = tone || topicData.default_tone;
         effectiveWritingStyle = writingStyle || topicData.default_writing_style;
-        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}`);
+        dripFeedEnabled = topicData.drip_feed_enabled || false;
+        console.log(`Content settings: expertise=${topicExpertise}${audienceExpertise ? ' (override)' : ' (topic default)'}, tone=${effectiveTone}${tone ? ' (override)' : ' (topic default)'}, style=${effectiveWritingStyle}${writingStyle ? ' (override)' : ' (topic default)'}, dripFeed=${dripFeedEnabled}`);
       }
     }
 
@@ -896,18 +898,26 @@ Return in JSON format:
     if (existingStory?.id) {
       storyId = existingStory.id;
       
-      // Update story with multi-tenant linkage and auto-publish
+      // Determine story status based on drip feed settings
+      const storyStatus = dripFeedEnabled ? 'ready' : 'published';
+      const isPublished = !dripFeedEnabled;
+      
+      // Update story with multi-tenant linkage
       const updateData: any = { 
         title: article.title,
-        status: 'published', // Auto-publish updated stories
-        is_published: true, // Auto-publish updated stories
+        status: storyStatus,
+        is_published: isPublished,
         tone: effectiveTone,
         writing_style: effectiveWritingStyle,
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
-        quality_score: article.content_quality_score, // Persist for auto-illustration
+        quality_score: article.content_quality_score,
         updated_at: new Date().toISOString()
       };
+      
+      if (dripFeedEnabled) {
+        console.log(`💧 Drip feed enabled - setting story to 'ready' status for scheduling`);
+      }
       
       // Preserve article image for social sharing if story doesn't have one
       if (article.image_url && !existingStory.cover_illustration_url) {
@@ -937,18 +947,26 @@ Return in JSON format:
         console.log(`📝 Updated existing story ${storyId} with multi-tenant linkage`);
       }
     } else {
-      // Create new story with full multi-tenant support (auto-published)
+      // Determine story status based on drip feed settings
+      const storyStatus = dripFeedEnabled ? 'ready' : 'published';
+      const isPublished = !dripFeedEnabled;
+      
+      // Create new story with full multi-tenant support
       const insertData: any = {
         title: article.title,
-        status: 'published', // Auto-publish new stories
-        is_published: true, // Auto-publish new stories
+        status: storyStatus,
+        is_published: isPublished,
         tone: effectiveTone,
         writing_style: effectiveWritingStyle,
         audience_expertise: topicExpertise,
         slide_type: finalSlideType,
-        quality_score: article.content_quality_score, // Persist quality score for auto-illustration
-        cover_illustration_url: article.image_url || null // Preserve original article image for social sharing
+        quality_score: article.content_quality_score,
+        cover_illustration_url: article.image_url || null
       };
+      
+      if (dripFeedEnabled) {
+        console.log(`💧 Drip feed enabled - creating story with 'ready' status for scheduling`);
+      }
       
       // Set appropriate IDs based on context - mutually exclusive
       if (isMultiTenant) {
