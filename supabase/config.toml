@@ -483,3 +483,10 @@ verify_jwt = false
 [functions.drip-feed-scheduler]
 verify_jwt = false
 
+# ========================================
+# WIDGET API
+# ========================================
+
+[functions.widget-feed-data]
+verify_jwt = false
+
