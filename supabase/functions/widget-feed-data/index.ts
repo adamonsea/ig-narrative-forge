@@ -1,0 +1,106 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Cache-Control': 'public, max-age=300', // 5 minute cache
+};
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const feedSlug = url.searchParams.get('feed');
+    const maxStories = Math.min(Math.max(parseInt(url.searchParams.get('max') || '5'), 1), 10);
+
+    if (!feedSlug) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameter: feed' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`📰 Widget request for feed: ${feedSlug}, max: ${maxStories}`);
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch topic/feed data
+    const { data: topic, error: topicError } = await supabase
+      .from('topics')
+      .select('id, name, slug, region, branding_config')
+      .eq('slug', feedSlug)
+      .eq('is_active', true)
+      .single();
+
+    if (topicError || !topic) {
+      console.error('Topic not found:', topicError);
+      return new Response(
+        JSON.stringify({ error: 'Feed not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extract branding from config
+    const branding = topic.branding_config || {};
+    const feedData = {
+      name: topic.name,
+      slug: topic.slug,
+      logo_url: branding.logo_url || null,
+      brand_color: branding.primary_color || branding.brand_color || '#3b82f6',
+    };
+
+    // Fetch published stories
+    const { data: stories, error: storiesError } = await supabase
+      .from('stories')
+      .select('id, headline, published_at')
+      .eq('topic_id', topic.id)
+      .eq('is_published', true)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(maxStories);
+
+    if (storiesError) {
+      console.error('Error fetching stories:', storiesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch stories' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build story URLs
+    const baseUrl = `https://eezeenews.lovable.app`;
+    const formattedStories = (stories || []).map(story => ({
+      title: story.headline,
+      url: `${baseUrl}/feed/${topic.slug}/story/${story.id}`,
+      published_at: story.published_at,
+    }));
+
+    console.log(`✅ Returning ${formattedStories.length} stories for widget`);
+
+    return new Response(
+      JSON.stringify({
+        feed: feedData,
+        stories: formattedStories,
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
+  } catch (error) {
+    console.error('Widget feed error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

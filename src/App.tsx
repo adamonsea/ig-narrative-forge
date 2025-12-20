@@ -25,6 +25,7 @@ import SwipeMode from "./pages/SwipeMode";
 import Pricing from "./pages/Pricing";
 import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
+import WidgetsPage from "./pages/dashboard/Widgets";
 
 // Redirect component for old feed URLs
 const FeedRedirect = () => {
@@ -67,6 +68,7 @@ const App = () => {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/topic/:slug" element={<TopicDashboard />} />
+                <Route path="/dashboard/widgets" element={<WidgetsPage />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/admin/ai-costs" element={<AICostDashboardPage />} />
                 
