@@ -338,7 +338,8 @@ serve(async (req) => {
     
     const subjectMatter = await extractSubjectMatter(
       slides || [],
-      OPENAI_API_KEY
+      OPENAI_API_KEY,
+      story.title
     )
 
     // Build appropriate prompt based on illustration style
