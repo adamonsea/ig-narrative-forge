@@ -198,12 +198,12 @@ serve(async (req) => {
 
         const storyId = generationResult.storyId || generationResult.story_id;
         
-        // Auto-approve high-quality stories
+        // Auto-approve high-quality stories (respecting drip feed status)
         try {
-          // Get the story's quality score and topic threshold
+          // Get the story's quality score, current status, and topic threshold
           const { data: story, error: storyError } = await supabase
             .from('stories')
-            .select('quality_score, article_id, topic_article_id')
+            .select('quality_score, status, article_id, topic_article_id')
             .eq('id', storyId)
             .single();
           
@@ -241,13 +241,15 @@ serve(async (req) => {
               }
             }
             
-            // Auto-approve if quality score meets or exceeds threshold
-            // Note: enhanced-content-generator already sets status='published' and is_published=true
-            // We only need to log the auto-approval, not change the status
+            // Check quality and respect the status set by enhanced-content-generator
+            // The generator sets 'ready' for drip-fed topics, 'published' for non-drip-fed
             if (story.quality_score && story.quality_score >= qualityThreshold) {
-              console.log(`🎯 Story ${storyId} auto-approved - quality score ${story.quality_score} >= threshold ${qualityThreshold}`);
+              // Quality is good - keep the status as set by the generator
+              // 'ready' for drip-fed topics (let drip scheduler handle publishing)
+              // 'published' for non-drip-fed topics
+              console.log(`🎯 Story ${storyId} auto-approved - quality score ${story.quality_score} >= threshold ${qualityThreshold}, keeping status '${story.status}'`);
             } else {
-              // Only downgrade to 'pending_review' if quality is below threshold
+              // Quality below threshold - downgrade to 'pending_review' for manual review
               const { error: reviewError } = await supabase
                 .from('stories')
                 .update({ 
