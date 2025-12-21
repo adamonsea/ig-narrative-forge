@@ -4,94 +4,100 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
   Hr,
+  Row,
+  Column,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 
-interface StoryPreview {
+interface EmailStory {
   id: string;
   title: string;
-  author?: string;
-  publication_name?: string;
+  thumbnail_url: string | null;
+  source_name: string;
+  story_url: string;
 }
 
 interface DailyRoundupEmailProps {
   topicName: string;
   topicSlug: string;
   date: string;
-  storyCount: number;
-  stories: StoryPreview[];
+  stories: EmailStory[];
   baseUrl: string;
+  unsubscribeUrl?: string;
 }
 
 export const DailyRoundupEmail = ({
   topicName = 'Your Topic',
   topicSlug = 'topic',
   date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
-  storyCount = 0,
   stories = [],
-  baseUrl = 'https://eezeenews.com'
+  baseUrl = 'https://eezeenews.com',
+  unsubscribeUrl
 }: DailyRoundupEmailProps) => (
   <Html>
     <Head />
-    <Preview>Your daily {topicName} briefing - {storyCount} {storyCount === 1 ? 'story' : 'stories'} today</Preview>
+    <Preview>Your daily {topicName} briefing - {stories.length} top stories</Preview>
     <Body style={main}>
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
+          <Text style={logo}>eeZee News</Text>
           <Heading style={h1}>{topicName}</Heading>
           <Text style={subtitle}>Daily Briefing • {date}</Text>
         </Section>
 
         <Hr style={hr} />
 
-        {/* Summary */}
-        <Section style={summarySection}>
-          <Text style={summaryText}>
-            {storyCount === 0 
-              ? "No new stories today. Check back tomorrow!"
-              : `${storyCount} ${storyCount === 1 ? 'story' : 'stories'} published today`
-            }
-          </Text>
-        </Section>
-
         {/* Stories */}
-        {stories.length > 0 && (
+        {stories.length > 0 ? (
           <Section style={storiesSection}>
-            {stories.map((story, index) => (
-              <Section key={story.id} style={storyCard}>
-                <Link
-                  href={`${baseUrl}/feed/${topicSlug}/story/${story.id}`}
-                  style={storyLink}
-                >
-                  <Text style={storyNumber}>{index + 1}</Text>
-                  <Text style={storyTitle}>{story.title}</Text>
-                </Link>
-                {(story.author || story.publication_name) && (
-                  <Text style={storyMeta}>
-                    {story.author && `By ${story.author}`}
-                    {story.author && story.publication_name && ' • '}
-                    {story.publication_name}
-                  </Text>
-                )}
-              </Section>
+            {stories.map((story) => (
+              <Link key={story.id} href={story.story_url} style={storyLink}>
+                <Section style={storyCard}>
+                  <Row>
+                    <Column style={thumbnailColumn}>
+                      {story.thumbnail_url ? (
+                        <Img
+                          src={story.thumbnail_url}
+                          alt=""
+                          width={80}
+                          height={80}
+                          style={thumbnail}
+                        />
+                      ) : (
+                        <div style={placeholderThumb} />
+                      )}
+                    </Column>
+                    <Column style={contentColumn}>
+                      <Text style={storyTitle}>{story.title}</Text>
+                      <Text style={sourceName}>{story.source_name}</Text>
+                    </Column>
+                  </Row>
+                </Section>
+              </Link>
             ))}
+          </Section>
+        ) : (
+          <Section style={emptySection}>
+            <Text style={emptyText}>No stories today. Check back tomorrow!</Text>
           </Section>
         )}
 
         <Hr style={hr} />
 
-        {/* CTA */}
+        {/* CTAs */}
         <Section style={ctaSection}>
-          <Link
-            href={`${baseUrl}/feed/${topicSlug}`}
-            style={ctaButton}
-          >
-            Read All Stories →
+          <Link href={`${baseUrl}/feed/${topicSlug}/roundup/daily`} style={ctaButtonPrimary}>
+            Today's Roundup →
+          </Link>
+          <Link href={`${baseUrl}/feed/${topicSlug}`} style={ctaButtonSecondary}>
+            Visit Feed
           </Link>
         </Section>
 
@@ -101,10 +107,10 @@ export const DailyRoundupEmail = ({
             You're receiving this because you subscribed to {topicName} daily updates.
           </Text>
           <Link
-            href={`${baseUrl}/feed/${topicSlug}`}
+            href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=daily`}
             style={footerLink}
           >
-            Manage preferences
+            Unsubscribe
           </Link>
         </Section>
       </Container>
@@ -123,94 +129,128 @@ const main = {
 const container = {
   backgroundColor: '#ffffff',
   margin: '0 auto',
-  padding: '20px 0 48px',
+  padding: '20px 0 32px',
   marginBottom: '64px',
   maxWidth: '600px',
 }
 
 const header = {
-  padding: '32px 40px 16px',
+  padding: '24px 32px 16px',
   textAlign: 'center' as const,
+}
+
+const logo = {
+  color: '#6366f1',
+  fontSize: '12px',
+  fontWeight: '600',
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase' as const,
+  margin: '0 0 8px',
 }
 
 const h1 = {
   color: '#1a1a1a',
-  fontSize: '28px',
+  fontSize: '24px',
   fontWeight: '700',
-  margin: '0 0 8px',
+  margin: '0 0 4px',
   padding: '0',
 }
 
 const subtitle = {
   color: '#6b7280',
-  fontSize: '14px',
+  fontSize: '13px',
   margin: '0',
 }
 
 const hr = {
   borderColor: '#e5e7eb',
-  margin: '20px 40px',
-}
-
-const summarySection = {
-  padding: '0 40px',
-}
-
-const summaryText = {
-  color: '#374151',
-  fontSize: '16px',
-  lineHeight: '24px',
-  margin: '16px 0',
-  textAlign: 'center' as const,
+  margin: '16px 32px',
 }
 
 const storiesSection = {
-  padding: '16px 40px',
-}
-
-const storyCard = {
-  backgroundColor: '#f9fafb',
-  borderRadius: '8px',
-  padding: '16px',
-  marginBottom: '12px',
+  padding: '8px 32px',
 }
 
 const storyLink = {
   textDecoration: 'none',
 }
 
-const storyNumber = {
-  color: '#6366f1',
-  fontSize: '12px',
-  fontWeight: '600',
-  margin: '0 0 4px',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.05em',
+const storyCard = {
+  backgroundColor: '#f9fafb',
+  borderRadius: '12px',
+  padding: '12px',
+  marginBottom: '12px',
+}
+
+const thumbnailColumn = {
+  width: '80px',
+  verticalAlign: 'top' as const,
+}
+
+const thumbnail = {
+  borderRadius: '8px',
+  objectFit: 'cover' as const,
+  width: '80px',
+  height: '80px',
+}
+
+const placeholderThumb = {
+  backgroundColor: '#e5e7eb',
+  borderRadius: '8px',
+  width: '80px',
+  height: '80px',
+}
+
+const contentColumn = {
+  paddingLeft: '12px',
+  verticalAlign: 'top' as const,
 }
 
 const storyTitle = {
   color: '#1a1a1a',
-  fontSize: '16px',
+  fontSize: '15px',
   fontWeight: '600',
-  lineHeight: '24px',
+  lineHeight: '20px',
+  margin: '0 0 6px',
+}
+
+const sourceName = {
+  color: '#6b7280',
+  fontSize: '12px',
   margin: '0',
 }
 
-const storyMeta = {
-  color: '#6b7280',
-  fontSize: '13px',
-  margin: '8px 0 0',
-}
-
-const ctaSection = {
-  padding: '24px 40px',
+const emptySection = {
+  padding: '32px',
   textAlign: 'center' as const,
 }
 
-const ctaButton = {
+const emptyText = {
+  color: '#6b7280',
+  fontSize: '14px',
+}
+
+const ctaSection = {
+  padding: '16px 32px 24px',
+  textAlign: 'center' as const,
+}
+
+const ctaButtonPrimary = {
   backgroundColor: '#6366f1',
-  borderRadius: '6px',
+  borderRadius: '8px',
   color: '#ffffff',
+  display: 'inline-block',
+  fontSize: '14px',
+  fontWeight: '600',
+  padding: '12px 24px',
+  textDecoration: 'none',
+  marginRight: '12px',
+}
+
+const ctaButtonSecondary = {
+  backgroundColor: '#f3f4f6',
+  borderRadius: '8px',
+  color: '#374151',
   display: 'inline-block',
   fontSize: '14px',
   fontWeight: '600',
@@ -219,19 +259,19 @@ const ctaButton = {
 }
 
 const footer = {
-  padding: '0 40px',
+  padding: '0 32px',
   textAlign: 'center' as const,
 }
 
 const footerText = {
   color: '#9ca3af',
-  fontSize: '12px',
-  lineHeight: '20px',
+  fontSize: '11px',
+  lineHeight: '18px',
   margin: '0 0 8px',
 }
 
 const footerLink = {
   color: '#6366f1',
-  fontSize: '12px',
+  fontSize: '11px',
   textDecoration: 'underline',
 }
