@@ -37,7 +37,7 @@ export function EmblaSlideCarousel({
   );
   const hasTrackedSwipe = useRef(false);
 
-  // Embla with mobile-optimized options
+  // Embla with mobile-optimized options - balanced for smoothness
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     containScroll: "trimSnaps",
@@ -45,8 +45,7 @@ export function EmblaSlideCarousel({
     skipSnaps: false,
     startIndex: initialIndex,
     watchDrag: true,
-    duration: 20, // Fast snap animation (ms) - feels responsive
-    dragThreshold: 10, // Lower threshold = more responsive to swipes
+    duration: 30, // Smooth snap animation - not too fast, not sluggish
   });
 
   // Sync selected index with Embla
@@ -133,14 +132,23 @@ export function EmblaSlideCarousel({
         className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing"
         style={{
           touchAction: "pan-y pinch-zoom",
+          WebkitOverflowScrolling: "touch",
         }}
       >
-        {/* Embla container - GPU accelerated */}
-        <div className="flex h-full touch-pan-y [backface-visibility:hidden] [transform:translate3d(0,0,0)]">
+        {/* Embla container - GPU accelerated for smooth swiping */}
+        <div 
+          className="flex h-full touch-pan-y"
+          style={{
+            willChange: "transform",
+            backfaceVisibility: "hidden",
+            transform: "translate3d(0, 0, 0)",
+          }}
+        >
           {slides.map((slide, i) => (
             <div
               key={i}
-              className="flex-[0_0_100%] min-w-0 h-full [backface-visibility:hidden]"
+              className="flex-[0_0_100%] min-w-0 h-full"
+              style={{ backfaceVisibility: "hidden" }}
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${i + 1} of ${count}`}
