@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { useState } from "react";
-import { SwipeCarousel } from "@/components/ui/swipe-carousel";
+import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import { formatDistanceToNow } from "date-fns";
 import { ComparisonCard } from './ComparisonCard';
 
@@ -377,7 +377,7 @@ export const SentimentCard = ({
 
           {/* SwipeCarousel */}
           <div className="flex-1">
-            <SwipeCarousel
+            <EmblaSlideCarousel
               slides={slideComponents}
               height="100%"
               initialIndex={currentSlide}

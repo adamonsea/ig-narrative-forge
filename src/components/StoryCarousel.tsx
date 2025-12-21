@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { getRelativeTimeLabel, getRelativeTimeColor, isNewlyPublished, getNewFlagColor, isNewStory, getPopularBadgeStyle, isPopularStory } from '@/lib/dateUtils';
 import { format } from 'date-fns';
-import { SwipeCarousel } from '@/components/ui/swipe-carousel';
+import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { useStoryInteractionTracking } from '@/hooks/useStoryInteractionTracking';
 import { optimizeImageUrl } from '@/lib/imageOptimization';
@@ -1072,7 +1072,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
             {/* Hand Swipe Hint - only show on first story */}
             {storyIndex === 0 && topicSlug && <HandSwipeHint topicSlug={topicSlug} />}
             
-            <SwipeCarousel
+            <EmblaSlideCarousel
               slides={slideComponents}
               height="100%"
               initialIndex={currentSlideIndex}
@@ -1081,7 +1081,6 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
               ariaLabel={`${story.title} story slides`}
               storyId={story.id}
               topicId={topicId}
-              showPreviewAnimation={isFirstCard}
             />
           </div>
 
