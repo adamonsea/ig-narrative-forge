@@ -43,6 +43,7 @@ export function SwipeCarousel({
   const [width, setWidth] = useState(0);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
+  const snapControlsRef = useRef<ReturnType<typeof animate> | null>(null);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   const [isDragBlocked, setIsDragBlocked] = useState(false);
@@ -79,19 +80,14 @@ export function SwipeCarousel({
     return () => ro.disconnect();
   }, []);
 
-  // keep x aligned on resize (no animation)
+  // keep x aligned on resize/index changes (no animation)
   useEffect(() => {
     x.set(-index * width);
-  }, [width]);
+  }, [index, width, x]);
 
-  // animate to index when changed via dots/click
-  useEffect(() => {
-    const controls = animate(x, -index * width, {
-      type: "spring",
-      ...animationPresets.spring,
-    });
-    return controls.stop;
-  }, [index, animationPresets]);
+  // Note: We intentionally avoid a "animate on index" effect.
+  // All snapping animations are triggered explicitly in goTo()/onDragEnd,
+  // which prevents animation fights and guarantees snap-back.
 
   // notify parent of slide changes and track swipes
   useEffect(() => {
@@ -148,21 +144,53 @@ export function SwipeCarousel({
   // Auto-slide effect
   useEffect(() => {
     if (!autoSlide || count <= 1) return;
-    
+
     const interval = setInterval(() => {
       setIndex((current) => {
-        // Loop back to start after reaching the end
-        return current >= count - 1 ? 0 : current + 1;
+        const nextIndex = current >= count - 1 ? 0 : current + 1;
+
+        // Animate the snap to keep auto-slide smooth
+        snapControlsRef.current?.stop?.();
+        if (width > 0) {
+          snapControlsRef.current = animate(x, -nextIndex * width, {
+            type: "spring",
+            ...animationPresets.spring,
+          });
+        }
+
+        return nextIndex;
       });
     }, autoSlideInterval);
-    
-    return () => clearInterval(interval);
-  }, [autoSlide, autoSlideInterval, count]);
 
-  const clamp = (v: number) => Math.min(Math.max(v, 0), count - 1);
-  const goTo = (i: number) => setIndex(clamp(i));
-  const prev = () => goTo(index - 1);
-  const next = () => goTo(index + 1);
+    return () => clearInterval(interval);
+  }, [autoSlide, autoSlideInterval, count, width, x, animationPresets.spring]);
+
+  const clamp = React.useCallback((v: number) => Math.min(Math.max(v, 0), count - 1), [count]);
+
+  const snapTo = React.useCallback(
+    (nextIndex: number, updateIndex: boolean) => {
+      const clamped = clamp(nextIndex);
+
+      // Stop any in-flight snap animation before starting a new one
+      snapControlsRef.current?.stop?.();
+
+      if (width > 0) {
+        snapControlsRef.current = animate(x, -clamped * width, {
+          type: "spring",
+          ...animationPresets.spring,
+        });
+      }
+
+      if (updateIndex && clamped !== index) {
+        setIndex(clamped);
+      }
+    },
+    [animationPresets.spring, clamp, index, width, x]
+  );
+
+  const goTo = (i: number) => snapTo(i, true);
+  const prev = () => snapTo(index - 1, true);
+  const next = () => snapTo(index + 1, true);
 
   // Instagram-like gesture: smooth slide-by-slide navigation with velocity-weighted thresholds
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
@@ -190,11 +218,10 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
 
-    // Only update index if it changed - let dragTransition handle snap-back
-    if (targetIndex !== index) {
-      setIndex(targetIndex);
-    }
-    // No manual snap-back animation - dragTransition bounceStiffness/bounceDamping handles it
+    // Always snap back to the nearest slide on release.
+    // We animate the motion value directly (even when index doesn't change)
+    // to avoid leaving the carousel between slides.
+    snapTo(targetIndex, targetIndex !== index);
   };
 
 
@@ -219,12 +246,11 @@ export function SwipeCarousel({
           className="flex h-full relative will-change-transform"
           drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={animationPresets.dragElastic}
-          dragMomentum={true}
+          dragMomentum={false}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={{
-            bounceStiffness: 200,
-            bounceDamping: 40,
-            timeConstant: 400,
+            bounceStiffness: 600,
+            bounceDamping: 45,
           }}
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
