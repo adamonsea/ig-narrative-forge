@@ -264,40 +264,40 @@ export function getAnimationPresets(): AnimationPresets {
   
   switch (tier) {
     case 'modern-ios':
-      // Modern iOS: snappy, tactile feel with haptics
+      // Modern iOS: lighter, snappier feel - reduced mass for responsiveness
       return {
-        dragElastic: 0.15,
-        spring: { stiffness: 450, damping: 32, mass: 0.85 },
-        dragTransition: { power: 0.22, timeConstant: 260 },
+        dragElastic: 0.18,
+        spring: { stiffness: 400, damping: 38, mass: 0.75 },
+        dragTransition: { power: 0.25, timeConstant: 220 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
-        swipeVelocityMultiplier: 1.3,
+        swipeVelocityMultiplier: 1.4,
       };
       
     case 'modern-android':
-      // Modern Android: smooth, quick response with natural momentum
+      // Modern Android: lighter, quicker response
       return {
-        dragElastic: 0.12,
-        spring: { stiffness: 420, damping: 34, mass: 0.88 },
-        dragTransition: { power: 0.20, timeConstant: 240 },
+        dragElastic: 0.16,
+        spring: { stiffness: 380, damping: 36, mass: 0.78 },
+        dragTransition: { power: 0.22, timeConstant: 200 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
-        swipeVelocityMultiplier: 1.3,
+        swipeVelocityMultiplier: 1.4,
       };
       
     case 'mid-range-ios':
     case 'mid-range-android':
-      // Mid-range: balanced but still responsive
+      // Mid-range: lighter springs, less visual weight
       return {
-        dragElastic: 0.10,
-        spring: { stiffness: 380, damping: 30, mass: 0.95 },
-        dragTransition: { power: 0.28, timeConstant: 250 },
-        enablePageCurl: true,
+        dragElastic: 0.14,
+        spring: { stiffness: 340, damping: 32, mass: 0.85 },
+        dragTransition: { power: 0.28, timeConstant: 220 },
+        enablePageCurl: false,
         enableDynamicShadows: false,
         enableHaptics: false,
-        swipeVelocityMultiplier: 1.1,
+        swipeVelocityMultiplier: 1.2,
       };
       
     case 'old-ios':

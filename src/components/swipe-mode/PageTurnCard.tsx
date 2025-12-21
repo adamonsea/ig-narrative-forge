@@ -3,7 +3,8 @@ import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-m
 import { Button } from '@/components/ui/button';
 import { Heart, ThumbsDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { useDeviceOptimizations, getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
+import { getAnimationPresets, triggerHaptic } from '@/lib/deviceUtils';
+import { optimizeImageUrl } from '@/lib/imageOptimization';
 
 interface Story {
   id: string;
@@ -130,6 +131,12 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
     }
   };
 
+  // Optimized image URL - resize for mobile viewport, WebP, 75% quality
+  const optimizedCoverUrl = useMemo(() => 
+    optimizeImageUrl(story.cover_illustration_url, { width: 400, quality: 75, format: 'webp' }),
+    [story.cover_illustration_url]
+  );
+
   return (
     <motion.div
       key={story.id}
@@ -141,15 +148,16 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         cursor: isDragging.current ? 'grabbing' : 'grab',
         willChange: 'transform',
         contain: 'layout paint',
+        transform: 'translateZ(0)', // GPU layer promotion
+        backfaceVisibility: 'hidden',
         ...style
       }}
       drag="x"
       dragConstraints={{ left: -500, right: 500 }}
-      dragElastic={0.2}
+      dragElastic={animationPresets.dragElastic}
       onDragStart={() => { isDragging.current = true; }}
       onDrag={(_, info) => { x.set(info.offset.x); }}
       onDragEnd={handleDragEnd}
-      whileTap={{ scale: 1.02 }}
       whileDrag={{ scale: liftScale }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
       animate={{ 
@@ -165,7 +173,6 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
               y: dragVelocity.current.y * exitVelocityMultiplier * 0.25,
               rotate: (exitDirection === 'left' ? -1 : 1) * (18 + Math.abs(dragVelocity.current.x) * 0.015),
               opacity: 0,
-              // Velocity-continuous exit: faster swipe = faster exit
               transition: { 
                 duration: Math.max(0.22, 0.38 - Math.abs(dragVelocity.current.x) * 0.0002), 
                 ease: [0.32, 0.72, 0, 1] 
@@ -209,16 +216,22 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
           style={{ background: 'linear-gradient(to bottom, transparent, #8b7765 50%, transparent)' }}
         />
 
-        {/* Cover Image with sepia treatment */}
-        {story.cover_illustration_url && (
-          <div className="relative w-full aspect-[4/3] overflow-hidden">
+        {/* Cover Image with sepia treatment - optimized */}
+        {optimizedCoverUrl && (
+          <div 
+            className="relative w-full aspect-[4/3] overflow-hidden"
+            style={{ 
+              transform: 'translateZ(0)', 
+              backfaceVisibility: 'hidden' 
+            }}
+          >
             <img
-              src={story.cover_illustration_url}
+              src={optimizedCoverUrl}
               alt={story.title}
-              className="w-full h-full object-cover"
-              style={{ filter: 'sepia(12%) contrast(1.02) brightness(0.98)' }}
+              className="w-full h-full object-cover sepia-card-image"
               loading="eager"
               draggable={false}
+              decoding="async"
             />
           </div>
         )}

@@ -82,6 +82,12 @@
     }
   }
 
+  /* Static sepia filter for card images - prevents recalculation during animation */
+  .sepia-card-image {
+    filter: sepia(12%) contrast(1.02) brightness(0.98);
+    will-change: auto; /* Don't animate the filter */
+  }
+
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-105;
   }
