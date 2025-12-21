@@ -16,8 +16,15 @@ const BASE_URL = 'https://eezeenews.com';
 interface SendEmailRequest {
   topicId: string;
   notificationType: 'daily' | 'weekly';
-  roundupDate?: string;
-  weekStart?: string;
+  testEmail?: string; // For testing
+}
+
+interface EmailStory {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  source_name: string;
+  story_url: string;
 }
 
 serve(async (req) => {
@@ -32,7 +39,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topicId, notificationType, roundupDate, weekStart }: SendEmailRequest = await req.json();
+    const { topicId, notificationType, testEmail }: SendEmailRequest = await req.json();
 
     console.log(`📧 Sending ${notificationType} email newsletter for topic ${topicId}`);
 
@@ -59,22 +66,92 @@ serve(async (req) => {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
 
-    // Get email subscribers for this notification type
-    const { data: subscribers, error: subError } = await supabase
-      .from('topic_newsletter_signups')
-      .select('id, email, name')
-      .eq('topic_id', topicId)
-      .eq('is_active', true)
-      .eq('notification_type', notificationType)
-      .not('email', 'is', null)
-      .is('push_subscription', null); // Only email-only subscriptions
-
-    if (subError) {
-      throw new Error(`Failed to fetch subscribers: ${subError.message}`);
+    // Determine date range based on notification type
+    const now = new Date();
+    let dateStart: Date;
+    let dateEnd = now;
+    
+    if (notificationType === 'daily') {
+      dateStart = new Date(now);
+      dateStart.setHours(0, 0, 0, 0);
+    } else {
+      // Weekly: last 7 days
+      dateStart = new Date(now);
+      dateStart.setDate(dateStart.getDate() - 7);
     }
 
-    if (!subscribers || subscribers.length === 0) {
-      console.log('📭 No email subscribers found for this topic/type');
+    // Fetch top stories directly from stories table
+    const storyLimit = notificationType === 'daily' ? 5 : 10;
+    
+    const { data: storiesData, error: storiesError } = await supabase
+      .from('stories')
+      .select(`
+        id,
+        headline,
+        cover_illustration_url,
+        topic_articles!inner (
+          article:articles!inner (
+            source:content_sources (
+              source_name
+            )
+          )
+        )
+      `)
+      .eq('topic_id', topicId)
+      .eq('status', 'published')
+      .gte('published_at', dateStart.toISOString())
+      .lte('published_at', dateEnd.toISOString())
+      .order('quality_score', { ascending: false })
+      .order('published_at', { ascending: false })
+      .limit(storyLimit);
+
+    if (storiesError) {
+      console.error('Error fetching stories:', storiesError);
+      throw new Error(`Failed to fetch stories: ${storiesError.message}`);
+    }
+
+    console.log(`📰 Found ${storiesData?.length || 0} stories for newsletter`);
+
+    // Transform stories for email template
+    const stories: EmailStory[] = (storiesData || []).map(story => {
+      // Get source name from nested structure
+      const topicArticle = story.topic_articles?.[0];
+      const source = topicArticle?.article?.source;
+      const sourceName = source?.source_name || 'Unknown Source';
+      
+      return {
+        id: story.id,
+        title: story.headline,
+        thumbnail_url: story.cover_illustration_url,
+        source_name: sourceName,
+        story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`
+      };
+    });
+
+    // Get subscribers (or use test email)
+    let recipients: { email: string }[] = [];
+    
+    if (testEmail) {
+      recipients = [{ email: testEmail }];
+      console.log(`🧪 Test mode: sending to ${testEmail}`);
+    } else {
+      const { data: subscribers, error: subError } = await supabase
+        .from('topic_newsletter_signups')
+        .select('email')
+        .eq('topic_id', topicId)
+        .eq('is_active', true)
+        .eq('notification_type', notificationType)
+        .not('email', 'is', null);
+
+      if (subError) {
+        throw new Error(`Failed to fetch subscribers: ${subError.message}`);
+      }
+
+      recipients = (subscribers || []).filter(s => s.email);
+    }
+
+    if (recipients.length === 0) {
+      console.log('📭 No email recipients');
       return new Response(JSON.stringify({
         success: true,
         message: 'No email subscribers',
@@ -84,83 +161,37 @@ serve(async (req) => {
       });
     }
 
-    console.log(`📬 Found ${subscribers.length} email subscribers`);
-
-    // Fetch roundup data
-    let roundupQuery = supabase
-      .from('topic_roundups')
-      .select('*')
-      .eq('topic_id', topicId)
-      .eq('roundup_type', notificationType)
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const { data: roundups, error: roundupError } = await roundupQuery;
-
-    if (roundupError) {
-      throw new Error(`Failed to fetch roundup: ${roundupError.message}`);
-    }
-
-    const roundup = roundups?.[0];
-    
-    if (!roundup) {
-      console.log('📭 No roundup found for this topic/type');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No roundup available',
-        emails_sent: 0
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Parse stories from roundup slide_data
-    const slideData = roundup.slide_data as any[];
-    const storySlides = slideData?.filter((s: any) => s.type === 'story_preview') || [];
-    const stories = storySlides.map((s: any) => ({
-      id: s.story_id,
-      title: s.content,
-      author: s.author || s.source_metadata?.author,
-      publication_name: s.publication_name || s.source_metadata?.publication
-    }));
-
-    // Get top sources from stories
-    const topSources = [...new Set(stories.map(s => s.publication_name).filter(Boolean))].slice(0, 5);
+    console.log(`📬 Sending to ${recipients.length} recipients`);
 
     // Generate email HTML
     let emailHtml: string;
+    const date = now.toLocaleDateString('en-GB', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    });
     
     if (notificationType === 'daily') {
-      const dateStr = new Date(roundup.period_start).toLocaleDateString('en-GB', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
-      });
-      
       emailHtml = await renderAsync(
         React.createElement(DailyRoundupEmail, {
           topicName: topic.name,
           topicSlug: topic.slug,
-          date: dateStr,
-          storyCount: stories.length,
-          stories: stories.slice(0, 5),
+          date,
+          stories,
           baseUrl: BASE_URL
         })
       );
     } else {
-      const weekStartDate = new Date(roundup.period_start);
-      const weekEndDate = new Date(roundup.period_end);
+      const weekStart = dateStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      const weekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       
       emailHtml = await renderAsync(
         React.createElement(WeeklyRoundupEmail, {
           topicName: topic.name,
           topicSlug: topic.slug,
-          weekStart: weekStartDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-          weekEnd: weekEndDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-          storyCount: roundup.story_ids?.length || stories.length,
-          stories: stories.slice(0, 7),
-          topSources,
+          weekStart,
+          weekEnd,
+          stories,
           baseUrl: BASE_URL
         })
       );
@@ -171,51 +202,54 @@ serve(async (req) => {
     let failedCount = 0;
     const errors: string[] = [];
 
-    for (const subscriber of subscribers) {
+    for (const recipient of recipients) {
       try {
         const subject = notificationType === 'daily'
-          ? `📰 ${topic.name} Daily Briefing`
-          : `📰 ${topic.name} Weekly Roundup`;
+          ? `${topic.name} Daily Briefing`
+          : `${topic.name} Weekly Roundup`;
 
         const { error: sendError } = await resend.emails.send({
           from: `${topic.name} <updates@eezeenews.com>`,
-          to: [subscriber.email!],
+          to: [recipient.email!],
           subject,
           html: emailHtml,
         });
 
         if (sendError) {
-          console.error(`Failed to send to ${subscriber.email}:`, sendError);
-          errors.push(`${subscriber.email}: ${sendError.message}`);
+          console.error(`Failed to send to ${recipient.email}:`, sendError);
+          errors.push(`${recipient.email}: ${sendError.message}`);
           failedCount++;
         } else {
           sentCount++;
-          console.log(`✅ Sent to ${subscriber.email}`);
+          console.log(`✅ Sent to ${recipient.email}`);
         }
       } catch (error) {
-        console.error(`Error sending to ${subscriber.email}:`, error);
-        errors.push(`${subscriber.email}: ${error.message}`);
+        console.error(`Error sending to ${recipient.email}:`, error);
+        errors.push(`${recipient.email}: ${error.message}`);
         failedCount++;
       }
     }
 
-    // Log the send operation
-    await supabase
-      .from('system_logs')
-      .insert({
-        level: failedCount > 0 ? 'warn' : 'info',
-        message: `Email newsletter sent for ${topic.name}`,
-        context: {
-          topic_id: topicId,
-          topic_name: topic.name,
-          notification_type: notificationType,
-          total_subscribers: subscribers.length,
-          sent: sentCount,
-          failed: failedCount,
-          errors: errors.slice(0, 5) // Only log first 5 errors
-        },
-        function_name: 'send-email-newsletter'
-      });
+    // Log the send operation (skip for test emails)
+    if (!testEmail) {
+      await supabase
+        .from('system_logs')
+        .insert({
+          level: failedCount > 0 ? 'warn' : 'info',
+          message: `Email newsletter sent for ${topic.name}`,
+          context: {
+            topic_id: topicId,
+            topic_name: topic.name,
+            notification_type: notificationType,
+            total_subscribers: recipients.length,
+            stories_included: stories.length,
+            sent: sentCount,
+            failed: failedCount,
+            errors: errors.slice(0, 5)
+          },
+          function_name: 'send-email-newsletter'
+        });
+    }
 
     console.log(`✅ Email newsletter complete: ${sentCount} sent, ${failedCount} failed`);
 
@@ -223,7 +257,8 @@ serve(async (req) => {
       success: true,
       emails_sent: sentCount,
       emails_failed: failedCount,
-      total_subscribers: subscribers.length
+      stories_included: stories.length,
+      total_recipients: recipients.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
