@@ -80,7 +80,7 @@ serve(async (req) => {
       dateStart.setDate(dateStart.getDate() - 7);
     }
 
-    // Fetch top stories directly from stories table
+    // Fetch top stories - use stories table with inner join to topic_articles
     const storyLimit = notificationType === 'daily' ? 5 : 10;
     
     const { data: storiesData, error: storiesError } = await supabase
@@ -89,35 +89,44 @@ serve(async (req) => {
         id,
         title,
         cover_illustration_url,
-        topic_article:topic_articles!topic_article_id (
-          topic_id,
-          source:content_sources (
-            source_name
-          ),
-          shared_content:shared_article_content (
-            source_domain
-          )
-        )
+        quality_score,
+        topic_article_id
       `)
-      .eq('topic_article.topic_id', topicId)
       .eq('status', 'published')
       .order('quality_score', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(storyLimit);
+      .order('created_at', { ascending: false });
 
     if (storiesError) {
       console.error('Error fetching stories:', storiesError);
       throw new Error(`Failed to fetch stories: ${storiesError.message}`);
     }
 
-    console.log(`📰 Found ${storiesData?.length || 0} stories for newsletter`);
+    // Get topic_article_ids that belong to this topic
+    const { data: topicArticleIds, error: taError } = await supabase
+      .from('topic_articles')
+      .select('id, source:content_sources(source_name), shared_content:shared_article_content(source_domain)')
+      .eq('topic_id', topicId);
+
+    if (taError) {
+      console.error('Error fetching topic articles:', taError);
+      throw new Error(`Failed to fetch topic articles: ${taError.message}`);
+    }
+
+    // Create a map for quick lookup
+    const taMap = new Map(topicArticleIds?.map(ta => [ta.id, ta]) || []);
+
+    // Filter stories to only those belonging to this topic
+    const topicStories = (storiesData || [])
+      .filter(story => story.topic_article_id && taMap.has(story.topic_article_id))
+      .slice(0, storyLimit);
+
+    console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter`);
 
     // Transform stories for email template
-    const stories: EmailStory[] = (storiesData || []).map(story => {
-      // Get source name from nested structure
-      const topicArticle = story.topic_article;
-      const sourceName = topicArticle?.source?.source_name 
-        || topicArticle?.shared_content?.source_domain 
+    const stories: EmailStory[] = topicStories.map(story => {
+      const ta = taMap.get(story.topic_article_id);
+      const sourceName = ta?.source?.source_name 
+        || ta?.shared_content?.source_domain 
         || topic.name;
       
       return {
@@ -210,7 +219,7 @@ serve(async (req) => {
           : `${topic.name} Weekly Roundup`;
 
         const { error: sendError } = await resend.emails.send({
-          from: `eeZee News <onboarding@resend.dev>`,
+          from: `curatr.pro <onboarding@resend.dev>`,
           to: [recipient.email!],
           subject,
           html: emailHtml,
