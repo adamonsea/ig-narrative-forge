@@ -42,33 +42,68 @@ export const usePushSubscription = (topicId?: string) => {
           const registration = await navigator.serviceWorker.ready;
           const existingSubscription = await registration.pushManager.getSubscription();
           
+          // Get a fresh subscription (re-subscribe to ensure valid token)
+          let currentSubscription = existingSubscription;
+          
           if (existingSubscription) {
-            console.log('🔄 Auto-healing push subscription with current VAPID key');
-            
-            // Unsubscribe old subscription
+            console.log('🔄 Refreshing push subscription with current VAPID key');
             await existingSubscription.unsubscribe();
-            
-            // Re-subscribe with current VAPID key
-            const newSubscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-            });
-
-            const subscriptionData = JSON.parse(JSON.stringify(newSubscription));
-            const oldEndpoint = JSON.parse(JSON.stringify(existingSubscription)).endpoint;
-
-            // Update all subscriptions for this topic with the new subscription data
-            await supabase
-              .from('topic_newsletter_signups')
-              .update({ 
-                push_subscription: subscriptionData,
-                is_active: true 
-              })
-              .eq('topic_id', topicId)
-              .filter('push_subscription->endpoint', 'eq', oldEndpoint);
-
-            console.log('✅ Push subscription auto-healed successfully');
           }
+          
+          // Always re-subscribe to get a fresh token
+          currentSubscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+
+          const subscriptionData = JSON.parse(JSON.stringify(currentSubscription));
+          
+          // Find ALL inactive subscriptions for this topic (regardless of old endpoint)
+          // and update them with the new fresh subscription
+          const { data: inactiveSignups, error: fetchError } = await supabase
+            .from('topic_newsletter_signups')
+            .select('id, notification_type')
+            .eq('topic_id', topicId)
+            .eq('is_active', false)
+            .not('push_subscription', 'is', null);
+
+          if (!fetchError && inactiveSignups && inactiveSignups.length > 0) {
+            console.log(`🔧 Found ${inactiveSignups.length} inactive push subscriptions to heal`);
+            
+            // Update each inactive subscription with fresh push token
+            for (const signup of inactiveSignups) {
+              const { error: updateError } = await supabase
+                .from('topic_newsletter_signups')
+                .update({ 
+                  push_subscription: subscriptionData,
+                  is_active: true 
+                })
+                .eq('id', signup.id);
+                
+              if (!updateError) {
+                console.log(`✅ Healed ${signup.notification_type} subscription`);
+              }
+            }
+          }
+          
+          // Also update any active subscriptions with fresh token
+          const { data: activeSignups } = await supabase
+            .from('topic_newsletter_signups')
+            .select('id')
+            .eq('topic_id', topicId)
+            .eq('is_active', true)
+            .not('push_subscription', 'is', null);
+            
+          if (activeSignups && activeSignups.length > 0) {
+            for (const signup of activeSignups) {
+              await supabase
+                .from('topic_newsletter_signups')
+                .update({ push_subscription: subscriptionData })
+                .eq('id', signup.id);
+            }
+            console.log(`🔄 Refreshed ${activeSignups.length} active subscriptions`);
+          }
+          
         } catch (error) {
           console.error('Failed to auto-heal subscription:', error);
           // Silent fail - user can manually re-subscribe if needed

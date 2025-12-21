@@ -48,13 +48,25 @@ serve(async (req) => {
           body.weekStart = weekStart;
         }
 
+        console.log(`📤 Invoking send-story-notification for ${topic.name} with:`, body);
+        
         const response = await supabase.functions.invoke('send-story-notification', { body });
         
-        results.push({
-          topic: topic.name,
-          success: true,
-          ...response.data
-        });
+        if (response.error) {
+          console.error(`❌ Error response for ${topic.name}:`, response.error);
+          results.push({
+            topic: topic.name,
+            success: false,
+            error: response.error.message || String(response.error)
+          });
+        } else {
+          console.log(`✅ Response for ${topic.name}:`, response.data);
+          results.push({
+            topic: topic.name,
+            success: true,
+            ...response.data
+          });
+        }
       } catch (error) {
         console.error(`Failed to send notification for ${topic.name}:`, error);
         results.push({
