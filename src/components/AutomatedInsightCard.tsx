@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { SwipeCarousel } from '@/components/ui/swipe-carousel';
+import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { AutomatedInsightCard as InsightCardType } from '@/hooks/useAutomatedInsightCards';
 import { useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
@@ -80,7 +80,7 @@ export const AutomatedInsightCard = ({ card, topicSlug }: AutomatedInsightCardPr
 
   return (
     <Card className="w-full overflow-hidden rounded-2xl border-border/50 bg-card relative h-full">
-      <SwipeCarousel
+      <EmblaSlideCarousel
         slides={slideComponents}
         height="100%"
         showDots={false}

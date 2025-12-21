@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Share2 } from 'lucide-react';
 import arrowRightSvg from '@/assets/arrow-right.svg';
 import { motion } from 'framer-motion';
-import { SwipeCarousel } from '@/components/ui/swipe-carousel';
+import { EmblaSlideCarousel } from '@/components/ui/embla-slide-carousel';
 import { createSafeHTML, sanitizeContentWithLinks } from '@/lib/sanitizer';
 import { Link } from 'react-router-dom';
 
@@ -170,7 +170,7 @@ export default function RoundupCarousel({
         data-roundup-card
         data-roundup-id={roundup.id}
       >
-        <SwipeCarousel
+        <EmblaSlideCarousel
           slides={slideComponents}
           initialIndex={currentSlideIndex}
           onSlideChange={goToSlide}

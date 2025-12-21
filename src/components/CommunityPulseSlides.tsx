@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, ExternalLink, MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { SwipeCarousel } from "@/components/ui/swipe-carousel";
+import { EmblaSlideCarousel } from "@/components/ui/embla-slide-carousel";
 import type { PulseKeyword } from "@/hooks/useCommunityPulseKeywords";
 
 interface PulseSlide {
@@ -224,7 +224,7 @@ export const CommunityPulseSlides = ({
 
           {/* SwipeCarousel */}
           <div className="flex-1">
-            <SwipeCarousel
+            <EmblaSlideCarousel
               slides={slideComponents}
               height="100%"
               initialIndex={currentSlide}
