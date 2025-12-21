@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
-import { useDeviceOptimizations, getAnimationPresets, triggerHaptic } from "@/lib/deviceUtils";
+import { getAnimationPresets, triggerHaptic } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -34,7 +34,6 @@ export function SwipeCarousel({
   storyId,
   topicId,
   showPreviewAnimation = false,
-  centerDragArea = false,
   autoSlide = false,
   autoSlideInterval = 5000,
 }: SwipeCarouselProps) {
@@ -46,28 +45,7 @@ export function SwipeCarousel({
   const snapControlsRef = useRef<ReturnType<typeof animate> | null>(null);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  const [isDragBlocked, setIsDragBlocked] = useState(false);
-  const optimizations = useDeviceOptimizations();
   const animationPresets = useMemo(() => getAnimationPresets(), []);
-
-  // Device-specific touch optimization (only for mid-range/old iOS)
-  useEffect(() => {
-    if (!optimizations.shouldReduceMotion || !viewportRef.current) return;
-    
-    const element = viewportRef.current;
-    
-    // Passive touch listeners for iOS scroll performance
-    const handleTouchStart = (e: TouchEvent) => {
-      (e.target as any).__startY = e.touches[0].clientY;
-    };
-    
-    element.addEventListener('touchstart', handleTouchStart, { passive: true });
-    
-    return () => {
-      element.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [optimizations.shouldReduceMotion]);
-
   // measure width
   useEffect(() => {
     const node = viewportRef.current;
@@ -109,7 +87,7 @@ export function SwipeCarousel({
         trackSwipe(storyId, topicId, index);
       });
     }
-  }, [index, onSlideChange, storyId, topicId, optimizations.shouldReduceMotion]);
+  }, [index, onSlideChange, storyId, topicId, animationPresets.enableHaptics]);
 
   // Preview animation effect - more pronounced nudge
   useEffect(() => {
@@ -189,8 +167,6 @@ export function SwipeCarousel({
   );
 
   const goTo = (i: number) => snapTo(i, true);
-  const prev = () => snapTo(index - 1, true);
-  const next = () => snapTo(index + 1, true);
 
   // Instagram-like gesture: smooth slide-by-slide navigation with velocity-weighted thresholds
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
@@ -244,7 +220,7 @@ export function SwipeCarousel({
       >
         <motion.div
           className="flex h-full relative will-change-transform"
-          drag={width > 0 && !isDragBlocked ? "x" : false}
+          drag={width > 0 ? "x" : false}
           dragElastic={animationPresets.dragElastic}
           dragMomentum={false}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
@@ -267,32 +243,6 @@ export function SwipeCarousel({
           
         </motion.div>
       </div>
-
-      {centerDragArea && (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Left edge click handler for navigation - smaller on mobile */}
-          <div
-            className="absolute inset-y-0 left-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
-            onClick={() => {
-              if (index > 0) {
-                prev();
-                console.debug?.('edge-click', 'left', 'prev');
-              }
-            }}
-          />
-          {/* Right edge click handler for navigation - smaller on mobile */}
-          <div
-            className="absolute inset-y-0 right-0 w-[10%] md:w-[15%] pointer-events-auto cursor-pointer"
-            onClick={() => {
-              if (index < count - 1) {
-                next();
-                console.debug?.('edge-click', 'right', 'next');
-              }
-            }}
-          />
-        </div>
-      )}
-
       {showDots && count > 1 && (
         <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-2">
           {Array.from({ length: count }).map((_, i) => (
