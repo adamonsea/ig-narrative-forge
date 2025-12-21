@@ -41,11 +41,12 @@ export function EmblaSlideCarousel({
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     containScroll: "trimSnaps",
-    dragFree: false, // Snap to slides
-    skipSnaps: false, // Never skip slides
+    dragFree: false,
+    skipSnaps: false,
     startIndex: initialIndex,
     watchDrag: true,
-    duration: 25, // Snappy but smooth (lower = faster)
+    duration: 20, // Fast snap animation (ms) - feels responsive
+    dragThreshold: 10, // Lower threshold = more responsive to swipes
   });
 
   // Sync selected index with Embla
@@ -129,26 +130,17 @@ export function EmblaSlideCarousel({
       {/* Embla viewport */}
       <div
         ref={emblaRef}
-        className="overflow-hidden w-full h-full"
+        className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing"
         style={{
-          // iOS-specific touch optimizations
-          WebkitOverflowScrolling: "touch",
           touchAction: "pan-y pinch-zoom",
         }}
       >
-        {/* Embla container */}
-        <div
-          className="flex h-full"
-          style={{
-            // GPU acceleration
-            willChange: "transform",
-            backfaceVisibility: "hidden",
-          }}
-        >
+        {/* Embla container - GPU accelerated */}
+        <div className="flex h-full touch-pan-y [backface-visibility:hidden] [transform:translate3d(0,0,0)]">
           {slides.map((slide, i) => (
             <div
               key={i}
-              className="flex-[0_0_100%] min-w-0 h-full"
+              className="flex-[0_0_100%] min-w-0 h-full [backface-visibility:hidden]"
               role="group"
               aria-roledescription="slide"
               aria-label={`Slide ${i + 1} of ${count}`}
