@@ -103,9 +103,9 @@ serve(async (req) => {
 
     console.log(`📅 Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`);
 
-    // Fetch top stories - use stories table with date filtering
+    // Fetch top stories
     const storyLimit = notificationType === 'daily' ? 5 : 10;
-    
+
     const { data: storiesData, error: storiesError } = await supabase
       .from('stories')
       .select(`
@@ -127,40 +127,49 @@ serve(async (req) => {
       throw new Error(`Failed to fetch stories: ${storiesError.message}`);
     }
 
-    // Get topic_article_ids that belong to this topic
-    const { data: topicArticleIds, error: taError } = await supabase
-      .from('topic_articles')
-      .select('id, source:content_sources(source_name), shared_content:shared_article_content(source_domain)')
-      .eq('topic_id', topicId);
+    // IMPORTANT: topic_articles can exceed the 1000-row query limit.
+    // Instead of loading all topic articles for the topic, only load the ones referenced
+    // by the stories in the current date window.
+    const candidateTopicArticleIds = Array.from(
+      new Set((storiesData || []).map((s) => s.topic_article_id).filter(Boolean))
+    ) as string[];
+
+    const { data: topicArticles, error: taError } = candidateTopicArticleIds.length
+      ? await supabase
+          .from('topic_articles')
+          .select('id, topic_id, source:content_sources(source_name), shared_content:shared_article_content(source_domain)')
+          .in('id', candidateTopicArticleIds)
+      : { data: [], error: null };
 
     if (taError) {
       console.error('Error fetching topic articles:', taError);
       throw new Error(`Failed to fetch topic articles: ${taError.message}`);
     }
 
-    // Create a map for quick lookup
-    const taMap = new Map(topicArticleIds?.map(ta => [ta.id, ta]) || []);
+    const taMap = new Map((topicArticles || []).map((ta) => [ta.id, ta]));
 
     // Filter stories to only those belonging to this topic
     const topicStories = (storiesData || [])
-      .filter(story => story.topic_article_id && taMap.has(story.topic_article_id))
+      .filter((story) => {
+        if (!story.topic_article_id) return false;
+        const ta = taMap.get(story.topic_article_id);
+        return ta?.topic_id === topicId;
+      })
       .slice(0, storyLimit);
 
     console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter`);
 
     // Transform stories for email template
-    const stories: EmailStory[] = topicStories.map(story => {
-      const ta = taMap.get(story.topic_article_id);
-      const sourceName = ta?.source?.source_name 
-        || ta?.shared_content?.source_domain 
-        || topic.name;
-      
+    const stories: EmailStory[] = topicStories.map((story) => {
+      const ta = story.topic_article_id ? taMap.get(story.topic_article_id) : undefined;
+      const sourceName = ta?.source?.source_name || ta?.shared_content?.source_domain || topic.name;
+
       return {
         id: story.id,
         title: story.title,
         thumbnail_url: story.cover_illustration_url,
         source_name: sourceName,
-        story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`
+        story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`,
       };
     });
 
@@ -244,7 +253,7 @@ serve(async (req) => {
       try {
         const subject = notificationType === 'daily'
           ? `${topic.name} Daily Briefing`
-          : `${topic.name} Weekly Roundup`;
+          : `${topic.name} Weekly Briefing`;
 
         const { error: sendError } = await resend.emails.send({
           from: `curatr.pro <onboarding@resend.dev>`,

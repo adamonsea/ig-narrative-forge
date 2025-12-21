@@ -1,17 +1,17 @@
 import {
   Body,
+  Column,
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Img,
   Link,
   Preview,
+  Row,
   Section,
   Text,
-  Hr,
-  Row,
-  Column,
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 
@@ -42,31 +42,33 @@ export const WeeklyRoundupEmail = ({
   weekEnd = 'Dec 21',
   stories = [],
   baseUrl = 'https://curatr.pro',
-  unsubscribeUrl
+  unsubscribeUrl,
 }: WeeklyRoundupEmailProps) => (
-  <Html>
-    <Head />
-    <Preview>Your {topicName} Weekly Briefing - {stories.length} top stories</Preview>
+  <Html style={html}>
+    <Head>
+      <meta name="color-scheme" content="light" />
+      <meta name="supported-color-schemes" content="light" />
+      <style>
+        {`
+          html, body { background: #ffffff !important; }
+          * { -webkit-text-size-adjust: 100%; }
+        `}
+      </style>
+    </Head>
+    <Preview>{topicName} Weekly Briefing • {stories.length} stories</Preview>
     <Body style={main}>
       <Container style={container}>
-        {/* Header with white background for dark mode */}
         <Section style={header}>
           {topicLogoUrl ? (
-            <Img
-              src={topicLogoUrl}
-              alt={`${topicName}`}
-              style={topicLogo}
-            />
+            <Img src={topicLogoUrl} alt={topicName} style={topicLogo} />
           ) : (
             <Heading style={h1}>{topicName}</Heading>
           )}
-          {topicLogoUrl && <Text style={topicNameSmall}>{topicName}</Text>}
           <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd}</Text>
         </Section>
 
         <Hr style={hr} />
 
-        {/* Stories */}
         {stories.length > 0 ? (
           <Section style={storiesSection}>
             {stories.map((story) => (
@@ -97,13 +99,12 @@ export const WeeklyRoundupEmail = ({
           </Section>
         ) : (
           <Section style={emptySection}>
-            <Text style={emptyText}>No stories this week. Check back next Sunday!</Text>
+            <Text style={emptyText}>No stories for this week.</Text>
           </Section>
         )}
 
         <Hr style={hr} />
 
-        {/* CTAs */}
         <Section style={ctaSection}>
           <Link href={`${baseUrl}/feed/${topicSlug}/weekly/latest`} style={ctaButtonPrimary}>
             View Weekly Briefing →
@@ -113,19 +114,13 @@ export const WeeklyRoundupEmail = ({
           </Link>
         </Section>
 
-        {/* Footer */}
         <Section style={footer}>
-          <Text style={footerText}>
-            You're receiving this because you subscribed to weekly briefing updates.
-          </Text>
-          <Link
-            href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=weekly`}
-            style={footerLink}
-          >
+          <Text style={footerText}>You're receiving this because you subscribed to weekly briefing updates.</Text>
+          <Link href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=weekly`} style={footerLink}>
             Unsubscribe
           </Link>
           <Text style={poweredBy}>
-            Powered by <Link href="https://curatr.pro" style={poweredByLink}>curatr.pro</Link>
+            <Link href="https://curatr.pro" style={poweredByLink}>curatr.pro</Link>
           </Text>
         </Section>
       </Container>
@@ -135,7 +130,10 @@ export const WeeklyRoundupEmail = ({
 
 export default WeeklyRoundupEmail
 
-// Styles - white backgrounds enforced for dark mode compatibility
+const html = {
+  backgroundColor: '#ffffff',
+}
+
 const main = {
   backgroundColor: '#ffffff',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
@@ -158,21 +156,14 @@ const header = {
 const topicLogo = {
   display: 'block',
   margin: '0 auto 12px',
-  maxWidth: '280px',
-  maxHeight: '80px',
+  maxWidth: '320px',
+  maxHeight: '96px',
   width: 'auto',
   height: 'auto',
 }
 
-const topicNameSmall = {
-  color: '#6b7280',
-  fontSize: '13px',
-  fontWeight: '500',
-  margin: '0 0 8px',
-}
-
 const h1 = {
-  color: '#1a1a1a',
+  color: '#111827',
   fontSize: '28px',
   fontWeight: '700',
   margin: '0 0 8px',
@@ -182,7 +173,7 @@ const h1 = {
 const subtitle = {
   color: '#6b7280',
   fontSize: '14px',
-  fontWeight: '500',
+  fontWeight: '600',
   margin: '0',
 }
 
@@ -231,7 +222,7 @@ const contentColumn = {
 }
 
 const storyTitle = {
-  color: '#1a1a1a',
+  color: '#111827',
   fontSize: '15px',
   fontWeight: '600',
   lineHeight: '20px',
@@ -265,7 +256,7 @@ const ctaButtonPrimary = {
   color: '#ffffff',
   display: 'inline-block',
   fontSize: '14px',
-  fontWeight: '600',
+  fontWeight: '700',
   padding: '12px 24px',
   textDecoration: 'none',
   marginRight: '12px',
@@ -274,10 +265,10 @@ const ctaButtonPrimary = {
 const ctaButtonSecondary = {
   backgroundColor: '#f3f4f6',
   borderRadius: '8px',
-  color: '#374151',
+  color: '#111827',
   display: 'inline-block',
   fontSize: '14px',
-  fontWeight: '600',
+  fontWeight: '700',
   padding: '12px 24px',
   textDecoration: 'none',
 }
@@ -308,7 +299,7 @@ const poweredBy = {
 }
 
 const poweredByLink = {
-  color: '#6366f1',
+  color: '#6b7280',
   textDecoration: 'none',
-  fontWeight: '600',
+  fontWeight: '700',
 }
