@@ -197,6 +197,9 @@ verify_jwt = false
 [functions.automated-roundup-notifier]
 verify_jwt = false
 
+[functions.send-email-newsletter]
+verify_jwt = false
+
 # Parliamentary data
 [functions.uk-parliament-collector]
 verify_jwt = false
