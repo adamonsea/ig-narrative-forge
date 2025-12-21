@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { motion, useMotionValue, animate, PanInfo } from "framer-motion";
+import { motion, animate, PanInfo } from "framer-motion";
 import { triggerHaptic } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
@@ -20,7 +20,7 @@ export type SwipeCarouselProps = {
 
 // Instagram-like easing curve - feels native and smooth
 const SMOOTH_TRANSITION = {
-  duration: 0.5,
+  duration: 0.38,
   ease: [0.32, 0.72, 0, 1] as const,
 };
 
@@ -46,10 +46,6 @@ export function SwipeCarousel({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  
-  // Drag offset for visual feedback during gesture
-  const dragX = useMotionValue(0);
-  
   // Check for reduced motion preference
   const prefersReducedMotion = useMemo(() => 
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -135,31 +131,21 @@ export function SwipeCarousel({
   const onDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
-    
-    // Threshold: 20% of width or quick flick (velocity > 500px/s)
-    const threshold = width * 0.2;
-    
+
+    const distanceThreshold = width * 0.18;
+    const flickVelocity = 650;
+
     let targetIndex = index;
-    
-    if (offset < -threshold || velocity < -500) {
-      // Swiped left -> next slide
+
+    if (offset < -distanceThreshold || (velocity < -flickVelocity && offset < -10)) {
       targetIndex = Math.min(count - 1, index + 1);
-    } else if (offset > threshold || velocity > 500) {
-      // Swiped right -> previous slide
+    } else if (offset > distanceThreshold || (velocity > flickVelocity && offset > 10)) {
       targetIndex = Math.max(0, index - 1);
     }
-    
-    // Reset drag offset
-    dragX.set(0);
-    
-    // Update index - this triggers declarative animation
-    setIndex(targetIndex);
-  }, [count, dragX, index, width]);
 
-  // Track drag offset for visual feedback
-  const onDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    dragX.set(info.offset.x);
-  }, [dragX]);
+    if (targetIndex !== index) setIndex(targetIndex);
+  }, [count, index, width]);
+
 
   const heightStyle = useMemo(() => ({ 
     height: typeof height === "number" ? `${height}px` : height 
@@ -190,21 +176,21 @@ export function SwipeCarousel({
           transition={transition}
           // Drag configuration
           drag={width > 0 ? "x" : false}
-          dragElastic={0.15}
-          dragConstraints={{ left: 0, right: 0 }} // Snap back after drag
-          onDrag={onDrag}
+          dragElastic={0.22}
+          dragMomentum
+          dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={onDragEnd}
           whileDrag={{ cursor: "grabbing" }}
-          style={{ 
-            x: dragX,
-            touchAction: "pan-y pinch-zoom",
-          }}
+          style={{ touchAction: "pan-y pinch-zoom" }}
         >
-          {slides.map((slide, i) => (
-            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
-              <div className="h-full w-full">{slide}</div>
-            </div>
-          ))}
+          {slides.map((slide, i) => {
+            const isNear = Math.abs(i - index) <= 1;
+            return (
+              <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
+                <div className="h-full w-full">{isNear ? slide : null}</div>
+              </div>
+            );
+          })}
         </motion.div>
       </div>
       {showDots && count > 1 && (
