@@ -1,4 +1,4 @@
-import { Home, Settings, LogOut, MapPin, Tag, ChevronDown } from "lucide-react";
+import { Home, Settings, LogOut, MapPin, Tag, ChevronDown, Code2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -23,6 +23,7 @@ import { useTopics } from "@/hooks/useTopics";
 
 const navigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Widget Builder", url: "/dashboard/widgets", icon: Code2 },
 ];
 
 export function AppSidebar() {
