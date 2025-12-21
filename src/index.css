@@ -88,6 +88,16 @@
     will-change: auto; /* Don't animate the filter */
   }
 
+  /* GPU acceleration layer for smooth 60fps animations */
+  .gpu-layer {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-perspective: 1000px;
+  }
+
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-105;
   }
