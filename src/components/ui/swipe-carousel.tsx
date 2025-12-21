@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, animate, PanInfo } from "framer-motion";
-import { triggerHaptic } from "@/lib/deviceUtils";
+import { getAnimationPresets, triggerHaptic } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -47,10 +47,13 @@ export function SwipeCarousel({
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
   // Check for reduced motion preference
-  const prefersReducedMotion = useMemo(() => 
-    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  , []);
-  
+  const prefersReducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+
+  const animationPresets = useMemo(() => getAnimationPresets(), []);
+
   const transition = prefersReducedMotion ? INSTANT_TRANSITION : SMOOTH_TRANSITION;
 
   // Measure width
@@ -69,20 +72,20 @@ export function SwipeCarousel({
   useEffect(() => {
     onSlideChange?.(index);
 
-    // Haptic feedback on slide change
-    if (index > 0) {
-      triggerHaptic('light');
+    // Haptic feedback on slide change (only on supported devices)
+    if (animationPresets.enableHaptics && index > 0) {
+      triggerHaptic("light");
     }
 
     // Track swipe interaction
     if (storyId && topicId && index > 0 && !hasTrackedSwipe.current) {
       hasTrackedSwipe.current = true;
-      import('@/hooks/useStoryInteractionTracking').then(({ useStoryInteractionTracking }) => {
+      import("@/hooks/useStoryInteractionTracking").then(({ useStoryInteractionTracking }) => {
         const { trackSwipe } = useStoryInteractionTracking();
         trackSwipe(storyId, topicId, index);
       });
     }
-  }, [index, onSlideChange, storyId, topicId]);
+  }, [animationPresets.enableHaptics, index, onSlideChange, storyId, topicId]);
 
   // Preview animation effect
   useEffect(() => {
@@ -128,23 +131,27 @@ export function SwipeCarousel({
   }, [clamp]);
 
   // Handle drag end - only updates index, animation is declarative
-  const onDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
+  const onDragEnd = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      const offset = info.offset.x;
+      const velocity = info.velocity.x;
 
-    const distanceThreshold = width * 0.18;
-    const flickVelocity = 650;
+      // Balanced: easy to advance with intent, but not accidental.
+      const distanceThreshold = width * 0.22;
+      const flickVelocity = 800;
 
-    let targetIndex = index;
+      let targetIndex = index;
 
-    if (offset < -distanceThreshold || (velocity < -flickVelocity && offset < -10)) {
-      targetIndex = Math.min(count - 1, index + 1);
-    } else if (offset > distanceThreshold || (velocity > flickVelocity && offset > 10)) {
-      targetIndex = Math.max(0, index - 1);
-    }
+      if (offset < -distanceThreshold || (velocity < -flickVelocity && offset < -20)) {
+        targetIndex = Math.min(count - 1, index + 1);
+      } else if (offset > distanceThreshold || (velocity > flickVelocity && offset > 20)) {
+        targetIndex = Math.max(0, index - 1);
+      }
 
-    if (targetIndex !== index) setIndex(targetIndex);
-  }, [count, index, width]);
+      if (targetIndex !== index) setIndex(targetIndex);
+    },
+    [count, index, width]
+  );
 
 
   const heightStyle = useMemo(() => ({ 
@@ -176,21 +183,19 @@ export function SwipeCarousel({
           transition={transition}
           // Drag configuration
           drag={width > 0 ? "x" : false}
-          dragElastic={0.22}
-          dragMomentum
-          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.18}
+          dragMomentum={false}
+          // Allow full-range dragging across slides; snap happens via `animate` + `onDragEnd`
+          dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           onDragEnd={onDragEnd}
           whileDrag={{ cursor: "grabbing" }}
           style={{ touchAction: "pan-y pinch-zoom" }}
         >
-          {slides.map((slide, i) => {
-            const isNear = Math.abs(i - index) <= 1;
-            return (
-              <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
-                <div className="h-full w-full">{isNear ? slide : null}</div>
-              </div>
-            );
-          })}
+          {slides.map((slide, i) => (
+            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
+              <div className="h-full w-full">{slide}</div>
+            </div>
+          ))}
         </motion.div>
       </div>
       {showDots && count > 1 && (
