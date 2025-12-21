@@ -186,12 +186,10 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
     
-    // Animate to target slide with slightly tighter spring for snap
+    // Animate to target slide with device-tuned spring (no multipliers)
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      stiffness: animationPresets.spring.stiffness * 1.1,
-      damping: animationPresets.spring.damping,
-      mass: animationPresets.spring.mass * 0.95,
+      ...animationPresets.spring,
     });
     setIndex(targetIndex);
     return () => controls.stop();
@@ -216,14 +214,15 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full" 
       >
         <motion.div
+          layout={false}
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={animationPresets.dragElastic}
-          dragMomentum={true}
+          dragMomentum={false}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={{
-            bounceStiffness: 400,
-            bounceDamping: 30,
+            bounceStiffness: 500,
+            bounceDamping: 35,
             power: animationPresets.dragTransition.power,
             timeConstant: animationPresets.dragTransition.timeConstant,
           }}
@@ -232,12 +231,16 @@ export function SwipeCarousel({
             x, 
             touchAction: "pan-y pinch-zoom",
             willChange: 'transform',
-            transform: 'translate3d(0, 0, 0)',
+            backfaceVisibility: 'hidden',
           }}
           onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
-            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
+            <div 
+              key={i} 
+              className="w-full shrink-0 grow-0 basis-full h-full"
+              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+            >
               <div className="h-full w-full">{slide}</div>
             </div>
           ))}
