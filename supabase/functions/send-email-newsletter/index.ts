@@ -80,7 +80,7 @@ serve(async (req) => {
       dateStart.setDate(dateStart.getDate() - 7);
     }
 
-    // Fetch top stories - use stories table with inner join to topic_articles
+    // Fetch top stories - use stories table with date filtering
     const storyLimit = notificationType === 'daily' ? 5 : 10;
     
     const { data: storiesData, error: storiesError } = await supabase
@@ -90,9 +90,12 @@ serve(async (req) => {
         title,
         cover_illustration_url,
         quality_score,
-        topic_article_id
+        topic_article_id,
+        created_at
       `)
       .eq('status', 'published')
+      .gte('created_at', dateStart.toISOString())
+      .lte('created_at', dateEnd.toISOString())
       .order('quality_score', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
 
