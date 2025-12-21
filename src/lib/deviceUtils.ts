@@ -264,11 +264,11 @@ export function getAnimationPresets(): AnimationPresets {
   
   switch (tier) {
     case 'modern-ios':
-      // Modern iOS: lighter, snappier feel - reduced mass for responsiveness
+      // Modern iOS: high elasticity, light springs for responsive finger-following
       return {
-        dragElastic: 0.18,
-        spring: { stiffness: 400, damping: 38, mass: 0.75 },
-        dragTransition: { power: 0.25, timeConstant: 220 },
+        dragElastic: 0.55,
+        spring: { stiffness: 350, damping: 26, mass: 0.65 },
+        dragTransition: { power: 0.35, timeConstant: 180 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
@@ -276,11 +276,11 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'modern-android':
-      // Modern Android: lighter, quicker response
+      // Modern Android: high elasticity, slightly more damped
       return {
-        dragElastic: 0.16,
-        spring: { stiffness: 380, damping: 36, mass: 0.78 },
-        dragTransition: { power: 0.22, timeConstant: 200 },
+        dragElastic: 0.50,
+        spring: { stiffness: 330, damping: 28, mass: 0.68 },
+        dragTransition: { power: 0.32, timeConstant: 190 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
@@ -289,11 +289,11 @@ export function getAnimationPresets(): AnimationPresets {
       
     case 'mid-range-ios':
     case 'mid-range-android':
-      // Mid-range: lighter springs, less visual weight
+      // Mid-range: moderate elasticity, balanced springs
       return {
-        dragElastic: 0.14,
-        spring: { stiffness: 340, damping: 32, mass: 0.85 },
-        dragTransition: { power: 0.28, timeConstant: 220 },
+        dragElastic: 0.35,
+        spring: { stiffness: 300, damping: 28, mass: 0.80 },
+        dragTransition: { power: 0.28, timeConstant: 200 },
         enablePageCurl: false,
         enableDynamicShadows: false,
         enableHaptics: false,
@@ -302,9 +302,9 @@ export function getAnimationPresets(): AnimationPresets {
       
     case 'old-ios':
     case 'legacy-android':
-      // Old/legacy: minimal effects, gentle springs to reduce jank
+      // Old/legacy: conservative settings to prevent jank
       return {
-        dragElastic: 0.04,
+        dragElastic: 0.08,
         spring: { stiffness: 200, damping: 28, mass: 1.2 },
         dragTransition: { power: 0.38, timeConstant: 220 },
         enablePageCurl: false,
@@ -314,11 +314,11 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'desktop':
-      // Desktop: full effects, smooth feel
+      // Desktop: good elasticity, smooth feel
       return {
-        dragElastic: 0.10,
-        spring: { stiffness: 360, damping: 35, mass: 1.0 },
-        dragTransition: { power: 0.30, timeConstant: 260 },
+        dragElastic: 0.45,
+        spring: { stiffness: 340, damping: 28, mass: 0.85 },
+        dragTransition: { power: 0.30, timeConstant: 200 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: false,
