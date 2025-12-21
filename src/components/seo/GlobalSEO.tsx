@@ -16,7 +16,7 @@ export const GlobalSEO = () => {
     "@type": "WebSite",
     "@id": "https://curatr.pro/#website",
     "name": "Curatr",
-    "alternateName": ["Curatr Pro", "eeZee News"],
+    "alternateName": ["Curatr Pro"],
     "url": "https://curatr.pro",
     "description": "AI-powered curated news feeds. Create and manage personalized topic feeds with intelligent content curation from trusted sources.",
     "inLanguage": "en-GB",

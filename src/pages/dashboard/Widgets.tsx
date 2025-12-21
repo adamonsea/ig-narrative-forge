@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 const SUPABASE_URL = "https://fpoywkjgdapgjtdeooak.supabase.co/functions/v1";
-const WIDGET_SCRIPT_URL = "https://eezeenews.lovable.app/widget.js";
+const WIDGET_SCRIPT_URL = "https://curatr.pro/widget.js";
 
 interface WidgetConfig {
   feed: string;
@@ -82,8 +82,8 @@ export default function Widgets() {
     if (config.theme !== "auto") attrs.push(`data-theme="${config.theme}"`);
     if (config.accent) attrs.push(`data-accent="${config.accent}"`);
 
-    return `<!-- eeZee News Widget -->
-<div id="eezee-widget" ${attrs.join(" ")}></div>
+    return `<!-- Curatr Widget -->
+<div id="curatr-widget" ${attrs.join(" ")}></div>
 <script src="${WIDGET_SCRIPT_URL}" async></script>`;
   };
 
@@ -110,7 +110,7 @@ export default function Widgets() {
   return (
     <AppLayout>
       <Helmet>
-        <title>Widget Builder | eeZee News</title>
+        <title>Widget Builder | Curatr</title>
       </Helmet>
 
       <div className="container max-w-6xl py-8 space-y-8">
@@ -220,7 +220,7 @@ export default function Widgets() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="attribution">Show Attribution</Label>
-                  <p className="text-xs text-muted-foreground">Display "Powered by eeZee News"</p>
+                  <p className="text-xs text-muted-foreground">Display "Powered by Curatr"</p>
                 </div>
                 <Switch
                   id="attribution"
@@ -391,7 +391,7 @@ function WidgetPreview({
           View all stories →
         </a>
         <span className="text-xs" style={{ color: textMuted }}>
-          Powered by eeZee News
+          Powered by Curatr
         </span>
       </div>
     </div>
