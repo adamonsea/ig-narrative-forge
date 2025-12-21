@@ -10,22 +10,22 @@ interface NewsletterSignupRequest {
   email: string;
   name?: string;
   topicId: string;
-  clientIP?: string; // Will be provided by the client for rate limiting
+  notificationType?: 'daily' | 'weekly';
+  clientIP?: string;
 }
 
-// Simple hash function for rate limiting (doesn't need to be cryptographically secure)
+// Simple hash function for rate limiting
 const simpleHash = (str: string): string => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    hash = hash & hash;
   }
   return Math.abs(hash).toString(16);
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -42,7 +42,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, name, topicId, clientIP }: NewsletterSignupRequest = await req.json();
+    const { email, name, topicId, notificationType = 'daily', clientIP }: NewsletterSignupRequest = await req.json();
 
     // Validate input
     if (!email || !topicId) {
@@ -64,7 +64,7 @@ serve(async (req) => {
     // Check if topic exists and is public
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, is_public')
+      .select('id, name, slug, is_public, branding_config')
       .eq('id', topicId)
       .single();
 
@@ -82,7 +82,7 @@ serve(async (req) => {
       );
     }
 
-    // Check rate limits using the database functions
+    // Check rate limits
     const ipHash = clientIP ? simpleHash(clientIP) : null;
     
     const { data: rateLimitCheck, error: rateLimitError } = await supabase
@@ -109,47 +109,76 @@ serve(async (req) => {
       );
     }
 
-    // Record the signup attempt for rate limiting
-    const { error: recordError } = await supabase
-      .rpc('record_newsletter_signup_attempt', {
-        p_email: email,
-        p_ip_hash: ipHash
-      });
+    // Record the signup attempt
+    await supabase.rpc('record_newsletter_signup_attempt', {
+      p_email: email,
+      p_ip_hash: ipHash
+    });
 
-    if (recordError) {
-      console.warn('Failed to record signup attempt:', recordError);
-      // Continue anyway, don't block the signup
-    }
-
-    // Check if already subscribed
+    // Check if already subscribed to this notification type
     const { data: existingSignup } = await supabase
       .from('topic_newsletter_signups')
-      .select('id')
+      .select('id, email_verified')
       .eq('topic_id', topicId)
-      .eq('email', email)
+      .eq('email', email.trim().toLowerCase())
+      .eq('notification_type', notificationType)
       .single();
 
     if (existingSignup) {
-      return new Response(
-        JSON.stringify({ 
-          message: 'Already subscribed to this topic',
-          alreadySubscribed: true 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (existingSignup.email_verified) {
+        return new Response(
+          JSON.stringify({ 
+            message: 'Already subscribed to this briefing',
+            alreadySubscribed: true 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // Resend confirmation email
+        const verificationToken = crypto.randomUUID();
+        await supabase
+          .from('topic_newsletter_signups')
+          .update({ 
+            verification_token: verificationToken,
+            verification_sent_at: new Date().toISOString()
+          })
+          .eq('id', existingSignup.id);
+
+        // Send confirmation email
+        await sendConfirmationEmail(supabaseUrl, supabaseServiceKey, {
+          signupId: existingSignup.id,
+          email: email.trim().toLowerCase(),
+          topicName: topic.name,
+          topicSlug: topic.slug,
+          topicLogoUrl: topic.branding_config?.logo_url,
+          verificationToken,
+          notificationType
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Confirmation email resent. Please check your inbox.',
+            pendingVerification: true 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Generate verification token for future email verification
+    // Generate verification token
     const verificationToken = crypto.randomUUID();
 
-    // Insert the newsletter signup
+    // Insert the newsletter signup (NOT verified yet)
     const { data: signup, error: insertError } = await supabase
       .from('topic_newsletter_signups')
       .insert({
         topic_id: topicId,
         email: email.trim().toLowerCase(),
         name: name?.trim() || null,
-        email_verified: false, // Will be verified via email later
+        notification_type: notificationType,
+        email_verified: false,
+        is_active: false, // Will be activated upon verification
         verification_token: verificationToken,
         verification_sent_at: new Date().toISOString()
       })
@@ -159,11 +188,10 @@ serve(async (req) => {
     if (insertError) {
       console.error('Insert error:', insertError);
       
-      // Handle constraint violations specifically
       if (insertError.code === '23505') {
         return new Response(
           JSON.stringify({ 
-            message: 'Already subscribed to this topic',
+            message: 'Already subscribed to this briefing',
             alreadySubscribed: true 
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -176,15 +204,27 @@ serve(async (req) => {
       );
     }
 
-    // Log successful signup
+    // Send confirmation email
+    await sendConfirmationEmail(supabaseUrl, supabaseServiceKey, {
+      signupId: signup.id,
+      email: email.trim().toLowerCase(),
+      topicName: topic.name,
+      topicSlug: topic.slug,
+      topicLogoUrl: topic.branding_config?.logo_url,
+      verificationToken,
+      notificationType
+    });
+
+    // Log successful signup request
     await supabase
       .from('system_logs')
       .insert({
         level: 'info',
-        message: 'Newsletter signup completed',
+        message: 'Newsletter signup initiated - confirmation email sent',
         context: {
           topic_id: topicId,
           topic_name: topic.name,
+          notification_type: notificationType,
           email_domain: email.split('@')[1],
           has_name: !!name
         },
@@ -194,7 +234,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Successfully subscribed to ${topic.name} updates!`,
+        message: `Please check your email to confirm your ${topic.name} subscription!`,
+        pendingVerification: true,
         signup_id: signup.id
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -208,3 +249,36 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper to send confirmation email
+async function sendConfirmationEmail(
+  supabaseUrl: string, 
+  serviceKey: string, 
+  data: {
+    signupId: string;
+    email: string;
+    topicName: string;
+    topicSlug: string;
+    topicLogoUrl?: string;
+    verificationToken: string;
+    notificationType: 'daily' | 'weekly';
+  }
+) {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-confirmation-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to send confirmation email:', errorText);
+    }
+  } catch (error) {
+    console.error('Error calling send-confirmation-email:', error);
+  }
+}
