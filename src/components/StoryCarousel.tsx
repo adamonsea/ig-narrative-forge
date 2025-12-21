@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, useMotionValue, animate } from 'framer-motion';
+
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Share2, Heart, Download, Pin, MessageCircle, ExternalLink } from 'lucide-react';
@@ -881,8 +881,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
     }
   }, [sortedSlides, story.id]);
   
-  // Create slide components for SwipeCarousel
-  const slideComponents = sortedSlides.map((slide, index) => {
+  // Memoize slide components to prevent re-renders during swipe
+  const slideComponents = useMemo(() => sortedSlides.map((slide, index) => {
     // Check if this is a parliamentary story and render accordingly
     if (isParliamentaryStory) {
       const parliamentaryContent = renderParliamentarySlide(slide, index);
@@ -952,15 +952,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                 {/* Arrow below content - show on all slides except the last */}
                 {!isLast && validSlides.length > 1 && (
                   <div className="flex justify-center mt-8">
-                    <motion.div
-                      initial={{ opacity: 0.6 }}
-                      animate={{ opacity: [0.6, 1, 0.6] }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                      className="cursor-pointer"
+                    <div 
+                      className="cursor-pointer animate-pulse"
                       onClick={nextSlide}
                     >
                       <img 
@@ -968,7 +961,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                         alt="Next slide" 
                         className="w-[125px] h-[28px]"
                       />
-                    </motion.div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1006,15 +999,8 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                  {/* Arrow below content - show on all slides except the last */}
                  {!isLast && validSlides.length > 1 && (
                    <div className="flex justify-center mt-8">
-                     <motion.div
-                       initial={{ opacity: 0.6 }}
-                       animate={{ opacity: [0.6, 1, 0.6] }}
-                       transition={{
-                         duration: 2,
-                         repeat: Infinity,
-                         ease: "easeInOut"
-                       }}
-                       className="cursor-pointer"
+                     <div 
+                       className="cursor-pointer animate-pulse"
                        onClick={nextSlide}
                      >
                         <img 
@@ -1022,7 +1008,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
                           alt="Next slide" 
                           className="w-[125px] h-[28px]"
                         />
-                     </motion.div>
+                     </div>
                    </div>
                  )}
              </div>
@@ -1030,7 +1016,7 @@ export default function StoryCarousel({ story, storyUrl, topicId, storyIndex = 0
         )}
       </div>
     );
-  });
+  }), [sortedSlides, story, validSlides.length, isParliamentaryStory, isFastConnection, partyColors]);
 
   return (
     <article 
