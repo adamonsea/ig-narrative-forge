@@ -36,53 +36,118 @@ serve(async (req) => {
     const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     for (const topic of topics) {
+      const topicResults: any = {
+        topic: topic.name,
+        push: { success: false },
+        email: { success: false }
+      };
+
+      // === PUSH NOTIFICATIONS ===
       try {
-        const body: any = {
+        const pushBody: any = {
           topicId: topic.id,
           notificationType: notification_type
         };
 
         if (notification_type === 'daily') {
-          body.roundupDate = today;
+          pushBody.roundupDate = today;
         } else if (notification_type === 'weekly') {
-          body.weekStart = weekStart;
+          pushBody.weekStart = weekStart;
         }
 
-        console.log(`📤 Invoking send-story-notification for ${topic.name} with:`, body);
+        console.log(`📤 Sending push notification for ${topic.name}`);
         
-        const response = await supabase.functions.invoke('send-story-notification', { body });
+        const pushResponse = await supabase.functions.invoke('send-story-notification', { body: pushBody });
         
-        if (response.error) {
-          console.error(`❌ Error response for ${topic.name}:`, response.error);
-          results.push({
-            topic: topic.name,
+        if (pushResponse.error) {
+          console.error(`❌ Push error for ${topic.name}:`, pushResponse.error);
+          topicResults.push = {
             success: false,
-            error: response.error.message || String(response.error)
-          });
+            error: pushResponse.error.message || String(pushResponse.error)
+          };
         } else {
-          console.log(`✅ Response for ${topic.name}:`, response.data);
-          results.push({
-            topic: topic.name,
+          console.log(`✅ Push sent for ${topic.name}:`, pushResponse.data);
+          topicResults.push = {
             success: true,
-            ...response.data
-          });
+            ...pushResponse.data
+          };
         }
       } catch (error) {
-        console.error(`Failed to send notification for ${topic.name}:`, error);
-        results.push({
-          topic: topic.name,
+        console.error(`Push notification failed for ${topic.name}:`, error);
+        topicResults.push = {
           success: false,
           error: error.message
-        });
+        };
       }
+
+      // === EMAIL NEWSLETTERS ===
+      try {
+        const emailBody: any = {
+          topicId: topic.id,
+          notificationType: notification_type
+        };
+
+        if (notification_type === 'daily') {
+          emailBody.roundupDate = today;
+        } else if (notification_type === 'weekly') {
+          emailBody.weekStart = weekStart;
+        }
+
+        console.log(`📧 Sending email newsletter for ${topic.name}`);
+        
+        const emailResponse = await supabase.functions.invoke('send-email-newsletter', { body: emailBody });
+        
+        if (emailResponse.error) {
+          console.error(`❌ Email error for ${topic.name}:`, emailResponse.error);
+          topicResults.email = {
+            success: false,
+            error: emailResponse.error.message || String(emailResponse.error)
+          };
+        } else {
+          console.log(`✅ Email sent for ${topic.name}:`, emailResponse.data);
+          topicResults.email = {
+            success: true,
+            ...emailResponse.data
+          };
+        }
+      } catch (error) {
+        console.error(`Email newsletter failed for ${topic.name}:`, error);
+        topicResults.email = {
+          success: false,
+          error: error.message
+        };
+      }
+
+      results.push(topicResults);
     }
 
-    console.log(`✅ Sent notifications to ${results.filter(r => r.success).length}/${topics.length} topics`);
+    const pushSuccessCount = results.filter(r => r.push.success).length;
+    const emailSuccessCount = results.filter(r => r.email.success).length;
+
+    console.log(`✅ Notifications complete: Push ${pushSuccessCount}/${topics.length}, Email ${emailSuccessCount}/${topics.length}`);
+
+    // Log summary
+    await supabase
+      .from('system_logs')
+      .insert({
+        level: 'info',
+        message: `Automated ${notification_type} notifications sent`,
+        context: {
+          notification_type,
+          topics_count: topics.length,
+          push_success: pushSuccessCount,
+          email_success: emailSuccessCount,
+          results: results.slice(0, 10) // Only log first 10 for brevity
+        },
+        function_name: 'automated-roundup-notifier'
+      });
 
     return new Response(JSON.stringify({
       success: true,
       notification_type,
       topics_processed: topics.length,
+      push_success: pushSuccessCount,
+      email_success: emailSuccessCount,
       results
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
