@@ -219,13 +219,13 @@ export function SwipeCarousel({
           className="flex h-full relative"
           drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={animationPresets.dragElastic}
-          dragMomentum
+          dragMomentum={false}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={animationPresets.dragTransition}
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
             x, 
-            touchAction: "none",
+            touchAction: "pan-y",
             willChange: 'transform',
             transform: 'translate3d(0, 0, 0)',
           }}
