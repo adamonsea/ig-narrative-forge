@@ -87,22 +87,22 @@ serve(async (req) => {
       .from('stories')
       .select(`
         id,
-        headline,
+        title,
         cover_illustration_url,
-        topic_articles!inner (
-          article:articles!inner (
-            source:content_sources (
-              source_name
-            )
+        topic_article:topic_articles!topic_article_id (
+          topic_id,
+          source:content_sources (
+            source_name
+          ),
+          shared_content:shared_article_content (
+            source_domain
           )
         )
       `)
-      .eq('topic_id', topicId)
+      .eq('topic_article.topic_id', topicId)
       .eq('status', 'published')
-      .gte('published_at', dateStart.toISOString())
-      .lte('published_at', dateEnd.toISOString())
-      .order('quality_score', { ascending: false })
-      .order('published_at', { ascending: false })
+      .order('quality_score', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
       .limit(storyLimit);
 
     if (storiesError) {
@@ -115,13 +115,14 @@ serve(async (req) => {
     // Transform stories for email template
     const stories: EmailStory[] = (storiesData || []).map(story => {
       // Get source name from nested structure
-      const topicArticle = story.topic_articles?.[0];
-      const source = topicArticle?.article?.source;
-      const sourceName = source?.source_name || 'Unknown Source';
+      const topicArticle = story.topic_article;
+      const sourceName = topicArticle?.source?.source_name 
+        || topicArticle?.shared_content?.source_domain 
+        || topic.name;
       
       return {
         id: story.id,
-        title: story.headline,
+        title: story.title,
         thumbnail_url: story.cover_illustration_url,
         source_name: sourceName,
         story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`
@@ -209,7 +210,7 @@ serve(async (req) => {
           : `${topic.name} Weekly Roundup`;
 
         const { error: sendError } = await resend.emails.send({
-          from: `${topic.name} <updates@eezeenews.com>`,
+          from: `eeZee News <onboarding@resend.dev>`,
           to: [recipient.email!],
           subject,
           html: emailHtml,
