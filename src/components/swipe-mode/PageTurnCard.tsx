@@ -45,32 +45,17 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   
   // Device-adaptive effect values
   const liftScale = animationPresets.enableDynamicShadows ? 1.02 : 1.01;
-  const maxTilt = animationPresets.enablePageCurl ? 10 : 5;
-  const shadowDepth = animationPresets.enableDynamicShadows ? 25 : 10;
+  const maxTilt = animationPresets.enablePageCurl ? 8 : 4;
   
-  // Natural paper tilt (rotateZ) instead of flip
+  // Natural paper tilt (rotateZ) - GPU accelerated
   const rotateZ = useTransform(x, [-200, 0, 200], [-maxTilt, 0, maxTilt]);
   
-  // Subtle vertical lift as paper tilts
-  const y = useTransform(x, [-200, 0, 200], [10, 0, 10]);
-  
-  // Shadow deepens as card lifts - softer newspaper shadow
-  const boxShadow = useTransform(
-    x,
-    [-200, 0, 200],
-    [
-      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(139,119,101,0.25)`,
-      `0 8px 24px -4px rgba(139,119,101,0.15)`,
-      `0 ${shadowDepth}px ${shadowDepth * 2}px -${shadowDepth / 2}px rgba(139,119,101,0.25)`
-    ]
-  );
+  // Shadow opacity instead of expensive boxShadow string interpolation - GPU accelerated
+  const shadowOpacity = useTransform(x, [-200, 0, 200], [0.3, 0.15, 0.3]);
 
-  // Overlay opacity for like/discard
+  // Overlay opacity for like/discard - GPU accelerated
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
   const discardOpacity = useTransform(x, [-100, 0], [1, 0]);
-  
-  // Icon scale pulses near threshold
-  const iconScale = useTransform(x, [-150, -100, 100, 150], [1.2, 1, 1, 1.2]);
 
   const storyDate = useMemo(() => {
     const dateStr = story.article?.published_at || story.created_at;
@@ -130,25 +115,29 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   return (
     <motion.div
       key={story.id}
+      layout={false}
       style={{
         x,
-        y,
         rotateZ,
-        boxShadow,
-        cursor: isDragging.current ? 'grabbing' : 'grab',
-        willChange: 'transform',
-        contain: 'layout paint',
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden',
+        cursor: 'grab',
+        willChange: 'transform, opacity',
+        contain: 'layout style paint',
         ...style
       }}
       drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
+      dragConstraints={{ left: -300, right: 300 }}
       dragElastic={animationPresets.dragElastic}
-      dragMomentum={true}
+      dragMomentum={false}
+      dragTransition={{ 
+        bounceStiffness: 600, 
+        bounceDamping: 30 
+      }}
       onDragStart={() => { isDragging.current = true; }}
       onDragEnd={handleDragEnd}
-      whileDrag={{ scale: liftScale }}
+      whileDrag={{ 
+        scale: liftScale,
+        cursor: 'grabbing'
+      }}
       initial={{ scale: 0.9, y: 50, opacity: 0 }}
       animate={{
         scale: 1,
@@ -166,26 +155,41 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
             }
           : undefined
       }
-      className="absolute inset-0 touch-none"
+      className="absolute inset-0 touch-none gpu-layer"
     >
-      {/* Discard Overlay */}
+      {/* GPU-accelerated shadow layer - opacity only, no boxShadow string interpolation */}
+      <motion.div 
+        style={{ opacity: shadowOpacity }}
+        className="absolute inset-0 -z-10 pointer-events-none rounded-lg"
+        aria-hidden="true"
+      >
+        <div 
+          className="absolute inset-0 rounded-lg"
+          style={{ 
+            boxShadow: '0 25px 50px -12px rgba(139,119,101,0.4)',
+            transform: 'translateZ(0)'
+          }}
+        />
+      </motion.div>
+
+      {/* Discard Overlay - simplified, no scale animation */}
       <motion.div
         style={{ opacity: discardOpacity }}
         className="absolute inset-0 bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent z-10 pointer-events-none flex items-center justify-center"
       >
-        <motion.div style={{ scale: iconScale }} className="bg-destructive text-destructive-foreground rounded-full p-4 shadow-lg">
+        <div className="bg-destructive text-destructive-foreground rounded-full p-4 shadow-lg">
           <ThumbsDown className="w-12 h-12" strokeWidth={3} />
-        </motion.div>
+        </div>
       </motion.div>
 
-      {/* Like Overlay */}
+      {/* Like Overlay - simplified, no scale animation */}
       <motion.div
         style={{ opacity: likeOpacity }}
         className="absolute inset-0 bg-gradient-to-bl from-primary/20 via-primary/10 to-transparent z-10 pointer-events-none flex items-center justify-center"
       >
-        <motion.div style={{ scale: iconScale }} className="bg-primary text-primary-foreground rounded-full p-4 shadow-lg">
+        <div className="bg-primary text-primary-foreground rounded-full p-4 shadow-lg">
           <Heart className="w-12 h-12 fill-current" strokeWidth={3} />
-        </motion.div>
+        </div>
       </motion.div>
 
       {/* Newspaper Cutting Card */}
