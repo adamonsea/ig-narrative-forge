@@ -26,6 +26,7 @@ interface EmailStory {
 interface WeeklyRoundupEmailProps {
   topicName: string;
   topicSlug: string;
+  topicLogoUrl?: string;
   weekStart: string;
   weekEnd: string;
   stories: EmailStory[];
@@ -36,6 +37,7 @@ interface WeeklyRoundupEmailProps {
 export const WeeklyRoundupEmail = ({
   topicName = 'Your Topic',
   topicSlug = 'topic',
+  topicLogoUrl,
   weekStart = 'Dec 15',
   weekEnd = 'Dec 21',
   stories = [],
@@ -49,6 +51,15 @@ export const WeeklyRoundupEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
+          {topicLogoUrl ? (
+            <Img
+              src={topicLogoUrl}
+              width={48}
+              height={48}
+              alt={`${topicName} logo`}
+              style={topicLogo}
+            />
+          ) : null}
           <Text style={logo}>curatr.pro</Text>
           <Heading style={h1}>{topicName}</Heading>
           <Text style={subtitle}>Weekly Roundup • {weekStart} – {weekEnd}</Text>
@@ -67,7 +78,7 @@ export const WeeklyRoundupEmail = ({
                       {story.thumbnail_url ? (
                         <Img
                           src={story.thumbnail_url}
-                          alt=""
+                          alt={`${story.title} thumbnail`}
                           width={80}
                           height={80}
                           style={thumbnail}
@@ -95,8 +106,8 @@ export const WeeklyRoundupEmail = ({
 
         {/* CTAs */}
         <Section style={ctaSection}>
-          <Link href={`${baseUrl}/feed/${topicSlug}/roundup/weekly`} style={ctaButtonPrimary}>
-            See All Stories →
+          <Link href={`${baseUrl}/feed/${topicSlug}/weekly/latest`} style={ctaButtonPrimary}>
+            See latest roundup →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} style={ctaButtonSecondary}>
             Visit Feed
@@ -148,6 +159,12 @@ const logo = {
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
   margin: '0 0 8px',
+}
+
+const topicLogo = {
+  display: 'block',
+  margin: '0 auto 10px',
+  borderRadius: '12px',
 }
 
 const h1 = {

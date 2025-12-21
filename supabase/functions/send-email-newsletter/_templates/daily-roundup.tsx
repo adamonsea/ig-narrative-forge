@@ -26,6 +26,7 @@ interface EmailStory {
 interface DailyRoundupEmailProps {
   topicName: string;
   topicSlug: string;
+  topicLogoUrl?: string;
   date: string;
   stories: EmailStory[];
   baseUrl: string;
@@ -35,6 +36,7 @@ interface DailyRoundupEmailProps {
 export const DailyRoundupEmail = ({
   topicName = 'Your Topic',
   topicSlug = 'topic',
+  topicLogoUrl,
   date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
   stories = [],
   baseUrl = 'https://curatr.pro',
@@ -47,6 +49,15 @@ export const DailyRoundupEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
+          {topicLogoUrl ? (
+            <Img
+              src={topicLogoUrl}
+              width={48}
+              height={48}
+              alt={`${topicName} logo`}
+              style={topicLogo}
+            />
+          ) : null}
           <Text style={logo}>curatr.pro</Text>
           <Heading style={h1}>{topicName}</Heading>
           <Text style={subtitle}>Daily Briefing • {date}</Text>
@@ -65,7 +76,7 @@ export const DailyRoundupEmail = ({
                       {story.thumbnail_url ? (
                         <Img
                           src={story.thumbnail_url}
-                          alt=""
+                          alt={`${story.title} thumbnail`}
                           width={80}
                           height={80}
                           style={thumbnail}
@@ -93,8 +104,8 @@ export const DailyRoundupEmail = ({
 
         {/* CTAs */}
         <Section style={ctaSection}>
-          <Link href={`${baseUrl}/feed/${topicSlug}/roundup/daily`} style={ctaButtonPrimary}>
-            Today's Roundup →
+          <Link href={`${baseUrl}/feed/${topicSlug}/daily/latest`} style={ctaButtonPrimary}>
+            View latest briefing →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} style={ctaButtonSecondary}>
             Visit Feed
@@ -146,6 +157,12 @@ const logo = {
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
   margin: '0 0 8px',
+}
+
+const topicLogo = {
+  display: 'block',
+  margin: '0 auto 10px',
+  borderRadius: '12px',
 }
 
 const h1 = {
