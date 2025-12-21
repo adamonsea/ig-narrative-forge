@@ -264,10 +264,10 @@ export function getAnimationPresets(): AnimationPresets {
   
   switch (tier) {
     case 'modern-ios':
-      // Modern iOS: high elasticity, light springs for responsive finger-following
+      // Modern iOS: high elasticity, controlled springs for smooth feel
       return {
         dragElastic: 0.55,
-        spring: { stiffness: 350, damping: 26, mass: 0.65 },
+        spring: { stiffness: 350, damping: 35, mass: 0.75 },
         dragTransition: { power: 0.35, timeConstant: 180 },
         enablePageCurl: true,
         enableDynamicShadows: true,
@@ -276,10 +276,10 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'modern-android':
-      // Modern Android: high elasticity, slightly more damped
+      // Modern Android: high elasticity, controlled springs
       return {
         dragElastic: 0.50,
-        spring: { stiffness: 330, damping: 28, mass: 0.68 },
+        spring: { stiffness: 330, damping: 36, mass: 0.78 },
         dragTransition: { power: 0.32, timeConstant: 190 },
         enablePageCurl: true,
         enableDynamicShadows: true,
@@ -289,10 +289,10 @@ export function getAnimationPresets(): AnimationPresets {
       
     case 'mid-range-ios':
     case 'mid-range-android':
-      // Mid-range: moderate elasticity, balanced springs
+      // Mid-range: moderate elasticity, controlled springs
       return {
         dragElastic: 0.35,
-        spring: { stiffness: 300, damping: 28, mass: 0.80 },
+        spring: { stiffness: 300, damping: 34, mass: 0.90 },
         dragTransition: { power: 0.28, timeConstant: 200 },
         enablePageCurl: false,
         enableDynamicShadows: false,
@@ -314,10 +314,10 @@ export function getAnimationPresets(): AnimationPresets {
       };
       
     case 'desktop':
-      // Desktop: good elasticity, smooth feel
+      // Desktop: good elasticity, controlled feel
       return {
         dragElastic: 0.45,
-        spring: { stiffness: 340, damping: 28, mass: 0.85 },
+        spring: { stiffness: 340, damping: 34, mass: 0.90 },
         dragTransition: { power: 0.30, timeConstant: 200 },
         enablePageCurl: true,
         enableDynamicShadows: true,

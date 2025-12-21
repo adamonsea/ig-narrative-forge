@@ -49,9 +49,6 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   
   // Natural paper tilt (rotateZ) - GPU accelerated
   const rotateZ = useTransform(x, [-200, 0, 200], [-maxTilt, 0, maxTilt]);
-  
-  // Shadow opacity instead of expensive boxShadow string interpolation - GPU accelerated
-  const shadowOpacity = useTransform(x, [-200, 0, 200], [0.3, 0.15, 0.3]);
 
   // Overlay opacity for like/discard - GPU accelerated
   const likeOpacity = useTransform(x, [0, 100], [0, 1]);
@@ -120,8 +117,9 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         x,
         rotateZ,
         cursor: 'grab',
-        willChange: 'transform, opacity',
-        contain: 'layout style paint',
+        willChange: 'transform',
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
         ...style
       }}
       drag="x"
@@ -129,8 +127,8 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
       dragElastic={animationPresets.dragElastic}
       dragMomentum={false}
       dragTransition={{ 
-        bounceStiffness: 600, 
-        bounceDamping: 30 
+        bounceStiffness: 500, 
+        bounceDamping: 35 
       }}
       onDragStart={() => { isDragging.current = true; }}
       onDragEnd={handleDragEnd}
@@ -155,22 +153,8 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
             }
           : undefined
       }
-      className="absolute inset-0 touch-none gpu-layer"
+      className="absolute inset-0 touch-none"
     >
-      {/* GPU-accelerated shadow layer - opacity only, no boxShadow string interpolation */}
-      <motion.div 
-        style={{ opacity: shadowOpacity }}
-        className="absolute inset-0 -z-10 pointer-events-none rounded-lg"
-        aria-hidden="true"
-      >
-        <div 
-          className="absolute inset-0 rounded-lg"
-          style={{ 
-            boxShadow: '0 25px 50px -12px rgba(139,119,101,0.4)',
-            transform: 'translateZ(0)'
-          }}
-        />
-      </motion.div>
 
       {/* Discard Overlay - simplified, no scale animation */}
       <motion.div
@@ -198,6 +182,7 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         style={{
           clipPath: tornEdgeClipPath,
           background: 'linear-gradient(145deg, #f8f5e9 0%, #f5f0e1 50%, #efe8d8 100%)',
+          boxShadow: '0 20px 40px -12px rgba(139,119,101,0.25)',
         }}
       >
         {/* Subtle fold line - simplified */}
