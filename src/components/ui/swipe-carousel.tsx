@@ -190,17 +190,11 @@ export function SwipeCarousel({
       targetIndex = Math.min(count - 1, index + 1);
     }
 
-    // Avoid double-animating when the index changes.
-    // If the index stays the same, we still need to snap back.
-    if (targetIndex === index) {
-      const controls = animate(x, -index * width, {
-        type: "spring",
-        ...animationPresets.spring,
-      });
-      return () => controls.stop();
+    // Only update index if it changed - let dragTransition handle snap-back
+    if (targetIndex !== index) {
+      setIndex(targetIndex);
     }
-
-    setIndex(targetIndex);
+    // No manual snap-back animation - dragTransition bounceStiffness/bounceDamping handles it
   };
 
 
@@ -222,25 +216,20 @@ export function SwipeCarousel({
         className="overflow-hidden w-full h-full" 
       >
         <motion.div
-          layout={false}
-          className="flex h-full relative"
+          className="flex h-full relative will-change-transform"
           drag={width > 0 && !isDragBlocked ? "x" : false}
           dragElastic={animationPresets.dragElastic}
-          dragMomentum={false}
+          dragMomentum={true}
           dragConstraints={{ left: -(count - 1) * width, right: 0 }}
           dragTransition={{
-            bounceStiffness: 500,
-            bounceDamping: 35,
-            power: animationPresets.dragTransition.power,
-            timeConstant: animationPresets.dragTransition.timeConstant,
+            bounceStiffness: 200,
+            bounceDamping: 40,
+            timeConstant: 400,
           }}
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
             x, 
             touchAction: "pan-y pinch-zoom",
-            willChange: 'transform',
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
           }}
           onDragEnd={onDragEnd}
         >
