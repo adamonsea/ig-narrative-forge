@@ -143,9 +143,9 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         ...style
       }}
       drag="x"
-      dragConstraints={{ left: -500, right: 500 }}
-      dragElastic={Math.max(0.25, animationPresets.dragElastic)}
-      dragMomentum={false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={animationPresets.dragElastic}
+      dragMomentum={true}
       onDragStart={() => { isDragging.current = true; }}
       onDragEnd={handleDragEnd}
       whileDrag={{ scale: liftScale }}
