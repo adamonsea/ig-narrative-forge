@@ -1,7 +1,7 @@
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
-import { getAnimationPresets, triggerHaptic } from "@/lib/deviceUtils";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { motion, useMotionValue, animate, PanInfo } from "framer-motion";
+import { triggerHaptic } from "@/lib/deviceUtils";
 
 export type SwipeCarouselProps = {
   slides: React.ReactNode[];
@@ -11,17 +11,20 @@ export type SwipeCarouselProps = {
   showDots?: boolean;
   onSlideChange?: (index: number) => void;
   ariaLabel?: string;
-  // Story tracking props
   storyId?: string;
   topicId?: string;
-  // Enhanced animation props
   showPreviewAnimation?: boolean;
-  // Limit drag start to centered area
-  centerDragArea?: boolean;
-  // Auto-slide props
   autoSlide?: boolean;
-  autoSlideInterval?: number; // milliseconds
+  autoSlideInterval?: number;
 };
+
+// Instagram-like easing curve - feels native and smooth
+const SMOOTH_TRANSITION = {
+  duration: 0.5,
+  ease: [0.32, 0.72, 0, 1] as const,
+};
+
+const INSTANT_TRANSITION = { duration: 0 };
 
 export function SwipeCarousel({
   slides,
@@ -41,12 +44,20 @@ export function SwipeCarousel({
   const [index, setIndex] = useState(Math.min(Math.max(0, initialIndex), count - 1));
   const [width, setWidth] = useState(0);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const x = useMotionValue(0);
-  const snapControlsRef = useRef<ReturnType<typeof animate> | null>(null);
   const hasTrackedSwipe = useRef(false);
   const previewAnimationRef = useRef<HTMLDivElement | null>(null);
-  const animationPresets = useMemo(() => getAnimationPresets(), []);
-  // measure width
+  
+  // Drag offset for visual feedback during gesture
+  const dragX = useMotionValue(0);
+  
+  // Check for reduced motion preference
+  const prefersReducedMotion = useMemo(() => 
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  , []);
+  
+  const transition = prefersReducedMotion ? INSTANT_TRANSITION : SMOOTH_TRANSITION;
+
+  // Measure width
   useEffect(() => {
     const node = viewportRef.current;
     if (!node) return;
@@ -58,57 +69,40 @@ export function SwipeCarousel({
     return () => ro.disconnect();
   }, []);
 
-  // keep x aligned on resize/index changes (no animation)
+  // Notify parent of slide changes and track swipes
   useEffect(() => {
-    x.set(-index * width);
-  }, [index, width, x]);
+    onSlideChange?.(index);
 
-  // Note: We intentionally avoid a "animate on index" effect.
-  // All snapping animations are triggered explicitly in goTo()/onDragEnd,
-  // which prevents animation fights and guarantees snap-back.
-
-  // notify parent of slide changes and track swipes
-  useEffect(() => {
-    if (onSlideChange) {
-      onSlideChange(index);
-    }
-
-    // Haptic feedback on slide change (modern iOS only)
-    if (animationPresets.enableHaptics && index > 0) {
+    // Haptic feedback on slide change
+    if (index > 0) {
       triggerHaptic('light');
     }
 
-    // Track swipe interaction if we have story/topic context and this is a real swipe
+    // Track swipe interaction
     if (storyId && topicId && index > 0 && !hasTrackedSwipe.current) {
       hasTrackedSwipe.current = true;
-      // Dynamic import to avoid circular dependencies
       import('@/hooks/useStoryInteractionTracking').then(({ useStoryInteractionTracking }) => {
         const { trackSwipe } = useStoryInteractionTracking();
         trackSwipe(storyId, topicId, index);
       });
     }
-  }, [index, onSlideChange, storyId, topicId, animationPresets.enableHaptics]);
+  }, [index, onSlideChange, storyId, topicId]);
 
-  // Preview animation effect - more pronounced nudge
+  // Preview animation effect
   useEffect(() => {
     if (!showPreviewAnimation || !previewAnimationRef.current) return;
     
     const element = previewAnimationRef.current;
     const sessionKey = topicId ? `swipe_preview_shown_${topicId}` : 'swipe_preview_shown_default';
     
-    // Check if animation already shown in this session
     if (sessionStorage.getItem(sessionKey)) return;
     
     const timer = setTimeout(() => {
       const controls = animate(element, 
         { x: [0, -40, 0] }, 
-        { 
-          duration: 1.8,
-          ease: "easeInOut"
-        }
+        { duration: 1.8, ease: "easeInOut" }
       );
       
-      // Mark as shown after animation completes
       setTimeout(() => {
         sessionStorage.setItem(sessionKey, 'true');
       }, 1800);
@@ -124,86 +118,57 @@ export function SwipeCarousel({
     if (!autoSlide || count <= 1) return;
 
     const interval = setInterval(() => {
-      setIndex((current) => {
-        const nextIndex = current >= count - 1 ? 0 : current + 1;
-
-        // Animate the snap to keep auto-slide smooth
-        snapControlsRef.current?.stop?.();
-        if (width > 0) {
-          snapControlsRef.current = animate(x, -nextIndex * width, {
-            type: "spring",
-            ...animationPresets.spring,
-          });
-        }
-
-        return nextIndex;
-      });
+      setIndex(current => current >= count - 1 ? 0 : current + 1);
     }, autoSlideInterval);
 
     return () => clearInterval(interval);
-  }, [autoSlide, autoSlideInterval, count, width, x, animationPresets.spring]);
+  }, [autoSlide, autoSlideInterval, count]);
 
-  const clamp = React.useCallback((v: number) => Math.min(Math.max(v, 0), count - 1), [count]);
+  const clamp = useCallback((v: number) => Math.min(Math.max(v, 0), count - 1), [count]);
 
-  const snapTo = React.useCallback(
-    (nextIndex: number, updateIndex: boolean) => {
-      const clamped = clamp(nextIndex);
+  // Navigate to specific slide
+  const goTo = useCallback((i: number) => {
+    setIndex(clamp(i));
+  }, [clamp]);
 
-      // Stop any in-flight snap animation before starting a new one
-      snapControlsRef.current?.stop?.();
-
-      if (width > 0) {
-        snapControlsRef.current = animate(x, -clamped * width, {
-          type: "spring",
-          ...animationPresets.spring,
-        });
-      }
-
-      if (updateIndex && clamped !== index) {
-        setIndex(clamped);
-      }
-    },
-    [animationPresets.spring, clamp, index, width, x]
-  );
-
-  const goTo = (i: number) => snapTo(i, true);
-
-  // Instagram-like gesture: smooth slide-by-slide navigation with velocity-weighted thresholds
-  const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    // More responsive base threshold (20% instead of 25%)
-    const baseThreshold = width * 0.20;
-    const swipeDistance = info.offset.x;
-    const swipeVelocity = info.velocity.x;
-
-    // More sensitive velocity boost for snappy feel
-    const velocityBoost =
-      Math.min(Math.abs(swipeVelocity) / 800, 0.55) * animationPresets.swipeVelocityMultiplier;
-    const effectiveThreshold = baseThreshold * (1 - velocityBoost);
-
+  // Handle drag end - only updates index, animation is declarative
+  const onDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+    
+    // Threshold: 20% of width or quick flick (velocity > 500px/s)
+    const threshold = width * 0.2;
+    
     let targetIndex = index;
-
-    // Lower minimum thresholds for faster response (30px/300 velocity instead of 40/400)
-    if (swipeDistance > effectiveThreshold || (swipeDistance > 30 && swipeVelocity > 300)) {
-      // Swiped right (previous slide)
-      targetIndex = Math.max(0, index - 1);
-    } else if (
-      swipeDistance < -effectiveThreshold ||
-      (swipeDistance < -30 && swipeVelocity < -300)
-    ) {
-      // Swiped left (next slide)
+    
+    if (offset < -threshold || velocity < -500) {
+      // Swiped left -> next slide
       targetIndex = Math.min(count - 1, index + 1);
+    } else if (offset > threshold || velocity > 500) {
+      // Swiped right -> previous slide
+      targetIndex = Math.max(0, index - 1);
     }
+    
+    // Reset drag offset
+    dragX.set(0);
+    
+    // Update index - this triggers declarative animation
+    setIndex(targetIndex);
+  }, [count, dragX, index, width]);
 
-    // Always snap back to the nearest slide on release.
-    // We animate the motion value directly (even when index doesn't change)
-    // to avoid leaving the carousel between slides.
-    snapTo(targetIndex, targetIndex !== index);
-  };
+  // Track drag offset for visual feedback
+  const onDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    dragX.set(info.offset.x);
+  }, [dragX]);
 
-
-  const heightStyle = useMemo(() => ({ height: typeof height === "number" ? `${height}px` : height }), [height]);
+  const heightStyle = useMemo(() => ({ 
+    height: typeof height === "number" ? `${height}px` : height 
+  }), [height]);
 
   if (count === 0) return null;
+
+  // Calculate target x position based on current index
+  const targetX = -index * width;
 
   return (
     <div 
@@ -220,27 +185,26 @@ export function SwipeCarousel({
       >
         <motion.div
           className="flex h-full relative will-change-transform"
+          // Declarative animation - framer handles everything
+          animate={{ x: targetX }}
+          transition={transition}
+          // Drag configuration
           drag={width > 0 ? "x" : false}
-          dragElastic={animationPresets.dragElastic}
-          dragMomentum={false}
-          dragConstraints={{ left: -(count - 1) * width, right: 0 }}
-          dragTransition={{
-            bounceStiffness: 600,
-            bounceDamping: 45,
-          }}
+          dragElastic={0.15}
+          dragConstraints={{ left: 0, right: 0 }} // Snap back after drag
+          onDrag={onDrag}
+          onDragEnd={onDragEnd}
           whileDrag={{ cursor: "grabbing" }}
           style={{ 
-            x, 
+            x: dragX,
             touchAction: "pan-y pinch-zoom",
           }}
-          onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
             <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
               <div className="h-full w-full">{slide}</div>
             </div>
           ))}
-          
         </motion.div>
       </div>
       {showDots && count > 1 && (
