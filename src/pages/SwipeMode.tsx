@@ -6,6 +6,7 @@ import { useSwipeMode } from '@/hooks/useSwipeMode';
 import { useDeviceOptimizations } from '@/lib/deviceUtils';
 import { useTopicFavicon } from '@/hooks/useTopicFavicon';
 import { usePlayModeVisitorTracking } from '@/hooks/usePlayModeVisitorTracking';
+import { optimizeThumbnailUrl, optimizeImageUrl } from '@/lib/imageOptimization';
 import { PageTurnCard } from '@/components/swipe-mode/PageTurnCard';
 import { SwipeModeAuth } from '@/components/swipe-mode/SwipeModeAuth';
 import { LikedStoriesDrawer } from '@/components/swipe-mode/LikedStoriesDrawer';
@@ -253,31 +254,33 @@ export default function SwipeMode() {
             </div>
           </div>
         ) : currentStory ? (
-          <div className="relative h-[600px]" style={{ zIndex: 1 }}>
+          <div className="relative h-[calc(100vh-12rem)] min-h-[400px] max-h-[700px]" style={{ zIndex: 1 }}>
             {/* Swipe hint animation */}
             <SwipeModeHint />
             
             {/* Show lightweight static preview underneath (if next story exists) */}
             {stories[currentIndex + 1] && (
               <>
-                {/* Next card preview - static, lightweight */}
+                {/* Next card preview - static, lightweight with optimized thumbnail */}
                 <div 
                   className="absolute inset-0 rounded-lg overflow-hidden bg-card border shadow-sm"
                   style={{ 
-                    transform: 'scale(0.95) translateY(8px)',
+                    transform: 'scale(0.95) translateY(8px) translateZ(0)',
                     opacity: 0.7,
                     zIndex: 0,
                     filter: optimizations.shouldReduceMotion ? 'none' : 'blur(1px)',
+                    backfaceVisibility: 'hidden',
                   }}
                 >
-                  {/* Static preview - just image and skeleton, not full PageTurnCard */}
+                  {/* Static preview - optimized thumbnail */}
                   {stories[currentIndex + 1].cover_illustration_url && (
                     <div className="w-full aspect-[4/3] bg-muted overflow-hidden">
                       <img 
-                        src={stories[currentIndex + 1].cover_illustration_url}
+                        src={optimizeThumbnailUrl(stories[currentIndex + 1].cover_illustration_url) || ''}
                         alt=""
                         className="w-full h-full object-cover opacity-80"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   )}
@@ -291,7 +294,7 @@ export default function SwipeMode() {
                 <div 
                   className="absolute inset-0 bg-card border rounded-lg shadow-sm"
                   style={{ 
-                    transform: 'scale(0.92) translateY(14px)',
+                    transform: 'scale(0.92) translateY(14px) translateZ(0)',
                     opacity: 0.4,
                     zIndex: -1
                   }}
@@ -299,12 +302,12 @@ export default function SwipeMode() {
               </>
             )}
             
-            {/* Preload next card image */}
+            {/* Preload next card image with optimized URL */}
             {stories[currentIndex + 1]?.cover_illustration_url && (
               <link 
                 rel="preload" 
                 as="image" 
-                href={stories[currentIndex + 1].cover_illustration_url} 
+                href={optimizeImageUrl(stories[currentIndex + 1].cover_illustration_url, { width: 400, quality: 75, format: 'webp' }) || ''} 
               />
             )}
             
