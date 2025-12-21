@@ -44,6 +44,12 @@ enable_confirmations = false
 [functions.secure-newsletter-signup]
 verify_jwt = false
 
+[functions.send-confirmation-email]
+verify_jwt = false
+
+[functions.verify-subscription]
+verify_jwt = false
+
 [functions.topic-manifest]
 verify_jwt = false
 

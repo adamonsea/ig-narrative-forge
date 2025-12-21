@@ -3019,6 +3019,60 @@ export type Database = {
           },
         ]
       }
+      subscriber_scores: {
+        Row: {
+          best_streak: number
+          created_at: string
+          email: string
+          id: string
+          last_played_at: string
+          like_count: number
+          sessions_played: number
+          topic_id: string | null
+          total_swipes: number
+          updated_at: string
+        }
+        Insert: {
+          best_streak?: number
+          created_at?: string
+          email: string
+          id?: string
+          last_played_at?: string
+          like_count?: number
+          sessions_played?: number
+          topic_id?: string | null
+          total_swipes?: number
+          updated_at?: string
+        }
+        Update: {
+          best_streak?: number
+          created_at?: string
+          email?: string
+          id?: string
+          last_played_at?: string
+          like_count?: number
+          sessions_played?: number
+          topic_id?: string | null
+          total_swipes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriber_scores_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "safe_public_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriber_scores_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suggested_keywords: {
         Row: {
           added_at: string | null
@@ -3431,6 +3485,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string | null
+          email_verified: boolean | null
           frequency: string
           id: string
           is_active: boolean
@@ -3439,12 +3494,14 @@ export type Database = {
           push_subscription: Json | null
           topic_id: string | null
           updated_at: string
+          verification_sent_at: string | null
           verification_token: string | null
           verified_at: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
+          email_verified?: boolean | null
           frequency?: string
           id?: string
           is_active?: boolean
@@ -3453,12 +3510,14 @@ export type Database = {
           push_subscription?: Json | null
           topic_id?: string | null
           updated_at?: string
+          verification_sent_at?: string | null
           verification_token?: string | null
           verified_at?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
+          email_verified?: boolean | null
           frequency?: string
           id?: string
           is_active?: boolean
@@ -3467,6 +3526,7 @@ export type Database = {
           push_subscription?: Json | null
           topic_id?: string | null
           updated_at?: string
+          verification_sent_at?: string | null
           verification_token?: string | null
           verified_at?: string | null
         }

@@ -25,6 +25,7 @@ import SwipeMode from "./pages/SwipeMode";
 import Pricing from "./pages/Pricing";
 import AboutFeed from "./pages/AboutFeed";
 import ExplorePile from "./pages/ExplorePile";
+import VerifySubscription from "./pages/VerifySubscription";
 import WidgetsPage from "./pages/dashboard/Widgets";
 
 // Redirect component for old feed URLs
@@ -90,6 +91,9 @@ const App = () => {
               
               {/* Explore Mode - photo pile */}
               <Route path="/explore/:slug" element={<ExplorePile />} />
+              
+              {/* Subscription verification */}
+              <Route path="/verify-subscription" element={<VerifySubscription />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
