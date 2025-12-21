@@ -42,13 +42,11 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   const isDragging = useRef(false);
   const animationPresets = useMemo(() => getAnimationPresets(), []);
   const x = useMotionValue(0);
-  const dragVelocity = useRef({ x: 0, y: 0 });
   
-  // Device-adaptive effect values based on tier
-  const liftScale = animationPresets.enableDynamicShadows ? 1.03 : 1.01;
-  const maxTilt = animationPresets.enablePageCurl ? 12 : 5;
-  const shadowDepth = animationPresets.enableDynamicShadows ? 30 : 10;
-  const exitVelocityMultiplier = animationPresets.swipeVelocityMultiplier;
+  // Device-adaptive effect values
+  const liftScale = animationPresets.enableDynamicShadows ? 1.02 : 1.01;
+  const maxTilt = animationPresets.enablePageCurl ? 10 : 5;
+  const shadowDepth = animationPresets.enableDynamicShadows ? 25 : 10;
   
   // Natural paper tilt (rotateZ) instead of flip
   const rotateZ = useTransform(x, [-200, 0, 200], [-maxTilt, 0, maxTilt]);
@@ -94,30 +92,17 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   }, [story.slides, story.title]);
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Lower base threshold for more responsive feel
-    const baseThreshold = 65;
-    // More sensitive velocity boost for flick gestures
-    const velocityBoost = Math.min(Math.abs(info.velocity.x) / 800, 0.5) * animationPresets.swipeVelocityMultiplier;
-    const effectiveThreshold = baseThreshold * (1 - velocityBoost);
+    const threshold = 80;
+    const isQuickFlick = Math.abs(info.velocity.x) > 400;
     
-    dragVelocity.current = { x: info.velocity.x, y: info.velocity.y };
-    
-    // Also allow quick flicks even with small distance
-    const isQuickFlick = Math.abs(info.velocity.x) > 500 && Math.abs(info.offset.x) > 30;
-    
-    if (Math.abs(info.offset.x) > effectiveThreshold || isQuickFlick) {
+    if (Math.abs(info.offset.x) > threshold || isQuickFlick) {
       if (animationPresets.enableHaptics) {
         triggerHaptic('medium');
       }
       onSwipe(info.offset.x > 0 ? 'like' : 'discard');
     } else {
-      // Snappy return animation
-      animate(x, 0, {
-        type: "spring",
-        stiffness: animationPresets.spring.stiffness * 1.2,
-        damping: animationPresets.spring.damping,
-        mass: animationPresets.spring.mass * 0.9,
-      });
+      // Snap back
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 30 });
     }
     
     isDragging.current = false;
@@ -145,42 +130,33 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
         y,
         rotateZ,
         boxShadow,
-        cursor: isDragging.current ? 'grabbing' : 'grab',
-        willChange: 'transform',
-        contain: 'layout paint',
-        transform: 'translateZ(0)', // GPU layer promotion
-        backfaceVisibility: 'hidden',
+        cursor: 'grab',
         ...style
       }}
       drag="x"
-      dragConstraints={{ left: -500, right: 500 }}
-      dragElastic={animationPresets.dragElastic}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.9}
+      dragMomentum={false}
       onDragStart={() => { isDragging.current = true; }}
-      onDrag={(_, info) => { x.set(info.offset.x); }}
       onDragEnd={handleDragEnd}
-      whileDrag={{ scale: liftScale }}
-      initial={{ scale: 0.9, y: 50, opacity: 0 }}
+      whileDrag={{ scale: liftScale, cursor: 'grabbing' }}
+      initial={{ scale: 0.95, opacity: 0 }}
       animate={{ 
         scale: 1, 
-        y: 0, 
         opacity: 1,
-        transition: { type: "spring", ...animationPresets.spring }
+        transition: { duration: 0.2 }
       }}
       exit={
         exitDirection
           ? {
-              x: (exitDirection === 'left' ? -1 : 1) * (400 + Math.abs(dragVelocity.current.x) * 0.5),
-              y: dragVelocity.current.y * exitVelocityMultiplier * 0.25,
-              rotate: (exitDirection === 'left' ? -1 : 1) * (18 + Math.abs(dragVelocity.current.x) * 0.015),
+              x: (exitDirection === 'left' ? -1 : 1) * 400,
+              rotate: (exitDirection === 'left' ? -1 : 1) * 15,
               opacity: 0,
-              transition: { 
-                duration: Math.max(0.22, 0.38 - Math.abs(dragVelocity.current.x) * 0.0002), 
-                ease: [0.32, 0.72, 0, 1] 
-              }
+              transition: { duration: 0.25, ease: 'easeOut' }
             }
           : undefined
       }
-      className="absolute inset-0 touch-none"
+      className="absolute inset-0"
     >
       {/* Discard Overlay */}
       <motion.div
