@@ -1,15 +1,15 @@
 /**
- * eeZee News Embeddable Widget
+ * Curatr Embeddable Widget
  * Displays feed headlines with branding
  * 
  * Usage:
- * <div id="eezee-widget" 
+ * <div id="curatr-widget" 
  *      data-feed="your-feed-slug"
  *      data-max="5"
  *      data-theme="auto"
  *      data-accent="#3b82f6">
  * </div>
- * <script src="https://eezeenews.lovable.app/widget.js" async></script>
+ * <script src="https://curatr.pro/widget.js" async></script>
  */
 (function() {
   'use strict';
@@ -31,7 +31,7 @@
     const width = container.dataset.width || '100%';
 
     if (!feedSlug) {
-      console.error('eeZee Widget: Missing data-feed attribute');
+      console.error('Curatr Widget: Missing data-feed attribute');
       return;
     }
 
@@ -59,7 +59,7 @@
         wrapper.innerHTML = renderWidget(data, prefersDark, accentColor);
       })
       .catch(error => {
-        console.error('eeZee Widget Error:', error);
+        console.error('Curatr Widget Error:', error);
         wrapper.innerHTML = getErrorHTML();
       });
   }
@@ -109,11 +109,11 @@
         ${storiesHTML}
       </div>
       <div class="widget-footer">
-        <a href="https://eezeenews.lovable.app/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
+        <a href="https://curatr.pro/feed/${feed.slug}" target="_blank" rel="noopener" class="widget-cta" style="color: ${accent}">
           View all stories →
         </a>
         <span class="widget-attribution">
-          Powered by <a href="https://eezeenews.lovable.app" target="_blank" rel="noopener">eeZee News</a>
+          Powered by <a href="https://curatr.pro" target="_blank" rel="noopener">Curatr</a>
         </span>
       </div>
     `;
@@ -303,5 +303,5 @@
   }
 
   // Export version for debugging
-  window.eezeeWidgetVersion = WIDGET_VERSION;
+  window.curatrWidgetVersion = WIDGET_VERSION;
 })();
