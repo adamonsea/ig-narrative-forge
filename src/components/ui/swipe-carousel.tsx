@@ -170,29 +170,37 @@ export function SwipeCarousel({
     const baseThreshold = width * 0.20;
     const swipeDistance = info.offset.x;
     const swipeVelocity = info.velocity.x;
-    
+
     // More sensitive velocity boost for snappy feel
-    const velocityBoost = Math.min(Math.abs(swipeVelocity) / 800, 0.55) * animationPresets.swipeVelocityMultiplier;
+    const velocityBoost =
+      Math.min(Math.abs(swipeVelocity) / 800, 0.55) * animationPresets.swipeVelocityMultiplier;
     const effectiveThreshold = baseThreshold * (1 - velocityBoost);
-    
+
     let targetIndex = index;
-    
+
     // Lower minimum thresholds for faster response (30px/300 velocity instead of 40/400)
     if (swipeDistance > effectiveThreshold || (swipeDistance > 30 && swipeVelocity > 300)) {
       // Swiped right (previous slide)
       targetIndex = Math.max(0, index - 1);
-    } else if (swipeDistance < -effectiveThreshold || (swipeDistance < -30 && swipeVelocity < -300)) {
+    } else if (
+      swipeDistance < -effectiveThreshold ||
+      (swipeDistance < -30 && swipeVelocity < -300)
+    ) {
       // Swiped left (next slide)
       targetIndex = Math.min(count - 1, index + 1);
     }
-    
-    // Animate to target slide with device-tuned spring (no multipliers)
-    const controls = animate(x, -targetIndex * width, {
-      type: "spring",
-      ...animationPresets.spring,
-    });
+
+    // Avoid double-animating when the index changes.
+    // If the index stays the same, we still need to snap back.
+    if (targetIndex === index) {
+      const controls = animate(x, -index * width, {
+        type: "spring",
+        ...animationPresets.spring,
+      });
+      return () => controls.stop();
+    }
+
     setIndex(targetIndex);
-    return () => controls.stop();
   };
 
 
@@ -231,16 +239,13 @@ export function SwipeCarousel({
             x, 
             touchAction: "pan-y pinch-zoom",
             willChange: 'transform',
+            transform: 'translateZ(0)',
             backfaceVisibility: 'hidden',
           }}
           onDragEnd={onDragEnd}
         >
           {slides.map((slide, i) => (
-            <div 
-              key={i} 
-              className="w-full shrink-0 grow-0 basis-full h-full"
-              style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-            >
+            <div key={i} className="w-full shrink-0 grow-0 basis-full h-full">
               <div className="h-full w-full">{slide}</div>
             </div>
           ))}
