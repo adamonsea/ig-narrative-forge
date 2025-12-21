@@ -166,29 +166,32 @@ export function SwipeCarousel({
 
   // Instagram-like gesture: smooth slide-by-slide navigation with velocity-weighted thresholds
   const onDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const baseThreshold = width * 0.25; // 25% of width base threshold
+    // More responsive base threshold (20% instead of 25%)
+    const baseThreshold = width * 0.20;
     const swipeDistance = info.offset.x;
     const swipeVelocity = info.velocity.x;
     
-    // Velocity-weighted threshold: faster swipes require less distance
-    const velocityBoost = Math.min(Math.abs(swipeVelocity) / 1000, 0.5) * animationPresets.swipeVelocityMultiplier;
+    // More sensitive velocity boost for snappy feel
+    const velocityBoost = Math.min(Math.abs(swipeVelocity) / 800, 0.55) * animationPresets.swipeVelocityMultiplier;
     const effectiveThreshold = baseThreshold * (1 - velocityBoost);
     
     let targetIndex = index;
     
-    // Determine direction based on distance and velocity-adjusted threshold
-    if (swipeDistance > effectiveThreshold || (swipeDistance > 40 && swipeVelocity > 400)) {
+    // Lower minimum thresholds for faster response (30px/300 velocity instead of 40/400)
+    if (swipeDistance > effectiveThreshold || (swipeDistance > 30 && swipeVelocity > 300)) {
       // Swiped right (previous slide)
       targetIndex = Math.max(0, index - 1);
-    } else if (swipeDistance < -effectiveThreshold || (swipeDistance < -40 && swipeVelocity < -400)) {
+    } else if (swipeDistance < -effectiveThreshold || (swipeDistance < -30 && swipeVelocity < -300)) {
       // Swiped left (next slide)
       targetIndex = Math.min(count - 1, index + 1);
     }
     
-    // Animate to target slide with device-specific spring
+    // Animate to target slide with slightly tighter spring for snap
     const controls = animate(x, -targetIndex * width, {
       type: "spring",
-      ...animationPresets.spring,
+      stiffness: animationPresets.spring.stiffness * 1.1,
+      damping: animationPresets.spring.damping,
+      mass: animationPresets.spring.mass * 0.95,
     });
     setIndex(targetIndex);
     return () => controls.stop();

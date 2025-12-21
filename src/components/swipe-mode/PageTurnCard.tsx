@@ -93,23 +93,29 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
   }, [story.slides, story.title]);
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const baseThreshold = 80;
-    const velocityBoost = Math.min(Math.abs(info.velocity.x) / 1000, 0.4) * animationPresets.swipeVelocityMultiplier;
+    // Lower base threshold for more responsive feel
+    const baseThreshold = 65;
+    // More sensitive velocity boost for flick gestures
+    const velocityBoost = Math.min(Math.abs(info.velocity.x) / 800, 0.5) * animationPresets.swipeVelocityMultiplier;
     const effectiveThreshold = baseThreshold * (1 - velocityBoost);
     
     dragVelocity.current = { x: info.velocity.x, y: info.velocity.y };
     
-    if (Math.abs(info.offset.x) > effectiveThreshold) {
+    // Also allow quick flicks even with small distance
+    const isQuickFlick = Math.abs(info.velocity.x) > 500 && Math.abs(info.offset.x) > 30;
+    
+    if (Math.abs(info.offset.x) > effectiveThreshold || isQuickFlick) {
       if (animationPresets.enableHaptics) {
         triggerHaptic('medium');
       }
       onSwipe(info.offset.x > 0 ? 'like' : 'discard');
     } else {
+      // Snappy return animation
       animate(x, 0, {
         type: "spring",
-        stiffness: animationPresets.spring.stiffness,
+        stiffness: animationPresets.spring.stiffness * 1.2,
         damping: animationPresets.spring.damping,
-        mass: animationPresets.spring.mass,
+        mass: animationPresets.spring.mass * 0.9,
       });
     }
     
@@ -155,11 +161,15 @@ const PageTurnCardComponent = ({ story, onSwipe, onTap, exitDirection, style }: 
       exit={
         exitDirection
           ? {
-              x: (exitDirection === 'left' ? -1 : 1) * (500 + Math.abs(dragVelocity.current.x) * exitVelocityMultiplier),
-              y: dragVelocity.current.y * exitVelocityMultiplier * 0.3,
-              rotate: (exitDirection === 'left' ? -1 : 1) * (20 + Math.abs(dragVelocity.current.x) * 0.02),
+              x: (exitDirection === 'left' ? -1 : 1) * (400 + Math.abs(dragVelocity.current.x) * 0.5),
+              y: dragVelocity.current.y * exitVelocityMultiplier * 0.25,
+              rotate: (exitDirection === 'left' ? -1 : 1) * (18 + Math.abs(dragVelocity.current.x) * 0.015),
               opacity: 0,
-              transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] }
+              // Velocity-continuous exit: faster swipe = faster exit
+              transition: { 
+                duration: Math.max(0.22, 0.38 - Math.abs(dragVelocity.current.x) * 0.0002), 
+                ease: [0.32, 0.72, 0, 1] 
+              }
             }
           : undefined
       }

@@ -264,40 +264,40 @@ export function getAnimationPresets(): AnimationPresets {
   
   switch (tier) {
     case 'modern-ios':
-      // Modern iOS: full effects, haptics enabled, velocity-responsive
+      // Modern iOS: snappy, tactile feel with haptics
       return {
-        dragElastic: 0.12,
-        spring: { stiffness: 380, damping: 36, mass: 0.95 },
-        dragTransition: { power: 0.28, timeConstant: 280 },
+        dragElastic: 0.15,
+        spring: { stiffness: 450, damping: 32, mass: 0.85 },
+        dragTransition: { power: 0.22, timeConstant: 260 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
-        swipeVelocityMultiplier: 1.2,
+        swipeVelocityMultiplier: 1.3,
       };
       
     case 'modern-android':
-      // Modern Android: full effects, smoother springs for natural feel
+      // Modern Android: smooth, quick response with natural momentum
       return {
-        dragElastic: 0.08,
-        spring: { stiffness: 400, damping: 38, mass: 0.90 },
-        dragTransition: { power: 0.25, timeConstant: 250 },
+        dragElastic: 0.12,
+        spring: { stiffness: 420, damping: 34, mass: 0.88 },
+        dragTransition: { power: 0.20, timeConstant: 240 },
         enablePageCurl: true,
         enableDynamicShadows: true,
         enableHaptics: true,
-        swipeVelocityMultiplier: 1.2,
+        swipeVelocityMultiplier: 1.3,
       };
       
     case 'mid-range-ios':
     case 'mid-range-android':
-      // Mid-range: simplified effects, balanced springs
+      // Mid-range: balanced but still responsive
       return {
-        dragElastic: 0.08,
-        spring: { stiffness: 320, damping: 34, mass: 1.0 },
-        dragTransition: { power: 0.32, timeConstant: 250 },
+        dragElastic: 0.10,
+        spring: { stiffness: 380, damping: 30, mass: 0.95 },
+        dragTransition: { power: 0.28, timeConstant: 250 },
         enablePageCurl: true,
         enableDynamicShadows: false,
         enableHaptics: false,
-        swipeVelocityMultiplier: 1.0,
+        swipeVelocityMultiplier: 1.1,
       };
       
     case 'old-ios':

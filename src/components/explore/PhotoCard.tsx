@@ -75,10 +75,10 @@ const PhotoCardComponent = ({
   const showPreview = isHolding || localHolding || (isDesktop && isHovering);
   const targetScale = showPreview ? 1.6 : isDragging ? 1.06 : 1;
   
-  // Use spring for smooth scale animation on release
+  // Use spring for smooth scale animation on release - tighter for responsiveness
   const scale = useSpring(targetScale, {
-    stiffness: 300,
-    damping: 25
+    stiffness: 380,
+    damping: 28
   });
   
   // Update scale when state changes
@@ -253,18 +253,19 @@ const PhotoCardComponent = ({
 
   const springTransition = isLegacy ? {
     type: 'tween' as const,
-    duration: 0.15,
+    duration: 0.12,
     ease: 'easeOut' as const
   } : isAnimating ? {
     type: 'spring' as const,
-    stiffness: 180,
-    damping: 18,
+    stiffness: 200,
+    damping: 20,
     delay: entryDelay,
-    mass: 0.6
+    mass: 0.55
   } : {
+    // Tighter spring for non-animating moves (snappier feedback)
     type: 'spring' as const,
-    stiffness: 350,
-    damping: 28
+    stiffness: 420,
+    damping: 32
   };
 
   return (
@@ -289,7 +290,7 @@ const PhotoCardComponent = ({
       transition={springTransition}
       drag
       dragMomentum={!isLegacy}
-      dragElastic={isLegacy ? 0.05 : 0.12}
+      dragElastic={isLegacy ? 0.04 : isDesktop ? 0.10 : 0.14}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onTouchStart={handleTouchStart}
