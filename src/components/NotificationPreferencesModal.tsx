@@ -87,8 +87,9 @@ export const NotificationPreferencesModal = ({
       if (error) throw error;
 
       toast({
-        title: "Subscribed!",
-        description: `You'll receive ${type} email updates for ${topicName}`,
+        title: "You're subscribed!",
+        description: `${type === 'daily' ? 'Daily' : 'Weekly'} briefing will be sent to ${emailInput}`,
+        duration: 5000,
       });
 
       setActiveInput(null);
@@ -136,15 +137,15 @@ export const NotificationPreferencesModal = ({
     {
       type: 'daily' as NotificationType,
       icon: Calendar,
-      title: 'Daily Newsletter',
-      description: 'Top 5 stories delivered at 5 PM',
+      title: 'Daily Briefing',
+      description: 'Top stories delivered at 5 PM',
       color: 'text-blue-500'
     },
     {
       type: 'weekly' as NotificationType,
       icon: Mail,
-      title: 'Weekly Newsletter',
-      description: 'Top 10 stories every Sunday at 9 AM',
+      title: 'Weekly Briefing',
+      description: 'Top stories every Sunday at 9 AM',
       color: 'text-purple-500'
     }
   ];

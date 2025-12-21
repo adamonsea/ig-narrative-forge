@@ -46,23 +46,22 @@ export const WeeklyRoundupEmail = ({
 }: WeeklyRoundupEmailProps) => (
   <Html>
     <Head />
-    <Preview>Your weekly {topicName} roundup - {stories.length} top stories</Preview>
+    <Preview>Your {topicName} Weekly Briefing - {stories.length} top stories</Preview>
     <Body style={main}>
       <Container style={container}>
-        {/* Header */}
+        {/* Header with white background for dark mode */}
         <Section style={header}>
-          <Text style={platformTag}>curatr.pro</Text>
           {topicLogoUrl ? (
             <Img
               src={topicLogoUrl}
-              alt={`${topicName} logo`}
+              alt={`${topicName}`}
               style={topicLogo}
             />
           ) : (
             <Heading style={h1}>{topicName}</Heading>
           )}
           {topicLogoUrl && <Text style={topicNameSmall}>{topicName}</Text>}
-          <Text style={subtitle}>Weekly Roundup • {weekStart} – {weekEnd}</Text>
+          <Text style={subtitle}>Weekly Briefing • {weekStart} – {weekEnd}</Text>
         </Section>
 
         <Hr style={hr} />
@@ -107,7 +106,7 @@ export const WeeklyRoundupEmail = ({
         {/* CTAs */}
         <Section style={ctaSection}>
           <Link href={`${baseUrl}/feed/${topicSlug}/weekly/latest`} style={ctaButtonPrimary}>
-            See latest roundup →
+            View Weekly Briefing →
           </Link>
           <Link href={`${baseUrl}/feed/${topicSlug}`} style={ctaButtonSecondary}>
             Visit Feed
@@ -117,7 +116,7 @@ export const WeeklyRoundupEmail = ({
         {/* Footer */}
         <Section style={footer}>
           <Text style={footerText}>
-            You're receiving this because you subscribed to {topicName} weekly updates.
+            You're receiving this because you subscribed to weekly briefing updates.
           </Text>
           <Link
             href={unsubscribeUrl || `${baseUrl}/feed/${topicSlug}?unsubscribe=weekly`}
@@ -125,6 +124,9 @@ export const WeeklyRoundupEmail = ({
           >
             Unsubscribe
           </Link>
+          <Text style={poweredBy}>
+            Powered by <Link href="https://curatr.pro" style={poweredByLink}>curatr.pro</Link>
+          </Text>
         </Section>
       </Container>
     </Body>
@@ -133,9 +135,9 @@ export const WeeklyRoundupEmail = ({
 
 export default WeeklyRoundupEmail
 
-// Styles
+// Styles - white backgrounds enforced for dark mode compatibility
 const main = {
-  backgroundColor: '#f6f9fc',
+  backgroundColor: '#ffffff',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
 }
 
@@ -148,44 +150,39 @@ const container = {
 }
 
 const header = {
-  padding: '24px 32px 16px',
+  backgroundColor: '#ffffff',
+  padding: '32px 32px 16px',
   textAlign: 'center' as const,
-}
-
-const platformTag = {
-  color: '#6366f1',
-  fontSize: '11px',
-  fontWeight: '600',
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase' as const,
-  margin: '0 0 16px',
 }
 
 const topicLogo = {
   display: 'block',
-  margin: '0 auto 8px',
-  maxWidth: '180px',
+  margin: '0 auto 12px',
+  maxWidth: '280px',
+  maxHeight: '80px',
+  width: 'auto',
   height: 'auto',
 }
 
 const topicNameSmall = {
   color: '#6b7280',
-  fontSize: '14px',
+  fontSize: '13px',
   fontWeight: '500',
-  margin: '0 0 4px',
+  margin: '0 0 8px',
 }
 
 const h1 = {
   color: '#1a1a1a',
-  fontSize: '24px',
+  fontSize: '28px',
   fontWeight: '700',
-  margin: '0 0 4px',
+  margin: '0 0 8px',
   padding: '0',
 }
 
 const subtitle = {
   color: '#6b7280',
-  fontSize: '13px',
+  fontSize: '14px',
+  fontWeight: '500',
   margin: '0',
 }
 
@@ -286,7 +283,8 @@ const ctaButtonSecondary = {
 }
 
 const footer = {
-  padding: '0 32px',
+  backgroundColor: '#ffffff',
+  padding: '0 32px 16px',
   textAlign: 'center' as const,
 }
 
@@ -301,4 +299,16 @@ const footerLink = {
   color: '#6366f1',
   fontSize: '11px',
   textDecoration: 'underline',
+}
+
+const poweredBy = {
+  color: '#9ca3af',
+  fontSize: '11px',
+  marginTop: '16px',
+}
+
+const poweredByLink = {
+  color: '#6366f1',
+  textDecoration: 'none',
+  fontWeight: '600',
 }
