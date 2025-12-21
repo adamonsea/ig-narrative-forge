@@ -51,17 +51,17 @@ export const WeeklyRoundupEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
+          <Text style={platformTag}>curatr.pro</Text>
           {topicLogoUrl ? (
             <Img
               src={topicLogoUrl}
-              width={48}
-              height={48}
               alt={`${topicName} logo`}
               style={topicLogo}
             />
-          ) : null}
-          <Text style={logo}>curatr.pro</Text>
-          <Heading style={h1}>{topicName}</Heading>
+          ) : (
+            <Heading style={h1}>{topicName}</Heading>
+          )}
+          {topicLogoUrl && <Text style={topicNameSmall}>{topicName}</Text>}
           <Text style={subtitle}>Weekly Roundup • {weekStart} – {weekEnd}</Text>
         </Section>
 
@@ -152,19 +152,27 @@ const header = {
   textAlign: 'center' as const,
 }
 
-const logo = {
+const platformTag = {
   color: '#6366f1',
-  fontSize: '12px',
+  fontSize: '11px',
   fontWeight: '600',
   letterSpacing: '0.1em',
   textTransform: 'uppercase' as const,
-  margin: '0 0 8px',
+  margin: '0 0 16px',
 }
 
 const topicLogo = {
   display: 'block',
-  margin: '0 auto 10px',
-  borderRadius: '12px',
+  margin: '0 auto 8px',
+  maxWidth: '180px',
+  height: 'auto',
+}
+
+const topicNameSmall = {
+  color: '#6b7280',
+  fontSize: '14px',
+  fontWeight: '500',
+  margin: '0 0 4px',
 }
 
 const h1 = {

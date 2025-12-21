@@ -17,6 +17,7 @@ interface SendEmailRequest {
   topicId: string;
   notificationType: 'daily' | 'weekly';
   testEmail?: string; // For testing
+  testDate?: string; // ISO date string for testing specific dates (e.g., "2025-12-20")
 }
 
 interface EmailStory {
@@ -39,7 +40,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { topicId, notificationType, testEmail }: SendEmailRequest = await req.json();
+    const { topicId, notificationType, testEmail, testDate }: SendEmailRequest = await req.json();
 
     console.log(`📧 Sending ${notificationType} email newsletter for topic ${topicId}`);
 
@@ -69,18 +70,38 @@ serve(async (req) => {
     const topicLogoUrl = topic.branding_config?.logo_url || topic.branding_config?.icon_url;
 
     // Determine date range based on notification type
-    const now = new Date();
+    // For testing, allow specifying a specific date
     let dateStart: Date;
-    let dateEnd = now;
+    let dateEnd: Date;
     
-    if (notificationType === 'daily') {
-      dateStart = new Date(now);
-      dateStart.setHours(0, 0, 0, 0);
+    if (testDate) {
+      // For test dates, use the specified date boundaries in UTC
+      dateStart = new Date(testDate + 'T00:00:00.000Z');
+      dateEnd = new Date(testDate + 'T23:59:59.999Z');
+      
+      if (notificationType === 'weekly') {
+        // For weekly, go back 7 days from the test date
+        dateStart = new Date(dateEnd);
+        dateStart.setUTCDate(dateStart.getUTCDate() - 7);
+        dateStart.setUTCHours(0, 0, 0, 0);
+      }
     } else {
-      // Weekly: last 7 days
-      dateStart = new Date(now);
-      dateStart.setDate(dateStart.getDate() - 7);
+      const now = new Date();
+      if (notificationType === 'daily') {
+        dateStart = new Date(now);
+        dateStart.setUTCHours(0, 0, 0, 0);
+        dateEnd = new Date(now);
+        dateEnd.setUTCHours(23, 59, 59, 999);
+      } else {
+        // Weekly: last 7 days
+        dateEnd = now;
+        dateStart = new Date(now);
+        dateStart.setUTCDate(dateStart.getUTCDate() - 7);
+        dateStart.setUTCHours(0, 0, 0, 0);
+      }
     }
+
+    console.log(`📅 Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`);
 
     // Fetch top stories - use stories table with date filtering
     const storyLimit = notificationType === 'daily' ? 5 : 10;
@@ -180,7 +201,7 @@ serve(async (req) => {
 
     // Generate email HTML
     let emailHtml: string;
-    const date = now.toLocaleDateString('en-GB', { 
+    const displayDate = dateEnd.toLocaleDateString('en-GB', { 
       weekday: 'long', 
       day: 'numeric', 
       month: 'long' 
@@ -192,22 +213,22 @@ serve(async (req) => {
           topicName: topic.name,
           topicSlug: topic.slug,
           topicLogoUrl,
-          date,
+          date: displayDate,
           stories,
           baseUrl: BASE_URL
         })
       );
     } else {
-      const weekStart = dateStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      const weekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      const weekStartDisplay = dateStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      const weekEndDisplay = dateEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       
       emailHtml = await renderAsync(
         React.createElement(WeeklyRoundupEmail, {
           topicName: topic.name,
           topicSlug: topic.slug,
           topicLogoUrl,
-          weekStart,
-          weekEnd,
+          weekStart: weekStartDisplay,
+          weekEnd: weekEndDisplay,
           stories,
           baseUrl: BASE_URL
         })
