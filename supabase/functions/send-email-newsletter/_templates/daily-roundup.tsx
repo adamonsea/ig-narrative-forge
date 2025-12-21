@@ -37,7 +37,7 @@ export const DailyRoundupEmail = ({
   topicSlug = 'topic',
   date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
   stories = [],
-  baseUrl = 'https://eezeenews.com',
+  baseUrl = 'https://curatr.pro',
   unsubscribeUrl
 }: DailyRoundupEmailProps) => (
   <Html>
@@ -47,7 +47,7 @@ export const DailyRoundupEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
-          <Text style={logo}>eeZee News</Text>
+          <Text style={logo}>curatr.pro</Text>
           <Heading style={h1}>{topicName}</Heading>
           <Text style={subtitle}>Daily Briefing • {date}</Text>
         </Section>

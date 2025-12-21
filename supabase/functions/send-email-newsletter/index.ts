@@ -11,7 +11,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BASE_URL = 'https://eezeenews.com';
+const BASE_URL = 'https://curatr.pro';
 
 interface SendEmailRequest {
   topicId: string;

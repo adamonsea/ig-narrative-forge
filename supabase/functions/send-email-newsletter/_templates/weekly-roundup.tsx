@@ -39,7 +39,7 @@ export const WeeklyRoundupEmail = ({
   weekStart = 'Dec 15',
   weekEnd = 'Dec 21',
   stories = [],
-  baseUrl = 'https://eezeenews.com',
+  baseUrl = 'https://curatr.pro',
   unsubscribeUrl
 }: WeeklyRoundupEmailProps) => (
   <Html>
@@ -49,7 +49,7 @@ export const WeeklyRoundupEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={header}>
-          <Text style={logo}>eeZee News</Text>
+          <Text style={logo}>curatr.pro</Text>
           <Heading style={h1}>{topicName}</Heading>
           <Text style={subtitle}>Weekly Roundup • {weekStart} – {weekEnd}</Text>
         </Section>
