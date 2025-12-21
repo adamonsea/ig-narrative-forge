@@ -58,13 +58,15 @@ serve(async (req) => {
     // Get topic details
     const { data: topic, error: topicError } = await supabase
       .from('topics')
-      .select('id, name, slug')
+      .select('id, name, slug, branding_config')
       .eq('id', topicId)
       .single();
 
     if (topicError || !topic) {
       throw new Error(`Topic not found: ${topicError?.message}`);
     }
+
+    const topicLogoUrl = topic.branding_config?.logo_url || topic.branding_config?.icon_url;
 
     // Determine date range based on notification type
     const now = new Date();
@@ -189,6 +191,7 @@ serve(async (req) => {
         React.createElement(DailyRoundupEmail, {
           topicName: topic.name,
           topicSlug: topic.slug,
+          topicLogoUrl,
           date,
           stories,
           baseUrl: BASE_URL
@@ -202,6 +205,7 @@ serve(async (req) => {
         React.createElement(WeeklyRoundupEmail, {
           topicName: topic.name,
           topicSlug: topic.slug,
+          topicLogoUrl,
           weekStart,
           weekEnd,
           stories,
