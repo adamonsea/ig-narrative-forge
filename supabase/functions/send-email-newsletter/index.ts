@@ -122,7 +122,8 @@ serve(async (req) => {
         cover_illustration_url,
         quality_score,
         topic_article_id,
-        created_at
+        created_at,
+        slides!slides_story_id_fkey(content, slide_number)
       `)
       .eq('status', 'published')
       .gte('created_at', dateStart.toISOString())
@@ -187,7 +188,8 @@ serve(async (req) => {
           cover_illustration_url,
           quality_score,
           topic_article_id,
-          created_at
+          created_at,
+          slides!slides_story_id_fkey(content, slide_number)
         `)
         .eq('status', 'published')
         .gte('created_at', weekAgo.toISOString())
@@ -229,10 +231,14 @@ serve(async (req) => {
     const stories: EmailStory[] = allStories.map((story) => {
       const ta = story.topic_article_id ? taMap.get(story.topic_article_id) : undefined;
       const sourceName = ta?.source?.source_name || ta?.shared_content?.source_domain || topic.name;
+      
+      // Use slide 1 headline instead of original article title
+      const slide1 = (story.slides || []).find((s: { slide_number: number }) => s.slide_number === 1);
+      const headline = slide1?.content || story.title;
 
       return {
         id: story.id,
-        title: story.title,
+        title: headline,
         thumbnail_url: story.cover_illustration_url,
         source_name: sourceName,
         story_url: `${BASE_URL}/feed/${topic.slug}/story/${story.id}`,
