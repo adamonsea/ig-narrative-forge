@@ -4,8 +4,22 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Download, Calendar, Bell, Smartphone, Monitor } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Download, Calendar, Mail, Smartphone, Monitor, TrendingUp, Users } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface EmailSubscriber {
+  id: string;
+  email: string;
+  notification_type: 'daily' | 'weekly';
+  created_at: string;
+  is_active: boolean;
+  is_verified: boolean;
+  topic: {
+    id: string;
+    name: string;
+  };
+}
 
 interface PushSubscriber {
   id: string;
@@ -17,6 +31,14 @@ interface PushSubscriber {
     id: string;
     name: string;
   };
+}
+
+interface SubscriberStats {
+  daily: number;
+  weekly: number;
+  total: number;
+  signupsToday: number;
+  signupsWeek: number;
 }
 
 interface NewsletterSignupsManagerProps {
@@ -42,16 +64,18 @@ const getNotificationBadge = (type: string) => {
     case 'instant':
       return <Badge variant="default" className="text-xs">Instant</Badge>;
     case 'daily':
-      return <Badge variant="secondary" className="text-xs">Daily</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Daily</Badge>;
     case 'weekly':
-      return <Badge variant="outline" className="text-xs">Weekly</Badge>;
+      return <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200">Weekly</Badge>;
     default:
       return <Badge variant="outline" className="text-xs">{type}</Badge>;
   }
 };
 
 export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerProps) => {
-  const [subscribers, setSubscribers] = useState<PushSubscriber[]>([]);
+  const [emailSubscribers, setEmailSubscribers] = useState<EmailSubscriber[]>([]);
+  const [pushSubscribers, setPushSubscribers] = useState<PushSubscriber[]>([]);
+  const [stats, setStats] = useState<SubscriberStats>({ daily: 0, weekly: 0, total: 0, signupsToday: 0, signupsWeek: 0 });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const { toast } = useToast();
@@ -64,7 +88,49 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
     try {
       setLoading(true);
       
-      let query = supabase
+      // Load email subscribers
+      let emailQuery = supabase
+        .from('topic_newsletter_signups')
+        .select(`
+          id,
+          email,
+          notification_type,
+          created_at,
+          is_active,
+          topics!inner (
+            id,
+            name
+          )
+        `)
+        .eq('is_active', true)
+        .not('email', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (topicId) {
+        emailQuery = emailQuery.eq('topic_id', topicId);
+      }
+
+      const { data: emailData, error: emailError } = await emailQuery;
+
+      if (emailError) throw emailError;
+
+      const transformedEmailData = (emailData || []).map(signup => ({
+        id: signup.id,
+        email: signup.email!,
+        notification_type: signup.notification_type as 'daily' | 'weekly',
+        created_at: signup.created_at,
+        is_active: signup.is_active,
+        is_verified: true, // Assume verified if active
+        topic: {
+          id: (signup.topics as any).id,
+          name: (signup.topics as any).name
+        }
+      }));
+
+      setEmailSubscribers(transformedEmailData);
+
+      // Load push subscribers (those with push_subscription but no email)
+      let pushQuery = supabase
         .from('topic_newsletter_signups')
         .select(`
           id,
@@ -78,17 +144,18 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
           )
         `)
         .eq('is_active', true)
+        .not('push_subscription', 'is', null)
         .order('created_at', { ascending: false });
 
       if (topicId) {
-        query = query.eq('topic_id', topicId);
+        pushQuery = pushQuery.eq('topic_id', topicId);
       }
 
-      const { data, error } = await query;
+      const { data: pushData, error: pushError } = await pushQuery;
 
-      if (error) throw error;
+      if (pushError) throw pushError;
 
-      const transformedData = (data || []).map(signup => ({
+      const transformedPushData = (pushData || []).map(signup => ({
         id: signup.id,
         notification_type: signup.notification_type as 'instant' | 'daily' | 'weekly',
         push_endpoint: (signup.push_subscription as any)?.endpoint || '',
@@ -100,12 +167,32 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         }
       }));
 
-      setSubscribers(transformedData);
+      setPushSubscribers(transformedPushData);
+
+      // Calculate stats
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const weekAgo = new Date(today);
+      weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+
+      const dailyCount = transformedEmailData.filter(s => s.notification_type === 'daily').length;
+      const weeklyCount = transformedEmailData.filter(s => s.notification_type === 'weekly').length;
+      const signupsToday = transformedEmailData.filter(s => new Date(s.created_at) >= today).length;
+      const signupsWeek = transformedEmailData.filter(s => new Date(s.created_at) >= weekAgo).length;
+
+      setStats({
+        daily: dailyCount,
+        weekly: weeklyCount,
+        total: transformedEmailData.length,
+        signupsToday,
+        signupsWeek
+      });
+
     } catch (error) {
-      console.error('Error loading push subscribers:', error);
+      console.error('Error loading subscribers:', error);
       toast({
         title: "Error",
-        description: "Failed to load push subscribers",
+        description: "Failed to load subscribers",
         variant: "destructive"
       });
     } finally {
@@ -117,7 +204,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
     try {
       setDownloading(true);
       
-      if (subscribers.length === 0) {
+      if (emailSubscribers.length === 0) {
         toast({
           title: "No data",
           description: "No subscribers to download",
@@ -126,15 +213,15 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         return;
       }
 
-      const headers = ['Device', 'Notification Type', 'Topic', 'Subscribed Date'];
+      const headers = ['Email', 'Frequency', 'Topic', 'Verified', 'Subscribed Date'];
       const csvContent = [
         headers.join(','),
-        ...subscribers.map(sub => {
-          const device = getDeviceInfo(sub.push_endpoint);
+        ...emailSubscribers.map(sub => {
           return [
-            `"${device.label}"`,
+            `"${sub.email}"`,
             `"${sub.notification_type}"`,
             `"${sub.topic.name}"`,
+            `"${sub.is_verified ? 'Yes' : 'No'}"`,
             `"${format(new Date(sub.created_at), 'yyyy-MM-dd HH:mm:ss')}"`
           ].join(',');
         })
@@ -145,7 +232,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
       const url = URL.createObjectURL(blob);
       
       link.setAttribute('href', url);
-      link.setAttribute('download', `push-subscribers-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      link.setAttribute('download', `email-subscribers-${format(new Date(), 'yyyy-MM-dd')}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
@@ -154,7 +241,7 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
 
       toast({
         title: "Download complete",
-        description: `Downloaded ${subscribers.length} subscriber${subscribers.length === 1 ? '' : 's'}`,
+        description: `Downloaded ${emailSubscribers.length} subscriber${emailSubscribers.length === 1 ? '' : 's'}`,
         variant: "default"
       });
     } catch (error) {
@@ -188,15 +275,55 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-blue-500/5 border-blue-200/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-muted-foreground">Daily</span>
+            </div>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{stats.daily}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-500/5 border-purple-200/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-purple-600" />
+              <span className="text-sm text-muted-foreground">Weekly</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-600 mt-1">{stats.weekly}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-emerald-500/5 border-emerald-200/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm text-muted-foreground">This Week</span>
+            </div>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">+{stats.signupsWeek}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Total</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.total}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {subscribers.length === 0 
-            ? "No push subscribers yet" 
-            : `${subscribers.length} device${subscribers.length === 1 ? '' : 's'} subscribed to push notifications`}
+          {emailSubscribers.length === 0 
+            ? "No email subscribers yet" 
+            : `${emailSubscribers.length} email subscriber${emailSubscribers.length === 1 ? '' : 's'}`}
         </div>
         
-        {subscribers.length > 0 && (
+        {emailSubscribers.length > 0 && (
           <Button
             onClick={downloadCSV}
             disabled={downloading}
@@ -210,16 +337,15 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
         )}
       </div>
 
-      {/* Content Section */}
-      {subscribers.length === 0 ? (
+      {/* Email Subscribers Table */}
+      {emailSubscribers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-            <Bell className="w-8 h-8 text-muted-foreground/60" />
+            <Mail className="w-8 h-8 text-muted-foreground/60" />
           </div>
-          <h3 className="text-lg font-medium mb-2">No push subscribers yet</h3>
+          <h3 className="text-lg font-medium mb-2">No email subscribers yet</h3>
           <p className="text-sm text-muted-foreground max-w-md">
-            When users enable push notifications for this topic, they'll appear here. 
-            Subscribers get notified when fresh content is published.
+            When users subscribe to daily or weekly briefing emails, they'll appear here.
           </p>
         </div>
       ) : (
@@ -227,58 +353,122 @@ export const NewsletterSignupsManager = ({ topicId }: NewsletterSignupsManagerPr
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Device</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Frequency</TableHead>
                 {!topicId && <TableHead>Topic</TableHead>}
+                <TableHead>Status</TableHead>
                 <TableHead>Subscribed</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscribers.map((sub, index) => {
-                const device = getDeviceInfo(sub.push_endpoint);
-                const DeviceIcon = device.icon;
-                
-                return (
-                  <TableRow key={sub.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <DeviceIcon className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{device.label}</div>
-                          <div className="text-xs text-muted-foreground">Push notifications</div>
-                        </div>
+              {emailSubscribers.map((sub, index) => (
+                <TableRow key={sub.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Mail className="w-4 h-4 text-primary" />
                       </div>
-                    </TableCell>
+                      <div className="font-medium truncate max-w-[180px]">{sub.email}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getNotificationBadge(sub.notification_type)}
+                  </TableCell>
+                  {!topicId && (
                     <TableCell>
-                      {getNotificationBadge(sub.notification_type)}
+                      <Badge variant="secondary" className="font-medium">
+                        {sub.topic.name}
+                      </Badge>
                     </TableCell>
-                    {!topicId && (
-                      <TableCell>
-                        <Badge variant="secondary" className="font-medium">
-                          {sub.topic.name}
-                        </Badge>
-                      </TableCell>
+                  )}
+                  <TableCell>
+                    {sub.is_verified ? (
+                      <Badge variant="default" className="text-xs bg-emerald-500">Verified</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">Pending</Badge>
                     )}
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(sub.created_at), 'MMM d, yyyy')}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(sub.created_at), 'HH:mm')}
-                          </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">
+                          {format(new Date(sub.created_at), 'MMM d, yyyy')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(sub.created_at), 'HH:mm')}
                         </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Push Subscribers Section */}
+      {pushSubscribers.length > 0 && (
+        <div className="pt-4 border-t">
+          <h4 className="text-sm font-medium mb-3 text-muted-foreground">Push Notification Subscribers ({pushSubscribers.length})</h4>
+          <div className="rounded-lg border bg-background/50 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Device</TableHead>
+                  <TableHead>Type</TableHead>
+                  {!topicId && <TableHead>Topic</TableHead>}
+                  <TableHead>Subscribed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pushSubscribers.map((sub, index) => {
+                  const device = getDeviceInfo(sub.push_endpoint);
+                  const DeviceIcon = device.icon;
+                  
+                  return (
+                    <TableRow key={sub.id} className={index % 2 === 0 ? "bg-muted/20" : ""}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <DeviceIcon className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{device.label}</div>
+                            <div className="text-xs text-muted-foreground">Push notifications</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getNotificationBadge(sub.notification_type)}
+                      </TableCell>
+                      {!topicId && (
+                        <TableCell>
+                          <Badge variant="secondary" className="font-medium">
+                            {sub.topic.name}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">
+                              {format(new Date(sub.created_at), 'MMM d, yyyy')}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(sub.created_at), 'HH:mm')}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
     </div>
