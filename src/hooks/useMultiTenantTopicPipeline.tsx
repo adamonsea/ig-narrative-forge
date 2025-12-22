@@ -443,8 +443,83 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
       }
 
       // Use the clean, unified data with frontend deduplication as safety net
-      const allStories = topicStoriesResult.data || [];
-      
+      // NOTE: get_admin_topic_stories may not include drip-feed "ready but not yet published" items.
+      // We explicitly include those so they appear in the Published tab as "Queued" (blue) or "Scheduled" (amber).
+      const { data: dripQueuedStories, error: dripQueuedError } = await supabase
+        .from('stories')
+        .select(`
+          id,
+          article_id,
+          topic_article_id,
+          title,
+          status,
+          is_published,
+          is_parliamentary,
+          created_at,
+          updated_at,
+          scheduled_publish_at,
+          drip_queued_at,
+          cover_illustration_url,
+          cover_illustration_prompt,
+          illustration_generated_at,
+          animated_illustration_url,
+          slide_type,
+          tone,
+          writing_style,
+          audience_expertise,
+          shared_content_id,
+          topic_articles!inner(
+            topic_id,
+            shared_content:shared_article_content(title, url, author, word_count)
+          )
+        `)
+        .eq('topic_articles.topic_id', selectedTopicId)
+        .eq('status', 'ready')
+        .eq('is_published', false)
+        .order('updated_at', { ascending: false })
+        .limit(200);
+
+      if (dripQueuedError) {
+        console.warn('⚠️ Failed to load drip-queued stories (ready + not published):', dripQueuedError);
+      }
+
+      const dripQueuedAsAdminRows = (dripQueuedStories || []).map((s: any) => {
+        const shared = s.topic_articles?.shared_content;
+        return {
+          id: s.id,
+          article_id: s.article_id || null,
+          topic_article_id: s.topic_article_id || null,
+          title: s.title || shared?.title || 'Untitled',
+          status: s.status,
+          is_published: s.is_published,
+          created_at: s.created_at,
+          updated_at: s.updated_at,
+          article_title: shared?.title || s.title || 'Untitled',
+          article_url: shared?.url || null,
+          article_author: shared?.author || null,
+          word_count: shared?.word_count || null,
+          slide_count: null,
+          story_type: s.topic_article_id ? 'multi_tenant' : 'legacy',
+          is_teaser: false,
+          is_parliamentary: s.is_parliamentary || false,
+          cover_illustration_url: s.cover_illustration_url,
+          cover_illustration_prompt: s.cover_illustration_prompt,
+          illustration_generated_at: s.illustration_generated_at,
+          animated_illustration_url: s.animated_illustration_url,
+          slide_type: s.slide_type,
+          tone: s.tone,
+          writing_style: s.writing_style,
+          audience_expertise: s.audience_expertise,
+          scheduled_publish_at: s.scheduled_publish_at || null,
+        };
+      });
+
+      console.log('🟦 Drip-feed queued stories included:', {
+        count: dripQueuedAsAdminRows.length,
+      });
+
+      const allStories = [...(topicStoriesResult.data || []), ...dripQueuedAsAdminRows];
+
       // Frontend deduplication safety net
       const seenStoryIds = new Set();
       const deduplicatedStories = allStories.filter((story: any) => {

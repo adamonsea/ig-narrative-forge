@@ -602,7 +602,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             </div>
           </div>
           
-          {stories.filter(s => (s.is_published || s.scheduled_publish_at) && ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 && queueItems.length === 0 ? (
+          {stories.filter(s => ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary)).length === 0 && queueItems.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -619,7 +619,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             <Card>
               <CardContent>
                 <PublishedStoriesList 
-                  stories={stories.filter(s => (s.is_published || s.scheduled_publish_at) && (!parliamentaryFilter || s.is_parliamentary))}
+                  stories={stories.filter(s => ['ready', 'published'].includes(s.status) && (!parliamentaryFilter || s.is_parliamentary))}
                   processingItems={queueItems}
                   onArchive={handleArchiveStory}
                   onReturnToReview={handleMultiTenantRejectStory}
