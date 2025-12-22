@@ -105,6 +105,7 @@ serve(async (req) => {
 
     // Fetch top stories
     const storyLimit = notificationType === 'daily' ? 5 : 10;
+    const minStoriesForFullEmail = 2; // Minimum stories before showing fallback
 
     const { data: storiesData, error: storiesError } = await supabase
       .from('stories')
@@ -159,8 +160,66 @@ serve(async (req) => {
 
     console.log(`📰 Found ${topicStories.length} published stories for ${topic.name} newsletter`);
 
+    // Check if we need fallback stories for daily emails (slow news day)
+    let fallbackStories: typeof storiesData = [];
+    let isSlowNewsDay = false;
+    
+    if (notificationType === 'daily' && topicStories.length < minStoriesForFullEmail) {
+      isSlowNewsDay = true;
+      console.log(`📉 Slow news day detected, fetching popular stories from the week`);
+      
+      // Fetch popular stories from the last 7 days (excluding today's stories)
+      const weekAgo = new Date(dateStart);
+      weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+      
+      const { data: weeklyStoriesData, error: weeklyError } = await supabase
+        .from('stories')
+        .select(`
+          id,
+          title,
+          cover_illustration_url,
+          quality_score,
+          topic_article_id,
+          created_at
+        `)
+        .eq('status', 'published')
+        .gte('created_at', weekAgo.toISOString())
+        .lt('created_at', dateStart.toISOString()) // Before today
+        .order('quality_score', { ascending: false, nullsFirst: false })
+        .limit(20);
+
+      if (!weeklyError && weeklyStoriesData) {
+        // Get topic articles for weekly stories
+        const weeklyTaIds = Array.from(
+          new Set(weeklyStoriesData.map((s) => s.topic_article_id).filter(Boolean))
+        ) as string[];
+
+        const { data: weeklyTopicArticles } = weeklyTaIds.length
+          ? await supabase
+              .from('topic_articles')
+              .select('id, topic_id, source:content_sources(source_name), shared_content:shared_article_content(source_domain)')
+              .in('id', weeklyTaIds)
+          : { data: [] };
+
+        // Add to taMap
+        (weeklyTopicArticles || []).forEach((ta) => taMap.set(ta.id, ta));
+
+        // Filter to this topic
+        fallbackStories = weeklyStoriesData.filter((story) => {
+          if (!story.topic_article_id) return false;
+          const ta = taMap.get(story.topic_article_id);
+          return ta?.topic_id === topicId;
+        }).slice(0, storyLimit - topicStories.length);
+        
+        console.log(`📚 Found ${fallbackStories.length} fallback stories from the week`);
+      }
+    }
+
+    // Combine today's stories with fallback if needed
+    const allStories = [...topicStories, ...fallbackStories];
+
     // Transform stories for email template
-    const stories: EmailStory[] = topicStories.map((story) => {
+    const stories: EmailStory[] = allStories.map((story) => {
       const ta = story.topic_article_id ? taMap.get(story.topic_article_id) : undefined;
       const sourceName = ta?.source?.source_name || ta?.shared_content?.source_domain || topic.name;
 
@@ -224,7 +283,8 @@ serve(async (req) => {
           topicLogoUrl,
           date: displayDate,
           stories,
-          baseUrl: BASE_URL
+          baseUrl: BASE_URL,
+          isSlowNewsDay
         })
       );
     } else {
