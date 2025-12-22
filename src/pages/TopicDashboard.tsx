@@ -50,8 +50,11 @@ interface TopicDashboardStats {
   ready_stories: number;
   simplified_stories_24h: number;
   sentiment_cards: number;
-  notifications_enabled?: number;
-  pwa_installs?: number;
+  email_subscribers_daily?: number;
+  email_subscribers_weekly?: number;
+  email_subscribers_total?: number;
+  email_signups_today?: number;
+  email_signups_week?: number;
   donation_button_clicks?: number;
   donation_modal_opens?: number;
   liked_stories?: number;
@@ -324,11 +327,50 @@ const TopicDashboard = () => {
         .select('id', { count: 'exact' })
         .eq('topic_id', topicData.id);
 
-      // Get engagement stats
-      const { data: engagementStats } = await supabase.rpc(
-        'get_topic_engagement_stats',
-        { p_topic_id: topicData.id }
-      );
+      // Get email subscriber stats
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const weekAgo = new Date(today);
+      weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+
+      const { count: dailySubscribers } = await supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('notification_type', 'daily')
+        .eq('is_active', true)
+        .not('email', 'is', null);
+
+      const { count: weeklySubscribers } = await supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('notification_type', 'weekly')
+        .eq('is_active', true)
+        .not('email', 'is', null);
+
+      const { count: totalEmailSubscribers } = await supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('is_active', true)
+        .not('email', 'is', null);
+
+      const { count: signupsToday } = await supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('is_active', true)
+        .not('email', 'is', null)
+        .gte('created_at', today.toISOString());
+
+      const { count: signupsWeek } = await supabase
+        .from('topic_newsletter_signups')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', topicData.id)
+        .eq('is_active', true)
+        .not('email', 'is', null)
+        .gte('created_at', weekAgo.toISOString());
 
       // Get donation interaction stats
       const { count: donationButtonClicks } = await supabase
@@ -372,8 +414,11 @@ const TopicDashboard = () => {
         ready_stories: readyStoriesRes.count || 0,
         simplified_stories_24h: simplifiedRes.count || 0,
         sentiment_cards: sentimentRes.count || 0,
-        notifications_enabled: Number(engagementStats?.[0]?.notifications_enabled || 0),
-        pwa_installs: Number(engagementStats?.[0]?.pwa_installs || 0),
+        email_subscribers_daily: dailySubscribers || 0,
+        email_subscribers_weekly: weeklySubscribers || 0,
+        email_subscribers_total: totalEmailSubscribers || 0,
+        email_signups_today: signupsToday || 0,
+        email_signups_week: signupsWeek || 0,
         donation_button_clicks: donationButtonClicks || 0,
         donation_modal_opens: donationModalOpens || 0,
         liked_stories: likedStories || 0,
