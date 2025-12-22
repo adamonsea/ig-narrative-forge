@@ -31,6 +31,7 @@ interface DailyRoundupEmailProps {
   stories: EmailStory[];
   baseUrl: string;
   unsubscribeUrl?: string;
+  isSlowNewsDay?: boolean;
 }
 
 export const DailyRoundupEmail = ({
@@ -41,6 +42,7 @@ export const DailyRoundupEmail = ({
   stories = [],
   baseUrl = 'https://curatr.pro',
   unsubscribeUrl,
+  isSlowNewsDay = false,
 }: DailyRoundupEmailProps) => (
   <Html style={html}>
     <Head>
@@ -66,6 +68,14 @@ export const DailyRoundupEmail = ({
         </Section>
 
         <Hr style={hr} />
+
+        {isSlowNewsDay && stories.length > 0 && (
+          <Section style={slowNewsDaySection}>
+            <Text style={slowNewsDayText}>
+              Yesterday was a slow news day, but here are some things you might have missed from the week:
+            </Text>
+          </Section>
+        )}
 
         {stories.length > 0 ? (
           <Section style={storiesSection}>
@@ -300,4 +310,19 @@ const poweredByLink = {
   color: '#6b7280',
   textDecoration: 'none',
   fontWeight: '700',
+}
+
+const slowNewsDaySection = {
+  padding: '16px 32px 8px',
+  textAlign: 'center' as const,
+}
+
+const slowNewsDayText = {
+  backgroundColor: '#fef3c7',
+  borderRadius: '8px',
+  color: '#92400e',
+  fontSize: '14px',
+  fontStyle: 'italic' as const,
+  padding: '12px 16px',
+  margin: '0',
 }
