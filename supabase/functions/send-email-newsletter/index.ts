@@ -70,7 +70,8 @@ serve(async (req) => {
     const topicLogoUrl = topic.branding_config?.logo_url || topic.branding_config?.icon_url;
 
     // Determine date range based on notification type
-    // For testing, allow specifying a specific date
+    // Daily briefings cover YESTERDAY's news (sent in the morning)
+    // Weekly briefings cover the last 7 days
     let dateStart: Date;
     let dateEnd: Date;
     
@@ -88,15 +89,21 @@ serve(async (req) => {
     } else {
       const now = new Date();
       if (notificationType === 'daily') {
-        dateStart = new Date(now);
-        dateStart.setUTCHours(0, 0, 0, 0);
+        // Daily briefing: yesterday's stories (the previous day)
         dateEnd = new Date(now);
-        dateEnd.setUTCHours(23, 59, 59, 999);
+        dateEnd.setUTCHours(0, 0, 0, 0); // End at midnight today (exclusive)
+        dateEnd.setUTCMilliseconds(-1); // Last moment of yesterday
+        
+        dateStart = new Date(dateEnd);
+        dateStart.setUTCHours(0, 0, 0, 0); // Start of yesterday
       } else {
-        // Weekly: last 7 days
-        dateEnd = now;
-        dateStart = new Date(now);
-        dateStart.setUTCDate(dateStart.getUTCDate() - 7);
+        // Weekly: last 7 days ending yesterday
+        dateEnd = new Date(now);
+        dateEnd.setUTCHours(0, 0, 0, 0);
+        dateEnd.setUTCMilliseconds(-1); // End of yesterday
+        
+        dateStart = new Date(dateEnd);
+        dateStart.setUTCDate(dateStart.getUTCDate() - 6); // 7 days total
         dateStart.setUTCHours(0, 0, 0, 0);
       }
     }
