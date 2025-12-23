@@ -329,7 +329,7 @@ serve(async (req) => {
           : `${topic.name} Weekly Briefing`;
 
         const { error: sendError } = await resend.emails.send({
-          from: `${topic.name} <noreply@curatr.pro>`,
+          from: `${topic.name} <noreply@eezee.news>`,
           to: [recipient.email!],
           subject,
           html: emailHtml,
