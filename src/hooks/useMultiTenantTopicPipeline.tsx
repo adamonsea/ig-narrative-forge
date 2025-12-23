@@ -468,6 +468,7 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           writing_style,
           audience_expertise,
           shared_content_id,
+          slides(id, slide_number, content, word_count, alt_text, visual_prompt, links),
           topic_articles!inner(
             topic_id,
             shared_content:shared_article_content(title, url, author, word_count)
@@ -485,6 +486,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
 
       const dripQueuedAsAdminRows = (dripQueuedStories || []).map((s: any) => {
         const shared = s.topic_articles?.shared_content;
+        // Include slides directly from the query
+        const slides = (s.slides || []).sort((a: any, b: any) => a.slide_number - b.slide_number);
         return {
           id: s.id,
           article_id: s.article_id || null,
@@ -498,7 +501,8 @@ export const useMultiTenantTopicPipeline = (selectedTopicId: string | null) => {
           article_url: shared?.url || null,
           article_author: shared?.author || null,
           word_count: shared?.word_count || null,
-          slide_count: null,
+          slide_count: slides.length,
+          slides: slides,
           story_type: s.topic_article_id ? 'multi_tenant' : 'legacy',
           is_teaser: false,
           is_parliamentary: s.is_parliamentary || false,
