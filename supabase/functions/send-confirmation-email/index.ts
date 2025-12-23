@@ -76,7 +76,7 @@ serve(async (req) => {
     const subject = `Confirm your ${topicName} ${notificationType} briefing subscription`;
 
     const { data, error: sendError } = await resend.emails.send({
-      from: `${topicName} <noreply@eezee.news>`,
+      from: `${topicName} <noreply@curatr.pro>`,
       to: [email],
       subject,
       html: emailHtml,
