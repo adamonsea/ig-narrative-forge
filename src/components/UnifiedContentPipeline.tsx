@@ -51,9 +51,37 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
   const [publishingStories, setPublishingStories] = useState<Set<string>>(new Set());
   const [deletingQueueItems, setDeletingQueueItems] = useState<Set<string>>(new Set());
   const [previewArticle, setPreviewArticle] = useState<any>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [sentimentCount, setSentimentCount] = useState(0);
   const [parliamentaryFilter, setParliamentaryFilter] = useState(false);
   const { toast } = useToast();
+  
+  // Handler to fetch article body when previewing
+  const handlePreviewArticle = async (article: any) => {
+    if (!article) return;
+    
+    setPreviewArticle(article);
+    setLoadingPreview(true);
+    
+    try {
+      // Fetch the body from shared_article_content
+      if (article.shared_content_id) {
+        const { data, error } = await supabase
+          .from('shared_article_content')
+          .select('body')
+          .eq('id', article.shared_content_id)
+          .single();
+        
+        if (!error && data?.body) {
+          setPreviewArticle((prev: any) => ({ ...prev, body: data.body }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching article body:', error);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   const [runningPublishMigration, setRunningPublishMigration] = useState(false);
 
@@ -525,7 +553,7 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                   onSlideQuantityChange={handleSlideQuantityChange}
                   onToneOverrideChange={handleToneOverrideChange}
                   onWritingStyleOverrideChange={handleWritingStyleOverrideChange}
-                  onPreview={setPreviewArticle}
+                  onPreview={handlePreviewArticle}
                   onApprove={(article, slideType, tone, writingStyle) => 
                     handleMultiTenantApprove(article, slideType, tone, writingStyle)
                   }
@@ -741,6 +769,12 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
             )}
 
             {/* Body content with position indicators */}
+            {loadingPreview && !previewArticle?.body && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading article content...</span>
+              </div>
+            )}
             {previewArticle?.body && (
               <div className="relative">
                 {/* Position strength indicator bar */}
@@ -763,6 +797,11 @@ export const UnifiedContentPipeline: React.FC<UnifiedContentPipelineProps> = ({ 
                     }}
                   />
                 </div>
+              </div>
+            )}
+            {!loadingPreview && !previewArticle?.body && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">No article body available for preview.</p>
               </div>
             )}
           </div>
