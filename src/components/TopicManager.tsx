@@ -13,6 +13,7 @@ import { EngagementSparkline } from "@/components/EngagementSparkline";
 import { SourceHealthBadge } from "@/components/SourceHealthBadge";
 import { CollapsibleAudienceCard } from "@/components/CollapsibleAudienceCard";
 import { CollapsibleEngagementCard } from "@/components/CollapsibleEngagementCard";
+import { TrafficHealthAlert } from "@/components/TrafficHealthAlert";
 
 interface Topic {
   id: string;
@@ -249,6 +250,9 @@ export const TopicManager = () => {
         onOpenChange={setShowCreateDialog}
         onTopicCreated={handleTopicCreated}
       />
+
+      {/* Traffic Health Alerts */}
+      <TrafficHealthAlert />
 
       {topics.length === 0 ? (
         <Card>

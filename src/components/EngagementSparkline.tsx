@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { engagementColors } from '@/lib/designTokens';
+import { Button } from '@/components/ui/button';
 
 interface EngagementSparklineProps {
   topicId: string;
@@ -16,33 +17,35 @@ interface DayData {
   displayDate: string;
 }
 
+type TimeRange = 7 | 14 | 30;
+
 export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
   const [data, setData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>(7);
 
   useEffect(() => {
     loadSparklineData();
-  }, [topicId]);
+  }, [topicId, timeRange]);
 
   const loadSparklineData = async () => {
     try {
       setLoading(true);
 
-      // Query last 7 days of engagement data
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const daysAgo = new Date(Date.now() - timeRange * 24 * 60 * 60 * 1000);
       
       const [{ data: interactions, error: interactionsError }, { data: visits, error: visitsError }] = await Promise.all([
         supabase
           .from('story_interactions')
           .select('interaction_type, created_at')
           .eq('topic_id', topicId)
-          .gte('created_at', sevenDaysAgo.toISOString())
+          .gte('created_at', daysAgo.toISOString())
           .in('interaction_type', ['swipe', 'share_click']),
         supabase
           .from('feed_visits')
           .select('visit_date, visitor_id')
           .eq('topic_id', topicId)
-          .gte('visit_date', sevenDaysAgo.toISOString().split('T')[0])
+          .gte('visit_date', daysAgo.toISOString().split('T')[0])
       ]);
 
       if (interactionsError) throw interactionsError;
@@ -51,8 +54,8 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
       // Group by day
       const dayMap = new Map<string, { swipes: number; shares: number; visitors: number }>();
       
-      // Initialize all 7 days with zero counts
-      for (let i = 0; i < 7; i++) {
+      // Initialize all days with zero counts
+      for (let i = 0; i < timeRange; i++) {
         const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
         const dateKey = date.toISOString().split('T')[0];
         dayMap.set(dateKey, { swipes: 0, shares: 0, visitors: 0 });
@@ -110,7 +113,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-12">
+      <div className="flex items-center justify-center h-16">
         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       </div>
     );
@@ -118,7 +121,7 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
 
   if (data.length === 0) {
     return (
-      <div className="h-12 flex items-center justify-center text-xs text-muted-foreground">
+      <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
         No data yet
       </div>
     );
@@ -139,33 +142,67 @@ export const EngagementSparkline = ({ topicId }: EngagementSparklineProps) => {
   };
 
   return (
-    <div className="w-full h-12">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-          <Tooltip content={<CustomTooltip />} />
-          <Line 
-            type="monotone" 
-            dataKey="swipes" 
-            stroke={engagementColors.swipes}
-            strokeWidth={1.5}
-            dot={false}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="shares" 
-            stroke={engagementColors.shares}
-            strokeWidth={1.5}
-            dot={false}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="visitors" 
-            stroke={engagementColors.visitors}
-            strokeWidth={1.5}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="space-y-2">
+      {/* Time range toggle */}
+      <div className="flex items-center justify-end gap-1">
+        {([7, 14, 30] as TimeRange[]).map((range) => (
+          <Button
+            key={range}
+            variant={timeRange === range ? "default" : "ghost"}
+            size="sm"
+            className={`h-6 px-2 text-[10px] ${
+              timeRange === range 
+                ? 'bg-[hsl(270,100%,68%)] text-white hover:bg-[hsl(270,100%,68%)]/90' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setTimeRange(range);
+            }}
+          >
+            {range}d
+          </Button>
+        ))}
+      </div>
+      
+      <div className="w-full h-16">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+            <Tooltip content={<CustomTooltip />} />
+            {timeRange >= 14 && (
+              <XAxis 
+                dataKey="displayDate" 
+                tick={{ fontSize: 8, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
+                interval={timeRange === 30 ? 6 : 3}
+              />
+            )}
+            <Line 
+              type="monotone" 
+              dataKey="swipes" 
+              stroke={engagementColors.swipes}
+              strokeWidth={1.5}
+              dot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="shares" 
+              stroke={engagementColors.shares}
+              strokeWidth={1.5}
+              dot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="visitors" 
+              stroke={engagementColors.visitors}
+              strokeWidth={1.5}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
