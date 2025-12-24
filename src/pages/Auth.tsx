@@ -24,11 +24,20 @@ const Auth = () => {
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (data.session) {
+          navigate('/');
+        }
+      } catch (err) {
+        // If refresh token is corrupted or the auth endpoint is unreachable,
+        // avoid breaking the auth page; user can still sign in.
+        console.warn('[Auth] getSession failed on /auth', err);
       }
     };
+
     checkUser();
   }, [navigate]);
 
@@ -121,9 +130,13 @@ const Auth = () => {
         window.location.href = '/';
       }
     } catch (error: any) {
+      const msg = typeof error?.message === 'string' ? error.message : 'Unknown error';
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description:
+          msg === 'Failed to fetch'
+            ? 'Network error reaching Supabase auth. Please disable ad-block/VPN and try again.'
+            : msg,
         variant: "destructive",
       });
     } finally {

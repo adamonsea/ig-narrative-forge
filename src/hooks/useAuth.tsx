@@ -58,6 +58,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleAuthFailure = (reason: string, err?: unknown) => {
       console.error(`[Auth] ${reason}`, err);
+
+      // Prevent repeated refresh attempts when the network/auth endpoint is unreachable
+      try {
+        (supabase.auth as any).stopAutoRefresh?.();
+      } catch {
+        // ignore
+      }
+
+      // Clear any in-memory session inside the client (best-effort)
+      setTimeout(() => {
+        try {
+          (supabase.auth as any).signOut?.({ scope: 'local' })?.catch?.(() => undefined);
+        } catch {
+          // ignore
+        }
+      }, 0);
+
       cleanupAuthState();
       setSession(null);
       setUser(null);
@@ -65,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       toast({
         title: "Authentication issue",
-        description: "We couldn't reach the login service. Please sign in again.",
+        description: "We couldn't reach the login service (network error). Please sign in again.",
         variant: "destructive",
       });
     };
