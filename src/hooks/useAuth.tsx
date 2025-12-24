@@ -56,31 +56,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    const handleAuthFailure = (reason: string, err?: unknown) => {
+      console.error(`[Auth] ${reason}`, err);
+      cleanupAuthState();
+      setSession(null);
+      setUser(null);
+      setUserRole(null);
+      setLoading(false);
+      toast({
+        title: "Authentication issue",
+        description: "We couldn't reach the login service. Please sign in again.",
+        variant: "destructive",
+      });
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        
-        // Handle token refresh failures
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.error('Token refresh failed - cleaning up auth state');
-          cleanupAuthState();
-          toast({
-            title: "Session Expired",
-            description: "Please sign in again.",
-            variant: "destructive",
-          });
-          setTimeout(() => {
-            window.location.href = '/auth';
-          }, 1000);
+
+        const eventName = event as unknown as string;
+        if (eventName === 'TOKEN_REFRESH_FAILED') {
+          handleAuthFailure('Token refresh failed');
           return;
         }
-        
+
         // Update state synchronously
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
+
         // Defer role fetching to avoid deadlocks
         if (session?.user) {
           setTimeout(() => {
@@ -96,25 +101,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.id);
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          fetchUserRole(session.user.id).then(role => {
-            console.log('Initial role fetched:', role);
-            setUserRole(role);
-          });
-        }, 0);
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        console.log('Initial session:', data.session?.user?.id);
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+
+        if (data.session?.user) {
+          setTimeout(() => {
+            fetchUserRole(data.session!.user.id).then(role => {
+              console.log('Initial role fetched:', role);
+              setUserRole(role);
+            });
+          }, 0);
+        }
+      } catch (err) {
+        handleAuthFailure('Initial session fetch failed', err);
+      } finally {
+        setLoading(false);
       }
-    });
+    })();
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
