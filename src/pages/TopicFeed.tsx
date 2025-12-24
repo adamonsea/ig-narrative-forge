@@ -48,6 +48,7 @@ import {
   getCardIndex,
   logCollisionReport 
 } from "@/lib/feedCardPositions";
+import { buildShareUrl } from "@/lib/urlUtils";
 
 // Helper functions using centralized position system
 const shouldShowSentiment = (idx: number) => shouldShowCard('sentiment', idx);
@@ -915,7 +916,7 @@ const TopicFeed = () => {
               if (contentItem.type === 'story') {
                 const story = contentItem.data as any;
                 // Generate universal story URL
-                const storyShareUrl = `${window.location.origin}/feed/${slug}/story/${story.id}`;
+                const storyShareUrl = buildShareUrl(`/feed/${slug}/story/${story.id}`);
                 
                 items.push(
                   <div
